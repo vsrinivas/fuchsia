@@ -6,6 +6,7 @@ library fuchsia.net.interfaces;
 
 using fuchsia.hardware.network;
 using fuchsia.net;
+using fuchsia.posix.socket;
 
 struct Empty {
 };
@@ -61,6 +62,8 @@ table Properties {
     5: bool has_default_ipv4_route;
     /// Whether there is a default IPv6 route through this interface.
     6: bool has_default_ipv6_route;
+    /// The name of the interface. Immutable.
+    7: fuchsia.posix.socket.interface_name name;
 };
 
 /// Options for configuring the interface state watcher.

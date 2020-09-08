@@ -12,5 +12,6 @@ fidl("fuchsia.net.interfaces") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.posix.socket",
   ]
 }

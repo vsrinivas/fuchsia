@@ -972,6 +972,7 @@ async fn test_interfaces_watcher_race() -> Result {
 fn empty_interface_properties(id: u64) -> fidl_fuchsia_net_interfaces::Properties {
     fidl_fuchsia_net_interfaces::Properties {
         id: Some(id),
+        name: None,
         online: None,
         device_class: None,
         addresses: None,
@@ -1060,6 +1061,9 @@ async fn test_interfaces_watcher() -> Result {
     let id = dev.id();
     let want = fidl_fuchsia_net_interfaces::Event::Added(fidl_fuchsia_net_interfaces::Properties {
         id: Some(id),
+        // We're not explicitly setting the name when adding the interface, so
+        // this may break if Netstack changes how it names interfaces.
+        name: Some(format!("eth{}", id)),
         online: Some(false),
         device_class: Some(fidl_fuchsia_net_interfaces::DeviceClass::Device(
             fidl_fuchsia_hardware_network::DeviceClass::Unknown,

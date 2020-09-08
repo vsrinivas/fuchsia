@@ -31,6 +31,7 @@ func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDef
 	var p interfaces.Properties
 	ifs := nicInfo.Context.(*ifState)
 	p.SetId(uint64(ifs.nicid))
+	p.SetName(nicInfo.Name)
 	p.SetHasDefaultIpv4Route(hasDefaultIPv4Route)
 	p.SetHasDefaultIpv6Route(hasDefaultIPv6Route)
 
