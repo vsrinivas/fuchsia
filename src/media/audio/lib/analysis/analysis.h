@@ -89,6 +89,43 @@ double MeasureAudioRMS(AudioBufferSlice<SampleFormat> slice) {
   return sqrt(sum / slice.NumSamples());
 }
 
+// Locate the left edge of the first impulse in the given slice, ignoring samples quieter
+// than the given noise floor. Returns the frame index if found, and std::nullopt otherwise.
+// The given slice must have a single channel. We assume the impulse has a positive signal.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+std::optional<size_t> FindImpulseLeadingEdge(
+    AudioBufferSlice<SampleFormat> slice,
+    typename SampleFormatTraits<SampleFormat>::SampleT noise_floor) {
+  FX_CHECK(slice.format().channels() == 1);
+
+  auto normalize = [](typename SampleFormatTraits<SampleFormat>::SampleT val) {
+    float d = val;
+    if constexpr (SampleFormat == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
+      d -= 128;
+    }
+    return d;
+  };
+
+  // If our impulse was a single frame, we could simply find the maximum value.
+  // To support wider impulses, we need to find the left edge of the impulse. We
+  // do this by finding the first value such that there does not exist a value
+  // more than 50% larger.
+  float max_value = 0;
+  for (size_t f = 0; f < slice.NumFrames(); f++) {
+    max_value = std::max(max_value, normalize(slice.SampleAt(f, 0)));
+  }
+  for (size_t f = 0; f < slice.NumFrames(); f++) {
+    float val = normalize(slice.SampleAt(f, 0));
+    if (val <= noise_floor) {
+      continue;
+    }
+    if (1.5 * val > max_value) {
+      return f;
+    }
+  }
+  return std::nullopt;
+}
+
 }  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_LIB_ANALYSIS_ANALYSIS_H_

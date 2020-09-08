@@ -14,6 +14,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
@@ -136,35 +137,30 @@ class Capture {
           std::min(search_frame_start + format_.frames_per_ns().Scale(ZX_MSEC(500)),
                    static_cast<int64_t>(buffer_.NumFrames()));
 
-      // If our impulse was a single frame, we could simply find the maximum value. Instead
-      // we want to find the left edge of the impulse. We do this by finding the first value
-      // such that there does not exist a value more than 50% larger.
-      int64_t max_frame = -1;
-      float max_value = 0;
-      for (auto f = search_frame_start; f < search_frame_end; f++) {
-        auto val = buffer_.SampleAt(f, 0);
-        if (val < kNoiseFloor) {
-          continue;
-        }
-        if (verbose) {
-          printf("[verbose] frame %lu, sample %f%s\n", f, val,
-                 (val > 1.5 * max_value) ? " (new max)" : "");
-        }
-        if (val > 1.5 * max_value) {
-          max_frame = f;
-          max_value = val;
+      auto slice = media::audio::AudioBufferSlice(&buffer_, search_frame_start, search_frame_end);
+      auto max_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
+
+      if (verbose) {
+        for (auto f = search_frame_start; f < search_frame_end; f++) {
+          auto val = buffer_.SampleAt(f, 0);
+          if (val > kNoiseFloor) {
+            size_t slice_index = f - search_frame_start;
+            printf("[verbose] frame %lu, sample %f%s\n", f, val,
+                   (max_frame && slice_index == *max_frame) ? " (left edge)" : "");
+          }
         }
       }
 
-      if (max_frame < 0) {
+      if (!max_frame) {
         out.push_back(zx::time(-1));
         continue;
       }
 
-      out.push_back(zx::time(frames_to_mono_time_.Apply(max_frame)));
+      auto left_edge = *max_frame + search_frame_start;
+      out.push_back(zx::time(frames_to_mono_time_.Apply(left_edge)));
       if (verbose) {
         printf("[verbose] *** signal estimated at frame %lu, expected signal at frame %lu\n",
-               max_frame, frames_to_mono_time_.Inverse().Apply(expected_time_mono.get()));
+               left_edge, frames_to_mono_time_.Inverse().Apply(expected_time_mono.get()));
       }
     }
 

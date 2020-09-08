@@ -494,4 +494,37 @@ TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
   EXPECT_DOUBLE_EQ(5.0, r.total_magn_other);
 }
 
+TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
+  auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
+  auto reals = AudioBuffer(format, 12);
+
+  // Silent audio should return nullopt.
+  auto result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0);
+  EXPECT_FALSE(result);
+
+  // Audio entirely below the noise floor should be considered silent.
+  reals.samples()[1] = 0.09;
+  reals.samples()[2] = -0.09;
+  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.1);
+  EXPECT_FALSE(result);
+
+  // Impulse with exactly one frame.
+  reals.samples()[1] = 0;
+  reals.samples()[2] = 0;
+  reals.samples()[5] = 0.7;
+  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(*result, 5lu);
+
+  // Impulse with ring in. The left edge occurs at the largest positive sample
+  // such that there is no value 50% larger. In the samples below, the edge occurs
+  // at +0.10 (there is no sample larger than 0.15).
+  reals.samples() = {
+      0, -0.01, 0.04, -0.08, 0.09, -0.10, 0.10, 0.12, 0.13, 0.14, 0.13, 0.145,
+  };
+  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.01);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(*result, 6lu);
+}
+
 }  // namespace media::audio
