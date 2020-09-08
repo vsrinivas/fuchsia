@@ -131,16 +131,16 @@ type PrimitiveSubtype string
 
 const (
 	Bool    PrimitiveSubtype = "bool"
-	Int8                     = "int8"
-	Int16                    = "int16"
-	Int32                    = "int32"
-	Int64                    = "int64"
-	Uint8                    = "uint8"
-	Uint16                   = "uint16"
-	Uint32                   = "uint32"
-	Uint64                   = "uint64"
-	Float32                  = "float32"
-	Float64                  = "float64"
+	Int8    PrimitiveSubtype = "int8"
+	Int16   PrimitiveSubtype = "int16"
+	Int32   PrimitiveSubtype = "int32"
+	Int64   PrimitiveSubtype = "int64"
+	Uint8   PrimitiveSubtype = "uint8"
+	Uint16  PrimitiveSubtype = "uint16"
+	Uint32  PrimitiveSubtype = "uint32"
+	Uint64  PrimitiveSubtype = "uint64"
+	Float32 PrimitiveSubtype = "float32"
+	Float64 PrimitiveSubtype = "float64"
 )
 
 var unsignedSubtypes = map[PrimitiveSubtype]struct{}{
@@ -167,33 +167,33 @@ type HandleSubtype string
 
 const (
 	Handle       HandleSubtype = "handle"
-	Bti                        = "bti"
-	Channel                    = "channel"
-	Clock                      = "clock"
-	DebugLog                   = "debuglog"
-	Event                      = "event"
-	Eventpair                  = "eventpair"
-	Exception                  = "exception"
-	Fifo                       = "fifo"
-	Guest                      = "guest"
-	Interrupt                  = "interrupt"
-	Iommu                      = "iommu"
-	Job                        = "job"
-	Pager                      = "pager"
-	PciDevice                  = "pcidevice"
-	Pmt                        = "pmt"
-	Port                       = "port"
-	Process                    = "process"
-	Profile                    = "profile"
-	Resource                   = "resource"
-	Socket                     = "socket"
-	Stream                     = "stream"
-	SuspendToken               = "suspendtoken"
-	Thread                     = "thread"
-	Time                       = "timer"
-	Vcpu                       = "vcpu"
-	Vmar                       = "vmar"
-	Vmo                        = "vmo"
+	Bti          HandleSubtype = "bti"
+	Channel      HandleSubtype = "channel"
+	Clock        HandleSubtype = "clock"
+	DebugLog     HandleSubtype = "debuglog"
+	Event        HandleSubtype = "event"
+	Eventpair    HandleSubtype = "eventpair"
+	Exception    HandleSubtype = "exception"
+	Fifo         HandleSubtype = "fifo"
+	Guest        HandleSubtype = "guest"
+	Interrupt    HandleSubtype = "interrupt"
+	Iommu        HandleSubtype = "iommu"
+	Job          HandleSubtype = "job"
+	Pager        HandleSubtype = "pager"
+	PciDevice    HandleSubtype = "pcidevice"
+	Pmt          HandleSubtype = "pmt"
+	Port         HandleSubtype = "port"
+	Process      HandleSubtype = "process"
+	Profile      HandleSubtype = "profile"
+	Resource     HandleSubtype = "resource"
+	Socket       HandleSubtype = "socket"
+	Stream       HandleSubtype = "stream"
+	SuspendToken HandleSubtype = "suspendtoken"
+	Thread       HandleSubtype = "thread"
+	Time         HandleSubtype = "timer"
+	Vcpu         HandleSubtype = "vcpu"
+	Vmar         HandleSubtype = "vmar"
+	Vmo          HandleSubtype = "vmo"
 )
 
 // Copied from third_party/go/src/syscall/zx/types.go
@@ -292,10 +292,10 @@ type LiteralKind string
 
 const (
 	StringLiteral  LiteralKind = "string"
-	NumericLiteral             = "numeric"
-	TrueLiteral                = "true"
-	FalseLiteral               = "false"
-	DefaultLiteral             = "default"
+	NumericLiteral LiteralKind = "numeric"
+	TrueLiteral    LiteralKind = "true"
+	FalseLiteral   LiteralKind = "false"
+	DefaultLiteral LiteralKind = "default"
 )
 
 type Literal struct {
@@ -307,7 +307,7 @@ type ConstantKind string
 
 const (
 	IdentifierConstant ConstantKind = "identifier"
-	LiteralConstant                 = "literal"
+	LiteralConstant    ConstantKind = "literal"
 )
 
 type Constant struct {
@@ -320,12 +320,12 @@ type TypeKind string
 
 const (
 	ArrayType      TypeKind = "array"
-	VectorType              = "vector"
-	StringType              = "string"
-	HandleType              = "handle"
-	RequestType             = "request"
-	PrimitiveType           = "primitive"
-	IdentifierType          = "identifier"
+	VectorType     TypeKind = "vector"
+	StringType     TypeKind = "string"
+	HandleType     TypeKind = "handle"
+	RequestType    TypeKind = "request"
+	PrimitiveType  TypeKind = "primitive"
+	IdentifierType TypeKind = "identifier"
 )
 
 type Type struct {
@@ -829,17 +829,17 @@ type DeclType string
 
 const (
 	ConstDeclType    DeclType = "const"
-	BitsDeclType              = "bits"
-	EnumDeclType              = "enum"
-	ProtocolDeclType          = "interface"
-	ServiceDeclType           = "service"
-	StructDeclType            = "struct"
-	TableDeclType             = "table"
-	UnionDeclType             = "union"
+	BitsDeclType     DeclType = "bits"
+	EnumDeclType     DeclType = "enum"
+	ProtocolDeclType DeclType = "interface"
+	ServiceDeclType  DeclType = "service"
+	StructDeclType   DeclType = "struct"
+	TableDeclType    DeclType = "table"
+	UnionDeclType    DeclType = "union"
 
 	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
 	// Topaz, and should be removed after fidlgen_dart code has been updated.
-	InterfaceDeclType = "interface"
+	InterfaceDeclType DeclType = "interface"
 )
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
