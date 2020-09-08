@@ -1,13 +1,11 @@
 # Library restrictions
 
-## third_party/absl-cpp
+## third_party/abseil-cpp
 
-Decision: **do not use** `<absl/synchronization/*>`. On Fuchsia, these classes
-bottom out in `pthread_mutex_t` and `pthread_cond_t`, which are not the most
-efficient primitives on Fuchsia. When `ABSL_INTERNAL_USE_NONPROD_MUTEX` is
-defined, these primitives bottom out in something much more sophisticated.
-Instead, please use `<lib/sync/*.h>`, which bottoms out in optimal
-synchronization primitives on Fuchsia.
+Decision: **do not use** `absl` in new code. Generally, `absl` is a
+poor fit for use cases in Fuchsia. We will remove `absl` from the tree
+once existing clients of it are migrated away. This removal work is tracked in
+[fxbug.dev/59428](https://fxbug.dev/59428).
 
 ## third_party/googletest
 
