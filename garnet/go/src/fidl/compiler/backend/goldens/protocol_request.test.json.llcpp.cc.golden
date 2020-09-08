@@ -38,15 +38,6 @@ Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
   error_ = _request.error();
 }
 
-Parent::ResultOf::GetChild Parent::SyncClient::GetChild() {
-  return ResultOf::GetChild(this->channel().get());
-}
-
-Parent::ResultOf::GetChild Parent::Call::GetChild(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::GetChild(_client_end->get());
-}
-
 Parent::UnownedResultOf::GetChild::GetChild(zx_handle_t _client,
                                             uint8_t* _response_bytes,
                                             uint32_t _response_byte_capacity)
@@ -58,19 +49,6 @@ Parent::UnownedResultOf::GetChild::GetChild(zx_handle_t _client,
   error_ = _request.error();
 }
 
-Parent::UnownedResultOf::GetChild Parent::SyncClient::GetChild(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetChild(this->channel().get(),
-                                   _response_buffer.data(),
-                                   _response_buffer.capacity());
-}
-
-Parent::UnownedResultOf::GetChild Parent::Call::GetChild(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetChild(_client_end->get(), _response_buffer.data(),
-                                   _response_buffer.capacity());
-}
-
 Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
   GetChildRequestOwnedRequest _request(0);
   _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client, bytes_,
@@ -78,15 +56,6 @@ Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
                                      GetChildRequestResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Parent::ResultOf::GetChildRequest Parent::SyncClient::GetChildRequest() {
-  return ResultOf::GetChildRequest(this->channel().get());
-}
-
-Parent::ResultOf::GetChildRequest Parent::Call::GetChildRequest(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::GetChildRequest(_client_end->get());
 }
 
 Parent::UnownedResultOf::GetChildRequest::GetChildRequest(
@@ -100,33 +69,11 @@ Parent::UnownedResultOf::GetChildRequest::GetChildRequest(
   error_ = _request.error();
 }
 
-Parent::UnownedResultOf::GetChildRequest Parent::SyncClient::GetChildRequest(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetChildRequest(this->channel().get(),
-                                          _response_buffer.data(),
-                                          _response_buffer.capacity());
-}
-
-Parent::UnownedResultOf::GetChildRequest Parent::Call::GetChildRequest(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetChildRequest(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
-}
-
 Parent::ResultOf::TakeChild::TakeChild(zx_handle_t _client, ::zx::channel& c) {
   TakeChildOwnedRequest _request(0, c);
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Parent::ResultOf::TakeChild Parent::SyncClient::TakeChild(::zx::channel c) {
-  return ResultOf::TakeChild(this->channel().get(), c);
-}
-
-Parent::ResultOf::TakeChild Parent::Call::TakeChild(
-    ::zx::unowned_channel _client_end, ::zx::channel c) {
-  return ResultOf::TakeChild(_client_end->get(), c);
 }
 
 Parent::UnownedResultOf::TakeChild::TakeChild(zx_handle_t _client,
@@ -140,36 +87,12 @@ Parent::UnownedResultOf::TakeChild::TakeChild(zx_handle_t _client,
   error_ = _request.error();
 }
 
-Parent::UnownedResultOf::TakeChild Parent::SyncClient::TakeChild(
-    ::fidl::BytePart _request_buffer, ::zx::channel c) {
-  return UnownedResultOf::TakeChild(this->channel().get(),
-                                    _request_buffer.data(),
-                                    _request_buffer.capacity(), c);
-}
-
-Parent::UnownedResultOf::TakeChild Parent::Call::TakeChild(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::zx::channel c) {
-  return UnownedResultOf::TakeChild(_client_end->get(), _request_buffer.data(),
-                                    _request_buffer.capacity(), c);
-}
-
 Parent::ResultOf::TakeChildRequest::TakeChildRequest(zx_handle_t _client,
                                                      ::zx::channel& r) {
   TakeChildRequestOwnedRequest _request(0, r);
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Parent::ResultOf::TakeChildRequest Parent::SyncClient::TakeChildRequest(
-    ::zx::channel r) {
-  return ResultOf::TakeChildRequest(this->channel().get(), r);
-}
-
-Parent::ResultOf::TakeChildRequest Parent::Call::TakeChildRequest(
-    ::zx::unowned_channel _client_end, ::zx::channel r) {
-  return ResultOf::TakeChildRequest(_client_end->get(), r);
 }
 
 Parent::UnownedResultOf::TakeChildRequest::TakeChildRequest(
@@ -180,21 +103,6 @@ Parent::UnownedResultOf::TakeChildRequest::TakeChildRequest(
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Parent::UnownedResultOf::TakeChildRequest Parent::SyncClient::TakeChildRequest(
-    ::fidl::BytePart _request_buffer, ::zx::channel r) {
-  return UnownedResultOf::TakeChildRequest(this->channel().get(),
-                                           _request_buffer.data(),
-                                           _request_buffer.capacity(), r);
-}
-
-Parent::UnownedResultOf::TakeChildRequest Parent::Call::TakeChildRequest(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::zx::channel r) {
-  return UnownedResultOf::TakeChildRequest(_client_end->get(),
-                                           _request_buffer.data(),
-                                           _request_buffer.capacity(), r);
 }
 
 Parent::ResultOf::GetChild Parent::ClientImpl::GetChild_Sync() {

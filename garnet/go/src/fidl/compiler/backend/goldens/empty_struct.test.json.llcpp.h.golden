@@ -515,24 +515,36 @@ class EmptyProtocol final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Send Send(::zx::unowned_channel _client_end,
-                               ::llcpp::fidl::test::json::Empty e);
+                               ::llcpp::fidl::test::json::Empty e) {
+      return ResultOf::Send(_client_end->get(), e);
+    }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Send Send(::zx::unowned_channel _client_end,
                                       ::fidl::BytePart _request_buffer,
-                                      ::llcpp::fidl::test::json::Empty e);
+                                      ::llcpp::fidl::test::json::Empty e) {
+      return UnownedResultOf::Send(_client_end->get(), _request_buffer.data(),
+                                   _request_buffer.capacity(), e);
+    }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::SendAndReceive SendAndReceive(
-        ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e);
+        ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e) {
+      return ResultOf::SendAndReceive(_client_end->get(), e);
+    }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::SendAndReceive SendAndReceive(
         ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::llcpp::fidl::test::json::Empty e, ::fidl::BytePart _response_buffer);
+        ::llcpp::fidl::test::json::Empty e, ::fidl::BytePart _response_buffer) {
+      return UnownedResultOf::SendAndReceive(
+          _client_end->get(), _request_buffer.data(),
+          _request_buffer.capacity(), e, _response_buffer.data(),
+          _response_buffer.capacity());
+    }
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
@@ -557,22 +569,36 @@ class EmptyProtocol final {
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::Send Send(::llcpp::fidl::test::json::Empty e);
+    ResultOf::Send Send(::llcpp::fidl::test::json::Empty e) {
+      return ResultOf::Send(this->channel().get(), e);
+    }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Send Send(::fidl::BytePart _request_buffer,
-                               ::llcpp::fidl::test::json::Empty e);
+                               ::llcpp::fidl::test::json::Empty e) {
+      return UnownedResultOf::Send(this->channel().get(),
+                                   _request_buffer.data(),
+                                   _request_buffer.capacity(), e);
+    }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::SendAndReceive SendAndReceive(::llcpp::fidl::test::json::Empty e);
+    ResultOf::SendAndReceive SendAndReceive(
+        ::llcpp::fidl::test::json::Empty e) {
+      return ResultOf::SendAndReceive(this->channel().get(), e);
+    }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::SendAndReceive SendAndReceive(
         ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e,
-        ::fidl::BytePart _response_buffer);
+        ::fidl::BytePart _response_buffer) {
+      return UnownedResultOf::SendAndReceive(
+          this->channel().get(), _request_buffer.data(),
+          _request_buffer.capacity(), e, _response_buffer.data(),
+          _response_buffer.capacity());
+    }
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the

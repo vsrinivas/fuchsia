@@ -24,14 +24,6 @@ Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
   error_ = _request.error();
 }
 
-Top::ResultOf::GetFoo Top::SyncClient::GetFoo() {
-  return ResultOf::GetFoo(this->channel().get());
-}
-
-Top::ResultOf::GetFoo Top::Call::GetFoo(::zx::unowned_channel _client_end) {
-  return ResultOf::GetFoo(_client_end->get());
-}
-
 Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
                                      uint8_t* _response_bytes,
                                      uint32_t _response_byte_capacity)
@@ -41,18 +33,6 @@ Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
                                  _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Top::UnownedResultOf::GetFoo Top::SyncClient::GetFoo(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFoo(this->channel().get(), _response_buffer.data(),
-                                 _response_buffer.capacity());
-}
-
-Top::UnownedResultOf::GetFoo Top::Call::GetFoo(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFoo(_client_end->get(), _response_buffer.data(),
-                                 _response_buffer.capacity());
 }
 
 Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {

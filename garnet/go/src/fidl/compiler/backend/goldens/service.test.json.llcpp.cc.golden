@@ -25,16 +25,6 @@ SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
   error_ = _request.error();
 }
 
-SecondProtocol::ResultOf::MethodOnSecond
-SecondProtocol::SyncClient::MethodOnSecond() {
-  return ResultOf::MethodOnSecond(this->channel().get());
-}
-
-SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::MethodOnSecond(_client_end->get());
-}
-
 ::fidl::Result SecondProtocol::ClientImpl::MethodOnSecond() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     auto _res = ResultOf::MethodOnSecond(_binding->handle());
@@ -112,16 +102,6 @@ FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-FirstProtocol::ResultOf::MethodOnFirst
-FirstProtocol::SyncClient::MethodOnFirst() {
-  return ResultOf::MethodOnFirst(this->channel().get());
-}
-
-FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::MethodOnFirst(_client_end->get());
 }
 
 ::fidl::Result FirstProtocol::ClientImpl::MethodOnFirst() {

@@ -174,7 +174,9 @@ class SecondProtocol final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MethodOnSecond MethodOnSecond(
-        ::zx::unowned_channel _client_end);
+        ::zx::unowned_channel _client_end) {
+      return ResultOf::MethodOnSecond(_client_end->get());
+    }
   };
 
   class SyncClient final {
@@ -191,7 +193,9 @@ class SecondProtocol final {
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::MethodOnSecond MethodOnSecond();
+    ResultOf::MethodOnSecond MethodOnSecond() {
+      return ResultOf::MethodOnSecond(this->channel().get());
+    }
 
    private:
     ::zx::channel channel_;
@@ -369,7 +373,9 @@ class FirstProtocol final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MethodOnFirst MethodOnFirst(
-        ::zx::unowned_channel _client_end);
+        ::zx::unowned_channel _client_end) {
+      return ResultOf::MethodOnFirst(_client_end->get());
+    }
   };
 
   class SyncClient final {
@@ -386,7 +392,9 @@ class FirstProtocol final {
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::MethodOnFirst MethodOnFirst();
+    ResultOf::MethodOnFirst MethodOnFirst() {
+      return ResultOf::MethodOnFirst(this->channel().get());
+    }
 
    private:
     ::zx::channel channel_;

@@ -26,15 +26,6 @@ super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
   error_ = _request.error();
 }
 
-super::ResultOf::foo super::SyncClient::foo(::fidl::StringView s) {
-  return ResultOf::foo(this->channel().get(), s);
-}
-
-super::ResultOf::foo super::Call::foo(::zx::unowned_channel _client_end,
-                                      ::fidl::StringView s) {
-  return ResultOf::foo(_client_end->get(), s);
-}
-
 super::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                  uint32_t _request_byte_capacity,
                                  const ::fidl::StringView& s,
@@ -46,22 +37,6 @@ super::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                  _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-super::UnownedResultOf::foo super::SyncClient::foo(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView s,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      s, _response_buffer.data(), _response_buffer.capacity());
-}
-
-super::UnownedResultOf::foo super::Call::foo(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), s,
-      _response_buffer.data(), _response_buffer.capacity());
 }
 
 super::ResultOf::foo super::ClientImpl::foo_Sync(::fidl::StringView s) {
@@ -211,15 +186,6 @@ sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
   error_ = _request.error();
 }
 
-sub::ResultOf::foo sub::SyncClient::foo(::fidl::StringView s) {
-  return ResultOf::foo(this->channel().get(), s);
-}
-
-sub::ResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
-                                  ::fidl::StringView s) {
-  return ResultOf::foo(_client_end->get(), s);
-}
-
 sub::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                uint32_t _request_byte_capacity,
                                const ::fidl::StringView& s,
@@ -231,23 +197,6 @@ sub::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                  _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-sub::UnownedResultOf::foo sub::SyncClient::foo(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView s,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      s, _response_buffer.data(), _response_buffer.capacity());
-}
-
-sub::UnownedResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
-                                         ::fidl::BytePart _request_buffer,
-                                         ::fidl::StringView s,
-                                         ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), s,
-      _response_buffer.data(), _response_buffer.capacity());
 }
 
 sub::ResultOf::foo sub::ClientImpl::foo_Sync(::fidl::StringView s) {

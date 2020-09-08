@@ -48,31 +48,5 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   status_ = _request.status();
   error_ = _request.error();
 }
-
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
-  {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
-  return UnownedResultOf::{{ .Name }}(this->channel().get()
-    {{- if .Request -}}
-      , _request_buffer.data(), _request_buffer.capacity()
-    {{- end -}}
-      {{- template "CommaPassthroughMessageParams" .Request -}}
-    {{- if .HasResponse -}}
-      , _response_buffer.data(), _response_buffer.capacity()
-    {{- end -}});
-}
-{{- end }}
-
-{{- define "StaticCallSyncRequestCallerAllocateMethodDefinition" }}
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
-  {{- template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-  return UnownedResultOf::{{ .Name }}(_client_end->get()
-    {{- if .Request -}}
-      , _request_buffer.data(), _request_buffer.capacity()
-    {{- end -}}
-      {{- template "CommaPassthroughMessageParams" .Request -}}
-    {{- if .HasResponse -}}
-      , _response_buffer.data(), _response_buffer.capacity()
-    {{- end -}});
-}
 {{- end }}
 `

@@ -153,19 +153,6 @@ TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
   error_ = _request.error();
 }
 
-TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-TestProtocol::SyncClient::StrictXUnionHenceResponseMayBeStackAllocated() {
-  return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-      this->channel().get());
-}
-
-TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-TestProtocol::Call::StrictXUnionHenceResponseMayBeStackAllocated(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-      _client_end->get());
-}
-
 TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(
         zx_handle_t _client, uint8_t* _response_bytes,
@@ -177,21 +164,6 @@ TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
       _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-TestProtocol::SyncClient::StrictXUnionHenceResponseMayBeStackAllocated(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-      this->channel().get(), _response_buffer.data(),
-      _response_buffer.capacity());
-}
-
-TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-TestProtocol::Call::StrictXUnionHenceResponseMayBeStackAllocated(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
@@ -206,19 +178,6 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
   error_ = _request.error();
 }
 
-TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-TestProtocol::SyncClient::FlexibleXUnionHenceResponseMustBeHeapAllocated() {
-  return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      this->channel().get());
-}
-
-TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-TestProtocol::Call::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      _client_end->get());
-}
-
 TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
         zx_handle_t _client, uint8_t* _response_bytes,
@@ -230,21 +189,6 @@ TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
       _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-TestProtocol::SyncClient::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      this->channel().get(), _response_buffer.data(),
-      _response_buffer.capacity());
-}
-
-TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-TestProtocol::Call::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated

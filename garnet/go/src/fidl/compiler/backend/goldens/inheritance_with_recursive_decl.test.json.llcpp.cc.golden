@@ -25,15 +25,6 @@ Parent::ResultOf::First::First(zx_handle_t _client, ::zx::channel& request) {
   error_ = _request.error();
 }
 
-Parent::ResultOf::First Parent::SyncClient::First(::zx::channel request) {
-  return ResultOf::First(this->channel().get(), request);
-}
-
-Parent::ResultOf::First Parent::Call::First(::zx::unowned_channel _client_end,
-                                            ::zx::channel request) {
-  return ResultOf::First(_client_end->get(), request);
-}
-
 Parent::UnownedResultOf::First::First(zx_handle_t _client,
                                       uint8_t* _request_bytes,
                                       uint32_t _request_byte_capacity,
@@ -43,19 +34,6 @@ Parent::UnownedResultOf::First::First(zx_handle_t _client,
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Parent::UnownedResultOf::First Parent::SyncClient::First(
-    ::fidl::BytePart _request_buffer, ::zx::channel request) {
-  return UnownedResultOf::First(this->channel().get(), _request_buffer.data(),
-                                _request_buffer.capacity(), request);
-}
-
-Parent::UnownedResultOf::First Parent::Call::First(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::zx::channel request) {
-  return UnownedResultOf::First(_client_end->get(), _request_buffer.data(),
-                                _request_buffer.capacity(), request);
 }
 
 ::fidl::Result Parent::ClientImpl::First(::zx::channel request) {
@@ -153,15 +131,6 @@ Child::ResultOf::First::First(zx_handle_t _client, ::zx::channel& request) {
   error_ = _request.error();
 }
 
-Child::ResultOf::First Child::SyncClient::First(::zx::channel request) {
-  return ResultOf::First(this->channel().get(), request);
-}
-
-Child::ResultOf::First Child::Call::First(::zx::unowned_channel _client_end,
-                                          ::zx::channel request) {
-  return ResultOf::First(_client_end->get(), request);
-}
-
 Child::UnownedResultOf::First::First(zx_handle_t _client,
                                      uint8_t* _request_bytes,
                                      uint32_t _request_byte_capacity,
@@ -173,33 +142,11 @@ Child::UnownedResultOf::First::First(zx_handle_t _client,
   error_ = _request.error();
 }
 
-Child::UnownedResultOf::First Child::SyncClient::First(
-    ::fidl::BytePart _request_buffer, ::zx::channel request) {
-  return UnownedResultOf::First(this->channel().get(), _request_buffer.data(),
-                                _request_buffer.capacity(), request);
-}
-
-Child::UnownedResultOf::First Child::Call::First(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::zx::channel request) {
-  return UnownedResultOf::First(_client_end->get(), _request_buffer.data(),
-                                _request_buffer.capacity(), request);
-}
-
 Child::ResultOf::Second::Second(zx_handle_t _client, ::zx::channel& request) {
   SecondOwnedRequest _request(0, request);
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Child::ResultOf::Second Child::SyncClient::Second(::zx::channel request) {
-  return ResultOf::Second(this->channel().get(), request);
-}
-
-Child::ResultOf::Second Child::Call::Second(::zx::unowned_channel _client_end,
-                                            ::zx::channel request) {
-  return ResultOf::Second(_client_end->get(), request);
 }
 
 Child::UnownedResultOf::Second::Second(zx_handle_t _client,
@@ -211,19 +158,6 @@ Child::UnownedResultOf::Second::Second(zx_handle_t _client,
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Child::UnownedResultOf::Second Child::SyncClient::Second(
-    ::fidl::BytePart _request_buffer, ::zx::channel request) {
-  return UnownedResultOf::Second(this->channel().get(), _request_buffer.data(),
-                                 _request_buffer.capacity(), request);
-}
-
-Child::UnownedResultOf::Second Child::Call::Second(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::zx::channel request) {
-  return UnownedResultOf::Second(_client_end->get(), _request_buffer.data(),
-                                 _request_buffer.capacity(), request);
 }
 
 ::fidl::Result Child::ClientImpl::First(::zx::channel request) {

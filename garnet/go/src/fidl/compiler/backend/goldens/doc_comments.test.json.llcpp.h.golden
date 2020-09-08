@@ -600,7 +600,9 @@ class Interface final {
     // method comment #3
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::Method Method(::zx::unowned_channel _client_end);
+    static ResultOf::Method Method(::zx::unowned_channel _client_end) {
+      return ResultOf::Method(_client_end->get());
+    }
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
@@ -628,7 +630,9 @@ class Interface final {
     // method comment #3
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::Method Method();
+    ResultOf::Method Method() {
+      return ResultOf::Method(this->channel().get());
+    }
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the

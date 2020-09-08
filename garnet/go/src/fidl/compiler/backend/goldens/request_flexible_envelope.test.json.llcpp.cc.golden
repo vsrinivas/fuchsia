@@ -64,18 +64,6 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
   error_ = _request.error();
 }
 
-Protocol::ResultOf::RequestStrictResponseFlexible
-Protocol::SyncClient::RequestStrictResponseFlexible(
-    ::llcpp::fidl::test::json::StrictFoo s) {
-  return ResultOf::RequestStrictResponseFlexible(this->channel().get(), s);
-}
-
-Protocol::ResultOf::RequestStrictResponseFlexible
-Protocol::Call::RequestStrictResponseFlexible(
-    ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::StrictFoo s) {
-  return ResultOf::RequestStrictResponseFlexible(_client_end->get(), s);
-}
-
 Protocol::UnownedResultOf::RequestStrictResponseFlexible::
     RequestStrictResponseFlexible(zx_handle_t _client, uint8_t* _request_bytes,
                                   uint32_t _request_byte_capacity,
@@ -92,24 +80,6 @@ Protocol::UnownedResultOf::RequestStrictResponseFlexible::
   error_ = _request.error();
 }
 
-Protocol::UnownedResultOf::RequestStrictResponseFlexible
-Protocol::SyncClient::RequestStrictResponseFlexible(
-    ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RequestStrictResponseFlexible(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      s, _response_buffer.data(), _response_buffer.capacity());
-}
-
-Protocol::UnownedResultOf::RequestStrictResponseFlexible
-Protocol::Call::RequestStrictResponseFlexible(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::llcpp::fidl::test::json::StrictFoo s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RequestStrictResponseFlexible(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), s,
-      _response_buffer.data(), _response_buffer.capacity());
-}
-
 Protocol::ResultOf::RequestFlexibleResponseStrict::
     RequestFlexibleResponseStrict(zx_handle_t _client,
                                   ::llcpp::fidl::test::json::FlexibleFoo& s)
@@ -121,19 +91,6 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
                                  ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Protocol::ResultOf::RequestFlexibleResponseStrict
-Protocol::SyncClient::RequestFlexibleResponseStrict(
-    ::llcpp::fidl::test::json::FlexibleFoo s) {
-  return ResultOf::RequestFlexibleResponseStrict(this->channel().get(), s);
-}
-
-Protocol::ResultOf::RequestFlexibleResponseStrict
-Protocol::Call::RequestFlexibleResponseStrict(
-    ::zx::unowned_channel _client_end,
-    ::llcpp::fidl::test::json::FlexibleFoo s) {
-  return ResultOf::RequestFlexibleResponseStrict(_client_end->get(), s);
 }
 
 Protocol::UnownedResultOf::RequestFlexibleResponseStrict::
@@ -150,25 +107,6 @@ Protocol::UnownedResultOf::RequestFlexibleResponseStrict::
                                  _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Protocol::UnownedResultOf::RequestFlexibleResponseStrict
-Protocol::SyncClient::RequestFlexibleResponseStrict(
-    ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::FlexibleFoo s,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RequestFlexibleResponseStrict(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      s, _response_buffer.data(), _response_buffer.capacity());
-}
-
-Protocol::UnownedResultOf::RequestFlexibleResponseStrict
-Protocol::Call::RequestFlexibleResponseStrict(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::llcpp::fidl::test::json::FlexibleFoo s,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RequestFlexibleResponseStrict(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), s,
-      _response_buffer.data(), _response_buffer.capacity());
 }
 
 Protocol::ResultOf::RequestStrictResponseFlexible

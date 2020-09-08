@@ -35,15 +35,6 @@ Interface::ResultOf::Method::Method(zx_handle_t _client) {
   error_ = _request.error();
 }
 
-Interface::ResultOf::Method Interface::SyncClient::Method() {
-  return ResultOf::Method(this->channel().get());
-}
-
-Interface::ResultOf::Method Interface::Call::Method(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::Method(_client_end->get());
-}
-
 ::fidl::Result Interface::ClientImpl::Method() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     auto _res = ResultOf::Method(_binding->handle());

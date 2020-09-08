@@ -54,15 +54,6 @@ Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
   error_ = _request.error();
 }
 
-Transitional::ResultOf::Request Transitional::SyncClient::Request(int64_t x) {
-  return ResultOf::Request(this->channel().get(), x);
-}
-
-Transitional::ResultOf::Request Transitional::Call::Request(
-    ::zx::unowned_channel _client_end, int64_t x) {
-  return ResultOf::Request(_client_end->get(), x);
-}
-
 Transitional::UnownedResultOf::Request::Request(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, int64_t x, uint8_t* _response_bytes,
@@ -75,36 +66,11 @@ Transitional::UnownedResultOf::Request::Request(
   error_ = _request.error();
 }
 
-Transitional::UnownedResultOf::Request Transitional::SyncClient::Request(
-    ::fidl::BytePart _request_buffer, int64_t x,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Request(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      x, _response_buffer.data(), _response_buffer.capacity());
-}
-
-Transitional::UnownedResultOf::Request Transitional::Call::Request(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int64_t x, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Request(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), x,
-      _response_buffer.data(), _response_buffer.capacity());
-}
-
 Transitional::ResultOf::OneWay::OneWay(zx_handle_t _client, int64_t x) {
   OneWayOwnedRequest _request(0, x);
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Transitional::ResultOf::OneWay Transitional::SyncClient::OneWay(int64_t x) {
-  return ResultOf::OneWay(this->channel().get(), x);
-}
-
-Transitional::ResultOf::OneWay Transitional::Call::OneWay(
-    ::zx::unowned_channel _client_end, int64_t x) {
-  return ResultOf::OneWay(_client_end->get(), x);
 }
 
 Transitional::UnownedResultOf::OneWay::OneWay(zx_handle_t _client,
@@ -115,19 +81,6 @@ Transitional::UnownedResultOf::OneWay::OneWay(zx_handle_t _client,
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-Transitional::UnownedResultOf::OneWay Transitional::SyncClient::OneWay(
-    ::fidl::BytePart _request_buffer, int64_t x) {
-  return UnownedResultOf::OneWay(this->channel().get(), _request_buffer.data(),
-                                 _request_buffer.capacity(), x);
-}
-
-Transitional::UnownedResultOf::OneWay Transitional::Call::OneWay(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int64_t x) {
-  return UnownedResultOf::OneWay(_client_end->get(), _request_buffer.data(),
-                                 _request_buffer.capacity(), x);
 }
 
 Transitional::ResultOf::Request Transitional::ClientImpl::Request_Sync(
@@ -435,16 +388,6 @@ ChannelProtocol::ResultOf::MethodA::MethodA(zx_handle_t _client, int64_t a,
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::MethodA ChannelProtocol::SyncClient::MethodA(
-    int64_t a, int64_t b) {
-  return ResultOf::MethodA(this->channel().get(), a, b);
-}
-
-ChannelProtocol::ResultOf::MethodA ChannelProtocol::Call::MethodA(
-    ::zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  return ResultOf::MethodA(_client_end->get(), a, b);
-}
-
 ChannelProtocol::UnownedResultOf::MethodA::MethodA(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, int64_t a, int64_t b) {
@@ -455,19 +398,6 @@ ChannelProtocol::UnownedResultOf::MethodA::MethodA(
   error_ = _request.error();
 }
 
-ChannelProtocol::UnownedResultOf::MethodA ChannelProtocol::SyncClient::MethodA(
-    ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
-  return UnownedResultOf::MethodA(this->channel().get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), a, b);
-}
-
-ChannelProtocol::UnownedResultOf::MethodA ChannelProtocol::Call::MethodA(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int64_t a, int64_t b) {
-  return UnownedResultOf::MethodA(_client_end->get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), a, b);
-}
-
 ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
                                             int64_t b) {
   MethodBOwnedRequest _request(0, a, b);
@@ -476,16 +406,6 @@ ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-ChannelProtocol::ResultOf::MethodB ChannelProtocol::SyncClient::MethodB(
-    int64_t a, int64_t b) {
-  return ResultOf::MethodB(this->channel().get(), a, b);
-}
-
-ChannelProtocol::ResultOf::MethodB ChannelProtocol::Call::MethodB(
-    ::zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  return ResultOf::MethodB(_client_end->get(), a, b);
 }
 
 ChannelProtocol::UnownedResultOf::MethodB::MethodB(
@@ -501,22 +421,6 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
   error_ = _request.error();
 }
 
-ChannelProtocol::UnownedResultOf::MethodB ChannelProtocol::SyncClient::MethodB(
-    ::fidl::BytePart _request_buffer, int64_t a, int64_t b,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MethodB(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      a, b, _response_buffer.data(), _response_buffer.capacity());
-}
-
-ChannelProtocol::UnownedResultOf::MethodB ChannelProtocol::Call::MethodB(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int64_t a, int64_t b, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MethodB(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), a,
-      b, _response_buffer.data(), _response_buffer.capacity());
-}
-
 ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
                                                       ::zx::socket& a) {
   MutateSocketOwnedRequest _request(0, a);
@@ -525,16 +429,6 @@ ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-ChannelProtocol::ResultOf::MutateSocket
-ChannelProtocol::SyncClient::MutateSocket(::zx::socket a) {
-  return ResultOf::MutateSocket(this->channel().get(), a);
-}
-
-ChannelProtocol::ResultOf::MutateSocket ChannelProtocol::Call::MutateSocket(
-    ::zx::unowned_channel _client_end, ::zx::socket a) {
-  return ResultOf::MutateSocket(_client_end->get(), a);
 }
 
 ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
@@ -548,25 +442,6 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
                                  _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-ChannelProtocol::UnownedResultOf::MutateSocket
-ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer,
-                                          ::zx::socket a,
-                                          ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MutateSocket(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      a, _response_buffer.data(), _response_buffer.capacity());
-}
-
-ChannelProtocol::UnownedResultOf::MutateSocket
-ChannelProtocol::Call::MutateSocket(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
-                                    ::zx::socket a,
-                                    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MutateSocket(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), a,
-      _response_buffer.data(), _response_buffer.capacity());
 }
 
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(int64_t a, int64_t b) {
@@ -1018,17 +893,6 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse
-WithAndWithoutRequestResponse::SyncClient::NoRequestNoResponse() {
-  return ResultOf::NoRequestNoResponse(this->channel().get());
-}
-
-WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse
-WithAndWithoutRequestResponse::Call::NoRequestNoResponse(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::NoRequestNoResponse(_client_end->get());
-}
-
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
     NoRequestEmptyResponse(zx_handle_t _client) {
   NoRequestEmptyResponseOwnedRequest _request(0);
@@ -1038,17 +902,6 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
           NoRequestEmptyResponseResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse
-WithAndWithoutRequestResponse::SyncClient::NoRequestEmptyResponse() {
-  return ResultOf::NoRequestEmptyResponse(this->channel().get());
-}
-
-WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse
-WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::NoRequestEmptyResponse(_client_end->get());
 }
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
@@ -1062,17 +915,6 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse
-WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse() {
-  return ResultOf::NoRequestWithResponse(this->channel().get());
-}
-
-WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse
-WithAndWithoutRequestResponse::Call::NoRequestWithResponse(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::NoRequestWithResponse(_client_end->get());
-}
-
 WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
     NoRequestWithResponse(zx_handle_t _client, uint8_t* _response_bytes,
                           uint32_t _response_byte_capacity)
@@ -1084,39 +926,12 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
-WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::NoRequestWithResponse(this->channel().get(),
-                                                _response_buffer.data(),
-                                                _response_buffer.capacity());
-}
-
-WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
-WithAndWithoutRequestResponse::Call::NoRequestWithResponse(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::NoRequestWithResponse(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
-}
-
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse::
     WithRequestNoResponse(zx_handle_t _client, const ::fidl::StringView& arg) {
   WithRequestNoResponseOwnedRequest _request(0, arg);
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse
-WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(
-    ::fidl::StringView arg) {
-  return ResultOf::WithRequestNoResponse(this->channel().get(), arg);
-}
-
-WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse
-WithAndWithoutRequestResponse::Call::WithRequestNoResponse(
-    ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  return ResultOf::WithRequestNoResponse(_client_end->get(), arg);
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
@@ -1130,23 +945,6 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse
-WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
-  return UnownedResultOf::WithRequestNoResponse(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      arg);
-}
-
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse
-WithAndWithoutRequestResponse::Call::WithRequestNoResponse(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::fidl::StringView arg) {
-  return UnownedResultOf::WithRequestNoResponse(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(),
-      arg);
-}
-
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
     WithRequestEmptyResponse(zx_handle_t _client,
                              const ::fidl::StringView& arg) {
@@ -1157,18 +955,6 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
           WithRequestEmptyResponseResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
-WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
-    ::fidl::StringView arg) {
-  return ResultOf::WithRequestEmptyResponse(this->channel().get(), arg);
-}
-
-WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
-WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(
-    ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  return ResultOf::WithRequestEmptyResponse(_client_end->get(), arg);
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
@@ -1187,24 +973,6 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
-WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WithRequestEmptyResponse(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      arg, _response_buffer.data(), _response_buffer.capacity());
-}
-
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
-WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::fidl::StringView arg, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WithRequestEmptyResponse(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(),
-      arg, _response_buffer.data(), _response_buffer.capacity());
-}
-
 WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
     WithRequestWithResponse(zx_handle_t _client, const ::fidl::StringView& arg)
     : bytes_(std::make_unique<
@@ -1214,18 +982,6 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
                                  bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
-WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(
-    ::fidl::StringView arg) {
-  return ResultOf::WithRequestWithResponse(this->channel().get(), arg);
-}
-
-WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
-WithAndWithoutRequestResponse::Call::WithRequestWithResponse(
-    ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  return ResultOf::WithRequestWithResponse(_client_end->get(), arg);
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
@@ -1241,24 +997,6 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
                                  _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
-WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WithRequestWithResponse(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      arg, _response_buffer.data(), _response_buffer.capacity());
-}
-
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
-WithAndWithoutRequestResponse::Call::WithRequestWithResponse(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::fidl::StringView arg, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WithRequestWithResponse(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(),
-      arg, _response_buffer.data(), _response_buffer.capacity());
 }
 
 ::fidl::Result
@@ -1979,16 +1717,6 @@ WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ResponseAsStruct
-WithErrorSyntax::SyncClient::ResponseAsStruct() {
-  return ResultOf::ResponseAsStruct(this->channel().get());
-}
-
-WithErrorSyntax::ResultOf::ResponseAsStruct
-WithErrorSyntax::Call::ResponseAsStruct(::zx::unowned_channel _client_end) {
-  return ResultOf::ResponseAsStruct(_client_end->get());
-}
-
 WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
@@ -1998,21 +1726,6 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
                                  _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithErrorSyntax::UnownedResultOf::ResponseAsStruct
-WithErrorSyntax::SyncClient::ResponseAsStruct(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ResponseAsStruct(this->channel().get(),
-                                           _response_buffer.data(),
-                                           _response_buffer.capacity());
-}
-
-WithErrorSyntax::UnownedResultOf::ResponseAsStruct
-WithErrorSyntax::Call::ResponseAsStruct(::zx::unowned_channel _client_end,
-                                        ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ResponseAsStruct(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
@@ -2026,16 +1739,6 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ErrorAsPrimitive
-WithErrorSyntax::SyncClient::ErrorAsPrimitive() {
-  return ResultOf::ErrorAsPrimitive(this->channel().get());
-}
-
-WithErrorSyntax::ResultOf::ErrorAsPrimitive
-WithErrorSyntax::Call::ErrorAsPrimitive(::zx::unowned_channel _client_end) {
-  return ResultOf::ErrorAsPrimitive(_client_end->get());
-}
-
 WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
@@ -2047,21 +1750,6 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
   error_ = _request.error();
 }
 
-WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
-WithErrorSyntax::SyncClient::ErrorAsPrimitive(
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsPrimitive(this->channel().get(),
-                                           _response_buffer.data(),
-                                           _response_buffer.capacity());
-}
-
-WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
-WithErrorSyntax::Call::ErrorAsPrimitive(::zx::unowned_channel _client_end,
-                                        ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsPrimitive(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
-}
-
 WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
   ErrorAsEnumOwnedRequest _request(0);
   _request.GetFidlMessage().Call(
@@ -2069,16 +1757,6 @@ WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithErrorSyntax::ResultOf::ErrorAsEnum
-WithErrorSyntax::SyncClient::ErrorAsEnum() {
-  return ResultOf::ErrorAsEnum(this->channel().get());
-}
-
-WithErrorSyntax::ResultOf::ErrorAsEnum WithErrorSyntax::Call::ErrorAsEnum(
-    ::zx::unowned_channel _client_end) {
-  return ResultOf::ErrorAsEnum(_client_end->get());
 }
 
 WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
@@ -2090,20 +1768,6 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
                                  _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-WithErrorSyntax::UnownedResultOf::ErrorAsEnum
-WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsEnum(this->channel().get(),
-                                      _response_buffer.data(),
-                                      _response_buffer.capacity());
-}
-
-WithErrorSyntax::UnownedResultOf::ErrorAsEnum
-WithErrorSyntax::Call::ErrorAsEnum(::zx::unowned_channel _client_end,
-                                   ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsEnum(
-      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithErrorSyntax::ResultOf::ResponseAsStruct

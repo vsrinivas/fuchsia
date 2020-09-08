@@ -44,21 +44,5 @@ const fragmentSyncRequestManagedTmpl = `
   status_ = _request.status();
   error_ = _request.error();
 }
-
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
-  {{- template "SyncRequestManagedMethodArguments" . }}) {
-    return ResultOf::{{ .Name }}(this->channel().get()
-    {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-}
-{{- end }}
-
-{{- define "StaticCallSyncRequestManagedMethodDefinition" }}
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
-  {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
-  return ResultOf::{{ .Name }}(_client_end->get()
-    {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-}
 {{- end }}
 `

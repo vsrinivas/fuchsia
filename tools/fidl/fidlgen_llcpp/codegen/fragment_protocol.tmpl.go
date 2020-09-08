@@ -553,14 +553,27 @@ class {{ .Name }} final {
     //{{ . }}
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
-    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }});
+    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }}) {
+      return ResultOf::{{ .Name }}(_client_end->get()
+        {{- template "CommaPassthroughMessageParams" .Request -}}
+        );
+    }
 {{ "" }}
       {{- if or .Request .Response }}
         {{- range .DocComments }}
     //{{ . }}
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }});
+    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
+      return UnownedResultOf::{{ .Name }}(_client_end->get()
+        {{- if .Request -}}
+          , _request_buffer.data(), _request_buffer.capacity()
+        {{- end -}}
+          {{- template "CommaPassthroughMessageParams" .Request -}}
+        {{- if .HasResponse -}}
+          , _response_buffer.data(), _response_buffer.capacity()
+        {{- end -}});
+    }
       {{- end }}
 {{ "" }}
     {{- end }}
@@ -591,14 +604,26 @@ class {{ .Name }} final {
     //{{ . }}
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
-    ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestManagedMethodArguments" . }});
+    ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestManagedMethodArguments" . }}) {
+      return ResultOf::{{ .Name }}(this->channel().get()
+        {{- template "CommaPassthroughMessageParams" .Request -}});
+    }
 {{ "" }}
       {{- if or .Request .Response }}
         {{- range .DocComments }}
     //{{ . }}
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }});
+    UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
+      return UnownedResultOf::{{ .Name }}(this->channel().get()
+        {{- if .Request -}}
+          , _request_buffer.data(), _request_buffer.capacity()
+        {{- end -}}
+          {{- template "CommaPassthroughMessageParams" .Request -}}
+        {{- if .HasResponse -}}
+          , _response_buffer.data(), _response_buffer.capacity()
+        {{- end -}});
+    }
       {{- end }}
 {{ "" }}
     {{- end }}
@@ -777,13 +802,9 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{- range FilterMethodsWithoutReqs .Methods -}}
 {{ "" }}
     {{- template "SyncRequestManagedMethodDefinition" . }}
-{{ "" }}
-  {{- template "StaticCallSyncRequestManagedMethodDefinition" . }}
   {{- if or .Request .Response }}
 {{ "" }}
     {{- template "SyncRequestCallerAllocateMethodDefinition" . }}
-{{ "" }}
-    {{- template "StaticCallSyncRequestCallerAllocateMethodDefinition" . }}
   {{- end }}
 {{ "" }}
 {{- end }}

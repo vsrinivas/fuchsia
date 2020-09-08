@@ -24,16 +24,6 @@ ExampleProtocol::ResultOf::Method::Method(zx_handle_t _client,
   error_ = _request.error();
 }
 
-ExampleProtocol::ResultOf::Method ExampleProtocol::SyncClient::Method(
-    ::llcpp::exampleusing::Empty arg) {
-  return ResultOf::Method(this->channel().get(), arg);
-}
-
-ExampleProtocol::ResultOf::Method ExampleProtocol::Call::Method(
-    ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg) {
-  return ResultOf::Method(_client_end->get(), arg);
-}
-
 ExampleProtocol::UnownedResultOf::Method::Method(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, ::llcpp::exampleusing::Empty& arg) {
@@ -41,19 +31,6 @@ ExampleProtocol::UnownedResultOf::Method::Method(
   _request.GetFidlMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-ExampleProtocol::UnownedResultOf::Method ExampleProtocol::SyncClient::Method(
-    ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg) {
-  return UnownedResultOf::Method(this->channel().get(), _request_buffer.data(),
-                                 _request_buffer.capacity(), arg);
-}
-
-ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::llcpp::exampleusing::Empty arg) {
-  return UnownedResultOf::Method(_client_end->get(), _request_buffer.data(),
-                                 _request_buffer.capacity(), arg);
 }
 
 ::fidl::Result ExampleProtocol::ClientImpl::Method(

@@ -27,16 +27,6 @@ SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
   error_ = _request.error();
 }
 
-SimpleProtocol::ResultOf::Add SimpleProtocol::SyncClient::Add(int32_t a,
-                                                              int32_t b) {
-  return ResultOf::Add(this->channel().get(), a, b);
-}
-
-SimpleProtocol::ResultOf::Add SimpleProtocol::Call::Add(
-    ::zx::unowned_channel _client_end, int32_t a, int32_t b) {
-  return ResultOf::Add(_client_end->get(), a, b);
-}
-
 SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
                                           uint8_t* _request_bytes,
                                           uint32_t _request_byte_capacity,
@@ -49,22 +39,6 @@ SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
                                  _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
-}
-
-SimpleProtocol::UnownedResultOf::Add SimpleProtocol::SyncClient::Add(
-    ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
-    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Add(
-      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
-      a, b, _response_buffer.data(), _response_buffer.capacity());
-}
-
-SimpleProtocol::UnownedResultOf::Add SimpleProtocol::Call::Add(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int32_t a, int32_t b, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Add(
-      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), a,
-      b, _response_buffer.data(), _response_buffer.capacity());
 }
 
 SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,

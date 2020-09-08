@@ -503,14 +503,21 @@ class SimpleProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Add Add(::zx::unowned_channel _client_end, int32_t a,
-                             int32_t b);
+                             int32_t b) {
+      return ResultOf::Add(_client_end->get(), a, b);
+    }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Add Add(::zx::unowned_channel _client_end,
                                     ::fidl::BytePart _request_buffer, int32_t a,
                                     int32_t b,
-                                    ::fidl::BytePart _response_buffer);
+                                    ::fidl::BytePart _response_buffer) {
+      return UnownedResultOf::Add(_client_end->get(), _request_buffer.data(),
+                                  _request_buffer.capacity(), a, b,
+                                  _response_buffer.data(),
+                                  _response_buffer.capacity());
+    }
   };
 
   class SyncClient final {
@@ -527,12 +534,19 @@ class SimpleProtocol final {
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::Add Add(int32_t a, int32_t b);
+    ResultOf::Add Add(int32_t a, int32_t b) {
+      return ResultOf::Add(this->channel().get(), a, b);
+    }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Add Add(::fidl::BytePart _request_buffer, int32_t a,
-                             int32_t b, ::fidl::BytePart _response_buffer);
+                             int32_t b, ::fidl::BytePart _response_buffer) {
+      return UnownedResultOf::Add(this->channel().get(), _request_buffer.data(),
+                                  _request_buffer.capacity(), a, b,
+                                  _response_buffer.data(),
+                                  _response_buffer.capacity());
+    }
 
    private:
     ::zx::channel channel_;
