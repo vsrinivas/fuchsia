@@ -498,7 +498,9 @@ void DebuggedProcess::UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::Addr
 
 void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,
                                       DebuggedThread* thread) {
-  PruneStepOverQueue();
+  // Passing the thread will delete any previous queuing of the same thread. Otherwise the thread
+  // will be recusrsively waiting for itself and can never make progress.
+  PruneStepOverQueue(thread);
 
   StepOverTicket ticket = {};
   ticket.process_breakpoint = process_breakpoint->GetWeakPtr();
@@ -535,9 +537,9 @@ void DebuggedProcess::OnBreakpointFinishedSteppingOver() {
     // Pop the previous ticket (the post-complete action is already set with the deferred action).
     step_over_queue_.pop_front();
 
-    // If there are still elements in the queue, we execute the next one.
-    // Since the queue is pruned,
-    PruneStepOverQueue();
+    // If there are still elements in the queue, we execute the next one (the queue is pruned so we
+    // know the next one is valid).
+    PruneStepOverQueue(nullptr);
     if (!step_over_queue_.empty()) {
       auto& ticket = step_over_queue_.front();
       ticket.process_breakpoint->ExecuteStepOver(ticket.thread.get());
@@ -731,15 +733,17 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
   }
 }
 
-void DebuggedProcess::PruneStepOverQueue() {
-  std::deque<StepOverTicket> pruned_tickets;
+void DebuggedProcess::PruneStepOverQueue(DebuggedThread* optional_thread) {
+  std::deque<StepOverTicket> good_tickets;
   for (auto& ticket : step_over_queue_) {
     if (!ticket.is_valid())
       continue;
-    pruned_tickets.push_back(std::move(ticket));
+    if (optional_thread && ticket.thread && ticket.thread.get() == optional_thread)
+      continue;  // Delete everything from this thread.
+    good_tickets.push_back(std::move(ticket));
   }
 
-  step_over_queue_ = std::move(pruned_tickets);
+  step_over_queue_ = std::move(good_tickets);
 }
 
 zx_status_t DebuggedProcess::RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address) {

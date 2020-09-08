@@ -718,6 +718,49 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 }
 
+// It's possible for a thread to try to step over the same breakpoint twice. This normally indicates
+// an error removing the breakpoint to step over it. We must not enqueue the same thread twice in
+// this error case or it will be forever stuck waiting for itself.
+TEST(ProcessBreakpoint, RecursiveStep) {
+  TestProcessDelegate process_delegate;
+
+  Breakpoint main_breakpoint(&process_delegate);
+  debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
+  main_breakpoint.SetSettings(settings);
+
+  constexpr zx_koid_t process_koid = 0x1234;
+  const std::string process_name = "process";
+  MockProcess process(nullptr, process_koid, process_name);
+
+  process.mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
+
+  constexpr zx_koid_t kThreadKoid = 1;
+  MockThread* mock_thread = process.AddThread(kThreadKoid);
+
+  SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
+  ASSERT_EQ(ZX_OK, bp.Init());
+
+  // The breakpoint should be installed.
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
+
+  // Hit the breakpoint the first time.
+  bp.BeginStepOver(mock_thread);
+
+  // There should be one enqueued step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread);
+
+  // Recursively hits the same breakpoint.
+  bp.BeginStepOver(mock_thread);
+
+  // There should still just be one enqueued step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread);
+}
+
 // This also tests registration and unregistration of ProcessBreakpoints via the Breakpoint object.
 TEST(ProcessBreakpoint, HitCount) {
   TestProcessDelegate process_delegate;

@@ -353,6 +353,7 @@ void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
   if (client_suspend_handle_) {
     // Normally the single-step flat is set by the exception resumption code, but if we're resuming
     // from a pause that will do nothing so set here.
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming from client suspend.";
     SetSingleStepForRunMode();
     client_suspend_handle_.reset();
   }
@@ -361,7 +362,7 @@ void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
 void DebuggedThread::InternalResumeException() {
   if (!in_exception()) {
     DEBUG_LOG(Thread) << ThreadPreamble(this)
-                      << "Resuming from exception but there is no exception, skipping.";
+                      << "Resuming from exception but there is no exception.";
     return;
   }
 

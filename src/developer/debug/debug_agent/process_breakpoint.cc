@@ -86,6 +86,8 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
 }
 
 void ProcessBreakpoint::BeginStepOver(DebuggedThread* thread) {
+  // Note that this request may get silently dropped in some edge cases (see EnqueueStepOver
+  // comment) so don't keep any state about this request.
   process_->EnqueueStepOver(this, thread);
 }
 

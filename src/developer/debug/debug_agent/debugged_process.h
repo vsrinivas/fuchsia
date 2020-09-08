@@ -136,6 +136,15 @@ class DebuggedProcess : public ProcessHandleObserver {
   // Enqueuing the breakpoint does not mean that the step over begins immediately, but rather the
   // process will call the |ExecuteStepOver| method on the breakpoint once its turn has come up in
   // the queue.
+  //
+  // In some error cases this might happen twice for the same thread. For example, if there is an
+  // error clearing the breakpoint instruction, attempting to clear it and then single-step it will
+  // just hit the same breakpoint again and the "step over" will never complete.
+  //
+  // If this happens the original "step over" request will be silently dropped. Otherwise, the
+  // step queue will be recursively waiting for itself and can never continue. All other breakpoints
+  // will still be waiting behind this failed step, but at least it could theoretically continue if
+  // the breakpoint clearing works in a future try.
   void EnqueueStepOver(ProcessBreakpoint* process_breakpoint, DebuggedThread* thread);
 
   // Called by the currently stepping over breakpoint when it's done. It will execute the next
@@ -144,6 +153,7 @@ class DebuggedProcess : public ProcessHandleObserver {
   void OnBreakpointFinishedSteppingOver();
 
   // Queue of breakpoints that are currently being stepped over.
+  //
   // As stepping over requires suspending all the threads, doing multiple at a time has a fair
   // chance of introducing deadlocks. We use this queue to serialize the stepping over, so only
   // one process breakpoint is being stepped over at a time.
@@ -197,10 +207,12 @@ class DebuggedProcess : public ProcessHandleObserver {
   // 3. Unbind the exception port.
   void DetachFromProcess();
 
-  // Deletes any elements in the step over queue that are no longer valid.
-  // This happens when either the thread or the breakpoint went away while the ticket was waiting
-  // within the queue.
-  void PruneStepOverQueue();
+  // Deletes any elements in the step over queue that are no longer valid. This happens when either
+  // the thread or the breakpoint went away while the ticket was waiting within the queue.
+  //
+  // If the |thread| parameter is non-null, ALL requests from that thread will be deleted in
+  // addition to the normal pruning behavior.
+  void PruneStepOverQueue(DebuggedThread* optional_thread);
 
   // Attempts to load the debug_state_ value from the
   // ZX_PROP_PROCESS_DEBUG_ADDR of the debugged process. Returns true if it
