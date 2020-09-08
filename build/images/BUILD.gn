@@ -1495,6 +1495,16 @@ group("record_filesystem_sizes") {
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
 
+# Flash scripts use a different recovery target depending on if it's zedboot or
+# a separate recovery image.
+# Once we properly pull image metadata from images.json instead of hardcoding it
+# into the generated script we won't need this anymore.
+recovery_is_zedboot = false
+if (get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info("zedboot", "label_with_toolchain")) {
+  recovery_is_zedboot = true
+}
+
 action("flash_script") {
   # Required for dependency on testonly firmware image targets.
   testonly = true
@@ -1503,14 +1513,22 @@ action("flash_script") {
   outputs = [ "$root_out_dir/flash.sh" ]
 
   if (custom_signing_script != "") {
-    image = "$root_out_dir/zedboot.zbi.signed"
+    image_suffix = "zbi.signed"
   } else {
-    image = "$root_out_dir/zedboot.zbi"
+    image_suffix = "zbi"
+  }
+  image = "$root_out_dir/fuchsia.${image_suffix}"
+
+  if (recovery_is_zedboot) {
+    recovery_image = "$root_out_dir/zedboot.${image_suffix}"
+  } else {
+    recovery_image = "$root_out_dir/recovery.zbi"
   }
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
   args = [
     "--image=" + rebase_path(image, root_build_dir),
+    "--recovery-image=" + rebase_path(recovery_image, root_build_dir),
     "--output=" + rebase_path(outputs[0], root_build_dir),
     "--zircon-a=${zircon_a_partition}",
     "--zircon-b=${zircon_b_partition}",
@@ -1533,6 +1551,15 @@ action("flash_script") {
     deps += [ ":${info.name}" ]
   }
 
+  if (fvm_partition != "") {
+    image_path = get_target_outputs(":fvm.fastboot.blk")
+    args += [
+      "--fvm-image=" + rebase_path(image_path[0], root_build_dir),
+      "--fvm=${fvm_partition}",
+    ]
+    deps += [ ":fvm.fastboot.blk" ]
+  }
+
   metadata = {
     images = [
       {
@@ -1552,13 +1579,22 @@ action("flash_script_archive") {
   outputs = [ "$root_out_dir/flash-archive.sh" ]
 
   if (custom_signing_script != "") {
-    image = "zircon-r.signed.zbi.signed"
+    image_suffix = "signed.zbi.signed"
   } else {
-    image = "zircon-r.zbi"
+    image_suffix = "zbi"
+  }
+  image = "zircon-a.${image_suffix}"
+
+  if (recovery_is_zedboot) {
+    recovery_image = "zircon-r.${image_suffix}"
+  } else {
+    # Archived recovery image alway uses .zbi suffix whether signed or not.
+    recovery_image = "zircon-r.zbi"
   }
 
   args = [
     "--image=${image}",
+    "--recovery-image=${recovery_image}",
     "--output=" + rebase_path(outputs[0], root_build_dir),
     "--zircon-a=${zircon_a_partition}",
     "--zircon-b=${zircon_b_partition}",
@@ -1574,6 +1610,14 @@ action("flash_script_archive") {
 
   foreach(info, firmware_info) {
     args += [ "--firmware=${info.partition}:${info.out_path}" ]
+  }
+
+  if (fvm_partition != "") {
+    image_path = get_target_outputs(":fvm.fastboot.blk")
+    args += [
+      "--fvm-image=" + get_path_info(image_path[0], "file"),
+      "--fvm=${fvm_partition}",
+    ]
   }
 }
 

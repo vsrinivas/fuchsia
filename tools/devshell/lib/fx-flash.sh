@@ -31,8 +31,11 @@ function fx-flash {
     return 1
   fi
 
+  # TODO(57479): add support for flashing SSH keys so we can flash the full
+  # image if it's available. Until then, we always have to flash --recovery
+  # and then use zedboot to re-flash with SSH keys.
   if [[ ! -z "${gb_device_ip}" ]]; then
-    "./flash.sh" "-s" "udp:${gb_device_ip}"
+    "./flash.sh" "--recovery" "-s" "udp:${gb_device_ip}"
   else
     # Process traditional fastboot over USB.
     num_devices=$(fastboot devices | wc -l)
@@ -49,6 +52,6 @@ function fx-flash {
       fastboot_args=("-s" "${serial}")
     fi
 
-    "./flash.sh" "${fastboot_args[@]}"
+    "./flash.sh" "--recovery" "${fastboot_args[@]}"
   fi
 }

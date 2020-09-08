@@ -3,7 +3,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# The generated script behavior depends on whether the FVM is flashable,
+# as indicated by the --fvm partition arg.
+#
+# If --fvm is present, the resulting script will flash the full OS:
+#   * Zircon image to A/B slots
+#   * recovery image to R slot
+#   * FVM image to the fvm partition
+#
+# Otherwise, the script will instead flash the recovery image to all slots,
+# since this will normally be a Zedboot image which does not use an FVM and
+# allows the user to then pave the full OS.
+#
+# The script also supports a "--recovery" arg which always flashes recovery
+# images whether the FVM is available or not.
+
 ZIRCON_IMAGE=
+RECOVERY_IMAGE=
+FVM_IMAGE=
 OUTPUT=
 ZIRCON_A_PARTITION=
 ZIRCON_B_PARTITION=
@@ -11,6 +28,7 @@ ZIRCON_R_PARTITION=
 VBMETA_A_PARTITION=
 VBMETA_B_PARTITION=
 VBMETA_R_PARTITION=
+FVM_PARTITION=
 ACTIVE_PARTITION=
 PRODUCT=
 PRE_ERASE_FLASH=
@@ -30,6 +48,14 @@ do
 case $i in
     --image=*)
     ZIRCON_IMAGE="${i#*=}"
+    shift
+    ;;
+    --recovery-image=*)
+    RECOVERY_IMAGE="${i#*=}"
+    shift
+    ;;
+    --fvm-image=*)
+    FVM_IMAGE="${i#*=}"
     shift
     ;;
     --output=*)
@@ -60,6 +86,10 @@ case $i in
     VBMETA_R_PARTITION="${i#*=}"
     shift
     ;;
+    --fvm=*)
+    FVM_PARTITION="${i#*=}"
+    shift
+    ;;
     --active=*)
     ACTIVE_PARTITION="${i#*=}"
     shift
@@ -83,12 +113,42 @@ case $i in
 esac
 done
 
-VBMETA_IMAGE="${ZIRCON_IMAGE%%.*}.vbmeta"
+# If we can't flash the FVM, put the recovery image in all slots.
+if [[ -z "${FVM_PARTITION}" ]]; then
+  ZIRCON_IMAGE="${RECOVERY_IMAGE}"
+fi
 
+ZIRCON_VBMETA="${ZIRCON_IMAGE%%.*}.vbmeta"
+RECOVERY_VBMETA="${RECOVERY_IMAGE%%.*}.vbmeta"
+
+# Support a single --recovery flag which flashes recovery to all slots even
+# if the full image is available.
 cat > "${OUTPUT}" << EOF
 #!/bin/sh
 DIR="\$(dirname "\$0")"
 set -e
+
+ZIRCON_IMAGE=${ZIRCON_IMAGE}
+ZIRCON_VBMETA=${ZIRCON_VBMETA}
+RECOVERY_IMAGE=${RECOVERY_IMAGE}
+RECOVERY_VBMETA=${RECOVERY_VBMETA}
+RECOVERY=
+
+for i in "\$@"
+do
+case \$i in
+    --recovery)
+    RECOVERY=true
+    ZIRCON_IMAGE=${RECOVERY_IMAGE}
+    ZIRCON_VBMETA=${RECOVERY_VBMETA}
+    shift
+    ;;
+    *)
+    break
+    ;;
+esac
+done
+
 FASTBOOT_ARGS="\$@"
 EOF
 
@@ -112,27 +172,35 @@ for firmware in "${FIRMWARE[@]}"; do
 done
 if [[ ! -z "${ZIRCON_A_PARTITION}" ]]; then
   erase_raw_flash ${ZIRCON_A_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_A_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_A_PARTITION}" \"\${DIR}/\${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${ZIRCON_B_PARTITION}" ]]; then
   erase_raw_flash ${ZIRCON_B_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_B_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_B_PARTITION}" \"\${DIR}/\${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${ZIRCON_R_PARTITION}" ]]; then
   erase_raw_flash ${ZIRCON_R_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_R_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_R_PARTITION}" \"\${DIR}/\${RECOVERY_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${VBMETA_A_PARTITION}" ]]; then
   erase_raw_flash ${VBMETA_A_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_A_PARTITION}" \"\${DIR}/${VBMETA_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_A_PARTITION}" \"\${DIR}/\${ZIRCON_VBMETA}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${VBMETA_B_PARTITION}" ]]; then
   erase_raw_flash ${VBMETA_B_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_B_PARTITION}" \"\${DIR}/${VBMETA_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_B_PARTITION}" \"\${DIR}/\${ZIRCON_VBMETA}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${VBMETA_R_PARTITION}" ]]; then
   erase_raw_flash ${VBMETA_R_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_R_PARTITION}" \"\${DIR}/${VBMETA_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_R_PARTITION}" \"\${DIR}/\${RECOVERY_VBMETA}\" "${extra_args[@]}" >> "${OUTPUT}"
+fi
+if [[ ! -z "${FVM_PARTITION}" ]]; then
+  # The FVM partition takes a significant amount of time to flash (40s+), so
+  # it's worth skipping if we're only flashing recovery and don't need it.
+  echo "if [[ -z \"\${RECOVERY}\" ]]; then" >> "${OUTPUT}"
+  erase_raw_flash ${FVM_PARTITION}
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${FVM_PARTITION}" \"\${DIR}/${FVM_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "fi" >> "${OUTPUT}"
 fi
 if [[ ! -z "${ACTIVE_PARTITION}" ]]; then
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" set_active "${ACTIVE_PARTITION}" >> "${OUTPUT}"

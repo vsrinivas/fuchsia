@@ -65,8 +65,12 @@ declare_args() {
   # A list of labels for meta packages to be included in the monolith.
   meta_package_labels = []
 
-  # Arguments to fx flash script (along with any `firmware_prebuilts` which
+  # Arguments to `fx flash` script (along with any `firmware_prebuilts` which
   # specify a partition).
+  #
+  # If `fvm_partition` is provided, the flash script will flash the full OS,
+  # recovery + Zircon + FVM. Otherwise, it will flash the recovery image to all
+  # slots, which doesn't require the FVM.
   zircon_a_partition = ""
   zircon_b_partition = ""
   zircon_r_partition = ""
