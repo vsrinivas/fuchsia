@@ -2233,7 +2233,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
         case ZX_ERR_TIMED_OUT:
           break;
         case ZX_OK:
-          if (pending & POLLHUP) {
+          if (pending & POLLERR) {
             status = ZX_ERR_CONNECTION_RESET;
             break;
           }
@@ -2276,7 +2276,7 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
         case ZX_ERR_TIMED_OUT:
           break;
         case ZX_OK:
-          if (pending & POLLHUP) {
+          if (pending & POLLERR) {
             status = ZX_ERR_CONNECTION_RESET;
             break;
           }
