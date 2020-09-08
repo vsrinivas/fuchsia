@@ -333,6 +333,9 @@ __BEGIN_CDECLS
 #define PDEV_VID_SILERGY            0x19
 #define PDEV_PID_SILERGY_SYBUCK     0X01
 
+// FocalTech
+#define PDEV_VID_FOCALTECH           0x20
+#define PDEV_DID_FOCALTECH_FT8201     0x1
 // clang-format on
 
 __END_CDECLS

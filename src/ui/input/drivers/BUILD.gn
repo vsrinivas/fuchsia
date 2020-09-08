@@ -6,6 +6,7 @@ group("drivers") {
   deps = [
     "cypress",
     "focaltech",
+    "ft8201",
     "goodix",
     "hid",
     "hid-buttons",
@@ -25,6 +26,7 @@ group("tests") {
   deps = [
     "bma253:tests",
     "cypress:tests",
+    "ft8201:tests",
     "goodix:tests",
     "hid:tests",
     "hid-buttons:tests",
