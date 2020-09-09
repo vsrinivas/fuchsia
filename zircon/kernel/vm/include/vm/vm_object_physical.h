@@ -33,9 +33,15 @@ class VmObjectPhysical final : public VmObject {
       // This function reaches into the created child, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  ChildType child_type() const override { return ChildType::kNotChild; }
+  ChildType child_type() const override {
+    return is_slice() ? ChildType::kSlice : ChildType::kNotChild;
+  }
   bool is_contiguous() const override { return true; }
-  uint64_t parent_user_id() const override { return 0u; }
+  bool is_slice() const { return is_slice_; }
+  uint64_t parent_user_id() const override {
+    Guard<Mutex> guard{&lock_};
+    return parent_user_id_;
+  }
 
   uint64_t size() const override { return size_; }
 
@@ -53,7 +59,7 @@ class VmObjectPhysical final : public VmObject {
 
  private:
   // private constructor (use Create())
-  VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size);
+  VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size, bool is_slice_);
 
   // private destructor, only called from refptr
   ~VmObjectPhysical() override;
@@ -64,6 +70,8 @@ class VmObjectPhysical final : public VmObject {
   // members
   const uint64_t size_ = 0;
   const paddr_t base_ = 0;
+  const bool is_slice_ = false;
+  uint64_t parent_user_id_ TA_GUARDED(lock_) = 0;
   uint32_t mapping_cache_flags_ TA_GUARDED(lock_) = 0;
 
   // parent pointer (may be null)

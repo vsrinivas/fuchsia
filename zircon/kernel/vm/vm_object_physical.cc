@@ -23,8 +23,9 @@
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
-VmObjectPhysical::VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size)
-    : VmObject(ktl::move(lock)), size_(size), base_(base) {
+VmObjectPhysical::VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size,
+                                   bool is_slice)
+    : VmObject(ktl::move(lock)), size_(size), base_(base), is_slice_(is_slice) {
   LTRACEF("%p, size %#" PRIx64 "\n", this, size_);
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
@@ -63,7 +64,8 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(ktl::move(lock), base, size));
+  auto vmo = fbl::AdoptRef<VmObject>(
+      new (&ac) VmObjectPhysical(ktl::move(lock), base, size, /*is_slice=*/false));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -113,8 +115,8 @@ zx_status_t VmObjectPhysical::CreateChildSlice(uint64_t offset, uint64_t size, b
   // To mimic a slice we can just create a physical vmo with the correct region. This works since
   // nothing is resizable and the slice must be wholly contained.
   fbl::AllocChecker ac;
-  auto vmo =
-      fbl::AdoptRef<VmObjectPhysical>(new (&ac) VmObjectPhysical(lock_ptr_, base_ + offset, size));
+  auto vmo = fbl::AdoptRef<VmObjectPhysical>(
+      new (&ac) VmObjectPhysical(lock_ptr_, base_ + offset, size, /*is_slice=*/true));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -127,6 +129,8 @@ zx_status_t VmObjectPhysical::CreateChildSlice(uint64_t offset, uint64_t size, b
     vmo->mapping_cache_flags_ = mapping_cache_flags_;
     // Initialize parent
     vmo->parent_ = fbl::RefPtr(this);
+    // Initialize parent user id.
+    vmo->parent_user_id_ = user_id_locked();
 
     // add the new vmo as a child.
     notify_one_child = AddChildLocked(vmo.get());

@@ -1064,9 +1064,21 @@ TEST(VmoTestCase, PhysicalSlice) {
   // Switch to a cached policy as we are operating on real memory and do not need to be uncached.
   EXPECT_OK(phys.vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
 
+  zx_info_vmo_t phys_vmo_info;
+  ASSERT_OK(
+      phys.vmo.get_info(ZX_INFO_VMO, &phys_vmo_info, sizeof(phys_vmo_info), nullptr, nullptr));
+  ASSERT_NE(phys_vmo_info.koid, 0ul);
+  ASSERT_EQ(phys_vmo_info.parent_koid, 0ul);
+
   // Create a slice of the second page.
   zx::vmo slice_vmo;
   EXPECT_OK(phys.vmo.create_child(ZX_VMO_CHILD_SLICE, size / 2, size / 2, &slice_vmo));
+
+  // Sliced VMO should have correct parent_koid in its VMO info struct.
+  zx_info_vmo_t slice_vmo_info;
+  ASSERT_OK(
+      slice_vmo.get_info(ZX_INFO_VMO, &slice_vmo_info, sizeof(slice_vmo_info), nullptr, nullptr));
+  ASSERT_EQ(slice_vmo_info.parent_koid, phys_vmo_info.koid);
 
   // Map both VMOs in so we can access them.
   uintptr_t parent_vaddr;
