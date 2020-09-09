@@ -168,8 +168,23 @@ test_package("guest_interaction_tests") {
     {
       name = "client_operation_test"
 
-      # TODO(48557): Reenable once gRPC leaks are fixed.
-      environments = nuc_env_fails_on_asan
+      # TODO(47487): Switch to [ nuc_env ] once gRPC leaks are fixed.
+      if (nuc_env_fails_on_asan != []) {
+        nuc_scope = nuc_env_fails_on_asan[0]
+
+        environments = [
+          {
+            dimensions = nuc_scope.dimensions
+
+            # TODO(59639): This test appears to flake roughly once per month during the
+            # Client_Exec_ImmediateFailure test.
+            tags = [ "flaky" ]
+          },
+        ]
+      } else {
+        # Disable this test for all non-NUC environments.
+        environments = []
+      }
     },
     {
       name = "server_operation_test"
