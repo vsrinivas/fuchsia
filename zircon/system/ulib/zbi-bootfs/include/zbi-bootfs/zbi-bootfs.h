@@ -27,11 +27,8 @@ class __EXPORT ZbiBootfsParser {
  public:
   virtual ~ZbiBootfsParser() {}
 
-  // Maintain function for soft transition
-  virtual zx_status_t Init(const char* input, size_t byte_offset);
-
   // This loads the ZBI image from "input" to a vmo.
-  virtual zx_status_t Init(const char* input) { return Init(input, 0); }
+  virtual zx_status_t Init(const char* input);
 
   // This parses the VMO for "filename" and writes its contents to "vmo_out"
   virtual zx_status_t ProcessZbi(const char* filename, Entry* entry);

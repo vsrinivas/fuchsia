@@ -231,7 +231,7 @@ __EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* en
   return ZX_OK;
 }
 
-__EXPORT zx_status_t ZbiBootfsParser::Init(const char* input, size_t byte_offset) {
+__EXPORT zx_status_t ZbiBootfsParser::Init(const char* input) {
   zx_status_t status = LoadZbi(input);
   if (status != ZX_OK) {
     fprintf(stderr, "Error loading ZBI. Error code: %s\n", zx_status_get_string(status));
