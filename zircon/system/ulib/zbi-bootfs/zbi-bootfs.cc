@@ -20,6 +20,9 @@
 #include <zircon/types.h>
 
 #include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <string>
 
 #include <fbl/macros.h>
@@ -32,6 +35,8 @@
 #include "src/lib/bootfs/parser.h"
 
 namespace zbi_bootfs {
+
+const uint32_t kMaxDecompressedZbiSize = (1 << 30);  // 1 GiB
 
 namespace {
 zx_status_t FindEntry(zx::unowned_vmo vmo, const char* filename, zbi_bootfs_dirent_t* entry) {
@@ -106,7 +111,7 @@ zx_status_t ZbiBootfsParser::FindBootZbi(uint32_t* read_offset, zbi_header_t* he
   printf("ZBI Type   = %08x\n", container_header.type);
   printf("ZBI Magic  = %08x\n", container_header.magic);
   printf("ZBI Extra  = %08x\n", container_header.extra);
-  printf("ZBI Length = %u\n", container_header.length);
+  printf("ZBI Length = %08x (%u)\n", container_header.length, container_header.length);
   printf("ZBI Flags  = %08x\n", container_header.flags);
 
   if ((container_header.type != ZBI_TYPE_CONTAINER) ||
@@ -115,8 +120,8 @@ zx_status_t ZbiBootfsParser::FindBootZbi(uint32_t* read_offset, zbi_header_t* he
     return ZX_ERR_BAD_STATE;
   }
 
-  uint32_t bytes_to_read = container_header.length;
-  uint32_t current_offset = sizeof(zbi_header_t);
+  uint64_t bytes_to_read = container_header.length;
+  uint64_t current_offset = sizeof(zbi_header_t);
   zbi_header_t item_header;
 
   while (bytes_to_read > 0) {
@@ -130,12 +135,21 @@ zx_status_t ZbiBootfsParser::FindBootZbi(uint32_t* read_offset, zbi_header_t* he
     printf("ZBI Type   = %08x\n", item_header.type);
     printf("ZBI Magic  = %08x\n", item_header.magic);
     printf("ZBI Extra  = %08x\n", item_header.extra);
-    printf("ZBI Length = %u\n", item_header.length);
+    printf("ZBI Length = %08x (%u)\n", item_header.length, item_header.length);
     printf("ZBI Flags  = %08x\n", item_header.flags);
 
-    uint32_t item_len = ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + item_header.length);
+    uint64_t item_len = static_cast<uint64_t>(sizeof(zbi_header_t)) + item_header.length;
+
+    // ZBI_ALIGN(uint32_t::max()) = 0 so the last ZBI_ALIGNMENT is excluded
+    if (item_len > std::numeric_limits<uint32_t>::max() - ZBI_ALIGNMENT) {
+      fprintf(stderr, "ZBI item exceeds uint32_t capacity\n");
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    item_len = ZBI_ALIGN(item_len);
+
     if (item_len > bytes_to_read) {
-      fprintf(stderr, "ZBI item too large (%u > %u)\n", item_len, bytes_to_read);
+      fprintf(stderr, "ZBI item too large (%lu > %lu)\n", item_len, bytes_to_read);
       return ZX_ERR_BAD_STATE;
     }
 
@@ -178,6 +192,13 @@ __EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* en
 
   zx::vmo boot_vmo;
   uint32_t decompressed_size = boot_header.extra;
+
+  if (decompressed_size > kMaxDecompressedZbiSize) {
+    fprintf(stderr, "ZBI Decompressed size too large: %u > %u\n", decompressed_size,
+            kMaxDecompressedZbiSize);
+    return ZX_ERR_FILE_BIG;
+  }
+
   status = zx::vmo::create(decompressed_size, 0, &boot_vmo);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create boot vmo: %s\n", zx_status_get_string(status));
@@ -211,14 +232,14 @@ __EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* en
 }
 
 __EXPORT zx_status_t ZbiBootfsParser::Init(const char* input, size_t byte_offset) {
-  zx_status_t status = LoadZbi(input, byte_offset);
+  zx_status_t status = LoadZbi(input);
   if (status != ZX_OK) {
-    fprintf(stderr, "Error loading ZBI. Error code: %d\n", status);
+    fprintf(stderr, "Error loading ZBI. Error code: %s\n", zx_status_get_string(status));
   }
   return status;
 }
 
-__EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_offset) {
+__EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input) {
   // Logic for skip-block devices.
   fuchsia_hardware_skipblock_PartitionInfo partition_info = {};
 
@@ -237,12 +258,6 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
   if ((IsSkipBlock(input, &partition_info))) {
     // Grab Block size for the partition we'd like to access
     input_bs = partition_info.block_size_bytes;
-
-    // Check byte_offset validity
-    if ((byte_offset % input_bs) != 0) {
-      fprintf(stderr, "Byte Offset must be a multiple of %lu (block-size)\n", input_bs);
-      return ZX_ERR_INVALID_ARGS;
-    }
 
     // Set buffer size
     buf_size = partition_info.block_size_bytes;
@@ -270,7 +285,7 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
     fuchsia_hardware_skipblock_ReadWriteOperation op = {
         .vmo = dup.release(),
         .vmo_offset = 0,
-        .block = static_cast<uint32_t>((byte_offset / partition_info.block_size_bytes)),
+        .block = 0,
         .block_count = block_count,
     };
 
@@ -319,7 +334,7 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
       fuchsia_hardware_skipblock_ReadWriteOperation op = {
           .vmo = dup.release(),
           .vmo_offset = 0,
-          .block = static_cast<uint32_t>((byte_offset / partition_info.block_size_bytes)),
+          .block = 0,
           .block_count = block_count,
       };
 
@@ -337,16 +352,21 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
     // accordingly
     char buf[sizeof(zbi_header_t)];
 
-    read(fd.get(), buf, sizeof(buf));
+    if (read(fd.get(), buf, sizeof(zbi_header_t)) != sizeof(zbi_header_t)) {
+      fprintf(stderr, "Failed to read header from zbi.\n");
+      return ZX_ERR_IO;
+    }
+
     zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(&buf);
     printf("ZBI container type = %08x\n", hdr->type);
     printf("ZBI payload length = %u\n", hdr->length);
-    buf_size = hdr->length + sizeof(zbi_header_t);
 
-    if (buf_size == 0) {
-      fprintf(stderr, "Buffer size must be greater than zero\n");
+    if (hdr->length == 0) {
+      fprintf(stderr, "Payload length must be greater than zero\n");
       return ZX_ERR_BUFFER_TOO_SMALL;
     }
+
+    buf_size = hdr->length + sizeof(zbi_header_t);
 
     zx_status_t status = mapping.CreateAndMap(buf_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                               &vmo, ZX_RIGHT_SAME_RIGHTS, 0);
@@ -354,13 +374,17 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
       fprintf(stderr, "Error creating and mapping VMO\n");
       return status;
     }
-    if (lseek(fd.get(), byte_offset, SEEK_SET) != static_cast<uint32_t>(byte_offset)) {
-      fprintf(stderr, "Failed to read at offset = %zu\n", byte_offset);
+
+    if (lseek(fd.get(), 0, SEEK_SET) != 0) {
+      fprintf(stderr, "Failed to reset to beginning of fd\n");
       return ZX_ERR_IO;
     }
 
     // Read in input file (on disk) into buffer
-    read(fd.get(), mapping.start(), mapping.size());
+    if (read(fd.get(), mapping.start(), mapping.size()) != static_cast<ssize_t>(mapping.size())) {
+      fprintf(stderr, "Failed to read input file into buffer\n");
+      return ZX_ERR_IO;
+    }
   }
 
   zbi_vmo_ = std::move(vmo);

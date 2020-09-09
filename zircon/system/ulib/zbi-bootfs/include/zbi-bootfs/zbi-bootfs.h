@@ -8,7 +8,10 @@
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <cstddef>
 
 namespace zbi_bootfs {
 
@@ -24,17 +27,17 @@ class __EXPORT ZbiBootfsParser {
  public:
   virtual ~ZbiBootfsParser() {}
 
-  // This loads the ZBI image from "input" to a vmo. It takes an optional parameter
-  // byte_offset
-  // byte_offset = 0 implies that bytes will be read without any offset
-  // relative to the start of the file/partition
-  virtual zx_status_t Init(const char* input, size_t byte_offset = 0);
+  // Maintain function for soft transition
+  virtual zx_status_t Init(const char* input, size_t byte_offset);
+
+  // This loads the ZBI image from "input" to a vmo.
+  virtual zx_status_t Init(const char* input) { return Init(input, 0); }
 
   // This parses the VMO for "filename" and writes its contents to "vmo_out"
   virtual zx_status_t ProcessZbi(const char* filename, Entry* entry);
 
  protected:
-  zx_status_t LoadZbi(const char* input, size_t byte_offset);
+  zx_status_t LoadZbi(const char* input);
 
  private:
   bool IsSkipBlock(const char* path, fuchsia_hardware_skipblock_PartitionInfo* partition_info);
