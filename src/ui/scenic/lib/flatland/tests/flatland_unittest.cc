@@ -354,18 +354,26 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   args.release_fences = CreateEventArray(1);
   auto release_copy = CopyEvent(args.release_fences[0]);
 
-  // The UberStructSystem shouldn't update when the Present includes acquire fences that haven't
-  // been reached, and the release fence shouldn't be signaled.
+  // Because the Present includes acquire fences, it should only be registered with the
+  // FlatlandPresenter. The UberStructSystem shouldn't have any entries and applying session
+  // updates shouldn't signal the release fence.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
-  RunLoopUntilIdle();
+
+  auto registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
 
   auto snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
 
   EXPECT_FALSE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
 
-  // Signal the second fence and ensure the UberStructSystem doesn't update and the release fence
-  // isn't signaled. Signal order doesn't matter.
+  // Signal the second fence and ensure the Present is still registered, the UberStructSystem
+  // doesn't update, and the release fence isn't signaled.
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
+
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
@@ -375,11 +383,16 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   EXPECT_FALSE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
 
-  // Signal the first fence and ensure the UberStructSystem contains an UberStruct for the
-  // instance and the release fence is signaled.
+  // Signal the first fence and ensure the Present is no longer registered (because it has been
+  // applied), the UberStructSystem contains an UberStruct for the instance, and the release fence
+  // is signaled.
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_TRUE(registered_presents.empty());
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -403,9 +416,14 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
   // Signal the event before the Present() call.
   acquire_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  // The UberStructSystem should update immediately and the release fence should be signaled.
+  // The PresentId is no longer registered because it has been applied, the UberStructSystem should
+  // update immediately, and the release fence should be signaled.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
   RunLoopUntilIdle();
+
+  auto registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_TRUE(registered_presents.empty());
 
   auto snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -426,10 +444,14 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   args1.release_fences = CreateEventArray(1);
   auto release1_copy = CopyEvent(args1.release_fences[0]);
 
-  // Present, but do not signal the fence, and ensure the UberStructSystem is empty and the release
-  // fence is unsignaled.
+  // Present, but do not signal the fence, and ensure Present is registered, the UberStructSystem is
+  // empty, and the release fence is unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args1), true);
   RunLoopUntilIdle();
+
+  auto registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
 
   auto snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -451,10 +473,14 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   args2.release_fences = CreateEventArray(1);
   auto release2_copy = CopyEvent(args2.release_fences[0]);
 
-  // Present, but do not signal the fence, and ensure the UberStructSystem is still empty and both
-  // release fences are unsignaled.
+  // Present, but do not signal the fence, and ensure there are two Presents registered, but the
+  // UberStructSystem is still empty and both release fences are unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args2), true);
   RunLoopUntilIdle();
+
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 2ul);
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -463,10 +489,15 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   EXPECT_FALSE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
 
   // Signal the fence for the second Present(). Since the first one is not done, there should still
-  // be no UberStruct for the instance, and neither fence should be signaled.
+  // be two Presents registered, no UberStruct for the instance, and neither fence should be
+  // signaled.
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 2ul);
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -474,11 +505,15 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
   EXPECT_FALSE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
 
-  // Signal the fence for the first Present(). This should trigger both Presents(), resulting in an
-  // UberStruct with a 2-element topology: the local root, and kId.
+  // Signal the fence for the first Present(). This should trigger both Presents(), resulting no
+  // registered Presents and an UberStruct with a 2-element topology: the local root, and kId.
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_TRUE(registered_presents.empty());
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);

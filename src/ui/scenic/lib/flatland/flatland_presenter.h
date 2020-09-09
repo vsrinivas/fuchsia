@@ -22,11 +22,17 @@ class FlatlandPresenter {
   //
   // Registers per-present information with the frame scheduler and returns an incrementing
   // PresentId unique to that session.
-  //
-  // Flatland instances should only call this function when the acquire fences for the Present()
-  // call have been reached.
   virtual scheduling::PresentId RegisterPresent(scheduling::SessionId session_id,
                                                 std::vector<zx::event> release_fences) = 0;
+
+  // From scheduling::FrameScheduler::ScheduleUpdateForSession():
+  //
+  // Tells the frame scheduler to schedule a frame. This is also used for updates triggered by
+  // something other than a Session update i.e. an ImagePipe with a new Image to present.
+  //
+  // Flatland should not call this function until it has reached the acquire fences and queued an
+  // UberStruct for the associated |id_pair|.
+  virtual void ScheduleUpdateForSession(scheduling::SchedulingIdPair id_pair) = 0;
 };
 
 }  // namespace flatland

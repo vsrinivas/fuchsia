@@ -135,16 +135,20 @@ void Flatland::Present(std::vector<zx::event> acquire_fences, std::vector<zx::ev
 
     uber_struct->images = image_metadatas_;
 
+    // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
+    // waiting on the acquire fences to indicate that a Present is pending.
+    auto present_id = flatland_presenter_->RegisterPresent(session_id_, std::move(release_fences));
+
     // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
     fence_queue_->QueueTask(
-        [this, uber_struct = std::move(uber_struct),
+        [this, present_id, uber_struct = std::move(uber_struct),
          link_operations = std::move(pending_link_operations_),
          release_fences = std::move(release_fences)]() mutable {
-          // Register a present and allow the UberStructSystem to handle the actual session update.
-          auto present_id =
-              flatland_presenter_->RegisterPresent(session_id_, std::move(release_fences));
+          // Push the UberStruct, then schedule the associated Present that will eventually publish
+          // it to the InstanceMap used for rendering.
           uber_struct_queue_->Push(present_id, std::move(uber_struct));
+          flatland_presenter_->ScheduleUpdateForSession({session_id_, present_id});
 
           // Finalize Link destruction operations after publishing the new UberStruct. This
           // ensures that any local Transforms referenced by the to-be-deleted Links are already
