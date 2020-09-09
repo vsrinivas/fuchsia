@@ -1,0 +1,59 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.update.usb;
+
+using fuchsia.io;
+using fuchsia.pkg;
+
+/// The front door of an OTA via USB.
+[Discoverable]
+protocol Checker {
+
+    /// Triggers a USB OTA.
+    ///
+    /// + request `update_url` the unpinned fuchsia-pkg:// URL of the update package to use for
+    ///   the OTA.
+    /// + request `logs_dir` an optional client end of a directory to which the `Checker` will
+    ///   write system logs.
+    /// + request `monitor` an optional client end on which the `Checker` will send status events
+    ///   for this update check. The monitor is only valid for the check started by this request
+    ///   and will be closed on completion.
+    /// - response `response` - the success state of the `Check`. If this was returned either the
+    ///   system was successfully updated, or the update package indicated by `update_url` was not
+    ///   newer than the system version, and no update was necessary.
+    /// - error - a `CheckError` value, indicating that the `Check` failed and did not complete a
+    ///   system update.
+    Check(
+        fuchsia.pkg.PackageUrl update_url,
+        fuchsia.io.Directory? logs_dir,
+        Monitor? monitor
+        ) -> (CheckSuccess response) error CheckError;
+};
+
+/// Success type for [`fuchsia.update.usb/Checker.Check`]
+enum CheckSuccess {
+    /// An update was installed successfully, and the device should be rebooted
+    /// now to switch to the updated system.
+    UPDATE_PERFORMED = 0;
+    /// The update package's version was equal to or older than the currently
+    /// installed system version, so no update needs to be installed.
+    UPDATE_NOT_NEEDED = 1;
+};
+
+/// Monitors a single update check.
+protocol Monitor {
+    /// Called if and when `Checker.Check` triggers a system update.
+    ///
+    /// Never called if no update is needed.
+    OnUpdateStarted();
+};
+
+/// Error type for [`fuchsia.update.usb/Checker.Check`]
+enum CheckError {
+    /// The `update_url` parameter was an invalid fuchsia-pkg:// url.
+    INVALID_UPDATE_URL = 1;
+    /// A system update was attempted, but the update failed.
+    UPDATE_FAILED = 2;
+};
