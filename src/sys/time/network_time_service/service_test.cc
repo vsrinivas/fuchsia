@@ -28,7 +28,7 @@ namespace network_time_service {
 
 // Although our test Roughtime server doesn't advance time, there is some error introduced
 // in the processing that results in the final reported sample being slightly off.
-const int64_t kTimeSpreadNanos = 10'000'000;
+const int64_t kTimeSpreadNanos = 100'000'000;
 
 const int64_t kExpectedTimeNanos = 7'000'000'000'000;
 
