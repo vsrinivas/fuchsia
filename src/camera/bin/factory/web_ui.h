@@ -17,13 +17,6 @@
 
 namespace camera {
 
-enum RGBConversionType : uint8_t {
-  NONE,    // treat frame as 8-bit grayscale, do not process to RGB
-  NATIVE,  // use pixel_format to select RGB conversion method
-  NV12,    // treat frame as NV12, do YUV to RGB conversion
-  BAYER,   // treat frame as 8-bit raw sensor data in NV12 stream (output Y plane)
-};
-
 // an interface for caller to provide access to resources
 class WebUIControl {
  public:
@@ -36,22 +29,23 @@ class WebUI {
   // create a new WebUI.
   static fit::result<std::unique_ptr<WebUI>, zx_status_t> Create(WebUIControl* control);
 
+  WebUI();
   ~WebUI();
 
-  // start listening on a port
+  // start listening on a port (thread safe)
   void PostListen(int port);
-
- private:
-  WebUI();
 
   // listen for and handle new clients
   void Listen(int port);
+
+ private:
+
   void ListenWaiter();
   void OnListenReady(zx_status_t success, uint32_t events);
   void HandleClient(FILE* fp);
 
   // handle capture replies
-  void RequestCapture(FILE* fp, RGBConversionType convert, bool saveToStorage);
+  void RequestCapture(FILE* fp, WriteFlags flags, bool saveToStorage);
 
   // controller hooks, owned by the controller (WebUI is a view in MVC)
   WebUIControl* control_;
@@ -59,7 +53,9 @@ class WebUI {
   async::Loop loop_;
   int listen_sock_;
   fsl::FDWaiter listen_waiter_;
-  bool isBayer_ = false;
+  bool is_bayer_ = false;
+  Crop crop_ = { 0, 0, 0, 0 };
+  bool is_center_ = false;
 };
 
 }  // namespace camera

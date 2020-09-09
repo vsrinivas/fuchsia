@@ -12,7 +12,6 @@
 #include <lib/syslog/global.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <png.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -87,13 +86,21 @@ void WebUI::OnListenReady(zx_status_t success, uint32_t events) {
     return;
   }
   FX_LOGS(INFO) << "accepted connection from client";
-  FILE* fp = fdopen(fd, "r+");
+  FILE* fp = fdopen(fd, "a+");
   if (fp == NULL) {
     FX_LOGS(ERROR) << "fdopen failed: " << strerror(errno);
     return;
   }
   setlinebuf(fp);
-  HandleClient(fp);
+  fd_set r;
+  FD_ZERO(&r);
+  FD_SET(fd, &r);
+  struct timeval to = { 0, 200000 };
+  if (select(fd + 1, &r, NULL, NULL, &to) != 1) {
+    FX_LOGS(INFO) << "hanging up on slow client";
+  } else {
+    HandleClient(fp);
+  }
   fclose(fp);
   ListenWaiter();
 }
@@ -101,7 +108,7 @@ void WebUI::OnListenReady(zx_status_t success, uint32_t events) {
 void WebUI::HandleClient(FILE* fp) {
   char buf[1024] = {0};
   if (fgets(buf, sizeof(buf), fp) == NULL) {
-    FX_LOGS(ERROR) << "fgets failed";
+    FX_LOGS(ERROR) << "fgets failed: " << strerror(errno);
     return;
   }
   char get[] = "GET /";
@@ -109,7 +116,7 @@ void WebUI::HandleClient(FILE* fp) {
     FX_LOGS(ERROR) << "expected '" << get << "', got '" << buf << "'";
     return;
   }
-  char* cmd = buf + sizeof(get) - 1;
+  char* cmd = buf + sizeof(get) - 2;
   char* space = index(buf + sizeof(get) - 1, ' ');
   if (space == NULL) {
     FX_LOGS(ERROR) << "expected GET /... ";
@@ -117,72 +124,120 @@ void WebUI::HandleClient(FILE* fp) {
   }
   *space = 0;
   FX_LOGS(INFO) << "processing request: " << cmd;
-  if (strcmp(cmd, "") == 0 || strcmp(cmd, "index.html") == 0) {
+  if (strcmp(cmd, "/") == 0 || strcmp(cmd, "/index.html") == 0) {
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\n", fp);
     fputs(R"HTML(<html><body>
-		 <a href="frame">frame</a> - capture and show a frame<br>
-                 <a href="save">save</a> - capture a frame, save to /data/capture.png<br>
+                 <a href="frame">frame</a> - download a frame
+                                             (pgm or raw format depending on bayer mode)<br>
+                 <a href="save">save</a> - save a frame to /data/capture.pgm or .raw<br>
                  <a href="bayer/on">bayer/on</a> - output raw sensor bayer image<br>
                  <a href="bayer/off">bayer/off</a> - output normal processed image<br>
+                 <a href="crop/upper-left">crop/upper-left</a> - crop to top left corner<br>
+                 <a href="crop/lower-right">crop/lower-right</a> - crop to lower right corner<br>
+                 <a href="crop/center">crop/center</a> - crop to center<br>
+                 <a href="crop/off">crop/off</a> - crop to top left corner<br>
                  <br>
-		)HTML",
+                )HTML",
           fp);
-    fprintf(fp, "Bayer mode is %s.<br>\n", isBayer_ ? "ON" : "OFF");
+    fprintf(fp, "Bayer mode is %s.<br>\n", is_bayer_ ? "ON" : "OFF");
+    fprintf(fp, "Crop is %d %d %d %d, CENTER is %s.<br>\n",
+            crop_.x, crop_.y, crop_.width, crop_.height,
+            is_center_ ? "ON" : "OFF");
     fputs(R"HTML(<br>
                  The follow may be useful for debugging:<br>
+                 <a href="frame/png">frame/png</a> - same as /frame but as png<br>
                  <a href="frame/nv12">frame/nv12</a> - process as NV12<br>
-                 <a href="frame/bayer">frame/bayer</a> - process as raw sensor data<br>
-                 <a href="frame/unprocessed">frame/unprocessed</a> - do no processing<br>
-		)HTML",
+                 <a href="frame/bayer8">frame/bayer8</a> - process as raw sensor data, 8-bit<br>
+                 <a href="frame/bayer16">frame/bayer16</a> - process as raw sensor data, 16-bit<br>
+                 <a href="frame/unprocessed">frame/unprocessed</a> - frame bits as 8-bit gray<br>
+                )HTML",
           fp);
     return;
   }
 
+  auto bayer_flag = is_bayer_ ? WriteFlags::MOD_BAYER8HACK : WriteFlags::NONE;
+
   // expected factory usage
-  if (strcmp(cmd, "frame") == 0) {
-    RequestCapture(fp, NATIVE, false);
+  if (strcmp(cmd, "/frame") == 0) {
+    auto out = is_bayer_ ? WriteFlags::OUT_RAW : WriteFlags::OUT_PGM;
+    RequestCapture(fp, WriteFlags::IN_DEFAULT | out | bayer_flag, false);
     return;
   }
-  if (strcmp(cmd, "save") == 0) {
-    RequestCapture(fp, NATIVE, true);
+  if (strcmp(cmd, "/save") == 0) {
+    auto out = is_bayer_ ? WriteFlags::OUT_RAW : WriteFlags::OUT_PGM;
+    RequestCapture(fp, WriteFlags::IN_DEFAULT | out | bayer_flag, true);
     return;
   }
-  if (strcmp(cmd, "bayer/on") == 0) {
-    isBayer_ = true;
+  if (strcmp(cmd, "/bayer/on") == 0) {
+    is_bayer_ = true;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbayer mode is on\n", fp);
     return;
   }
-  if (strcmp(cmd, "bayer/off") == 0) {
-    isBayer_ = false;
+  if (strcmp(cmd, "/bayer/off") == 0) {
+    is_bayer_ = false;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbayer mode is off\n", fp);
     return;
   }
+  if (strcmp(cmd, "/crop/upper-left") == 0) {
+    crop_ = { 0, 0, 500, 500 };
+    is_center_ = false;
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is upper-left\n", fp);
+    return;
+  }
+  if (strcmp(cmd, "/crop/lower-right") == 0) {
+    crop_ = { 1500, 1500, 500, 500 };
+    is_center_ = false;
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is lower-right\n", fp);
+    return;
+  }
+  if (strcmp(cmd, "/crop/center") == 0) {
+    crop_ = { 0, 0, 500, 500 };
+    is_center_ = true;
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is center\n", fp);
+    return;
+  }
+  if (strcmp(cmd, "/crop/off") == 0) {
+    crop_ = { 0, 0, 0, 0 };
+    is_center_ = false;
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is off\n", fp);
+    return;
+  }
 
-  // for debugging
-  if (strcmp(cmd, "frame/nv12") == 0) {
-    RequestCapture(fp, NV12, false);
+  // for debugging (png shows in chrome)
+  if (strcmp(cmd, "/frame/png") == 0) {
+    RequestCapture(fp, WriteFlags::IN_DEFAULT | WriteFlags::OUT_PNG_GRAY | bayer_flag, false);
     return;
   }
-  if (strcmp(cmd, "frame/bayer") == 0) {
-    RequestCapture(fp, BAYER, false);
+  if (strcmp(cmd, "/frame/nv12") == 0) {
+    RequestCapture(fp, WriteFlags::IN_NV12 | WriteFlags::OUT_PNG_RGB, false);
     return;
   }
-  if (strcmp(cmd, "frame/unprocessed") == 0) {
-    RequestCapture(fp, NONE, false);
+  if (strcmp(cmd, "/frame/bayer8") == 0) {
+    RequestCapture(fp, WriteFlags::IN_BAYER8 | WriteFlags::OUT_PNG_GRAY |
+                   WriteFlags::MOD_BAYER8HACK, false);
+    return;
+  }
+  if (strcmp(cmd, "/frame/bayer16") == 0) {
+    RequestCapture(fp, WriteFlags::IN_BAYER16 | WriteFlags::OUT_PNG_GRAY, false);
+    return;
+  }
+  if (strcmp(cmd, "/frame/unprocessed") == 0) {
+    RequestCapture(fp, WriteFlags::IN_DEFAULT | WriteFlags::OUT_PNG_GRAY |
+                       WriteFlags::MOD_UNPROCESSED, false);
     return;
   }
 
   fputs("HTTP/1.1 404 Not Found\n", fp);
 }
 
-void WebUI::RequestCapture(FILE* fp, RGBConversionType convert, bool saveToStorage) {
+void WebUI::RequestCapture(FILE* fp, WriteFlags flags, bool saveToStorage) {
   FILE* fp2 = fdopen(dup(fileno(fp)), "w");
   if (fp2 == NULL) {
     FX_LOGS(ERROR) << "failed to fdopen/dup: " << strerror(errno);
     fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: dup failed", fp2);
     return;
   }
-  control_->RequestCaptureData(0, [fp2, isBayer = isBayer_, convert, saveToStorage](
+  control_->RequestCaptureData(0, [this, fp2, flags, saveToStorage](
                                       zx_status_t status, std::unique_ptr<Capture> frame) {
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "RequestCaptureData failed";
@@ -191,57 +246,47 @@ void WebUI::RequestCapture(FILE* fp, RGBConversionType convert, bool saveToStora
       return;
     }
     FILE* filefp = fp2;  // default to write png in HTTP reply
+    std::string file = is_bayer_ ? "capture.raw" : "capture.pgm";
+    std::string path = "/data/" + file;
     if (saveToStorage) {
-      char file[] = "/data/capture.png";
-      filefp = fopen(file, "w");
+      filefp = fopen(path.c_str(), "w");
       if (filefp == NULL) {
-        FX_LOGS(ERROR) << "failed to open " << file << ": " << strerror(errno);
+        FX_LOGS(ERROR) << "failed to open " << path << ": " << strerror(errno);
         fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: local file write failed", fp2);
         fclose(fp2);
         return;
       }
     }
 
-    uint32_t vmo_size = frame->image_->size();
-    fprintf(fp2, "HTTP/1.1 200 OK\nContent-Type: %s\nXContent-Length: %u\n\n",
-            saveToStorage ? "text/html" : "image/png", vmo_size);
+    const char* mime = saveToStorage ? "text/html"
+                       : (flags & kPNGMask) != WriteFlags::NONE ? "image/png"
+                       : (flags & kPNMMask) != WriteFlags::NONE ? "image/x-portable-anymap"
+                       : "application/octet-stream";
+
+    fprintf(fp2, "HTTP/1.1 200 OK\nContent-Type: %s\n", mime);
+    fprintf(fp2, "Content-Disposition: filename=\"%s\"\n\n", file.c_str());
 
     if (saveToStorage) {
       fputs("Please wait while frame is written to local storage...<br>\n", fp2);
       fflush(fp2);
     }
 
-    auto& iformat = frame->properties_.image_format;
-    auto& pformat = iformat.pixel_format;
-
-    switch (convert) {
-      default:
-        FX_LOGS(INFO) << "unknown CaptureType";
-        // fall through to NATIVE
-      case NATIVE:
-        if (isBayer) {
-          frame->WritePNGUnprocessed(filefp, isBayer);
-        } else if (pformat.type == fuchsia::sysmem::PixelFormatType::NV12) {
-          frame->WritePNGAsNV12(filefp);
-        } else {
-          FX_LOGS(INFO) << "writing unusual format " << (int)pformat.type << " as unprocessed";
-          frame->WritePNGUnprocessed(filefp, false);
-        }
-        break;
-      case NONE:
-        frame->WritePNGUnprocessed(filefp, false);
-        break;
-      case BAYER:
-        frame->WritePNGUnprocessed(filefp, true);
-        break;
-      case NV12:
-        frame->WritePNGAsNV12(filefp);
-        break;
+    auto center = is_center_ ? WriteFlags::MOD_CENTER : WriteFlags::NONE;
+    auto crop = crop_;
+    status = frame->WriteImage(filefp, flags | center, crop);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status);
+      if (filefp != fp2) {
+        fclose(filefp);
+      }
+      fclose(fp2);
+      return;
     }
+    FX_LOGS(INFO) << "crop: " << crop.x << "," << crop.y << "," << crop.width << "," << crop.height;
     if (filefp != fp2) {
       fputs("Frame saved to local storage.<br>", fp2);
-      fprintf(fp2, "Path is likely: %s.<br>",
-              "/data/r/sys/fuchsia.com:camera-factory:0#meta:camera-factory.cmx/capture.png");
+      std::string real = "/data/r/sys/fuchsia.com:camera-factory:0#meta:camera-factory.cmx/" + file;
+      fprintf(fp2, "Wrote %s, which is likely %s<br>", path.c_str(), real.c_str());
       fclose(filefp);
     }
     fclose(fp2);
