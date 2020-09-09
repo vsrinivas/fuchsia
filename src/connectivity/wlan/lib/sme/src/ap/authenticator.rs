@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 use eapol;
-use wlan_rsn::{self, rsna::UpdateSink, NegotiatedProtection};
+use wlan_rsn::{self, rsna::UpdateSink, Error, NegotiatedProtection};
 
 // Trait has to be Send because wlanstack wraps SME into a Future
 pub trait Authenticator: std::fmt::Debug + std::marker::Send {
     fn get_negotiated_protection(&self) -> &NegotiatedProtection;
     fn reset(&mut self);
-    fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error>;
+    fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error>;
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), anyhow::Error>;
+    ) -> Result<(), Error>;
 }
 
 impl Authenticator for wlan_rsn::Authenticator {
@@ -26,7 +26,7 @@ impl Authenticator for wlan_rsn::Authenticator {
         wlan_rsn::Authenticator::reset(self)
     }
 
-    fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
+    fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         wlan_rsn::Authenticator::initiate(self, update_sink)
     }
 
@@ -34,7 +34,7 @@ impl Authenticator for wlan_rsn::Authenticator {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         wlan_rsn::Authenticator::on_eapol_frame(self, update_sink, frame)
     }
 }

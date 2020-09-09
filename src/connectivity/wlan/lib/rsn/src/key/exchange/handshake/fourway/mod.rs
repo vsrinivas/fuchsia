@@ -32,7 +32,7 @@ impl<B: ByteSlice> FourwayHandshakeFrame<B> {
         frame: Dot11VerifiedKeyFrame<B>,
         role: Role,
         nonce: Option<&[u8]>,
-    ) -> Result<FourwayHandshakeFrame<B>, anyhow::Error> {
+    ) -> Result<FourwayHandshakeFrame<B>, Error> {
         // Safe: the raw frame is never exposed outside of this function.
         let raw_frame = frame.unsafe_get_raw();
         // Drop messages which were not expected by the configured role.
@@ -99,7 +99,7 @@ impl Config {
         a_protection: ProtectionInfo,
         nonce_rdr: Arc<NonceReader>,
         gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
-    ) -> Result<Config, anyhow::Error> {
+    ) -> Result<Config, Error> {
         rsn_ensure!(
             role != Role::Authenticator || gtk_provider.is_some(),
             "GtkProvider is missing"
@@ -148,7 +148,7 @@ impl Fourway {
         &mut self,
         update_sink: &mut Vec<SecAssocUpdate>,
         key_replay_counter: u64,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         match self {
             Fourway::Authenticator(state_machine) => {
                 state_machine
@@ -165,7 +165,7 @@ impl Fourway {
         update_sink: &mut UpdateSink,
         key_replay_counter: u64,
         frame: Dot11VerifiedKeyFrame<B>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         match self {
             Fourway::Authenticator(state_machine) => {
                 let frame = FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, None)?;
@@ -194,7 +194,7 @@ impl Fourway {
 
 // Verbose and explicit verification of Message 1 to 4 against IEEE Std 802.11-2016, 12.7.6.2.
 
-fn validate_message_1<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), anyhow::Error> {
+fn validate_message_1<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     rsn_ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message1.into()));
@@ -240,7 +240,7 @@ fn validate_message_1<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), 
     Ok(())
 }
 
-fn validate_message_2<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), anyhow::Error> {
+fn validate_message_2<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     rsn_ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message2.into()));
@@ -284,7 +284,7 @@ fn validate_message_2<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), 
 fn validate_message_3<B: ByteSlice>(
     frame: &eapol::KeyFrameRx<B>,
     nonce: Option<&[u8]>,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     // Install = 0 is only used in key mapping with TKIP and WEP, neither is supported by Fuchsia.
@@ -338,7 +338,7 @@ fn validate_message_3<B: ByteSlice>(
     Ok(())
 }
 
-fn validate_message_4<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), anyhow::Error> {
+fn validate_message_4<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     rsn_ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message4.into()));

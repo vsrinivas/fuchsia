@@ -4,9 +4,8 @@
 
 use super::Algorithm;
 
-use crate::{rsn_ensure, Error};
+use crate::{format_rsn_err, rsn_ensure, Error};
 
-use anyhow::format_err;
 use byteorder::{BigEndian, ByteOrder};
 use crypto::aes::KeySize;
 use crypto::aessafe;
@@ -22,7 +21,7 @@ const BLOCK_SIZE: usize = 16;
 pub struct NistAes;
 
 impl NistAes {
-    fn keysize(key_len: usize) -> Result<KeySize, anyhow::Error> {
+    fn keysize(key_len: usize) -> Result<KeySize, Error> {
         match key_len {
             16 => Ok(KeySize::KeySize128),
             24 => Ok(KeySize::KeySize192),
@@ -82,7 +81,7 @@ pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
 
 impl Algorithm for NistAes {
     // RFC 3394, 2.2.1 - Uses index based wrapping
-    fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
+    fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, Error> {
         let n = p.len() / 8;
         rsn_ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
 
@@ -108,9 +107,9 @@ impl Algorithm for NistAes {
                         let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
                         let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
                         let mut cipher = ecb_encryptor(keysize, key, blockmodes::NoPadding);
-                        cipher
-                            .encrypt(&mut read_buf, &mut write_buf, true)
-                            .map_err(|e| format_err!("AES keywrap encryption error: {:?}", e))?;
+                        cipher.encrypt(&mut read_buf, &mut write_buf, true).map_err(|e| {
+                            format_rsn_err!("AES keywrap encryption error: {:?}", e)
+                        })?;
                     }
                     let t = (n * j + i) as u64;
                     BigEndian::write_u64(&mut aes_block, BigEndian::read_u64(&b[..8]) ^ t);
@@ -127,7 +126,7 @@ impl Algorithm for NistAes {
     }
 
     // RFC 3394, 2.2.2 - uses index based unwrapping
-    fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
+    fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, Error> {
         let n = c.len() / 8 - 1;
         rsn_ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
 
@@ -157,7 +156,7 @@ impl Algorithm for NistAes {
                     let mut cipher = ecb_decryptor(keysize, key, blockmodes::NoPadding);
                     cipher
                         .decrypt(&mut read_buf, &mut write_buf, true)
-                        .map_err(|e| format_err!("AES keywrap decryption error: {:?}", e))?;
+                        .map_err(|e| format_rsn_err!("AES keywrap decryption error: {:?}", e))?;
                 }
 
                 &aes_block[..8].copy_from_slice(&b[..8]);

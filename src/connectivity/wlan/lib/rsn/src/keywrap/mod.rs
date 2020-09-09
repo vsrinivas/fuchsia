@@ -5,8 +5,10 @@
 mod aes;
 mod rc4;
 
+use crate::Error;
+
 use wlan_common::ie::rsn::akm;
-use {aes::NistAes, anyhow::Error, rc4::Rc4};
+use {aes::NistAes, rc4::Rc4};
 
 /// An arbitrary algorithm used to encrypt the key data field of an EAPoL keyframe.
 /// Usage is specified in IEEE 802.11-2016 8.5.2 j

@@ -5,7 +5,6 @@
 pub mod kde;
 
 use crate::Error;
-use anyhow;
 use nom::IResult;
 use nom::{call, complete, many0, named, take, try_parse, Needed};
 use wlan_common::ie::{rsn::rsne, wpa, Id};
@@ -51,7 +50,7 @@ fn parse_element(input: &[u8]) -> IResult<&[u8], Element> {
 
 named!(parse_elements<&[u8], Vec<Element>>, many0!(complete!(parse_element)));
 
-pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, anyhow::Error> {
+pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, Error> {
     match parse_elements(&key_data[..]) {
         Ok((_, elements)) => Ok(elements),
         Err(nom::Err::Error((_, kind))) => Err(Error::InvalidKeyData(kind).into()),

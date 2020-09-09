@@ -5,7 +5,7 @@
 use eapol;
 use std::sync::{Arc, Mutex};
 use wlan_common::ie::rsn::rsne::RsnCapabilities;
-use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
+use wlan_rsn::{rsna::UpdateSink, Error, NegotiatedProtection};
 
 use crate::{ap::authenticator::Authenticator, test_utils};
 
@@ -26,7 +26,7 @@ impl Authenticator for MockAuthenticator {
         self.on_eapol_frame.lock().unwrap().clear();
     }
 
-    fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
+    fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         update_sink.extend(self.initiate.lock().unwrap().drain(..));
         Ok(())
     }
@@ -35,7 +35,7 @@ impl Authenticator for MockAuthenticator {
         &mut self,
         update_sink: &mut UpdateSink,
         _frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         update_sink.extend(self.on_eapol_frame.lock().unwrap().drain(..));
         Ok(())
     }

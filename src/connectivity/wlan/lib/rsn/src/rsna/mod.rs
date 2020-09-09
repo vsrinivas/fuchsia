@@ -144,7 +144,7 @@ impl<B: ByteSlice> EncryptedKeyData<B> {
         self,
         kek: &[u8],
         protection: &NegotiatedProtection,
-    ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), anyhow::Error> {
+    ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), Error> {
         let key_data = protection.keywrap_algorithm()?.unwrap_key(
             kek,
             &self.0.key_frame_fields.key_iv,
@@ -166,7 +166,7 @@ impl<B: ByteSlice> WithUnverifiedMic<B> {
         self,
         kck: &[u8],
         protection: &NegotiatedProtection,
-    ) -> Result<UnverifiedKeyData<B>, anyhow::Error> {
+    ) -> Result<UnverifiedKeyData<B>, Error> {
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
         let mic_bytes = protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
@@ -208,7 +208,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         role: &Role,
         protection: &NegotiatedProtection,
         key_replay_counter: u64,
-    ) -> Result<Dot11VerifiedKeyFrame<B>, anyhow::Error> {
+    ) -> Result<Dot11VerifiedKeyFrame<B>, Error> {
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
@@ -242,7 +242,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         let frame_key_descriptor_version =
             frame.key_frame_fields.key_info().key_descriptor_version();
         let expected_version = derive_key_descriptor_version(key_descriptor, protection);
-        ensure!(
+        rsn_ensure!(
             frame_key_descriptor_version == expected_version,
             Error::UnsupportedKeyDescriptorVersion(frame_key_descriptor_version)
         );
@@ -253,7 +253,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
             eapol::KeyType::PAIRWISE => {}
             eapol::KeyType::GROUP_SMK => {
                 // IEEE Std 802.11-2016, 12.7.2 b.4 ii)
-                ensure!(
+                rsn_ensure!(
                     !frame.key_frame_fields.key_info().install(),
                     Error::InvalidInstallBitGroupSmkHandshake
                 );
@@ -262,7 +262,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
 
         // IEEE Std 802.11-2016, 12.7.2 b.5)
         if let Role::Supplicant = sender {
-            ensure!(
+            rsn_ensure!(
                 !frame.key_frame_fields.key_info().key_ack(),
                 Error::InvalidKeyAckBitSupplicant
             );
@@ -276,7 +276,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
 
         // IEEE Std 802.11-2016, 12.7.2 b.8)
         if let Role::Authenticator = sender {
-            ensure!(
+            rsn_ensure!(
                 !frame.key_frame_fields.key_info().error(),
                 Error::InvalidErrorBitAuthenticator
             );
@@ -284,7 +284,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
 
         // IEEE Std 802.11-2016, 12.7.2 b.9)
         if let Role::Authenticator = sender {
-            ensure!(
+            rsn_ensure!(
                 !frame.key_frame_fields.key_info().request(),
                 Error::InvalidRequestBitAuthenticator
             );
@@ -294,7 +294,10 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         // Encrypted key data is validated at the end once all other validations succeeded.
 
         // IEEE Std 802.11-2016, 12.7.2 b.11)
-        ensure!(!frame.key_frame_fields.key_info().smk_message(), Error::SmkHandshakeNotSupported);
+        rsn_ensure!(
+            !frame.key_frame_fields.key_info().smk_message(),
+            Error::SmkHandshakeNotSupported
+        );
 
         // IEEE Std 802.11-2016, 12.7.2 c)
         match frame.key_frame_fields.key_info().key_type() {
@@ -311,7 +314,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
                     let tk_bits =
                         protection.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
                     let tk_len = tk_bits / 8;
-                    ensure!(
+                    rsn_ensure!(
                         frame.key_frame_fields.key_len.to_native() == tk_len,
                         Error::InvalidKeyLength(frame.key_frame_fields.key_len.to_native(), tk_len)
                     );
@@ -321,7 +324,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
                     let tk_bits =
                         protection.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
                     let tk_len = tk_bits / 8;
-                    ensure!(
+                    rsn_ensure!(
                         frame.key_frame_fields.key_len.to_native() == tk_len,
                         Error::InvalidKeyLength(frame.key_frame_fields.key_len.to_native(), tk_len)
                     );
@@ -340,7 +343,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
                 // Supplicant responds to messages from the Authenticator with the same
                 // key replay counter.
                 Role::Supplicant => {
-                    ensure!(
+                    rsn_ensure!(
                         frame.key_frame_fields.key_replay_counter.to_native() >= key_replay_counter,
                         Error::InvalidKeyReplayCounter(
                             frame.key_frame_fields.key_replay_counter.to_native(),
@@ -350,7 +353,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
                 }
                 // Authenticator must send messages with a strictly larger key replay counter.
                 Role::Authenticator => {
-                    ensure!(
+                    rsn_ensure!(
                         frame.key_frame_fields.key_replay_counter.to_native() > key_replay_counter,
                         Error::InvalidKeyReplayCounter(
                             frame.key_frame_fields.key_replay_counter.to_native(),
@@ -364,7 +367,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         // IEEE Std 802.11-2016, 12.7.2
         // Encrypted Key Data bit requires MIC bit to be set for all 802.11 handshakes.
         if frame.key_frame_fields.key_info().encrypted_key_data() {
-            ensure!(
+            rsn_ensure!(
                 frame.key_frame_fields.key_info().key_mic(),
                 Error::InvalidMicBitForEncryptedKeyData
             );

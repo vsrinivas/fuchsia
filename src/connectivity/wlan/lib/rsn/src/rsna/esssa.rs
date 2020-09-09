@@ -12,7 +12,7 @@ use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
-use anyhow::format_err;
+use crate::{format_rsn_err, Error};
 use eapol;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use log::{error, info};
@@ -182,7 +182,7 @@ impl EssSa {
         Ok(rsna)
     }
 
-    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
+    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         self.reset();
         info!("establishing ESSSA...");
 
@@ -203,7 +203,7 @@ impl EssSa {
                     None => Ok(()),
                 },
             },
-            _ => Err(format_err!("cannot initiate PMK more than once")),
+            _ => Err(format_rsn_err!("cannot initiate PMK more than once")),
         }
     }
 
@@ -221,11 +221,7 @@ impl EssSa {
         }
     }
 
-    fn on_key_confirmed(
-        &mut self,
-        update_sink: &mut UpdateSink,
-        key: Key,
-    ) -> Result<(), anyhow::Error> {
+    fn on_key_confirmed(&mut self, update_sink: &mut UpdateSink, key: Key) -> Result<(), Error> {
         let was_esssa_established = self.is_established();
         match key {
             Key::Pmk(pmk) => {
@@ -245,7 +241,7 @@ impl EssSa {
                 if let Ptksa::Initialized { method } = self.ptksa.as_mut() {
                     method.initiate(update_sink, self.key_replay_counter)?;
                 } else {
-                    return Err(format_err!("PTKSA not initialized"));
+                    return Err(format_rsn_err!("PTKSA not initialized"));
                 }
             }
             Key::Ptk(ptk) => {
@@ -345,7 +341,7 @@ impl EssSa {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let updates = match frame {
             eapol::Frame::Key(key_frame) => {
@@ -404,7 +400,7 @@ impl EssSa {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::KeyFrameRx<B>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
         let verified_frame = Dot11VerifiedKeyFrame::from_frame(
             frame,
@@ -956,10 +952,7 @@ mod tests {
     // Nonce reuse
     // (in)-compatible protocol and RSNE versions
 
-    fn send_msg1<F>(
-        supplicant: &mut Supplicant,
-        msg_modifier: F,
-    ) -> (Result<(), anyhow::Error>, UpdateSink)
+    fn send_msg1<F>(supplicant: &mut Supplicant, msg_modifier: F) -> (Result<(), Error>, UpdateSink)
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
@@ -973,7 +966,7 @@ mod tests {
         supplicant: &mut Supplicant,
         ptk: &Ptk,
         msg_modifier: F,
-    ) -> (Result<(), anyhow::Error>, UpdateSink)
+    ) -> (Result<(), Error>, UpdateSink)
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
@@ -989,7 +982,7 @@ mod tests {
         gtk: [u8; 16],
         key_id: u8,
         key_replay_counter: u64,
-    ) -> (Result<(), anyhow::Error>, UpdateSink) {
+    ) -> (Result<(), Error>, UpdateSink) {
         let msg = test_util::get_group_key_hs_msg1(ptk, &gtk[..], key_id, key_replay_counter);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));

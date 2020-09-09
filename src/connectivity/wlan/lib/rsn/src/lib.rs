@@ -28,6 +28,7 @@ use {
         },
         rsna::{esssa::EssSa, Role, UpdateSink},
     },
+    eapol,
     fidl_fuchsia_wlan_mlme::SaeFrame,
     std::sync::{Arc, Mutex},
     wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe},
@@ -90,7 +91,7 @@ impl Supplicant {
 
     /// Starts the Supplicant. A Supplicant must be started after its creation and everytime it was
     /// reset.
-    pub fn start(&mut self) -> Result<(), anyhow::Error> {
+    pub fn start(&mut self) -> Result<(), Error> {
         // The Supplicant always waits for Authenticator to initiate and does not yet support EAPOL
         // request frames. Thus, all updates can be ignored.
         let mut dead_update_sink = vec![];
@@ -111,7 +112,7 @@ impl Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
 
@@ -196,7 +197,7 @@ impl Authenticator {
     /// This method can be called multiple times to re-initiate the security association, however,
     /// calling this method will invalidate all established security associations and their derived
     /// keys.
-    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
+    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         self.esssa.initiate(update_sink)
     }
 
@@ -208,7 +209,7 @@ impl Authenticator {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
 }
@@ -349,20 +350,57 @@ pub enum Error {
     UnknownIntegrityAlgorithm,
     #[error("unknown keywrap algorithm for negotiated protection")]
     UnknownKeywrapAlgorithm,
+    #[error("eapol error, {}", _0)]
+    EapolError(eapol::Error),
+    #[error("auth error, {}", _0)]
+    AuthError(auth::AuthError),
+    #[error("error, {}", _0)]
+    GenericError(String),
 }
 
-pub use anyhow;
 #[macro_export]
 macro_rules! rsn_ensure {
+    ($cond:expr, $err:literal) => {
+        if !$cond {
+            return std::result::Result::Err(Error::GenericError($err.to_string()));
+        }
+    };
     ($cond:expr, $err:expr $(,)?) => {
         if !$cond {
-            return std::result::Result::Err($crate::anyhow::anyhow!($err));
+            return std::result::Result::Err($err);
         }
+    };
+}
+
+#[macro_export]
+macro_rules! format_rsn_err {
+    ($msg:literal $(,)?) => {
+        // Handle $:literal as a special case to make cargo-expanded code more
+        // concise in the common case.
+        Error::GenericError($msg.to_string())
+    };
+    ($err:expr $(,)?) => ({
+        Error::GenericError($err)
+    });
+    ($fmt:expr, $($arg:tt)*) => {
+        Error::GenericError(format!($fmt, $($arg)*))
     };
 }
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::UnexpectedIoError(e)
+    }
+}
+
+impl From<eapol::Error> for Error {
+    fn from(e: eapol::Error) -> Self {
+        Error::EapolError(e)
+    }
+}
+
+impl From<auth::AuthError> for Error {
+    fn from(e: auth::AuthError) -> Self {
+        Error::AuthError(e)
     }
 }

@@ -20,6 +20,7 @@ use {
         timer::EventId,
         MlmeRequest,
     },
+    anyhow,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription},
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
@@ -199,7 +200,7 @@ impl LinkState {
                     Err(e) => {
                         error!("deauthenticating; could not start Supplicant: {}", e);
                         send_deauthenticate_request(bss, &context.mlme_sink);
-                        context.info.report_supplicant_error(e);
+                        context.info.report_supplicant_error(anyhow::anyhow!(e));
                         report_connect_finished(
                             responder,
                             context,
@@ -448,7 +449,7 @@ fn process_eapol_ind(
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 status: format!("rejected (processing error): {}", e)
             });
-            context.info.report_supplicant_error(e);
+            context.info.report_supplicant_error(anyhow::anyhow!(e));
             return RsnaStatus::Unchanged;
         }
         Ok(_) => {

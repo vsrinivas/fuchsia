@@ -9,7 +9,6 @@ use {
         test_utils::{self, *},
         InfoEvent, InfoStream, Ssid,
     },
-    anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     futures::channel::mpsc,
     std::{
@@ -26,7 +25,7 @@ use {
         ie::{rsn::rsne::RsnCapabilities, write_wpa1_ie, *},
         mac,
     },
-    wlan_rsn::rsna::UpdateSink,
+    wlan_rsn::{format_rsn_err, rsna::UpdateSink, Error},
     wlan_sae::Timeout as SaeTimeout,
     zerocopy::AsBytes,
 };
@@ -270,9 +269,9 @@ pub struct MockSupplicant {
 }
 
 impl Supplicant for MockSupplicant {
-    fn start(&mut self) -> Result<(), anyhow::Error> {
+    fn start(&mut self) -> Result<(), Error> {
         match &*self.start_failure.lock().unwrap() {
-            Some(error) => return Err(format_err!("{:?}", error)),
+            Some(error) => return Err(format_rsn_err!("{:?}", error)),
             None => {
                 self.started.store(true, Ordering::SeqCst);
                 Ok(())
@@ -288,7 +287,7 @@ impl Supplicant for MockSupplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         _frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         if let Some(cb) = self.on_eapol_frame_cb.lock().unwrap().as_mut() {
             cb();
         }
@@ -299,7 +298,7 @@ impl Supplicant for MockSupplicant {
             .map(|updates| {
                 update_sink.extend(updates.drain(..));
             })
-            .map_err(|e| format_err!("{:?}", e))
+            .map_err(|e| format_rsn_err!("{:?}", e))
     }
 
     fn on_sae_handshake_ind(&mut self, _update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {

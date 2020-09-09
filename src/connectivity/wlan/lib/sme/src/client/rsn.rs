@@ -15,7 +15,8 @@ use {
         OUI,
     },
     wlan_rsn::{
-        self, auth, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedProtection, ProtectionInfo,
+        self, auth, nonce::NonceReader, psk, rsna::UpdateSink, Error, NegotiatedProtection,
+        ProtectionInfo,
     },
     wlan_sae::Timeout as SaeTimeout,
 };
@@ -33,13 +34,13 @@ impl PartialEq for Rsna {
 }
 
 pub trait Supplicant: std::fmt::Debug + std::marker::Send {
-    fn start(&mut self) -> Result<(), anyhow::Error>;
+    fn start(&mut self) -> Result<(), Error>;
     fn reset(&mut self);
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), anyhow::Error>;
+    ) -> Result<(), Error>;
     fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error>;
     fn on_sae_frame_rx(
         &mut self,
@@ -55,7 +56,7 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
 }
 
 impl Supplicant for wlan_rsn::Supplicant {
-    fn start(&mut self) -> Result<(), anyhow::Error> {
+    fn start(&mut self) -> Result<(), Error> {
         wlan_rsn::Supplicant::start(self)
     }
 
@@ -67,7 +68,7 @@ impl Supplicant for wlan_rsn::Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_eapol_frame(self, update_sink, frame)
     }
 

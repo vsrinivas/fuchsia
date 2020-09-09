@@ -13,8 +13,7 @@ use crate::key_data::kde::GtkInfoTx;
 use crate::rsna::{
     Dot11VerifiedKeyFrame, ProtectionType, SecAssocUpdate, UnverifiedKeyData, UpdateSink,
 };
-use crate::Error;
-use anyhow::format_err;
+use crate::{format_rsn_err, Error};
 use bytes::Bytes;
 use eapol;
 use eapol::KeyFrameBuf;
@@ -34,7 +33,7 @@ impl Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         msg1: GroupKeyHandshakeFrame<B>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         let (frame, key_data) = match msg1.get() {
             Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
                 match unverified_mic.verify_mic(&self.kck[..], &self.cfg.protection)? {
@@ -56,7 +55,7 @@ impl Supplicant {
                                 (keyframe, key_data)
                             }
                             _ => {
-                                return Err(format_err!(
+                                return Err(format_rsn_err!(
                                     "msg1 of Group-Key Handshake must carry encrypted key data"
                                 ))
                             }
@@ -65,7 +64,7 @@ impl Supplicant {
                 }
             }
             Dot11VerifiedKeyFrame::WithoutMic(_) => {
-                return Err(format_err!("msg1 of Group-Key Handshake must carry a MIC"))
+                return Err(format_rsn_err!("msg1 of Group-Key Handshake must carry a MIC"))
             }
         };
 
@@ -84,7 +83,7 @@ impl Supplicant {
         &self,
         frame: &eapol::KeyFrameRx<B>,
         key_data: &[u8],
-    ) -> Result<Gtk, anyhow::Error> {
+    ) -> Result<Gtk, Error> {
         let gtk = match self.cfg.protection.protection_type {
             ProtectionType::LegacyWpa1 => {
                 let key_id = frame.key_frame_fields.key_info().legacy_wpa1_key_id() as u8;
@@ -97,7 +96,7 @@ impl Supplicant {
                     _ => None,
                 })
                 .next()
-                .ok_or(format_err!(
+                .ok_or(format_rsn_err!(
                     "GTK KDE not present in key data of Group-Key Handshakes's 1st message"
                 ))?,
         };
@@ -110,7 +109,7 @@ impl Supplicant {
     fn create_message_2<B: ByteSlice>(
         &self,
         msg1: &eapol::KeyFrameRx<B>,
-    ) -> Result<KeyFrameBuf, anyhow::Error> {
+    ) -> Result<KeyFrameBuf, Error> {
         let mut key_info = eapol::KeyInformation(0)
             .with_key_descriptor_version(msg1.key_frame_fields.key_info().key_descriptor_version())
             .with_key_type(msg1.key_frame_fields.key_info().key_type())
@@ -137,8 +136,8 @@ impl Supplicant {
             self.cfg.protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)? as usize,
         )
         .serialize();
-        let mic = compute_mic_from_buf(&self.kck[..], &self.cfg.protection, msg2.unfinalized_buf())
-            .map_err(|e| anyhow::Error::from(e))?;
+        let mic =
+            compute_mic_from_buf(&self.kck[..], &self.cfg.protection, msg2.unfinalized_buf())?;
         msg2.finalize_with_mic(&mic[..]).map_err(|e| e.into())
     }
 
@@ -168,7 +167,7 @@ mod tests {
         key_frame: eapol::KeyFrameRx<B>,
         role: Role,
         protection: &NegotiatedProtection,
-    ) -> Result<Dot11VerifiedKeyFrame<B>, anyhow::Error> {
+    ) -> Result<Dot11VerifiedKeyFrame<B>, Error> {
         Dot11VerifiedKeyFrame::from_frame(key_frame, &role, protection, 0)
     }
 

@@ -5,8 +5,7 @@
 // Remove once GtkProvider is used.
 #[allow(unused)]
 use crate::crypto_utils::prf;
-use crate::Error;
-use anyhow::ensure;
+use crate::{rsn_ensure, Error};
 use mundane::bytes;
 use std::hash::{Hash, Hasher};
 use wlan_common::ie::rsn::cipher::Cipher;
@@ -30,7 +29,7 @@ impl GtkProvider {
         Ok(GtkProvider { cipher, key: generate_random_gtk(tk_bytes) })
     }
 
-    pub fn get_gtk(&self) -> Result<Gtk, anyhow::Error> {
+    pub fn get_gtk(&self) -> Result<Gtk, Error> {
         Gtk::from_gtk(self.key.to_vec(), 0, self.cipher.clone(), 0)
     }
 }
@@ -54,15 +53,10 @@ impl Hash for Gtk {
 }
 
 impl Gtk {
-    pub fn from_gtk(
-        gtk: Vec<u8>,
-        key_id: u8,
-        cipher: Cipher,
-        rsc: u64,
-    ) -> Result<Gtk, anyhow::Error> {
+    pub fn from_gtk(gtk: Vec<u8>, key_id: u8, cipher: Cipher, rsc: u64) -> Result<Gtk, Error> {
         let tk_bits = cipher.tk_bits().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
         let tk_len = (tk_bits / 8) as usize;
-        ensure!(gtk.len() >= tk_len, "GTK must be larger than the resulting TK");
+        rsn_ensure!(gtk.len() >= tk_len, "GTK must be larger than the resulting TK");
 
         Ok(Gtk { tk_len, gtk, key_id, cipher, rsc })
     }

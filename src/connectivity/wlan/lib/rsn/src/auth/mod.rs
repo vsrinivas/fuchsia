@@ -7,12 +7,12 @@ pub mod psk;
 use crate::{
     key::exchange::Key,
     rsna::{AuthStatus, Dot11VerifiedKeyFrame, SecAssocUpdate, UpdateSink},
+    Error,
 };
 
 use anyhow;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use log::warn;
-use thiserror::{self, Error};
 use wlan_common::{
     ie::rsn::akm::{self, Akm},
     mac::MacAddr,
