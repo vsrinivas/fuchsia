@@ -1,0 +1,92 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//src/sys/build/components.gni")
+
+# Example:
+# ```
+#   audio_core_config_test("foo-audio-core-config-test") {
+#     sources = [
+#       "//path/to/audio_core_config.json",
+#     ]
+#   }
+# ```
+#
+# Parameters
+#     sources (required)
+#       A list of paths to audio_core_config.json files.
+#       Type: list (string)
+#
+#     package_name (optional)
+#       The name of the package to create.
+#       Type: string
+#       Default: $target_name
+template("audio_core_config_test") {
+  assert(defined(invoker.sources))
+  package_name = target_name
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+
+  test_config_resource = "${target_name}_test_resource"
+  resource(test_config_resource) {
+    visibility = [ ":*" ]
+    testonly = true
+    sources = invoker.sources
+    outputs = [ "audio_core_config/{{source_file_part}}" ]
+  }
+
+  fuchsia_unittest_package(target_name) {
+    executable_path = "bin/config_validator"
+    deps = [
+      ":${test_config_resource}",
+      "//src/media/audio/audio_core/test/config_validator",
+    ]
+  }
+}
+
+# Example:
+# ```
+#   audio_core_config("foo_audio_core_config") {
+#     for_pkg = "audio_core"
+#     config = "//path/to/audio_core_config.json"
+#     test_package_name = "foo-audio-core-config-test"
+#   }
+# ```
+#
+# Parameters
+#     for_pkg (required)
+#       The name of the audio_core package.
+#       Type: string
+#
+#     config (required)
+#       The path of an audio_core_config.json file.
+#       Type: string
+#
+#     test_package_name(required)
+#       The package name of a fuchsia_unittest_package. This test package will validate that
+#       `config` can be loaded by audio_core.
+#       Type: string
+#
+template("audio_core_config") {
+  assert(defined(invoker.for_pkg))
+  assert(defined(invoker.config))
+  assert(defined(invoker.test_package_name))
+
+  # Add the config-data for the audio_core package.
+  config_data(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "for_pkg",
+                           ])
+    sources = [ invoker.config ]
+    outputs = [ "audio_core_config.json" ]
+  }
+
+  audio_core_config_test(invoker.test_package_name) {
+    sources = [ invoker.config ]
+  }
+}

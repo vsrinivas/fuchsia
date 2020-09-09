@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/media/audio/audio_core_config.gni")
+
+audio_core_config_test("tests") {
+  package_name = "audio-core-test-configs-test"
+  sources = [
+    "audio_core_config_with_inversion_filter.json",
+    "audio_core_config_with_sleeper_filter.json",
+    "ultrasound_audio_core_config.json",
+  ]
+}

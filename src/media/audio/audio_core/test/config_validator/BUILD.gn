@@ -1,0 +1,13 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("config_validator") {
+  testonly = true
+  sources = [ "config_validator.cc" ]
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/audio_core:audio_core_lib",
+  ]
+}

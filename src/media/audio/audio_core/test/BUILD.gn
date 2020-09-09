@@ -8,6 +8,7 @@ group("test") {
     "api:audio-core-api-pipeline-tests",
     "api:audio-core-api-tests",
     "api:audio-core-with-test-effects",
+    "api/testdata:tests",
     "hardware:audio_core_hardware_tests",
     "//src/media/audio/audio_core:audio-core-for-test",
     "//src/media/audio/virtual_audio_service:virtual-audio-service-for-test",
