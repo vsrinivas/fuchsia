@@ -583,7 +583,7 @@ class WebEngineTest : public TouchInputBase {
   static constexpr auto kTapRetryInterval = zx::sec(1);
 };
 
-TEST_F(WebEngineTest, ChromiumTap) {
+TEST_F(WebEngineTest, DISABLED_ChromiumTap) {
   const std::string kOneChromium = "fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;
