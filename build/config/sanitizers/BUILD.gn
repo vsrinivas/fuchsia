@@ -13,22 +13,31 @@ variant("asan") {
   # TODO(phosek): use runtime.json instead of invoking Clang.
   if (is_fuchsia) {
     extension = ".so"
-  } else if (is_linux) {
-    extension = ".a"
   } else if (is_mac) {
     extension = "_osx_dynamic.dylib"
   } else {
     extension = ".a"
   }
-  libclang_rt_asan =
-      exec_script("/usr/bin/env",
-                  [
-                    "${clang_prefix}/clang",
-                    "--target=${clang_target}",
-                    "-print-file-name=libclang_rt.asan${extension}",
-                  ],
-                  "trim string")
-  rustflags = [ "-Clink-arg=${libclang_rt_asan}" ]
+
+  # For dynamic linking (Fuchsia and macOS), there is just one combined DSO.
+  # For static linking (other platforms), there are separate libraries for the
+  # generic (C) and C++-specific runtime support.
+  needed_asan_libs = [ "asan" ]
+  if (extension == ".a") {
+    needed_asan_libs += [ "asan_cxx" ]
+  }
+  rustflags = []
+  foreach(asan, needed_asan_libs) {
+    libclang_rt_asan =
+        exec_script("/usr/bin/env",
+                    [
+                      "${clang_prefix}/clang",
+                      "--target=${clang_target}",
+                      "-print-file-name=libclang_rt.${asan}${extension}",
+                    ],
+                    "trim string")
+    rustflags += [ "-Clink-arg=${libclang_rt_asan}" ]
+  }
   if (is_fuchsia) {
     rustflags += [ "-Clink-arg=-dynamic-linker=asan/ld.so.1" ]
   }
