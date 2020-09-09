@@ -103,9 +103,6 @@ class Display : public DisplayType,
     thrd_t flush_thread{};
   };
 
-  static void OnSignal(void* ctx, int32_t flags);
-  void OnReadOrWritable();
-
   zx_status_t WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(uint32_t* result, uint32_t count) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
@@ -131,8 +128,6 @@ class Display : public DisplayType,
   int FlushHandler(uint64_t id);
 
   fbl::Mutex lock_;
-  fbl::Mutex read_write_lock_;
-  fbl::ConditionVariable readable_writable_cvar_;
   ddk::GoldfishControlProtocolClient control_ TA_GUARDED(lock_);
   ddk::GoldfishPipeProtocolClient pipe_ TA_GUARDED(lock_);
   int32_t id_ = 0;
@@ -145,6 +140,8 @@ class Display : public DisplayType,
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
   std::map<uint64_t, ColorBuffer*> current_cb_ TA_GUARDED(flush_lock_);
   bool shutdown_ TA_GUARDED(flush_lock_) = false;
+
+  zx::event pipe_event_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Display);
 };

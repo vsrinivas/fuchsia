@@ -21,7 +21,7 @@ enum PipeCmdCode : int32 {
     CALL = 11;
 };
 
-/// Wake flags received through signal callback.
+/// Pipe device wake flags.
 enum PipeWakeFlag : int32 {
     CLOSED = 1;
     READ = 2;
@@ -58,12 +58,6 @@ struct PipeCmdBuffer {
     PipeCmdReadWriteParams rw_params;
 };
 
-/// Signal callback interface used for notifications.
-[Layout = "ddk-callback"]
-protocol GoldfishPipeSignalValue {
-    Callback(int32 flags) -> ();
-};
-
 /// This interface can be used to establish a goldfish pipe connection. The
 /// client is responsible for managing the command structure associated with
 /// the pipe and should issue a 'close' command before destroying a previously
@@ -71,13 +65,22 @@ protocol GoldfishPipeSignalValue {
 /// not cleaned up properly.
 [Layout = "ddk-protocol"]
 protocol GoldfishPipe {
-    /// Create a new pipe connection. The |id| identifies the pipe and must
-    /// be used for all subsequent commands. The memory that will be used
-    /// as command structure is returned in |vmo|.
-    Create(GoldfishPipeSignalValue cb_value) -> (zx.status s, int32 id, handle<vmo> vmo);
+    /// Create a new pipe connection. The |id| identifies the pipe and must be
+    /// used for all subsequent commands. The memory that will be used as
+    /// command structure is returned in |vmo|.
+    Create() -> (zx.status s, int32 id, handle<vmo> vmo);
 
     /// Destroy a previously created pipe connection.
     Destroy(int32 id);
+
+    /// Set event used to signal device state. Discards existing event
+    /// after having transferred device state to the new event, if event
+    /// exists.
+    ///
+    /// Return error states from `zx_object_wait_one` and `zx_object_signal`
+    /// if existing events on `pipe_event` cannot be transferred to the call.
+    /// Otherwise returns `ZX_OK`.
+    SetEvent(int32 id, handle<event> pipe_event) -> (zx.status s);
 
     /// Open pipe connection. This must be called before any other
     /// commands are issued and will cause the physical address of the

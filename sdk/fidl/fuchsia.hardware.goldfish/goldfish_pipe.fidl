@@ -49,10 +49,15 @@ protocol Pipe {
     /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not writable.
     Write(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
 
-    /// Writes count bytes from the IO buffer at specified write
-    /// offset. Blocks if pipe device is not writable. Subsequently reads
-    /// read_count bytes into the IO buffer at specified read offset.
-    /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.
+    /// Writes `count` bytes from the IO buffer at specified write
+    /// `offset`. Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not writable.
+    ///
+    /// If it writes to device successfully, it subsequently reads `read_count`
+    /// bytes into the IO buffer at specified `read_offset`. Returns
+    /// `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.
+    ///
+    /// Return value `actual` is the total bytes read from and written to
+    /// the IO buffer.
     ///
     /// The name "DoCall" (instead of "Call") is to avoid collision with LLCPP
     /// generated code "class Call" (generated per protocol).  We don't want

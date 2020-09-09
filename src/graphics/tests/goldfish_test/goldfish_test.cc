@@ -112,7 +112,7 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
     auto result = pipe.DoCall(kSmallSize, 0u, kSmallSize, kRecvOffset);
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
-    EXPECT_EQ(result.Unwrap()->actual, kSmallSize);
+    EXPECT_EQ(result.Unwrap()->actual, 2 * kSmallSize);
   }
 
   EXPECT_EQ(vmo.read(recv_buffer, kRecvOffset, kSmallSize), ZX_OK);

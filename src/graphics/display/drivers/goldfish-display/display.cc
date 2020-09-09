@@ -4,6 +4,7 @@
 
 #include "display.h"
 
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/pixelformat.h>
@@ -218,11 +219,28 @@ zx_status_t Display::Bind() {
     return status;
   }
 
+  status = zx::event::create(0u, &pipe_event_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_event_create failed: %d", kTag, status);
+    return status;
+  }
+
+  zx::event pipe_event_dup;
+  status = pipe_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_event_dup);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_handle_duplicate failed: %d", kTag, status);
+    return status;
+  }
+
   zx::vmo vmo;
-  goldfish_pipe_signal_value_t signal_cb = {Display::OnSignal, this};
-  status = pipe_.Create(&signal_cb, &id_, &vmo);
+  status = pipe_.Create(&id_, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Create failed: %d", kTag, status);
+    return status;
+  }
+  status = pipe_.SetEvent(id_, std::move(pipe_event_dup));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: SetEvent failed: %d", kTag, status);
     return status;
   }
 
@@ -666,25 +684,8 @@ zx_status_t Display::DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* ou
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Display::OnSignal(void* ctx, int32_t flags) {
-  TRACE_DURATION("gfx", "Display::OnSignal", "flags", flags);
-
-  if (flags & (PIPE_WAKE_FLAG_READ | PIPE_WAKE_FLAG_WRITE | PIPE_WAKE_FLAG_CLOSED)) {
-    static_cast<Display*>(ctx)->OnReadOrWritable();
-  }
-}
-
-void Display::OnReadOrWritable() {
-  TRACE_DURATION("gfx", "Display::OnReadOrWritable");
-
-  fbl::AutoLock lock(&read_write_lock_);
-  readable_writable_cvar_.Signal();
-}
-
 zx_status_t Display::WriteLocked(uint32_t cmd_size) {
   TRACE_DURATION("gfx", "Display::Write", "cmd_size", cmd_size);
-
-  fbl::AutoLock lock(&read_write_lock_);
 
   auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
   uint32_t remaining = cmd_size;
@@ -715,15 +716,22 @@ zx_status_t Display::WriteLocked(uint32_t cmd_size) {
     pipe_.Exec(id_);
 
     // Wait for pipe to become writable.
-    readable_writable_cvar_.Wait(&read_write_lock_);
+    zx_status_t status =
+        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP |
+                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE,
+                             zx::time::infinite(), nullptr);
+    if (status != ZX_OK) {
+      if (status != ZX_ERR_CANCELED) {
+        zxlogf(ERROR, "%s: zx_object_wait_one failed: %d", kTag, status);
+      }
+      return status;
+    }
   }
   return ZX_OK;
 }
 
 zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
   TRACE_DURATION("gfx", "Display::ReadResult");
-
-  fbl::AutoLock lock(&read_write_lock_);
 
   size_t length = sizeof(*result) * count;
   size_t remaining = length;
@@ -759,7 +767,16 @@ zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
     ZX_DEBUG_ASSERT(!buffer->status);
 
     // Wait for pipe to become readable.
-    readable_writable_cvar_.Wait(&read_write_lock_);
+    zx_status_t status =
+        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP |
+                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
+                             zx::time::infinite(), nullptr);
+    if (status != ZX_OK) {
+      if (status != ZX_ERR_CANCELED) {
+        zxlogf(ERROR, "%s: zx_object_wait_one failed: %d", kTag, status);
+      }
+      return status;
+    }
   }
 
   return ZX_OK;

@@ -66,19 +66,24 @@ void Pipe::Init() {
     return;
   }
 
-  status = zx::event::create(0, &event_);
+  zx::event event;
+  status = zx::event::create(0, &event);
   if (status != ZX_OK) {
     FailAsync(status, "[%s] Pipe::Pipe() failed to create event", kTag);
     return;
   }
-  status = event_.signal(0, SIGNALS);
+  status = event.signal(0, SIGNALS);
   ZX_ASSERT(status == ZX_OK);
 
   zx::vmo vmo;
-  goldfish_pipe_signal_value_t signal_cb = {Pipe::OnSignal, this};
-  status = pipe_.Create(&signal_cb, &id_, &vmo);
+  status = pipe_.Create(&id_, &vmo);
   if (status != ZX_OK) {
     FailAsync(status, "[%s] Pipe::Pipe() failed to create pipe", kTag);
+    return;
+  }
+  status = pipe_.SetEvent(id_, std::move(event));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "[%s] Pipe::Pipe() failed to set event: %d", kTag, status);
     return;
   }
 
@@ -150,17 +155,13 @@ void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync completer) {
 
   fbl::AutoLock lock(&lock_);
 
-  zx_handle_t observed = 0;
-  zx_status_t status = event_.wait_one(SIGNALS, zx::time::infinite_past(), &observed);
+  zx_status_t status = pipe_.SetEvent(id_, std::move(event));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "[%s] Pipe::SetEvent() failed to transfer observed signals: %d", kTag, status);
-    completer.Close(status);
+    zxlogf(ERROR, "[%s] SetEvent failed: %d", kTag, status);
+    completer.Close(ZX_ERR_INTERNAL);
     return;
   }
 
-  event_ = std::move(event);
-  status = event_.signal(SIGNALS, observed & SIGNALS);
-  ZX_ASSERT(status == ZX_OK);
   completer.Close(ZX_OK);
 }
 
@@ -215,7 +216,7 @@ void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync completer
 
 void Pipe::DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
                   DoCallCompleter::Sync completer) {
-  TRACE_DURATION("gfx", "Pipe::Call", "count", count, "read_count", read_count);
+  TRACE_DURATION("gfx", "Pipe::DoCall", "count", count, "read_count", read_count);
 
   fbl::AutoLock lock(&lock_);
 
@@ -228,52 +229,29 @@ void Pipe::DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t
     return;
   }
 
-  size_t remaining = count;
-  size_t remaining_read = read_count;
-
-  int32_t cmd = PIPE_CMD_CODE_WRITE;
-  zx_paddr_t read_paddr = 0;
+  int32_t cmd = 0, wake_cmd = 0;
+  uint32_t wake_signal = 0u;
+  zx_paddr_t read_paddr = 0u, write_paddr = 0u;
+  // Set write command, signal and offset.
+  if (count) {
+    cmd = read_count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_WRITE;
+    wake_cmd = PIPE_CMD_CODE_WAKE_ON_WRITE;
+    wake_signal = PIPE_CMD_CODE_WAKE_ON_WRITE;
+    write_paddr = buffer_.phys + offset;
+  }
+  // Set read command, signal and offset.
   if (read_count) {
-    cmd = PIPE_CMD_CODE_CALL;
+    cmd = count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_READ;
+    wake_cmd = PIPE_CMD_CODE_WAKE_ON_READ;
+    wake_signal = PIPE_CMD_CODE_WAKE_ON_READ;
     read_paddr = buffer_.phys + read_offset;
   }
 
-  // Blocking write. This should always make progress or fail.
-  while (remaining) {
-    size_t actual;
-    zx_status_t status = TransferLocked(
-        cmd, PIPE_CMD_CODE_WAKE_ON_WRITE, llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE,
-        buffer_.phys + offset, remaining, read_paddr, read_count, &actual);
-    if (status == ZX_OK) {
-      // Calculate bytes written and bytes read. Adjust counts and offsets accordingly.
-      size_t actual_write = std::min(actual, remaining);
-      size_t actual_read = actual - actual_write;
-      remaining -= actual_write;
-      offset += actual_write;
-      remaining_read -= actual_read;
-      read_offset += actual_read;
-      continue;
-    }
-    if (status != ZX_ERR_SHOULD_WAIT) {
-      completer.Reply(status, 0);
-      return;
-    }
-    signal_cvar_.Wait(&lock_);
-  }
+  size_t actual = 0u;
+  zx_status_t status = TransferLocked(cmd, wake_cmd, wake_signal, write_paddr, count, read_paddr,
+                                      read_count, &actual);
 
-  // Non-blocking read if no data has been read yet.
-  zx_status_t status = ZX_OK;
-  if (read_count && remaining_read == read_count) {
-    size_t actual = 0;
-    status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                            llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
-                            buffer_.phys + read_offset, remaining_read, 0, 0, &actual);
-    if (status == ZX_OK) {
-      remaining_read -= actual;
-    }
-  }
-  size_t actual_read = read_count - remaining_read;
-  completer.Reply(status, actual_read);
+  completer.Reply(status, actual);
 }
 
 // This function can be trusted to complete fairly quickly. It will cause a
@@ -308,12 +286,6 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
     zxlogf(ERROR, "[%s] Pipe::Transfer() transfer failed: %d", kTag, buffer->status);
     return ZX_ERR_INTERNAL;
   }
-
-  // PIPE_ERROR_AGAIN means that we need to wait until pipe is
-  // readable/writable before we can perform another transfer command.
-  // Clear event_ READABLE/WRITABLE bits and request an interrupt that
-  // will indicate that the pipe is again readable/writable.
-  event_.signal(state_clr, 0);
 
   buffer->id = id_;
   buffer->cmd = wake_cmd;
@@ -358,29 +330,6 @@ void Pipe::FailAsync(zx_status_t epitaph, const char* format, ...) {
   va_start(args, format);
   zxlogvf(ERROR, format, args);
   va_end(args);
-}
-
-// static
-void Pipe::OnSignal(void* ctx, int32_t flags) {
-  TRACE_DURATION("gfx", "Pipe::OnSignal", "flags", flags);
-
-  zx_signals_t state_set = 0;
-  if (flags & PIPE_WAKE_FLAG_CLOSED) {
-    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP;
-  }
-  if (flags & PIPE_WAKE_FLAG_READ) {
-    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE;
-  }
-  if (flags & PIPE_WAKE_FLAG_WRITE) {
-    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
-  }
-
-  auto pipe = static_cast<Pipe*>(ctx);
-
-  fbl::AutoLock lock(&pipe->lock_);
-  // The event_ signal is for client code, while the signal_cvar_ is for this class.
-  pipe->event_.signal(0, state_set);
-  pipe->signal_cvar_.Signal();
 }
 
 Pipe::Buffer& Pipe::Buffer::operator=(Pipe::Buffer&& other) noexcept {

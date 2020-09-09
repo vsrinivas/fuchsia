@@ -72,8 +72,6 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   // Close current bounded channel and send an epitaph to the client.
   void FailAsync(zx_status_t epitaph, const char* format, ...);
 
-  static void OnSignal(void* ctx, int32_t flags);
-
   std::unique_ptr<fidl::ServerBindingRef<llcpp::fuchsia::hardware::goldfish::Pipe>> binding_ref_;
   const OnBindFn on_bind_;
   const OnCloseFn on_close_;
@@ -81,14 +79,12 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   async_dispatcher_t* dispatcher_;
 
   fbl::Mutex lock_;
-  fbl::ConditionVariable signal_cvar_;
   ddk::GoldfishPipeProtocolClient pipe_;
   int32_t id_ TA_GUARDED(lock_) = 0;
   zx::bti bti_;
   ddk::IoBuffer cmd_buffer_;
 
   Buffer buffer_ TA_GUARDED(lock_) = {};
-  zx::event event_ TA_GUARDED(lock_);
 };
 
 }  // namespace goldfish

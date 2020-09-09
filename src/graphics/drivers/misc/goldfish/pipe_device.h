@@ -43,8 +43,8 @@ class PipeDevice : public DeviceType,
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t GoldfishPipeCreate(const goldfish_pipe_signal_value_t* cb_value, int32_t* out_id,
-                                 zx::vmo* out_vmo);
+  zx_status_t GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo);
+  zx_status_t GoldfishPipeSetEvent(int32_t id, zx::event pipe_event);
   void GoldfishPipeDestroy(int32_t id);
   void GoldfishPipeOpen(int32_t id);
   void GoldfishPipeExec(int32_t id);
@@ -56,11 +56,14 @@ class PipeDevice : public DeviceType,
 
  private:
   struct Pipe {
-    Pipe(zx_paddr_t paddr, zx::pmt pmt, const goldfish_pipe_signal_value_t* cb_value);
+    Pipe(zx_paddr_t paddr, zx::pmt pmt, zx::event pipe_event);
     ~Pipe();
+
+    void SignalEvent(uint32_t flags) const;
+
     const zx_paddr_t paddr;
     zx::pmt pmt;
-    const goldfish_pipe_signal_value_t cb_value;
+    zx::event pipe_event;
   };
 
   ddk::AcpiProtocolClient acpi_;

@@ -32,6 +32,7 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.goldfish.control",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/lib/ddk",
     "//src/lib/ddktl",

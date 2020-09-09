@@ -4,6 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
@@ -152,11 +153,29 @@ zx_status_t Control::Bind() {
     return status;
   }
 
-  zx::vmo vmo;
-  goldfish_pipe_signal_value_t signal_cb = {Control::OnSignal, this};
-  status = pipe_.Create(&signal_cb, &id_, &vmo);
+  ZX_DEBUG_ASSERT(!pipe_event_.is_valid());
+  status = zx::event::create(0u, &pipe_event_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create failed: %d", kTag, status);
+    zxlogf(ERROR, "%s: zx_event_create failed: %d", kTag, status);
+    return status;
+  }
+
+  zx::event pipe_event_dup;
+  status = pipe_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_event_dup);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_handle_duplicate failed: %d", kTag, status);
+    return status;
+  }
+
+  zx::vmo vmo;
+  status = pipe_.Create(&id_, &vmo);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pipe Create failed: %d", kTag, status);
+    return status;
+  }
+  status = pipe_.SetEvent(id_, std::move(pipe_event_dup));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pipe SetEvent failed: %d", kTag, status);
     return status;
   }
 
@@ -451,21 +470,6 @@ zx_status_t Control::GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id
   return ZX_OK;
 }
 
-void Control::OnSignal(void* ctx, int32_t flags) {
-  TRACE_DURATION("gfx", "Control::OnSignal", "flags", flags);
-
-  if (flags & (PIPE_WAKE_FLAG_READ | PIPE_WAKE_FLAG_CLOSED)) {
-    static_cast<Control*>(ctx)->OnReadable();
-  }
-}
-
-void Control::OnReadable() {
-  TRACE_DURATION("gfx", "Control::OnReadable");
-
-  fbl::AutoLock lock(&lock_);
-  readable_cvar_.Signal();
-}
-
 int32_t Control::WriteLocked(uint32_t cmd_size, int32_t* consumed_size) {
   TRACE_DURATION("gfx", "Control::Write", "cmd_size", cmd_size);
 
@@ -523,7 +527,16 @@ zx_status_t Control::ReadResultLocked(uint32_t* result) {
     ZX_DEBUG_ASSERT(!buffer->status);
 
     // Wait for pipe to become readable.
-    readable_cvar_.Wait(&lock_);
+    zx_status_t status =
+        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP |
+                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
+                             zx::time::infinite(), nullptr);
+    if (status != ZX_OK) {
+      if (status != ZX_ERR_CANCELED) {
+        zxlogf(ERROR, "%s: zx_object_wait_one failed: %d", kTag, status);
+      }
+      return status;
+    }
   }
 }
 

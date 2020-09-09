@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "pipe_device.h"
+#include "src/graphics/drivers/misc/goldfish/pipe_device.h"
 
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls/iommu.h>
 #include <zircon/threads.h>
 
@@ -13,7 +17,7 @@
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 
-#include "instance.h"
+#include "src/graphics/drivers/misc/goldfish/instance.h"
 
 namespace goldfish {
 namespace {
@@ -174,8 +178,7 @@ void PipeDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void PipeDevice::DdkRelease() { delete this; }
 
-zx_status_t PipeDevice::GoldfishPipeCreate(const goldfish_pipe_signal_value_t* cb_value,
-                                           int32_t* out_id, zx::vmo* out_vmo) {
+zx_status_t PipeDevice::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
   TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeCreate");
 
   static_assert(sizeof(pipe_cmd_buffer_t) <= PAGE_SIZE, "cmd size");
@@ -196,10 +199,41 @@ zx_status_t PipeDevice::GoldfishPipeCreate(const goldfish_pipe_signal_value_t* c
 
   fbl::AutoLock lock(&pipes_lock_);
   ZX_DEBUG_ASSERT(pipes_.count(id) == 0);
-  pipes_[id] = std::make_unique<Pipe>(paddr, std::move(pmt), cb_value);
+  pipes_[id] = std::make_unique<Pipe>(paddr, std::move(pmt), zx::event());
 
   *out_vmo = std::move(vmo);
   *out_id = id;
+  return ZX_OK;
+}
+
+zx_status_t PipeDevice::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
+  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeSetEvent");
+
+  fbl::AutoLock lock(&pipes_lock_);
+
+  ZX_DEBUG_ASSERT(pipes_.count(id) == 1);
+  ZX_DEBUG_ASSERT(pipe_event.is_valid());
+
+  zx_signals_t kSignals = llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE |
+                          llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
+
+  zx_signals_t observed = 0u;
+  // If old pipe event exists, transfer observed signal to new pipe event.
+  if (pipes_[id]->pipe_event.is_valid()) {
+    zx_status_t status =
+        pipes_[id]->pipe_event.wait_one(kSignals, zx::time::infinite_past(), &observed);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: failed to transfer observed signals: %d", kTag, status);
+      return status;
+    }
+  }
+
+  pipes_[id]->pipe_event = std::move(pipe_event);
+  zx_status_t status = pipes_[id]->pipe_event.signal(kSignals, observed & kSignals);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to signal event: %d", kTag, status);
+    return status;
+  }
   return ZX_OK;
 }
 
@@ -278,7 +312,7 @@ int PipeDevice::IrqHandler() {
       for (uint32_t i = 0; i < count; ++i) {
         auto it = pipes_.find(buffers->signal_buffers[i].id);
         if (it != pipes_.end()) {
-          it->second->cb_value.callback(it->second->cb_value.ctx, buffers->signal_buffers[i].flags);
+          it->second->SignalEvent(buffers->signal_buffers[i].flags);
         }
       }
     }
@@ -287,12 +321,34 @@ int PipeDevice::IrqHandler() {
   return 0;
 }
 
-PipeDevice::Pipe::Pipe(zx_paddr_t paddr, zx::pmt pmt, const goldfish_pipe_signal_value_t* cb_value)
-    : paddr(paddr), pmt(std::move(pmt)), cb_value(*cb_value) {}
+PipeDevice::Pipe::Pipe(zx_paddr_t paddr, zx::pmt pmt, zx::event pipe_event)
+    : paddr(paddr), pmt(std::move(pmt)), pipe_event(std::move(pipe_event)) {}
 
 PipeDevice::Pipe::~Pipe() {
   ZX_DEBUG_ASSERT(pmt.is_valid());
   pmt.unpin();
+}
+
+void PipeDevice::Pipe::SignalEvent(uint32_t flags) const {
+  if (!pipe_event.is_valid()) {
+    return;
+  }
+
+  zx_signals_t state_set = 0;
+  if (flags & PIPE_WAKE_FLAG_CLOSED) {
+    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP;
+  }
+  if (flags & PIPE_WAKE_FLAG_READ) {
+    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE;
+  }
+  if (flags & PIPE_WAKE_FLAG_WRITE) {
+    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
+  }
+
+  zx_status_t status = pipe_event.signal(/*clear_mask=*/0u, state_set);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_signal_object failed: %d", kTag, status);
+  }
 }
 
 }  // namespace goldfish

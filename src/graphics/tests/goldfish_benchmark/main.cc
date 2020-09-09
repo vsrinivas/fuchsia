@@ -127,8 +127,10 @@ void RunPingPongBenchmark(llcpp::fuchsia::hardware::goldfish::Pipe::SyncClient& 
 
   RunAndMeasure(test_name, iterations, [&pipe, size] {
     auto result = pipe.DoCall(size, 0, size, 0);
+    // For the test purpose we expect the buffer is small enough
+    // so that we can finish in one write-read round trip.
     ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
-    ZX_ASSERT(result.value().actual == size);
+    ZX_ASSERT(result.value().actual == 2 * size);
   });
 }
 

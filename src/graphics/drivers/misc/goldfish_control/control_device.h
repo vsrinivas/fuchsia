@@ -64,9 +64,6 @@ class Control : public ControlType,
   void RemoveHeap(Heap* heap);
 
  private:
-  static void OnSignal(void* ctx, int32_t flags);
-  void OnReadable();
-
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
@@ -84,7 +81,6 @@ class Control : public ControlType,
   zx_status_t MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint32_t* result) TA_REQ(lock_);
 
   fbl::Mutex lock_;
-  fbl::ConditionVariable readable_cvar_;
   ddk::GoldfishPipeProtocolClient pipe_;
   ddk::GoldfishControlProtocolClient control_;
   int32_t id_ = 0;
@@ -93,6 +89,8 @@ class Control : public ControlType,
   ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
 
   fbl::DoublyLinkedList<std::unique_ptr<Heap>> heaps_ TA_GUARDED(lock_);
+
+  zx::event pipe_event_;
 
   // TODO(TC-383): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
