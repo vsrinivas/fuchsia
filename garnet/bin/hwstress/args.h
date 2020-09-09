@@ -26,8 +26,13 @@ enum class StressTest {
   kMemory,
 };
 
-// Parse an OptionalUint64.
-std::istream& operator>>(std::istream& is, cmdline::Optional<int64_t>& result);
+// A std::vector<uint32_t> that can be used with the args parsing library.
+struct CpuCoreList {
+  std::vector<uint32_t> cores;
+};
+
+// Parse a CpuCoreList.
+std::istream& operator>>(std::istream& is, CpuCoreList& result);
 
 // Parsed command line arguments.
 struct CommandLineArgs {
@@ -81,6 +86,9 @@ struct CommandLineArgs {
 
   // CPU workload to use.
   std::string cpu_workload;
+
+  // CPU cores to stress.
+  CpuCoreList cores_to_test;
 
   //
   // LED-specific arguments.

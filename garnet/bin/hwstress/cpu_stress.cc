@@ -29,10 +29,10 @@ namespace hwstress {
 namespace {
 
 void RunWorkload(StatusLine* status, ProfileManager* profile_manager, TemperatureSensor* sensor,
-                 const CpuWorkload& workload, uint32_t num_cpus, zx::duration duration,
-                 double utilization) {
+                 const CpuWorkload& workload, std::vector<uint32_t> cores_to_test,
+                 zx::duration duration, double utilization) {
   // Start a workload.
-  CpuStressor stressor{num_cpus, workload.work, utilization, profile_manager};
+  CpuStressor stressor{std::move(cores_to_test), workload.work, utilization, profile_manager};
   stressor.Start();
 
   // Update the status line until the test is finished.
@@ -96,9 +96,11 @@ bool StressCpu(StatusLine* status, const CommandLineArgs& args, zx::duration dur
   zx::time start_time = zx::clock::get_monotonic();
   zx::time finish_time = start_time + duration;
 
-  // Get number of CPUs.
-  uint32_t num_cpus = zx_system_get_num_cpus();
-  status->Log("Detected %d CPU(s) in the system.\n", num_cpus);
+  std::string cores_to_test("Testing CPU(s):");
+  for (auto core : args.cores_to_test.cores) {
+    cores_to_test += " " + std::to_string(core);
+  }
+  status->Log("%s", cores_to_test.c_str());
 
   // Create a profile manager.
   std::unique_ptr<ProfileManager> profile_manager = ProfileManager::CreateFromEnvironment();
@@ -159,8 +161,9 @@ bool StressCpu(StatusLine* status, const CommandLineArgs& args, zx::duration dur
   do {
     status->Log("Iteration %ld: %0.2fs per test.", iteration++, DurationToSecs(time_per_test));
     for (const auto& workload : workloads) {
-      RunWorkload(status, profile_manager.get(), temperature_sensor, workload, num_cpus,
-                  time_per_test, /*utilization=*/(args.utilization_percent / 100.0));
+      RunWorkload(status, profile_manager.get(), temperature_sensor, workload,
+                  args.cores_to_test.cores, time_per_test,
+                  /*utilization=*/(args.utilization_percent / 100.0));
     }
     time_per_test *= 2;
   } while (zx::clock::get_monotonic() < finish_time);

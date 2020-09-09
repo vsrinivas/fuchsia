@@ -5,8 +5,11 @@
 #include "args.h"
 
 #include <lib/cmdline/args_parser.h>
+#include <lib/cmdline/status.h>
 #include <lib/fitx/result.h>
 #include <stdlib.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 #include <memory>
 #include <optional>
@@ -14,6 +17,8 @@
 #include <string_view>
 #include <vector>
 
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "status.h"
 
@@ -50,6 +55,7 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
                     "Name of a CPU workload to use. If not specified, "
                     "all available workloads will be used.",
                     &CommandLineArgs::cpu_workload);
+  parser->AddSwitch("cpu-cores", 'p', "CPU cores to stress.", &CommandLineArgs::cores_to_test);
 
   // Light test flags.
   parser->AddSwitch("light-on-time", 0, "Time in seconds the light should be on for each blink.",
@@ -61,6 +67,22 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
 }
 
 }  // namespace
+
+std::istream& operator>>(std::istream& is, CpuCoreList& result) {
+  std::string str_result;
+  is >> str_result;
+  std::vector<std::string> cores_str =
+      fxl::SplitStringCopy(str_result, ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  for (const std::string& core_str : cores_str) {
+    uint32_t core_num;
+    if (!fxl::StringToNumberWithError(core_str, &core_num)) {
+      is.setstate(std::ios_base::failbit);
+      break;
+    }
+    result.cores.push_back(core_num);
+  }
+  return is;
+}
 
 void PrintUsage() {
   puts(
@@ -93,6 +115,10 @@ CPU test options:
                          can be determined by using "--workload=list".
                          If not specified, each of the internal
                          workloads will be iterated through repeatedly.
+  -p, --cpu-cores=<cores>
+                         CPU cores to run the test on. A comma separated list
+                         of CPU indices. If not specified all the CPUs will be
+                         tested.
 
 Flash test options:
   -c, --cleanup-test-partitions
@@ -229,6 +255,23 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
     }
   }
 
+  // Validate CPU cores.
+  if (result.subcommand == StressTest::kCpu) {
+    // Get number of CPUs.
+    uint32_t num_cpus = zx_system_get_num_cpus();
+    // If CPUs are not specified, test all CPUs.
+    if (result.cores_to_test.cores.empty()) {
+      for (uint32_t i = 0; i < num_cpus; i++) {
+        result.cores_to_test.cores.push_back(i);
+      }
+    } else {
+      for (auto core : result.cores_to_test.cores) {
+        if (core >= num_cpus) {
+          return fitx::error(fxl::StringPrintf("CPU core out of range."));
+        }
+      }
+    }
+  }
   // Ensure no more parameters were given.
   if (!params.empty()) {
     return fitx::error(fxl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());

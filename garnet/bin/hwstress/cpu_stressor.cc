@@ -69,16 +69,18 @@ void WorkIndicator::MaybeSleep() {
 
 void StopIndicator::Stop() { should_stop_.store(true, std::memory_order_release); }
 
-CpuStressor::CpuStressor(uint32_t threads, std::function<void(WorkIndicator)> workload,
-                         double utilization, ProfileManager* profile_manager)
-    : threads_(threads),
+CpuStressor::CpuStressor(std::vector<uint32_t> cores_to_test,
+                         std::function<void(WorkIndicator)> workload, double utilization,
+                         ProfileManager* profile_manager)
+    : cores_to_test_(std::move(cores_to_test)),
       workload_(std::move(workload)),
       utilization_(utilization),
       profile_manager_(profile_manager) {}
 
-CpuStressor::CpuStressor(uint32_t threads, std::function<void()> looping_workload,
-                         double utilization, ProfileManager* profile_manager)
-    : threads_(threads),
+CpuStressor::CpuStressor(std::vector<uint32_t> cores_to_test,
+                         std::function<void()> looping_workload, double utilization,
+                         ProfileManager* profile_manager)
+    : cores_to_test_(std::move(cores_to_test)),
       workload_([f = std::move(looping_workload)](WorkIndicator indicator) {
         do {
           f();
@@ -93,15 +95,15 @@ void CpuStressor::Start() {
   ZX_ASSERT(workers_.empty());
 
   // Start the workers.
-  for (uint32_t i = 0; i < threads_; i++) {
-    auto worker = std::make_unique<std::thread>([this, workload = workload_, i]() mutable {
-      // Set priority to low, and set affinity to CPU (i %  num_cpus).
+  for (uint32_t core : cores_to_test_) {
+    auto worker = std::make_unique<std::thread>([this, workload = workload_, core]() mutable {
+      // Set priority to low, and set affinity to CPU (core % num_cpus).
       if (profile_manager_ != nullptr) {
         zx_status_t status =
             profile_manager_->SetThreadPriority(*zx::thread::self(), ZX_PRIORITY_LOW);
         ZX_ASSERT(status == ZX_OK);
         profile_manager_->SetThreadAffinity(*zx::thread::self(),
-                                            1u << (i % zx_system_get_num_cpus()));
+                                            1u << (core % zx_system_get_num_cpus()));
         ZX_ASSERT(status == ZX_OK);
       }
 

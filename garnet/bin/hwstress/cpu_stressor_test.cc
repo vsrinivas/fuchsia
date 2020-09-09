@@ -16,14 +16,14 @@ namespace hwstress {
 namespace {
 
 TEST(CpuStressor, TrivialStartStop) {
-  CpuStressor stressor{1, []() { /* do nothing */ }};
+  CpuStressor stressor{{1}, []() { /* do nothing */ }};
   stressor.Start();
   stressor.Stop();
 }
 
 TEST(CpuStressor, EnsureFunctionRunsAndStops) {
   std::atomic<uint32_t> val;
-  CpuStressor stressor{1, [&]() { val.fetch_add(1); }};
+  CpuStressor stressor{{1}, [&]() { val.fetch_add(1); }};
   stressor.Start();
 
   // Ensure we see the counter change a few times.
@@ -51,9 +51,13 @@ TEST(CpuStressor, EnsureFunctionRunsAndStops) {
 TEST(CpuStressor, MultipleThreads) {
   const int kNumThreads = 10;
   std::atomic<uint32_t> seen_threads;
+  std::vector<uint32_t> cores;
+  for (uint32_t i = 0; i < kNumThreads; i++) {
+    cores.push_back(i);
+  }
 
   // Each thread increments the "seen_threads" counter once.
-  CpuStressor stressor{kNumThreads, [&seen_threads, added = false]() mutable {
+  CpuStressor stressor{cores, [&seen_threads, added = false]() mutable {
                          if (!added) {
                            seen_threads.fetch_add(1);
                          }

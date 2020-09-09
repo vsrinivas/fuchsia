@@ -98,7 +98,7 @@ class CpuStressor {
   //
   // |utilization| should be a value between 0.0 and 1.0 indicating the
   // fraction of CPU that should be used in the long run.
-  CpuStressor(uint32_t threads, std::function<void(WorkIndicator)> workload,
+  CpuStressor(std::vector<uint32_t> cores_to_test, std::function<void(WorkIndicator)> workload,
               double utilization = 1.0, ProfileManager* manager = nullptr);
 
   // Create a CPU stressor that calls the given workload function in
@@ -110,8 +110,8 @@ class CpuStressor {
   //
   // |utilization| should be a value between 0.0 and 1.0 indicating the
   // fraction of CPU that should be used in the long run.
-  CpuStressor(uint32_t threads, std::function<void()> looping_workload, double utilization = 1.0,
-              ProfileManager* manager = nullptr);
+  CpuStressor(std::vector<uint32_t> cores_to_test, std::function<void()> looping_workload,
+              double utilization = 1.0, ProfileManager* manager = nullptr);
 
   // Start the workload. Must not already be started.
   void Start();
@@ -124,7 +124,7 @@ class CpuStressor {
   CpuStressor(const CpuStressor&) = delete;
   CpuStressor& operator=(const CpuStressor&) = delete;
 
-  uint32_t threads_;
+  std::vector<uint32_t> cores_to_test_;
   std::function<void(WorkIndicator)> workload_;
   std::vector<std::unique_ptr<std::thread>> workers_;
   StopIndicator indicator_;

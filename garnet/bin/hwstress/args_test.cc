@@ -133,5 +133,18 @@ TEST(Args, ParseIterations) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "--fvm-path=abc", "--iterations=1.5"}}).is_error());
 }
 
+TEST(Args, ParseCores) {
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "--cpu-cores=0"}})->cores_to_test.cores,
+            std::vector<uint32_t>({0}));
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "--cpu-cores=2,1"}})->cores_to_test.cores,
+            std::vector<uint32_t>({2, 1}));
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-p", "0,3"}})->cores_to_test.cores,
+            std::vector<uint32_t>({0, 3}));
+  EXPECT_FALSE(ParseArgs({{"hwstress", "cpu"}})->cores_to_test.cores.empty());
+
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "--cpu-cores=a"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "--cpu-cores=1.0"}}).is_error());
+}
+
 }  // namespace
 }  // namespace hwstress
