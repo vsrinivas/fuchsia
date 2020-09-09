@@ -156,6 +156,27 @@ _ALL_TOOLCHAINS = [
         },
         'no_shared': True,
     },
+    {
+        'name': 'physmem_arm64',
+        'gn': {
+            'toolchain': '//zircon/kernel/arch/arm64:physmem_arm64',
+        },
+        'zn': {
+            'toolchain': '//kernel/arch/arm64:physmem-arm64-clang',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'physmem_arm64-gcc',
+        'variants': ['gcc'],
+        'gn': {
+            'toolchain': '//zircon/kernel/arch/arm64:physmem_arm64-gcc',
+        },
+        'zn': {
+            'toolchain': '//kernel/arch/arm64:physmem-arm64-gcc',
+        },
+        'no_shared': True,
+    },
 ]
 
 _GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]
