@@ -267,6 +267,7 @@ build_api_module("api") {
     ":prebuilt_binaries",
     ":tests",
     ":tool_paths",
+    ":triage_sources",
     ":zbi_tests",
     ":zircon",
   ]
@@ -747,6 +748,22 @@ group("tool_paths.zircon") {
       ]
     }
   }
+}
+
+# The "triage_sources.json" build API file contains a list of paths to
+# `<foo>.triage` configuration files that are used by the
+# `fx triage` command. These paths are relative to the $root_build_dir.
+# in file: "$root_build_dir/triage_sources.json".
+#
+# Type: list(string)
+#
+build_api_module("triage_sources") {
+  testonly = true
+  data_keys = [ "triage_sources" ]
+  deps = [
+    "//build/images:packages",
+    "//src/diagnostics/config/triage",
+  ]
 }
 
 # This describes all the "ZBI tests" the build can produce.

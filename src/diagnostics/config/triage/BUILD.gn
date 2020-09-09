@@ -4,9 +4,41 @@
 
 import("//src/diagnostics/triage/build/triage_config_test.gni")
 
+# The list of triage configuration files in the current directory that
+# are used to implement the `fx triage` command. Files that are not listed
+# in this variable will be ignored.
+triage_files = [
+  "cpu.triage",
+  "crashes.triage",
+  "disk.triage",
+  "intl.dart_aot.triage",
+  "intl.dart_aot_product.triage",
+  "intl.dart_jit.triage",
+  "intl.dart_jit_product.triage",
+  "intl.flutter_aot.triage",
+  "intl.flutter_aot_product.triage",
+  "intl.flutter_jit.triage",
+  "intl.flutter_jit_product.triage",
+  "intl.triage",
+  "memory.triage",
+  "sandboxing.triage",
+  "scenic.triage",
+  "stash.triage",
+  "stash_secure.triage",
+  "timezone.triage",
+]
+
 group("triage") {
   testonly = true
   deps = [ ":tests" ]
+  metadata = {
+    # This metadata key is used by the `triage_sources` build api module
+    # defined in //BUILD.gn.
+    triage_sources = []
+    foreach(file, triage_files) {
+      triage_sources += [ rebase_path(file, root_build_dir) ]
+    }
+  }
 }
 
 group("tests") {
@@ -16,25 +48,7 @@ group("tests") {
 
 if (is_host) {
   triage_config_test("triage_configs_test") {
-    sources = [
-      "cpu.triage",
-      "crashes.triage",
-      "disk.triage",
-      "intl.dart_aot.triage",
-      "intl.dart_aot_product.triage",
-      "intl.dart_jit.triage",
-      "intl.dart_jit_product.triage",
-      "intl.flutter_aot.triage",
-      "intl.flutter_aot_product.triage",
-      "intl.flutter_jit.triage",
-      "intl.flutter_jit_product.triage",
-      "intl.triage",
-      "memory.triage",
-      "scenic.triage",
-      "stash.triage",
-      "stash_secure.triage",
-      "timezone.triage",
-    ]
+    sources = triage_files
     source_dir = "."
   }
 }
