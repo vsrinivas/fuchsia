@@ -12,6 +12,7 @@ group("tests") {
     "cm_types:tests",
     "fidl-fuchsia-pkg-ext:tests",
     "fidl-fuchsia-pkg-rewrite-ext:tests",
+    "fuchsia-bootfs:fuchsia-bootfs-tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
     "library_loader:tests",
     "runner:tests",

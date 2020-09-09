@@ -18,7 +18,6 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/rust/fuchsia-bootfs",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -31,6 +30,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/ext4/server/fidl:ext4_readonly-rustc",
+    "//src/sys/lib/fuchsia-bootfs",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
