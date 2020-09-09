@@ -131,6 +131,31 @@ _ALL_TOOLCHAINS = [
             'toolchain': '//system/ulib/zircon:user.vdso-arm64-gcc',
         },
     },
+    {
+        'name': 'multiboot',
+        'gn':
+            {
+                'toolchain':
+                    '//zircon/kernel/target/pc/multiboot:zircon_multiboot',
+            },
+        'zn': {
+            'toolchain': '//kernel/target/pc/multiboot:multiboot-x64-clang',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'multiboot-gcc',
+        'variants': ['gcc'],
+        'gn':
+            {
+                'toolchain':
+                    '//zircon/kernel/target/pc/multiboot:zircon_multiboot-gcc',
+            },
+        'zn': {
+            'toolchain': '//kernel/target/pc/multiboot:multiboot-x64-gcc',
+        },
+        'no_shared': True,
+    },
 ]
 
 _GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]
@@ -682,7 +707,6 @@ def main():
             # The output directories are derived from the toolchain name.
             gn_outdir = gn_toolchain_name
             zn_outdir = zn_toolchain_name + '/obj/public/canaries'
-
 
             gn_outfile = os.path.join(gn_outdir, target) + extension
             zn_outfile = os.path.join(zn_outdir, target) + extension

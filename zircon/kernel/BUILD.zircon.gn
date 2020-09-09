@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+# TODO(54160): Keep this in sync with BUILD.gn
+
 import("$zx/public/gn/config/levels.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")

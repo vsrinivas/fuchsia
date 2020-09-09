@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(54160) Keep in sync with BUILD.zircon.gn
+
+config("limits-dummy") {
+  visibility = [
+    ":*",
+    "$zx/kernel:headers",
+  ]
+
+  # libc/include is before toolchain headers because it needs to be able to
+  # override some libc++ headers that won't work in the kernel context.
+  # However, libc/include/limits.h punts to the toolchain via #include_next
+  # <limits.h> and the toolchain's limits.h does the same to get the "system"
+  # libc <limits.h>, so we need another include directory after the toolchain
+  # headers that has a limits.h for that to find, even though in the kernel
+  # there is nothing to add to the toolchain's <limits.h> content.
+  cflags = [
+    "-idirafter",
+    rebase_path("limits-dummy", root_build_dir),
+  ]
+}

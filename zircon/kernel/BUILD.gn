@@ -1,0 +1,116 @@
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(54160): Keep this in sync with BUILD.zircon.gn
+import("//build/unification/global_variables.gni")
+if (is_kernel) {
+  config("headers") {
+    include_dirs = [
+      "include",
+      "lib/libc/include",
+    ]
+    configs = [ "lib/libc:limits-dummy" ]
+  }
+
+  # For any standalone static binary.
+  config("standalone") {
+    ldflags = [
+      "-nostdlib",
+      "-static",
+    ]
+
+    cflags = [
+      "-ffreestanding",
+      "-include",
+      rebase_path("include/hidden.h", root_build_dir),
+
+      # We want `.debug_frame` for the kernel (ZX-62).  And we still want
+      # asynchronous unwind tables.  Alas there's (currently) no way to
+      # achieve this with our GCC.  At the moment we compile with
+      # `-fno-omit-frame-pointer`, which is good because we link with
+      # `--gc-sections`, which means `.eh_frame` gets discarded so GCC-built
+      # kernels don't have any unwind info (except for assembly)!  Assembler
+      # code has its own way of requesting `.debug_frame` vs `.eh_frame` with
+      # the `.cfi_sections` directive.
+      "-fno-unwind-tables",
+    ]
+
+    cflags_cc = [
+      # Underlying kernel heap only has default alignment of 8 bytes, so pass
+      # this to the compiler as the default new alignment.
+      "-faligned-new=8",
+    ]
+
+    if (current_cpu == "x64") {
+      # This only matters in an environment where interrupt handlers might
+      # push trap frames in the same privilege level, like the kernel.
+      # e.g. Multiboot probably doesn't actually need it, but it doesn't hurt.
+      cflags += [ "-mno-red-zone" ]
+    } else if (current_cpu == "arm64") {
+      # This matters if vector registers are not available, e.g. in the kernel
+      # since the they hold unsaved user state, or in the physmem environment
+      # because they might not be enabled in hardware yet.
+      if (!is_gcc) {
+        cflags += [ "-mgeneral-regs-only" ]
+      } else {
+        # TODO(mcgrathr): To work around a GCC bug we have to sneak
+        # -mgeneral-regs-only in through an arcane mechanism.  See
+        # //zircon/kernel/lib/arch/arm64/include/lib/arch/intrin.h for details.
+        cflags += [
+          "-include",
+          rebase_path("arch/arm64/general-regs-only.h", root_build_dir),
+        ]
+      }
+    }
+
+    if (is_gcc && current_os == "fuchsia") {
+      cflags += [ "-fpie" ]
+    }
+
+    if (!is_gcc && current_os == "fuchsia") {
+      # In the Fuchsia-target toolchains there's no way to prevent the
+      # compiler driver from passing -pie, so negate it.  BFD ld doesn't
+      # have --no-pie, but arm64-elf-gcc doesn't pass -pie either.
+      ldflags += [ "-Wl,--no-pie" ]
+    }
+
+    if (!is_gcc) {
+      # Disable the implicit addition of toolchain-provided libraries to
+      # the link by the compiler driver.  No toolchain-provided library is
+      # compatible with the kernel's internal ABI.
+      #
+      # TODO(27356): Clang doesn't have a single straightforward switch to
+      # disable all such libraries, though it certainly should.  It
+      # provides separate switches to disable the profiling/coverage
+      # runtime and to disable all the flavors of runtime implied by
+      # -fsanitize=... switches (including any such defaults).  It will
+      # still provide other incompatible libraries to the link, but they
+      # won't have any effect since they don't define any symbols the link
+      # needs.  However, this is a fragile situation that could easily
+      # break.
+      ldflags += [
+        "-noprofilelib",
+        "-fno-sanitize-link-runtime",
+      ]
+    }
+
+    configs = [ "$zx_build_config:no_exceptions" ]
+  }
+
+  config("warnings") {
+    cflags = [
+      "-Wformat=2",
+      "-Wvla",
+    ]
+
+    # GCC supports `-Wformat-signedness` but Clang currently does not.
+    if (is_gcc) {
+      cflags += [ "-Wformat-signedness" ]
+    }
+
+    cflags_c = [ "-Wmissing-prototypes" ]
+  }
+}  # is_kernel

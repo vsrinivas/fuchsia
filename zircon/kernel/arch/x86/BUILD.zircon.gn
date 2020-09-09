@@ -4,7 +4,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("$zx/kernel/params.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
+if (zx == "/") {
+  import("$zx/kernel/params.gni")
+}
 
 # These set the ABI contract between C++ and assembly code.
 # This is kept consistent between the kernel proper and phys
@@ -77,151 +80,177 @@ config("kernel") {
   # For #include <arch/foo.h>.
   include_dirs = [ "include" ]
 
-  configs = [
-    # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
-    "$zx/system/ulib/bitmap:headers.config",
+  # TODO(digit): Once the dependencies below have been migrated to the Fuchsia
+  # build, only use configs to add the include paths.
+  if (zx == "/") {
+    configs = [
+      # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
+      "$zx/system/ulib/bitmap:headers.config",
 
-    # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
-    "page_tables:headers.config",
+      # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
+      "page_tables:headers.config",
 
-    # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
-    "$zx/system/ulib/hwreg:headers.config",
+      # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
+      "$zx/system/ulib/hwreg:headers.config",
 
-    # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
-    "$zx/kernel/lib/ktl:headers.config",
+      # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
+      "$zx/kernel/lib/ktl:headers.config",
 
-    # <arch/x86.h> has #include <lib/arch/intrin.h>.
-    "$zx/kernel/lib/arch/x86:headers.config",
-  ]
+      # <arch/x86.h> has #include <lib/arch/intrin.h>.
+      "$zx/kernel/lib/arch/x86:headers.config",
+    ]
+  } else {
+    include_dirs += [
+      # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
+      "$zx/system/ulib/bitmap/include",
+
+      # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
+      "page_tables/include",
+
+      # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
+      "$zx/system/ulib/hwreg/include",
+
+      # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
+      "$zx/kernel/lib/ktl/include",
+
+      # <arch/x86.h> has #include <lib/arch/intrin.h>.
+      "$zx/kernel/lib/arch/x86/include",
+    ]
+  }
 }
 
-zx_library("x86") {
-  kernel = true
-  sources = [
-    "acpi.S",
-    "amd.cc",
-    "arch.cc",
-    "asm.S",
-    "bootstrap16.cc",
-    "cache.cc",
-    "debugger.cc",
-    "descriptor.cc",
-    "exceptions.S",
-    "faults.cc",
-    "feature.cc",
-    "gdt.S",
-    "hwp.cc",
-    "idle_states.cc",
-    "idt.cc",
-    "intel.cc",
-    "ioapic.cc",
-    "ioport.cc",
-    "lapic.cc",
-    "mexec.S",
-    "mmu.cc",
-    "mmu_mem_types.cc",
-    "mp.cc",
-    "msr.cc",
-    "ops.S",
-    "perf_mon.cc",
-    "proc_trace.cc",
-    "pv.cc",
-    "registers.cc",
-    "retpoline.S",
-    "smp.cc",
-    "spinlock.cc",
-    "start.S",
-    "start16.S",
-    "system_topology.cc",
-    "thread.cc",
-    "timer_freq.cc",
-    "user_copy.S",
-    "user_copy.cc",
-    "uspace_entry.S",
-  ]
-  deps = [
-    ":syscall",
-    ":tests",
-    "$zx/kernel/arch/x86/cpuid",
-    "$zx/kernel/dev/hw_rng",
-    "$zx/kernel/dev/iommu/dummy",
-    "$zx/kernel/dev/iommu/intel",
-    "$zx/kernel/lib/acpi_tables",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/code_patching",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/crashlog",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/instrumentation",
-    "$zx/kernel/lib/kpci",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/perfmon",
-    "$zx/kernel/lib/root_resource_filter",
-    "$zx/kernel/lib/topology",
-    "$zx/kernel/object",
-    "$zx/kernel/platform/pc",
-    "$zx/system/ulib/bitmap",
-    "$zx/system/ulib/pretty",
-    "cpuid",
-  ]
-  public_deps = [
-    # arch/x86/system_topology.h has #include <arch/x86/cpuid.h>.
-    "$zx/kernel/arch/x86/cpuid:headers",
+# TODO(58463): Remove conditional when all dependencies below have been
+# migrated to the Fuchsia build.
+# NOTE: Bad indentation is intentional, to make code reviews easier.
+if (zx == "/") {
+  zx_library("x86") {
+    kernel = true
+    sources = [
+      "acpi.S",
+      "amd.cc",
+      "arch.cc",
+      "asm.S",
+      "bootstrap16.cc",
+      "cache.cc",
+      "debugger.cc",
+      "descriptor.cc",
+      "exceptions.S",
+      "faults.cc",
+      "feature.cc",
+      "gdt.S",
+      "hwp.cc",
+      "idle_states.cc",
+      "idt.cc",
+      "intel.cc",
+      "ioapic.cc",
+      "ioport.cc",
+      "lapic.cc",
+      "mexec.S",
+      "mmu.cc",
+      "mmu_mem_types.cc",
+      "mp.cc",
+      "msr.cc",
+      "ops.S",
+      "perf_mon.cc",
+      "proc_trace.cc",
+      "pv.cc",
+      "registers.cc",
+      "retpoline.S",
+      "smp.cc",
+      "spinlock.cc",
+      "start.S",
+      "start16.S",
+      "system_topology.cc",
+      "thread.cc",
+      "timer_freq.cc",
+      "user_copy.S",
+      "user_copy.cc",
+      "uspace_entry.S",
+    ]
+    deps = [
+      ":syscall",
+      ":tests",
+      "$zx/kernel/arch/x86/cpuid",
+      "$zx/kernel/dev/hw_rng",
+      "$zx/kernel/dev/iommu/dummy",
+      "$zx/kernel/dev/iommu/intel",
+      "$zx/kernel/lib/acpi_tables",
+      "$zx/kernel/lib/arch",
+      "$zx/kernel/lib/cmdline",
+      "$zx/kernel/lib/code_patching",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/crashlog",
+      "$zx/kernel/lib/fbl",
+      "$zx/kernel/lib/init",
+      "$zx/kernel/lib/instrumentation",
+      "$zx/kernel/lib/kpci",
+      "$zx/kernel/lib/ktrace",
+      "$zx/kernel/lib/perfmon",
+      "$zx/kernel/lib/root_resource_filter",
+      "$zx/kernel/lib/topology",
+      "$zx/kernel/object",
+      "$zx/kernel/platform/pc",
+      "$zx/system/ulib/bitmap",
+      "$zx/system/ulib/pretty",
+      "cpuid",
+    ]
+    public_deps = [
+      # arch/x86/system_topology.h has #include <arch/x86/cpuid.h>.
+      "$zx/kernel/arch/x86/cpuid:headers",
 
-    # arch/x86/apic.h has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+      # arch/x86/apic.h has #include <dev/interrupt.h>.
+      "$zx/kernel/dev/interrupt:headers",
 
-    # arch/x86/hypervisor.h has #include <hypervisor/guest_physical_address_space.h>.
-    "$zx/kernel/hypervisor:headers",
+      # arch/x86/hypervisor.h has #include <hypervisor/guest_physical_address_space.h>.
+      "$zx/kernel/hypervisor:headers",
 
-    # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>.
-    "$zx/system/ulib/bitmap:headers",
+      # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>.
+      "$zx/system/ulib/bitmap:headers",
 
-    # <arch/aspace.h> uses various fbl things
-    "$zx/system/ulib/fbl:headers",
+      # <arch/aspace.h> uses various fbl things
+      "$zx/system/ulib/fbl:headers",
 
-    # <arch/x86/acpi.h> has #include <acpica/acpi.h>.
-    "$zx/third_party/lib/acpica:headers",
+      # <arch/x86/acpi.h> has #include <acpica/acpi.h>.
+      "$zx/third_party/lib/acpica:headers",
 
-    # <arch/x86/ioport.h> has #include <bitmap/rle-bitmap.h>.
-    "$zx/system/ulib/bitmap:headers",
+      # <arch/x86/ioport.h> has #include <bitmap/rle-bitmap.h>.
+      "$zx/system/ulib/bitmap:headers",
 
-    # <arch/x86/apic.h> has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+      # <arch/x86/apic.h> has #include <dev/interrupt.h>.
+      "$zx/kernel/dev/interrupt:headers",
 
-    # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
-    "$zx/kernel/lib/ktl:headers",
+      # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
+      "$zx/kernel/lib/ktl:headers",
 
-    # <arch/x86.h> has #include <lib/arch/intrin.h>.
-    "$zx/kernel/lib/arch:headers",
-  ]
-}
+      # <arch/x86.h> has #include <lib/arch/intrin.h>.
+      "$zx/kernel/lib/arch:headers",
+    ]
+  }
 
-source_set("syscall") {
-  sources = [ "syscall.S" ]
-  deps = [
-    "$zx/kernel/lib/code_patching",
-    "$zx/kernel/lib/syscalls",
-  ]
-}
+  source_set("syscall") {
+    sources = [ "syscall.S" ]
+    deps = [
+      "$zx/kernel/lib/code_patching",
+      "$zx/kernel/lib/syscalls",
+    ]
+  }
 
-source_set("tests") {
-  sources = [
-    "hwp_tests.cc",
-    "idle_states_test.cc",
-    "mmu_tests.cc",
-    "platform_tests.cc",
-    "system_topology_test.cc",
-  ]
-  deps = [
-    ":headers",
-    "$zx/kernel/lib/acpi_tables:headers",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console:headers",
-    "$zx/kernel/lib/topology:headers",
-    "$zx/kernel/lib/unittest",
-  ]
-}
+  source_set("tests") {
+    sources = [
+      "hwp_tests.cc",
+      "idle_states_test.cc",
+      "mmu_tests.cc",
+      "platform_tests.cc",
+      "system_topology_test.cc",
+    ]
+    deps = [
+      ":headers",
+      "$zx/kernel/lib/acpi_tables:headers",
+      "$zx/kernel/lib/cmdline",
+      "$zx/kernel/lib/console:headers",
+      "$zx/kernel/lib/topology:headers",
+      "$zx/kernel/lib/unittest",
+    ]
+  }
+}  # zx == "/"
