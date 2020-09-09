@@ -1246,16 +1246,16 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
 
 /// Attempts to decode a FIDL vector into `vec`, returning a `bool` indicating
 /// whether the vector was present.
-fn decode_vector<T: Decodable>(
+unsafe fn decode_vector<T: Decodable>(
     decoder: &mut Decoder<'_>,
     vec: &mut Vec<T>,
     offset: usize,
 ) -> Result<bool> {
     let mut len: u64 = 0;
-    len.decode(decoder, offset)?;
+    len.unsafe_decode(decoder, offset)?;
 
     let mut present: u64 = 0;
-    present.decode(decoder, offset + 8)?;
+    present.unsafe_decode(decoder, offset + 8)?;
 
     match present {
         ALLOC_ABSENT_U64 => {
@@ -1271,17 +1271,13 @@ fn decode_vector<T: Decodable>(
         if T::supports_simple_copy() {
             // Safety: The uninitalized elements are immediately written by
             // `decode_array`, which always succeeds in the simple copy case.
-            unsafe {
-                resize_vec_no_zeroing(vec, len);
-            }
+            resize_vec_no_zeroing(vec, len);
         } else {
             vec.resize_with(len, T::new_empty);
         }
         // Safety:
         //   `vec` has `len` elements based on the above code.
-        unsafe {
-            decode_array(vec, decoder, offset)?;
-        }
+        decode_array(vec, decoder, offset)?;
         Ok(true)
     })
 }
@@ -1414,7 +1410,7 @@ impl<T: Decodable> Decodable for Vec<T> {
         Vec::new()
     }
 
-    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         if decode_vector(decoder, self, offset)? {
             Ok(())
         } else {
@@ -1455,7 +1451,7 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
         None
     }
 
-    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         let was_some;
         {
             let vec = self.get_or_insert(Vec::new());
