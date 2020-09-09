@@ -251,25 +251,6 @@ TEST(ProcessTest, ProcessNotKilledViaProcessClose) {
   EXPECT_OK(zx_handle_close(thread));
 }
 
-TEST(ProcessTest, KillProcessViaThreadKill) {
-  zx_handle_t event;
-  ASSERT_OK(zx_event_create(0u, &event));
-
-  zx_handle_t process;
-  zx_handle_t thread;
-  ASSERT_OK(start_mini_process(zx_job_default(), event, &process, &thread));
-
-  // Killing the only thread should cause the process to terminate.
-  EXPECT_OK(zx_task_kill(thread));
-
-  zx_signals_t signals;
-  EXPECT_OK(zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
-  EXPECT_EQ(signals, ZX_TASK_TERMINATED);
-
-  EXPECT_OK(zx_handle_close(process));
-  EXPECT_OK(zx_handle_close(thread));
-}
-
 zx_status_t dup_send_handle(zx_handle_t channel, zx_handle_t handle) {
   zx_handle_t dup;
   zx_status_t st = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup);
@@ -415,14 +396,19 @@ class TestProcess {
   }
 
   // Starts the process and all child threads.
-  void StartProcess() {
+  void StartProcess() { return StartProcessWithControl(nullptr); }
+
+  // Starts a process with a control channel that can be used to send commands.
+  // Also starts all child threads.
+  void StartProcessWithControl(zx_handle_t* out_control_channel) {
     ASSERT_GT(num_threads_, 0);
 
     // The first thread must start the process.
     // We don't use this event but starting a new process requires passing it a handle.
     zx_handle_t event = ZX_HANDLE_INVALID;
     ASSERT_OK(zx_event_create(0u, &event));
-    ASSERT_OK(start_mini_process_etc(process_, threads_[0], vmar_, event, true, nullptr));
+    ASSERT_OK(
+        start_mini_process_etc(process_, threads_[0], vmar_, event, true, out_control_channel));
 
     for (int i = 1; i < num_threads_; ++i) {
       ASSERT_OK(start_mini_process_thread(threads_[i], vmar_));
@@ -452,10 +438,12 @@ class TestProcess {
 
   zx_handle_t process() const { return process_; }
   zx_handle_t thread(int index) const { return threads_[index]; }
+  zx::channel& control_channel() { return control_channel_; }
 
  private:
   zx_handle_t process_ = ZX_HANDLE_INVALID;
   zx_handle_t vmar_ = ZX_HANDLE_INVALID;
+  zx::channel control_channel_;
 
   int num_threads_ = 0;
   zx_handle_t threads_[kMaxThreads];
@@ -659,23 +647,25 @@ TEST(ProcessTest, SuspendTwiceBeforeCreatingThreads) {
 // bug.
 TEST(ProcessTest, SuspendWithDyingThread) {
   TestProcess test_process;
+  zx::channel control_channel;
   ASSERT_NO_FAILURES(test_process.CreateProcess());
   ASSERT_NO_FAILURES(test_process.CreateThread());
   ASSERT_NO_FAILURES(test_process.CreateThread());
   ASSERT_NO_FAILURES(test_process.CreateThread());
-  ASSERT_NO_FAILURES(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.StartProcessWithControl(control_channel.reset_and_get_address()));
 
-  // Kill the middle thread.
-  ASSERT_OK(zx_task_kill(test_process.thread(1)));
+  // Tell the main process thread to exit. Hopefully we can catch it in the DYING state.
+  ASSERT_OK(mini_process_cmd_send(control_channel.get(), MINIP_CMD_THREAD_EXIT));
 
   // Now suspend the process and make sure it still works on the live threads.
+  // Don't check thread 0 because that's the one that's exiting.
   zx_handle_t suspend_token;
   ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_token));
-  ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
+  ASSERT_TRUE(test_process.WaitForThreadSignal(1, ZX_THREAD_SUSPENDED, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(2, ZX_THREAD_SUSPENDED, ZX_OK));
 
   ASSERT_OK(zx_handle_close(suspend_token));
-  ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
+  ASSERT_TRUE(test_process.WaitForThreadSignal(1, ZX_THREAD_RUNNING, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(2, ZX_THREAD_RUNNING, ZX_OK));
 
   ASSERT_NO_FAILURES(test_process.StopProcess());

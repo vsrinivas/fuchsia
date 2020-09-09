@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_CORE_PAGER_TEST_THREAD_H_
+#define ZIRCON_SYSTEM_UTEST_CORE_PAGER_TEST_THREAD_H_
 
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -47,12 +48,6 @@ class TestThread {
 
   void Resume() { suspend_token_.reset(); }
 
-  // Kill the test thread.
-  bool Kill() {
-    killed_ = true;
-    return zx_task_kill(zx_thread_.get()) == ZX_OK;
-  }
-
   void Run();
 
  private:
@@ -60,7 +55,6 @@ class TestThread {
   void PrintDebugInfo(const zx_exception_report_t& report);
 
   const fbl::Function<bool()> fn_;
-  bool killed_ = false;
 
   thrd_t thrd_;
   zx::thread zx_thread_;
@@ -74,3 +68,5 @@ class TestThread {
 };
 
 }  // namespace pager_tests
+
+#endif  // ZIRCON_SYSTEM_UTEST_CORE_PAGER_TEST_THREAD_H_

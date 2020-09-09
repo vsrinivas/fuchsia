@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/function.h>
-#include <inspector/inspector.h>
+#include "test_thread.h"
+
 #include <lib/zx/exception.h>
 #include <string.h>
 #include <threads.h>
@@ -12,7 +12,8 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/threads.h>
 
-#include "test_thread.h"
+#include <fbl/function.h>
+#include <inspector/inspector.h>
 
 namespace pager_tests {
 
@@ -29,14 +30,7 @@ TestThread::TestThread(fbl::Function<bool()> fn) : fn_(std::move(fn)) {
 
 TestThread::~TestThread() {
   // TODO: UserPagers need to be destroyed before TestThreads to ensure threads aren't blocked
-  if (killed_) {
-    // Killing the thread leaves the thread support library in a somewhat
-    // undefined state, but it should be okay as long as we don't touch
-    // the thread again (and don't do it with too many threads).
-    ZX_ASSERT(zx_thread_.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr) == ZX_OK);
-  } else {
-    ZX_ASSERT(thrd_join(thrd_, nullptr) == thrd_success);
-  }
+  ZX_ASSERT(thrd_join(thrd_, nullptr) == thrd_success);
 }
 
 bool TestThread::Start() {
