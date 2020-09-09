@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",

@@ -94,6 +94,12 @@ impl<D: Borrow<DirectoryProxy>, S: DiscoverableService> ServiceConnector<D, S> {
     }
 }
 
+/// Clone the handle to the service directory in the application's root namespace.
+pub fn clone_namespace_svc() -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
+    io_util::directory::open_in_namespace(SVC_DIR, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
+        .context("error opening svc directory")
+}
+
 /// Return a FIDL service connector at the default service directory in the
 /// application's root namespace.
 pub fn new_service_connector<S: DiscoverableService>(

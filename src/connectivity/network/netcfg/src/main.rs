@@ -28,6 +28,7 @@ use std::str::FromStr;
 
 use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
@@ -38,7 +39,7 @@ use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext as fnet_stack_ext;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::{clone_namespace_svc, new_service_connector_in_dir};
 use fuchsia_syslog as fsyslog;
 use fuchsia_vfs_watcher as fvfs_watcher;
 use fuchsia_zircon::{self as zx, DurationNum as _};
@@ -336,8 +337,8 @@ struct NetCfg<'a> {
     netstack: fnetstack::NetstackProxy,
     lookup_admin: fnet_name::LookupAdminProxy,
     filter: fnet_filter::FilterProxy,
-    dhcp_server: fnet_dhcp::Server_Proxy,
-    dhcpv6_client_provider: fnet_dhcpv6::ClientProviderProxy,
+    dhcp_server: Option<fnet_dhcp::Server_Proxy>,
+    dhcpv6_client_provider: Option<fnet_dhcpv6::ClientProviderProxy>,
 
     device_dir_path: &'a str,
     allow_virtual_devices: bool,
@@ -372,29 +373,55 @@ fn static_source_from_ip(f: std::net::IpAddr) -> fnet_name::DnsServer_ {
     }
 }
 
+/// Connect to a service, returning an error if the service does not exist in
+/// the service directory.
+async fn svc_connect<S: fidl::endpoints::DiscoverableService>(
+    svc_dir: &fio::DirectoryProxy,
+) -> Result<S::Proxy, anyhow::Error> {
+    optional_svc_connect::<S>(svc_dir).await?.ok_or(anyhow::anyhow!("service does not exist"))
+}
+
+/// Attempt to connect to a service, returning `None` if the service does not
+/// exist in the service directory.
+async fn optional_svc_connect<S: fidl::endpoints::DiscoverableService>(
+    svc_dir: &fio::DirectoryProxy,
+) -> Result<Option<S::Proxy>, anyhow::Error> {
+    let req = new_service_connector_in_dir::<S>(&svc_dir);
+    if !req.exists().await.context("error checking for service existence")? {
+        Ok(None)
+    } else {
+        req.connect().context("error connecting to service").map(Some)
+    }
+}
+
 impl<'a> NetCfg<'a> {
     /// Returns a new `NetCfg`.
-    fn new(
+    async fn new(
         device_dir_path: &'a str,
         allow_virtual_devices: bool,
         default_config_rules: Vec<matchers::InterfaceSpec>,
         filter_enabled_interface_types: HashSet<InterfaceType>,
     ) -> Result<NetCfg<'a>, anyhow::Error> {
-        // Note, just because `connect_to_service` returns without an error does not mean
-        // the service is available to us. We will observe an error when we try to use the
-        // proxy if the service is not available.
-        let stack = connect_to_service::<fnet_stack::StackMarker>()
+        let svc_dir = clone_namespace_svc().context("error cloning svc directory handle")?;
+        let stack = svc_connect::<fnet_stack::StackMarker>(&svc_dir)
+            .await
             .context("could not connect to stack")?;
-        let netstack = connect_to_service::<fnetstack::NetstackMarker>()
+        let netstack = svc_connect::<fnetstack::NetstackMarker>(&svc_dir)
+            .await
             .context("could not connect to netstack")?;
-        let lookup_admin = connect_to_service::<fnet_name::LookupAdminMarker>()
+        let lookup_admin = svc_connect::<fnet_name::LookupAdminMarker>(&svc_dir)
+            .await
             .context("could not connect to lookup admin")?;
-        let filter = connect_to_service::<fnet_filter::FilterMarker>()
+        let filter = svc_connect::<fnet_filter::FilterMarker>(&svc_dir)
+            .await
             .context("could not connect to filter")?;
-        let dhcp_server = connect_to_service::<fnet_dhcp::Server_Marker>()
+        let dhcp_server = optional_svc_connect::<fnet_dhcp::Server_Marker>(&svc_dir)
+            .await
             .context("could not connect to DHCP Server")?;
-        let dhcpv6_client_provider = connect_to_service::<fnet_dhcpv6::ClientProviderMarker>()
-            .context("could not connect to DHCPv6 client provider")?;
+        let dhcpv6_client_provider =
+            optional_svc_connect::<fnet_dhcpv6::ClientProviderMarker>(&svc_dir)
+                .await
+                .context("could not connect to DHCPv6 client provider")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("error loading persistent interface configurations")?;
@@ -725,15 +752,17 @@ impl<'a> NetCfg<'a> {
                 state.dhcpv6_client_addr = None;
             }
             InterfaceState::WlanAp(WlanApInterfaceState {}) => {
-                // The DHCP server should only run on the WLAN AP interface, so stop it
-                // since the AP interface is removed.
-                info!(
-                    "WLAN AP interface with id={} is removed, stopping DHCP server",
-                    interface_id
-                );
-                let () = dhcpv4::stop_server(&self.dhcp_server)
-                    .await
-                    .context("error stopping DHCP server")?;
+                if let Some(dhcp_server) = &self.dhcp_server {
+                    // The DHCP server should only run on the WLAN AP interface, so stop it
+                    // since the AP interface is removed.
+                    info!(
+                        "WLAN AP interface with id={} is removed, stopping DHCP server",
+                        interface_id
+                    );
+                    let () = dhcpv4::stop_server(dhcp_server)
+                        .await
+                        .context("error stopping DHCP server")?;
+                }
             }
         }
 
@@ -759,6 +788,13 @@ impl<'a> NetCfg<'a> {
 
         match &mut state.specific {
             InterfaceState::Host(state) => {
+                let dhcpv6_client_provider =
+                    if let Some(dhcpv6_client_provider) = &self.dhcpv6_client_provider {
+                        dhcpv6_client_provider
+                    } else {
+                        return Ok(());
+                    };
+
                 let id = Into::into(*id);
 
                 if !up {
@@ -845,7 +881,7 @@ impl<'a> NetCfg<'a> {
                     name, id, sockaddr,
                 );
 
-                match dhcpv6::start_client(&self.dhcpv6_client_provider, id, sockaddr, watchers) {
+                match dhcpv6::start_client(dhcpv6_client_provider, id, sockaddr, watchers) {
                     Ok(()) => {
                         state.dhcpv6_client_addr = Some(sockaddr);
                     }
@@ -866,13 +902,19 @@ impl<'a> NetCfg<'a> {
             InterfaceState::WlanAp(WlanApInterfaceState {}) => {
                 // TODO(55879): Stop the DHCP server when the address it is listening on
                 // is removed.
+                let dhcp_server = if let Some(dhcp_server) = &self.dhcp_server {
+                    dhcp_server
+                } else {
+                    return Ok(());
+                };
+
                 if prev_up == up {
                     return Ok(());
                 }
 
                 if up {
                     info!("WLAN AP interface {} (id={}) came up so starting DHCP server", name, id);
-                    let () = dhcpv4::start_server(&self.dhcp_server)
+                    let () = dhcpv4::start_server(dhcp_server)
                         .await
                         .context("error starting DHCP server")?;
                 } else {
@@ -880,7 +922,7 @@ impl<'a> NetCfg<'a> {
                         "WLAN AP interface {} (id={}) went down so stopping DHCP server",
                         name, id
                     );
-                    let () = dhcpv4::stop_server(&self.dhcp_server)
+                    let () = dhcpv4::stop_server(dhcp_server)
                         .await
                         .context("error stopping DHCP server")?;
                 }
@@ -1220,12 +1262,18 @@ impl<'a> NetCfg<'a> {
             )));
         }
 
+        let dhcp_server = if let Some(dhcp_server) = &self.dhcp_server {
+            dhcp_server
+        } else {
+            warn!("cannot configure DHCP server for WLAN AP (interface ID={}) since DHCP server service is not available", interface_id);
+            return Ok(());
+        };
+
         // First we clear any leases that the server knows about since the server
         // will be used on a new interface. If leases exist, configuring the DHCP
         // server parameters may fail (AddressPool).
         debug!("clearing DHCP leases");
-        let () = self
-            .dhcp_server
+        let () = dhcp_server
             .clear_leases()
             .await
             .context("error sending clear DHCP leases request")
@@ -1237,8 +1285,7 @@ impl<'a> NetCfg<'a> {
         // Configure the DHCP server.
         let v = vec![addr.into()];
         debug!("setting DHCP IpAddrs parameter to {:?}", v);
-        let () = self
-            .dhcp_server
+        let () = dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::IpAddrs(v))
             .await
             .context("error sending set DHCP IpAddrs parameter request")
@@ -1249,8 +1296,7 @@ impl<'a> NetCfg<'a> {
 
         let v = vec![name];
         debug!("setting DHCP BoundDeviceNames parameter to {:?}", v);
-        let () = self
-            .dhcp_server
+        let () = dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::BoundDeviceNames(v))
             .await
             .context("error sending set DHCP BoundDeviceName parameter request")
@@ -1264,8 +1310,7 @@ impl<'a> NetCfg<'a> {
             max: Some(WLAN_AP_DHCP_LEASE_TIME_SECONDS),
         };
         debug!("setting DHCP LeaseLength parameter to {:?}", v);
-        let () = self
-            .dhcp_server
+        let () = dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::Lease(v))
             .await
             .context("error sending set DHCP LeaseLength parameter request")
@@ -1294,7 +1339,7 @@ impl<'a> NetCfg<'a> {
             pool_range_stop: Some(dhcp_pool_end),
         };
         debug!("setting DHCP AddressPool parameter to {:?}", v);
-        self.dhcp_server
+        dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::AddressPool(v))
             .await
             .context("error sending set DHCP AddressPool parameter request")
@@ -1352,6 +1397,7 @@ async fn main() {
 
         let mut netcfg =
             NetCfg::new(path, allow_virtual, default_config_rules, filter_enabled_interface_types)
+                .await
                 .context("error creating new netcfg instance")?;
 
         let () =
@@ -1441,8 +1487,8 @@ mod tests {
                 netstack,
                 lookup_admin,
                 filter,
-                dhcp_server,
-                dhcpv6_client_provider,
+                dhcp_server: Some(dhcp_server),
+                dhcpv6_client_provider: Some(dhcpv6_client_provider),
                 device_dir_path: "/vdev",
                 persisted_interface_config: persisted_interface_config,
                 allow_virtual_devices: false,
