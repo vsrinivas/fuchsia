@@ -41,8 +41,8 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     [list of labels] The objects installed on the bootfs partition of the
 #     generated ZBI.
 #
-#   netboot (default: false)
-#     [boolean] Whether the generated ZBI should contain the entire system.
+#   ramdisk_fvm_in_zbi (default: false)
+#     [boolean] Whether the generated ZBI should contain the system's FVM as a ramdisk.
 #
 #   devmgr_config (default: [])
 #     [list of strings] List of arguments to add to /boot/config/devmgr.
@@ -70,6 +70,10 @@ template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
 
+  # TODO: Delete after soft transition away from 'netboot' parameter
+  assert(!defined(invoker.netboot) || !defined(invoker.ramdisk_fvm_in_zbi),
+    "Only one of netboot or ramdisk_fvm_in_zbi can be set, they are equivalent")
+
   base_packages = invoker.base_packages
   cache_packages = []
   universe_packages = []
@@ -89,9 +93,12 @@ template("assemble_system") {
     zbi_name = "${target_name}.zbi"
   }
 
-  netboot = false
+  ramdisk_fvm_in_zbi = false
+  if (defined(invoker.ramdisk_fvm_in_zbi)) {
+    ramdisk_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi
+  }
   if (defined(invoker.netboot)) {
-    netboot = invoker.netboot
+    ramdisk_fvm_in_zbi = invoker.netboot
   }
 
   compress_blobs = true
@@ -409,7 +416,7 @@ template("assemble_system") {
              "//build/unification/zbi:kernel",
            ] + invoker.bootfs_labels
 
-    if (netboot) {
+    if (ramdisk_fvm_in_zbi) {
       deps += [ ":${image_name}_fvm.blk_ramdisk" ]
     }
   }

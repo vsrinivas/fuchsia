@@ -68,7 +68,7 @@ assemble_system("recovery-eng") {
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
   compress_blobs = false
-  netboot = true
+  ramdisk_fvm_in_zbi = true
   devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
   cmdline = [
               "console.shell=true",
@@ -90,7 +90,7 @@ assemble_system("recovery-fdr") {
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
   compress_blobs = false
-  netboot = true
+  ramdisk_fvm_in_zbi = true
   devmgr_config = [ "virtcon.disable=true" ]
   cmdline = []
 

@@ -24,7 +24,7 @@ assemble_system("overnet") {
   ]
   bootfs_labels = common_image_contents
   bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
-  netboot = true
+  ramdisk_fvm_in_zbi = true
 }
 
 if (is_host) {
