@@ -599,15 +599,14 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   zx_status_t ret = ZX_ERR_IO;
   struct brcmf_bus* bus_if = drvr->bus_if;
   struct brcmf_if* ifp;
-  zx_status_t err;
 
   BRCMF_DBG(TRACE, "Enter");
 
   /* add primary networking interface */
   // TODO(WLAN-740): Name uniqueness
-  err = brcmf_add_if(drvr, 0, 0, kPrimaryNetworkInterfaceName, NULL, &ifp);
-  if (err != ZX_OK) {
-    return err;
+  ret = brcmf_add_if(drvr, 0, 0, kPrimaryNetworkInterfaceName, NULL, &ifp);
+  if (ret != ZX_OK) {
+    return ret;
   }
 
   /* signal bus ready */
@@ -636,7 +635,13 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
 
   ret = brcmf_cfg80211_attach(drvr);
   if (ret != ZX_OK) {
-    BRCMF_ERR("brcmf_cfg80211_attach failed.");
+    BRCMF_ERR("brcmf_cfg80211_attach failed (%d).", ret);
+    goto fail;
+  }
+
+  ret = brcmf_fweh_activate_events(ifp);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("FWEH activation failed (%d)", ret);
     goto fail;
   }
 
@@ -649,7 +654,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   return ZX_OK;
 
 fail:
-  BRCMF_ERR("failed: %d", ret);
+  BRCMF_ERR("brcmf_bus started failed: (%d)", ret);
   if (drvr->config) {
     brcmf_cfg80211_detach(drvr->config);
     drvr->config = NULL;

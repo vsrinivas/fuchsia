@@ -5299,18 +5299,7 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     err = brcmf_fil_iovar_int_set(ifp, "obss_coex", BRCMF_OBSS_COEX_AUTO, nullptr);
   }
 
-  /* p2p might require that "if-events" get processed by fweh. So
-   * activate the already registered event handlers now and activate
-   * the rest when initialization has completed. drvr->config needs to
-   * be assigned before activating events.
-   */
   drvr->config = cfg;
-  err = brcmf_fweh_activate_events(ifp);
-  if (err != ZX_OK) {
-    BRCMF_ERR("FWEH activation failed (%d)", err);
-    goto unreg_out;
-  }
-
   err = brcmf_btcoex_attach(cfg);
   if (err != ZX_OK) {
     BRCMF_ERR("BT-coex initialisation failed (%d)", err);
@@ -5333,19 +5322,9 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     }
   }
 
-  /* (re-) activate FWEH event handling */
-  err = brcmf_fweh_activate_events(ifp);
-  if (err != ZX_OK) {
-    BRCMF_ERR("FWEH activation failed (%d)", err);
-    goto detach;
-  }
-
   BRCMF_DBG(TEMP, "Exit");
   return ZX_OK;
 
-detach:
-  brcmf_pno_detach(cfg);
-  brcmf_btcoex_detach(cfg);
 unreg_out:
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
 cfg_out:
