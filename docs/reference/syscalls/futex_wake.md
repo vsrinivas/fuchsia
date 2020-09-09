@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+Wake some number of threads waiting on a futex, and set the ownership of the futex to nothing.
 
 ## SYNOPSIS
 

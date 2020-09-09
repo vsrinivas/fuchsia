@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+Wake one thread waiting on a futex, and requeue more waiters to another futex wait queue.
 
 ## SYNOPSIS
 
@@ -22,6 +22,17 @@ zx_status_t zx_futex_requeue_single_owner(const zx_futex_t* value_ptr,
 
 ## DESCRIPTION
 
+
+Wake one thread waiting on *value_ptr* and assign ownership of *value_ptr* to
+the thread that was woken. If there are no threads waiting on *value_ptr* then
+the ownership of *value_ptr* is set to none.
+
+Then move up to *requeue_count* threads that are still waiting on *value_ptr* from
+the *value_ptr* futex to the *requeue_ptr* futex.
+
+`zx_futex_requeue_single_owner` is similar to `zx_futex_requeue` with a
+*wake_count* of 1, except that `zx_futex_requeue_single_owner` changes the
+ownership of *value_ptr* to the woken thread.
 See [`zx_futex_requeue()`] for a full description.
 
 ## RIGHTS

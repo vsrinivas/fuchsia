@@ -102,13 +102,13 @@ See [signals] for more information about signals and their terminology.
 
 ## SEE ALSO
 
+[signals]: /docs/concepts/kernel/signals.md
+
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
  - [`zx_port_cancel()`]
  - [`zx_port_queue()`]
  - [`zx_port_wait()`]
-
-[signals]: /docs/concepts/kernel/signals.md
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 

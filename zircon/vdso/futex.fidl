@@ -33,16 +33,15 @@ protocol futexfuncs {
                   handle new_requeue_owner)
         -> (status status);
 
-    /// Wake one thread waiting on a futex. If a thread is woken,
-    /// ownership of the futex is transferred to that thread. If no
-    /// thread is woken (because none are waiting), ownership of the
-    /// futex is set to none.
+    /// Wake one thread waiting on a futex, and set the ownership of the futex to that thread.
+    /// If a thread is woken, ownership of the futex is transferred to that thread. If no
+    /// thread is woken (because none are waiting), ownership of the futex is set to none.
     /// Rights: None.
     futex_wake_single_owner(const_futexptr value_ptr) -> (status status);
 
-    /// Wake one thread waiting on a futex, and move more waiters to
-    /// another wait queue. Ownership is transferred to the woken thread,
-    /// or cancelled, as with |futex_wake_single_owner|.
+    /// Wake one thread waiting on a futex, and requeue more waiters to another futex wait queue.
+    /// Ownership is transferred to the woken thread, or cancelled,
+    /// as with |futex_wake_single_owner|.
     /// Rights: None.
     futex_requeue_single_owner(const_futexptr value_ptr,
                                Futex current_value,

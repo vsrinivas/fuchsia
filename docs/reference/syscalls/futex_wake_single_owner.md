@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+Wake one thread waiting on a futex, and set the ownership of the futex to that thread.
 
 ## SYNOPSIS
 
@@ -17,6 +17,10 @@ zx_status_t zx_futex_wake_single_owner(const zx_futex_t* value_ptr);
 ```
 
 ## DESCRIPTION
+
+Wake one thread waiting on a futex.
+If a thread is woken, ownership of the futex is transferred to that thread. If no
+thread is woken (because none are waiting), ownership of the futex is set to none.
 
 See [`zx_futex_wake()`] for a full description.
 
