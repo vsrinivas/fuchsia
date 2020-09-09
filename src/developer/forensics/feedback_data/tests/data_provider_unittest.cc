@@ -333,18 +333,19 @@ TEST_F(DataProviderTest, GetSnapshot_SmokeTest) {
 
   Snapshot snapshot = GetSnapshot();
 
-  // There is not much we can assert here as no missing annotation nor attachment is fatal and we
-  // cannot expect annotations or attachments to be present.
+  // There will always be a "manifest.json" so there will always be an archive.
 
-  // If there are annotations, there should also be the snapshot.
-  if (snapshot.has_annotations()) {
-    ASSERT_TRUE(snapshot.has_archive());
-  }
+  ASSERT_TRUE(snapshot.has_archive());
 
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          cobalt::Event(cobalt::SnapshotGenerationFlow::kSuccess,
-                                                        kDefaultBugReportFlowDuration.to_usecs()),
-                                      }));
+  const auto attachment_size = snapshot.archive().value.size;
+  ASSERT_TRUE(attachment_size > 0);
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::SnapshotGenerationFlow::kSuccess,
+                                kDefaultBugReportFlowDuration.to_usecs()),
+                  cobalt::Event(cobalt::SnapshotVersion::kV_01, attachment_size),
+              }));
 }
 
 TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {

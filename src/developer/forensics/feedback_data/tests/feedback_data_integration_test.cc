@@ -380,6 +380,12 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckCobalt) {
               UnorderedElementsAreArray({
                   cobalt::SnapshotGenerationFlow::kSuccess,
               }));
+
+  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::SnapshotVersion>(
+                  /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_EVENT_COUNT),
+              UnorderedElementsAreArray({
+                  cobalt::SnapshotVersion::kV_01,
+              }));
 }
 
 TEST_F(FeedbackDataIntegrationTest,

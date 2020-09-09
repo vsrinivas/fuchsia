@@ -110,6 +110,17 @@ enum class PreviousBootEncodingVersion {
   kV_05 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V05,
 };
 
+enum class SnapshotVersion {
+  kUnknown = cobalt_registry::SnapshotSizeMetricDimensionVersion::Unknown,
+  kV_01 = cobalt_registry::SnapshotSizeMetricDimensionVersion::V01,
+  kV_02 = cobalt_registry::SnapshotSizeMetricDimensionVersion::V02,
+  kV_03 = cobalt_registry::SnapshotSizeMetricDimensionVersion::V03,
+};
+
+inline constexpr uint32_t MetricIDForEventCode(const SnapshotVersion version) {
+  return cobalt_registry::kSnapshotSizeMetricId;
+}
+
 inline constexpr uint32_t MetricIDForEventCode(const PreviousBootEncodingVersion version) {
   return cobalt_registry::kPreviousBootLogCompressionRatioMetricId;
 }
@@ -182,6 +193,10 @@ enum class EventType {
   kTimeElapsed,
   kMultidimensionalOccurrence,
 };
+
+inline constexpr EventType EventTypeForEventCode(const SnapshotVersion version) {
+  return EventType::kCount;
+}
 
 inline constexpr EventType EventTypeForEventCode(const PreviousBootEncodingVersion version) {
   return EventType::kCount;
