@@ -1,7 +1,8 @@
 # FFX Config
 
 FFX's configuration management allows you to configure your FFX code without
-recompiling. From a high level, configurations can be thought of as key-value map.
+recompiling. From a high level, configurations can be thought of as key-value
+map.
 
 The configuration management code searches in several locations for the value
 associated with a key. The search is performed in the following order

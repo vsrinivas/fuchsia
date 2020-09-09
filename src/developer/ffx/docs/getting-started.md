@@ -1,26 +1,31 @@
 # Getting Started with ffx
 
-This doc will guide you through some of the features of `ffx`. For an overview of the design
-and components of `ffx`, see [this doc](ffx.md).
+This doc will guide you through some of the features of `ffx`. For an overview
+of the design and components of `ffx`, see [this doc](ffx.md).
 
-Warning: **`ffx` is currently in alpha. Its APIs, command-line surface, and documentation are subject to change.**
+Warning: **`ffx` is currently in alpha. Its APIs, command-line surface, and
+documentation are subject to change.**
 
 
 ## Contacting us
 
-If you discover possible bugs or have questions or suggestions, [file a bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=ffx+User+Bug).
+If you discover possible bugs or have questions or suggestions,
+[file a bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=ffx+User+Bug).
 
 ## Prerequisites
 
-To follow the examples in this doc, you'll need a Fuchsia device running. If you don't have
-a physical device connected, you can use an emulator with networking enabled (`-N`).
+To follow the examples in this doc, you'll need a Fuchsia device running. If you
+don't have a physical device connected, you can use an emulator with networking
+enabled (`-N`).
 
 Tip: To start a headless emulator, run `fx emu --headless --software-gpu -N`.
 
-Your device must be running a `core` [product configuration](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products)
+Your device must be running a `core`
+[product configuration](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products)
 or a product configuration which extends `core` (such as `workstation`).
 
-Optionally, you can run `fx log`, which will provide some additional information about the interactions between `ffx` and your Fuchsia target device.
+Optionally, you can run `fx log`, which will provide some additional information
+about the interactions between `ffx` and your Fuchsia target device.
 
 ## Introduction
 
@@ -30,7 +35,8 @@ After following all the prerequisites, run the following in a terminal:
 fx ffx help
 ```
 
-This will list all of the available `ffx` subcommands. You'll see something like:
+This will list all of the available `ffx` subcommands. You'll see something
+like:
 
 ```
 Usage: ffx [--config <config>] [--environment-file <environment-file>] [--target <target>] <command> [<args>]
@@ -54,7 +60,8 @@ Commands:
 
 ```
 
-You can use `fx ffx help <subcommand>` or `fx ffx <subcommand> --help` to see more about any subcommand.
+You can use `fx ffx help <subcommand>` or `fx ffx <subcommand> --help` to see
+more about any subcommand.
 
 ## Interacting with target devices
 
@@ -72,33 +79,39 @@ NAME                    TYPE       STATE      ADDRS/IP                       AGE
 step-atom-yard-juicy    Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m0s    N
 ```
 
-NOTE: Ignore the `TYPE` and `STATE` columns - they have no values besides `UNKNOWN` right now.
+NOTE: Ignore the `TYPE` and `STATE` columns - they have no values besides
+`UNKNOWN` right now.
 
 A couple columns worth explanation:
 - `AGE`: this is the time since `ffx` was last able to reach the device.
-- `RCS`: Indicates whether there is a reachable instance of the [Remote Control Service (RCS)](rcs.md) running on the device.
+- `RCS`: Indicates whether there is a reachable instance of the
+  [Remote Control Service (RCS)](rcs.md) running on the device.
 
-If you wait 10 to 15 seconds and run the same command again, you should see the value in the `RCS` column change to `Y`.
+If you wait 10 to 15 seconds and run the same command again, you should see the
+value in the `RCS` column change to `Y`.
 ```sh
 $ fx ffx target list
 NAME                    TYPE       STATE      ADDRS/IP                       AGE     RCS
 step-atom-yard-juicy    Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m6s    Y
 ```
 
-If you had `fx log` running, you should also see something like the following in the logs:
+If you had `fx log` running, you should also see something like the following in
+the logs:
 
 ```
 [00009.776170][28540][28542][remote-control, remote_control_bin] INFO: published remote control service to overnet
 ```
 
-NOTE: if the `RCS` column remains `N` for an extended amount of time, [reach out](#contacting-us) to the `ffx` team.
+NOTE: if the `RCS` column remains `N` for an extended amount of time,
+[reach out](#contacting-us) to the `ffx` team.
 
 ### Interacting with multiple devices
 TODO: fill this out.
 
 ### Controlling the state of target devices
 
-You can use the `target off` and `target reboot` subcommands to power-off or reboot a device, respectively.
+You can use the `target off` and `target reboot` subcommands to power-off or
+reboot a device, respectively.
 
 ## Configuration
 
@@ -108,7 +121,10 @@ TODO
 
 ### Selector Syntax
 
-Many `ffx` commands that interact with components or services take component selectors as a parameter. Component selectors in `ffx` use the same syntax as the component selectors in the [diagnostics library](https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#Selector).
+Many `ffx` commands that interact with components or services take component
+selectors as a parameter. Component selectors in `ffx` use the same syntax as
+the component selectors in the
+[diagnostics library](https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#Selector).
 
 Here are some example selectors, all of which select the Remote Control Service:
 
@@ -123,27 +139,45 @@ core/*:expose:fuchsia.developer.remotecontrol.R*
 
 #### Selector segments
 
-There are 3 constituent segments of a selector: `<component moniker>:<node selector>:<property selector>`. Each is discussed below.
-The wildcard (`*`) is valid in each segment of a selector.
+There are 3 constituent segments of a selector:
+`<component moniker>:<node selector>:<property selector>`. Each is discussed
+below. The wildcard (`*`) is valid in each segment of a selector.
 
-Consider this example: `core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl`
+Consider this example:
+  `core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl`
 
-- `core/remote-control` is the [component moniker](https://fuchsia.dev/fuchsia-src/concepts/components/monikers). This uniquely specifies a path in the [component topology](https://fuchsia.dev/fuchsia-src/concepts/components/topology).
+- `core/remote-control` is the
+  [component moniker](https://fuchsia.dev/fuchsia-src/concepts/components/monikers).
+  This uniquely specifies a path in the
+  [component topology](https://fuchsia.dev/fuchsia-src/concepts/components/topology).
 
-  Note: You can use `*` to wildcard a particular level in the topology, but *`*` is not recursive*. That is, `a/*/c` will match `a/b/c` but would not match `a/b/b2/c`.
+  Note: You can use `*` to wildcard a particular level in the topology, but *`*`
+  is not recursive*. That is, `a/*/c` will match `a/b/c` but would not match
+  `a/b/b2/c`.
 
-- `out` is the node selector. In `ffx`, this must be one of the following values, which correspond to the routing terminology used in the component manifest and defined [here](https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests#routing-terminology).
-  - `out`: services offered by the component. Corresponds to `offer` in the component manifest.
-  - `expose`: services exposed by the component. Corresponds to `expose` in the component manifest.
-  - `in`: services depended upon by the component. Corresponds to `use` in the component manifest.
-- `fuchsia.developer.remotecontrol.RemoteControl` is the property selector and is matched against fully-qualified FIDL service names in the routing directory/directories matched by the node selector.
+- `out` is the node selector. In `ffx`, this must be one of the following
+  values, which correspond to the routing terminology used in the component
+  manifest and defined
+  [here](https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests#routing-terminology).
+  - `out`: services offered by the component. Corresponds to `offer` in the
+    component manifest.
+  - `expose`: services exposed by the component. Corresponds to `expose` in the
+    component manifest.
+  - `in`: services depended upon by the component. Corresponds to `use` in the
+    component manifest.
+- `fuchsia.developer.remotecontrol.RemoteControl` is the property selector and
+  is matched against fully-qualified FIDL service names in the routing
+  directory/directories matched by the node selector.
 
-You may optionally omit the property selector: `core/remote-control:out` is equivalent to `core/remote-control:out:*`.
+You may optionally omit the property selector: `core/remote-control:out` is
+equivalent to `core/remote-control:out:*`.
 
 ### Inspecting the component topology
 
-You can use the `component select` command to inspect services in the [component topology](https://fuchsia.dev/fuchsia-src/concepts/components/topology). For example, the following
-command will display all services offered by [v1 components](https://fuchsia.dev/fuchsia-src/glossary#components-v1):
+You can use the `component select` command to inspect services in the
+[component topology](https://fuchsia.dev/fuchsia-src/concepts/components/topology).
+For example, the following command will display all services offered by
+[v1 components](https://fuchsia.dev/fuchsia-src/glossary#components-v1):
 
 ```sh
 $ fx ffx component select 'core/appmgr:out:*'`
@@ -173,15 +207,20 @@ core/appmgr
    [truncated]
 ```
 
-Note: this command can be slow (~10-15s), especially for selectors that match a large number of services.
+Note: this command can be slow (~10-15s), especially for selectors that match a
+large number of services.
 
 ### Verifying a service is up
 
-You can use the `component knock` command to verify that a service starts successfully: `knock` will open a channel to the service and return success if and only if the channel isn't closed.
+You can use the `component knock` command to verify that a service starts
+successfully: `knock` will open a channel to the service and return success if
+and only if the channel isn't closed.
 
-The component framework will start the component that provides the service on-demand.
+The component framework will start the component that provides the service
+on-demand.
 
-Note: the selector you pass to `knock` may contain a wildcard but must match _exactly one_ service. You cannot `knock` on multiple services at once.
+Note: the selector you pass to `knock` may contain a wildcard but must match
+_exactly one_ service. You cannot `knock` on multiple services at once.
 
 For example:
 
@@ -195,13 +234,20 @@ Failed to connect to service: NoMatchingServices
 
 ### Running a component
 
-`ffx` can run components on a device given their package URL and arguments. `stdout` and `stderr` will be streamed to the corresponding descriptor on the host terminal.
+`ffx` can run components on a device given their package URL and arguments.
+`stdout` and `stderr` will be streamed to the corresponding descriptor on the
+host terminal.
 
-Only v1 components can be `run`: v2 components are only started on-demand by the framework. Learn more about the component lifecycle [here](https://fuchsia.dev/fuchsia-src/concepts/components/lifecycle). 
+Only v1 components can be `run`: v2 components are only started on-demand by
+the framework. Learn more about the component lifecycle
+[here](https://fuchsia.dev/fuchsia-src/concepts/components/lifecycle).
 
-Note: `fx serve ` must be running in order to `component run` a package that is not [in base or cached](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products#dependency_sets).
+Note: `fx serve ` must be running in order to `component run` a package that is
+not
+[in base or cached](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products#dependency_sets).
 
-Here's an example of running the Rust hello-world component. First, you'll need the hello-world package in your universe:
+Here's an example of running the Rust hello-world component. First, you'll need
+the hello-world package in your universe:
 
 ```
 $ fx set <product>.<board> --with //examples/hello_world/rust:hello_world_rust && fx build
@@ -263,9 +309,10 @@ Attempting to get an RCS connection...success
 Attempting to communicate with RCS...FAILED. Timed out.
 
 
-Connecting to RCS failed after maximum attempts. To resolve this issue, try rebooting your device.
-If this persists, please file a bug at the link below and include 1) all output above and 2) device syslog if available.
-Bug link: ...
+Connecting to RCS failed after maximum attempts. To resolve this issue, try
+rebooting your device. If this persists, please file a bug at the link below
+and include 1) all output
+above and 2) device syslog if available.Bug link: ...
 ```
 
 ## Next steps
