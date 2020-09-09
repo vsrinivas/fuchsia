@@ -13,18 +13,25 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 import("//zircon/public/gn/toolchain/c_utils.gni")
 
-group("constructors") {
-  testonly = true
+fuchsia_unittest_package("fdio-constructor-unittest-package") {
+  executable_path = "test/fdio-constructor-test"
   deps = [ ":fdio-constructor" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fdio-constructor-unittest-package" ]
 }
 
 # This bogus test is necessary to have the verification run in the variant
 # toolchain.
 test("fdio-constructor") {
+  output_name = "fdio-constructor-test"
+
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -67,9 +74,4 @@ toolchain_utils_action("no-static-ctor") {
     rebase_path(outputs[0], root_build_dir),
     rebase_path(depfile, root_build_dir),
   ]
-}
-
-bootfs_test("fdio-constructor-bootfs-test") {
-  name = "fdio-constructor"
-  deps = [ ":fdio-constructor" ]
 }

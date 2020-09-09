@@ -55,14 +55,6 @@ TEST(DirectoryTest, Open) {
   ASSERT_OK(fdio_service_clone_to(h2.get(), h3.release()));
 }
 
-std::string new_path(const char* file) {
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  if (root_dir == nullptr) {
-    root_dir = "";
-  }
-  return std::string(root_dir) + "/" + file;
-}
-
 TEST(DirectoryTest, OpenFD) {
   {
     fbl::unique_fd fd;
@@ -77,8 +69,7 @@ TEST(DirectoryTest, OpenFD) {
 
   {
     fbl::unique_fd fd;
-    std::string test_path = new_path("test");
-    ASSERT_OK(fdio_open_fd(test_path.c_str(), kReadFlags, fd.reset_and_get_address()));
+    ASSERT_OK(fdio_open_fd("/pkg/test", kReadFlags, fd.reset_and_get_address()));
     ASSERT_TRUE(fd.is_valid());
 
     fbl::unique_fd fd2;

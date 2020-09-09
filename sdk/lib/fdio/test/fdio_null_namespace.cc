@@ -24,12 +24,7 @@ TEST(NullNamespaceTest, NullNamespace) {
   zx::process process;
   zx_status_t status;
 
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  if (root_dir == nullptr) {
-    root_dir = "";
-  }
-  const std::string path = std::string(root_dir) + "/bin/null-namespace-child";
-  const char* argv[] = {path.c_str(), nullptr};
+  const char* argv[] = {"/pkg/bin/null-namespace-child", nullptr};
   status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_STDIO | FDIO_SPAWN_DEFAULT_LDSVC, argv[0],
                       argv, process.reset_and_get_address());
   ASSERT_OK(status);

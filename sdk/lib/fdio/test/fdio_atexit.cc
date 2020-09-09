@@ -140,12 +140,7 @@ TEST(AtExit, ExitInAccept) {
   ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  if (root_dir == nullptr) {
-    root_dir = "";
-  }
-  const std::string path = std::string(root_dir) + "/bin/accept-child";
-  const char* argv[] = {path.c_str(), nullptr};
+  const char* argv[] = {"/pkg/bin/accept-child", nullptr};
   const fdio_spawn_action_t actions[] = {
       {
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,

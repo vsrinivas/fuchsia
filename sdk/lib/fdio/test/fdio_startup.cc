@@ -17,12 +17,7 @@ namespace {
 // Ensure that the child crashes when given bogus fd handle info.
 template <uint32_t... Info>
 void BadFdTest() {
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  if (root_dir == nullptr) {
-    root_dir = "";
-  }
-  const std::string path = std::string(root_dir) + "/bin/hello-world";
-  const char* const argv[] = {path.c_str(), nullptr};
+  const char* const argv[] = {"/pkg/bin/hello-world", nullptr};
 
   zx::channel bs_parent, bs_child;
   ASSERT_OK(zx::channel::create(0, &bs_parent, &bs_child));

@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/fdio-test"
+    },
+    "sandbox": {
+        "dev": [
+            "zero"
+        ],
+        "features": [
+            "deprecated-ambient-replace-as-executable",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

@@ -73,6 +73,7 @@ group("tests") {
     "//examples:tests",
     "//garnet/packages/tests:all",
     "//scripts:tests",
+    "//sdk:tests",
     "//src:tests",
     "//third_party/go:tests",
     "//tools:tests",

@@ -21,6 +21,12 @@ group("sdk") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [ "lib:tests" ]
+}
+
 sdk_documentation("open_source") {
   name = "open_source"
 

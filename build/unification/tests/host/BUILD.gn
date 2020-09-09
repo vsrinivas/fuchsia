@@ -105,9 +105,6 @@ group("migrated-tests") {
 
   deps = [
     #------------------
-    "//sdk/lib/fdio/test/host",
-
-    #------------------
     "//src/storage/blobfs/test:blobfs-host",
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/ffl/test:ffl",

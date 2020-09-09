@@ -13,31 +13,47 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+fuchsia_unittest_package("fdio-unittest-package") {
+  manifest = "meta/fdio_test.cmx"
+  deps = [
+    ":accept-child",
+    ":fdio",
+    ":hello-world",
+    ":null-namespace-child",
+  ]
+}
+
+group("tests") {
   testonly = true
-  deps = [ ":fdio" ]
+  deps = [
+    ":fdio-unittest-package",
+    ":fdio_hosttests($host_toolchain)",
+    "constructors:tests",
+  ]
+}
+
+# FDIO tests that can run on host as well as target.
+test("fdio_hosttests") {
+  sources = [
+    "fdio_eventfd.cc",
+    "fdio_poll.cc",
+    "fdio_timerfd.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 test("fdio") {
   output_name = "fdio-test"
 
-  if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+  configs += [ "//build/config:all_source" ]
 
   # If your test can run on host as well as target, consider adding it to
-  # fdio_hosttests in the "host" directory.
+  # fdio_hosttests above.
   sources = [
     "fdio_atexit.cc",
     "fdio_directory.cc",
@@ -75,24 +91,9 @@ test("fdio") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/test-utils",
   ]
-
-  data_deps = [
-    ":accept-child",
-    ":hello-world",
-    ":null-namespace-child",
-  ]
 }
 
 executable("accept-child") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   visibility = [ ":*" ]
 
   testonly = true
@@ -103,15 +104,6 @@ executable("accept-child") {
 
 # Used by tests in fdio_startup.cc.
 executable("hello-world") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   visibility = [ ":*" ]
 
   testonly = true
@@ -120,24 +112,10 @@ executable("hello-world") {
 }
 
 executable("null-namespace-child") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   visibility = [ ":*" ]
 
   testonly = true
   sources = [ "fdio_null_namespace_child.c" ]
   deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
-}
-
-bootfs_test("fdio-bootfs-test") {
-  name = "fdio-test"
-  deps = [ ":fdio" ]
 }
