@@ -22,7 +22,7 @@ struct desc_ptr {
 #if defined(__x86_64__)
 static bool is_umip_supported(void) {
   uint32_t eax, ebx, ecx, edx;
-  if (__get_cpuid(7, &eax, &ebx, &ecx, &edx) != 1) {
+  if (__get_cpuid_count(7, 0, &eax, &ebx, &ecx, &edx) != 1) {
     return false;
   }
   return ecx & (1u << 2);
