@@ -32,6 +32,7 @@ zx_library("unittest") {
   }
   if (is_fuchsia) {
     deps += [ "//zircon/public/lib/zx" ]
+    deps += [ "//zircon/system/ulib/test-exceptions" ]
   }
   configs += [
     # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -54,5 +55,8 @@ zx_library("unittest-static") {
   deps = [ "//zircon/public/lib/pretty" ]
   if (current_os == "linux") {
     libs = [ "pthread" ]
+  }
+  if (is_fuchsia) {
+    deps += [ "//zircon/system/ulib/test-exceptions" ]
   }
 }

@@ -14,6 +14,7 @@
 
 #ifdef UNITTEST_DEATH_TEST_SUPPORTED
 
+#include <lib/test-exceptions/exception-handling.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/port.h>
@@ -21,6 +22,7 @@
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 
 #endif  // UNITTEST_DEATH_TEST_SUPPORTED
@@ -298,27 +300,27 @@ death_test_result_t unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
     return thread_exit_code == ZX_OK ? DEATH_TEST_RESULT_LIVED : DEATH_TEST_RESULT_INTERNAL_ERROR;
   }
 
-  // If we got here, the thread hit an exception.
-  //
-  // It's impossible to fully clean up here using standard C/C++ thread APIs.
-  // The best we can do is detach and kill the thread but this likely leaks
-  // some stack VMO/VMAR mapping and other internal bookkeeping, since the
-  // thread never returns from its entry point function.
-  //
-  // If we really need to clean up properly we'll have to use the zxr_thread_*
-  // APIs, in which case we'll need to replicate or somehow expose all the
-  // complicated stack setup and mapping that comes with the C/C++ APIs.
-  // See zircon/third_party/ulib/musl/src/thread/allocate.c for details.
-  //
-  // Alternately, we could try to adjust the thread registers to jump it to a
-  // call to thrd_exit() and then resume, but this seems equally complicated.
-  if (int result = thrd_detach(thread); result != thrd_success) {
-    unittest_printf_critical("failed to detach thread: thrd code %d\n", result);
+  zx_exception_info_t info;
+  zx::exception exception;
+  zx_status_t status = state.exception_channel.read(0, &info, exception.reset_and_get_address(),
+                                                    sizeof(info), 1, nullptr, nullptr);
+  if (status != ZX_OK) {
+    unittest_printf_critical("Failed to read exception: %d\n", status);
     return DEATH_TEST_RESULT_INTERNAL_ERROR;
   }
 
-  if (zx_status_t status = state.zx_thread.kill(); status != ZX_OK) {
-    unittest_printf_critical("failed to kill thread: %s\n", zx_status_get_string(status));
+  // This causes the thread to exit via thrd_exit. It's impossible to to fully clean
+  // up a thread that has hit an exception however and there are likely small leaks.
+  status = test_exceptions::ExitExceptionCThread(std::move(exception));
+  if (status != ZX_OK) {
+    unittest_printf_critical("Failed to exit the exception thread: %d\n", status);
+    return DEATH_TEST_RESULT_INTERNAL_ERROR;
+  }
+
+  // Check that the thrd exited successfully.
+  int thread_exit_code;
+  if (int result = thrd_join(thread, &thread_exit_code); result != thrd_success) {
+    unittest_printf_critical("failed to join exception thread: thrd code %d\n", result);
     return DEATH_TEST_RESULT_INTERNAL_ERROR;
   }
 
