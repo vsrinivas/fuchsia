@@ -11,7 +11,9 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
@@ -140,6 +142,62 @@ int RoutineThread(void* args) {
   return 0;
 }
 
+__NO_SAFESTACK static void thrd_exit_success() { thrd_exit(0); }
+
+// Extracts the thread from |exception| and causes it to exit.
+zx_status_t ExitExceptionThread(zx::exception exception, std::string* error_message) {
+  zx::thread thread;
+  zx_status_t status = exception.get_thread(&thread);
+  if (status != ZX_OK) {
+    SET_ERROR(*error_message, "Failed to obtain thread from exception handle");
+    return status;
+  }
+
+  if (!thread.is_valid()) {
+    SET_ERROR(*error_message, "Exception contained invalid exception handle");
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Set the thread's registers to `zx_thread_exit`.
+  zx_thread_state_general_regs_t regs;
+  status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  if (status != ZX_OK) {
+    SET_ERROR(*error_message, "Failed to read exception thread state");
+    return status;
+  }
+
+#if defined(__aarch64__)
+  regs.pc = reinterpret_cast<uintptr_t>(thrd_exit_success);
+#elif defined(__x86_64__)
+  regs.rip = reinterpret_cast<uintptr_t>(thrd_exit_success);
+#else
+#error "what machine?"
+#endif
+
+  status = thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  if (status != ZX_OK) {
+    SET_ERROR(*error_message, "Failed to write exception thread state");
+    return status;
+  }
+
+  // Clear the exception so the thread continues.
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  status = exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+  if (status != ZX_OK) {
+    SET_ERROR(*error_message, "Failed to handle exception");
+    return status;
+  }
+  exception.reset();
+
+  // Wait until the thread exits.
+  status = thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr);
+  if (status != ZX_OK) {
+    SET_ERROR(*error_message, "Failed to wait for thread exit");
+    return status;
+  }
+  return ZX_OK;
+}
+
 }  // namespace
 
 DeathStatement::DeathStatement(fit::function<void()> statement) : statement_(std::move(statement)) {
@@ -163,6 +221,7 @@ void DeathStatement::Execute() {
     return;
   }
   Listen(routine_args.event_port, routine_args.exception_channel);
+  thrd_join(death_thread, nullptr);
 }
 
 // Listens for events on |event_port|. Eventually the thread will register its termination and the
@@ -224,18 +283,6 @@ bool DeathStatement::HandleException(const zx::channel& exception_channel) {
     return true;
   }
 
-  zx::thread exception_thread;
-
-  if (exception.get_thread(&exception_thread) != ZX_OK) {
-    SET_ERROR(error_message_, "Failed to obtain thread from exception handle");
-    return true;
-  }
-
-  if (!exception_thread.is_valid()) {
-    SET_ERROR(error_message_, "Exception contained invalid exception handle");
-    return true;
-  }
-
   set_internal_error.cancel();
   // Ignore exceptions that are not really crashes and resume the thread.
   switch (exception_info.type) {
@@ -249,11 +296,12 @@ bool DeathStatement::HandleException(const zx::channel& exception_channel) {
 
   // If we fail to kill the thread, we set the statement to a bad state so the harness can exit
   // cleanly.
-  state_ = DeathStatement::State::kBadState;
-  if (exception_thread.kill() != ZX_OK) {
-    SET_ERROR(error_message_, "Failed to terminate death_thread");
+  if (ExitExceptionThread(std::move(exception), &error_message_) != ZX_OK) {
+    // ExitExceptionThread sets error_message_ correctly.
+    state_ = DeathStatement::State::kBadState;
     return true;
   }
+
   // If everything went ok, we mark the statement as completed with exception.
   state_ = DeathStatement::State::kException;
   return true;
