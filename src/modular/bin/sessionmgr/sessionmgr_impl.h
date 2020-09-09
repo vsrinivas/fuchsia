@@ -19,7 +19,6 @@
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
-#include "src/modular/bin/sessionmgr/presentation_provider.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "src/modular/bin/sessionmgr/session_ctl.h"
@@ -48,25 +47,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void Terminate(fit::function<void()> callback);
 
  private:
-  // TODO(fxbug.dev/58216): Remove PresentationProvider
-  class PresentationProviderImpl : public PresentationProvider {
-   public:
-    explicit PresentationProviderImpl(SessionmgrImpl* impl);
-    ~PresentationProviderImpl() override = default;
-
-   private:
-    // |PresentationProvider|
-    void GetPresentation(
-        fidl::StringPtr story_id,
-        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
-
-    void WatchVisualState(
-        fidl::StringPtr story_id,
-        fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) override;
-
-    SessionmgrImpl* const impl_;
-  };
-
   // |Sessionmgr|
   void Initialize(std::string session_id, fuchsia::modular::session::AppConfig session_shell_config,
                   fuchsia::modular::session::AppConfig story_shell_config,
@@ -175,8 +155,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<SessionCtl> session_ctl_;
 
   std::unique_ptr<StartupAgentLauncher> startup_agent_launcher_;
-
-  std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;
 
   // Component context given to session shell so that it can run agents.
   std::unique_ptr<ComponentContextImpl> session_shell_component_context_impl_;

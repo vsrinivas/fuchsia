@@ -11,8 +11,6 @@ hermetic_tests_package("story_runner_unittests") {
   environments = basic_envs
 }
 
-# NOTE: We are in the process of deconstructing story_runner into its
-# constituent components. Please see MF-85.
 source_set("story_runner") {
   sources = [
     "module_context_impl.cc",
@@ -40,7 +38,6 @@ source_set("story_runner") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/sessionmgr:component_context",
-    "//src/modular/bin/sessionmgr:presentation_provider",
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
     "//src/modular/bin/sessionmgr/storage:encode_module_path",

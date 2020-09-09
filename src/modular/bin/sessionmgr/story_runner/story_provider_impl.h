@@ -25,6 +25,8 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
+#include "src/modular/bin/sessionmgr/storage/session_storage.h"
+#include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -33,20 +35,16 @@
 
 namespace modular {
 
-class PresentationProvider;
-class Resolver;
-class SessionStorage;
+// StoryControllerImpl has a circular dependency on StoryProviderImpl.
 class StoryControllerImpl;
-class StoryStorage;
 
 class StoryProviderImpl : fuchsia::modular::StoryProvider {
  public:
   StoryProviderImpl(Environment* session_environment, SessionStorage* session_storage,
                     fuchsia::modular::session::AppConfig story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-                    const ComponentContextInfo& component_context_info,
-                    AgentServicesFactory* agent_services_factory,
-                    PresentationProvider* presentation_provider, inspect::Node* root_node);
+                    ComponentContextInfo component_context_info,
+                    AgentServicesFactory* agent_services_factory, inspect::Node* root_node);
 
   ~StoryProviderImpl() override;
 
@@ -108,13 +106,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // session shell that the view of the story identified by |story_id| is about
   // to close.
   void DetachView(std::string story_id, fit::function<void()> done);
-
-  // Called by StoryShellContextImpl. Sends request to
-  // fuchsia::modular::SessionShell through PresentationProvider.
-  void GetPresentation(std::string story_id,
-                       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
-  void WatchVisualState(std::string story_id,
-                        fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
 
   // Converts a StoryInfo2 to StoryInfo.
   static fuchsia::modular::StoryInfo StoryInfo2ToStoryInfo(
@@ -205,7 +196,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   const ComponentContextInfo component_context_info_;
 
   AgentServicesFactory* const agent_services_factory_;  // Not owned.
-  PresentationProvider* const presentation_provider_;   // Not owned.
 
   inspect::Node* session_inspect_node_;
 

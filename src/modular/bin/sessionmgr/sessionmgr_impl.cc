@@ -73,24 +73,6 @@ fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
 
 }  // namespace
 
-SessionmgrImpl::PresentationProviderImpl::PresentationProviderImpl(SessionmgrImpl* impl)
-    : impl_(impl) {}
-
-void SessionmgrImpl::PresentationProviderImpl::GetPresentation(
-    fidl::StringPtr story_id, fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  fuchsia::modular::SessionShellPresentationProviderPtr provider;
-  impl_->ConnectToSessionShellService(provider.NewRequest());
-  provider->GetPresentation(story_id.value_or(""), std::move(request));
-}
-
-void SessionmgrImpl::PresentationProviderImpl::WatchVisualState(
-    fidl::StringPtr story_id,
-    fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
-  fuchsia::modular::SessionShellPresentationProviderPtr provider;
-  impl_->ConnectToSessionShellService(provider.NewRequest());
-  provider->WatchVisualState(story_id.value_or(""), std::move(watcher));
-}
-
 SessionmgrImpl::SessionmgrImpl(sys::ComponentContext* const component_context,
                                fuchsia::modular::session::SessionmgrConfig config,
                                inspect::Node node_object)
@@ -256,9 +238,6 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
     ConnectToSessionShellService(story_shell_factory_ptr.NewRequest());
   }
 
-  presentation_provider_impl_ = std::make_unique<PresentationProviderImpl>(this);
-  OnTerminate(Reset(&presentation_provider_impl_));
-
   // We create |story_provider_impl_| after |agent_runner_| so
   // story_provider_impl_ is terminated before agent_runner_, which will cause
   // all modules to be terminated before agents are terminated. Agents must
@@ -271,7 +250,7 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
       std::move(story_shell_factory_ptr), component_context_info, startup_agent_launcher_.get(),
-      presentation_provider_impl_.get(), &inspect_root_node_));
+      &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   story_command_executor_ = MakeProductionStoryCommandExecutor(session_storage_.get());

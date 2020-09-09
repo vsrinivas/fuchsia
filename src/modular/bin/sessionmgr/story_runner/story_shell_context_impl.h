@@ -11,26 +11,15 @@
 
 namespace modular {
 
-class StoryControllerImpl;
-class StoryProviderImpl;
-
 class StoryShellContextImpl : fuchsia::modular::StoryShellContext {
  public:
-  StoryShellContextImpl(std::string story_id, StoryProviderImpl* story_provider_impl);
+  explicit StoryShellContextImpl(std::string story_id);
   ~StoryShellContextImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::StoryShellContext> request);
 
  private:
-  // |fuchsia::modular::StoryShellContext|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
-  void WatchVisualState(
-      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) override;
-  void RequestView(std::string surface_id) override;
-
   const std::string story_id_;
-  // Not owned. The StoryProviderImpl corresponding to this context.
-  StoryProviderImpl* const story_provider_impl_;
 
   fidl::BindingSet<fuchsia::modular::StoryShellContext> bindings_;
 };

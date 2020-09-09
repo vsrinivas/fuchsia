@@ -32,6 +32,9 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
+#include "src/modular/bin/sessionmgr/storage/story_storage.h"
+#include "src/modular/bin/sessionmgr/story_runner/module_context_impl.h"
+#include "src/modular/bin/sessionmgr/story_runner/module_controller_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_shell_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
@@ -41,11 +44,8 @@
 
 namespace modular {
 
-class ModuleContextImpl;
-class ModuleControllerImpl;
+// StoryProviderImpl has a circular dependency on StoryControllerImpl.
 class StoryProviderImpl;
-class StoryStorage;
-class StoryVisibilitySystem;
 
 // The story runner, which runs all the modules as well as the story shell.
 // It also implements the StoryController service to give clients control over

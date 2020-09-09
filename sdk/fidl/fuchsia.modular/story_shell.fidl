@@ -4,7 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
 /// This interface is implemented by a story shell. Dependencies are passed to it
@@ -132,26 +131,8 @@ table SurfaceInfo2 {
     6: fuchsia.ui.views.ViewRef view_ref;
 };
 
-/// This interface provides the StoryShell instance with everything it needs to
-/// know or be able to do about the Story. Not much right now, but we expect this
-/// to increase.
+/// The story shell receives this protocol upon initialization.
 protocol StoryShellContext {
-    /// Requests a Presentation connection from the SessionShell. See
-    /// SessionShellPresenationProvider in session_shell.fidl.
-    GetPresentation(request<fuchsia.ui.policy.Presentation> request);
-
-    /// Starts watching Story shell's visual state.
-    WatchVisualState(StoryVisualStateWatcher watcher);
-
-    /// Requests a view for a Surface.
-    /// Requests that a view for `surface_id` is provided through
-    /// StoryShell.ReconnectView().
-    RequestView(string:MAX surface_id);
-};
-
-/// Implemented by StoryShell to get notified about visual state changes.
-protocol StoryVisualStateWatcher {
-    OnVisualStateChange(StoryVisualState visual_state);
 };
 
 /// Defines the visual state of the Story shell.

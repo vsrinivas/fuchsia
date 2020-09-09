@@ -22,7 +22,6 @@
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
-#include "src/modular/bin/sessionmgr/presentation_provider.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
@@ -198,17 +197,15 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
                                      SessionStorage* const session_storage,
                                      fuchsia::modular::session::AppConfig story_shell_config,
                                      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-                                     const ComponentContextInfo& component_context_info,
+                                     ComponentContextInfo component_context_info,
                                      AgentServicesFactory* const agent_services_factory,
-                                     PresentationProvider* const presentation_provider,
                                      inspect::Node* root_node)
     : session_environment_(session_environment),
       session_storage_(session_storage),
       story_shell_config_(std::move(story_shell_config)),
       story_shell_factory_(std::move(story_shell_factory)),
-      component_context_info_(component_context_info),
+      component_context_info_(std::move(component_context_info)),
       agent_services_factory_(agent_services_factory),
-      presentation_provider_(presentation_provider),
       session_inspect_node_(root_node),
       weak_factory_(this) {
   session_storage_->SubscribeStoryDeleted(
@@ -512,17 +509,6 @@ void StoryProviderImpl::NotifyStoryWatchers(const fuchsia::modular::internal::St
     (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state,
                     fuchsia::modular::StoryVisibilityState::DEFAULT);
   }
-}
-
-void StoryProviderImpl::GetPresentation(
-    std::string story_id, fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  presentation_provider_->GetPresentation(std::move(story_id), std::move(request));
-}
-
-void StoryProviderImpl::WatchVisualState(
-    std::string story_id,
-    fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
-  presentation_provider_->WatchVisualState(std::move(story_id), std::move(watcher));
 }
 
 fuchsia::modular::StoryInfo StoryProviderImpl::StoryInfo2ToStoryInfo(

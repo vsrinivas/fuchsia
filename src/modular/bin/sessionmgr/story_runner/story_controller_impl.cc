@@ -50,6 +50,7 @@ namespace modular {
 namespace {
 
 constexpr char kSurfaceIDSeparator[] = ":";
+
 std::string ModulePathToSurfaceID(const std::vector<std::string>& module_path) {
   std::vector<std::string> path;
   // Sanitize all the |module_name|s that make up this |module_path|.
@@ -741,14 +742,14 @@ class StoryControllerImpl::StartCall : public Operation<> {
 StoryControllerImpl::StoryControllerImpl(std::string story_id,
                                          SessionStorage* const session_storage,
                                          StoryStorage* const story_storage,
-                                         StoryProviderImpl* const story_provider_impl,
+                                         StoryProviderImpl* story_provider_impl,
                                          inspect::Node* story_inspect_node)
     : story_id_(std::move(story_id)),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
       story_inspect_node_(story_inspect_node),
-      story_shell_context_impl_{story_id_, story_provider_impl},
+      story_shell_context_impl_{story_id_},
       weak_factory_(this) {
   story_storage_->SubscribeModuleDataUpdated(
       [this](const fuchsia::modular::ModuleData& module_data) {

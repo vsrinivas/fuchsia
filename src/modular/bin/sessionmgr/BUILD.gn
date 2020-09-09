@@ -58,7 +58,6 @@ source_set("sessionmgr_lib") {
 
   deps = [
     ":component_context",
-    ":presentation_provider",
     ":session_ctl",
     ":startup_agent_launcher",
     "//sdk/lib/fidl/cpp",
@@ -138,20 +137,6 @@ source_set("component_context") {
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:json_xdr",
-  ]
-}
-
-source_set("presentation_provider") {
-  sources = [
-    "presentation_provider.cc",
-    "presentation_provider.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
   ]
 }
 
