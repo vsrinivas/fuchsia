@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.fidl.connector;
+
+// This is an example event monitor FIDL protocol that can be used with the event queue library.
+[Discoverable]
+protocol Test {
+    Ping() -> (uint32 gen);
+    Disconnect() -> ();
+};

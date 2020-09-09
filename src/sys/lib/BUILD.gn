@@ -10,6 +10,7 @@ group("tests") {
     "cm_json:tests",
     "cm_rust:tests",
     "cm_types:tests",
+    "fidl-connector:tests",
     "fidl-fuchsia-pkg-ext:tests",
     "fidl-fuchsia-pkg-rewrite-ext:tests",
     "fuchsia-bootfs:fuchsia-bootfs-tests",
