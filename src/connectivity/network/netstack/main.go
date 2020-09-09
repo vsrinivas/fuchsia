@@ -359,19 +359,24 @@ func Main() {
 	// jq '.[] | select(.path | contains("/pprof/")) | .contents.root.pprof.goroutine[4:]' | \
 	// xargs echo | base64 --decode > goroutine
 	pprofCache := filepath.Join("", "cache", "pprof")
-	if err := os.MkdirAll(pprofCache, os.ModePerm); err != nil {
-		syslog.Fatalf("%s", err)
-	}
-
-	dir, run, err := pprof.Setup(pprofCache)
-	if err != nil {
-		syslog.Fatalf("%s", err)
-	}
-	appCtx.OutgoingService.AddDiagnostics("pprof", dir)
-	go func() {
-		if err := run(); err != nil {
-			_ = syslog.Errorf("%s", err)
+	func() {
+		if err := os.MkdirAll(pprofCache, os.ModePerm); err != nil {
+			if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrNoSpace {
+				_ = syslog.Errorf("pprof directory setup error; snapshots will not include pprof data: %s", err)
+				return
+			}
+			_ = syslog.Fatalf("%s", err)
 		}
+		dir, run, err := pprof.Setup(pprofCache)
+		if err != nil {
+			_ = syslog.Fatalf("%s", err)
+		}
+		appCtx.OutgoingService.AddDiagnostics("pprof", dir)
+		go func() {
+			if err := run(); err != nil {
+				_ = syslog.Errorf("pprof directory serving error; snapshots will not include pprof data: %s", err)
+			}
+		}()
 	}()
 
 	{
