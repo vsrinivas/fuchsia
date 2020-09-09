@@ -1423,6 +1423,64 @@ TEST(NetStreamTest, ShutdownDuringConnect) {
   });
 }
 
+TEST(LocalhostTest, RaceLocalPeerClose) {
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  std::array<std::thread, 50> threads;
+  ASSERT_EQ(listen(listener.get(), threads.size()), 0) << strerror(errno);
+
+  // Run many iterations in parallel in order to increase load on Netstack and increase the
+  // probability we'll hit the problem.
+  for (auto& t : threads) {
+    t = std::thread([&] {
+      fbl::unique_fd peer;
+      ASSERT_TRUE(peer = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+      // Connect and immediately close a peer with linger. This causes the network-initiated close
+      // that will race with the accepted connection close below. Linger is necessary because we
+      // need a TCP RST to force a full teardown, tickling Netstack the right way to cause a bad
+      // race.
+      struct linger opt = {
+          .l_onoff = 1,
+          .l_linger = 0,
+      };
+      EXPECT_EQ(setsockopt(peer.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
+          << strerror(errno);
+      ASSERT_EQ(connect(peer.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+                0)
+          << strerror(errno);
+      ASSERT_EQ(close(peer.release()), 0) << strerror(errno);
+
+      // Accept the connection and close it, adding new racing signal (operating on `close`) to
+      // Netstack.
+      fbl::unique_fd local;
+      ASSERT_TRUE(local = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+          << strerror(errno);
+      ASSERT_EQ(close(local.release()), 0) << strerror(errno);
+    });
+  }
+
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+}
+
 TEST(LocalhostTest, GetAddrInfo) {
   struct addrinfo hints = {
       .ai_family = AF_UNSPEC,
