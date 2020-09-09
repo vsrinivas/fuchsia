@@ -223,18 +223,6 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
 void device_init_reply(zx_device_t* device, zx_status_t status,
                        const device_init_reply_args_t* args);
 
-// Begins the removal of the given device.  This releases the driver's reference
-// to the device, so it is unsafe to use the zx_device_t object after this call.
-//
-// After **device_remove()** returns, it is not possible for further open calls
-// to occur, but io operations, etc may continue until those client connections
-// are closed.
-//
-// DEPRECATED (fxb/34574).
-// To schedule removal of a device, use **device_async_remove()** instead.
-// To signal completion of the device's |unbind| hook, use **device_unbind_reply()** instead.
-zx_status_t device_remove_deprecated(zx_device_t* device);
-
 zx_status_t device_rebind(zx_device_t* device);
 void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args);
 

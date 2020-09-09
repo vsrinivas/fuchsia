@@ -191,15 +191,14 @@ constexpr void CheckClosable() {
                 "'zx_status_t DdkClose(uint32)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_unbind_deprecated, DdkUnbindDeprecated);
+DECLARE_HAS_MEMBER_FN(has_ddk_unbind, DdkUnbind);
 
 template <typename D>
-constexpr void CheckUnbindableDeprecated() {
-  static_assert(has_ddk_unbind_deprecated<D>::value,
-                "UnbindableDeprecated classes must implement DdkUnbindDeprecated");
-  static_assert(std::is_same<decltype(&D::DdkUnbindDeprecated), void (D::*)(void)>::value,
-                "DdkUnbindDeprecated must be a public non-static member function with signature "
-                "'void DdkUnbindDeprecated()'.");
+constexpr void CheckUnbindable() {
+  static_assert(has_ddk_unbind<D>::value, "Unbindable classes must implement DdkUnbindNew");
+  static_assert(std::is_same<decltype(&D::DdkUnbind), void (D::*)(UnbindTxn txn)>::value,
+                "DdkUnbind must be a public non-static member function with signature "
+                "'void DdkUnbind(ddk::UnbindTxn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_unbind_new, DdkUnbindNew);

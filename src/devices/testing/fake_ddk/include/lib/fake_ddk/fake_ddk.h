@@ -145,7 +145,6 @@ class Bind {
   friend zx_status_t(::device_add_from_driver)(zx_driver_t* drv, zx_device_t* parent,
                                                device_add_args_t* args, zx_device_t** out);
 
-  friend zx_status_t(::device_remove_deprecated)(zx_device_t* device);
   friend void(::device_async_remove)(zx_device_t* device);
   friend void(::device_init_reply)(zx_device_t* device, zx_status_t status,
                                    const device_init_reply_args_t* args);

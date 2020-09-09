@@ -47,7 +47,7 @@ class MockDevice : public MockDeviceType {
   void DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
@@ -249,7 +249,7 @@ zx_status_t MockDevice::DdkClose(uint32_t flags) {
   return ctx.hook_status;
 }
 
-void MockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void MockDevice::DdkUnbind(ddk::UnbindTxn txn) {
   auto result = controller_.Unbind(ConstructHookInvocation());
   ZX_ASSERT(result.ok());
   ProcessActionsContext ctx(controller_.channel(), false, this, zxdev());

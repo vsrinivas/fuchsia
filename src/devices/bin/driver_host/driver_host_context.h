@@ -60,8 +60,6 @@ class DriverHostContext {
   zx_status_t DeviceInit(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
   void DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                        const device_init_reply_args_t* args) TA_REQ(api_lock_);
-  // TODO(fxb/34574): this should be removed once device_remove() is removed.
-  zx_status_t DeviceRemoveDeprecated(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
   zx_status_t DeviceRemove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self = false)
       TA_REQ(api_lock_);
   zx_status_t DeviceCompleteRemoval(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);

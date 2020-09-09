@@ -186,17 +186,6 @@ __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
   internal::ContextForApi()->DeviceInitReply(dev_ref, status, args);
 }
 
-__EXPORT zx_status_t device_remove_deprecated(zx_device_t* dev) {
-  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
-  // The leaked reference in device_add_from_driver() will be recovered when
-  // DriverManagerRemove() completes. We can't drop it here as we may just be
-  // scheduling a removal, and do not know when that will happen.
-  fbl::RefPtr<zx_device_t> dev_ref(dev);
-  return internal::ContextForApi()->DeviceRemoveDeprecated(dev_ref);
-}
-
-__EXPORT zx_status_t device_remove(zx_device_t* dev) { return device_remove_deprecated(dev); }
-
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   fbl::RefPtr<zx_device_t> dev_ref(dev);

@@ -51,7 +51,7 @@
 // |                         |                                                    |
 // | ddk::Closable           | zx_status_t DdkClose(uint32_t flags)               |
 // |                         |                                                    |
-// | ddk::UnbindableNew      | void DdkUnbindNew(ddk::UnbindTxn txn)              |
+// | ddk::Unbindable         | void DdkUnbind(ddk::UnbindTxn txn)                 |
 // |                         |                                                    |
 // | ddk::PerformanceTunable | zx_status_t DdkSetPerformanceState(                |
 // |                         |                           uint32_t requested_state,|
@@ -84,8 +84,6 @@
 // |                          |                                                    |
 // | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
 // |                          |                                                    |
-// | ddk::UnbindableDeprecated| void DdkUnbindDeprecated()                         |
-// |                          |                                                    |
 // +--------------------------+----------------------------------------------------+
 //
 //
@@ -115,7 +113,7 @@
 //     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
 //     zx_status_t DdkClose(uint32_t flags);
 //     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-//     void DdkUnbindNew(ddk::UnbindTxn txn);
+//     void DdkUnbind(ddk::UnbindTxn txn);
 //     void DdkSuspend(ddk::SuspendTxn txn);
 //     void DdkRelease();
 // };
@@ -207,17 +205,23 @@ class Closable : public base_mixin {
 };
 
 template <typename D>
-class UnbindableDeprecated : public base_mixin {
+class Unbindable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckUnbindableDeprecated<D>();
-    proto->unbind = Unbind_Deprecated;
+    internal::CheckUnbindable<D>();
+    proto->unbind = Unbind;
   }
 
  private:
-  static void Unbind_Deprecated(void* ctx) { static_cast<D*>(ctx)->DdkUnbindDeprecated(); }
+  static void Unbind(void* ctx) {
+    auto dev = static_cast<D*>(ctx);
+    UnbindTxn txn(dev->zxdev());
+    dev->DdkUnbind(std::move(txn));
+  }
 };
 
+// DEPRECATED (fxb/34574).
+// Use Unbindable instead.
 template <typename D>
 class UnbindableNew : public base_mixin {
  protected:
@@ -512,25 +516,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     device_make_visible(zxdev(), &args);
   }
 
-  // Removes the device.
-  // This method may have the side-effect of destroying this object if the
-  // device's reference count drops to zero.
-  //
-  // DEPRECATED (fxb/34574).
-  // To schedule removal of a device, use DdkAsyncRemove() instead.
-  // To signal completion of the device's DdkUnbind(txn) hook, use txn.Reply() instead.
-  zx_status_t DdkRemoveDeprecated() {
-    if (this->zxdev_ == nullptr) {
-      return ZX_ERR_BAD_STATE;
-    }
-
-    // The call to |device_remove| must be last since it decrements the
-    // device's reference count when successful.
-    zx_device_t* dev = this->zxdev_;
-    this->zxdev_ = nullptr;
-    return device_remove_deprecated(dev);
-  }
-
   // Schedules the removal of the device and its descendents.
   // Each device will evenutally have its unbind hook (if implemented) and release hook invoked.
   void DdkAsyncRemove() {
@@ -607,7 +592,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // Convenience type for implementations that would like to override all
 // zx_protocol_device_t methods.
 template <class D>
-using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, UnbindableNew,
+using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, Unbindable,
                           Readable, Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
 
 }  // namespace ddk

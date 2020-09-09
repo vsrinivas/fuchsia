@@ -47,10 +47,10 @@ BEGIN_SUCCESS_CASE(Closable)
 zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(UnbindableNew)
+BEGIN_SUCCESS_CASE(Unbindable)
 // As the txn does not contain a valid device pointer, the destructor won't throw an error
 // if we don't reply.
-void DdkUnbindNew(ddk::UnbindTxn txn) {}
+void DdkUnbind(ddk::UnbindTxn txn) {}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Readable)
@@ -113,7 +113,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     return ZX_OK;
   }
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { unbind_called = true; }
+  void DdkUnbind(ddk::UnbindTxn txn) { unbind_called = true; }
 
   void DdkRelease() { release_called = true; }
 
@@ -267,7 +267,7 @@ TEST(DdktlDevice, MixinGetProtocolable) { do_test<TestGetProtocolable>(); }
 TEST(DdktlDevice, MixinInitializable) { do_test<TestInitializable>(); }
 TEST(DdktlDevice, MixinOpenable) { do_test<TestOpenable>(); }
 TEST(DdktlDevice, MixinClosable) { do_test<TestClosable>(); }
-TEST(DdktlDevice, MixinUnbindableNew) { do_test<TestUnbindableNew>(); }
+TEST(DdktlDevice, MixinUnbindable) { do_test<TestUnbindable>(); }
 TEST(DdktlDevice, MixinReadable) { do_test<TestReadable>(); }
 TEST(DdktlDevice, MixinWritable) { do_test<TestWritable>(); }
 TEST(DdktlDevice, MixinGetSizable) { do_test<TestGetSizable>(); }

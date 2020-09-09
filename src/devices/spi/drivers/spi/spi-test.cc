@@ -15,13 +15,11 @@
 namespace spi {
 
 class FakeDdkSpiImpl;
-using DeviceType = ddk::Device<FakeDdkSpiImpl, ddk::UnbindableDeprecated>;
 
 class FakeDdkSpiImpl : public fake_ddk::Bind,
-                       public DeviceType,
                        public ddk::SpiImplProtocol<FakeDdkSpiImpl, ddk::base_protocol> {
  public:
-  explicit FakeDdkSpiImpl() : DeviceType(fake_ddk::kFakeParent) {
+  explicit FakeDdkSpiImpl() {
     fbl::AllocChecker ac;
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new (&ac) fake_ddk::ProtocolEntry[1](), 1);
     ASSERT_TRUE(ac.check());
@@ -141,9 +139,6 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
 
     return ZX_OK;
   }
-
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
-  void DdkRelease() { delete this; }
 
   SpiDevice* bus_device_;
   fbl::Vector<SpiChild*> children_;
