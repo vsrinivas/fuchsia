@@ -110,8 +110,8 @@ macro_rules! fx_log {
 #[macro_export]
 macro_rules! fx_log_err {
     (tag: $tag:expr, $($arg:tt)*) => (
-        $crate::fx_log!(tag: $tag, $crate::levels::ERROR, "{}({}): {}",
-        file!(), line!(), format_args!($($arg)*));
+        $crate::fx_log!(tag: $tag, $crate::levels::ERROR, "[{}({})] {}",
+        file!().trim_start_matches("../"), line!(), format_args!($($arg)*));
     );
     ($($arg:tt)*) => (
         $crate::fx_log_err!(tag: "", $($arg)*);
@@ -282,8 +282,8 @@ impl log::Log for Logger {
     fn log(&self, record: &Record<'_>) {
         if record.level() == Level::Error {
             fx_log!(tag:record.target(),
-                get_fx_logger_severity(record.level()), "{}({}): {}",
-                record.file().unwrap_or("??"), record.line().unwrap_or(0), record.args());
+                get_fx_logger_severity(record.level()), "[{}({})] {}",
+                record.file().unwrap_or("??").trim_start_matches("../"), record.line().unwrap_or(0), record.args());
         } else {
             fx_log!(tag:record.target(),
                 get_fx_logger_severity(record.level()), "{}", record.args());
@@ -417,7 +417,11 @@ mod test {
 
         fx_log_err!("err msg {}", 10);
         let line = line!() - 1;
-        expected.push(format!("[] ERROR: {}({}): err msg 10", file!(), line));
+        expected.push(format!(
+            "[] ERROR: [{}({})] err msg 10",
+            file!().trim_start_matches("../"),
+            line
+        ));
 
         fx_log_info!(tag:"info_tag", "info msg {}", 10);
         expected.push(String::from("[info_tag] INFO: info msg 10"));
@@ -427,7 +431,11 @@ mod test {
 
         fx_log_err!(tag:"err_tag", "err msg {}", 10);
         let line = line!() - 1;
-        expected.push(format!("[err_tag] ERROR: {}({}): err msg 10", file!(), line));
+        expected.push(format!(
+            "[err_tag] ERROR: [{}({})] err msg 10",
+            file!().trim_start_matches("../"),
+            line
+        ));
 
         //test verbosity
         fx_vlog!(1, "verbose msg {}", 10); // will not log
@@ -453,7 +461,12 @@ mod test {
 
         error!("log err: {}", 10);
         let line = line!() - 1;
-        expected.push(format!("[{}] ERROR: {}({}): log err: 10", tag, file!(), line));
+        expected.push(format!(
+            "[{}] ERROR: [{}({})] log err: 10",
+            tag,
+            file!().trim_start_matches("../"),
+            line
+        ));
 
         debug!("log debug: {}", 10);
         expected.push(format!("[{}] DEBUG: log debug: 10", tag));
