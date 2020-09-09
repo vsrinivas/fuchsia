@@ -385,11 +385,14 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
   arm_generic_timer_init(driver->freq_override);
 }
 
-// This only gets called if ARM Cortex-A73 cores are detected in device.
+// Called once per cpu in the system post cpu detection.
 void late_update_reg_procs(uint) {
   ASSERT(timer_assignment == IRQ_PHYS || timer_assignment == IRQ_VIRT ||
          timer_assignment == IRQ_SPHYS);
 
+  // If at least one of the cpus are an A73, switch the read hooks to a specialized
+  // A73 errata workaround version. Note this will duplicately run on every
+  // core in the system.
   if (arm64_read_percpu_ptr()->microarch == ARM_CORTEX_A73) {
     if (timer_assignment == IRQ_PHYS) {
       reg_procs = &cntp_procs_a73;
@@ -404,6 +407,8 @@ void late_update_reg_procs(uint) {
     s_arch_quirks_needs_arm_erratum_858921_mitigation.store(true);
 
     ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+
+    dprintf(INFO, "arm generic timer applying A73 workaround\n");
   }
 }
 
