@@ -1133,7 +1133,6 @@ pub unsafe fn encode_vector<T: Encodable>(
     slice_opt: Option<&mut [T]>,
 ) -> Result<()> {
     match slice_opt {
-        None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(slice) => {
             // Two u64: (len, present)
             (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
@@ -1151,6 +1150,7 @@ pub unsafe fn encode_vector<T: Encodable>(
                 },
             )
         }
+        None => encode_absent_vector(encoder, offset, recursion_depth),
     }
 }
 
@@ -1172,7 +1172,6 @@ unsafe fn encode_vector_from_bytes(
     slice_opt: Option<&[u8]>,
 ) -> Result<()> {
     match slice_opt {
-        None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(slice) => {
             // Two u64: (len, present)
             (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
@@ -1181,6 +1180,7 @@ unsafe fn encode_vector_from_bytes(
             encoder.append_out_of_line_bytes(slice);
             Ok(())
         }
+        None => encode_absent_vector(encoder, offset, recursion_depth),
     }
 }
 
@@ -1196,7 +1196,6 @@ where
     T: Encodable,
 {
     match iter_opt {
-        None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(iter) => {
             // Two u64: (len, present)
             (iter.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
@@ -1217,6 +1216,7 @@ where
                 },
             )
         }
+        None => encode_absent_vector(encoder, offset, recursion_depth),
     }
 }
 
@@ -1230,10 +1230,10 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
     present.decode(decoder, offset + 8)?;
 
     match present {
+        ALLOC_PRESENT_U64 => {}
         ALLOC_ABSENT_U64 => {
             return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
         }
-        ALLOC_PRESENT_U64 => {}
         _ => return Err(Error::Invalid),
     };
     let len = len as usize;
@@ -1258,10 +1258,10 @@ unsafe fn decode_vector<T: Decodable>(
     present.unsafe_decode(decoder, offset + 8)?;
 
     match present {
+        ALLOC_PRESENT_U64 => {}
         ALLOC_ABSENT_U64 => {
             return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
         }
-        ALLOC_PRESENT_U64 => {}
         _ => return Err(Error::Invalid),
     }
 
@@ -1668,8 +1668,8 @@ impl Decodable for Handle {
         let mut present: u32 = 0;
         present.decode(decoder, offset)?;
         match present {
-            ALLOC_ABSENT_U32 => return Err(Error::NotNullable),
             ALLOC_PRESENT_U32 => {}
+            ALLOC_ABSENT_U32 => return Err(Error::NotNullable),
             _ => return Err(Error::Invalid),
         }
         *self = decoder.take_next_handle()?;
