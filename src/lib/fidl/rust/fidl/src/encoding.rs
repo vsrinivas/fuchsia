@@ -1646,13 +1646,13 @@ macro_rules! fidl_enum {
 impl_layout!(Handle, align: 4, size: 4);
 
 impl Encodable for Handle {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        ALLOC_PRESENT_U32.encode(encoder, offset, recursion_depth)?;
+        ALLOC_PRESENT_U32.unsafe_encode(encoder, offset, recursion_depth)?;
         let handle = take_handle(self);
         encoder.handles.push(handle);
         Ok(())
