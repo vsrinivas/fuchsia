@@ -4,6 +4,22 @@
 
 import("//build/unification/zbi/kernel_cmdline.gni")
 
+kernel_cmdline("serial-legacy") {
+  args = [ "kernel.serial=legacy" ]
+}
+
+kernel_cmdline("toulouse") {
+  args = [
+    # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
+    # /dev/class/ethernet/xxx paths have no well-defined mapping to the ports on the front of the
+    # device.
+    # In order for netbooting and loglistener to work, we need to let netsvc know which path corresponds
+    # to the left-most ethernet port.
+    "kernel.serial=legacy",
+    "netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet",
+  ]
+}
+
 kernel_cmdline("x64-reduced-perf-variation") {
   args = [
     # Disable Intel Turbo Boost. Turbo Boost provides a significant speed-up to
@@ -46,16 +62,4 @@ kernel_cmdline("x64-reduced-perf-variation") {
 
 kernel_cmdline("vs680") {
   args = [ "kernel.bypass-debuglog=true" ]
-}
-
-kernel_cmdline("toulouse") {
-  args = [
-    # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
-    # /dev/class/ethernet/xxx paths have no well-defined mapping to the ports on the front of the
-    # device.
-    # In order for netbooting and loglistener to work, we need to let netsvc know which path corresponds
-    # to the left-most ethernet port.
-    "kernel.serial=legacy",
-    "netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet",
-  ]
 }

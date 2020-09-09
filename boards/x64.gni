@@ -9,6 +9,7 @@ target_cpu = "x64"
 board_name = "x64"
 
 _common_bootfs_deps = [
+  "//boards/kernel_cmdline:serial-legacy",
   "//src/connectivity/ethernet/drivers/realtek-8111",
   "//src/devices/bin/acpidump",
   "//src/devices/block/drivers/ahci",
