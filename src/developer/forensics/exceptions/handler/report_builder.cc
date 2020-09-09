@@ -18,6 +18,7 @@ CrashReportBuilder& CrashReportBuilder::SetProcessName(const std::string& proces
 }
 
 CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
+  FX_CHECK(minidump.is_valid());
   minidump_ = std::move(minidump);
   return *this;
 }
@@ -44,6 +45,11 @@ CrashReportBuilder& CrashReportBuilder::SetExceptionExpired() {
   return *this;
 }
 
+CrashReportBuilder& CrashReportBuilder::SetProcessTerminated() {
+  process_already_terminated_ = true;
+  return *this;
+}
+
 fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   FX_CHECK(process_name_.has_value()) << "Need a process name";
   FX_CHECK(is_valid_) << "Consume can only be called once";
@@ -56,46 +62,42 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
       (component_url_.has_value()) ? component_url_.value() : process_name_.value();
   crash_report.set_program_name(program_name.substr(0, fuchsia::feedback::MAX_PROGRAM_NAME_LENGTH));
 
-  crash_report.mutable_annotations()->push_back(Annotation{
-      .key = "crash.process.name",
-      .value = process_name_.value(),
-  });
+  auto AddAnnotation = [&crash_report](const std::string& key, const std::string& value) {
+    crash_report.mutable_annotations()->push_back(Annotation{.key = key, .value = value});
+  };
 
+  AddAnnotation("crash.process.name", process_name_.value());
   if (!component_url_.has_value()) {
-    crash_report.mutable_annotations()->push_back(Annotation{
-        .key = "debug.crash.component.url.set",
-        .value = "false",
-    });
+    AddAnnotation("debug.crash.component.url.set", "false");
   }
-
   if (realm_path_.has_value()) {
-    crash_report.mutable_annotations()->push_back(Annotation{
-        .key = "crash.realm-path",
-        .value = realm_path_.value(),
-    });
+    AddAnnotation("crash.realm-path", realm_path_.value());
   }
 
-  if (exception_expired_) {
-    crash_report.mutable_annotations()->push_back(Annotation{
-        .key = "debug.crash.exception.expired",
-        .value = "true",
-    });
-  }
+  FX_CHECK(minidump_.has_value() || exception_expired_ || process_already_terminated_);
 
-  NativeCrashReport native_crash_report;
+  if (minidump_.has_value()) {
+    NativeCrashReport native_crash_report;
 
-  if (minidump_.has_value() && minidump_.value().is_valid()) {
     fuchsia::mem::Buffer mem_buffer;
     minidump_.value().get_size(&mem_buffer.size);
     mem_buffer.vmo = std::move(minidump_.value());
+    minidump_ = std::nullopt;
 
     native_crash_report.set_minidump(std::move(mem_buffer));
+    crash_report.set_specific_report(
+        SpecificCrashReport::WithNative(std::move(native_crash_report)));
+  } else {
+    GenericCrashReport generic_crash_report;
+    if (exception_expired_) {
+      generic_crash_report.set_crash_signature("fuchsia-no-minidump-exception-expired");
+    } else if (process_already_terminated_) {
+      generic_crash_report.set_crash_signature("fuchsia-no-minidump-process-terminated");
+    }
+
+    crash_report.set_specific_report(
+        SpecificCrashReport::WithGeneric(std::move(generic_crash_report)));
   }
-
-  crash_report.set_specific_report(SpecificCrashReport::WithNative(std::move(native_crash_report)));
-
-  minidump_ = std::nullopt;
-
   return crash_report;
 }
 

@@ -177,39 +177,30 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
 
 // Utilities ---------------------------------------------------------------------------------------
 
-inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
-                           const std::string& program_name,
-                           const std::optional<std::string>& realm_path, bool validate_minidump) {
-  ASSERT_TRUE(report.has_program_name());
+inline void ValidateGenericReport(const fuchsia::feedback::CrashReport& report,
+                                  const std::string& crash_signature) {
+  ASSERT_TRUE(report.has_specific_report());
+  const fuchsia::feedback::SpecificCrashReport& specific_report = report.specific_report();
 
+  ASSERT_TRUE(specific_report.is_generic());
+
+  ASSERT_TRUE(specific_report.generic().has_crash_signature());
+  EXPECT_EQ(specific_report.generic().crash_signature(), crash_signature);
+}
+
+inline void ValidateNativeReport(const fuchsia::feedback::CrashReport& report,
+                                 bool validate_minidump) {
   ASSERT_TRUE(report.has_specific_report());
   const fuchsia::feedback::SpecificCrashReport& specific_report = report.specific_report();
 
   ASSERT_TRUE(specific_report.is_native());
-  const fuchsia::feedback::NativeCrashReport& native_report = specific_report.native();
-
-  if (validate_minidump) {
-    ASSERT_TRUE(report.has_annotations());
-    auto matchers = std::vector({MatchesAnnotation("crash.process.name", "crasher")});
-
-    if (realm_path.has_value()) {
-      matchers.push_back(MatchesAnnotation("crash.realm-path", realm_path.value().c_str()));
-    }
-
-    if (program_name == "crasher") {
-      matchers.push_back(MatchesAnnotation("debug.crash.component.url.set", "false"));
-    }
-
-    EXPECT_THAT(report.annotations(), UnorderedElementsAreArray(matchers));
-  }
+  const auto& native_report = specific_report.native();
 
   // If the crash reporter could not get a minidump, it will not send a mem buffer.
   if (!validate_minidump) {
     ASSERT_FALSE(native_report.has_minidump());
     return;
   }
-
-  EXPECT_EQ(report.program_name(), program_name);
 
   ASSERT_TRUE(native_report.has_minidump());
   const zx::vmo& minidump_vmo = native_report.minidump().vmo;
@@ -232,9 +223,25 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
   ASSERT_TRUE(minidump_snapshot.Initialize(&string_file));
 }
 
-inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
-                           const std::string& program_name, bool validate_minidump) {
-  ValidateReport(report, program_name, std::nullopt, validate_minidump);
+inline void ValidateCrashReport(const fuchsia::feedback::CrashReport& report,
+                                const std::string& program_name,
+                                const std::map<std::string, std::string>& annotations) {
+  ASSERT_TRUE(report.has_program_name());
+  EXPECT_EQ(report.program_name(), program_name);
+
+  if (!annotations.empty()) {
+    ASSERT_TRUE(report.has_annotations());
+
+    // Infer the type of |matchers|.
+    auto matchers = std::vector({MatchesAnnotation("", "")});
+    matchers.clear();
+
+    for (const auto& [k, v] : annotations) {
+      matchers.push_back(MatchesAnnotation(k.c_str(), v.c_str()));
+    }
+
+    EXPECT_THAT(report.annotations(), UnorderedElementsAreArray(matchers));
+  }
 }
 
 TEST_F(HandlerTest, NoIntrospectConnection) {
@@ -277,21 +284,6 @@ TEST_F(HandlerTest, NoCrashReporterConnection) {
   exception.job.kill();
 }
 
-TEST_F(HandlerTest, GettingInvalidVMO) {
-  SetUpCrashReporter();
-  SetUpCrashIntrospect();
-
-  bool called = false;
-  HandleException(zx::exception{}, zx::duration::infinite(), [&called] { called = true; });
-
-  ASSERT_TRUE(called);
-
-  ASSERT_EQ(crash_reporter().reports().size(), 1u);
-  auto& report = crash_reporter().reports().front();
-
-  ValidateReport(report, "crasher", false);
-}
-
 TEST_F(HandlerTest, NoException) {
   SetUpCrashReporter();
   SetUpCrashIntrospect();
@@ -324,7 +316,11 @@ TEST_F(HandlerTest, NoException) {
   ASSERT_EQ(crash_reporter().reports().size(), 1u);
   auto& report = crash_reporter().reports().front();
 
-  ValidateReport(report, kComponentUrl, false);
+  ValidateCrashReport(report, kComponentUrl,
+                      {
+                          {"crash.process.name", "crasher"},
+                      });
+  ValidateGenericReport(report, "fuchsia-no-minidump-exception-expired");
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our

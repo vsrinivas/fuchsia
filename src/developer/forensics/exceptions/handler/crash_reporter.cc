@@ -37,6 +37,8 @@ void CrashReporter::Send(const std::string crashed_process_name,
     zx::vmo minidump = GenerateMinidump(std::move(exception));
     if (minidump.is_valid()) {
       builder.SetMinidump(std::move(minidump));
+    } else {
+      builder.SetProcessTerminated();
     }
   } else {
     builder.SetExceptionExpired();

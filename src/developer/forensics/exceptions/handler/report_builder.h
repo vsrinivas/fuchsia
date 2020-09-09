@@ -23,6 +23,7 @@ class CrashReportBuilder {
   CrashReportBuilder& SetComponentInfo(
       const fuchsia::sys::internal::SourceIdentity& component_info);
   CrashReportBuilder& SetExceptionExpired();
+  CrashReportBuilder& SetProcessTerminated();
 
   fuchsia::feedback::CrashReport Consume();
 
@@ -32,6 +33,7 @@ class CrashReportBuilder {
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};
   bool exception_expired_{false};
+  bool process_already_terminated_{false};
 
   bool is_valid_{true};
 };

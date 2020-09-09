@@ -74,6 +74,7 @@ executable("exception_broker_unittest_exe") {
     "exception_broker_unittest.cc",
     "minidump_unittest.cc",
     "process_limbo_manager_unittest.cc",
+    "report_builder_unittest.cc",
   ]
 
   deps = [
