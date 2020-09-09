@@ -12,6 +12,7 @@
 #include <efi/protocol/loaded-image.h>
 #include <efi/protocol/managed-network.h>
 #include <efi/protocol/pci-root-bridge-io.h>
+#include <efi/protocol/serial-io.h>
 #include <efi/protocol/simple-file-system.h>
 #include <efi/protocol/simple-network.h>
 #include <efi/protocol/simple-text-input.h>
@@ -34,3 +35,4 @@ efi_guid SimpleNetworkProtocol = EFI_SIMPLE_NETWORK_PROTOCOL_GUID;
 efi_guid SimpleTextInputProtocol = EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID;
 efi_guid SimpleTextOutputProtocol = EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID;
 efi_guid UsbIoProtocol = EFI_USB_IO_PROTOCOL_GUID;
+efi_guid SerialIoProtocol = EFI_SERIAL_IO_PROTOCOL_GUID;

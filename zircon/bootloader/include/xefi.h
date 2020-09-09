@@ -8,6 +8,7 @@
 #include <efi/boot-services.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/file.h>
+#include <efi/protocol/serial-io.h>
 #include <efi/protocol/simple-text-output.h>
 #include <efi/system-table.h>
 #include <efi/types.h>
@@ -48,6 +49,7 @@ typedef struct {
   efi_system_table* sys;
   efi_boot_services* bs;
   efi_simple_text_output_protocol* conout;
+  efi_serial_io_protocol* serial;
 } xefi_global;
 
 extern xefi_global xefi_global_state;
@@ -57,5 +59,6 @@ extern xefi_global xefi_global_state;
 #define gSys (xefi_global_state.sys)
 #define gBS (xefi_global_state.bs)
 #define gConOut (xefi_global_state.conout)
+#define gSerial (xefi_global_state.serial)
 
 #endif  // ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_

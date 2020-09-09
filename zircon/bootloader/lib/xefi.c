@@ -19,6 +19,15 @@ void xefi_init(efi_handle img, efi_system_table* sys) {
   gImg = img;
   gBS = sys->BootServices;
   gConOut = sys->ConOut;
+
+  // TODO: re-evaluate the following when we come across the case of a system
+  // with multiple implementations of the serial I/O protocol; we will need a
+  // way to choose which one to read from and write to.
+  gSerial = NULL;
+  efi_status status = gBS->LocateProtocol(&SerialIoProtocol, NULL, (void**)&gSerial);
+  if (status) {
+    printf("xefi_init: failed to open SerialIoProtocol (%s)\n", xefi_strerror(status));
+  }
 }
 
 void xefi_wait_any_key(void) {
