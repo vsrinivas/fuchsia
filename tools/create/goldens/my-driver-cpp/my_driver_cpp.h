@@ -10,7 +10,7 @@
 namespace my_driver_cpp {
 
 class MyDriverCpp;
-using DeviceType = ddk::Device<MyDriverCpp, ddk::Initializable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<MyDriverCpp, ddk::Initializable, ddk::Unbindable>;
 class MyDriverCpp : public DeviceType {
  public:
   explicit MyDriverCpp(zx_device_t* parent) : DeviceType(parent) {}
@@ -19,7 +19,7 @@ class MyDriverCpp : public DeviceType {
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 };
 

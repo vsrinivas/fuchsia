@@ -8,7 +8,7 @@
 namespace {{snake_case PROJECT_NAME}} {
 
 class {{pascal_case PROJECT_NAME}};
-using DeviceType = ddk::Device<{{pascal_case PROJECT_NAME}}, ddk::Initializable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<{{pascal_case PROJECT_NAME}}, ddk::Initializable, ddk::Unbindable>;
 class {{pascal_case PROJECT_NAME}} : public DeviceType {
  public:
   explicit {{pascal_case PROJECT_NAME}}(zx_device_t* parent) : DeviceType(parent) {}
@@ -17,7 +17,7 @@ class {{pascal_case PROJECT_NAME}} : public DeviceType {
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 };
 

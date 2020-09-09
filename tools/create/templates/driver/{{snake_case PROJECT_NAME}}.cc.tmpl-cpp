@@ -12,7 +12,7 @@ zx_status_t {{pascal_case PROJECT_NAME}}::Bind() { return DdkAdd("{{snake_case P
 
 void {{pascal_case PROJECT_NAME}}::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 
-void {{pascal_case PROJECT_NAME}}::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void {{pascal_case PROJECT_NAME}}::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void {{pascal_case PROJECT_NAME}}::DdkRelease() { delete this; }
 
