@@ -11,6 +11,7 @@ group("tests") {
   testonly = true
   deps = [
     "dash",
+    "service:tests",
     "fvm:tests",
     "fs-recovery:tests"
   ]

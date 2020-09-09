@@ -18,7 +18,6 @@ Check these in to version control.
 ## How to run
 
 ```
-fx set ... --with-base //garnet/tests/zircon:zircon_tests`
-fx build
-fx shell /system/test/sys/service-llcpp-test
+fx set ... --with //zircon/system/utest/service:tests
+fx test -od service-llcpp-unittest-package
 ```
