@@ -41,3 +41,8 @@ test_package("fuchsia-hyper-tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-hyper-tests" ]
+}

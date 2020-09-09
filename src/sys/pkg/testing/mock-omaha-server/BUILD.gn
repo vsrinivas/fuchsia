@@ -10,8 +10,8 @@ rustc_library("mock-omaha-server") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fuchsia-hyper",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

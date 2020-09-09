@@ -6,10 +6,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 unittest_package("rust-crates-tests") {
-  deps = [
-    "fuchsia-cprng:fuchsia-cprng_test",
-    "fuchsia-hyper:fuchsia-hyper-tests",
-  ]
+  deps = [ "fuchsia-cprng:fuchsia-cprng_test" ]
 
   tests = [
     {

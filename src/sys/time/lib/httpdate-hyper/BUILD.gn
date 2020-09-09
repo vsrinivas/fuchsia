@@ -19,8 +19,8 @@ rustc_library("httpdate-hyper") {
 
   deps = [
     "//garnet/lib/rust/webpki-roots-fuchsia",
-    "//garnet/public/rust/fuchsia-hyper",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",

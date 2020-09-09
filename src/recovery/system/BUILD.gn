@@ -42,7 +42,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -52,6 +51,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-hyper",
     "//src/lib/mapped-vmo",
     "//src/lib/storage/fs_management",
     "//src/lib/ui/carnelian",

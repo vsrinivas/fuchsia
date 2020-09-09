@@ -12,10 +12,10 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/bin/sl4f/fidl:fuchsia.testing.proxy-rustc",
-    "//garnet/public/rust/fuchsia-hyper",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-hyper",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

@@ -78,7 +78,6 @@ group("all") {
     "//garnet/lib/trace_converters:trace_converter_tests",
     "//garnet/public/lib/fostr:tests_package",
     "//garnet/public/rust:rust-crates-tests",
-    "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
     "//garnet/tests/acts_tests",
     "//garnet/tests/fdio_spawn:fdio_spawn_tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",

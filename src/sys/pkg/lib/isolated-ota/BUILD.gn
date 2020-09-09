@@ -13,7 +13,6 @@ rustc_library("isolated-ota") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
@@ -26,6 +25,7 @@ rustc_library("isolated-ota") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-hyper",
     "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
     "//src/lib/scoped_task",
