@@ -229,15 +229,6 @@ function main {
           fx-command-help
           return 1
         fi
-
-        # deny list for very specific packages that are
-        # deprecated_system_image=true. This list should not grow.
-        case "$2" in
-        *tests/zircon:zircon_tests)
-          fx-error "zircon tests are deprecated_system_image and must be given to --with-base"
-          return 1;;
-        esac
-
         IFS=, cache_packages+=("$2")
         shift
         ;;
@@ -246,15 +237,6 @@ function main {
           fx-command-help
           return 1
         fi
-
-        # deny list for very specific packages that are
-        # deprecated_system_image=true. This list should not grow.
-        case "$2" in
-        *tests/zircon:zircon_tests)
-          fx-error "zircon tests are deprecated_system_image and must be given to --with-base"
-          return 1;;
-        esac
-
         IFS=, universe_packages+=("$2")
         shift
         ;;

@@ -342,7 +342,7 @@ Tab 2> fx qemu -kN
 To run the compatibility tests:
 
 ```sh
-Tab 3> fx set core.x64 --with-base //garnet/packages/tests:zircon --with //garnet/packages/tests:all
+Tab 3> fx set core.x64 --with //src/tests/fidl/compatibility
 Tab 3> fx test fidl-compatibility-test
 ```
 
