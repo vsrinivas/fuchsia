@@ -4,6 +4,3 @@
 # migrating libraries to the GN build.
 *
 !.gitignore
-!metrics/
-!metrics/*
-

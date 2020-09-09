@@ -178,7 +178,6 @@ zx_library("blobfs") {
       "//sdk/lib/sys/inspect/cpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/metrics",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/async-default",
