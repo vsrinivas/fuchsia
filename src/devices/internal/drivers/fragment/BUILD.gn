@@ -27,6 +27,8 @@ driver_module("fragment") {
     "//sdk/banjo/ddk.protocol.ethernet.board",
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.ge2d",
+    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
+    "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.isp",

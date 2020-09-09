@@ -18,6 +18,7 @@
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 
+#include "ddk/protocol/goldfish/addressspace.h"
 #include "proxy-protocol.h"
 
 namespace fragment {
@@ -184,6 +185,134 @@ zx_status_t Fragment::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uin
       return eth_board_client_.proto_client().ResetPhy();
     default:
       zxlogf(ERROR, "%s: unknown ETH_BOARD op %u", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
+zx_status_t Fragment::RpcGoldfishAddressSpace(const uint8_t* req_buf, uint32_t req_size,
+                                              uint8_t* resp_buf, uint32_t* out_resp_size,
+                                              zx::handle* req_handles, uint32_t req_handle_count,
+                                              zx::handle* resp_handles,
+                                              uint32_t* resp_handle_count) {
+  if (!goldfish_address_space_client_.proto_client().is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto* req = reinterpret_cast<const GoldfishAddressSpaceProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  uint32_t expected_handle_count;
+  switch (req->op) {
+    case GoldfishAddressSpaceOp::OPEN_CHILD_DRIVER:
+      expected_handle_count = 1;
+      break;
+  }
+  if (req_handle_count != expected_handle_count) {
+    zxlogf(ERROR, "%s received %u handles, expecting %u op %u", __func__, req_handle_count,
+           expected_handle_count, static_cast<uint32_t>(req->op));
+    return ZX_ERR_INTERNAL;
+  }
+  auto* resp = reinterpret_cast<GoldfishAddressSpaceProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+
+  switch (req->op) {
+    case GoldfishAddressSpaceOp::OPEN_CHILD_DRIVER: {
+      zx::channel channel(std::move(req_handles[0]));
+      return goldfish_address_space_client_.proto_client().OpenChildDriver(req->type,
+                                                                           std::move(channel));
+    }
+    default:
+      zxlogf(ERROR, "%s: unknown GoldfishPipe op %u", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
+zx_status_t Fragment::RpcGoldfishPipe(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                      uint32_t* out_resp_size, zx::handle* req_handles,
+                                      uint32_t req_handle_count, zx::handle* resp_handles,
+                                      uint32_t* resp_handle_count) {
+  if (!goldfish_pipe_client_.proto_client().is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto* req = reinterpret_cast<const GoldfishPipeProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  uint32_t expected_handle_count;
+  switch (req->op) {
+    case GoldfishPipeOp::SET_EVENT:
+    case GoldfishPipeOp::CONNECT_SYSMEM:
+    case GoldfishPipeOp::REGISTER_SYSMEM_HEAP:
+      expected_handle_count = 1;
+      break;
+    case GoldfishPipeOp::CREATE:
+    case GoldfishPipeOp::DESTROY:
+    case GoldfishPipeOp::OPEN:
+    case GoldfishPipeOp::EXEC:
+    case GoldfishPipeOp::GET_BTI:
+      expected_handle_count = 0;
+      break;
+  }
+  if (req_handle_count != expected_handle_count) {
+    zxlogf(ERROR, "%s received %u handles, expecting %u op %u", __func__, req_handle_count,
+           expected_handle_count, static_cast<uint32_t>(req->op));
+    return ZX_ERR_INTERNAL;
+  }
+  auto* resp = reinterpret_cast<GoldfishPipeProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+
+  switch (req->op) {
+    case GoldfishPipeOp::CREATE: {
+      int32_t id = 0;
+      zx::vmo vmo;
+      auto status = goldfish_pipe_client_.proto_client().Create(&id, &vmo);
+      if (status == ZX_OK) {
+        resp->id = id;
+        resp_handles[0] = std::move(vmo);
+        *resp_handle_count = 1;
+      }
+      return status;
+    }
+    case GoldfishPipeOp::DESTROY: {
+      goldfish_pipe_client_.proto_client().Destroy(req->id);
+      return ZX_OK;
+    }
+    case GoldfishPipeOp::SET_EVENT: {
+      zx::event pipe_event(std::move(req_handles[0]));
+      return goldfish_pipe_client_.proto_client().SetEvent(req->id, std::move(pipe_event));
+    }
+    case GoldfishPipeOp::OPEN: {
+      goldfish_pipe_client_.proto_client().Open(req->id);
+      return ZX_OK;
+    }
+    case GoldfishPipeOp::EXEC: {
+      goldfish_pipe_client_.proto_client().Exec(req->id);
+      return ZX_OK;
+    }
+    case GoldfishPipeOp::GET_BTI: {
+      zx::bti bti;
+      auto status = goldfish_pipe_client_.proto_client().GetBti(&bti);
+      if (status == ZX_OK) {
+        resp_handles[0] = std::move(bti);
+        *resp_handle_count = 1;
+      }
+      return status;
+    }
+    case GoldfishPipeOp::CONNECT_SYSMEM: {
+      zx::channel connection(std::move(req_handles[0]));
+      return goldfish_pipe_client_.proto_client().ConnectSysmem(std::move(connection));
+    }
+    case GoldfishPipeOp::REGISTER_SYSMEM_HEAP: {
+      zx::channel connection(std::move(req_handles[0]));
+      return goldfish_pipe_client_.proto_client().RegisterSysmemHeap(req->heap,
+                                                                     std::move(connection));
+    }
+    default:
+      zxlogf(ERROR, "%s: unknown GoldfishPipe op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -991,6 +1120,14 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
       status = RpcEthBoard(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                            resp_handles, &resp_handle_count);
       break;
+    case ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE:
+      status = RpcGoldfishAddressSpace(req_buf, actual, resp_buf, &resp_len, req_handles,
+                                       req_handle_count, resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_GOLDFISH_PIPE:
+      status = RpcGoldfishPipe(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                               resp_handles, &resp_handle_count);
+      break;
     case ZX_PROTOCOL_GPIO:
       status = RpcGpio(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
@@ -1092,6 +1229,22 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       eth_board_client_.proto_client().GetProto(static_cast<eth_board_protocol_t*>(out_protocol));
+      return ZX_OK;
+    }
+    case ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE: {
+      if (!goldfish_address_space_client_.proto_client().is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      goldfish_address_space_client_.proto_client().GetProto(
+          static_cast<goldfish_address_space_protocol_t*>(out_protocol));
+      return ZX_OK;
+    }
+    case ZX_PROTOCOL_GOLDFISH_PIPE: {
+      if (!goldfish_pipe_client_.proto_client().is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      goldfish_pipe_client_.proto_client().GetProto(
+          static_cast<goldfish_pipe_protocol_t*>(out_protocol));
       return ZX_OK;
     }
     case ZX_PROTOCOL_GPIO: {

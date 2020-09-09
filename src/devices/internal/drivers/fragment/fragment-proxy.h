@@ -16,6 +16,8 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/goldfish/addressspace.h>
+#include <ddktl/protocol/goldfish/pipe.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform/device.h>
@@ -51,7 +53,9 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::SysmemProtocol<FragmentProxy>,
                       public ddk::TeeProtocol<FragmentProxy>,
                       public ddk::UsbModeSwitchProtocol<FragmentProxy>,
-                      public ddk::VregProtocol<FragmentProxy> {
+                      public ddk::VregProtocol<FragmentProxy>,
+                      public ddk::GoldfishAddressSpaceProtocol<FragmentProxy>,
+                      public ddk::GoldfishPipeProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -86,6 +90,16 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t ClockGetNumInputs(uint32_t* out_num_inputs);
   zx_status_t ClockGetInput(uint32_t* out_current_input);
   zx_status_t EthBoardResetPhy();
+  zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
+                                                  zx::channel request);
+  zx_status_t GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo);
+  zx_status_t GoldfishPipeSetEvent(int32_t id, zx::event pipe_event);
+  void GoldfishPipeDestroy(int32_t id);
+  void GoldfishPipeOpen(int32_t id);
+  void GoldfishPipeExec(int32_t id);
+  zx_status_t GoldfishPipeGetBti(zx::bti* out_bti);
+  zx_status_t GoldfishPipeConnectSysmem(zx::channel connection);
+  zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection);
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);
   zx_status_t GpioSetAltFunction(uint64_t function);

@@ -115,6 +115,12 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
   EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:19/test-rpmb", &fd),
             ZX_OK);
+  EXPECT_EQ(
+      RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1c/test-goldfish-pipe", &fd),
+      ZX_OK);
+  EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
+                                 "sys/platform/11:01:1d/test-goldfish-address-space", &fd),
+            ZX_OK);
 
   const int dirfd = devmgr.devfs_root().get();
   struct stat st;
@@ -130,6 +136,8 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:19/test-rpmb", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1c/test-goldfish-pipe", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1d/test-goldfish-address-space", &st, 0), 0);
 
   // Check that we see multiple entries that begin with "fragment-" for a device that is a
   // fragment of multiple composites

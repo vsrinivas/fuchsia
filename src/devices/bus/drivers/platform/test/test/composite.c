@@ -8,6 +8,8 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -18,6 +20,8 @@
 #include <ddk/protocol/clock.h>
 #include <ddk/protocol/codec.h>
 #include <ddk/protocol/composite.h>
+#include <ddk/protocol/goldfish/addressspace.h>
+#include <ddk/protocol/goldfish/pipe.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
@@ -30,6 +34,7 @@
 #include "../test-metadata.h"
 
 #define DRIVER_NAME "test-composite"
+#define GOLDFISH_TEST_HEAP (0x100000000000fffful)
 
 enum Fragments_1 {
   FRAGMENT_PDEV_1, /* Should be 1st fragment */
@@ -54,6 +59,13 @@ enum Fragments_2 {
   FRAGMENT_COUNT_2,
 };
 
+enum Fragments_GoldfishControl {
+  FRAGMENT_PDEV_GOLDFISH_CTRL, /* Should be 1st fragment */
+  FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL,
+  FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL,
+  FRAGMENT_COUNT_GOLDFISH_CTRL,
+};
+
 typedef struct {
   zx_device_t* zxdev;
 } test_t;
@@ -75,6 +87,120 @@ static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = test_release,
 };
+
+static zx_status_t check_handle_type(zx_handle_t handle, zx_obj_type_t type) {
+  if (handle == ZX_HANDLE_INVALID) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zx_info_handle_basic_t handle_info;
+
+  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &handle_info,
+                                          sizeof(handle_info), NULL, NULL);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_object_get_info (handle = %u) failed: %d", __func__, handle, status);
+    return status;
+  }
+
+  if (handle_info.type != type) {
+    zxlogf(ERROR, "%s: type of handle %u (%u) doesn't match target type %u", __func__, handle,
+           handle_info.type, type);
+    return ZX_ERR_WRONG_TYPE;
+  }
+  return ZX_OK;
+}
+
+static zx_status_t test_goldfish_address_space(goldfish_address_space_protocol_t* addr_space) {
+  zx_status_t status;
+
+  zx_handle_t client, server;
+  if ((status = zx_channel_create(0u, &client, &server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_channel_create failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  if ((status = goldfish_address_space_open_child_driver(
+           addr_space, ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT, server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_address_space_open_child_driver failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+static zx_status_t test_goldfish_pipe(goldfish_pipe_protocol_t* pipe) {
+  zx_status_t status;
+
+  zx_handle_t event;
+  if ((status = zx_event_create(0u, &event)) != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_event_create failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  zx_handle_t sysmem_client, sysmem_server;
+  if ((status = zx_channel_create(0u, &sysmem_client, &sysmem_server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_channel_create failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  zx_handle_t heap_client, heap_server;
+  if ((status = zx_channel_create(0u, &heap_client, &heap_server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_channel_create failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  int32_t id;
+  zx_handle_t vmo;
+
+  // Test |GoldfishPipe.Create|.
+  if ((status = goldfish_pipe_create(pipe, &id, &vmo)) != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_pipe_create failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Check if |vmo| is valid.
+  if ((status = check_handle_type(vmo, ZX_OBJ_TYPE_VMO)) != ZX_OK) {
+    zxlogf(ERROR, "%s: vmo handle/type invalid: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Test |GoldfishPipe.SetEvent|.
+  if ((status = goldfish_pipe_set_event(pipe, id, event)) != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_pipe_set_event failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Test |GoldfishPipe.Open|.
+  goldfish_pipe_open(pipe, id);
+
+  // Test |GoldfishPipe.Exec|.
+  goldfish_pipe_exec(pipe, id);
+
+  // Test |GoldfishPipe.GetBti|.
+  zx_handle_t bti;
+  if ((status = goldfish_pipe_get_bti(pipe, &bti)) != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_pipe_get_bti failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Test |GoldfishPipe.ConnectSysmem|.
+  if ((status = goldfish_pipe_connect_sysmem(pipe, sysmem_server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_pipe_connect_sysmem failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Test |GoldfishPipe.RegisterSysmemHeap|.
+  if ((status = goldfish_pipe_register_sysmem_heap(pipe, GOLDFISH_TEST_HEAP, heap_server)) !=
+      ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_pipe_register_sysmem_heap failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Test |GoldfishPipe.Destroy|.
+  goldfish_pipe_destroy(pipe, id);
+
+  return ZX_OK;
+}
 
 static zx_status_t test_gpio(gpio_protocol_t* gpio) {
   zx_status_t status;
@@ -523,10 +649,8 @@ static zx_status_t test_vreg(vreg_protocol_t* vreg) {
 
   vreg_params_t params;
   vreg_get_regulator_params(vreg, &params);
-  if ((params.min_uv != 123) ||
-      (params.step_size_uv != 456) ||
-      (params.num_steps != 789)) {
-        return ZX_ERR_INTERNAL;
+  if ((params.min_uv != 123) || (params.step_size_uv != 456) || (params.num_steps != 789)) {
+    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;
@@ -590,6 +714,8 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   pwm_protocol_t pwm;
   rpmb_protocol_t rpmb;
   vreg_protocol_t vreg;
+  goldfish_address_space_protocol_t goldfish_address_space;
+  goldfish_pipe_protocol_t goldfish_pipe;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != FRAGMENT_COUNT_1) {
@@ -715,6 +841,33 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: test_vreg failed: %d", DRIVER_NAME, status);
       return status;
     }
+  } else if (metadata.composite_device_id == PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE) {
+    if (count != FRAGMENT_COUNT_GOLDFISH_CTRL) {
+      zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %d)", DRIVER_NAME, count,
+             FRAGMENT_COUNT_GOLDFISH_CTRL);
+      return ZX_ERR_BAD_STATE;
+    }
+
+    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL],
+                                 ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE, &goldfish_address_space);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_ADDRESS_SPACE", DRIVER_NAME);
+      return status;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL],
+                                 ZX_PROTOCOL_GOLDFISH_PIPE, &goldfish_pipe);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GOLDFISH_PIPE", DRIVER_NAME);
+      return status;
+    }
+    if ((status = test_goldfish_address_space(&goldfish_address_space)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_goldfish_address_space failed: %d", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_goldfish_pipe(&goldfish_pipe)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_goldfish_pipe failed: %d", DRIVER_NAME, status);
+      return status;
+    }
   }
 
   test_t* test = calloc(1, sizeof(test_t));
@@ -766,10 +919,11 @@ static zx_driver_ops_t test_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE_1),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE_2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE),
 ZIRCON_DRIVER_END(test_bus)

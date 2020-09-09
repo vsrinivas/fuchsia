@@ -44,6 +44,7 @@ driver_module("test-board") {
     "test-audio-codec.cc",
     "test-board.cc",
     "test-clock.cc",
+    "test-goldfish.cc",
     "test-gpio.cc",
     "test-i2c.cc",
     "test-power.cc",
@@ -100,6 +101,48 @@ driver_module("test-power") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.power",
     "//sdk/banjo/ddk.protocol.powerimpl",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+driver_module("test-goldfish-address-space") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [ "test/goldfish_address_space.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+driver_module("test-goldfish-pipe") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [ "test/goldfish_pipe.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.goldfish.pipe",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -272,6 +315,8 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.clock",
       "//sdk/banjo/ddk.protocol.codec",
       "//sdk/banjo/ddk.protocol.composite",
+      "//sdk/banjo/ddk.protocol.goldfish.addressspace",
+      "//sdk/banjo/ddk.protocol.goldfish.pipe",
       "//sdk/banjo/ddk.protocol.gpio",
       "//sdk/banjo/ddk.protocol.i2c",
       "//sdk/banjo/ddk.protocol.platform.device",
@@ -295,6 +340,8 @@ isolated_devmgr_unittest_package("platform-bus-test") {
     ":test-audio-codec",
     ":test-board",
     ":test-clock",
+    ":test-goldfish-address-space",
+    ":test-goldfish-pipe",
     ":test-gpio",
     ":test-i2c",
     ":test-power",

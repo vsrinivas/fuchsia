@@ -42,6 +42,12 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_ETH_BOARD:
       proto->ops = &eth_board_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE:
+      proto->ops = &goldfish_address_space_protocol_ops_;
+      return ZX_OK;
+    case ZX_PROTOCOL_GOLDFISH_PIPE:
+      proto->ops = &goldfish_pipe_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_GPIO:
       proto->ops = &gpio_protocol_ops_;
       return ZX_OK;
@@ -467,6 +473,106 @@ void FragmentProxy::CodecGetPlugState(codec_get_plug_state_callback callback, vo
 
   Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
   callback(cookie, &resp.plug_state);
+}
+
+zx_status_t FragmentProxy::GoldfishAddressSpaceOpenChildDriver(
+    address_space_child_driver_type_t type, zx::channel request) {
+  GoldfishAddressSpaceProxyRequest req = {};
+  GoldfishAddressSpaceProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE;
+  req.op = GoldfishAddressSpaceOp::OPEN_CHILD_DRIVER;
+
+  zx_handle_t channel = request.release();
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
+             nullptr);
+}
+
+zx_status_t FragmentProxy::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::CREATE;
+
+  zx_status_t status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
+                           out_vmo->reset_and_get_address(), 1, nullptr);
+  if (status == ZX_OK) {
+    *out_id = resp.id;
+  }
+  return status;
+}
+
+void FragmentProxy::GoldfishPipeDestroy(int32_t id) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::DESTROY;
+  req.id = id;
+
+  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0, nullptr, 0, nullptr);
+}
+
+zx_status_t FragmentProxy::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::SET_EVENT;
+  req.id = id;
+
+  zx_handle_t event = pipe_event.release();
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &event, 1, nullptr, 0, nullptr);
+}
+
+void FragmentProxy::GoldfishPipeOpen(int32_t id) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::OPEN;
+  req.id = id;
+
+  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0, nullptr, 0, nullptr);
+}
+
+void FragmentProxy::GoldfishPipeExec(int32_t id) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::EXEC;
+  req.id = id;
+
+  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0, nullptr, 0, nullptr);
+}
+
+zx_status_t FragmentProxy::GoldfishPipeGetBti(zx::bti* out_bti) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::GET_BTI;
+
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
+             out_bti->reset_and_get_address(), 1, nullptr);
+}
+
+zx_status_t FragmentProxy::GoldfishPipeConnectSysmem(zx::channel connection) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::CONNECT_SYSMEM;
+
+  zx_handle_t channel = connection.release();
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
+             nullptr);
+}
+
+zx_status_t FragmentProxy::GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
+  GoldfishPipeProxyRequest req = {};
+  GoldfishPipeProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_PIPE;
+  req.op = GoldfishPipeOp::REGISTER_SYSMEM_HEAP;
+  req.heap = heap;
+
+  zx_handle_t channel = connection.release();
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
+             nullptr);
 }
 
 zx_status_t FragmentProxy::GpioConfigIn(uint32_t flags) {

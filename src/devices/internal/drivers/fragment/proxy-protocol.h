@@ -414,6 +414,45 @@ struct RpmbProxyResponse {
   ProxyResponse header;
 };
 
+// ZX_PROTOCOL_GOLDFISH_PIPE proxy support.
+enum class GoldfishPipeOp {
+  CREATE,
+  DESTROY,
+  SET_EVENT,
+  OPEN,
+  EXEC,
+  GET_BTI,
+  CONNECT_SYSMEM,
+  REGISTER_SYSMEM_HEAP,
+};
+
+struct GoldfishPipeProxyRequest {
+  ProxyRequest header;
+  GoldfishPipeOp op;
+  int32_t id;
+  uint64_t heap;
+};
+
+struct GoldfishPipeProxyResponse {
+  ProxyResponse header;
+  int32_t id;
+};
+
+// ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE proxy support.
+enum class GoldfishAddressSpaceOp {
+  OPEN_CHILD_DRIVER,
+};
+
+struct GoldfishAddressSpaceProxyRequest {
+  ProxyRequest header;
+  GoldfishAddressSpaceOp op;
+  uint32_t type;
+};
+
+struct GoldfishAddressSpaceProxyResponse {
+  ProxyResponse header;
+};
+
 }  // namespace fragment
 
 #endif  // SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_

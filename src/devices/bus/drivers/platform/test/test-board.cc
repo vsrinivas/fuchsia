@@ -33,6 +33,16 @@ void TestBoard::DdkRelease() { delete this; }
 int TestBoard::Thread() {
   zx_status_t status;
 
+  status = GoldfishAddressSpaceInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GpioInit failed: %d", __func__, status);
+  }
+
+  status = GoldfishPipeInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GpioInit failed: %d", __func__, status);
+  }
+
   status = GpioInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GpioInit failed: %d", __func__, status);
@@ -128,6 +138,12 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {std::size(root_match), root_match},
       {std::size(power_match), power_match},
   };
+  const zx_bind_inst_t goldfish_address_space_match[] = {
+      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE),
+  };
+  const zx_bind_inst_t goldfish_pipe_match[] = {
+      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
+  };
   const zx_bind_inst_t gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, 3),
@@ -168,6 +184,14 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   };
   const zx_bind_inst_t vreg_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
+  };
+  device_fragment_part_t goldfish_address_space_fragment[] = {
+      {std::size(root_match), root_match},
+      {std::size(goldfish_address_space_match), goldfish_address_space_match},
+  };
+  device_fragment_part_t goldfish_pipe_fragment[] = {
+      {std::size(root_match), root_match},
+      {std::size(goldfish_pipe_match), goldfish_pipe_match},
   };
   device_fragment_part_t gpio_fragment[] = {
       {std::size(root_match), root_match},
@@ -223,6 +247,11 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       .metadata_value = 12345,
   };
 
+  struct composite_test_metadata metadata_goldfish_control = {
+      .composite_device_id = PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE,
+      .metadata_value = 12345,
+  };
+
   const pbus_metadata_t test_metadata_1[] = {{
       .type = DEVICE_METADATA_PRIVATE,
       .data_buffer = &metadata_1,
@@ -232,6 +261,12 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   const pbus_metadata_t test_metadata_2[] = {{
       .type = DEVICE_METADATA_PRIVATE,
       .data_buffer = &metadata_2,
+      .data_size = sizeof(composite_test_metadata),
+  }};
+
+  const pbus_metadata_t test_metadata_goldfish_control[] = {{
+      .type = DEVICE_METADATA_PRIVATE,
+      .data_buffer = &metadata_goldfish_control,
       .data_size = sizeof(composite_test_metadata),
   }};
 
@@ -264,6 +299,26 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev2.metadata_count = std::size(test_metadata_2);
 
   status = pbus_composite_device_add(&pbus, &pdev2, composite2, std::size(composite2), UINT32_MAX);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
+  }
+
+  device_fragment_t goldfish_composite[] = {
+      {std::size(goldfish_address_space_fragment), goldfish_address_space_fragment},
+      {std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
+  };
+
+  pbus_dev_t pdev_goldfish_composite = {};
+  pdev_goldfish_composite.name = "composite-dev-goldfish-control";
+  pdev_goldfish_composite.vid = PDEV_VID_TEST;
+  pdev_goldfish_composite.pid = PDEV_PID_PBUS_TEST;
+  pdev_goldfish_composite.did = PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE;
+  pdev_goldfish_composite.metadata_list = test_metadata_goldfish_control;
+  pdev_goldfish_composite.metadata_count = std::size(test_metadata_goldfish_control);
+
+  status = pbus_composite_device_add(&pbus, &pdev_goldfish_composite, goldfish_composite,
+                                     std::size(goldfish_composite), UINT32_MAX);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);

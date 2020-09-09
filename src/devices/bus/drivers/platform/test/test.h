@@ -32,6 +32,8 @@ class TestBoard : public TestBoardType {
   DISALLOW_COPY_ASSIGN_AND_MOVE(TestBoard);
 
   zx_status_t Start();
+  zx_status_t GoldfishAddressSpaceInit();
+  zx_status_t GoldfishPipeInit();
   zx_status_t GpioInit();
   zx_status_t I2cInit();
   zx_status_t SpiInit();
