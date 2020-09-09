@@ -47,7 +47,7 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
   EXPECT_EQ(tv_len, sizeof(original_tv));
   const struct timeval tv = {
       .tv_sec = 0,
-      .tv_usec = 1 << 16,  // ~65ms
+      .tv_usec = 1 << 17,  // ~131ms
   };
   EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
 #endif
