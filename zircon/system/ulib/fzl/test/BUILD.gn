@@ -13,19 +13,28 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+fuchsia_unittest_package("fzl-zxtest-unittest-package") {
+  executable_path = "test/fzl-zxtest-test"
+  deps = [ ":fzl-zxtest" ]
+}
+
+fuchsia_unittest_package("fzl-unittest-package") {
+  executable_path = "test/fzl-test"
+  deps = [ ":fzl" ]
+}
+
+group("tests") {
   testonly = true
   deps = [
-    ":fzl",
-    ":fzl-zxtest",
+    ":fzl-unittest-package",
+    ":fzl-zxtest-unittest-package",
   ]
 }
 
 test("fzl-zxtest") {
   output_name = "fzl-zxtest-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "pinned-vmo-tests.cc",
     "vmo-pool-tests.cc",
@@ -50,7 +59,6 @@ test("fzl-zxtest") {
 
 test("fzl") {
   output_name = "fzl-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "fzl-test.cc",
     "memory_probe_tests.cc",
@@ -78,14 +86,4 @@ test("fzl") {
 
   # TODO(47439): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-bootfs_test("fzl-bootfs-test") {
-  name = "fzl-test"
-  deps = [ ":fzl" ]
-}
-
-bootfs_test("fzl-zxtest-bootfs-test") {
-  name = "fzl-zxtest-test"
-  deps = [ ":fzl-zxtest" ]
 }
