@@ -12,7 +12,7 @@ pub enum BlobIdParseError {
     #[error("invalid length, expected 32 hex bytes, got {0}")]
     InvalidLength(usize),
 
-    #[error("invalid hex: {0}")]
+    #[error("invalid hex")]
     FromHexError(#[from] hex::FromHexError),
 }
 
@@ -39,11 +39,11 @@ pub enum RepositoryParseError {
     #[error("missing required field subscribe")]
     SubscribeMissing,
 
-    #[error("invalid repository url: {0}")]
-    InvalidRepoUrl(fuchsia_url::pkg_url::ParseError),
+    #[error("invalid repository url")]
+    InvalidRepoUrl(#[source] fuchsia_url::pkg_url::ParseError),
 
-    #[error("invalid update package url: {0}")]
-    InvalidUpdatePackageUrl(fuchsia_url::pkg_url::ParseError),
+    #[error("invalid update package url")]
+    InvalidUpdatePackageUrl(#[source] fuchsia_url::pkg_url::ParseError),
 
     #[error("invalid root version: {0}")]
     InvalidRootVersion(u32),
@@ -51,15 +51,15 @@ pub enum RepositoryParseError {
     #[error("invalid root threshold: {0}")]
     InvalidRootThreshold(u32),
 
-    #[error("invalid uri: {0}")]
+    #[error("invalid uri")]
     InvalidUri(#[from] http::uri::InvalidUri),
 
-    #[error("invalid config: {0}")]
+    #[error("invalid config")]
     MirrorConfig(#[from] MirrorConfigError),
 }
 
 #[derive(Error, Debug)]
 pub enum RepositoryUrlParseError {
-    #[error("invalid repository url: {0}")]
-    InvalidRepoUrl(fuchsia_url::pkg_url::ParseError),
+    #[error("invalid repository url")]
+    InvalidRepoUrl(#[source] fuchsia_url::pkg_url::ParseError),
 }
