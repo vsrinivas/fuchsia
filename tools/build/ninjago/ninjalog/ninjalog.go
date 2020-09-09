@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/shlex"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 )
 
@@ -44,10 +45,7 @@ func (s Step) Duration() time.Duration {
 }
 
 var toSkip = map[string]bool{
-	"bin": true,
 	"env": true,
-	// This is a binary wrapper for invoking host binaries produced by the build.
-	"gn_run_binary.sh": true,
 }
 
 // category returns a comma separate list of executed commands.
@@ -56,19 +54,39 @@ func (s Step) Category() string {
 		return "unknown"
 	}
 	var categories []string
-	// TODO(jayzhuang): use github.com/google/shlex instead.
-	for _, command := range strings.Split(strings.Replace(s.Command.Command, " || ", " && ", -1), " && ") {
-		var cmd string
-		for _, token := range strings.Split(strings.TrimSpace(command), " ") {
-			cmd = strings.Trim(path.Base(token), "()")
-			if !toSkip[cmd] {
-				break
-			}
+
+	tokens, err := shlex.Split(s.Command.Command)
+	if err != nil {
+		return "invalid command"
+	}
+
+	var token string
+	cmdStart := true
+	for len(tokens) > 0 {
+		token, tokens = tokens[0], tokens[1:]
+		baseCmd := strings.Trim(path.Base(token), "()")
+		if toSkip[baseCmd] {
+			continue
 		}
-		if cmd != "" {
-			categories = append(categories, cmd)
+		// gn_run_binary.sh is a script to run an arbitrary binary produced by the
+		// current build.
+		//
+		// First argument to gn_run_binary.sh is the bin directory of the toolchain,
+		// skip it to take the second argument, which is the binary to run.
+		if baseCmd == "gn_run_binary.sh" {
+			tokens = tokens[1:]
+			continue
+		}
+		if baseCmd == "||" || baseCmd == "&&" {
+			cmdStart = true
+			continue
+		}
+		if cmdStart {
+			categories = append(categories, baseCmd)
+			cmdStart = false
 		}
 	}
+
 	return strings.Join(categories, ",")
 }
 

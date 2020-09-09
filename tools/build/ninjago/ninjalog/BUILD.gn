@@ -6,7 +6,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("ninjalog") {
-  deps = [ "//tools/build/ninjago/compdb" ]
+  deps = [
+    "//third_party/golibs:github.com/google/shlex",
+    "//tools/build/ninjago/compdb",
+  ]
 }
 
 if (is_host) {

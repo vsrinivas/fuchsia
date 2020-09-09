@@ -107,6 +107,8 @@ golib("github.com/golang/groupcache/lru") {
 }
 golib("github.com/golang/snappy") {
 }
+golib("github.com/google/shlex") {
+}
 golib("github.com/google/subcommands") {
 }
 golib("github.com/google/uuid") {
