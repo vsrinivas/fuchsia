@@ -16,6 +16,7 @@ zx_library("unittest") {
     sources += [
       "console.cc",
       "user_memory.cc",
+      "user_memory_tests.cc",
     ]
     public_deps += [
       # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.

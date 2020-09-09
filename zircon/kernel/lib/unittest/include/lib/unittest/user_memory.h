@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_USER_MEMORY_H_
 #define ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_USER_MEMORY_H_
 
-#include <lib/instrumentation/asan.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <ktl/move.h>
@@ -40,16 +39,18 @@ class UserMemory {
 
   const fbl::RefPtr<VmAspace>& aspace() const { return mapping_->aspace(); }
 
-  // put() and get() make direct accesses to non-kernel virtual addresses, so
-  // they must be marked with NO_ASAN to suppress address checking.
   template <typename T>
-  NO_ASAN void put(const T& value, size_t i = 0) {
-    reinterpret_cast<T*>(base())[i] = value;
+  void put(const T& value, size_t i = 0) {
+    zx_status_t status = user_out<T>().element_offset(i).copy_to_user(value);
+    ASSERT(status == ZX_OK);
   }
 
   template <typename T>
-  NO_ASAN T get(size_t i = 0) {
-    return reinterpret_cast<const T*>(base())[i];
+  T get(size_t i = 0) {
+    T value;
+    zx_status_t status = user_in<T>().element_offset(i).copy_from_user(&value);
+    ASSERT(status == ZX_OK);
+    return value;
   }
 
   template <typename T>
