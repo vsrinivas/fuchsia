@@ -480,9 +480,9 @@ TEST_F(ScaleArrayTest, TwoRamps) {
   EXPECT_TRUE(gain_.IsRamping());
 
   // Advance only partially through the duration of the ramp.
-  gain_.Advance(2, rate_1khz_output_); // 1 frame == 1ms
+  gain_.Advance(2, rate_1khz_output_);  // 1 frame == 1ms
 
-  auto expect_scale = scale_start + (Gain::DbToScale(-20.f) - scale_start) * 2.0/10.0;
+  auto expect_scale = scale_start + (Gain::DbToScale(-20.f) - scale_start) * 2.0 / 10.0;
   EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
   EXPECT_TRUE(gain_.IsRamping());
 
@@ -496,7 +496,7 @@ TEST_F(ScaleArrayTest, TwoRamps) {
   // Advance again.
   gain_.Advance(2, rate_1khz_output_);
 
-  expect_scale = scale_start + (Gain::DbToScale(-80.f) - scale_start) * 2.0/10.0;
+  expect_scale = scale_start + (Gain::DbToScale(-80.f) - scale_start) * 2.0 / 10.0;
   EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
   EXPECT_TRUE(gain_.IsRamping());
 }
