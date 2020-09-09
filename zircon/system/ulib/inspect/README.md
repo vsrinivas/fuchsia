@@ -40,11 +40,7 @@ information can be read and aggregated by `iquery --health`.
 
 ## Testing
 
-Unit tests for inspect are available in the Zircon tests package.
-
-To include them, you must pass `--with-base //garnet/packages/tests:zircon`
-to `fx set` and re-pave your device.
-
 ```
-$ fx shell runtests --names inspect-test
+fx set ... --with //zircon/system/ulib/inspect:tests
+fx test -od inspect-unittest-package
 ```

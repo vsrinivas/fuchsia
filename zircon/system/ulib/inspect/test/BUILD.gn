@@ -14,15 +14,19 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
-  testonly = true
+fuchsia_unittest_package("inspect-unittest-package") {
+  executable_path = "test/inspect"
   deps = [ ":inspect" ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":inspect-unittest-package" ]
+}
+
 test("inspect") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "health_unittest.cc",
     "heap_unittest.cc",
@@ -47,9 +51,4 @@ test("inspect") {
 fuzzer("inspect-reader-fuzzer") {
   sources = [ "reader_fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/inspect" ]
-}
-
-bootfs_test("inspect-bootfs-test") {
-  name = "inspect"
-  deps = [ ":inspect" ]
 }

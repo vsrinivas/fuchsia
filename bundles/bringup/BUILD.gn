@@ -108,7 +108,6 @@ group("tests") {
     "//zircon/system/ulib/id_allocator/test:id_allocator-test-bootfs-test",
     "//zircon/system/ulib/image-format/test:image-format-test-bootfs-test",
     "//zircon/system/ulib/inet6/test:inet6-test-bootfs-test",
-    "//zircon/system/ulib/inspect/test:inspect-bootfs-test",
     "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-bootfs-test",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-bootfs-test",
     "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-bootfs-test",

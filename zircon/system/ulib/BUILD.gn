@@ -12,6 +12,7 @@ group("tests") {
   deps = [
     "edid:tests",
     "hid-parser/test:tests",
-    "sysconfig-client:tests"
+    "inspect:tests",
+    "sysconfig-client:tests",
   ]
 }

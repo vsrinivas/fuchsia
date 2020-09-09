@@ -43,15 +43,11 @@ Every change from this section goes into a single CL:
 
 1. Include tests
   ```
-fx set --with-base //garnet/packages/tests:zircon
-  ```
-1. Build and repave between each modification
-  ```
-fx build && fx pave -1
+  fx set ... --with //zircon/system/ulib/inspect:tests
   ```
 1. Run tests.
   ```
-fx shell runtests --names inspect-test
+  fx test -od inspect-unittest-package
   ```
 
 ### Bitfield updates {#bitfield-updates}

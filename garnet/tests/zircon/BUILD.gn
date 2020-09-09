@@ -20,7 +20,6 @@ _migrated_fuzzers = [
   "//zircon/system/ulib/fs/test:vmo_file-fuzzer",
   "//zircon/system/ulib/gfx/test:gfx-fuzzer",
   "//zircon/system/ulib/hid-parser/test:hid-parser-fuzzer",
-  "//zircon/system/ulib/inspect/test:inspect-reader-fuzzer",
   "//zircon/system/ulib/ldmsg/test:ldmsg-fuzzer",
   "//zircon/system/ulib/minfs/test:minfs-fuzzer",
   "//zircon/system/ulib/tftp/test:tftp-fuzzer",
