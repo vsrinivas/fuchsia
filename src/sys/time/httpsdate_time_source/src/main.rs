@@ -40,7 +40,7 @@ struct DummyAlgorithm;
 
 #[async_trait]
 impl UpdateAlgorithm for DummyAlgorithm {
-    fn update_device_properties(&self, _properties: Properties) {
+    async fn update_device_properties(&self, _properties: Properties) {
         // do nothing
     }
 

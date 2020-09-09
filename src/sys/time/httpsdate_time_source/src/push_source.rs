@@ -15,10 +15,10 @@ use fidl_fuchsia_time_external::{
 use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc::{channel, Sender},
+    lock::Mutex,
     StreamExt, TryStreamExt,
 };
 use log::warn;
-use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 use watch_handler::{Sender as WatchSender, WatchHandler};
 
@@ -36,7 +36,7 @@ pub enum Update {
 #[async_trait]
 pub trait UpdateAlgorithm {
     /// Update the algorithm's knowledge of device properties.
-    fn update_device_properties(&self, properties: Properties);
+    async fn update_device_properties(&self, properties: Properties);
 
     /// Generate updates asynchronously and push them to |sink|. This method may run
     /// indefinitely.
@@ -67,7 +67,7 @@ impl<UA: UpdateAlgorithm> PushSource<UA> {
         let updater_fut = self.update_algorithm.generate_updates(sender);
         let consumer_fut = async move {
             while let Some(update) = receiver.next().await {
-                self.internal.lock().push_update(update);
+                self.internal.lock().await.push_update(update).await;
             }
         };
         let (update_res, _) = futures::future::join(updater_fut, consumer_fut).await;
@@ -79,9 +79,9 @@ impl<UA: UpdateAlgorithm> PushSource<UA> {
         &self,
         mut request_stream: PushSourceRequestStream,
     ) -> Result<(), Error> {
-        let client_context = self.internal.lock().register_client();
+        let client_context = self.internal.lock().await.register_client();
         while let Some(request) = request_stream.try_next().await? {
-            client_context.lock().handle_request(request, &self.update_algorithm)?;
+            client_context.lock().await.handle_request(request, &self.update_algorithm).await?;
         }
         Ok(())
     }
@@ -115,19 +115,23 @@ impl PushSourceInternal {
     }
 
     /// Push a new update to all existing clients.
-    pub fn push_update(&mut self, update: Update) {
+    pub async fn push_update(&mut self, update: Update) {
         match &update {
             Update::Sample(sample) => self.latest_sample = Some(Arc::clone(&sample)),
             Update::Status(status) => self.latest_status = *status,
         }
         // Discard any references to clients that no longer exist.
+        let mut client_arcs = vec![];
         self.clients.retain(|client_weak| match client_weak.upgrade() {
-            Some(client) => {
-                client.lock().handle_update(update.clone());
+            Some(client_arc) => {
+                client_arcs.push(client_arc);
                 true
             }
             None => false,
         });
+        for client in client_arcs {
+            client.lock().await.handle_update(update.clone());
+        }
     }
 }
 
@@ -141,7 +145,7 @@ struct PushSourceClientHandler {
 
 impl PushSourceClientHandler {
     /// Handle a fidl request received from the client.
-    fn handle_request(
+    async fn handle_request(
         &mut self,
         request: PushSourceRequest,
         update_algorithm: &impl UpdateAlgorithm,
@@ -160,7 +164,7 @@ impl PushSourceClientHandler {
                 })?;
             }
             PushSourceRequest::UpdateDeviceProperties { properties, .. } => {
-                update_algorithm.update_device_properties(properties);
+                update_algorithm.update_device_properties(properties).await;
             }
         }
         Ok(())
@@ -223,12 +227,12 @@ mod test {
 
     #[async_trait]
     impl UpdateAlgorithm for TestUpdateAlgorithm {
-        fn update_device_properties(&self, properties: Properties) {
-            self.device_property_updates.lock().push(properties);
+        async fn update_device_properties(&self, properties: Properties) {
+            self.device_property_updates.lock().await.push(properties);
         }
 
         async fn generate_updates(&self, sink: Sender<Update>) -> Result<(), Error> {
-            let receiver = self.receiver.lock().take().unwrap();
+            let receiver = self.receiver.lock().await.take().unwrap();
             receiver.map(Ok).forward(sink).await?;
             Ok(())
         }
@@ -271,9 +275,9 @@ mod test {
         }
 
         /// Assert that the TestUpdateAlgorithm received the property updates.
-        fn assert_device_properties(&self, properties: &[Properties]) {
+        async fn assert_device_properties(&self, properties: &[Properties]) {
             assert_eq!(
-                self.test_source.update_algorithm.device_property_updates.lock().as_slice(),
+                self.test_source.update_algorithm.device_property_updates.lock().await.as_slice(),
                 properties
             );
         }
@@ -437,6 +441,6 @@ mod test {
         proxy_2.update_device_properties(Properties {}).unwrap();
         // Sleep here to allow the executor to run the tasks servicing these requests.
         fasync::Timer::new(fasync::Time::after(zx::Duration::from_nanos(1000))).await;
-        harness.assert_device_properties(&vec![Properties {}, Properties {}]);
+        harness.assert_device_properties(&vec![Properties {}, Properties {}]).await;
     }
 }
