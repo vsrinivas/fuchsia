@@ -5,11 +5,8 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
-    fidl_fuchsia_io as io,
-    fidl_fuchsia_io_test as io_test,
-    fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::StreamExt,
     io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
@@ -61,10 +58,11 @@ async fn open_node<T: ServiceMarker>(
 }
 
 /// Constant representing the aggregate of all io.fidl rights.
-const ALL_RIGHTS: u32 = io::OPEN_RIGHT_ADMIN
-    | io::OPEN_RIGHT_EXECUTABLE
-    | io::OPEN_RIGHT_READABLE
-    | io::OPEN_RIGHT_WRITABLE;
+// TODO(fxbug.dev/59574): Add io::OPEN_RIGHT_EXECUTABLE and io::OPEN_RIGHT_ADMIN back here once
+// they are supported by rustvfs (or alternatively add tests to check they *are not* supported for
+// all implementations, or add a config flag to allow controlling this as a test configuration
+// option).
+const ALL_RIGHTS: u32 = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE;
 
 /// Returns a list of flag combinations to test. Returns a vector of the aggregate of
 /// every constant flag and every combination of variable flags.
@@ -102,6 +100,11 @@ fn build_flag_combinations(constant_flags: &[u32], variable_flags: &[u32]) -> Ve
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_test() {
     let harness = connect_to_harness().expect("Could not setup harness connection.");
+
+    let config = harness.get_config().await.expect("Could not get config from harness.");
+    if config.no_remote_dir.unwrap_or_default() {
+        return;
+    }
 
     let (remote_dir_client, remote_dir_server) =
         create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints.");
@@ -149,7 +152,7 @@ async fn file_read_with_sufficient_rights() {
     let filename = "testing.txt";
 
     let constant_flags = [io::OPEN_RIGHT_READABLE];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE, io::OPEN_RIGHT_EXECUTABLE, io::OPEN_RIGHT_ADMIN];
+    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
     let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
@@ -175,7 +178,7 @@ async fn file_read_with_insufficient_rights() {
     let filename = "testing.txt";
 
     let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE, io::OPEN_RIGHT_EXECUTABLE, io::OPEN_RIGHT_ADMIN];
+    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
     let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
@@ -201,7 +204,7 @@ async fn file_read_at_with_sufficient_rights() {
     let filename = "testing.txt";
 
     let constant_flags = [io::OPEN_RIGHT_READABLE];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE, io::OPEN_RIGHT_EXECUTABLE, io::OPEN_RIGHT_ADMIN];
+    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
     let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
@@ -227,7 +230,7 @@ async fn file_read_at_with_insufficient_rights() {
     let filename = "testing.txt";
 
     let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE, io::OPEN_RIGHT_EXECUTABLE, io::OPEN_RIGHT_ADMIN];
+    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
     let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
@@ -253,7 +256,7 @@ async fn file_write_with_sufficient_rights() {
     let filename = "testing.txt";
 
     let constant_flags = [io::OPEN_RIGHT_WRITABLE];
-    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_EXECUTABLE, io::OPEN_RIGHT_ADMIN];
+    let variable_flags = [io::OPEN_RIGHT_READABLE];
 
     let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
@@ -279,7 +282,7 @@ async fn file_write_with_insufficient_rights() {
     let filename = "testing.txt";
 
     let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_EXECUTABLE, io::OPEN_RIGHT_ADMIN];
+    let variable_flags = [io::OPEN_RIGHT_READABLE];
 
     let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);

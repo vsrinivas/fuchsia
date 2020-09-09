@@ -48,6 +48,9 @@ table Io1Config {
 
     /// Vmofiles are not supported.
     4: bool no_vmofile;
+
+    /// Remote directories are not supported.
+    5: bool no_remote_dir;
 };
 
 [Discoverable]

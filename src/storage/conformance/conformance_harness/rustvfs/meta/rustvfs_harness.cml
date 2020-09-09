@@ -1,0 +1,17 @@
+{
+    program: {
+        binary: "bin/io_conformance_harness_rustvfs",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.io.test.Io1Harness",
+            from: "self",
+        },
+    ],
+}

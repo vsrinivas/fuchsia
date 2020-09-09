@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "bin/io_conformance_harness_rustvfs"
-    }
-}

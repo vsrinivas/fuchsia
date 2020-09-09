@@ -12,6 +12,7 @@ group("tests") {
   deps = [
     # Disabled for now until io.test.fidl changes.
     #":fdio_test",
+    "//src/storage/conformance/conformance_harness/rustvfs:rustvfs-io1-conformance-test",
     "//src/storage/conformance/conformance_harness/ulibfs:ulibfs-io1-conformance-test",
     "//src/sys/component_manager:component-manager",
   ]
