@@ -886,48 +886,47 @@ static inline struct iwl_trans_dump_data* iwl_trans_dump_data(struct iwl_trans* 
   return trans->ops->dump_data(trans, dump_mask);
 }
 
-#if 0  // NEEDS_PORTING
-static inline struct iwl_device_cmd*
-iwl_trans_alloc_tx_cmd(struct iwl_trans* trans) {
-    // TODO(alexlegg): dev_cmd_pool is a cache-line aligned slab allocator in the Linux driver.
-    return kmem_cache_alloc(trans->dev_cmd_pool, GFP_ATOMIC);
+static inline struct iwl_device_cmd* iwl_trans_alloc_tx_cmd() {
+  // Since the transport code will always copy the 'iwl_device_cmd' struct, we can just allocate
+  // usual memory here (no cache-line alignment is required). The transport layer will copy it
+  // into cache-line aligned io_buffer.
+  return (struct iwl_device_cmd*)malloc(sizeof(struct iwl_device_cmd));
 }
-#endif  // NEEDS_PORTING
 
 // This function returns couple error codes. The ZX_ERR_BAD_STATE is the most special one.
 // It is called ERFKILL originally. We remap it to ZX_ERR_BAD_STATE in Fuchsia.
 zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
+static inline void iwl_trans_free_tx_cmd(struct iwl_trans* trans, struct iwl_device_cmd* dev_cmd) {
+  free(dev_cmd);
+}
+
+static inline zx_status_t iwl_trans_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+                                       struct iwl_device_cmd* dev_cmd, int queue) {
+  if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) {
+    IWL_ERR(trans, "%s() trans->status inidicates FW_ERROR\n", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return trans->ops->tx(trans, pkt, dev_cmd, queue);
+}
+
+static inline void iwl_trans_reclaim(struct iwl_trans* trans, int queue, int ssn) {
+  if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return;
+  }
+
+  trans->ops->reclaim(trans, queue, ssn);
+}
+
 #if 0  // NEEDS_PORTING
-static inline void iwl_trans_free_tx_cmd(struct iwl_trans* trans,
-        struct iwl_device_cmd* dev_cmd) {
-    kmem_cache_free(trans->dev_cmd_pool, dev_cmd);
-}
-
-static inline int iwl_trans_tx(struct iwl_trans* trans, struct sk_buff* skb,
-                               struct iwl_device_cmd* dev_cmd, int queue) {
-    if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) {
-        return -EIO;
-    }
-
-    if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return -EIO;
-    }
-
-    return trans->ops->tx(trans, skb, dev_cmd, queue);
-}
-
-static inline void iwl_trans_reclaim(struct iwl_trans* trans, int queue,
-                                     int ssn, struct sk_buff_head* skbs) {
-    if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return;
-    }
-
-    trans->ops->reclaim(trans, queue, ssn, skbs);
-}
-
+// TODO(49531): supports txq disable.
 static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue,
         bool configure_scd) {
     trans->ops->txq_disable(trans, queue, configure_scd);
