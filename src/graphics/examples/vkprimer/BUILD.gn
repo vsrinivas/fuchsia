@@ -84,9 +84,6 @@ vulkan_executable("bin") {
     ]
   }
 
-  # TODO(fxb/58615): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   data = [
     "common/shaders/frag.spv",
     "common/shaders/vert.spv",
