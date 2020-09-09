@@ -168,7 +168,7 @@ static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_
   }
   mtx_unlock(&txq->lock);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   struct iwl_trans_pcie* trans_pcie = txq->trans_pcie;
   struct iwl_trans* trans = iwl_trans_pcie_get_trans(trans_pcie);
   iwl_trans_pcie_log_scd_error(trans, txq);
@@ -213,7 +213,7 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer) {
   }
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_txq_update_byte_cnt_tbl - Set up entry in Tx byte-count array
  */
@@ -548,7 +548,7 @@ zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, uint
 
   mtx_init(&txq->lock, mtx_plain);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     if (cmd_queue) {
         static struct lock_class_key iwl_pcie_cmd_queue_lock_class;
         lockdep_set_class(&txq->lock, &iwl_pcie_cmd_queue_lock_class);
@@ -560,7 +560,7 @@ zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, uint
   return 0;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 void iwl_pcie_free_tso_page(struct iwl_trans_pcie* trans_pcie, struct sk_buff* skb) {
     struct page** page_ptr;
 
@@ -610,7 +610,7 @@ void iwl_pcie_txq_unmap(struct iwl_trans* trans, int txq_id) {
     IWL_DEBUG_TX_REPLY(trans, "Q %d Free %d\n", txq_id, txq->read_ptr);
 
     if (txq_id != trans_pcie->cmd_queue) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
             iwl_pcie_free_tso_page(trans_pcie, skb);
 #endif  // NEEDS_PORTING
     }
@@ -727,7 +727,7 @@ void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr) {
   }
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 void iwl_trans_pcie_tx_reset(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int txq_id;
@@ -1000,9 +1000,8 @@ static inline void iwl_pcie_txq_progress(struct iwl_txq* txq) {
 }
 
 /* Frees buffers until index _not_ inclusive */
-void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn,
-                            struct sk_buff_head* skbs) {
-#if 0   // NEEDS_PORTING
+void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
     int tfd_num = iwl_pcie_get_cmd_index(txq, ssn);
@@ -1329,7 +1328,7 @@ bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int txq_id, uint16_t ssn
 
 void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id,
                                         bool shared_mode) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
 
@@ -1339,7 +1338,7 @@ void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id
 }
 
 void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool configure_scd) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint32_t stts_addr = trans_pcie->scd_base_addr + SCD_TX_STTS_QUEUE_OFFSET(txq_id);
     static const uint32_t zero_val[4] = {};
@@ -1700,7 +1699,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
 
   out_meta->flags = cmd->flags;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   trace_iwlwifi_dev_hcmd(trans->dev, cmd, cmd_size, &out_cmd->hdr_wide);
 #endif  // NEEDS_PORTING
 
@@ -1753,7 +1752,7 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
   if (txq_id != trans_pcie->cmd_queue) {
     IWL_WARN(trans, "wrong command queue %d (should be %d), sequence 0x%X readp=%d writep=%d\n",
              txq_id, trans_pcie->cmd_queue, sequence, txq->read_ptr, txq->write_ptr);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
       iwl_print_hex_error(trans, pkt, 32);
 #endif  // NEEDS_PORTING
     return;
@@ -1771,12 +1770,12 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
 
   /* Input error checking is done when commands are added to queue. */
   if (meta->flags & CMD_WANT_SKB) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         struct page* p = rxb_steal_page(rxb);
 #endif  // NEEDS_PORTING
 
     meta->source->resp_pkt = pkt;
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         meta->source->_rx_page_addr = (unsigned long)page_address(p);
         meta->source->_rx_page_order = trans_pcie->rx_page_order;
 #endif  // NEEDS_PORTING
@@ -1803,7 +1802,7 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
     IWL_DEBUG_INFO(trans, "complete %s - mark trans as idle\n",
                    iwl_get_cmd_string(trans, cmd->hdr.cmd));
     set_bit(STATUS_TRANS_IDLE, &trans->status);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         wake_up(&trans_pcie->d0i3_waitq);
 #endif  // NEEDS_PORTING
   }
@@ -1812,7 +1811,7 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
     IWL_DEBUG_INFO(trans, "complete %s - clear trans idle flag\n",
                    iwl_get_cmd_string(trans, cmd->hdr.cmd));
     clear_bit(STATUS_TRANS_IDLE, &trans->status);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         wake_up(&trans_pcie->d0i3_waitq);
 #endif  // NEEDS_PORTING
   }
@@ -1854,7 +1853,7 @@ static zx_status_t iwl_pcie_send_hcmd_sync(struct iwl_trans* trans, struct iwl_h
 
   IWL_DEBUG_INFO(trans, "Setting HCMD_ACTIVE for command %s\n", iwl_get_cmd_string(trans, cmd->id));
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     if (pm_runtime_suspended(&trans_pcie->pci_dev->dev)) {
         ret =
             wait_event_timeout(trans_pcie->d0i3_waitq, pm_runtime_active(&trans_pcie->pci_dev->dev),
@@ -2213,7 +2212,7 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
 
     return 0;
 }
-#else   /* CONFIG_INET */
+#else /* CONFIG_INET */
 static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
                                    struct iwl_txq* txq, uint8_t hdr_len,
                                    struct iwl_cmd_meta* out_meta, struct iwl_device_cmd* dev_cmd,
@@ -2223,11 +2222,11 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
 
     return -1;
 }
-#endif  /* CONFIG_INET */
+#endif /* CONFIG_INET */
 #endif  // NEEDS_PORTING
 
-int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_device_cmd* dev_cmd,
-                      int txq_id) {
+int iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+                      const struct iwl_device_cmd* dev_cmd, int txq_id) {
 #if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct ieee80211_hdr* hdr;

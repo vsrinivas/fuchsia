@@ -1577,12 +1577,18 @@ zx_status_t __must_check iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl
                                                  uint32_t* status);
 zx_status_t __must_check iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len,
                                                      const void* data, uint32_t* status);
-int iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_sta* sta);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Interfaces for tx.c
+//
+
+zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt,
+                           struct iwl_mvm_sta* mvmsta);
 int iwl_mvm_tx_skb_non_sta(struct iwl_mvm* mvm, struct sk_buff* skb);
-void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_cmd* tx_cmd,
-                        struct ieee80211_tx_info* info, uint8_t sta_id);
-void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd,
-                             struct ieee80211_tx_info* info, struct ieee80211_sta* sta, __le16 fc);
+void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, struct iwl_tx_cmd* tx_cmd,
+                        uint8_t sta_id);
+void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd);
 void iwl_mvm_mac_itxq_xmit(struct ieee80211_hw* hw, struct ieee80211_txq* txq);
 unsigned int iwl_mvm_max_amsdu_size(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                     unsigned int tid);
@@ -2088,6 +2094,7 @@ void iwl_mvm_event_frame_timeout_callback(struct iwl_mvm* mvm, struct ieee80211_
 void iwl_mvm_send_tcm_event(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 
 void iwl_mvm_recalc_multicast(struct iwl_mvm* mvm);
+
 int iwl_mvm_configure_bcast_filter(struct iwl_mvm* mvm);
 
 void iwl_mvm_active_rx_filters(struct iwl_mvm* mvm);

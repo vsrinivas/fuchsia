@@ -39,6 +39,7 @@
 #include <lib/async-loop/loop.h>
 
 #include <ddk/io-buffer.h>
+#include <ddk/protocol/wlan/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
@@ -535,9 +536,9 @@ struct iwl_trans_ops {
 
   zx_status_t (*send_cmd)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
-  zx_status_t (*tx)(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_device_cmd* dev_cmd,
-                    int queue);
-  void (*reclaim)(struct iwl_trans* trans, int queue, int ssn, struct sk_buff_head* skbs);
+  zx_status_t (*tx)(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+                    const struct iwl_device_cmd* dev_cmd, int queue);
+  void (*reclaim)(struct iwl_trans* trans, int queue, int ssn);
 
   bool (*txq_enable)(struct iwl_trans* trans, int queue, uint16_t ssn,
                      const struct iwl_trans_txq_scd_cfg* cfg, zx_duration_t queue_wdg_timeout);

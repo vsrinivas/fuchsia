@@ -81,13 +81,12 @@ static zx_status_t iwl_trans_sim_send_cmd(struct iwl_trans* trans, struct iwl_ho
   return ret;
 }
 
-static zx_status_t iwl_trans_sim_tx(struct iwl_trans* trans, struct sk_buff* skb,
-                                    struct iwl_device_cmd* dev_cmd, int queue) {
+static zx_status_t iwl_trans_sim_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+                                    const struct iwl_device_cmd* dev_cmd, int queue) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void iwl_trans_sim_reclaim(struct iwl_trans* trans, int queue, int ssn,
-                                  struct sk_buff_head* skbs) {}
+static void iwl_trans_sim_reclaim(struct iwl_trans* trans, int queue, int ssn) {}
 
 static bool iwl_trans_sim_txq_enable(struct iwl_trans* trans, int queue, uint16_t ssn,
                                      const struct iwl_trans_txq_scd_cfg* cfg,
