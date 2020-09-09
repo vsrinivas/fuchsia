@@ -15,6 +15,9 @@ use {
 /// Frame Check Sequence calculations.
 mod fcs;
 
+/// Multiplexer Commands.
+mod mux_commands;
+
 use crate::pub_decodable_enum;
 use crate::rfcomm::{
     frame::fcs::verify_fcs,
@@ -82,6 +85,8 @@ pub enum FrameParseError {
     InvalidFrame,
     #[error("Frame type is unsupported")]
     UnsupportedFrameType,
+    #[error("Mux Command type is unsupported")]
+    UnsupportedMuxCommandType,
 }
 
 pub_decodable_enum! {
