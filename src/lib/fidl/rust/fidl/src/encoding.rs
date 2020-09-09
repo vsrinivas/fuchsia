@@ -353,6 +353,37 @@ impl<'a> Decoder<'a> {
         Self::decode_with_context(&header.decoding_context(), buf, handles, value)
     }
 
+    /// Checks for errors after decoding. This is a separate function to reduce binary bloat.
+    /// Requires that `padding_end <= self.buf.len()`.
+    fn post_decoding(&self, padding_start: usize, padding_end: usize) -> Result<()> {
+        if self.next_out_of_line < self.buf.len() {
+            return Err(Error::ExtraBytes);
+        }
+        if self.next_handle < self.handles.len() {
+            return Err(Error::ExtraHandles);
+        }
+
+        let padding = padding_end - padding_start;
+        if padding > 0 {
+            // Safety:
+            // padding_end <= self.buf.len() is guaranteed by the caller.
+            let last_u64 = unsafe {
+                let last_u64_ptr = self.buf.get_unchecked(padding_end - 8);
+                std::mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
+            };
+            // padding == 0 => mask == 0x0000000000000000
+            // padding == 1 => mask == 0xff00000000000000
+            // padding == 2 => mask == 0xffff000000000000
+            // ...
+            let mask = !(!0u64 >> padding * 8);
+            if last_u64 & mask != 0 {
+                return Err(self.end_of_block_padding_error(padding_start, padding_end));
+            }
+        }
+
+        Ok(())
+    }
+
     /// FIDL2-decodes a value of type `T` from the provided data and handle
     /// buffers, using the specified context.
     ///
@@ -379,42 +410,8 @@ impl<'a> Decoder<'a> {
             context: context,
         };
         value.decode(&mut decoder, 0)?;
-
-        // Put this in a non-polymorphic helper function to reduce binary bloat.
-        fn post_decoding(
-            decoder: &Decoder,
-            padding_start: usize,
-            padding_end: usize,
-        ) -> Result<()> {
-            if decoder.next_out_of_line < decoder.buf.len() {
-                return Err(Error::ExtraBytes);
-            }
-            if decoder.next_handle < decoder.handles.len() {
-                return Err(Error::ExtraHandles);
-            }
-
-            let padding = padding_end - padding_start;
-            if padding > 0 {
-                // # Safety:
-                // padding_end = next_out_of_line <= decoder.buf.len() based on if statement above.
-                let last_u64 = unsafe {
-                    let last_u64_ptr = decoder.buf.get_unchecked(padding_end - 8);
-                    std::mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
-                };
-                // padding == 0 => mask == 0x0000000000000000
-                // padding == 1 => mask == 0xff00000000000000
-                // padding == 2 => mask == 0xffff000000000000
-                // ...
-                let mask = !(!0u64 >> padding * 8);
-                if last_u64 & mask != 0 {
-                    return Err(decoder.end_of_block_padding_error(padding_start, padding_end));
-                }
-            }
-
-            Ok(())
-        }
-
-        post_decoding(&decoder, inline_size, next_out_of_line)
+        // Safety: next_out_of_line <= buf.len() based on the if-statement above.
+        decoder.post_decoding(inline_size, next_out_of_line)
     }
 
     /// Take the next handle from the `handles` list.
