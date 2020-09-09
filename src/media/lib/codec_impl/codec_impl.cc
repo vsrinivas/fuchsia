@@ -4,6 +4,8 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/closure-queue/closure_queue.h>
 #include <lib/fidl/cpp/clone.h>
@@ -24,6 +26,8 @@
 // Binding).
 
 namespace {
+
+constexpr bool kLogTimestampDelay = false;
 
 // The protocol does not permit an unbounded number of in-flight streams, as
 // that would potentially result in unbounded data queued in the incoming
@@ -752,6 +756,9 @@ void CodecImpl::Sync_StreamControl(ThreadSafeDeleter<SyncCallback> callback_hold
 
 void CodecImpl::RecycleOutputPacket(fuchsia::media::PacketHeader available_output_packet) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  if (kLogTimestampDelay) {
+    LOG(INFO, "RecycleOutputPacket");
+  }
   CodecPacket* packet = nullptr;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -912,6 +919,10 @@ void CodecImpl::QueueInputPacket(fuchsia::media::Packet packet) {
       return;
     }
   }  // ~lock
+  if (kLogTimestampDelay) {
+    LOG(INFO, "input timestamp: has: %d value: 0x%" PRIx64, packet.has_timestamp_ish(),
+        packet.has_timestamp_ish() ? packet.timestamp_ish() : 0);
+  }
   PostToStreamControl([this, packet = std::move(packet)]() mutable {
     QueueInputPacket_StreamControl(std::move(packet));
   });
@@ -3718,6 +3729,10 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected
         [this, p = std::move(p), error_detected_before, error_detected_during]() mutable {
           // See "is_bound_checks" comment up top.
           if (binding_.is_bound()) {
+            if (kLogTimestampDelay) {
+              LOG(INFO, "output timestamp: has: %d value: 0x%" PRIx64, p.has_timestamp_ish(),
+                  p.has_timestamp_ish() ? p.timestamp_ish() : 0);
+            }
             binding_.events().OnOutputPacket(std::move(p), error_detected_before,
                                              error_detected_during);
           }
