@@ -30,7 +30,7 @@ use {
 pub const DEFAULT_GROUP_ID: u16 = 19;
 
 /// Maximum number of incorrect frames sent before SAE fails.
-const DOT11_RSNA_SAE_SYNC: u16 = 30;
+const MAX_RETRIES_PER_EXCHANGE: u16 = 30;
 
 /// A shared key computed by an SAE handshake.
 #[derive(Clone, PartialEq, Debug)]
@@ -58,6 +58,8 @@ pub enum RejectReason {
     AuthFailed,
     /// The peer has failed to respond or sent incorrect responses too many times.
     TooManyRetries,
+    /// The SAE PMKSA has expired, reauthenticate.
+    KeyExpiration,
 }
 
 impl From<Error> for RejectReason {
@@ -408,6 +410,14 @@ mod tests {
         ConfirmTx(confirm)
     }
 
+    fn expect_reset_timeout(sink: &mut Vec<SaeUpdate>, timeout: Timeout) {
+        assert_variant!(sink.remove(0), SaeUpdate::ResetTimeout(timeout));
+    }
+
+    fn expect_cancel_timeout(sink: &mut Vec<SaeUpdate>, timeout: Timeout) {
+        assert_variant!(sink.remove(0), SaeUpdate::CancelTimeout(timeout));
+    }
+
     // Test helper to advance through successful steps of an SAE handshake.
     impl TestHandshake {
         fn new() -> Self {
@@ -425,7 +435,7 @@ mod tests {
             self.sta1.initiate_sae(&mut sink);
             assert_eq!(sink.len(), 2);
             let commit = expect_commit(&mut sink);
-            assert_variant!(sink.remove(0), SaeUpdate::ResetTimeout(Timeout::Retransmission));
+            expect_reset_timeout(&mut sink, Timeout::Retransmission);
             commit
         }
 
@@ -435,7 +445,7 @@ mod tests {
             assert_eq!(sink.len(), 3);
             let commit2 = expect_commit(&mut sink);
             let confirm2 = expect_confirm(&mut sink);
-            assert_variant!(sink.remove(0), SaeUpdate::ResetTimeout(Timeout::Retransmission));
+            expect_reset_timeout(&mut sink, Timeout::Retransmission);
             (commit2, confirm2)
         }
 
@@ -444,7 +454,7 @@ mod tests {
             self.sta1.handle_commit(&mut sink, &commit2.msg());
             assert_eq!(sink.len(), 2);
             let confirm1 = expect_confirm(&mut sink);
-            assert_variant!(sink.remove(0), SaeUpdate::ResetTimeout(Timeout::Retransmission));
+            expect_reset_timeout(&mut sink, Timeout::Retransmission);
             confirm1
         }
 
@@ -460,8 +470,8 @@ mod tests {
             let mut sink = vec![];
             sta.handle_confirm(&mut sink, &confirm);
             assert_eq!(sink.len(), 3);
-            assert_variant!(sink.remove(0), SaeUpdate::CancelTimeout(Timeout::Retransmission));
-            assert_variant!(sink.remove(0), SaeUpdate::ResetTimeout(Timeout::KeyExpiration));
+            expect_cancel_timeout(&mut sink, Timeout::Retransmission);
+            expect_reset_timeout(&mut sink, Timeout::KeyExpiration);
             assert_variant!(sink.remove(0), SaeUpdate::Success(key) => key)
         }
     }
@@ -651,8 +661,8 @@ mod tests {
         let mut commit1 = handshake.sta1_init();
         let (commit2, confirm2) = handshake.sta2_handle_commit(commit1.clone().to_rx());
 
-        // STA2 should allow DOT11_RSNA_SAE_SYNC retry operations before giving up.
-        for i in 0..DOT11_RSNA_SAE_SYNC {
+        // STA2 should allow MAX_RETRIES_PER_EXCHANGE retry operations before giving up.
+        for i in 0..MAX_RETRIES_PER_EXCHANGE {
             let (commit2_retry, confirm2_retry) =
                 handshake.sta2_handle_commit(commit1.clone().to_rx());
             assert_eq!(commit2, commit2_retry);
@@ -672,9 +682,9 @@ mod tests {
         let mut commit1 = handshake.sta1_init();
         let (commit2, confirm2) = handshake.sta2_handle_commit(commit1.clone().to_rx());
 
-        // STA2 should allow DOT11_RSNA_SAE_SYNC retry operations before giving up. We subtract 1
+        // STA2 should allow MAX_RETRIES_PER_EXCHANGE retry operations before giving up. We subtract 1
         // here for the reason explained in the note below.
-        for i in 0..(DOT11_RSNA_SAE_SYNC - 1) {
+        for i in 0..(MAX_RETRIES_PER_EXCHANGE - 1) {
             let (commit2_retry, confirm2_retry) =
                 handshake.sta2_handle_commit(commit1.clone().to_rx());
             assert_eq!(commit2, commit2_retry);
@@ -699,7 +709,7 @@ mod tests {
         // NOTE: We run all of the operations here two times. This is because of a quirk in the SAE
         // state machine: while only certain operations *increment* sync, all invalid operations
         // will *check* sync. We can test whether sync is being incremented by running twice to see
-        // if this pushes us over the DOT11_RSNA_SAE_SYNC threshold.
+        // if this pushes us over the MAX_RETRIES_PER_EXCHANGE threshold.
 
         // STA2 ignores commits.
         handshake.sta2.handle_commit(&mut sink, &commit1.to_rx().msg());
@@ -723,5 +733,121 @@ mod tests {
         handshake.sta2.handle_confirm(&mut sink, &confirm1_sc2.to_rx().msg());
         assert_eq!(sink.len(), 1);
         assert_variant!(sink.remove(0), SaeUpdate::Reject(RejectReason::TooManyRetries));
+    }
+
+    #[test]
+    fn resend_commit_after_retransmission_timeout() {
+        let mut handshake = TestHandshake::new();
+        let commit1 = handshake.sta1_init();
+
+        let mut sink = vec![];
+        handshake.sta1.handle_timeout(&mut sink, Timeout::Retransmission);
+        let commit1_retry = expect_commit(&mut sink);
+        expect_reset_timeout(&mut sink, Timeout::Retransmission);
+        assert_eq!(commit1, commit1_retry);
+    }
+
+    #[test]
+    fn resend_confirm_after_retransmission_timeout() {
+        let mut handshake = TestHandshake::new();
+        let commit1 = handshake.sta1_init();
+        let (commit2, confirm2) = handshake.sta2_handle_commit(commit1.clone().to_rx());
+
+        let mut sink = vec![];
+        handshake.sta2.handle_timeout(&mut sink, Timeout::Retransmission);
+        // On timeout we should only send commit and confirm.
+        let confirm2_retry = expect_confirm(&mut sink);
+        expect_reset_timeout(&mut sink, Timeout::Retransmission);
+        assert_eq!(
+            confirm2.to_rx().msg().send_confirm + 1,
+            confirm2_retry.to_rx().msg().send_confirm
+        );
+    }
+
+    #[test]
+    fn abort_commit_after_too_many_timeouts() {
+        let mut handshake = TestHandshake::new();
+        let commit1 = handshake.sta1_init();
+
+        let mut sink = vec![];
+        for i in 0..MAX_RETRIES_PER_EXCHANGE {
+            handshake.sta1.handle_timeout(&mut sink, Timeout::Retransmission);
+            let commit1_retry = expect_commit(&mut sink);
+            expect_reset_timeout(&mut sink, Timeout::Retransmission);
+            assert_eq!(commit1, commit1_retry);
+        }
+
+        // This camel can't hold another straw!
+        handshake.sta1.handle_timeout(&mut sink, Timeout::Retransmission);
+        assert_eq!(sink.len(), 1);
+        assert_variant!(sink.remove(0), SaeUpdate::Reject(RejectReason::TooManyRetries));
+    }
+
+    #[test]
+    fn abort_confirm_after_too_many_timeouts() {
+        let mut handshake = TestHandshake::new();
+        let commit1 = handshake.sta1_init();
+        let (commit2, confirm2) = handshake.sta2_handle_commit(commit1.clone().to_rx());
+
+        let mut sink = vec![];
+        for i in 0..MAX_RETRIES_PER_EXCHANGE {
+            handshake.sta2.handle_timeout(&mut sink, Timeout::Retransmission);
+            // On timeout we should only send commit and confirm.
+            let confirm2_retry = expect_confirm(&mut sink);
+            expect_reset_timeout(&mut sink, Timeout::Retransmission);
+            assert_eq!(
+                confirm2.to_rx().msg().send_confirm + i + 1,
+                confirm2_retry.to_rx().msg().send_confirm
+            );
+        }
+
+        handshake.sta2.handle_timeout(&mut sink, Timeout::Retransmission);
+        assert_eq!(sink.len(), 1);
+        assert_variant!(sink.remove(0), SaeUpdate::Reject(RejectReason::TooManyRetries));
+    }
+
+    #[test]
+    fn ignore_unexpected_retransmit_timeout() {
+        let mut handshake = TestHandshake::new();
+        let mut sink = vec![];
+        // Timeout::Retransmission is ignored while in New state.
+        handshake.sta1.handle_timeout(&mut sink, Timeout::Retransmission);
+        assert!(sink.is_empty());
+
+        let commit1 = handshake.sta1_init();
+        let (commit2, confirm2) = handshake.sta2_handle_commit(commit1.to_rx());
+        let confirm1 = handshake.sta1_handle_commit(commit2.to_rx());
+        let key1 = handshake.sta1_handle_confirm(confirm2.to_rx());
+
+        // Timeout::Retransmission is ignored while in Accepted state.
+        handshake.sta1.handle_timeout(&mut sink, Timeout::Retransmission);
+        assert!(sink.is_empty());
+    }
+
+    #[test]
+    fn fail_on_early_key_expiration() {
+        let mut handshake = TestHandshake::new();
+        handshake.sta1_init();
+
+        // Early key expiration indicates that something has gone very wrong, so we abort.
+        let mut sink = vec![];
+        handshake.sta1.handle_timeout(&mut sink, Timeout::KeyExpiration);
+        assert_eq!(sink.len(), 1);
+        assert_variant!(sink.remove(0), SaeUpdate::Reject(RejectReason::InternalError(_)));
+    }
+
+    #[test]
+    fn key_expiration_timeout() {
+        let mut handshake = TestHandshake::new();
+        // Timeout::KeyExpiration is only expected once our handshake has completed.
+        let commit1 = handshake.sta1_init();
+        let (commit2, confirm2) = handshake.sta2_handle_commit(commit1.to_rx());
+        let confirm1 = handshake.sta1_handle_commit(commit2.to_rx());
+        let key1 = handshake.sta1_handle_confirm(confirm2.to_rx());
+
+        let mut sink = vec![];
+        handshake.sta1.handle_timeout(&mut sink, Timeout::KeyExpiration);
+        assert_eq!(sink.len(), 1);
+        assert_variant!(sink.remove(0), SaeUpdate::Reject(RejectReason::KeyExpiration));
     }
 }

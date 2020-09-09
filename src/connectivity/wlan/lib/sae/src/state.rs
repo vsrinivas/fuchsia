@@ -180,9 +180,9 @@ fn compute_confirm<E>(
 
 /// Helper function to reject the authentication after too many retries.
 fn check_sync(sync: &u16) -> Result<(), RejectReason> {
-    // IEEE says we should only fail if sync is greater, but failing on equality as well gives
-    // DOT11_RSNA_SAE_SYNC a clearer meaning (max number of incorrect frames allowed).
-    if *sync >= super::DOT11_RSNA_SAE_SYNC {
+    // IEEE says we should only fail if sync exceeds our limit, but failing on equality as well gives
+    // MAX_RETRIES_PER_EXCHANGE slightly more obvious behavior.
+    if *sync >= super::MAX_RETRIES_PER_EXCHANGE {
         Err(RejectReason::TooManyRetries)
     } else {
         Ok(())
@@ -298,11 +298,7 @@ impl<E> SaeCommitted<E> {
         Ok(FrameResult::Proceed((peer_commit, kck, key)))
     }
 
-    fn handle_confirm(
-        &mut self,
-        sink: &mut SaeUpdateSink,
-        _confirm_msg: &ConfirmMsg,
-    ) -> Result<(), RejectReason> {
+    fn resend_last_frame(&mut self, sink: &mut SaeUpdateSink) -> Result<(), RejectReason> {
         check_sync(&self.sync)?;
         self.sync += 1;
         // We resend our last commit.
@@ -315,6 +311,28 @@ impl<E> SaeCommitted<E> {
         )));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(())
+    }
+
+    fn handle_confirm(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        _confirm_msg: &ConfirmMsg,
+    ) -> Result<(), RejectReason> {
+        self.resend_last_frame(sink)
+    }
+
+    fn handle_timeout(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        timeout: Timeout,
+    ) -> Result<(), RejectReason> {
+        match timeout {
+            Timeout::Retransmission => self.resend_last_frame(sink),
+            Timeout::KeyExpiration => {
+                Err(format_err!("Unexpected key expiration timout before PMKSA established.")
+                    .into())
+            }
+        }
     }
 }
 
@@ -369,6 +387,35 @@ impl<E> SaeConfirmed<E> {
             Ok(FrameResult::Drop)
         }
     }
+
+    fn handle_timeout(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        timeout: Timeout,
+    ) -> Result<(), RejectReason> {
+        match timeout {
+            Timeout::Retransmission => {
+                // Resend our confirm message.
+                check_sync(&self.sync)?;
+                self.sync += 1;
+                self.sc += 1;
+                let confirm = compute_confirm(
+                    &self.config,
+                    &self.kck,
+                    self.sc,
+                    &self.commit,
+                    &self.peer_commit,
+                )?;
+                sink.push(SaeUpdate::SendFrame(write_confirm(self.sc, &confirm[..])));
+                sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
+                Ok(())
+            }
+            Timeout::KeyExpiration => {
+                Err(format_err!("Unexpected key expiration timout before PMKSA established.")
+                    .into())
+            }
+        }
+    }
 }
 
 /// IEEE 802.11-2016 12.4.8.6.6
@@ -407,6 +454,21 @@ impl<E> SaeAccepted<E> {
             }
         }
         Ok(())
+    }
+
+    fn handle_timeout(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        timeout: Timeout,
+    ) -> Result<(), RejectReason> {
+        match timeout {
+            Timeout::Retransmission => {
+                // This is weird, but probably shouldn't kill our PMKSA.
+                error!("Unexpected retransmission timeout after completed SAE handshake.");
+                Ok(())
+            }
+            Timeout::KeyExpiration => Err(RejectReason::KeyExpiration),
+        }
     }
 }
 
@@ -535,9 +597,40 @@ impl<E> SaeHandshakeState<E> {
         }
     }
 
-    fn handle_timeout(self, _sink: &mut SaeUpdateSink, _timeout: Timeout) -> Self {
-        error!("Timeouts not currently handled.");
-        self
+    fn handle_timeout(self, sink: &mut SaeUpdateSink, timeout: Timeout) -> Self {
+        match self {
+            SaeHandshakeState::SaeCommitted(mut state) => {
+                match state.handle_timeout(sink, timeout) {
+                    Ok(()) => state.into(),
+                    Err(reject) => {
+                        sink.push(SaeUpdate::Reject(reject));
+                        state.transition_to(SaeFailed).into()
+                    }
+                }
+            }
+            SaeHandshakeState::SaeConfirmed(mut state) => {
+                match state.handle_timeout(sink, timeout) {
+                    Ok(()) => state.into(),
+                    Err(reject) => {
+                        sink.push(SaeUpdate::Reject(reject));
+                        state.transition_to(SaeFailed).into()
+                    }
+                }
+            }
+            SaeHandshakeState::SaeAccepted(mut state) => {
+                match state.handle_timeout(sink, timeout) {
+                    Ok(()) => state.into(),
+                    Err(reject) => {
+                        sink.push(SaeUpdate::Reject(reject));
+                        state.transition_to(SaeFailed).into()
+                    }
+                }
+            }
+            _ => {
+                error!("Unexpected SAE timeout triggered");
+                self
+            }
+        }
     }
 }
 
