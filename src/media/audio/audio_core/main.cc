@@ -36,7 +36,7 @@ static int StartAudioCore() {
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (process_config.is_error()) {
-    FX_LOGS(WARNING) << "Failed to load audio_core_config.json;" << process_config.error()
+    FX_LOGS(WARNING) << "Failed to load " << kProcessConfigPath << ": " << process_config.error()
                      << ". Falling back to default configuration.";
     process_config = fit::ok(ProcessConfig::Builder()
                                  .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(

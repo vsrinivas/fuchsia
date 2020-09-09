@@ -102,7 +102,11 @@ AudioBuffer<SampleFormat> GenerateCosineAudio(TypedFormat<SampleFormat> format, 
 // Load audio from a WAV file.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioBuffer<SampleFormat> LoadWavFile(const std::string& file_name) {
-  auto r = WavReader::Open(file_name).take_value();
+  auto open_result = WavReader::Open(file_name);
+  FX_CHECK(open_result.is_ok()) << "Open(" << file_name << ") failed with status "
+                                << open_result.error();
+
+  auto r = open_result.take_value();
   FX_CHECK(r->sample_format() == SampleFormat)
       << "Read(" << file_name << ") failed, expected format " << static_cast<int>(SampleFormat)
       << ", got " << static_cast<int>(r->sample_format());
@@ -110,11 +114,12 @@ AudioBuffer<SampleFormat> LoadWavFile(const std::string& file_name) {
   auto format = Format::Create<SampleFormat>(r->channel_count(), r->frame_rate()).take_value();
   AudioBuffer out(format, r->length_in_frames());
   auto size = r->length_in_bytes();
-  auto result = r->Read(&out.samples()[0], size);
+  auto read_result = r->Read(&out.samples()[0], size);
 
-  FX_CHECK(result.is_ok()) << "Read(" << file_name << ") failed, error: " << result.error();
-  FX_CHECK(size == result.value())
-      << "Read(" << file_name << ") failed, expected " << size << " bytes, got " << result.value();
+  FX_CHECK(read_result.is_ok()) << "Read(" << file_name
+                                << ") failed, error: " << read_result.error();
+  FX_CHECK(size == read_result.value()) << "Read(" << file_name << ") failed, expected " << size
+                                        << " bytes, got " << read_result.value();
 
   return out;
 }

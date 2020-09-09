@@ -33,6 +33,7 @@ class RendererShimImpl {
 
   fuchsia::media::AudioRendererPtr& renderer() { return renderer_; }
   VmoBackedBuffer& payload() { return payload_buffer_; }
+  const Format& format() const { return format_; }
 
   size_t num_packet_frames() const { return format_.frames_per_second() / 1000 * kPacketMs; }
   size_t num_packet_samples() const { return num_packet_frames() * format_.channels(); }

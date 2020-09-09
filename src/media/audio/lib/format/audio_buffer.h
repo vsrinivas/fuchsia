@@ -28,7 +28,8 @@ class AudioBuffer {
   using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
 
   AudioBuffer(const Format& f, size_t num_frames)
-      : format_(f), samples_(num_frames * f.channels()) {
+      : format_(Format::Create<SampleFormat>(f.channels(), f.frames_per_second()).take_value()),
+        samples_(num_frames * f.channels()) {
     FX_CHECK(SampleFormat == f.sample_format());
   }
 
@@ -37,7 +38,7 @@ class AudioBuffer {
     FX_CHECK(SampleFormat == f.sample_format());
   }
 
-  const Format& format() const { return format_; }
+  const TypedFormat<SampleFormat>& format() const { return format_; }
   const std::vector<SampleT>& samples() const { return samples_; }
   std::vector<SampleT>& samples() { return samples_; }
 
@@ -69,7 +70,7 @@ class AudioBuffer {
  private:
   friend class AudioBufferSlice<SampleFormat>;
 
-  Format format_;
+  TypedFormat<SampleFormat> format_;
   std::vector<SampleT> samples_;
 };
 
@@ -93,7 +94,7 @@ class AudioBufferSlice {
   }
 
   const AudioBuffer<SampleFormat>* buf() const { return buf_; }
-  const Format& format() const {
+  const TypedFormat<SampleFormat>& format() const {
     FX_CHECK(buf_);
     return buf_->format();
   }

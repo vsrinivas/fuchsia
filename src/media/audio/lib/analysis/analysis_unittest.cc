@@ -526,5 +526,4 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   EXPECT_TRUE(result);
   EXPECT_EQ(*result, 6lu);
 }
-
 }  // namespace media::audio

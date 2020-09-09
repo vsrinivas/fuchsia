@@ -150,8 +150,9 @@ void CompareAudioBuffersApprox(AudioBufferSlice<SampleFormat> got_slice,
 
   size_t raw_frame = got_slice.start_frame() + first_difference->frame;
   ADD_FAILURE() << options.test_label << ": relative error " << relative_error << " > "
-                << options.max_relative_error << "; differences start at frame " << raw_frame
-                << ":\n   got[" << raw_frame
+                << options.max_relative_error << " (diff_rms = " << diff_rms
+                << ", want_slice_rms = " << want_slice_rms << ")"
+                << "\nDifferences start at frame " << raw_frame << ":\n   got[" << raw_frame
                 << "] = " << SampleFormatTraits<SampleFormat>::ToString(first_difference->got)
                 << "\n  want[" << raw_frame
                 << "] = " << SampleFormatTraits<SampleFormat>::ToString(first_difference->want)

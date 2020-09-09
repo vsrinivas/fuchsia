@@ -118,7 +118,7 @@ HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(o
   devmgr_services_->Connect(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
   fuchsia::io::NodeInfo info;
   zx_status_t status = devfs_dir->Describe(&info);
-  FX_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK) << status;
 }
 
 void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {

@@ -77,6 +77,7 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav",
+    "//third_party/googletest:gtest",
     "//zircon/system/ulib/inspect",
   ]
 
@@ -86,6 +87,24 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fxl",
   ]
+}
+
+# Main entry point for tests that use hermetic_golden_test.h.
+source_set("hermetic_golden_test_main") {
+  testonly = true
+
+  sources = [
+    "hermetic_golden_test.cc",
+    "hermetic_golden_test.h",
+    "hermetic_golden_test_main.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+  ]
+
+  public_deps = [ ":hermetic_audio_test" ]
 }
 
 # Flexible utility class for channel-based communication (such as to drivers or device services).
