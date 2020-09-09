@@ -571,7 +571,7 @@ additionally implements the `fidl::endpoints::DiscoverableService` trait.
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="default_derived_traits" adjust_indentation="auto" %}
 ```
 
-### Appendix B: Fill derives {#fill-derives}
+## Appendix B: Fill derives {#fill-derives}
 
 The calculation of traits derivation rules is visible in
 [fidlgen_rust](/tools/fidl/fidlgen_rust/codegen/ir.go):
