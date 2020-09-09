@@ -10,8 +10,6 @@ common_test_contents = [
   "//src/devices/tests/mock-device",
   "//src/devices/tests/sysdev",
   "//src/media/audio/drivers/alc5663",
-  "//src/storage/bin/blobfs",
-  "//src/storage/bin/blobfs",
   "//src/storage/bin/factoryfs",
 ]
 
