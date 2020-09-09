@@ -1033,11 +1033,7 @@ unsafe fn encode_array<T: Encodable>(
     let stride = encoder.inline_size_of::<T>();
     let len = slice.len();
     if T::supports_simple_copy() {
-        if slice.is_empty() {
-            return Ok(());
-        }
-        // Safety: index 0 is in bounds due to early return when slice.is_empty().
-        let src = slice.get_unchecked(0) as *const T as *const u8;
+        let src = slice.as_ptr() as *const u8;
         let dst: *mut u8 = encoder.buf.get_unchecked_mut(offset);
         std::ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
@@ -1061,14 +1057,11 @@ unsafe fn decode_array<T: Decodable>(
     let stride = decoder.inline_size_of::<T>();
     let len = slice.len();
     if T::supports_simple_copy() {
-        if slice.is_empty() {
-            return Ok(());
-        }
         // Safety: offset is guaranteed to be within the buffer because of the same
         // property as unsafe_decode -- the offset is always within an inline object
         // in the buffer.
         let src: *const u8 = decoder.buf.get_unchecked(offset);
-        let dst = slice.get_unchecked_mut(0) as *mut T as *mut u8;
+        let dst = slice.as_mut_ptr() as *mut u8;
         std::ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
         for i in 0..len {
