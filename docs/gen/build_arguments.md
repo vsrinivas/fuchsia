@@ -6,7 +6,7 @@
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:76
+From //build/images/args.gni:81
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -14,7 +14,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:82
+From //build/images/args.gni:87
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -24,7 +24,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:88
+From //build/images/args.gni:93
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -47,7 +47,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:100
+From //build/images/args.gni:105
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -151,21 +151,21 @@ For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:70
+From //build/images/fvm.gni:75
 
 ### blob_blobfs_minimum_data_bytes
 For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:56
+From //build/images/fvm.gni:61
 
 ### blob_blobfs_minimum_inodes
 For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:45
+From //build/images/fvm.gni:50
 
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -179,7 +179,7 @@ reserve few blocks required for its operations.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:66
+From //build/images/fvm.gni:71
 
 ### blobfs_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
@@ -190,7 +190,7 @@ required for the filesystem.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:52
+From //build/images/fvm.gni:57
 
 ### blobfs_minimum_inodes
 minimum_inodes is the number of inodes to reserve for the fs
@@ -199,7 +199,7 @@ required for the filesystem.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:41
+From //build/images/fvm.gni:46
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -306,7 +306,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:130
+From //build/images/args.gni:135
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -492,7 +492,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:94
+From //build/images/args.gni:99
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -533,7 +533,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:97
+From //build/images/args.gni:102
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -633,7 +633,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/53cf9b55b83eaf529e630e7bd32e29099966fc40/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -641,14 +641,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/53cf9b55b83eaf529e630e7bd32e29099966fc40/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/53cf9b55b83eaf529e630e7bd32e29099966fc40/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -815,7 +815,7 @@ From //build/config/BUILDCONFIG.gn:853
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:77
+From //build/images/args.gni:82
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -851,7 +851,7 @@ From //build/images/args.gni:49
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/53cf9b55b83eaf529e630e7bd32e29099966fc40/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -866,14 +866,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/53cf9b55b83eaf529e630e7bd32e29099966fc40/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/53cf9b55b83eaf529e630e7bd32e29099966fc40/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -917,17 +917,26 @@ non-SDK buildroots.
 
 From //build/fuchsia/sdk.gni:17
 
+### fvm_emmc_partition_size
+The size in bytes of the FVM partition on the target eMMC devices.
+Specifying this parameter will lead build to generate a fvm.fastboot.blk
+suitable for flashing through fastboot for eMMC devices.
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:17
+
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:80
+From //build/images/fvm.gni:85
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:78
+From //build/images/fvm.gni:83
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -938,13 +947,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:77
+From //build/images/fvm.gni:82
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:79
+From //build/images/fvm.gni:84
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
@@ -971,7 +980,13 @@ at pave/format time.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:25
+From //build/images/fvm.gni:30
+
+### fvm_partition
+
+**Current value (from the default):** `""`
+
+From //build/images/args.gni:80
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -982,7 +997,7 @@ selected for conservation of space, rather than performance.
 
 **Current value (from the default):** `"8388608"`
 
-From //build/images/fvm.gni:32
+From //build/images/fvm.gni:37
 
 ### glm_build_root
 
@@ -1096,7 +1111,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:34
+From //products/bringup.gni:33
 
 **Overridden from the default:** `[]`
 
@@ -1104,7 +1119,7 @@ From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:34
+From //products/bringup.gni:33
 
 **Overridden from the default:** `[]`
 
@@ -1165,7 +1180,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:107
+From //build/images/args.gni:112
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1252,7 +1267,7 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:14
 
@@ -1260,7 +1275,7 @@ From //products/core.gni:14
 
 From //build/images/args.gni:23
 
-**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:14
 
@@ -1639,19 +1654,19 @@ From //build/images/args.gni:66
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:67
+From //build/images/fvm.gni:72
 
 ### minfs_minimum_data_bytes
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:53
+From //build/images/fvm.gni:58
 
 ### minfs_minimum_inodes
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:42
+From //build/images/fvm.gni:47
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -1745,7 +1760,7 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:119
+From //build/images/args.gni:124
 
 ### persist_logs
 
@@ -1757,7 +1772,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:104
+From //build/images/args.gni:109
 
 ### platform_enable_user_pci
 
@@ -1769,7 +1784,7 @@ From //src/devices/bus/drivers/pci/pci.gni:10
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:78
+From //build/images/args.gni:83
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -1797,7 +1812,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:20
+From //products/bringup.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -1805,7 +1820,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:20
+From //products/bringup.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -1826,7 +1841,7 @@ product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:22
+From //products/bringup.gni:21
 
 **Overridden from the default:** `[]`
 
@@ -1834,7 +1849,7 @@ From //build/product.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:22
+From //products/bringup.gni:21
 
 **Overridden from the default:** `[]`
 
@@ -1860,7 +1875,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:116
+From //build/images/args.gni:121
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -2545,19 +2560,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:73
+From //build/images/args.gni:77
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:74
+From //build/images/args.gni:78
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:75
+From //build/images/args.gni:79
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -2689,12 +2704,16 @@ List of arguments to populate /boot/config/devmgr in the Zedboot image.
 From //build/images/zedboot/zedboot_args.gni:18
 
 ### zircon_a_partition
-Arguments to fx flash script (along with any `firmware_prebuilts` which
+Arguments to `fx flash` script (along with any `firmware_prebuilts` which
 specify a partition).
+
+If `fvm_partition` is provided, the flash script will flash the full OS,
+recovery + Zircon + FVM. Otherwise, it will flash the recovery image to all
+slots, which doesn't require the FVM.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:70
+From //build/images/args.gni:74
 
 ### zircon_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2735,7 +2754,7 @@ From //build/config/fuchsia/BUILD.gn:198
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:71
+From //build/images/args.gni:75
 
 ### zircon_build_root
 
@@ -2787,7 +2806,7 @@ From //build/config/zircon/levels.gni:18
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:72
+From //build/images/args.gni:76
 
 ### zircon_toolchain
 *This should never be set as a build argument.*
