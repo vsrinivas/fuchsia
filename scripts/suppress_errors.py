@@ -2,15 +2,17 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-# Example usage:
-# $ fx set ...
-# $ scripts/suppress_errors.py\
-# --error=-Wconversion
-# --config="//build/config:Wno-conversion"
+"""
+Example usage:
+$ fx set ...
+$ scripts/suppress_errors.py\
+--error=-Wconversion
+--config="//build/config:Wno-conversion"
+"""
 
 import argparse
 import fileinput
+import multiprocessing
 import os
 import re
 import subprocess
@@ -20,6 +22,60 @@ import sys
 def run_command(command):
     return subprocess.check_output(
         command, stderr=subprocess.STDOUT, encoding="utf8")
+
+
+def get_common_gn_args(is_zircon):
+    """Retrieve common GN args shared by several commands in this script.
+    Args:
+      is_zircon: True iff dealing with the Zircon build output directory.
+    Returns:
+      A list of GN command-line arguments (to be used after "gn <command>").
+    """
+    if is_zircon:
+        return [
+            "out/default.zircon",
+            "--root=zircon",
+            "--all-toolchains",
+            "//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-arm64-clang)",
+            "//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-x64-clang)",
+        ]
+    else:
+        return ["out/default"]
+
+
+def can_have_config(params):
+    """Returns whether the given target can have a config.
+    If not sure, returns True.
+    
+    This function is module-level for reasons to do with how Python
+    multiprocessing works.
+    
+    Args:
+      params: tuple of target to examine, config to add, is target in Zircon.
+              Packed in a single tuple for reasons to do with how Python
+              multiprocessing works.
+    """
+
+    target, config, is_zircon = params
+
+    desc_command = ["fx", "gn", "desc"]
+    desc_command += get_common_gn_args(is_zircon)
+
+    try:
+        desc_out = run_command(desc_command + [target, "configs"])
+        # Target has configs and they include the given config.
+        # Can't add a duplicate config!
+        return config not in desc_out
+    except subprocess.CalledProcessError as e:
+        if 'Don\'t know how to display "configs" for ' in e.output:
+            # Target type cannot have configs
+            return False
+        elif " matches no targets, configs or files" in e.output:
+            # The target probably exists in a non-default toolchain.
+            # Assume that it can have the config.
+            return True
+        else:
+            raise e
 
 
 def main():
@@ -62,20 +118,11 @@ def main():
     if not error_files:
         return 0
 
-    # Collect all BUILD.gn files with failing targets
-    print("Resolving failing targets...")
+    # Collect all BUILD.gn files with targets referencing failing sources
+    print("Resolving references...")
     outdir = "out/default.zircon" if zircon else "out/default"
     refs_command = ["fx", "gn", "refs"]
-    if zircon:
-        refs_command += [
-            "out/default.zircon",
-            "--root=zircon",
-            "--all-toolchains",
-            "//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-arm64-clang)",
-            "//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-x64-clang)",
-        ]
-    else:
-        refs_command += ["out/default"]
+    refs_command += get_common_gn_args(zircon)
     refs_command += sorted(error_files)
     try:
         refs_out = run_command(refs_command)
@@ -83,11 +130,28 @@ def main():
         print("Failed to resolve references!")
         print(e.output)
         return 1
-    target_no_toolchain = re.compile("(\/\/[^:]*:\w*)(?:\(.*\))?")
-    error_targets = set(
+    target_no_toolchain = re.compile("(\/\/[^:]*:[^(]*)(?:\(.*\))?")
+    error_targets = {
         target_no_toolchain.match(ref).group(1)
-        for ref in refs_out.splitlines())
-    print("Failing BUILD.gn files:")
+        for ref in refs_out.splitlines()
+    }
+
+    # Remove targets that already have the given config
+    # or can't have a config in the first place
+    print("Removing irrelevant targets...")
+    # `gn desc` is slow so parallelize
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+        target_can_have = zip(
+            error_targets,
+            p.map(
+                can_have_config,
+                ((target, config, zircon) for target in error_targets)),
+        )
+        error_targets = {
+            target for target, can_have in target_can_have if can_have
+        }
+
+    print("Failing targets:")
     print("\n".join(sorted(error_targets)))
     print()
 
@@ -117,11 +181,6 @@ def main():
         start_configs_inline = re.compile('configs \+?= \[ "')
         start_configs = re.compile("configs \+?= \[")
 
-        def print_config():
-            if comment:
-                print('#', comment)
-            print('"' + config + '",')
-
         for line in fileinput.FileInput(build_file, inplace=True):
             curly_brace_depth += line.count("{") - line.count("}")
             assert curly_brace_depth >= 0
@@ -139,9 +198,9 @@ def main():
                 pass
             elif curly_brace_depth == target_end_depth:
                 # Last chance to print config before exiting
-                print('configs += [')
-                print_config()
-                print(']')
+                if comment:
+                    print("#", comment)
+                print('configs += [ "' + config + '"]')
                 config_printed = True
                 in_target = False
             elif start_configs_inline.match(line) and config in line:
@@ -155,7 +214,9 @@ def main():
                 in_configs = False
                 config_printed = True
             elif in_configs and line.strip() == "]":
-                print_config()
+                if comment:
+                    print("#", comment)
+                print('"' + config + '",')
                 in_configs = False
                 config_printed = True
             print(line, end="")
@@ -167,7 +228,7 @@ def main():
 
     print("Fixed all of:")
     for error_target in sorted(error_targets):
-        print("  \"" + error_target + "\",")
+        print('  "' + error_target + '",')
 
     return 0
 
