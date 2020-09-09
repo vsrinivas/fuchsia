@@ -2352,7 +2352,7 @@ copy("fastboot") {
       {
         archive = true
         name = "fastboot"
-        path = rebase_path(sources[0])
+        path = rebase_path(outputs[0], root_build_dir)
         type = "exe.$host_platform"
       },
     ]
