@@ -305,7 +305,11 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		Signal: false,
 	}
 	if t.config.Logfile != "" {
-		chardev.Logfile = t.config.Logfile
+		logfile, err := filepath.Abs(t.config.Logfile)
+		if err != nil {
+			return fmt.Errorf("cannot get absolute path for %q: %v", t.config.Logfile, err)
+		}
+		chardev.Logfile = logfile
 	}
 	qemuCmd.AddSerial(chardev)
 
