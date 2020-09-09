@@ -758,6 +758,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugUtilsMessengerEXT(VkInstance instance,
   dispatch_key key = get_dispatch_key(instance);
   LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
   my_data->debug_callbacks.erase(messenger);
+  my_data->instance_dispatch_table->DestroyDebugUtilsMessengerEXT(instance, messenger, pAllocator);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char* funcName);
