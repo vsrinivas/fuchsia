@@ -144,8 +144,7 @@ struct GranularLogStatsBucket {
 
 impl GranularLogStatsBucket {
     pub fn record_log(&mut self, msg: &Message) {
-        if msg.0.metadata.severity != Severity::Error && msg.0.metadata.severity != Severity::Fatal
-        {
+        if msg.metadata.severity != Severity::Error && msg.metadata.severity != Severity::Fatal {
             return;
         }
         let id = match LogIdentifier::try_from(msg) {
@@ -187,7 +186,7 @@ pub struct ComponentLogStats {
 impl ComponentLogStats {
     pub fn record_log(&self, msg: &Message) {
         self.total_logs.add(1);
-        match msg.0.metadata.severity {
+        match msg.metadata.severity {
             Severity::Trace => self.trace_logs.add(1),
             Severity::Debug => self.debug_logs.add(1),
             Severity::Info => self.info_logs.add(1),
@@ -219,7 +218,7 @@ impl LogManagerStats {
                 self.logsink_logs.add(1);
             }
         }
-        match msg.0.metadata.severity {
+        match msg.metadata.severity {
             Severity::Trace => self.trace_logs.add(1),
             Severity::Debug => self.debug_logs.add(1),
             Severity::Info => self.info_logs.add(1),

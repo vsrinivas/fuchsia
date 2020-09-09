@@ -101,7 +101,7 @@ impl LogManager {
                 return;
             }
         };
-        messages.sort_by_key(|m| m.0.metadata.timestamp);
+        messages.sort_by_key(|m| m.metadata.timestamp);
         for message in messages {
             component_log_stats.lock().await.record_log(&message);
             self.ingest_message(message, LogSource::Kernel).await;

@@ -346,26 +346,26 @@ mod tests {
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "ERROR: first log");
-        assert_eq!(log_message.0.metadata.severity, Severity::Error);
+        assert_eq!(log_message.metadata.severity, Severity::Error);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "first log error");
-        assert_eq!(log_message.0.metadata.severity, Severity::Info);
+        assert_eq!(log_message.metadata.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "WARNING: second log");
-        assert_eq!(log_message.0.metadata.severity, Severity::Warn);
+        assert_eq!(log_message.metadata.severity, Severity::Warn);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "INFO: third log");
-        assert_eq!(log_message.0.metadata.severity, Severity::Info);
+        assert_eq!(log_message.metadata.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "fourth log");
-        assert_eq!(log_message.0.metadata.severity, Severity::Info);
+        assert_eq!(log_message.metadata.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), &long_log);
-        assert_eq!(log_message.0.metadata.severity, Severity::Info);
+        assert_eq!(log_message.metadata.severity, Severity::Info);
     }
 }

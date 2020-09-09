@@ -38,7 +38,7 @@ pub const PLACEHOLDER_URL: &str = "fuchsia-pkg://todo#populate-real-urls.cmx";
 
 /// Our internal representation for a log message.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Message(pub(crate) LogsData);
+pub struct Message(LogsData);
 
 impl Accounted for Message {
     fn bytes_used(&self) -> usize {
