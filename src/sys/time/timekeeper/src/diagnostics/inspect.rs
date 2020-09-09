@@ -242,7 +242,6 @@ impl InspectDiagnostics {
     }
 
     /// Records the outcome of initalizing and reading the real time clock.
-    #[allow(unused)]
     pub fn rtc_initialize(&mut self, event: RtcEventType, time: Option<zx::Time>) {
         if self.rtc.is_none() {
             self.rtc = Some(RealTimeClockNode::new(
@@ -254,7 +253,6 @@ impl InspectDiagnostics {
     }
 
     /// Records an attempt to write to the real time clock.
-    #[allow(unused)]
     pub fn rtc_write(&mut self, success: bool) {
         if let Some(ref mut rtc_node) = self.rtc {
             rtc_node.write(success);
@@ -280,6 +278,11 @@ impl InspectDiagnostics {
                 return;
             }
         };
+    }
+
+    /// Records a complete failure of a required time source. This is not recoverable.
+    pub fn failed(&mut self, message: &str) {
+        self.health.set_unhealthy(message);
     }
 }
 

@@ -53,7 +53,6 @@ type PushTimeSourceEventStream = Select<
     Pin<Box<dyn Stream<Item = Result<Event, Error>> + Send>>,
 >;
 
-#[allow(unused)]
 impl PushTimeSource {
     /// Creates a new `PushTimeSource` using the supplied component name.
     pub fn new(component: String) -> Self {
