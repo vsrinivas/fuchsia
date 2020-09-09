@@ -106,14 +106,34 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
 
   zx_koid_t get_koid() const { return koid_; }
 
-  void increment_handle_count() { handle_count_.fetch_add(1, ktl::memory_order_seq_cst); }
+  void increment_handle_count() {
+    // As this function does not return anything actionable, not even something implicit like "you
+    // now have the lock", there are no correct assumptions the caller can make about orderings
+    // of this increment and any other memory access. As such it can just be relaxed.
+    handle_count_.fetch_add(1, ktl::memory_order_relaxed);
+  }
 
   // Returns true exactly when the handle count goes to zero.
   bool decrement_handle_count() {
-    return handle_count_.fetch_sub(1, ktl::memory_order_seq_cst) == 1u;
+    if (handle_count_.fetch_sub(1, ktl::memory_order_release) == 1u) {
+      // The decrement operation above synchronizes with the fence below.  This ensures that changes
+      // to the object prior to its handle count reaching 0 will be visible to the thread that
+      // ultimately drops the count to 0.  This is similar to what's done in
+      // |fbl::RefCountedInternal|.
+      ktl::atomic_thread_fence(ktl::memory_order_acquire);
+      return true;
+    }
+    return false;
   }
 
-  uint32_t current_handle_count() const { return handle_count_.load(ktl::memory_order_seq_cst); }
+  uint32_t current_handle_count() const {
+    // Requesting the count is fundamentally racy with other users of the dispatcher. A typical
+    // reference count implementation might place an acquire here for the scenario where you then
+    // run an object destructor without acquiring any locks. As a handle count is not a refcount
+    // and a low handle count does not imply any ownership of the dispatcher (which has its own
+    // refcount), this can just be relaxed.
+    return handle_count_.load(ktl::memory_order_relaxed);
+  }
 
   // Add a observer which will be triggered when any |signal| becomes active
   // or cancelled when |handle| is destroyed.
