@@ -52,7 +52,7 @@ debug.
 In order to do this, there is a configuration that has to be set into the build:
 
 ```
-fx set <YOUR CONFIG> --with-base //src/developer/forensics/exceptions:enable_jitd_on_startup
+fx set <YOUR CONFIG> --with-base //src/developer/forensics:exceptions_enable_jitd_on_startup
 ```
 
 Or add this label to the `base_package_labels` in your build args. You can still use the Process
