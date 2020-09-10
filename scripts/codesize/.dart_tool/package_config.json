@@ -65,7 +65,7 @@
       "name": "file",
       "rootUri": "../../../third_party/dart-pkg/pub/file",
       "packageUri": "lib/",
-      "languageVersion": "2.2"
+      "languageVersion": "2.10"
     },
     {
       "name": "fixnum",
@@ -149,7 +149,7 @@
       "name": "platform",
       "rootUri": "../../../third_party/dart-pkg/pub/platform",
       "packageUri": "lib/",
-      "languageVersion": "1.24"
+      "languageVersion": "2.10"
     },
     {
       "name": "pool",
@@ -161,7 +161,7 @@
       "name": "process",
       "rootUri": "../../../third_party/dart-pkg/pub/process",
       "packageUri": "lib/",
-      "languageVersion": "2.0"
+      "languageVersion": "2.10"
     },
     {
       "name": "protobuf",
