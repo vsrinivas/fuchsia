@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using deprecated.usb;
+using fuchsia.usb;
 
-deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
-deprecated.BIND_USB_CLASS == deprecated.usb.BIND_USB_CLASS.HUB;
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.HUB;

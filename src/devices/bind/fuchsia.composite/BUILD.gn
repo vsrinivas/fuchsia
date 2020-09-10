@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.acpi") {
-  source = "deprecated.acpi.bind"
+bind_library("fuchsia.composite") {
+  source = "fuchsia.composite.bind"
 }

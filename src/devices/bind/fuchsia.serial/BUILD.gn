@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.serial") {
-  source = "deprecated.serial.bind"
+bind_library("fuchsia.serial") {
+  source = "fuchsia.serial.bind"
 }

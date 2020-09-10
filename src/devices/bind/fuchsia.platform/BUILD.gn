@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.platform") {
-  source = "deprecated.platform.bind"
+bind_library("fuchsia.platform") {
+  source = "fuchsia.platform.bind"
 }

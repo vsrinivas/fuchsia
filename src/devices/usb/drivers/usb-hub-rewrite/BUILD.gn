@@ -11,7 +11,7 @@ import("//src/sys/build/components.gni")
 bind_rules("bind") {
   rules = "usb-hub-rewrite.bind"
   output = "usb_hub_rewrite_bind.h"
-  deps = [ "//src/devices/bind/deprecated.usb" ]
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
 driver_module("usb-hub-rewrite") {

@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library deprecated.bluetooth;
+library fuchsia.serial;
 
-extend uint deprecated.BIND_PROTOCOL {
-  HCI = 47,
-  EMULATOR = 48,
-  TRANSPORT = 49,
-  HOST = 50,
-  GATT_SVC = 51,
+extend uint fuchsia.BIND_PROTOCOL {
+  DEVICE = 87,
+  IMPL = 88,
+  IMPL_ASYNC = 125,
 };

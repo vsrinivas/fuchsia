@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using deprecated.usb;
+using fuchsia.usb;
 
-deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.FUNCTION;
-deprecated.BIND_USB_CLASS == deprecated.usb.BIND_USB_CLASS.MISC;
-deprecated.BIND_USB_SUBCLASS == deprecated.usb.BIND_USB_SUBCLASS.MISC_RNDIS;
-deprecated.BIND_USB_PROTOCOL == deprecated.usb.BIND_USB_PROTOCOL.MISC_RNDIS_ETHERNET;
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.FUNCTION;
+fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.MISC;
+fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.BIND_USB_SUBCLASS.MISC_RNDIS;
+fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.BIND_USB_PROTOCOL.MISC_RNDIS_ETHERNET;

@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.usb") {
-  source = "deprecated.usb.bind"
+bind_library("fuchsia.bluetooth") {
+  source = "fuchsia.bluetooth.bind"
 }

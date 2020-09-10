@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using deprecated.usb;
-using deprecated.bluetooth;
+using fuchsia.usb;
+using fuchsia.bluetooth;
 
-deprecated.BIND_PROTOCOL == deprecated.bluetooth.BIND_PROTOCOL.TRANSPORT;
-deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL;
-accept deprecated.BIND_USB_PID {
+fuchsia.BIND_PROTOCOL == fuchsia.bluetooth.BIND_PROTOCOL.TRANSPORT;
+fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL;
+accept fuchsia.BIND_USB_PID {
   0x07dc, // Intel 7260
   0x0a2a, // Intel 7265
   0x0aa7, // Sandy Peak (3168)

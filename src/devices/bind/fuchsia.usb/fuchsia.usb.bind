@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library deprecated.usb;
+library fuchsia.usb;
 
-extend uint deprecated.BIND_PROTOCOL {
+extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 34,
   FUNCTION = 40,
 };
 
-extend uint deprecated.BIND_USB_VID {
+extend uint fuchsia.BIND_USB_VID {
   FTDI = 0x0403,
   CYPRESS = 0x04b4,
   ASIX = 0x0b95,
@@ -22,7 +22,7 @@ extend uint deprecated.BIND_USB_VID {
 };
 
 // See https://www.usb.org/defined-class-codes
-extend uint deprecated.BIND_USB_CLASS {
+extend uint fuchsia.BIND_USB_CLASS {
   AUDIO = 0x01,
   COMM = 0x02,
   HID = 0x03,
@@ -46,7 +46,7 @@ extend uint deprecated.BIND_USB_CLASS {
   VENDOR_SPECIFIC = 0xff,
 };
 
-extend uint deprecated.BIND_USB_SUBCLASS {
+extend uint fuchsia.BIND_USB_SUBCLASS {
   VIDEO_CONTROL = 0x01,
   VIDEO_STREAMING = 0x02,
   VIDEO_INTERFACE_COLLECTION = 0x03,
@@ -54,7 +54,7 @@ extend uint deprecated.BIND_USB_SUBCLASS {
   MISC_RNDIS = 0x04,
 };
 
-extend uint deprecated.BIND_USB_PROTOCOL {
+extend uint fuchsia.BIND_USB_PROTOCOL {
   UNDEFINED = 0x00,
 
   MISC_RNDIS_ETHERNET = 0x01,

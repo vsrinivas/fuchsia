@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library deprecated.wlan;
+library fuchsia.hid;
 
-extend uint deprecated.BIND_PROTOCOL {
-  PHY = 57,
-  PHY_IMPL = 58,
-  IF = 59,
-  IF_IMPL = 60,
-  MAC = 61,
+extend uint fuchsia.BIND_PROTOCOL {
+  BUS = 22,
+  DEVICE = 23,
 };

@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library deprecated.composite;
+library fuchsia.test;
 
-extend uint deprecated.BIND_PROTOCOL {
-  DEVICE = 7,
+extend uint fuchsia.BIND_PROTOCOL {
+  DEVICE = 80,
+  COMPAT_CHILD = 81,
+  POWER_CHILD = 82,
+  PARENT = 83,
 };

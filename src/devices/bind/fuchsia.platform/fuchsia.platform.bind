@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library deprecated.platform;
+library fuchsia.platform;
 
-extend uint deprecated.BIND_PROTOCOL {
+extend uint fuchsia.BIND_PROTOCOL {
   BUS = 84,
   DEVICE = 85,
 };
 
-extend uint deprecated.BIND_PLATFORM_DEV_VID {
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
   NINETY_SIX_BOARDS = 2,

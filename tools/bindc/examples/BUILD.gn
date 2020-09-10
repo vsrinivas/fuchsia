@@ -12,5 +12,5 @@ group("tests") {
 bind_test("example_bind_test") {
   rules = "gizmo.bind"
   tests = "tests.json"
-  deps = [ "//src/devices/bind/deprecated.usb" ]
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
 }

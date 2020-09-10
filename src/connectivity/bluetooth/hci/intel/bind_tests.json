@@ -3,9 +3,9 @@
     "name": "Matches Intel 7260",
     "expected": "match",
     "device": {
-      "deprecated.BIND_PROTOCOL": "deprecated.bluetooth.BIND_PROTOCOL.TRANSPORT",
-      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.INTEL",
-      "deprecated.BIND_USB_PID": "0x07dc"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.TRANSPORT",
+      "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.INTEL",
+      "fuchsia.BIND_USB_PID": "0x07dc"
     }
   },
 
@@ -13,9 +13,9 @@
     "name": "Aborts unrecognised PID",
     "expected": "abort",
     "device": {
-      "deprecated.BIND_PROTOCOL": "deprecated.bluetooth.BIND_PROTOCOL.TRANSPORT",
-      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.INTEL",
-      "deprecated.BIND_USB_PID": "0x4242"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.TRANSPORT",
+      "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.INTEL",
+      "fuchsia.BIND_USB_PID": "0x4242"
     }
   },
 
@@ -23,9 +23,9 @@
     "name": "Aborts unrecognised VID",
     "expected": "abort",
     "device": {
-      "deprecated.BIND_PROTOCOL": "deprecated.bluetooth.BIND_PROTOCOL.TRANSPORT",
-      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.GOOGLE",
-      "deprecated.BIND_USB_PID": "0x07dc"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.TRANSPORT",
+      "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.GOOGLE",
+      "fuchsia.BIND_USB_PID": "0x07dc"
     }
   },
 
@@ -33,9 +33,9 @@
     "name": "Aborts unrecognised protocol",
     "expected": "abort",
     "device": {
-      "deprecated.BIND_PROTOCOL": "deprecated.bluetooth.BIND_PROTOCOL.EMULATOR",
-      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.INTEL",
-      "deprecated.BIND_USB_PID": "0x07dc"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.EMULATOR",
+      "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.INTEL",
+      "fuchsia.BIND_USB_PID": "0x07dc"
     }
   }
 ]

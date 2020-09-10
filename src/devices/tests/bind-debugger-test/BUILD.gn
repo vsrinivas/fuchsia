@@ -40,7 +40,7 @@ bind_rules("bind") {
   rules = "bind-debugger-test.bind"
   output = "bind-debugger-test-bind.h"
   disable_autobind = true
-  deps = [ "//src/devices/bind/deprecated.test" ]
+  deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
 driver_module("bind-debugger-test-driver") {

@@ -1,16 +1,16 @@
-using deprecated.usb;
+using fuchsia.usb;
 
 // The device must be a USB device.
-deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
 
-if deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL {
+if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
   // If the device's vendor is Intel, the device class must be audio.
-  deprecated.BIND_USB_CLASS == deprecated.usb.BIND_USB_CLASS.AUDIO;
-} else if deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.REALTEK {
+  fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.AUDIO;
+} else if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK {
   // If the device's vendor is Realtek, the device class must be one of the following values:
-  accept deprecated.BIND_USB_CLASS {
-    deprecated.usb.BIND_USB_CLASS.COMM,
-    deprecated.usb.BIND_USB_CLASS.VIDEO,
+  accept fuchsia.BIND_USB_CLASS {
+    fuchsia.usb.BIND_USB_CLASS.COMM,
+    fuchsia.usb.BIND_USB_CLASS.VIDEO,
   }
 } else {
   // If the vendor is neither Intel or Realtek, do not bind.

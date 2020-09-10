@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library deprecated.pci;
+library fuchsia.pci;
 
-extend uint deprecated.BIND_PROTOCOL {
+extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 31,
 };
 
-extend uint deprecated.BIND_PCI_VID {
+extend uint fuchsia.BIND_PCI_VID {
   AMD = 0x1002,
   REALTEK = 0x10ec,
   NVIDIA = 0x10de,
@@ -17,7 +17,7 @@ extend uint deprecated.BIND_PCI_VID {
   INTEL = 0x8086,
 };
 
-extend uint deprecated.BIND_PCI_CLASS {
+extend uint fuchsia.BIND_PCI_CLASS {
   UNCLASSIFIED = 0x00,
   MASS_STORAGE = 0x01,
   NETWORK = 0x02,

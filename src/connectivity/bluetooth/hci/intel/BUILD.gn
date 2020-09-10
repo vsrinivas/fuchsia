@@ -12,8 +12,8 @@ bind_rules("bt_hci_intel_bind") {
   output = "bt_hci_intel-bind.h"
   tests = "bind_tests.json"
   deps = [
-    "//src/devices/bind/deprecated.bluetooth",
-    "//src/devices/bind/deprecated.usb",
+    "//src/devices/bind/fuchsia.bluetooth",
+    "//src/devices/bind/fuchsia.usb",
   ]
 }
 

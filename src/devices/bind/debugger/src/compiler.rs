@@ -134,8 +134,9 @@ fn find_qualified_identifier(
             return Err(CompilerError::MissingExtendsKeyword(declaration.identifier.clone()));
         }
 
-        // Special case for deprecated symbols, return the declaration as-is.
-        if namespace == make_identifier!["deprecated"] {
+        // Special case for deprecated symbols (currently in the fuchsia namespace), return the
+        // declaration as-is.
+        if namespace == make_identifier!["fuchsia"] {
             return Ok(declaration.identifier.clone());
         }
 
@@ -347,7 +348,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
 fn get_deprecated_symbols() -> SymbolTable {
     let mut symbol_table = HashMap::new();
     for (key, value) in deprecated_keys() {
-        symbol_table.insert(make_identifier!("deprecated", key), Symbol::DeprecatedKey(value));
+        symbol_table.insert(make_identifier!("fuchsia", key), Symbol::DeprecatedKey(value));
     }
     symbol_table
 }
@@ -355,7 +356,7 @@ fn get_deprecated_symbols() -> SymbolTable {
 pub fn get_deprecated_key_identifiers() -> HashMap<u32, String> {
     let mut key_identifiers = HashMap::new();
     for (key, value) in deprecated_keys() {
-        key_identifiers.insert(value, make_identifier!("deprecated", key).to_string());
+        key_identifiers.insert(value, make_identifier!("fuchsia", key).to_string());
     }
     key_identifiers
 }
@@ -735,7 +736,7 @@ mod test {
                 name: make_identifier!("lib_a"),
                 using: vec![],
                 declarations: vec![bind_library::Declaration {
-                    identifier: make_identifier!["deprecated", "BIND_PCI_DID"],
+                    identifier: make_identifier!["fuchsia", "BIND_PCI_DID"],
                     value_type: bind_library::ValueType::Number,
                     extends: true,
                     values: vec![(bind_library::Value::Number("x".to_string(), 0x1234))],

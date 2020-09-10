@@ -10,7 +10,7 @@ import("//build/test/test_package.gni")
 bind_rules("bind") {
   rules = "rndis_function.bind"
   output = "rndis_function_bind.h"
-  deps = [ "//src/devices/bind/deprecated.usb" ]
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
 source_set("rndis-function-lib") {

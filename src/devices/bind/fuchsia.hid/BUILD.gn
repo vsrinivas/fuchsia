@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.test") {
-  source = "deprecated.test.bind"
+bind_library("fuchsia.hid") {
+  source = "fuchsia.hid.bind"
 }

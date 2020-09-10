@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.pci") {
-  source = "deprecated.pci.bind"
+bind_library("fuchsia.test") {
+  source = "fuchsia.test.bind"
 }

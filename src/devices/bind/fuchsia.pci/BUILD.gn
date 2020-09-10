@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("deprecated.bluetooth") {
-  source = "deprecated.bluetooth.bind"
+bind_library("fuchsia.pci") {
+  source = "fuchsia.pci.bind"
 }
