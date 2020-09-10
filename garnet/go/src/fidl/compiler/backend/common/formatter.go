@@ -35,45 +35,21 @@ func NewFormatter(path string, args ...string) Formatter {
 
 // FormatPipe formats an output stream.
 //
+// If there is a error during formatting, the unformatted input will be written and an error will
+// be returned.
+//
 // When the returned WriteCloser is closed, 'out' will also be closed.
 // This allows the caller to close the writer in a single location and received all relevant errors.
 func (f Formatter) FormatPipe(out io.WriteCloser) (io.WriteCloser, error) {
 	if f.path == "" {
 		return unformattedStream{normalOut: out}, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	cmd := exec.CommandContext(ctx, f.path, f.args...)
-	cmd.Stdout = out
-	errBuf := new(bytes.Buffer)
-	cmd.Stderr = errBuf
-	in, err := cmd.StdinPipe()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	if err := cmd.Start(); err != nil {
-		cancel()
-		return nil, err
-	}
 	return formattedStream{
-		cmd:    cmd,
-		cancel: cancel,
-		in:     in,
-		out:    out,
-		errBuf: errBuf,
+		path:           f.path,
+		args:           f.args,
+		out:            out,
+		unformattedBuf: new(bytes.Buffer),
 	}, nil
-}
-
-type unformattedStream struct {
-	normalOut io.Writer
-}
-
-type formattedStream struct {
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
-	in     io.WriteCloser
-	out    io.WriteCloser
-	errBuf *bytes.Buffer
 }
 
 var _ = []io.WriteCloser{
@@ -81,12 +57,12 @@ var _ = []io.WriteCloser{
 	formattedStream{},
 }
 
-func (s unformattedStream) Write(p []byte) (int, error) {
-	return s.normalOut.Write(p)
+type unformattedStream struct {
+	normalOut io.Writer
 }
 
-func (s formattedStream) Write(p []byte) (int, error) {
-	return s.in.Write(p)
+func (s unformattedStream) Write(p []byte) (int, error) {
+	return s.normalOut.Write(p)
 }
 
 func (s unformattedStream) Close() error {
@@ -95,16 +71,50 @@ func (s unformattedStream) Close() error {
 	return nil
 }
 
+type formattedStream struct {
+	path           string
+	args           []string
+	out            io.WriteCloser
+	unformattedBuf *bytes.Buffer
+}
+
+func (s formattedStream) Write(p []byte) (int, error) {
+	return s.unformattedBuf.Write(p)
+}
+
 func (s formattedStream) Close() error {
-	defer s.cancel()
-	if err := s.in.Close(); err != nil {
+	defer s.out.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, s.path, s.args...)
+	formattedBuf := new(bytes.Buffer)
+	cmd.Stdout = formattedBuf
+	errBuf := new(bytes.Buffer)
+	cmd.Stderr = errBuf
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		s.out.Write(s.unformattedBuf.Bytes())
 		return err
 	}
-	if err := s.cmd.Wait(); err != nil {
-		if errContent := s.errBuf.Bytes(); len(errContent) != 0 {
+	if err := cmd.Start(); err != nil {
+		s.out.Write(s.unformattedBuf.Bytes())
+		return err
+	}
+	if _, err := in.Write(s.unformattedBuf.Bytes()); err != nil {
+		s.out.Write(s.unformattedBuf.Bytes())
+		return err
+	}
+	if err := in.Close(); err != nil {
+		s.out.Write(s.unformattedBuf.Bytes())
+		return err
+	}
+	if err := cmd.Wait(); err != nil {
+		s.out.Write(s.unformattedBuf.Bytes())
+		if errContent := errBuf.Bytes(); len(errContent) != 0 {
 			return fmt.Errorf("%s: %s", err, string(errContent))
 		}
 		return err
 	}
-	return s.out.Close()
+	_, err = s.out.Write(formattedBuf.Bytes())
+	return err
 }
