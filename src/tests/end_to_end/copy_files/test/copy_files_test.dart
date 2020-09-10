@@ -11,6 +11,12 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 
 const _timeout = Timeout(Duration(minutes: 1));
 
+void printErrorHelp() {
+  print('If this test fails, see '
+      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/copy_tests/README.md'
+      ' for details!');
+}
+
 void main() {
   sl4f.Sl4f sl4fDriver;
   sl4f.Storage storage;
@@ -31,6 +37,8 @@ void main() {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
     Logger.root.clearListeners();
+
+    printErrorHelp();
   });
 
   List<String> makeCopyToArgs(String source, String destination) =>
