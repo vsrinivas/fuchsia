@@ -24,7 +24,10 @@ use {
         convert::{From, TryFrom, TryInto},
         ffi,
         os::raw,
+        fmt,
     },
+
+    ecma402_traits,
 };
 
 /// Maximum length of locale supported by uloc.h.
@@ -42,6 +45,17 @@ pub struct ULoc {
     // A locale's representation in C is really just a string.
     repr: String,
 }
+
+/// Implement the Display trait to convert the ULoc into string for display.
+///
+/// The string for display and string serialization happen to be the same for [ULoc].
+impl fmt::Display for ULoc {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.repr)
+    }
+}
+/// Marker implementation for ULoc.
+impl ecma402_traits::Locale for ULoc {}
 
 impl TryFrom<&str> for ULoc {
     type Error = common::Error;

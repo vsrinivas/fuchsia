@@ -48,17 +48,22 @@ coverage in the headers.
 | [rust_icu](https://crates.io/crates/rust_icu)| Top-level crate.  Include this if you just want to have all the functionality available for use. |
 | [rust_icu_common](https://crates.io/crates/rust_icu_common)| Commonly used low-level wrappings of the bindings. |
 | [rust_icu_intl](https://crates.io/crates/rust_icu_intl)| Implements ECMA 402 recommendation APIs. |
-| [rust_icu_ulistformatter](https://crates.io/crates/rust_icu_ulistformatter)| Locale-sensitive list formatting support. Implements [`ulistformatter.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ulistformatter_8h.html) C API header from the ICU library. |
 | [rust_icu_sys](https://crates.io/crates/rust_icu_sys)| Low-level bindings code |
 | [rust_icu_ucal](https://crates.io/crates/rust_icu_ucal)| ICU Calendar. Implements [`ucal.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ucal_8h.html) C API header from the ICU library. |
 | [rust_icu_ucol](https://crates.io/crates/rust_icu_ucol)| Collation support. Implements [`ucol.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ucol_8h.html) C API header from the ICU library. |
 | [rust_icu_udat](https://crates.io/crates/rust_icu_udat)| ICU date and time. Implements [`udat.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/udat_8h.html) C API header from the ICU library. |
 | [rust_icu_udata](https://crates.io/crates/rust_icu_udata)| ICU binary data. Implements [`udata.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/udata_8h.html) C API header from the ICU library. |
 | [rust_icu_uenum](https://crates.io/crates/rust_icu_uenum)| ICU enumerations. Implements [`uenum.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uenum_8h.html) C API header from the ICU library. Mainly `UEnumeration` and friends. |
+| [rust_icu_uformattable](https://crates.io/crates/rust_icu_uformattable)| Locale-sensitive list formatting support. Implements [`uformattable.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uformattable_8h.html) C API header from the ICU library. Since 0.3.1. |
+| [rust_icu_ulistformatter](https://crates.io/crates/rust_icu_ulistformatter)| Locale-sensitive list formatting support. Implements [`ulistformatter.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ulistformatter_8h.html) C API header from the ICU library. |
 | [rust_icu_uloc](https://crates.io/crates/rust_icu_uloc)| Locale support. Implements [`uloc.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uloc_8h.html) C API header from the ICU library. |
 | [rust_icu_umsg](https://crates.io/crates/rust_icu_umsg)| MessageFormat support. Implements [`umsg.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/umsg_8h.html) C API header from the ICU library. |
+| [rust_icu_unum](https://crates.io/crates/rust_icu_unum)| Number formatting support. Implements [`unum.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/unum_8h.html) C API header from the ICU library. |
+| [rust_icu_unumberformatter](https://crates.io/crates/rust_icu_unumberformatter)| Number formatting support (modern). Implements [`unumberformatter.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/unumberformatter_8h.html) C API header from the ICU library. |
+| [rust_icu_upluralrules](https://crates.io/crates/rust_icu_upluralrules)| Locale-sensitive plural rules support. Implements [`upluralrules.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/upluralrules_8h.html) C API header from the ICU library. |
 | [rust_icu_ustring](https://crates.io/crates/rust_icu_ustring)| ICU strings. Implements [`ustring.h`]() C API header from the ICU library. |
 | [rust_icu_utext](https://crates.io/crates/rust_icu_utext)| Text operations. Implements [`utext.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/utext_8h.html) C API header from the ICU library. |
+| [rust_icu_utrans](https://crates.io/crates/rust_icu_utrans)| Transliteration support. Implements [`utrans.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/utrans_8h.html) C API header from the ICU library. |
 
 # Limitations
 
@@ -111,11 +116,9 @@ this particular ICU library and `rust_icu` version combination.
 
 | `rust_icu` version | ICU 63.x | ICU 64.2 | ICU 65.1  | ICU 66.0.1 | ICU 67.1 |
 | ------------------ | -------- | -------- | --------- | ---------- | -------- |
-| 0.1                | ☟        | ☟        | ☟         | ☟          | ☟        |
-| 0.1.3              | 1        | 1        | 1;2;2+3   | 1          | 1        |
-| 0.2                | ☟        | ☟        | ☟         | ☟          | ☟        |
-| 0.2.2              | 1        | 1        | 1;2;2+3   | 1          | 1        |
-| 0.2.3              | 1;2;2+3  | 1;2;2+3  | 1;2;2+3   | 1;2;2+3    | 1;2;2+3  |
+| 0.1                | 1        | 1        | 1;2;2+3   | 1          | 1        |
+| 0.2                | 1;2;2+3  | 1;2;2+3  | 1;2;2+3   | 1;2;2+3    | 1;2;2+3  |
+| 0.3                | 1;2;2+3  | 1;2;2+3  | 1;2;2+3   | 1;2;2+3    | 1;2;2+3  |
 
 > Prior to a 1.0.0 release, API versions that only differ in the patch version
 > number (0.x.**y**) only should be compatible.
@@ -140,7 +143,7 @@ confusing compilation end result.
 
 | Feature | Default? | Description |
 | ------- | -------- | ----------- |
-| `bindgen` | Yes | If set, cargo will run `bindgen` to generate bindings based on the installed ICU library.  The program `icu-config` must be in $PATH for this to work. In the future there may be other approaches for auto-detecting libraries, such as via `pkg-config`. |
+| `use-bindgen` | Yes | If set, cargo will run `bindgen` to generate bindings based on the installed ICU library.  The program `icu-config` must be in $PATH for this to work. In the future there may be other approaches for auto-detecting libraries, such as via `pkg-config`. |
 | `renaming` | Yes | If set, ICU bindings are generated with version numbers appended.  This is called "renaming" in ICU, and is normally needed only when linking against specific ICU version is required, for example to work around having to link different ICU versions.  See [the ICU documentation](http://userguide.icu-project.org/design) for a discussion of renaming. **This feature MUST be used when `bindgen` is NOT used.** |
 | `icu_config` | Yes | If set, the binary icu-config will be used to configure the library.  Turn this feature off if you do not want `build.rs` to try to autodetect the build environment.  You will want to skip this feature if your build environment configures ICU in a different way. **This feature is only meaningful when `bindgen` feature is used; otherwise it has no effect.** |
 | `icu_version_in_env` | No | If set, ICU bindings are made for the ICU version specified in the environment variable `RUST_ICU_MAJOR_VERSION_NUMBER`, which is made available to cargo at build time. See section below for details on how to use this feature. **This feature is only meaningful when `bindgen` feature is NOT used; otherwise it has no effect.** |
@@ -471,8 +474,9 @@ to include more features.
 
 When adding more ICU wrappers, make sure to do the following:
 
-* Check `build.rs` to add appropriate lines into `bindgen_source_modules`, then
-  `whitelist_types_regexes` and `whitelist_functions_regexes`.
+* Check `rust_icu_sys/build.rs` and `rust_icu_sys/bindgen/run_bindgen.sh` to add
+  appropriate lines into `BINDGEN_SOURCE_MODULES`, then
+  `BINDGEN_ALLOWLIST_FUNCTIONS` and `BINDGEN_ALLOWLIST_TYPES`.
 
 ## Testing with a specific feature set turned on
 

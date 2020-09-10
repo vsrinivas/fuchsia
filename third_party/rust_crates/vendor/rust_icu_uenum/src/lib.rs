@@ -122,6 +122,27 @@ impl Iterator for Enumeration {
     }
 }
 
+impl Enumeration {
+    /// Constructs an [Enumeration] from a raw pointer.
+    ///
+    /// **DO NOT USE THIS FUNCTION UNLESS THERE IS NO OTHER CHOICE!**
+    ///
+    /// We tried to keep this function hidden to avoid the
+    /// need to have a such a powerful unsafe function in the
+    /// public API.  It worked up to a point for free functions.
+    ///
+    /// It no longer works on high-level methods that return
+    /// enumerations, since then we'd need to depend on them to
+    /// create an [Enumeration].
+    #[doc(hidden)]
+    pub unsafe fn from_raw_parts(
+        raw: Option<common::CStringVec>,
+        rep: *mut sys::UEnumeration,
+    ) -> Enumeration {
+        Enumeration { raw, rep }
+    }
+}
+
 #[doc(hidden)]
 /// Implements `ucal_openCountryTimeZones`.
 // This should be in the `ucal` crate, but not possible because of the raw enum initialization.

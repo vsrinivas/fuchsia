@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_uenum"
-version = "0.3.0"
+version = "0.3.2"
 authors = ["Google Inc."]
 description = "Native bindings to the ICU4C library from Unicode.\n\nImplements `uenum.h` from the ICU4C API.\n"
 readme = "README.md"
@@ -21,14 +21,14 @@ keywords = ["icu", "unicode", "i18n", "l10n"]
 license = "Apache-2.0"
 repository = "https://github.com/google/rust_icu"
 [dependencies.paste]
-version = "0.1.5"
+version = "1.0"
 
 [dependencies.rust_icu_common]
-version = "0.3.0"
+version = "0.3.2"
 default-features = false
 
 [dependencies.rust_icu_sys]
-version = "0.3.0"
+version = "0.3.2"
 default-features = false
 
 [features]

@@ -17,6 +17,7 @@
 //! At the moment, this crate contains the declaration of various errors
 
 use {
+    anyhow::anyhow,
     rust_icu_sys as sys,
     std::{ffi, os},
     thiserror::Error,
@@ -40,7 +41,7 @@ pub enum Error {
     /// Errors originating from the wrapper code.  For example when pre-converting input into
     /// UTF8 for input that happens to be malformed.
     #[error(transparent)]
-    Wrapper(anyhow::Error),
+    Wrapper(#[from] anyhow::Error),
 }
 
 impl Error {
@@ -145,6 +146,42 @@ impl From<std::string::FromUtf8Error> for Error {
     }
 }
 
+impl Into<std::fmt::Error> for Error {
+    fn into(self) -> std::fmt::Error {
+        // It is not possible to transfer any info into std::fmt::Error, so we log instead.
+        eprintln!("error while formatting: {:?}", &self);
+        std::fmt::Error {}
+    }
+}
+
+/// `type_name` is the type to implement drop for.
+/// `impl_function_name` is the name of the function that implements
+/// memory deallocation.  It is assumed that the type has an internal
+/// representation wrapped in a [std::ptr::NonNull].
+///
+/// Example:
+///
+/// ```rust ignore
+/// pub struct UNumberFormatter {
+///   rep: std::ptr::NonNull<Foo>,
+/// }
+/// //...
+/// simple_drop_impl!(UNumberFormatter, unumf_close);
+/// ```
+#[macro_export]
+macro_rules! simple_drop_impl {
+    ($type_name:ty, $impl_function_name:ident) => {
+        impl Drop for $type_name {
+            /// Implements `$impl_function_name`.
+            fn drop(&mut self) {
+                unsafe {
+                    versioned_function!($impl_function_name)(self.rep.as_ptr());
+                }
+            }
+        }
+    };
+}
+
 /// Generates a method to wrap ICU4C `uloc` methods that require a resizable output string buffer.
 ///
 /// The various `uloc` methods of this type have inconsistent signature patterns, with some putting
@@ -161,7 +198,7 @@ impl From<std::string::FromUtf8Error> for Error {
 ///     BUFFER_CAPACITY,
 ///     [before_arg_a: before_type_a, before_arg_b: before_type_b,],
 ///     [after_arg_a: after_type_a, after_arg_b: after_type_b,]
-/// );   
+/// );
 /// ```
 ///
 /// the generated method has a signature of the form
@@ -257,6 +294,167 @@ macro_rules! buffered_string_method_with_retry {
     }
 }
 
+/// There is a slew of near-identical method calls which differ in the type of
+/// the input argument and the name of the function to invoke.
+///
+/// The invocation:
+///
+/// ```rust ignore
+/// impl ... {
+///   // ...
+///   format_ustring_for_type!(format_f64, unum_formatDouble, f64);
+/// }
+/// ```
+///
+/// allows us to bind the function:
+///
+/// ```c++ ignore
+/// int32_t unum_formatDouble(
+///     const UNumberFormat* fmt, 
+///     double number, 
+///     UChar* result, 
+///     int32_t result_length, 
+///     UFieldPosition* pos,
+///     UErrorCode *status)
+/// ```
+///
+/// as:
+///
+/// ```rust ignore
+/// impl ... {
+///   format_f64(&self /* format */, value: f64) -> Result<ustring::UChar, common::Error>;
+/// }
+/// ```
+#[macro_export]
+macro_rules! format_ustring_for_type{
+    ($method_name:ident, $function_name:ident, $type_decl:ty) => (
+        /// Implements `$function_name`.
+        pub fn $method_name(&self, number: $type_decl) -> Result<String, common::Error> {
+            let result = paste::item! {
+                self. [< $method_name _ustring>] (number)?
+            };
+            String::try_from(&result)
+        }
+
+        // Should be able to use https://github.com/google/rust_icu/pull/144 to
+        // make this even shorter.
+        paste::item! {
+            /// Implements `$function_name`.
+            pub fn [<$method_name _ustring>] (&self, param: $type_decl) -> Result<ustring::UChar, common::Error> {
+                const CAPACITY: usize = 200;
+                buffered_uchar_method_with_retry!(
+                    [< $method_name _ustring_impl >],
+                    CAPACITY,
+                    [ rep: *const sys::UNumberFormat, param: $type_decl, ],
+                    [ field: *mut sys::UFieldPosition, ]
+                    );
+
+                [<$method_name _ustring_impl>](
+                    versioned_function!($function_name),
+                    self.rep.as_ptr(),
+                    param,
+                    // The field position is unused for now.
+                    0 as *mut sys::UFieldPosition,
+                    )
+            }
+        }
+    )
+}
+
+/// Expands into a getter method that forwards all its arguments and returns a fallible value which
+/// is the same as the value returned by the underlying function.
+///
+/// The invocation:
+///
+/// ```rust ignore
+/// impl _ {
+///     generalized_fallible_getter!(
+///         get_context,
+///         unum_getContext,
+///         [context_type: sys::UDisplayContextType, ],
+///         sys::UDisplayContext
+///     );
+/// }
+/// ```
+///
+/// allows us to bind the function:
+///
+/// ```c++ ignore
+/// UDisplayContext unum_getContext(
+///     const SOMETYPE* t,
+///     UDisplayContextType type,
+///     UErrorCode* status
+/// );
+/// ```
+///
+/// which then becomes: 
+///
+/// ```rust ignore
+/// impl _ {
+///   fn get_context(&self, context_type: sys::UDisplayContextType) -> Result<sys::UDisplayContext, common::Error>;
+/// }
+/// ```
+/// where `Self` has an internal representation named exactly `Self::rep`.
+#[macro_export]
+macro_rules! generalized_fallible_getter{
+    ($top_level_method_name:ident, $impl_name:ident, [ $( $arg:ident: $arg_type:ty ,)* ],  $ret_type:ty) => (
+        /// Implements `$impl_name`.
+        pub fn $top_level_method_name(&self, $( $arg: $arg_type, )* ) -> Result<$ret_type, common::Error> {
+            let mut status = common::Error::OK_CODE;
+            let result: $ret_type = unsafe {
+                assert!(common::Error::is_ok(status));
+                versioned_function!($impl_name)(self.rep.as_ptr(), $( $arg, )* &mut status)
+            };
+            common::Error::ok_or_warning(status)?;
+            Ok(result)
+        }
+    )
+}
+
+/// Expands into a setter methods that forwards all its arguments between []'s and returns a
+/// Result<(), common::Error>.
+///
+/// The invocation:
+///
+/// ```rust ignore
+/// impl _ {
+///     generalized_fallible_setter!(
+///         get_context,
+///         unum_getContext,
+///         [context_type: sys::UDisplayContextType, ]
+///     );
+/// }
+/// ```
+///
+/// allows us to bind the function:
+///
+/// ```c++ ignore
+/// UDisplayContext unum_setContext(
+///     const SOMETYPE* t,
+///     UDisplayContext value,
+///     UErrorCode* status
+/// );
+/// ```
+///
+/// which then becomes: 
+///
+/// ```rust ignore
+/// impl _ {
+///   fn set_context(&self, value: sys::UDisplayContext) -> Result<(), common::Error>;
+/// }
+/// ```
+/// where `Self` has an internal representation named exactly `Self::rep`.
+#[macro_export]
+macro_rules! generalized_fallible_setter{
+    ($top_level_method_name:ident, $impl_name:ident, [ $( $arg:ident : $arg_type:ty, )* ]) => (
+        generalized_fallible_getter!(
+            $top_level_method_name,
+            $impl_name,
+            [ $( $arg: $arg_type, )* ],
+            ());
+    )
+}
+
 /// Used to simulate an array of C-style strings.
 #[derive(Debug)]
 pub struct CStringVec {
@@ -324,4 +522,88 @@ mod tests {
         let values = vec!["hell\0x00o"];
         let _c_array = CStringVec::new(&values).expect_err("should fail");
     }
+
+    #[test]
+    fn test_parser_error_ok() {
+        let tests = vec![
+            sys::UParseError {
+                line: 0,
+                offset: 0,
+                preContext: [0; 16usize],
+                postContext: [0; 16usize],
+            },
+            sys::UParseError {
+                line: -1,
+                offset: 0,
+                preContext: [0; 16usize],
+                postContext: [0; 16usize],
+            },
+            sys::UParseError {
+                line: 0,
+                offset: -1,
+                preContext: [0; 16usize],
+                postContext: [0; 16usize],
+            },
+        ];
+        for test in tests {
+            assert!(
+                parse_ok(test.clone()).is_ok(),
+                "for test: {:?}",
+                test.clone()
+            );
+        }
+    }
+
+    #[test]
+    fn test_parser_error_not_ok() {
+        let tests = vec![
+            sys::UParseError {
+                line: 1,
+                offset: 0,
+                preContext: [0; 16usize],
+                postContext: [0; 16usize],
+            },
+            sys::UParseError {
+                line: 0,
+                offset: 1,
+                preContext: [0; 16usize],
+                postContext: [0; 16usize],
+            },
+            sys::UParseError {
+                line: -1,
+                offset: 1,
+                preContext: [0; 16usize],
+                postContext: [0; 16usize],
+            },
+        ];
+        for test in tests {
+            assert!(
+                parse_ok(test.clone()).is_err(),
+                "for test: {:?}",
+                test.clone()
+            );
+        }
+    }
+}
+
+/// A zero-value parse error, used to initialize types that get passed into FFI code.
+pub static NO_PARSE_ERROR: sys::UParseError = sys::UParseError {
+    line: 0,
+    offset: 0,
+    preContext: [0; 16usize],
+    postContext: [0; 16usize],
+};
+
+/// Converts a parse error to a Result.
+///
+/// A parse error is an error if line or offset are positive, apparently.
+pub fn parse_ok(e: sys::UParseError) -> Result<(), crate::Error> {
+    if e.line > 0 || e.offset > 0 {
+        return Err(Error::Wrapper(anyhow!(
+            "parse error: line: {}, offset: {}",
+            e.line,
+            e.offset
+        )));
+    }
+    Ok(())
 }

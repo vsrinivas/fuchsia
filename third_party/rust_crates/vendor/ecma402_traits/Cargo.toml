@@ -11,23 +11,14 @@
 # will likely look very different (and much more reasonable)
 
 [package]
-name = "paste-impl"
-version = "0.1.5"
-authors = ["David Tolnay <dtolnay@gmail.com>"]
-description = "Implementation detail of the `paste` crate"
-license = "MIT/Apache-2.0"
-repository = "https://github.com/dtolnay/paste"
+edition = "2018"
+name = "ecma402_traits"
+version = "0.2.0"
+authors = ["Google Inc."]
+description = "Rust implementation of type traits to support ECMA 402 specification in Rust.\n\nImplementors are welcome to provide their own.\n\n"
+readme = "README.md"
+keywords = ["ecma", "ecma402", "icu", "i18n", "l10n"]
+license = "Apache-2.0"
+repository = "https://github.com/google/rust_icu"
 
-[lib]
-proc-macro = true
-[dependencies.proc-macro-hack]
-version = "0.5"
-
-[dependencies.proc-macro2]
-version = "0.4"
-
-[dependencies.quote]
-version = "0.6"
-
-[dependencies.syn]
-version = "0.15"
+[dependencies]

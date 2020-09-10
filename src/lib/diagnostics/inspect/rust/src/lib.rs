@@ -907,7 +907,7 @@ numeric_property!(double, Double, f64);
 ///   `type`: the type of the argument of the function to generate (example: str)
 ///   `bytes`: an optional method to get the bytes of the property
 macro_rules! property {
-    ($name:ident, $type:expr $(, $bytes:ident)?) => {
+    ($name:ident, $type:ty $(, $bytes:ident)?) => {
         paste::item! {
             inspect_type_impl!(
                 /// Inspect API Property data type.

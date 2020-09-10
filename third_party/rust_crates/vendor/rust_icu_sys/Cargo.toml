@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_sys"
-version = "0.3.0"
+version = "0.3.2"
 authors = ["Google Inc."]
 build = "build.rs"
 links = "icuuc"
@@ -29,7 +29,7 @@ doctest = false
 version = "0.2.34"
 
 [dependencies.paste]
-version = "0.1.5"
+version = "1.0"
 [build-dependencies.anyhow]
 version = "1.0"
 

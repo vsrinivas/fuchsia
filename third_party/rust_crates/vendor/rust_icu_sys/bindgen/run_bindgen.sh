@@ -39,11 +39,18 @@ readonly BINDGEN_SOURCE_MODULES=(
         "udat"
         "udata"
         "uenum"
+        "ufieldpositer"
+        "uformattable"
         "ulistformatter"
+        "umisc"
         "umsg"
+        "unum"
+        "unumberformatter"
+        "upluralrules"
         "uset"
         "ustring"
         "utext"
+        "utrans"
 )
 
 # Types for which to generate the bindings.  Expand this list if you need more.
@@ -60,14 +67,25 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
         "UData.*"
         "UDate.*"
         "UDateFormat.*"
+        "UDisplayContext.*"
         "UEnumeration.*"
         "UErrorCode"
+        "UField.*"
+        "UFormat.*"
         "UFormattedList.*"
+        "ULOC.*"
         "UListFormatter.*"
+        "ULoc.*"
         "UMessageFormat"
+        "UNUM.*"
+        "UNumber.*",
         "UParseError"
+        "UPlural.*"
         "USet"
         "UText"
+        "UTransDirection"
+        "UTransPosition"
+        "UTransliterator"
 )
 
 # Functions for which to generate the bindings.  Expand this list if you need
@@ -80,10 +98,16 @@ readonly BINDGEN_ALLOWLIST_FUNCTIONS=(
         "udat_.*"
         "udata_.*"
         "uenum_.*"
+        "ufieldpositer_.*"
+        "ufmt_.*"
         "ulistfmt_.*"
         "uloc_.*"
         "umsg_.*"
+        "unum_.*"
+        "unumf_.*"
+        "uplrules_.*"
         "utext_.*"
+        "utrans_.*"
 )
 
 function check_requirements() {

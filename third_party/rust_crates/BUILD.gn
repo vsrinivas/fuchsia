@@ -321,7 +321,7 @@ group("parking_lot") {
 }
 
 group("paste") {
-  deps = [ ":paste-v0_1_5" ]
+  deps = [ ":paste-v1_0_0($host_toolchain)" ]
 }
 
 group("percent-encoding") {
@@ -450,47 +450,47 @@ group("rust-crypto") {
 
 if (current_os == "fuchsia") {
   group("rust_icu_common") {
-    deps = [ ":rust_icu_common-v0_3_0" ]
+    deps = [ ":rust_icu_common-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_sys") {
-    deps = [ ":rust_icu_sys-v0_3_0" ]
+    deps = [ ":rust_icu_sys-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_ucal") {
-    deps = [ ":rust_icu_ucal-v0_3_0" ]
+    deps = [ ":rust_icu_ucal-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_udat") {
-    deps = [ ":rust_icu_udat-v0_3_0" ]
+    deps = [ ":rust_icu_udat-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_udata") {
-    deps = [ ":rust_icu_udata-v0_3_0" ]
+    deps = [ ":rust_icu_udata-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_uenum") {
-    deps = [ ":rust_icu_uenum-v0_3_0" ]
+    deps = [ ":rust_icu_uenum-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_uloc") {
-    deps = [ ":rust_icu_uloc-v0_3_0" ]
+    deps = [ ":rust_icu_uloc-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_ustring") {
-    deps = [ ":rust_icu_ustring-v0_3_0" ]
+    deps = [ ":rust_icu_ustring-v0_3_2" ]
   }
 }
 if (current_os == "fuchsia") {
   group("rust_icu_utext") {
-    deps = [ ":rust_icu_utext-v0_3_0" ]
+    deps = [ ":rust_icu_utext-v0_3_2" ]
   }
 }
 group("rustc-demangle") {
@@ -2462,6 +2462,27 @@ rust_library("difference-v2_0_0") {
     "-Cmetadata=729c4c18786eef68",
     "-Cextra-filename=-729c4c18786eef68",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("ecma402_traits-v0_2_0") {
+  crate_name = "ecma402_traits"
+  crate_root = "//third_party/rust_crates/vendor/ecma402_traits/src/lib.rs"
+  output_name = "ecma402_traits-845a78072bb7eff6"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=845a78072bb7eff6",
+    "-Cextra-filename=-845a78072bb7eff6",
   ]
 }
 
@@ -4947,51 +4968,24 @@ rust_library("parking_lot_core-v0_7_2") {
   }
 }
 
-rust_library("paste-v0_1_5") {
+rust_proc_macro("paste-v1_0_0") {
   crate_name = "paste"
   crate_root = "//third_party/rust_crates/vendor/paste/src/lib.rs"
-  output_name = "paste-b3b6d3ea85a05423"
+  output_name = "paste-467ce9508308aa2b"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":paste-impl-v0_1_5($host_toolchain)" ]
-  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=b3b6d3ea85a05423",
-    "-Cextra-filename=-b3b6d3ea85a05423",
-  ]
-}
-
-rust_proc_macro("paste-impl-v0_1_5") {
-  crate_name = "paste_impl"
-  crate_root = "//third_party/rust_crates/vendor/paste-impl/src/lib.rs"
-  output_name = "paste_impl-b64b4bb81dc68dc0"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
-  deps += [ ":proc-macro2-v0_4_27" ]
-  deps += [ ":quote-v0_6_11" ]
-  deps += [ ":syn-v0_15_26" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=b64b4bb81dc68dc0",
-    "-Cextra-filename=-b64b4bb81dc68dc0",
+    "--edition=2018",
+    "-Cmetadata=467ce9508308aa2b",
+    "-Cextra-filename=-467ce9508308aa2b",
   ]
 }
 
@@ -6682,10 +6676,10 @@ rust_library("rust-crypto-v0_2_36") {
   ]
 }
 
-rust_library("rust_icu_common-v0_3_0") {
+rust_library("rust_icu_common-v0_3_2") {
   crate_name = "rust_icu_common"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_common/src/lib.rs"
-  output_name = "rust_icu_common-50dda5c5d811693d"
+  output_name = "rust_icu_common-df85ed79e351b35"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6694,7 +6688,7 @@ rust_library("rust_icu_common-v0_3_0") {
 
   deps = []
   deps += [ ":anyhow-v1_0_25" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
   deps += [ ":thiserror-v1_0_9" ]
 
   rustenv = []
@@ -6702,18 +6696,18 @@ rust_library("rust_icu_common-v0_3_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=50dda5c5d811693d",
-    "-Cextra-filename=-50dda5c5d811693d",
+    "-Cmetadata=df85ed79e351b35",
+    "-Cextra-filename=-df85ed79e351b35",
     "--cfg=feature=\"icu_version_67_plus\"",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_sys-v0_3_0") {
+rust_library("rust_icu_sys-v0_3_2") {
   crate_name = "rust_icu_sys"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_sys/src/lib.rs"
-  output_name = "rust_icu_sys-fc114ecbf591ecd4"
+  output_name = "rust_icu_sys-fe0376e391c8a6d4"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6722,25 +6716,25 @@ rust_library("rust_icu_sys-v0_3_0") {
 
   deps = []
   deps += [ ":libc-v0_2_74" ]
-  deps += [ ":paste-v0_1_5" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=fc114ecbf591ecd4",
-    "-Cextra-filename=-fc114ecbf591ecd4",
+    "-Cmetadata=fe0376e391c8a6d4",
+    "-Cextra-filename=-fe0376e391c8a6d4",
     "--cfg=feature=\"icu_version_67_plus\"",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_ucal-v0_3_0") {
+rust_library("rust_icu_ucal-v0_3_2") {
   crate_name = "rust_icu_ucal"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_ucal/src/lib.rs"
-  output_name = "rust_icu_ucal-9592e77141dd0fb6"
+  output_name = "rust_icu_ucal-726408372c227d1f"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6749,28 +6743,28 @@ rust_library("rust_icu_ucal-v0_3_0") {
 
   deps = []
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
-  deps += [ ":rust_icu_uenum-v0_3_0" ]
-  deps += [ ":rust_icu_ustring-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
+  deps += [ ":rust_icu_uenum-v0_3_2" ]
+  deps += [ ":rust_icu_ustring-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9592e77141dd0fb6",
-    "-Cextra-filename=-9592e77141dd0fb6",
+    "-Cmetadata=726408372c227d1f",
+    "-Cextra-filename=-726408372c227d1f",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_udat-v0_3_0") {
+rust_library("rust_icu_udat-v0_3_2") {
   crate_name = "rust_icu_udat"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_udat/src/lib.rs"
-  output_name = "rust_icu_udat-14ca05ed059866fc"
+  output_name = "rust_icu_udat-32c723aa71bdc1b2"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6779,30 +6773,30 @@ rust_library("rust_icu_udat-v0_3_0") {
 
   deps = []
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
-  deps += [ ":rust_icu_ucal-v0_3_0" ]
-  deps += [ ":rust_icu_uenum-v0_3_0" ]
-  deps += [ ":rust_icu_uloc-v0_3_0" ]
-  deps += [ ":rust_icu_ustring-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
+  deps += [ ":rust_icu_ucal-v0_3_2" ]
+  deps += [ ":rust_icu_uenum-v0_3_2" ]
+  deps += [ ":rust_icu_uloc-v0_3_2" ]
+  deps += [ ":rust_icu_ustring-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=14ca05ed059866fc",
-    "-Cextra-filename=-14ca05ed059866fc",
+    "-Cmetadata=32c723aa71bdc1b2",
+    "-Cextra-filename=-32c723aa71bdc1b2",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_udata-v0_3_0") {
+rust_library("rust_icu_udata-v0_3_2") {
   crate_name = "rust_icu_udata"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_udata/src/lib.rs"
-  output_name = "rust_icu_udata-f06b2e6a1330c599"
+  output_name = "rust_icu_udata-d9eaa5c465a5cf4b"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6811,26 +6805,26 @@ rust_library("rust_icu_udata-v0_3_0") {
 
   deps = []
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f06b2e6a1330c599",
-    "-Cextra-filename=-f06b2e6a1330c599",
+    "-Cmetadata=d9eaa5c465a5cf4b",
+    "-Cextra-filename=-d9eaa5c465a5cf4b",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_uenum-v0_3_0") {
+rust_library("rust_icu_uenum-v0_3_2") {
   crate_name = "rust_icu_uenum"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_uenum/src/lib.rs"
-  output_name = "rust_icu_uenum-9e39eea83ccee8b6"
+  output_name = "rust_icu_uenum-9ae3755207945fe8"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6838,27 +6832,27 @@ rust_library("rust_icu_uenum-v0_3_0") {
   ]
 
   deps = []
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9e39eea83ccee8b6",
-    "-Cextra-filename=-9e39eea83ccee8b6",
+    "-Cmetadata=9ae3755207945fe8",
+    "-Cextra-filename=-9ae3755207945fe8",
     "--cfg=feature=\"icu_version_67_plus\"",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_uloc-v0_3_0") {
+rust_library("rust_icu_uloc-v0_3_2") {
   crate_name = "rust_icu_uloc"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_uloc/src/lib.rs"
-  output_name = "rust_icu_uloc-d7c1d6caa67f7acb"
+  output_name = "rust_icu_uloc-f25d17509f6a6244"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6866,30 +6860,31 @@ rust_library("rust_icu_uloc-v0_3_0") {
   ]
 
   deps = []
+  deps += [ ":ecma402_traits-v0_2_0" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
-  deps += [ ":rust_icu_uenum-v0_3_0" ]
-  deps += [ ":rust_icu_ustring-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
+  deps += [ ":rust_icu_uenum-v0_3_2" ]
+  deps += [ ":rust_icu_ustring-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=d7c1d6caa67f7acb",
-    "-Cextra-filename=-d7c1d6caa67f7acb",
+    "-Cmetadata=f25d17509f6a6244",
+    "-Cextra-filename=-f25d17509f6a6244",
     "--cfg=feature=\"icu_version_67_plus\"",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_ustring-v0_3_0") {
+rust_library("rust_icu_ustring-v0_3_2") {
   crate_name = "rust_icu_ustring"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_ustring/src/lib.rs"
-  output_name = "rust_icu_ustring-cd5f8e0d9d6687b1"
+  output_name = "rust_icu_ustring-552e0f05945ff06f"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6898,27 +6893,27 @@ rust_library("rust_icu_ustring-v0_3_0") {
 
   deps = []
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=cd5f8e0d9d6687b1",
-    "-Cextra-filename=-cd5f8e0d9d6687b1",
+    "-Cmetadata=552e0f05945ff06f",
+    "-Cextra-filename=-552e0f05945ff06f",
     "--cfg=feature=\"icu_version_67_plus\"",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_utext-v0_3_0") {
+rust_library("rust_icu_utext-v0_3_2") {
   crate_name = "rust_icu_utext"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_utext/src/lib.rs"
-  output_name = "rust_icu_utext-71d8068937586302"
+  output_name = "rust_icu_utext-4c60a09000f084"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
     "//build/config:rust_edition_2018",
@@ -6926,17 +6921,17 @@ rust_library("rust_icu_utext-v0_3_0") {
   ]
 
   deps = []
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_3_0" ]
-  deps += [ ":rust_icu_sys-v0_3_0" ]
+  deps += [ ":paste-v1_0_0($host_toolchain)" ]
+  deps += [ ":rust_icu_common-v0_3_2" ]
+  deps += [ ":rust_icu_sys-v0_3_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=71d8068937586302",
-    "-Cextra-filename=-71d8068937586302",
+    "-Cmetadata=4c60a09000f084",
+    "-Cextra-filename=-4c60a09000f084",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]

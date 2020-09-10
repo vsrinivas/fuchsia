@@ -44,11 +44,18 @@ mod inner {
             "udat",
             "udata",
             "uenum",
+            "ufieldpositer",
+            "uformattable",
             "ulistformatter",
+            "umisc",
             "umsg",
+            "unum",
+            "unumberformatter",
+            "upluralrules",
             "uset",
             "ustring",
             "utext",
+            "utrans",
         ];
 
         // C functions that will be made available to rust code.  Add more to this list if you want to
@@ -60,10 +67,16 @@ mod inner {
             "udat_.*",
             "udata_.*",
             "uenum_.*",
+            "ufieldpositer_.*",
+            "ufmt_.*",
             "ulistfmt_.*",
             "uloc_.*",
             "umsg_.*",
+            "unum_.*",
+            "unumf_.*",
+            "uplrules_.*",
             "utext_.*",
+            "utrans_.*",
         ];
 
         // C types that will be made available to rust code.  Add more to this list if you want to
@@ -79,14 +92,25 @@ mod inner {
             "UData.*",
             "UDate.*",
             "UDateFormat.*",
+            "UDisplayContext.*",
             "UEnumeration.*",
             "UErrorCode",
+            "UField.*",
+            "UFormat.*",
             "UFormattedList.*",
             "UListFormatter.*",
+            "ULoc.*",
+            "ULOC.*",
             "UMessageFormat",
+            "UNUM.*",
+            "UNumber.*",
             "UParseError",
+            "UPlural.*",
             "USet",
             "UText",
+            "UTransDirection",
+            "UTransPosition",
+            "UTransliterator",
         ];
     }
 

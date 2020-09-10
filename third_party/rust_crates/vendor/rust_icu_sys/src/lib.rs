@@ -20,6 +20,19 @@
     unused_imports
 )]
 
+#[cfg(all(feature="icu_version_in_env", feature="icu_config"))]
+compile_error!(
+    "Features `icu_version_in_env` and `icu_config` are not compatible." +
+    " Choose at most one of them.");
+
+#[cfg(all(feature="icu_config", not(feature="use-bindgen")))]
+compile_error!("Feature `icu_config` is useless without the feature `use-bindgen`");
+
+// This feature combination is not inherrently a problem; we had no use case that
+// required it just yet.
+#[cfg(all(not(feature="renaming"), not(feature="use-bindgen")))]
+compile_error!("You must use `renaming` when not using `use-bindgen`");
+
 #[cfg(feature="use-bindgen")]
 include!(concat!(env!("OUT_DIR"), "/macros.rs"));
 #[cfg(all(feature="use-bindgen",feature="icu_config",not(feature="icu_version_in_env")))]
