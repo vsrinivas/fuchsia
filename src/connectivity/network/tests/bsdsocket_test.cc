@@ -1292,6 +1292,20 @@ TEST(LocalhostTest, AcceptAfterReset) {
       << inet_ntop(addr.sin6_family, &addr.sin6_addr, buf, sizeof(buf));
   ASSERT_NE(addr.sin6_port, 0);
 
+  // Wait for the connection to close to avoid flakes when this code is reached before the RST
+  // arrives at |conn|.
+  {
+    struct pollfd pfd = {
+        .fd = conn.get(),
+        .events = POLLIN,
+    };
+
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLIN | POLLERR | POLLHUP);
+  }
+
   int err;
   socklen_t optlen = sizeof(err);
   ASSERT_EQ(getsockopt(conn.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
