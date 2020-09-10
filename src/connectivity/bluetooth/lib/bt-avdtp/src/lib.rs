@@ -5,7 +5,6 @@
 use {
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::Channel,
-    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{
         future::FusedFuture,
@@ -13,6 +12,7 @@ use {
         stream::Stream,
         task::{Context, Poll, Waker},
     },
+    log::{info, trace, warn},
     parking_lot::Mutex,
     slab::Slab,
     std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
@@ -666,7 +666,7 @@ impl Decodable for GetCapabilitiesResponse {
                     // Advance `idx` by the payload amount, but don't push the invalid capability.
                     // Increment by 1 byte for ServiceCategory, 1 byte for payload length,
                     // `length_of_capability` bytes for capability length.
-                    fx_log_info!(
+                    info!(
                         "GetCapabilitiesResponse decode: Capability {:?} not supported.",
                         from[idx]
                     );
@@ -895,7 +895,7 @@ impl PeerInner {
         let key = self.response_waiters.lock().insert(ResponseWaiter::WillPoll);
         let id = TxLabel::try_from(key as u8);
         if id.is_err() {
-            fx_log_warn!(tag: "avdtp", "Transaction IDs are exhausted");
+            warn!("Transaction IDs are exhausted");
             self.response_waiters.lock().remove(key);
         }
         id
@@ -970,7 +970,7 @@ impl PeerInner {
         loop {
             let packet_size = match self.signaling.poll_datagram(cx, &mut buf) {
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-                    fx_vlog!(tag: "avdtp", 1, "Signaling peer closed");
+                    trace!("Signaling peer closed");
                     return Ok(true);
                 }
                 Poll::Ready(Err(e)) => return Err(Error::PeerRead(e)),
@@ -992,7 +992,7 @@ impl PeerInner {
                 Err(_) => {
                     // Only possible other return is OutOfRange
                     // Returned only when the packet is too small, can't make a meaningful reject.
-                    fx_log_info!(tag: "avdtp", "received unrejectable message");
+                    info!("received unrejectable message");
                     buf = buf.split_off(packet_size);
                     continue;
                 }
@@ -1020,7 +1020,7 @@ impl PeerInner {
                         waker.wake();
                     }
                 } else {
-                    fx_vlog!(tag: "avdtp", 1, "response for {:?} we did not send, dropping", header.label());
+                    trace!("response for {:?} we did not send, dropping", header.label());
                 }
                 buf = rest;
                 // Note: we drop any TxLabel response we are not waiting for

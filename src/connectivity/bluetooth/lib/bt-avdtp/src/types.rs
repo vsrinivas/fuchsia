@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     std::{
         convert::TryFrom,
@@ -242,7 +241,6 @@ impl TryFrom<u8> for TxLabel {
 
     fn try_from(value: u8) -> Result<Self> {
         if value > MAX_TX_LABEL {
-            fx_log_warn!("TxLabel out of range: {}", value);
             Err(Error::OutOfRange)
         } else {
             Ok(TxLabel(value))
