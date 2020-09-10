@@ -7,6 +7,7 @@ package eth_test
 import (
 	"fmt"
 	"math/bits"
+	"runtime"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
@@ -252,17 +253,27 @@ func TestEndpoint(t *testing.T) {
 							t.Fatal(err)
 						}
 
-						dropsAfter := client.TxStats().Drops.Value()
-
-						// Since we're not setting the TX_OK flag in this test, all these
-						// packets will be considered to have dropped.
-						if got, want := dropsAfter-dropsBefore, uint64(writeSize); got != want {
-							t.Errorf("got client.TxStates.Drops.Value() = %d, want %d", got, want)
-						}
-
-						// NB: only assert on the writes, since TX reads are unsynchronized wrt this test.
+						// NB: only assert on the writes, since TX read FIFO stats are
+						// unsynchronized wrt this test. Even though we poll for drop stats,
+						// we can't make guarantees for the FIFO stats.
 						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(&client.TxStats().FifoStats)); diff != "" {
 							t.Errorf("Stats.Tx.Writes mismatch (-want +got):\n%s", diff)
+						}
+
+						// Since we're not setting the TX_OK flag in this test, all these
+						// packets will be considered to have dropped. We need to poll until
+						// the stats match expectations since we're unsynchronized on TX
+						// reads, which is when the value increments.
+						for {
+							dropsAfter := client.TxStats().Drops.Value() - dropsBefore
+							if dropsAfter < uint64(writeSize) {
+								runtime.Gosched()
+								continue
+							}
+							if dropsAfter != uint64(writeSize) {
+								t.Errorf("got client.TxStates.Drops.Value() = %d, want %d", dropsAfter, writeSize)
+							}
+							break
 						}
 					})
 					if excess == 0 {
