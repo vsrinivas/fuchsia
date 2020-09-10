@@ -92,8 +92,8 @@ TEST(Formatting, bits_types) {
 
 TEST(Formatting, struct_types) {
   EXPECT_NAME_EQ("struct_level_0", &struct_level_0_struct, 1024);
-  EXPECT_NAME_EQ("fidl.test.coding/StructWithManyHandles",
-                 &fidl_test_coding_StructWithManyHandlesTable, 1024);
+  EXPECT_NAME_EQ("fidl.test.coding.fuchsia/StructWithManyHandles",
+                 &fidl_test_coding_fuchsia_StructWithManyHandlesTable, 1024);
 }
 
 TEST(Formatting, struct_ptr_types) {

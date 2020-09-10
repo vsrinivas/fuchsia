@@ -5,7 +5,7 @@
 // A set of structs and interface methods designed to exercise fidl_encode,
 // fidl_decode, and fidl_validate.
 
-library fidl.test.coding;
+library fidl.test.coding.fuchsia;
 
 protocol Handles {
     // Starting easy: just a handle.

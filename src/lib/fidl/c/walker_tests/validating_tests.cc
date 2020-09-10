@@ -1173,10 +1173,6 @@ TEST(Structs, validate_nested_nullable_structs) {
   EXPECT_NULL(error, "%s", error);
 }
 
-// The following tests are disabled for host because they depend on fidl
-// generated LLCPP code that can't run on host.
-
-#ifdef __Fuchsia__
 TEST(Xunions, validate_valid_empty_nullable_xunion) {
   SampleNullableXUnionStruct message = {};
 
@@ -1347,7 +1343,6 @@ TEST(Bits, validate_invalid_32bit_bits) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bits member");
 }
-#endif
 
 template <typename T>
 void TestValidEnum(const fidl_type_t* coding_table) {
@@ -1384,7 +1379,6 @@ void TestInvalidEnum(const fidl_type_t* coding_table) {
   }
 }
 
-#ifdef __Fuchsia__
 TEST(Enums, validate_int8_enum) {
   TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
   TestInvalidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
@@ -1424,7 +1418,6 @@ TEST(Enums, validate_uint64_enum) {
   TestValidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable);
   TestInvalidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable);
 }
-#endif
 
 TEST(Primitives, validate_primitives_struct) {
   // TODO(fxbug.dev/52585): Use generated types - primitive struct fields actually have null type.

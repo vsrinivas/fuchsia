@@ -15,12 +15,13 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <fidl/test/coding/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-using ::llcpp::fidl::test::coding::Simple;
+using ::llcpp::fidl::test::coding::fuchsia::Simple;
 
 constexpr uint32_t kNumberOfAsyncs = 10;
 constexpr int32_t kExpectedReply = 7;

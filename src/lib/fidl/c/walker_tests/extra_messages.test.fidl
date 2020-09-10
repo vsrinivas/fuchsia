@@ -9,11 +9,6 @@
 
 library fidl.test.coding;
 
-protocol LinearizerTest {
-    VectorOfUint32(vector<uint32> v);
-    VectorOfString(vector<string> v);
-};
-
 struct IntStruct {
     int64 v;
 };
@@ -39,27 +34,6 @@ table NewerSimpleTable {
     5: IntStruct y;
     6: IntStruct z;
     7: reserved;
-};
-
-struct StructWithHandle {
-    handle h;
-    int32 foo;
-};
-
-struct StructWithManyHandles {
-    handle h1;
-    handle h2;
-    vector<handle>:2 hs;
-};
-
-table TableOfStructWithHandle {
-    1: StructWithHandle a;
-    2: StructWithManyHandles b;
-};
-
-table SmallerTableOfStructWithHandle {
-    1: reserved;
-    2: StructWithManyHandles b;
 };
 
 union SampleUnion {

@@ -1913,8 +1913,6 @@ void encode_nested_nullable_structs() {
   EXPECT_EQ(reinterpret_cast<uintptr_t>(result.out_out_out_2.l3_absent), FIDL_ALLOC_ABSENT);
 }
 
-// Disabled for host because LLCPP fidl codegen currently doesn't support host.
-#ifdef __Fuchsia__
 TEST(TrackingPtr, encode_union_tracking_ptr_unowned) {
   int32_t int_val = 0x12345678;
   LLCPPStyleUnionStruct str;
@@ -2085,7 +2083,6 @@ TEST(TrackingPtr, encode_string_view_tracking_ptr_heap_allocate) {
   for (size_t i = 0; i < strlen(input); i++)
     EXPECT_EQ(written_data[i], input[i]);
 }
-#endif
 
 // Most fidl_linearize_and_encode_etc code paths are covered by the fidl_linearize_and_encode tests.
 // These tests cover additional paths.

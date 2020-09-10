@@ -154,8 +154,8 @@ TEST(OnErrorCloseHandle, DecodeErrorTest) {
 
   const char* out_error = nullptr;
   zx_handle_t handles[] = {eventpair_b.release(), eventpair_y.release()};
-  auto status = fidl_decode(&fidl_test_coding_SmallerTableOfStructWithHandleTable, buffer, buf_size,
-                            handles, std::size(handles), &out_error);
+  auto status = fidl_decode(&fidl_test_coding_fuchsia_SmallerTableOfStructWithHandleTable, buffer,
+                            buf_size, handles, std::size(handles), &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(out_error);
 

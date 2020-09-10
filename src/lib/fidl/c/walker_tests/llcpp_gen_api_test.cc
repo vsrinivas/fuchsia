@@ -11,12 +11,13 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <fidl/test/coding/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-using ::llcpp::fidl::test::coding::Example;
+using ::llcpp::fidl::test::coding::fuchsia::Example;
 
 class Server : public Example::Interface {
  public:
