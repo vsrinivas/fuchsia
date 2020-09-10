@@ -7,6 +7,7 @@ package dart
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"strings"
 	"text/template"
 
@@ -28,6 +29,8 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:topaz.lib.gidl/gidl.dart';
+import 'package:topaz.lib.gidl/handles.dart';
+import 'package:zircon/zircon.dart';
 
 import 'package:fidl_conformance/fidl_async.dart';
 
@@ -35,34 +38,66 @@ void main() {
 	group('conformance', () {
 		group('encode success cases', () {
 			{{ range .EncodeSuccessCases }}
+			{{- if .HandleDefs }}
+			EncodeSuccessCase.runWithHandles(
+				{{ .EncoderName }},
+				{{ .Name }},
+				(List<Handle> handleDefs) => {{ .Value }},
+				{{ .ValueType }},
+				{{ .Bytes }},
+				{{ .HandleDefs }},
+				{{ .Handles }});
+			{{- else }}
 			EncodeSuccessCase.run(
 				{{ .EncoderName }},
 				{{ .Name }},
 				{{ .Value }},
 				{{ .ValueType }},
 				{{ .Bytes }});
+            {{- end }}
 			{{ end }}
 				});
 
 		group('decode success cases', () {
 			{{ range .DecodeSuccessCases }}
+			{{- if .HandleDefs }}
+			DecodeSuccessCase.runWithHandles(
+				{{ .DecoderName }},
+				{{ .Name }},
+				(List<Handle> handleDefs) => {{ .Value }},
+				{{ .ValueType }},
+				{{ .Bytes }},
+				{{ .HandleDefs }},
+				{{ .Handles }});
+			{{- else }}
 			DecodeSuccessCase.run(
 				{{ .DecoderName }},
 				{{ .Name }},
 				{{ .Value }},
 				{{ .ValueType }},
 				{{ .Bytes }});
+            {{- end }}
 			{{ end }}
 				});
 
 		group('encode failure cases', () {
 			{{ range .EncodeFailureCases }}
+			{{- if .HandleDefs }}
+			EncodeFailureCase.runWithHandles(
+				{{ .EncoderName }},
+				{{ .Name }},
+				(List<Handle> handleDefs) => {{ .Value }},
+				{{ .ValueType }},
+				{{ .ErrorCode }},
+				{{ .HandleDefs }});
+			{{- else }}
 			EncodeFailureCase.run(
 				{{ .EncoderName }},
 				{{ .Name }},
 				() => {{ .Value }},
 				{{ .ValueType }},
 				{{ .ErrorCode }});
+			{{- end }}
 			{{ end }}
 				});
 
@@ -73,7 +108,13 @@ void main() {
 				{{ .Name }},
 				{{ .ValueType }},
 				{{ .Bytes }},
+			{{- if .HandleDefs }}
+				{{ .ErrorCode }},
+				{{ .HandleDefs }},
+				{{ .Handles }});
+			{{- else }}
 				{{ .ErrorCode }});
+			{{- end }}
 			{{ end }}
 				});
 	});
@@ -88,19 +129,19 @@ type tmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	EncoderName, Name, Value, ValueType, Bytes string
+	EncoderName, Name, Value, ValueType, Bytes, HandleDefs, Handles string
 }
 
 type decodeSuccessCase struct {
-	DecoderName, Name, Value, ValueType, Bytes string
+	DecoderName, Name, Value, ValueType, Bytes, HandleDefs, Handles string
 }
 
 type encodeFailureCase struct {
-	EncoderName, Name, Value, ValueType, ErrorCode string
+	EncoderName, Name, Value, ValueType, ErrorCode, HandleDefs string
 }
 
 type decodeFailureCase struct {
-	DecoderName, Name, ValueType, Bytes, ErrorCode string
+	DecoderName, Name, ValueType, Bytes, ErrorCode, HandleDefs, Handles string
 }
 
 // Generate generates dart tests.
@@ -150,7 +191,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
 				Value:       valueStr,
 				ValueType:   valueType,
-				Bytes:       bytesBuilder(encoding.Bytes),
+				Bytes:       buildBytes(encoding.Bytes),
+				HandleDefs:  buildHandles(encodeSuccess.HandleDefs),
+				Handles:     toDartIntList(encoding.Handles),
 			})
 		}
 	}
@@ -175,7 +218,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
 				Value:       valueStr,
 				ValueType:   valueType,
-				Bytes:       bytesBuilder(encoding.Bytes),
+				Bytes:       buildBytes(encoding.Bytes),
+				HandleDefs:  buildHandles(decodeSuccess.HandleDefs),
+				Handles:     toDartIntList(encoding.Handles),
 			})
 		}
 	}
@@ -208,6 +253,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				Value:       valueStr,
 				ValueType:   valueType,
 				ErrorCode:   errorCode,
+				HandleDefs:  buildHandles(encodeFailure.HandleDefs),
 			})
 		}
 	}
@@ -234,8 +280,10 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				DecoderName: decoderName(encoding.WireFormat),
 				Name:        testCaseName(decodeFailure.Name, encoding.WireFormat),
 				ValueType:   valueType,
-				Bytes:       bytesBuilder(encoding.Bytes),
+				Bytes:       buildBytes(encoding.Bytes),
 				ErrorCode:   errorCode,
+				HandleDefs:  buildHandles(decodeFailure.HandleDefs),
+				Handles:     toDartIntList(encoding.Handles),
 			})
 		}
 	}
@@ -262,7 +310,7 @@ func dartTypeName(inputType string) string {
 	return fmt.Sprintf("k%s_Type", inputType)
 }
 
-func bytesBuilder(bytes []byte) string {
+func buildBytes(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("Uint8List.fromList([\n")
 	for i, b := range bytes {
@@ -274,6 +322,28 @@ func bytesBuilder(bytes []byte) string {
 		}
 	}
 	builder.WriteString("])")
+	return builder.String()
+}
+
+func buildHandles(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for i, d := range defs {
+		switch d.Subtype {
+		case fidlir.Channel:
+			builder.WriteString(fmt.Sprint("HandleSubtype.event,"))
+		case fidlir.Event:
+			builder.WriteString(fmt.Sprint("HandleSubtype.channel,"))
+		default:
+			log.Fatal("unsupported handle subtype ", d.Subtype)
+		}
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+	}
+	builder.WriteString("]")
 	return builder.String()
 }
 
@@ -291,6 +361,21 @@ func toDartStr(value string) string {
 	return buf.String()
 }
 
+func toDartIntList(handles []gidlir.Handle) string {
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for i, handle := range handles {
+		builder.WriteString(fmt.Sprintf("%d,", handle))
+		if i%8 == 7 {
+			// Note: empty comments are written to preserve formatting. See:
+			// https://github.com/dart-lang/dart_style/wiki/FAQ#why-does-the-formatter-mess-up-my-collection-literals
+			builder.WriteString(" //\n")
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
 // Dart error codes defined in: topaz/public/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "fidlStringTooLong",
@@ -301,6 +386,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictBitsUnknownBit:       "fidlInvalidBit",
 	gidlir.StrictEnumUnknownValue:     "fidlInvalidEnumValue",
 	gidlir.InvalidPaddingByte:         "unknown",
+	gidlir.TooFewHandles:              "fidlTooFewHandles",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

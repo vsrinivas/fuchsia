@@ -22,6 +22,7 @@ const (
 	InvalidNumHandlesInEnvelope           = "INVALID_NUM_HANDLES_IN_ENVELOPE"
 	InvalidPaddingByte                    = "INVALID_PADDING_BYTE"
 	ExtraHandles                          = "EXTRA_HANDLES"
+	TooFewHandles                         = "TOO_FEW_HANDLES"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -37,4 +38,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	InvalidNumHandlesInEnvelope: {},
 	InvalidPaddingByte:          {},
 	ExtraHandles:                {},
+	TooFewHandles:               {},
 }

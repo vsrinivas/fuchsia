@@ -6,10 +6,12 @@ package dart
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
 	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
@@ -27,6 +29,20 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case string:
 		return toDartStr(value)
+	case gidlir.Handle:
+		rawHandle := fmt.Sprintf("handleDefs[%d]", value)
+		handleDecl := decl.(*gidlmixer.HandleDecl)
+		switch handleDecl.Subtype() {
+		case fidlir.Handle:
+			return rawHandle
+		case fidlir.Channel:
+			return fmt.Sprintf("Channel(%s)", rawHandle)
+		case fidlir.Event:
+			// Dart does not support events, so events are mapped to bare handles
+			return rawHandle
+		default:
+			log.Fatal("Handle subtype not supported ", handleDecl.Subtype())
+		}
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
@@ -77,7 +93,7 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 				"%s.with$UnknownData(%d, fidl.UnknownRawData(%s, []))",
 				value.Name,
 				field.Key.UnknownOrdinal,
-				bytesBuilder(unknownData.Bytes))
+				buildBytes(unknownData.Bytes))
 		}
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {

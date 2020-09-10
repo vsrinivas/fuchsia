@@ -4,7 +4,7 @@
 
 success("SingleHandle") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(),
     },
@@ -25,7 +25,7 @@ success("SingleHandle") {
 
 success("SingleOptionalHandlePresent") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(),
     },
@@ -46,7 +46,7 @@ success("SingleOptionalHandlePresent") {
 
 success("SingleOptionalHandleAbsent") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     value = SingleOptionalHandle {},
     bytes = {
         v1 = [
@@ -57,7 +57,7 @@ success("SingleOptionalHandleAbsent") {
 
 success("ArrayOfHandles") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -80,7 +80,7 @@ success("ArrayOfHandles") {
 
 success("ArrayOfOptionalHandles") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(),
     },
@@ -101,7 +101,7 @@ success("ArrayOfOptionalHandles") {
 
 success("VectorOfHandles") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -147,7 +147,7 @@ success("VectorOfOptionalHandles") {
 
 success("MultipleHandleSubtypes") {
     // TODO(fxb/36441): Implement handles in all backends.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = channel(),
         #1 = event(),
@@ -172,7 +172,7 @@ success("MultipleHandleSubtypes") {
 
 decode_failure("TooManyHandles") {
     // TODO(fxb/36441): Implement handles in all backends.
-    // TODO(fxb/58385): Close handles on encode/decode failure in Rust.
+    // TODO(fxb/58385): Close handles on encode/decode failure in Dart, Rust.
     bindings_allowlist = [],
     handle_defs = {
         #0 = event(),
@@ -190,4 +190,38 @@ decode_failure("TooManyHandles") {
         ],
     },
     err = EXTRA_HANDLES,
+}
+
+// TODO(fxbug.dev/59449): Check for extra handles in Dart so that this fails.
+decode_success("TooManyHandlesSuccess") {
+    bindings_allowlist = [dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+    },
+    value = SingleHandle {
+        h: #0,
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1,
+        ],
+    }
+}
+
+decode_failure("TooFewHandles") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure in Rust.
+    bindings_allowlist = [dart],
+    type = SingleHandle,
+    bytes = {
+        v1 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    err = TOO_FEW_HANDLES,
 }
