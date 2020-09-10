@@ -698,7 +698,7 @@ func (ifs *ifState) setDHCPStatus(name string, enabled bool) {
 // Runs the DHCP client with a fresh context and initializes ifs.mu.dhcp.cancel.
 // Call the old cancel function before calling this function.
 func (ifs *ifState) runDHCPLocked(name string) {
-	_ = syslog.VLogf(syslog.DebugVerbosity, "NIC %s: run DHCP", name)
+	_ = syslog.Infof("NIC %s: run DHCP", name)
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	ifs.mu.dhcp.cancel = func() {
