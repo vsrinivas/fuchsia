@@ -4,6 +4,7 @@
 
 library fuchsia.session;
 
+using fuchsia.sys;
 using fuchsia.url;
 
 /// The ElementManager is responsible for service requests to add elements to a
@@ -63,4 +64,15 @@ table ElementSpec {
 
     /// Initial metadata on the element. Optional.
     2: Annotations annotations;
+
+    /// A list of services passed to the Element. Optional.
+    ///
+    /// If specified, `ElementSpec.component_url` must point to a CFv1 component.
+    /// This is not supported for CFv2 components. If this field is set,
+    /// proposing a CFv2 component will fail.
+    ///
+    /// The [`fuchsia.sys/ServiceList.provider`] field is not supported
+    /// and must be null. Instead, [`fuchsia.sys/ServiceList.host_directory`]
+    /// must be set to a channel for a directory hosting the services.
+    3: fuchsia.sys.ServiceList additional_services;
 };

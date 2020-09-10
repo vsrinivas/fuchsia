@@ -14,6 +14,7 @@ fidl("fuchsia.session") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.url",
   ]

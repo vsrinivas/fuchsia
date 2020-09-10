@@ -133,6 +133,12 @@ async fn handle_element_manager_requests(
                     Err(ElementManagerError::UrlMissing { .. }) => {
                         Err(ProposeElementError::NotFound)
                     }
+                    Err(ElementManagerError::InvalidServiceList { .. }) => {
+                        Err(ProposeElementError::Rejected)
+                    }
+                    Err(ElementManagerError::AdditionalServicesNotSupported { .. }) => {
+                        Err(ProposeElementError::Rejected)
+                    }
                     Err(ElementManagerError::NotCreated { .. }) => {
                         Err(ProposeElementError::Rejected)
                     }
