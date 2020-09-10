@@ -420,15 +420,14 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	// Register a callback for error and closing events from gVisor to
 	// trigger a close of the endpoint.
 	eps.entry.Callback = callback(func(*waiter.Entry) {
-		// Run this in a separate goroutine to return sooner and
-		// avoid deadlock.
+		// Run this in a separate goroutine to avoid deadlock.
 		//
 		// The waiter.Queue lock is held by the caller of this callback.
-		// close() blocks on completions of loop{read,Write}, which
-		// depends on acquiring waiter.Queue lock to unregister events.
-		go eps.close(eps.loopReadDone, eps.loopWriteDone, eps.loopPollDone)
+		// close() blocks on completions of `loop*`, which
+		// depend on acquiring waiter.Queue lock to unregister events.
+		go eps.close()
 	})
-	eps.wq.EventRegister(&eps.entry, waiter.EventErr|waiter.EventHUp)
+	eps.wq.EventRegister(&eps.entry, waiter.EventHUp)
 
 	go func() {
 		defer close(eps.loopPollDone)
@@ -572,7 +571,7 @@ const localSignalClosing = zx.SignalUser1
 //
 // Note, calling close on an endpoint that has already been closed is safe as
 // the cleanup work will only be done once.
-func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) {
+func (eps *endpointWithSocket) close() {
 	eps.closeOnce.Do(func() {
 		// Interrupt waits on notification channels. Notification reads
 		// are always combined with closing in a select statement.
@@ -586,7 +585,11 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) {
 
 		// The interruptions above cause our loops to exit. Wait until
 		// they do before releasing resources they may be using.
-		for _, ch := range loopDone {
+		for _, ch := range []<-chan struct{}{
+			eps.loopReadDone,
+			eps.loopWriteDone,
+			eps.loopPollDone,
+		} {
 			<-ch
 		}
 
@@ -677,7 +680,7 @@ func (eps *endpointWithSocket) loopWrite() {
 	defer func() {
 		close(eps.loopWriteDone)
 		if triggerClose {
-			eps.close(eps.loopReadDone, eps.loopPollDone)
+			eps.close()
 		}
 	}()
 
@@ -792,7 +795,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 	defer func() {
 		close(eps.loopReadDone)
 		if triggerClose {
-			eps.close(eps.loopWriteDone, eps.loopPollDone)
+			eps.close()
 		}
 	}()
 
@@ -1231,7 +1234,7 @@ func (s *streamSocketImpl) close() {
 		}
 
 		doClose := func() {
-			s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone, s.loopPollDone)
+			s.endpointWithSocket.close()
 
 			if err := s.peer.Close(); err != nil {
 				panic(err)
