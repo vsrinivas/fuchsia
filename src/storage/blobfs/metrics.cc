@@ -47,6 +47,20 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
 
 }  // namespace
 
+BlobfsMetrics::BlobfsMetrics() {
+  // Add a node that allows querying the size of the Inspect VMO at runtime
+  root_.CreateLazyNode(
+      "inspect_vmo_stats",
+      [this] {
+        inspect::InspectStats stats = inspector_.GetStats();
+        inspect::Inspector insp;
+        insp.GetRoot().CreateUint("current_size", stats.size, &insp);
+        insp.GetRoot().CreateUint("maximum_size", stats.maximum_size, &insp);
+        return fit::make_result_promise(fit::ok(std::move(insp)));
+      },
+      &inspector_);
+}
+
 BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 
 void PrintReadMetrics(ReadMetrics& metrics) {
@@ -115,6 +129,10 @@ void BlobfsMetrics::Dump() {
     FS_TRACE_INFO("  Spent %zu ms verifying\n",
                   TicksToMs(zx::ticks(verify_snapshot.verification_time)));
   }
+
+  FS_TRACE_INFO("Inspect VMO:\n");
+  FS_TRACE_INFO("  Maximum Size (bytes) = %zu\n", inspector_.GetStats().maximum_size);
+  FS_TRACE_INFO("  Current Size (bytes) = %zu\n", inspector_.GetStats().size);
 }
 
 void BlobfsMetrics::ScheduleMetricFlush() {
