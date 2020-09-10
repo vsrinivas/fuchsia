@@ -6,8 +6,8 @@ use {
     anyhow::Error,
     async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::endpoints,
-    fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest, HostRequestStream},
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, HostInfo as FidlHostInfo, TechnologyType},
+    fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
+    fidl_fuchsia_bluetooth_sys::{AccessMarker, TechnologyType},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         inspect::{placeholder_node, Inspectable},
@@ -175,8 +175,8 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
     future::try_join4(
         run_client,
         run_access,
-        run_discovery_host_server(host_server_1, host_info_1),
-        run_discovery_host_server(host_server_2, host_info_2),
+        host_device::test::run_discovery_host_server(host_server_1, host_info_1),
+        host_device::test::run_discovery_host_server(host_server_2, host_info_2),
     )
     .await
     .map(|_: ((), (), (), ())| ())
@@ -192,34 +192,4 @@ fn example_host_info(host_no: u8) -> HostInfo {
         discoverable: false,
         discovering: false,
     }
-}
-
-// Runs a HostRequestStream that handles StartDiscovery and WatchState requests
-async fn run_discovery_host_server(
-    server: HostRequestStream,
-    host_info: Arc<RwLock<HostInfo>>,
-) -> Result<(), Error> {
-    server
-        .try_for_each(move |req| {
-            // Set discovery field of host info
-            if let HostRequest::StartDiscovery { responder } = req {
-                host_info.write().discovering = true;
-                assert_matches!(responder.send(&mut Ok(())), Ok(()));
-            }
-            // Clear discovery field of host info
-            else if let HostRequest::StopDiscovery { control_handle: _ } = req {
-                host_info.write().discovering = false;
-            }
-            // Update host with current info state
-            else if let HostRequest::WatchState { responder } = req {
-                assert_matches!(
-                    responder.send(FidlHostInfo::from(host_info.read().clone())),
-                    Ok(())
-                );
-            }
-
-            future::ok(())
-        })
-        .await
-        .map_err(|e| e.into())
 }
