@@ -296,7 +296,7 @@ void Device::DdkRelease() {
   Release();
 }
 
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
@@ -735,7 +735,7 @@ static void usb_write_complete(void* ctx, usb_request_t* request) {
 }
 
 Device::Device(zx_device_t* parent)
-    : ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>(parent) {
+    : ddk::Device<Device, ddk::Unbindable, ddk::Messageable>(parent) {
   usb_device_ = parent;
 }
 

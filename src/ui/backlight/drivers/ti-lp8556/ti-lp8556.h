@@ -44,7 +44,7 @@ constexpr uint8_t kBrightnessMsbByteMask = 0xF;
 constexpr uint16_t kBrightnessMsbMask = (kBrightnessMsbByteMask << kBrightnessMsbShift);
 
 class Lp8556Device;
-using DeviceType = ddk::Device<Lp8556Device, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::Messageable>;
 namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
 
 class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint32_t> {
@@ -70,7 +70,7 @@ class Lp8556Device : public DeviceType,
   zx_status_t Init();
 
   // Methods requried by the ddk mixins
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

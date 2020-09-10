@@ -109,7 +109,7 @@ void SerialPpp::DdkRelease() {
   delete this;
 }
 
-void SerialPpp::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void SerialPpp::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 zx_status_t SerialPpp::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);

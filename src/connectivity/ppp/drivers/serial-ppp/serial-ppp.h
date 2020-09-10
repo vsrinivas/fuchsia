@@ -50,8 +50,8 @@ class SerialPpp final : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   // ddk::Releasable
   void DdkRelease();
 
-  // ddk::UnbindableNew
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  // ddk::Unbindable
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // ddk::Messageable
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

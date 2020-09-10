@@ -57,7 +57,7 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase =
-    ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::UnbindableNew>;
+    ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::Unbindable>;
 
 // The SimpleAudioStream server (thread compatible) implements Device::Interface and
 // RingBuffer::Interface.
@@ -109,7 +109,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void Shutdown() __TA_EXCLUDES(domain_token());
 
   // DDK device implementation
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void DdkSuspend(ddk::SuspendTxn txn);

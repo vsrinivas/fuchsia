@@ -84,7 +84,7 @@ zx_status_t NetworkDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void NetworkDevice::DdkUnbindNew(ddk::UnbindTxn unbindTxn) {
+void NetworkDevice::DdkUnbind(ddk::UnbindTxn unbindTxn) {
   zxlogf(DEBUG, "network-device: DdkUnbind");
   device_->Teardown([this, txn = std::move(unbindTxn)]() mutable {
     if (mac_) {

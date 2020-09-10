@@ -25,7 +25,7 @@ enum {
   FRAGMENT_COUNT,
 };
 
-void Lp8556Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Lp8556Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Lp8556Device::DdkRelease() { delete this; }
 

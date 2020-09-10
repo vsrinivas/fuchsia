@@ -157,7 +157,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
 }
 
 FakeOtRadioDevice::FakeOtRadioDevice(zx_device_t* device)
-    : ddk::Device<FakeOtRadioDevice, ddk::UnbindableNew, ddk::Messageable>(device),
+    : ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>(device),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 zx_status_t FakeOtRadioDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -434,7 +434,7 @@ zx_status_t FakeOtRadioDevice::Start() {
 
 void FakeOtRadioDevice::DdkRelease() { delete this; }
 
-void FakeOtRadioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void FakeOtRadioDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

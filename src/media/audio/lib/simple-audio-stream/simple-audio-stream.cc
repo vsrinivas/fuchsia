@@ -155,7 +155,7 @@ zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPosition
   return ZX_OK;
 }
 
-void SimpleAudioStream::DdkUnbindNew(ddk::UnbindTxn txn) {
+void SimpleAudioStream::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
 
   // TODO(johngro): We need to signal our SimpleAudioStream owner to let them

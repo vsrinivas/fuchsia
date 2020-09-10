@@ -20,7 +20,7 @@
 namespace network {
 
 class NetworkDevice;
-using DeviceType = ddk::Device<NetworkDevice, ddk::Messageable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<NetworkDevice, ddk::Messageable, ddk::Unbindable>;
 
 class NetworkDevice : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE>,
@@ -34,7 +34,7 @@ class NetworkDevice : public DeviceType,
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-  void DdkUnbindNew(ddk::UnbindTxn unbindTxn);
+  void DdkUnbind(ddk::UnbindTxn unbindTxn);
 
   void DdkRelease();
 

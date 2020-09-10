@@ -18,14 +18,14 @@ constexpr size_t kUsbIntfDummySize = 8;
 
 // This driver is for testing the USB-QMI driver. It binds as a peripheral USB
 // device and sends fake QMI responses.
-class FakeUsbQmiFunction : public ddk::Device<FakeUsbQmiFunction, ddk::UnbindableNew>,
+class FakeUsbQmiFunction : public ddk::Device<FakeUsbQmiFunction, ddk::Unbindable>,
                            public ddk::UsbFunctionInterfaceProtocol<FakeUsbQmiFunction> {
  public:
   FakeUsbQmiFunction(zx_device_t* parent)
-      : ddk::Device<FakeUsbQmiFunction, ddk::UnbindableNew>(parent), function_(parent) {}
+      : ddk::Device<FakeUsbQmiFunction, ddk::Unbindable>(parent), function_(parent) {}
   zx_status_t Bind();
   // |ddk::Device|
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   // |ddk::Device|
   void DdkRelease();
 

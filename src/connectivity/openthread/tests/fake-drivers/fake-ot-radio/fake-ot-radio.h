@@ -36,7 +36,7 @@ constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
 constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
 class FakeOtRadioDevice
-    : public ddk::Device<FakeOtRadioDevice, ddk::UnbindableNew, ddk::Messageable>,
+    : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>,
       public llcpp::fuchsia::lowpan::spinel::DeviceSetup::Interface {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
@@ -49,7 +49,7 @@ class FakeOtRadioDevice
   zx_status_t StartLoopThread();
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t ShutDown();
   zx_status_t Reset();
