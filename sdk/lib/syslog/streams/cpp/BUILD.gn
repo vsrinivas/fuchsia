@@ -40,6 +40,9 @@ executable("streams-encoder-test") {
     ":streams-encoder",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("streams-cpp-tests") {

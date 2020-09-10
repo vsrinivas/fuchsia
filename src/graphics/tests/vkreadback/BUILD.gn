@@ -14,6 +14,9 @@ source_set("vkreadback_src") {
     "//third_party/googletest:gtest",
   ]
   public_deps += [ "//src/lib/vulkan" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("vkreadback") {
@@ -22,4 +25,7 @@ executable("vkreadback") {
   sources = [ "main.cc" ]
 
   deps = [ ":vkreadback_src" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

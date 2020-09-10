@@ -50,6 +50,9 @@ source_set("array_to_string") {
   sources = [ "array_to_string.h" ]
 
   deps = [ "//sdk/lib/fidl/cpp" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("json_xdr") {
@@ -67,6 +70,9 @@ source_set("json_xdr") {
     # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("proxy") {

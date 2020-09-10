@@ -23,6 +23,9 @@ source_set("analysis") {
     "//src/media/audio/lib/wav",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unittest-bin") {
@@ -43,6 +46,9 @@ executable("unittest-bin") {
   ]
 
   libs = [ "zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("audio-libanalysis-unittests") {

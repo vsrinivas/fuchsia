@@ -24,4 +24,7 @@ source_set("socket") {
   ]
 
   public_configs = [ "//garnet/public:config" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

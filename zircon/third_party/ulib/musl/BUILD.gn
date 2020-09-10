@@ -12,6 +12,9 @@ source_set("getifaddrs-internal") {
   ]
   sources = [ "src/network/getifaddrs.h" ]
   public_configs = [ ":getifaddrs_include_dirs" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 config("getifaddrs_include_dirs") {

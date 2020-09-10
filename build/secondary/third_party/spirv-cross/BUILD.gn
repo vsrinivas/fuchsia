@@ -46,6 +46,9 @@ source_set("spirv-cross") {
     # spirv-cross-msl
     "spirv_msl.hpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # NOTE: Required by recent versions of libshaderc_spvc and is provided by more

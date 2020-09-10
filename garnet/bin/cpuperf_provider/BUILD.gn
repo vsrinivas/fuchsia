@@ -43,6 +43,9 @@ source_set("categories") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -67,6 +70,9 @@ executable("bin") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("cpuperf_provider") {

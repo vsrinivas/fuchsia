@@ -16,6 +16,9 @@ source_set("stream_utils_lib") {
     "//src/lib/files",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("stream_configs") {

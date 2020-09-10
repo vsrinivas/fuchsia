@@ -79,6 +79,9 @@ trace_engine_library("trace-engine") {
 trace_engine_library("trace-engine-static") {
   sdk = "static"
   defines = [ "STATIC_LIBRARY" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  extra_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # And again, but this time for drivers.
@@ -86,6 +89,9 @@ trace_engine_library("trace-engine-static") {
 trace_engine_library("trace-engine-driver") {
   sdk = "static"
   defines = [ "DDK_TRACING" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  extra_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # Header-only source package for use by trace-provider:handler,

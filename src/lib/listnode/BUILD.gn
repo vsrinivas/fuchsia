@@ -26,6 +26,9 @@ test("listnode-tests") {
     ":listnode",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("listnode-package") {

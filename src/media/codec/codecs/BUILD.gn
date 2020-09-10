@@ -28,8 +28,8 @@ group("hw_dependent_tests") {
   testonly = true
   deps = [
     "//src/media/codec/examples:h264_decoder_fuzzer_test",
-    "//src/media/codec/examples:use-h264-multi-decoder-stream-switching-test",
     "//src/media/codec/examples:use-h264-multi-decoder-concurrent-stream-switching-test",
+    "//src/media/codec/examples:use-h264-multi-decoder-stream-switching-test",
     "//src/media/codec/examples:use-h264-multi-decoder-test",
     "//src/media/codec/examples:use-vp9-decoder-stream-switching-test",
     "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",
@@ -78,4 +78,7 @@ source_set("output_sink") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

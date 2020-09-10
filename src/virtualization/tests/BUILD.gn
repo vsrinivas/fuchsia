@@ -103,6 +103,9 @@ source_set("fake_netstack") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.netstack" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fake_scenic") {
@@ -440,6 +443,9 @@ executable("hypervisor_tests") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("hypervisor_tests_pkg") {

@@ -28,6 +28,9 @@ source_set("fake-buffer-collection") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("button_checker") {

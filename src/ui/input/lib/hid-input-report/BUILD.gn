@@ -24,6 +24,9 @@ source_set("hid-input-report") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("lib-hid-input-report-test") {
@@ -59,6 +62,9 @@ test("lib-hid-input-report-test") {
 
   # TODO(46730): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("test") {

@@ -115,6 +115,9 @@ static_library("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (include_test_app) {
@@ -143,6 +146,9 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/cmdline",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("debug_agent") {
@@ -198,6 +204,9 @@ source_set("test_lib") {
     ":lib",
     "//src/developer/debug/shared:test_support",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unit_tests") {
@@ -245,6 +254,9 @@ executable("unit_tests") {
 
   # TODO(46711): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("debug_agent_tests") {

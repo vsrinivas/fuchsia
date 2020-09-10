@@ -39,6 +39,9 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/security/codelab/services:codelab",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("smart-door-memory") {

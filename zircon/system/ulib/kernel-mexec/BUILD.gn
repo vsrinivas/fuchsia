@@ -32,4 +32,7 @@ zx_library("kernel-mexec") {
     "//zircon/system/ulib/fzl",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

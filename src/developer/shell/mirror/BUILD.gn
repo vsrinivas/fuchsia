@@ -36,6 +36,9 @@ static_library("server_lib") {
     "//third_party/boringssl",
     "//zircon/public/lib/cmdline",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("shared") {
@@ -49,6 +52,9 @@ source_set("shared") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/shared",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("client") {
@@ -92,6 +98,9 @@ executable("shell_mirror_tests_bin") {
 
   # TODO(46840): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("shell-mirror-test") {

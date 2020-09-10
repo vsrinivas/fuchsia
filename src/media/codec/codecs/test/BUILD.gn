@@ -86,6 +86,9 @@ executable("chunk_input_stream_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:chunk_input_stream",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("chunk_input_stream_tests") {
@@ -111,6 +114,9 @@ executable("output_sink_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:output_sink",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("output_sink_tests") {

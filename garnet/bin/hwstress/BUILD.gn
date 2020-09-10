@@ -49,6 +49,9 @@ source_set("lib") {
   # that this will also optimize for generating code that will maximise the
   # amount of stress placed on the system (e.g., more heat for CPU tests).
   configs += [ "//build/config:optimize_speed" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -140,6 +143,9 @@ executable("hwstress_test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Tests requiring support from the CFv2 (or requiring support from libraries that depend on CFv2).

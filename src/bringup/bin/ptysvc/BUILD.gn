@@ -58,6 +58,9 @@ source_set("common") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("ptysvc-test") {

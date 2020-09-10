@@ -48,6 +48,9 @@ zx_library("memfs-cpp") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # libmemfs.so: The C ABI client library.

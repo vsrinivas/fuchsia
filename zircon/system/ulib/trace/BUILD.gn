@@ -83,6 +83,9 @@ trace_library("trace-with-static-engine") {
   sdk = "static"
   public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-static" ]
   deps = [ "//zircon/system/ulib/trace-engine:trace-engine-static" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # And again, but this time for drivers.
@@ -92,4 +95,7 @@ trace_library("trace-driver") {
   sdk = "static"
   public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
   deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

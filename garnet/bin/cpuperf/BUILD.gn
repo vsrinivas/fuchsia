@@ -20,6 +20,9 @@ source_set("session_spec") {
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("session_result_spec") {
@@ -60,6 +63,9 @@ executable("bin") {
   ]
 
   libs = [ "zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("cpuperf") {

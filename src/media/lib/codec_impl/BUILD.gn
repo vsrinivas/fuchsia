@@ -65,6 +65,9 @@ source_set("codec_impl") {
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

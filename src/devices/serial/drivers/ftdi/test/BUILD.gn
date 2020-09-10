@@ -49,6 +49,9 @@ source_set("common") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("ftdi-i2c-test-package") {

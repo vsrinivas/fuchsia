@@ -18,6 +18,9 @@ source_set("vmo_store") {
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("test_bin") {
@@ -36,6 +39,9 @@ executable("test_bin") {
     "//src/lib/testing/predicates",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("vmo-store-test") {

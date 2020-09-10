@@ -43,6 +43,9 @@ executable("memcpy") {
   output_name = "test_memcpy"
 
   sources = [ "test_memcpy.cc" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("vkcopy") {
@@ -59,6 +62,9 @@ executable("vkcopy") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (magma_openvx_package != "") {

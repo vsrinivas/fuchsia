@@ -42,4 +42,7 @@ executable("fx_bin") {
     "//zircon/system/ulib/audio-utils",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

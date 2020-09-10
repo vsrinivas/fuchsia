@@ -86,6 +86,9 @@ source_set("vk_mem_alloc") {
     ":vk_mem_alloc_error_suppression",
     ":vk_mem_alloc_small_heap_max_size",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Allows variants of Escher library to be built, e.g. to toggle

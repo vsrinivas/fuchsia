@@ -34,4 +34,7 @@ zx_library("kcounter") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/svc",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

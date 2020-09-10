@@ -26,6 +26,9 @@ executable("bin") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # A test utility used to test various features of fdio_spawn, extensively in spawn_test.cc.
@@ -38,6 +41,9 @@ executable("spawn_child_util") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # A test utility that attempts to use zx_process_create (mimicking a launcher implementation).
@@ -53,6 +59,9 @@ executable("fake_launcher_util") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # A simple test utility that returns the integer value provided to it in its first argument.

@@ -51,4 +51,7 @@ executable("audio_driver_tests_bin") {
     "//src/media/audio/lib/test:test_fixture",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

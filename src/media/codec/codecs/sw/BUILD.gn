@@ -57,4 +57,7 @@ source_set("codec_adapter_sw") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

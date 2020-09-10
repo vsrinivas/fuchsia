@@ -39,4 +39,7 @@ executable("integration_tests") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

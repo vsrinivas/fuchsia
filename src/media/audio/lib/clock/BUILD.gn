@@ -37,6 +37,9 @@ source_set("pid") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("utils") {
@@ -56,6 +59,9 @@ source_set("utils") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unittest_bin") {
@@ -78,6 +84,9 @@ executable("unittest_bin") {
   ]
 
   libs = [ "zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("audio-libclock-unittests") {

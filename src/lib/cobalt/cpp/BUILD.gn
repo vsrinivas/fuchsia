@@ -45,6 +45,9 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-testing",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("cobalt_event_builder") {
@@ -71,4 +74,7 @@ source_set("metric_event_builder") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

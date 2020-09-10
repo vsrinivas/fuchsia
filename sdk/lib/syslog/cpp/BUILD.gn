@@ -77,6 +77,9 @@ sdk_source_set("backend_legacy") {
   } else {
     public_deps = [ ":backend_host" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 sdk_shared_library("backend_fuchsia_globals") {
@@ -118,6 +121,9 @@ sdk_source_set("backend") {
   } else {
     public_deps = [ ":backend_host" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("logging_cpp_unittests") {

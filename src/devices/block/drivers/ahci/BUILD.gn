@@ -77,4 +77,7 @@ source_set("shared") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

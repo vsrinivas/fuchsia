@@ -21,6 +21,9 @@ executable("bin") {
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("bt-hci-tool") {

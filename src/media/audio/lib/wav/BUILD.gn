@@ -22,6 +22,9 @@ source_set("wav") {
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unittest_bin") {

@@ -21,4 +21,7 @@ static_library("testing") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

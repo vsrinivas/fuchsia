@@ -59,6 +59,9 @@ zx_library("metrics-inspect") {
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Helper library that uses both cobalt and inspect to record metrics.

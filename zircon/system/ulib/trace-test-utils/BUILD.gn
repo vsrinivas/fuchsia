@@ -49,4 +49,7 @@ zx_library("trace-test-utils") {
     "//zircon/system/ulib/trace-provider:trace-handler",
     "//zircon/system/ulib/trace-reader",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

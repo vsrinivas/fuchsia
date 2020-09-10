@@ -77,6 +77,9 @@ zx_library("ddk") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 zx_library("ddk-device-headers") {

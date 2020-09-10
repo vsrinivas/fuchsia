@@ -67,6 +67,9 @@ test("ssd1306-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

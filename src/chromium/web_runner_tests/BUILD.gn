@@ -39,6 +39,9 @@ source_set("test_server") {
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("mock_server") {

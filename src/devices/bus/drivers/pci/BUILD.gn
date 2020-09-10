@@ -53,6 +53,9 @@ source_set("user_pci") {
     # compiled for the test using the mock version.
     "//src/devices/lib/mmio",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("user_pci.proxy") {

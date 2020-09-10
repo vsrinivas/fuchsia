@@ -62,6 +62,9 @@ static_library("vk") {
     graphics_compute_vulkan_loader_target,
   ]
   public_configs = [ ":spinel_vk_public_config" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 #

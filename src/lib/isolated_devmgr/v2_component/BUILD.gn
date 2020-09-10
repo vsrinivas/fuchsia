@@ -100,6 +100,9 @@ source_set("client") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/ramdevice-client",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("v2_component") {

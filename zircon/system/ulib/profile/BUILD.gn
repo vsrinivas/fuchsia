@@ -29,4 +29,7 @@ zx_library("profile") {
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/syslog",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -32,6 +32,9 @@ source_set("lib") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/cmdline",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # TODO(jeremymanson): Break this out into its own directory.
@@ -43,6 +46,9 @@ source_set("common") {
   ]
 
   public_deps = [ "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

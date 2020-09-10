@@ -157,4 +157,7 @@ executable("optee_smoke_test_bin") {
     ":test_common",
     "//zircon/public/lib/fit",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

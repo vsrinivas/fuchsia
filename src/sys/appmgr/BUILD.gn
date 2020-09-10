@@ -102,6 +102,9 @@ source_set("lib") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("appmgr_for_test") {
@@ -195,6 +198,9 @@ executable("unittest_bin") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/memfs",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("appmgr") {

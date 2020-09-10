@@ -16,4 +16,7 @@ source_set("util") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

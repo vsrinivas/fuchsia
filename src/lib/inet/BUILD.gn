@@ -21,6 +21,9 @@ static_library("inet") {
     "//sdk/fidl/fuchsia.netstack",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("tests_bin") {

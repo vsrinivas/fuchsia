@@ -50,6 +50,9 @@ source_set("app") {
     "PACKAGE_NAME=\"OPENTHREAD-CORE\"",
     "PACKAGE_VERSION=\"1.0.0\"",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

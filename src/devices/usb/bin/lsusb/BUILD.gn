@@ -35,6 +35,9 @@ executable("lsusb") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/pretty",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # A simple test utility that returns the integer value provided to it in its first argument.

@@ -8,6 +8,9 @@ executable("bin") {
   output_name = "cowsay"
 
   sources = [ "cowsay.c" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("cowsay") {

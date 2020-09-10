@@ -43,6 +43,9 @@ source_set("optee_lib") {
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fidl-utils",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("optee") {
@@ -104,6 +107,9 @@ test("optee-client-test") {
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("optee-unittest") {

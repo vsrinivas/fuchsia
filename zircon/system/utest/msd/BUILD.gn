@@ -19,4 +19,7 @@ executable("msd") {
   sources = [ "msd.c" ]
   deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

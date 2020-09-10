@@ -84,6 +84,9 @@ executable("activity_test_bin") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("activity_test") {

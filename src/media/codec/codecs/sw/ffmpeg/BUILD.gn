@@ -12,10 +12,10 @@ group("ffmpeg") {
 
 executable("codec_runner_sw_ffmpeg") {
   visibility = [
-    "//src/media/codec/factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
     "//src/media/codec:codec_runner_sw_ffmpeg.manifest",
     "//src/media/codec/*",  # TODO(CF-235): Dep shouldn't be needed
+    "//src/media/codec/factory",
   ]
 
   sources = [
@@ -35,4 +35,7 @@ executable("codec_runner_sw_ffmpeg") {
     "//src/media/lib/codec_impl",
     "//src/media/lib/ffmpeg",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -24,6 +24,9 @@ test("component_cpp_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("component_cpp_testing_unittests") {
@@ -58,6 +61,9 @@ test("component_cpp_testing_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("helper_proc") {

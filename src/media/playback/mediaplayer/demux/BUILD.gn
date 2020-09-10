@@ -31,6 +31,9 @@ source_set("demux") {
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/util",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("tests") {
@@ -46,4 +49,7 @@ test("tests") {
     ":demux",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

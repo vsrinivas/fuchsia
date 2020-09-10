@@ -57,6 +57,9 @@ sdk_source_set("cpp") {
   ]
 
   public_configs = [ "//sdk/config" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("vfs_cpp_unittests") {
@@ -80,6 +83,9 @@ test("vfs_cpp_unittests") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("vfs_cpp_tests") {

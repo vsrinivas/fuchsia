@@ -36,6 +36,9 @@ source_set("lib_source") {
   public = all_hdrs
   sources = all_src
   public_deps = all_deps
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_source") {
@@ -43,6 +46,9 @@ source_set("test_source") {
   public = all_hdrs
   sources = all_src
   public_deps = all_deps
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("wlanif_driver") {

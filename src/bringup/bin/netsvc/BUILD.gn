@@ -119,6 +119,9 @@ source_set("netsvc_common") {
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("netsvc-test") {
@@ -148,6 +151,9 @@ test("netsvc-test") {
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("netsvc-stress-test") {
@@ -166,6 +172,9 @@ test("netsvc-stress-test") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/ramdevice-client",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 isolated_devmgr_unittest_component("netsvc-stress-test-component") {

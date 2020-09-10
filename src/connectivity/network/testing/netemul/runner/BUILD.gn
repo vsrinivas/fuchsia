@@ -96,6 +96,9 @@ source_set("src") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fs",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -150,6 +153,9 @@ executable("sandbox_unittest") {
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("netemul-sandbox-component") {

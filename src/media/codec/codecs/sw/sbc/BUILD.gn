@@ -8,10 +8,10 @@ group("sbc") {
 
 executable("codec_runner_sw_sbc") {
   visibility = [
-    "//src/media/codec/factory",
     "//src/media/codec:codec_runner_sw_sbc",
     "//src/media/codec:codec_runner_sw_sbc.manifest",
     "//src/media/codec/*",  # TODO(CF-235): Dep shouldn't be needed
+    "//src/media/codec/factory",
   ]
 
   sources = [
@@ -33,4 +33,7 @@ executable("codec_runner_sw_sbc") {
     "//third_party/android/platform/system/bt/embdrv/sbc:sbc_encoder",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -62,6 +62,9 @@ test("hid-test") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("hid-test-package") {

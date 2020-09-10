@@ -68,6 +68,9 @@ test("bt-hci-broadcom-test") {
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("bt-hci-broadcom-test-package") {

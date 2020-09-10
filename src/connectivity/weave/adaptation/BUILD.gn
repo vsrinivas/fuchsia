@@ -59,6 +59,9 @@ openweave_adaptation_layer("adaptation") {
     "//third_party/openweave-core",
     "//zircon/system/ulib/inet6",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs = [ "//build/config:Wno-conversion" ]
 }
 
 config("adaptation_config") {

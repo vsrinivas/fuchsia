@@ -26,4 +26,7 @@ source_set("annotation") {
     "//src/lib/fsl",
     "//src/ui/a11y/lib/util",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

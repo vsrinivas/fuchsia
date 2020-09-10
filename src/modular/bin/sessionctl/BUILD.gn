@@ -64,6 +64,9 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/lib/json_parser",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("sessionctl_unittest") {

@@ -57,6 +57,9 @@ source_set("shared") {
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

@@ -26,6 +26,9 @@ source_set("future") {
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-default",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("operation") {
@@ -61,6 +64,9 @@ source_set("future_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-testing",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("operation_unittest") {

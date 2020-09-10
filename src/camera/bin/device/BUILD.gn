@@ -48,6 +48,9 @@ source_set("lib") {
   } else {
     defines += [ "CAMERA_POLICY_ALLOW_REPLACEMENT_CONNECTIONS=(false)" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

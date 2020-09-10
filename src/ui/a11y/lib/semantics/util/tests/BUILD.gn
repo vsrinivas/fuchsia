@@ -19,4 +19,7 @@ executable("semantics_util_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/semantics/util",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

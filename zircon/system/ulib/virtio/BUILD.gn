@@ -30,4 +30,7 @@ zx_library("virtio") {
     "virtio/wl.h",
   ]
   sources = []
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

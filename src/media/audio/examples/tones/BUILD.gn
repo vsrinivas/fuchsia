@@ -49,4 +49,7 @@ executable("tones_bin") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -12,8 +12,8 @@ static_library("url") {
   #
   # Please do not add any more entries to this list.
   visibility = [
-    "//src/lib",
     ":*",
+    "//src/lib",
     "//src/media/playback/examples/audio_player:*",
     "//src/media/playback/mediaplayer:*",
     "//topaz/examples/mediaplayer/mediaplayer_skia:*",
@@ -58,6 +58,9 @@ static_library("url") {
   deps = [ "//third_party/icu" ]
 
   public_deps = [ "//src/lib/fxl" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("url_unittests_main") {
@@ -90,6 +93,9 @@ executable("url_unittests") {
     "//third_party/googletest:gtest",
     "//third_party/icu",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("url_tests") {

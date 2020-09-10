@@ -36,4 +36,7 @@ executable("mkfs-msdosfs") {
       "_GNU_SOURCE",
     ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

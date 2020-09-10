@@ -21,6 +21,9 @@ executable("stacktrace_unittest") {
 source_set("testutil") {
   sources = [ rebase_path("testutil.cc", ".", gperftools_src_root) ]
   deps = [ "//garnet/lib/profiler:profiler_static" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("profiler_unittest") {
@@ -47,6 +50,9 @@ executable("profiledata_unittest") {
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("profiler_tests") {

@@ -85,6 +85,9 @@ source_set("test-utils-zxtest") {
     "//src/storage/blobfs:private_headers",
   ]
   public_configs = [ ":test-utils-headers" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test-utils") {
@@ -104,6 +107,9 @@ source_set("test-utils") {
     "//src/storage/blobfs:private_headers",
   ]
   public_configs = [ ":test-utils-headers" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("blobfs_unittest") {
@@ -160,6 +166,9 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("blobfs-unittest") {
@@ -258,6 +267,9 @@ source_set("load-generator") {
     "//zircon/system/ulib/fs-test-utils",
   ]
   public_deps = [ ":test-utils-zxtest" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 blobfs_large_integration_test("fragmentation") {

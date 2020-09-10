@@ -78,4 +78,7 @@ zx_library("ramdevice-client-static") {
     "//zircon/system/ulib/fzl",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

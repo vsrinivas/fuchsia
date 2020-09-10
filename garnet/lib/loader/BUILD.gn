@@ -15,4 +15,7 @@ source_set("loader") {
     "//src/lib/pkg_url",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

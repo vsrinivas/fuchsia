@@ -29,4 +29,7 @@ zx_library("task-utils") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -18,4 +18,7 @@ source_set("metrics") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/playback/mediaplayer/graph",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

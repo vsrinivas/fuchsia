@@ -24,6 +24,9 @@ source_set("fake_logger_lib") {
     ":log_method",
     "//sdk/fidl/fuchsia.cobalt",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fake_clock_lib") {

@@ -34,6 +34,9 @@ zx_library("edid") {
     "//zircon/public/lib/zx",
   ]
   public_deps = [ "//zircon/public/lib/hwreg" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("edid-test") {

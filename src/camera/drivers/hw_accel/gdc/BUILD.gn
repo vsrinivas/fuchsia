@@ -47,6 +47,9 @@ source_set("source") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("driver") {

@@ -18,6 +18,9 @@ source_set("device_test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("test") {
@@ -47,4 +50,7 @@ executable("test") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

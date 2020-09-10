@@ -56,6 +56,9 @@ executable("test_bin") {
     ":cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("media_lib_timeline_tests") {

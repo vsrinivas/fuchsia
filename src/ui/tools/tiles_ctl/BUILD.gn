@@ -18,6 +18,9 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("tiles_ctl") {

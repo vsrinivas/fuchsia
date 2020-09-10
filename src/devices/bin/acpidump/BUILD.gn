@@ -18,6 +18,9 @@ source_set("src") {
     "//zircon/system/ulib/fdio-caller",
   ]
   visibility = [ ":*" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("acpidump") {

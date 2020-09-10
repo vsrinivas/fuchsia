@@ -36,6 +36,9 @@ source_set("address_space") {
     "platform:buffer",
     "platform:bus_mapper",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("macros") {
@@ -89,6 +92,9 @@ source_set("mapped_batch") {
     "platform:semaphore",
     "platform:trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("thread") {
@@ -137,6 +143,9 @@ source_set("semaphore_port") {
     "platform:port",
     "platform:semaphore",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("registers") {
@@ -157,6 +166,9 @@ source_set("registers") {
     ":macros",
     "platform:device",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("ringbuffer") {
@@ -173,4 +185,7 @@ source_set("ringbuffer") {
     ":address_space",
     ":macros",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -99,6 +99,9 @@ source_set("lib") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("driver_manager") {
@@ -137,6 +140,9 @@ test("driver_manager_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("driver-manager-test") {

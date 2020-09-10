@@ -30,4 +30,7 @@ executable("fsck-msdosfs") {
     "main.c",
   ]
   deps = [ "//sdk/lib/fdio" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

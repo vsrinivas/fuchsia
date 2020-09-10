@@ -68,6 +68,9 @@ source_set("lib") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -83,6 +86,9 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/launchpad",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("util") {
@@ -97,6 +103,9 @@ source_set("util") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fs",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("util_test") {
@@ -120,6 +129,9 @@ test("bootfs_loader_service_test") {
     ":lib",
     "//src/lib/loader_service:loader_service_test_fixture",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("bootfs-loader-service-test") {

@@ -34,6 +34,9 @@ source_set("block_lib") {
     "//src/devices/bus/lib/virtio",
     "//src/lib/ddktl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("scsi_lib") {

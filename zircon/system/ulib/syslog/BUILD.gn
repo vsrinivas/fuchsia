@@ -63,6 +63,9 @@ zx_library("syslog-static") {
     "//zircon/public/lib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 zx_library("syslog-headers") {

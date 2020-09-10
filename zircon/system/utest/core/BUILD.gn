@@ -120,6 +120,9 @@ test("standalone") {
     "test-main-with-filter.c",
   ]
   deps += [ "//zircon/public/lib/zxtest" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Make that into a bootable ZBI with just the kernel.

@@ -92,4 +92,7 @@ source_set("shared") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage-metrics",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

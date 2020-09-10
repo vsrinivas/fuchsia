@@ -39,6 +39,9 @@ executable("bin") {
   ]
 
   libs = [ "zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 install_host_tools("host_insntrace_print") {

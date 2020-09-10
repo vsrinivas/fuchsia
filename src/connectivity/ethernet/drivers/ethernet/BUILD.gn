@@ -85,6 +85,9 @@ test("ethernet-integration") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 isolated_devmgr_unittest_package("ethernet-integration-test") {

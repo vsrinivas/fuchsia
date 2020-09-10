@@ -23,6 +23,9 @@ template("ddk_source_split") {
                              "public_deps",
                              "public_configs",
                            ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
     defines += [ "NETDEV_DDK" ]
     public_deps += [
       "//zircon/system/ulib/ddk",
@@ -38,6 +41,9 @@ template("ddk_source_split") {
                              "public_deps",
                              "public_configs",
                            ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
     public_deps += [ "//zircon/system/ulib/syslog" ]
   }
 }

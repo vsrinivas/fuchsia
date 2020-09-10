@@ -79,6 +79,9 @@ source_set("src") {
     "//zircon/system/ulib/intel-hda",
     "//zircon/system/ulib/refcount",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("intel-hda") {

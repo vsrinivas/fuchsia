@@ -10,4 +10,7 @@ executable("tee-test") {
     "//zircon/system/ulib/tee-client-api",
   ]
   libs = [ "zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

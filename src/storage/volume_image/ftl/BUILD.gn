@@ -26,6 +26,9 @@ source_set("ftl-image-internal") {
     "//zircon/public/lib/fit",
   ]
   deps = [ ":raw-nand-image-utils" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("ftl-raw-nand-image-writer") {
@@ -41,6 +44,9 @@ source_set("ftl-raw-nand-image-writer") {
     ":ftl-image-internal",
     ":raw-nand-image-utils",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("ftl-image") {
@@ -83,6 +89,9 @@ source_set("ftl-test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("ftl-integration-test") {
@@ -100,6 +109,9 @@ source_set("ftl-integration-test") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/ftl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

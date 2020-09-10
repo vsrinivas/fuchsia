@@ -25,6 +25,9 @@ source_set("device") {
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/virtio",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("virtio") {
@@ -86,6 +89,9 @@ source_set("block") {
     "//zircon/public/lib/bitmap",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("virtio_block_bin") {
@@ -97,6 +103,9 @@ executable("virtio_block_bin") {
     ":block",
     ":virtio",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("virtio_block") {
@@ -297,6 +306,9 @@ executable("virtio_net_bin") {
     "//sdk/fidl/fuchsia.netstack",
     "//zircon/public/lib/async-cpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("virtio_net") {
@@ -347,6 +359,9 @@ executable("virtio_wl_bin") {
     "virtio_wl.h",
   ]
   deps = [ ":virtio" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("virtio_wl") {
@@ -400,6 +415,9 @@ executable("device_tests") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("qcow_test_data") {
@@ -424,6 +442,9 @@ executable("device_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 action("virtio_magma_generic") {

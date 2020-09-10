@@ -28,4 +28,7 @@ zx_library("sysmem-version") {
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/sysmem-make-tracking",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

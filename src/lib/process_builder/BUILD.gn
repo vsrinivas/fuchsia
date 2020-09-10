@@ -143,6 +143,9 @@ executable("static_pie_test_util") {
   ]
 
   exclude_toolchain_tags = [ "instrumented" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("process_builder_tests") {

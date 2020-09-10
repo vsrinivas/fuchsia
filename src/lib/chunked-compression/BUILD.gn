@@ -43,6 +43,9 @@ executable("chunked-compress") {
     ":chunked-compression",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 install_host_tools("chunked-compress-host-tool") {
@@ -82,6 +85,9 @@ test("chunked-compression-unittests") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("chunked-compression-unittests-package") {

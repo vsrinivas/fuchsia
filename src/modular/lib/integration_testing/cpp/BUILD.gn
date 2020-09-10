@@ -17,4 +17,7 @@ source_set("cpp") {
     "//src/modular/lib/async/cpp:future",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.testing.runner" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

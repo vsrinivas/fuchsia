@@ -107,6 +107,9 @@ executable("group_key_store_unittests") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("platform_case_auth_delegate_unittests") {
@@ -120,6 +123,9 @@ executable("platform_case_auth_delegate_unittests") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("weave_platform_manager_unittests") {

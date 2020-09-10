@@ -157,6 +157,9 @@ executable("test_suite") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("hw_watchpointer") {
@@ -170,6 +173,9 @@ executable("hw_watchpointer") {
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("multi_threaded") {
@@ -181,6 +187,9 @@ executable("multi_threaded") {
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("printer") {
@@ -205,6 +214,9 @@ executable("process_spawner") {
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("thread_signals") {

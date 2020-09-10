@@ -58,6 +58,9 @@ executable("virtual-console") {
               "vc-log.cc",
             ]
   deps = [ ":common" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("virtual-console-test-display") {
@@ -73,6 +76,9 @@ test("virtual-console-test-display") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("virtual-console-test-text") {
@@ -89,6 +95,9 @@ test("virtual-console-test-text") {
     ":common",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("virtual-console-test-integration") {

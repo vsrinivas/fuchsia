@@ -119,6 +119,9 @@ source_set("message_transceiver") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Empty renderer and capturer implementations suitable for use in unit testing.

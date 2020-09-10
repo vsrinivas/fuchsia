@@ -120,6 +120,9 @@ source_set("displays") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("activity_notifier") {

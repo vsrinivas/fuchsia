@@ -58,6 +58,9 @@ source_set("mixer") {
   # aspects of the debug configuration (ex: DCHECK is still enabled).
   configs -= [ "//build/config:default_optimize" ]
   configs += [ "//build/config:optimize_speed" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
@@ -105,4 +108,7 @@ executable("unittest_bin") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -30,6 +30,9 @@ source_set("format") {
     "//src/lib/fxl",
     "//zircon/system/ulib/audio-proto-utils",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unittest-bin") {

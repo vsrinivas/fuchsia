@@ -45,6 +45,9 @@ source_set("lz4-compression-test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("guid") {
@@ -108,6 +111,9 @@ source_set("fd-io") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fd-test-helper") {
@@ -130,6 +136,9 @@ source_set("fd-io-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("block-utils") {
