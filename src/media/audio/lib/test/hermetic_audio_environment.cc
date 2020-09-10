@@ -209,6 +209,9 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   services->AllowParentService("fuchsia.logger.LogSink");
   services->AllowParentService("fuchsia.tracing.provider.Registry");
   services->AllowParentService(fuchsia::scheduler::ProfileProvider::Name_);
+  for (const auto& service : options_.extra_allowed_parent_services) {
+    services->AllowParentService(service);
+  }
 
   std::unique_lock<std::mutex> lock(mutex_);
   hermetic_environment_ = sys::testing::EnclosingEnvironment::Create(
