@@ -275,9 +275,6 @@ void StoryProviderImpl::Watch(
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
     FX_CHECK(container.current_data->has_story_info());
-    watcher_ptr->OnChange(StoryInfo2ToStoryInfo(container.current_data->story_info()),
-                          container.controller_impl->runtime_state(),
-                          fuchsia::modular::StoryVisibilityState::DEFAULT);
     watcher_ptr->OnChange2(CloneStruct(container.current_data->story_info()),
                            container.controller_impl->runtime_state(),
                            fuchsia::modular::StoryVisibilityState::DEFAULT);
@@ -504,8 +501,6 @@ void StoryProviderImpl::NotifyStoryWatchers(const fuchsia::modular::internal::St
     if (!story_data->has_story_info()) {
       continue;
     }
-    (*i)->OnChange(StoryInfo2ToStoryInfo(story_data->story_info()), story_state,
-                   fuchsia::modular::StoryVisibilityState::DEFAULT);
     (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state,
                     fuchsia::modular::StoryVisibilityState::DEFAULT);
   }
