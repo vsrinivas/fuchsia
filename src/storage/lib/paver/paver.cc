@@ -592,7 +592,17 @@ std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
   }
   PartitionSpec spec = PartitionSpec(part_type, std::string_view(type.data(), type.size()));
 
-  if (partitioner_->SupportsPartition(spec)) {
+  bool supported = partitioner_->SupportsPartition(spec);
+  if (!supported && part_type == Partition::kBootloaderB) {
+    // It's possible that the device does not support bootloader A/B. In this case,
+    // try writing to configuration A, which is always supported for some expected firmware
+    // type.
+    LOG("Device may not support firmware A/B. Attempt to write to slot A\n")
+    spec.partition = Partition::kBootloaderA;
+    supported = partitioner_->SupportsPartition(spec);
+  }
+
+  if (supported) {
     return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec).status_value();
   }
 
