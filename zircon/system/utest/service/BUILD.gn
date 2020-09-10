@@ -27,11 +27,6 @@ group("tests") {
 }
 
 test("service-llcpp-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-  if (configs + fdio_config - fdio_config != configs) {
-    configs -= fdio_config
-  }
   sources = [
     "llcpp/client_test.cc",
     "llcpp/server_test.cc",
