@@ -7,6 +7,8 @@ import("//topaz/runtime/flutter_runner/flutter_app.gni")
 flutter_app("scroll-flutter") {
   main_dart = "lib/main.dart"
 
+  sources = [ "main.dart" ]
+
   # Force a non-release (profile or debug) build since flutter_driver is
   # disabled in release builds.
   product = false

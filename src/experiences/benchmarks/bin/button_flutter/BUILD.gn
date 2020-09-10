@@ -7,6 +7,8 @@ import("//topaz/runtime/flutter_runner/flutter_app.gni")
 flutter_app("button_flutter") {
   main_dart = "lib/main.dart"
 
+  sources = [ "main.dart" ]
+
   meta = [
     {
       path = rebase_path("meta/button_flutter.cmx")
@@ -16,7 +18,7 @@ flutter_app("button_flutter") {
 
   deps = [
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_scenic_flutter",
   ]
 }
