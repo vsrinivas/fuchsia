@@ -6,7 +6,6 @@
 # and inserted into bootfs or system images.
 # This list is mostly used by //bundles/bringup:tests.
 common_test_contents = [
-  "//src/devices/tests/devhost-test",
   "//src/storage/bin/factoryfs",
 ]
 

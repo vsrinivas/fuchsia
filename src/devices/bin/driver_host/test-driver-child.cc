@@ -19,7 +19,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
-#include "test-metadata.h"
+#include "src/devices/bin/driver_host/test-metadata.h"
 
 class TestDevhostDriverChild;
 using DeviceType = ddk::Device<TestDevhostDriverChild, ddk::Unbindable, ddk::Initializable>;

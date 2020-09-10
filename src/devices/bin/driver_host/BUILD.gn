@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -81,6 +82,41 @@ shared_library("driver") {
   deps = [ ":common" ]
 }
 
+driver_module("driver-host-test-driver") {
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [ "test-driver.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
+driver_module("driver-host-test-child-driver") {
+  configs += [ "//build/config:all_source" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [ "test-driver-child.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
 test("driver_host_test") {
   sources = [
     "core_test.cc",
@@ -110,12 +146,12 @@ isolated_devmgr_unittest_package("driver-host-tests") {
   executable_path = "test/driver_host_test"
 
   deps = [
+    ":driver-host-test-driver",
+    ":driver-host-test-child-driver",
     ":driver_host_test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/devhost-test:devhost-test",
-    "//src/devices/tests/devhost-test:devhost-test-child",
     "//src/devices/tests/sysdev",
     "//src/devices/tests/unit-test-test:unit-test-fail",
     "//src/devices/tests/unit-test-test:unit-test-pass",

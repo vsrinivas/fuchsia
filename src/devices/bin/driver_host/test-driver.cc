@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/devhost/test/llcpp/fidl.h>
-#include <zircon/threads.h>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -16,29 +13,17 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/alloc_checker.h>
 
-#include "test-metadata.h"
-
-using llcpp::fuchsia::device::devhost::test::TestDevice;
+#include "src/devices/bin/driver_host/test-metadata.h"
 
 class TestDevhostDriver;
-using DeviceType =
-    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
-class TestDevhostDriver : public DeviceType,
-                          public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
-                          public TestDevice::Interface {
+using DeviceType = ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable>;
+class TestDevhostDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST> {
  public:
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-  void AddChildDevice(AddChildDeviceCompleter::Sync completer) override;
-
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    ::llcpp::fuchsia::device::devhost::test::TestDevice::Dispatch(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   struct devhost_test_metadata metadata_;
@@ -71,14 +56,7 @@ void TestDevhostDriver::DdkInit(ddk::InitTxn txn) {
   txn.Reply(status);
 }
 
-void TestDevhostDriver::AddChildDevice(AddChildDeviceCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result response;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  response.set_err(fidl::unowned_ptr(&status));
-  completer.Reply(std::move(response));
-}
-
-zx_status_t test_devhost_driver_bind(void* ctx, zx_device_t* device) {
+zx_status_t TestDevhostDriverBind(void* ctx, zx_device_t* device) {
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<TestDevhostDriver>(&ac, device);
   if (!ac.check()) {
@@ -95,7 +73,7 @@ zx_status_t test_devhost_driver_bind(void* ctx, zx_device_t* device) {
 static zx_driver_ops_t test_devhost_driver_ops = []() -> zx_driver_ops_t {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = test_devhost_driver_bind;
+  ops.bind = TestDevhostDriverBind;
   return ops;
 }();
 

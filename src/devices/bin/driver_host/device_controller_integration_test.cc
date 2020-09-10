@@ -18,10 +18,7 @@
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
-// Should be same as the one in devhost-test/metadata.h
-struct driver_host_test_metadata {
-  bool init_reply_success = true;
-};
+#include "src/devices/bin/driver_host/test-metadata.h"
 
 namespace {
 
@@ -123,7 +120,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
+  struct devhost_test_metadata test_metadata = {
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -170,7 +167,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
+  struct devhost_test_metadata test_metadata = {
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -192,7 +189,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
   char libpath[PATH_MAX];
-  int len = snprintf(libpath, sizeof(libpath), "%s/%s", "/boot/driver", "devhost-test-child.so");
+  int len = snprintf(libpath, sizeof(libpath), "%s/%s", "/boot/driver",
+                     "driver-host-test-child-driver.so");
   // Do not open the child. Otherwise rebind will be stuck.
   zx_status_t call_status = ZX_OK;
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(zx::unowned(parent_channel),
@@ -216,7 +214,7 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
+  struct devhost_test_metadata test_metadata = {
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -428,7 +426,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
+  struct devhost_test_metadata test_metadata = {
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -472,7 +470,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
+  struct devhost_test_metadata test_metadata = {
       .init_reply_success = false,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
