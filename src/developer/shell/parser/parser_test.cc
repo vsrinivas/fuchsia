@@ -251,7 +251,11 @@ TEST(ParserTest, VariableDeclFail) {
   const auto kTestString = "vars = 0";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, TwoVariableDecl) {
@@ -277,7 +281,11 @@ TEST(ParserTest, TwoVariableDeclFail) {
       "var y = 0";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, TwoVariableDeclTrailingChars) {
@@ -287,7 +295,11 @@ TEST(ParserTest, TwoVariableDeclTrailingChars) {
       "xxx";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, TwoVariableDeclConst) {
@@ -374,14 +386,22 @@ TEST(ParserTest, VariableDeclIntegerZeroFirst) {
   const auto kTestString = "var s = 0912";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclIntegerHexNoMark) {
   const auto kTestString = "var s = 0abc";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclString) {
@@ -443,7 +463,11 @@ TEST(ParserTest, VariableDeclStringDangling) {
   const auto kTestString = "var s = \"bob";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclObject) {
@@ -545,28 +569,44 @@ TEST(ParserTest, VariableDeclObjectDangling) {
   const auto kTestString = "var s = { foo: { bar: 7 }, baz: 23, bang: \"hiiii\"";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclObjectDanglingField) {
   const auto kTestString = "var s = { foo: ";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclObjectNoFieldSeparator) {
   const auto kTestString = "var s = { foo 6 }";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclStringBadEscape) {
   const auto kTestString = "var s = \"bob\\qbob\"";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclPath) {
@@ -684,7 +724,11 @@ TEST(ParserTest, VariableDeclPathDanglingQuote) {
   const auto kTestString = "var x = ./somew` oo oo ";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclPathInObject) {
@@ -877,14 +921,22 @@ TEST(ParserTest, VariableDeclAddSubtractDangle) {
   const auto kTestString = "var s = 1 - 2 + ";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 TEST(ParserTest, VariableDeclAddSubtractTogether) {
   const auto kTestString = "var s = 1 - + 2";
 
   auto parse = Parse(kTestString);
-  EXPECT_FALSE(parse);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program());
 }
 
 }  // namespace shell::parser

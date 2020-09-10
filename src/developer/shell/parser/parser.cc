@@ -4,8 +4,11 @@
 
 #include "src/developer/shell/parser/parser.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/shell/parser/ast.h"
 #include "src/developer/shell/parser/combinators.h"
+#include "src/developer/shell/parser/error.h"
 #include "src/developer/shell/parser/text_match.h"
 
 namespace shell::parser {
@@ -267,11 +270,13 @@ ParseResult ProgramContent(ParseResult prefix) {
 }  // namespace
 
 std::shared_ptr<ast::Node> Parse(std::string_view text) {
-  if (auto res = NT<ast::Program>(Seq(ProgramContent, EOS))(ParseResult(text))) {
-    return res.node();
-  }
+  auto res =
+      NT<ast::Program>(Alt(Seq(ProgramContent, EOS), ErSkip("Unrecoverable parse error",
+                                                            ZeroPlus(AnyChar))))(ParseResult(text));
 
-  return nullptr;
+  FX_DCHECK(res) << "Incorrectly handled parse error.";
+
+  return res.node();
 }
 
 }  // namespace shell::parser

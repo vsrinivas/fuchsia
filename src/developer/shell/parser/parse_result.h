@@ -64,36 +64,23 @@ class ParseResult {
 
   // Insert an error indicating a token of the given size was expected. ident names the token in the
   // error message. The parse position does not change.
-  ParseResult Expected(size_t size, const std::string &ident) {
+  ParseResult Expected(size_t size, std::string_view message) {
     if (is_end()) {
       return kEnd;
     }
 
     return ParseResult(unit_, offset_, error_insert_ + size, error_delete_, error_internal_,
-                       std::make_unique<ast::Error>(offset_, 0, "Expected " + ident), frame_);
+                       std::make_unique<ast::Error>(offset_, 0, message), frame_);
   }
 
   // Skip the given number of bytes and push an error token indicating they were skipped.
-  ParseResult Skip(size_t size) {
+  ParseResult Skip(size_t size, std::string_view message) {
     if (is_end()) {
       return kEnd;
     }
 
-    return ParseResult(
-        unit_, offset_ + size, error_insert_, error_delete_ + size, error_internal_,
-        std::make_unique<ast::Error>(offset_, size,
-                                     "Unexpected '" + std::string(tail().substr(0, size)) + "'"),
-        frame_);
-  }
-
-  // Push an error on to the stack and add internal error to this state.
-  ParseResult InjectError(size_t error_amount, std::shared_ptr<ast::Node> error_node) {
-    if (is_end()) {
-      return kEnd;
-    }
-
-    return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_ + error_amount,
-                       error_node, frame_);
+    return ParseResult(unit_, offset_ + size, error_insert_, error_delete_ + size, error_internal_,
+                       std::make_unique<ast::Error>(offset_, size, message), frame_);
   }
 
   // Push a marker frame onto the stack. The next Reduce() call will reduce up to here.

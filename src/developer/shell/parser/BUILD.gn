@@ -11,6 +11,8 @@ static_library("parser") {
     "ast.h",
     "combinators.cc",
     "combinators.h",
+    "error.cc",
+    "error.h",
     "parse_result.cc",
     "parse_result.h",
     "parser.cc",
@@ -32,6 +34,7 @@ static_library("parser") {
 test("parser_tests_bin") {
   sources = [
     "combinator_test.cc",
+    "error_test.cc",
     "parser_test.cc",
     "text_match_test.cc",
   ]

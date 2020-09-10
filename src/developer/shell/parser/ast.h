@@ -162,7 +162,7 @@ class Terminal : public Node {
 
 class Error : public Terminal {
  public:
-  Error(size_t start, size_t size, const std::string& message)
+  Error(size_t start, size_t size, std::string_view message)
       : Terminal(start, size, ""), message_(message) {}
 
   const std::string& message() const { return message_; }
