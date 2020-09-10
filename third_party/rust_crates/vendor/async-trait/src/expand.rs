@@ -284,6 +284,13 @@ fn transform_block(
     };
 
     let mut outer_generics = generics.clone();
+    for p in &mut outer_generics.params {
+        match p {
+            GenericParam::Type(t) => t.default = None,
+            GenericParam::Const(c) => c.default = None,
+            GenericParam::Lifetime(_) => {}
+        }
+    }
     if !has_self {
         if let Some(mut where_clause) = outer_generics.where_clause {
             where_clause.predicates = where_clause
@@ -446,9 +453,11 @@ fn transform_block(
     let box_pin = quote_spanned!(brace.span=> {
         #[allow(
             #allow_non_snake_case
+            unused_parens, // https://github.com/dtolnay/async-trait/issues/118
             clippy::missing_docs_in_private_items,
             clippy::needless_lifetimes,
             clippy::ptr_arg,
+            clippy::trivially_copy_pass_by_ref,
             clippy::type_repetition_in_bounds,
             clippy::used_underscore_binding,
         )]

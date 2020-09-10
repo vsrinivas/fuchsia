@@ -706,6 +706,8 @@ pub mod issue81 {
 
 // https://github.com/dtolnay/async-trait/issues/83
 pub mod issue83 {
+    #![allow(clippy::needless_arbitrary_self_type)]
+
     use async_trait::async_trait;
 
     #[async_trait]
@@ -881,8 +883,37 @@ pub mod issue92 {
     }
 }
 
+// https://github.com/dtolnay/async-trait/issues/92#issuecomment-683370136
+pub mod issue92_2 {
+    use async_trait::async_trait;
+
+    macro_rules! mac {
+        ($($tt:tt)*) => {
+            $($tt)*
+        };
+    }
+
+    pub trait Trait1 {
+        fn func1();
+    }
+
+    #[async_trait]
+    pub trait Trait2: Trait1 {
+        async fn func2() {
+            mac!(Self::func1());
+
+            macro_rules! mac2 {
+                ($($tt:tt)*) => {
+                    Self::func1();
+                };
+            }
+            mac2!();
+        }
+    }
+}
+
 // https://github.com/dtolnay/async-trait/issues/104
-mod issue104 {
+pub mod issue104 {
     use async_trait::async_trait;
 
     #[async_trait]
@@ -907,7 +938,7 @@ mod issue104 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/106
-mod issue106 {
+pub mod issue106 {
     use async_trait::async_trait;
     use std::future::Future;
 
@@ -939,7 +970,7 @@ mod issue106 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/110
-mod issue110 {
+pub mod issue110 {
     #![deny(clippy::all)]
 
     use async_trait::async_trait;
@@ -958,4 +989,39 @@ mod issue110 {
     impl Loader for AwsEc2MetadataLoader<'_> {
         async fn load(&self, _key: &str) {}
     }
+}
+
+// https://github.com/dtolnay/async-trait/issues/120
+pub mod issue120 {
+    #![deny(clippy::trivially_copy_pass_by_ref)]
+
+    use async_trait::async_trait;
+
+    #[async_trait]
+    trait Trait {
+        async fn f(&self);
+    }
+
+    #[async_trait]
+    impl Trait for () {
+        async fn f(&self) {}
+    }
+}
+
+// https://github.com/dtolnay/async-trait/issues/123
+pub mod issue123 {
+    use async_trait::async_trait;
+
+    #[async_trait]
+    trait Trait<T = ()> {
+        async fn f(&self) -> &str
+        where
+            T: 'async_trait,
+        {
+            "default"
+        }
+    }
+
+    #[async_trait]
+    impl<T> Trait<T> for () {}
 }

@@ -26,7 +26,7 @@ if (!(current_os == "fuchsia")) {
   }
 }
 group("async-trait") {
-  deps = [ ":async-trait-v0_1_36($host_toolchain)" ]
+  deps = [ ":async-trait-v0_1_40($host_toolchain)" ]
 }
 
 group("base64") {
@@ -1147,10 +1147,10 @@ rust_library("async-task-v3_0_0") {
   ]
 }
 
-rust_proc_macro("async-trait-v0_1_36") {
+rust_proc_macro("async-trait-v0_1_40") {
   crate_name = "async_trait"
   crate_root = "//third_party/rust_crates/vendor/async-trait/src/lib.rs"
-  output_name = "async_trait-ea6c1c1ca784b963"
+  output_name = "async_trait-c6b6d222802967e6"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -1166,8 +1166,8 @@ rust_proc_macro("async-trait-v0_1_36") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=ea6c1c1ca784b963",
-    "-Cextra-filename=-ea6c1c1ca784b963",
+    "-Cmetadata=c6b6d222802967e6",
+    "-Cextra-filename=-c6b6d222802967e6",
   ]
 }
 
@@ -8824,7 +8824,7 @@ rust_library("trust-dns-proto-v0_19_2") {
   ]
 
   deps = []
-  deps += [ ":async-trait-v0_1_36($host_toolchain)" ]
+  deps += [ ":async-trait-v0_1_40($host_toolchain)" ]
   deps += [ ":backtrace-v0_3_42" ]
   deps += [ ":enum-as-inner-v0_3_0($host_toolchain)" ]
   deps += [ ":futures-v0_3_5" ]

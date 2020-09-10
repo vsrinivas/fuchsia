@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "async-trait"
-version = "0.1.36"
+version = "0.1.40"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Type erasure for async trait methods"
 documentation = "https://docs.rs/async-trait"
