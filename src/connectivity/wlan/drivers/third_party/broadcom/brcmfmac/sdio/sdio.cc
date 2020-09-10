@@ -3437,7 +3437,20 @@ static zx_status_t brcmf_get_wifi_metadata(brcmf_bus* bus_if, void* data, size_t
 
 static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t* mac_addr) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-  return brcmf_sdiod_get_bootloader_macaddr(sdiodev, mac_addr);
+  static uint8_t bootloader_macaddr[ETH_ALEN];
+  static bool memoized = false;
+  zx_status_t status;
+
+  if (!memoized) {
+    status = brcmf_sdiod_get_bootloader_macaddr(sdiodev, bootloader_macaddr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    memoized = true;
+  }
+
+  memcpy(mac_addr, bootloader_macaddr, sizeof(bootloader_macaddr));
+  return ZX_OK;
 }
 
 static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {

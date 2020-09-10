@@ -533,6 +533,11 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
         const uint8_t* mac_addr = req->init_mac_addr;
         err = brcmf_set_iface_macaddr(true, ndev, mac_addr);
         if (err != ZX_OK) {
+          BRCMF_ERR(
+              "Failed to set custom MAC address %02x:%02x:%02x:%02x:%02x:%02x for AP iface "
+              "netdev:%s",
+              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
+              ndev->name);
           return err;
         }
       }
@@ -591,11 +596,39 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       wdev->iftype = req->role;
       ndev->sme_channel = zx::channel(req->sme_channel);
       ndev->needs_free_net_device = false;
+
+      // Use req->init_mac_addr if it's provided. Otherwise, fallback to the bootloader
+      // MAC address. Note that this fallback MAC address is intended for client ifaces only.
+      const uint8_t* mac_addr;
+      uint8_t bootloader_macaddr[ETH_ALEN];
       if (req->has_init_mac_addr) {
-        err = brcmf_set_iface_macaddr(false, ndev, req->init_mac_addr);
+        mac_addr = req->init_mac_addr;
+      } else {
+        err = brcmf_bus_get_bootloader_macaddr(drvr->bus_if, bootloader_macaddr);
         if (err != ZX_OK) {
-          return err;
+          BRCMF_ERR("Bootloader MAC address not available.");
+          err = brcmf_gen_random_mac_addr(bootloader_macaddr);
+          if (err != ZX_OK) {
+            BRCMF_ERR("Failed to generate random MAC address.");
+            return err;
+          }
+          BRCMF_ERR("Falling back to random mac address: %02x:%02x:%02x:%02x:%02x:%02x",
+                    bootloader_macaddr[0], bootloader_macaddr[1], bootloader_macaddr[2],
+                    bootloader_macaddr[3], bootloader_macaddr[4], bootloader_macaddr[5]);
         }
+        BRCMF_DBG(WLANIF, "Retrieved bootloader wifi MAC addresss: %02x:%02x:%02x:%02x:%02x:%02x",
+                  bootloader_macaddr[0], bootloader_macaddr[1], bootloader_macaddr[2],
+                  bootloader_macaddr[3], bootloader_macaddr[4], bootloader_macaddr[5]);
+        mac_addr = bootloader_macaddr;
+      }
+
+      err = brcmf_set_iface_macaddr(false, ndev, mac_addr);
+      if (err != ZX_OK) {
+        BRCMF_ERR(
+            "Failed to set MAC address %02x:%02x:%02x:%02x:%02x:%02x for client iface netdev:%s",
+            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
+            ndev->name);
+        return err;
       }
 
       break;

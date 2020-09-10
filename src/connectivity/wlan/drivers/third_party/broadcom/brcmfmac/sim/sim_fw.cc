@@ -584,9 +584,29 @@ struct pktq* SimFirmware::BusGetTxQueue() {
 }
 
 zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
-  // Rather than simulate a fixed MAC address, return NOT_SUPPORTED, which will force
-  // us to use a randomly-generated value
-  return ZX_ERR_NOT_SUPPORTED;
+  // Simulate a fixed MAC address.
+  static uint8_t fixed_random_macaddr[ETH_ALEN] = {};
+  static bool memoized = false;
+  zx_status_t status;
+
+  if (!memoized) {
+    BRCMF_INFO(
+        "Bootloader MAC address not available to simulated firmware. Generating a random mac "
+        "address to simulate a fixed MAC address.");
+    status = brcmf_gen_random_mac_addr(fixed_random_macaddr);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    BRCMF_INFO("Generated random mac address: %02x:%02x:%02x:%02x:%02x:%02x",
+               fixed_random_macaddr[0], fixed_random_macaddr[1], fixed_random_macaddr[2],
+               fixed_random_macaddr[3], fixed_random_macaddr[4], fixed_random_macaddr[5]);
+
+    memoized = true;
+  }
+
+  memcpy(mac_addr, fixed_random_macaddr, sizeof(fixed_random_macaddr));
+  return ZX_OK;
 }
 
 void SimFirmware::BusSetTimer(std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
@@ -1882,6 +1902,8 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
 // If setting for the first time, save it as system mac address as well
 zx_status_t SimFirmware::SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr) {
   if (mac_addr_set_ == false) {
+    BRCMF_DBG(SIM, "Setting system mac addr: %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0],
+              mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     memcpy(mac_addr_.data(), mac_addr, ETH_ALEN);
     memcpy(pfn_mac_addr_.byte, mac_addr, ETH_ALEN);
     mac_addr_set_ = true;
@@ -1955,6 +1977,10 @@ void SimFirmware::ScanNextChannel() {
       if (scan_state_.channel_index >= scan_state_.opts->channels.size()) {
         // Scanning complete
         if (scan_state_.opts->is_active) {
+          BRCMF_DBG(SIM,
+                    "Resetting pfn_mac_addr_ to system mac addr: %02x:%02x:%02x:%02x:%02x:%02x",
+                    mac_addr_.data()[0], mac_addr_.data()[1], mac_addr_.data()[2],
+                    mac_addr_.data()[3], mac_addr_.data()[4], mac_addr_.data()[5]);
           memcpy(pfn_mac_addr_.byte, mac_addr_.data(), ETH_ALEN);
         }
         hw_.DisableRx();

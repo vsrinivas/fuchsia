@@ -151,7 +151,7 @@ TEST_F(DynamicIfTest, CreateDestroy) {
 
 // This test case verifies that starting an AP iface using the same MAC address as the existing
 // client iface will return an error.
-TEST_F(DynamicIfTest, CreateAPwithSameMacAsClient) {
+TEST_F(DynamicIfTest, CreateApWithSameMacAsClient) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 
@@ -167,7 +167,7 @@ TEST_F(DynamicIfTest, CreateAPwithSameMacAsClient) {
 
 // This test verifies that if we want to create an client iface with the same MAC address as the
 // pre-set one, no error will be returned.
-TEST_F(DynamicIfTest, CreateClientwithPreAllocMac) {
+TEST_F(DynamicIfTest, CreateClientWithPreAllocMac) {
   Init();
   common::MacAddr pre_set_mac;
   brcmf_simdev* sim = device_->GetSim();
@@ -180,6 +180,40 @@ TEST_F(DynamicIfTest, CreateClientwithPreAllocMac) {
             ZX_OK);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   DeleteInterface(client_ifc_);
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+// This test verifies that we still successfully create an iface with a random
+// MAC address even if the bootloader MAC address cannot be retrieved.
+TEST_F(DynamicIfTest, CreateClientWithRandomMac) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+
+  // Replace get_bootloader_mac_addr with a function that will fail
+  brcmf_bus_ops modified_bus_ops = *(sim->drvr->bus_if->ops);
+  modified_bus_ops.get_bootloader_macaddr = [](brcmf_bus* bus, uint8_t* mac_addr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  };
+  const brcmf_bus_ops* original_bus_ops = sim->drvr->bus_if->ops;
+  sim->drvr->bus_if->ops = &modified_bus_ops;
+
+  // Test that get_bootloader_macaddr was indeed replaced
+  uint8_t bootloader_macaddr[ETH_ALEN];
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+            brcmf_bus_get_bootloader_macaddr(sim->drvr->bus_if, bootloader_macaddr));
+
+  EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, WLAN_INFO_MAC_ROLE_CLIENT));
+  wireless_dev* wdev = nullptr;
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = client_ifc_.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, &wdev));
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
+
+  // Set sim->drvr->bus_if->ops back to the original set of brcmf_bus_ops
+  sim->drvr->bus_if->ops = original_bus_ops;
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
@@ -315,7 +349,56 @@ TEST_F(DynamicIfTest, CreateClientWithLongName) {
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, really_long_name, nullptr, &req, &wdev));
   EXPECT_EQ(0, strcmp(wdev->netdev->name, truncated_name));
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
 
+// This test verifies that creating a client interface with a pre-set MAC address will not cause
+// the pre-set MAC to be remembered by the driver.
+TEST_F(DynamicIfTest, CreateClientWithCustomMac) {
+  Init();
+  common::MacAddr retrieved_mac;
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
+  EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+  EXPECT_EQ(ZX_OK,
+            brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
+  EXPECT_EQ(retrieved_mac, kFakeMac);
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  DeleteInterface(client_ifc_);
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+// This test verifies that creating a client interface with a custom MAC address will not cause
+// subsequent client ifaces to use the same custom MAC address instead of using the bootloader
+// (or random) MAC address.
+TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
+  Init();
+  common::MacAddr pre_set_mac;
+  common::MacAddr retrieved_mac;
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
+  EXPECT_EQ(ZX_OK,
+            brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", pre_set_mac.byte, ETH_ALEN, nullptr));
+
+  // Create a client with a custom MAC address
+  EXPECT_EQ(ZX_OK, StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac));
+  EXPECT_EQ(ZX_OK,
+            brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
+  EXPECT_EQ(retrieved_mac, kFakeMac);
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  DeleteInterface(client_ifc_);
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+
+  // Create a client without a custom MAC address
+  EXPECT_EQ(ZX_OK, StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_));
+  EXPECT_EQ(ZX_OK,
+            brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
+  EXPECT_EQ(retrieved_mac, pre_set_mac);
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  DeleteInterface(client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
