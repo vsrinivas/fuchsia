@@ -970,7 +970,7 @@ int Dwc2::IrqThread() {
   return 0;
 }
 
-void Dwc2::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Dwc2::DdkUnbind(ddk::UnbindTxn txn) {
   irq_.destroy();
   if (irq_thread_started_) {
     irq_thread_started_ = false;

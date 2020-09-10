@@ -24,7 +24,7 @@
 namespace audio {
 
 class Max98373;
-using DeviceType = ddk::Device<Max98373, ddk::UnbindableNew, ddk::Suspendable>;
+using DeviceType = ddk::Device<Max98373, ddk::Unbindable, ddk::Suspendable>;
 
 class Max98373 : public DeviceType,  // Not final for unit tests.
                  public ddk::CodecProtocol<Max98373, ddk::base_protocol> {
@@ -37,7 +37,7 @@ class Max98373 : public DeviceType,  // Not final for unit tests.
   zx_status_t Bind();
 
   void DdkRelease() { delete this; }
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
+  void DdkUnbind(ddk::UnbindTxn txn) {
     Shutdown();
     txn.Reply();
   }

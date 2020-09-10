@@ -1199,7 +1199,7 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   return status;
 }
 
-void Fragment::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Fragment::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   switch (proto_id) {

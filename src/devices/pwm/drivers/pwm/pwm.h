@@ -13,13 +13,13 @@
 namespace pwm {
 
 class PwmDevice;
-using PwmDeviceType = ddk::Device<PwmDevice, ddk::UnbindableNew>;
+using PwmDeviceType = ddk::Device<PwmDevice, ddk::Unbindable>;
 
 class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Ddk Mixins.

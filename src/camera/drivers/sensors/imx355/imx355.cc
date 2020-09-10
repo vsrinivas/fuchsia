@@ -459,7 +459,7 @@ zx_status_t Imx355Device::Create(zx_device_t* parent, std::unique_ptr<Imx355Devi
 
 void Imx355Device::ShutDown() {}
 
-void Imx355Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Imx355Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Imx355Device::DdkRelease() {
   ShutDown();

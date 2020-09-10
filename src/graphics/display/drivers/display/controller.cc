@@ -1006,7 +1006,7 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   return ZX_OK;
 }
 
-void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Controller::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(INFO, "Controller::DdkUnbind");
   fbl::AutoLock lock(mtx());
   unbinding_ = true;

@@ -201,7 +201,7 @@ void AmlThermal::DdkRelease() {
   delete this;
 }
 
-void AmlThermal::DdkUnbindNew(ddk::UnbindTxn txn) {
+void AmlThermal::DdkUnbind(ddk::UnbindTxn txn) {
   sync_completion_signal(&quit_);
   txn.Reply();
 }

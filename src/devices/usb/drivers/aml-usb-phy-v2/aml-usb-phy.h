@@ -22,7 +22,7 @@
 namespace aml_usb_phy {
 
 class AmlUsbPhy;
-using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::Initializable, ddk::UnbindableNew,
+using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::Initializable, ddk::Unbindable,
                                   ddk::ChildPreReleaseable, ddk::Messageable>;
 
 // This is the main class for the platform bus driver.
@@ -46,7 +46,7 @@ class AmlUsbPhy : public AmlUsbPhyType,
 
   // Device protocol implementation.
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkChildPreRelease(void* child_ctx);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

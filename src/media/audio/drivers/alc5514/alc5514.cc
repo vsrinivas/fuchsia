@@ -69,7 +69,7 @@ void Alc5514Device::DumpRegs() {
   }
 }
 
-void Alc5514Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Alc5514Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Alc5514Device::DdkRelease() { delete this; }
 

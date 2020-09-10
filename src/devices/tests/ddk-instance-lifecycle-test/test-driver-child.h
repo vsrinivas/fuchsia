@@ -9,7 +9,7 @@
 #include <ddktl/fidl.h>
 
 class TestLifecycleDriverChild;
-using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::UnbindableNew, ddk::Messageable,
+using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::Messageable,
                                ddk::Openable, ddk::Closable>;
 
 class TestLifecycleDriverChild : public DeviceType {
@@ -21,7 +21,7 @@ class TestLifecycleDriverChild : public DeviceType {
       : DeviceType(parent), lifecycle_(std::move(lifecycle_client)) {}
   ~TestLifecycleDriverChild() {}
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t DdkOpen(zx_device_t** out, uint32_t flags);
@@ -39,7 +39,7 @@ class TestLifecycleDriverChild : public DeviceType {
 };
 
 class TestLifecycleDriverChildInstance;
-using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::UnbindableNew,
+using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Unbindable,
                                        ddk::Messageable, ddk::Openable, ddk::Closable>;
 using llcpp::fuchsia::device::instancelifecycle::test::InstanceDevice;
 
@@ -48,7 +48,7 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}
-  void DdkUnbindNew(ddk::UnbindTxn txn) { ZX_PANIC("DdkUnbind reached in instance device\n"); }
+  void DdkUnbind(ddk::UnbindTxn txn) { ZX_PANIC("DdkUnbind reached in instance device\n"); }
   void DdkRelease();
 
   zx_status_t DdkOpen(zx_device_t** out, uint32_t flags) {

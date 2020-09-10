@@ -120,7 +120,7 @@ zx_status_t TestFunction::Bind() {
   return ZX_OK;
 }
 
-void TestFunction::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void TestFunction::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestFunction::DdkRelease() { delete this; }
 

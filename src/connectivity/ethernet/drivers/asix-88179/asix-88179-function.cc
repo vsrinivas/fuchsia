@@ -44,7 +44,7 @@ constexpr size_t INTR_MAX_PACKET = 64;
 
 class FakeUsbAx88179Function;
 
-using DeviceType = ddk::Device<FakeUsbAx88179Function, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<FakeUsbAx88179Function, ddk::Unbindable, ddk::Messageable>;
 
 class FakeUsbAx88179Function : public DeviceType,
                                public ddk::UsbFunctionInterfaceProtocol<FakeUsbAx88179Function>,
@@ -56,7 +56,7 @@ class FakeUsbAx88179Function : public DeviceType,
   zx_status_t Bind();
 
   // |ddk::Device| mix-in implementations.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
@@ -243,7 +243,7 @@ zx_status_t FakeUsbAx88179Function::UsbFunctionInterfaceSetInterface(uint8_t int
   return ZX_OK;
 }
 
-void FakeUsbAx88179Function::DdkUnbindNew(ddk::UnbindTxn txn) {
+void FakeUsbAx88179Function::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
   txn.Reply();
 }

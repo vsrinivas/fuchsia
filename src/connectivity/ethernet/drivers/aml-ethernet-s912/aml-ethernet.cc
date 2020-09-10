@@ -176,7 +176,7 @@ zx_status_t AmlEthernet::Bind() {
   return DdkAdd(ddk::DeviceAddArgs("aml-ethernet").set_props(props));
 }
 
-void AmlEthernet::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlEthernet::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlEthernet::DdkRelease() { delete this; }
 

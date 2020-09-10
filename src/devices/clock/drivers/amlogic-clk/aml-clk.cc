@@ -873,7 +873,7 @@ void AmlClock::InitHiu() {
   }
 }
 
-void AmlClock::DdkUnbindNew(ddk::UnbindTxn txn) {
+void AmlClock::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

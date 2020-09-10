@@ -224,7 +224,7 @@ TEST(RamNandTest, BasicDeviceProtocol) {
   ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
 
   // Since we have not called DdkAdd, calling DdkAsyncRemove will assert failure.
-  device.DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  device.DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   ASSERT_EQ(ZX_ERR_BAD_STATE, device.DdkMessage(nullptr, nullptr));
 }

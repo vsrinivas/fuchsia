@@ -224,7 +224,7 @@ zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
                           protocol, interface_, NULL, 0, NULL);
 }
 
-void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbHidbus::DdkUnbind(ddk::UnbindTxn txn) {
   unbind_thread_ = std::thread([this, txn = std::move(txn)]() mutable {
     usb_.CancelAll(endptin_address_);
     usb_.CancelAll(endptout_address_);

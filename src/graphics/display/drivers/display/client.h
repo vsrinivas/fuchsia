@@ -296,7 +296,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
 // controller. Methods on this class are thread safe.
-using ClientParent = ddk::Device<ClientProxy, ddk::UnbindableNew, ddk::Closable>;
+using ClientParent = ddk::Device<ClientProxy, ddk::Unbindable, ddk::Closable>;
 class ClientProxy : public ClientParent {
  public:
   // "client_id" is assigned by the Controller to distinguish clients.
@@ -309,7 +309,7 @@ class ClientProxy : public ClientParent {
   zx_status_t Init(zx::channel server_channel);
 
   zx_status_t DdkClose(uint32_t flags);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Requires holding controller_->mtx() lock

@@ -218,7 +218,7 @@ void Mt8167GpioDevice::ShutDown() {
   thrd_join(thread_, NULL);
 }
 
-void Mt8167GpioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Mt8167GpioDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

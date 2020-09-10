@@ -850,7 +850,7 @@ class FakeAmlThermal : public AmlThermal {
     return test;
   }
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   FakeAmlThermal(std::unique_ptr<thermal::AmlTSensor> tsensor,
@@ -949,7 +949,7 @@ class AmlThermalTest : public zxtest::Test {
     cpufreq_scaling_mock_hiu_mmio_->VerifyAll();
 
     // Tear down
-    thermal_device_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+    thermal_device_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
     thermal_device_ = nullptr;
   }
 

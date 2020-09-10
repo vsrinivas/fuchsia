@@ -11,7 +11,7 @@
 #include <ddktl/protocol/clockimpl.h>
 
 class ClockDevice;
-using ClockDeviceType = ddk::Device<ClockDevice, ddk::UnbindableNew>;
+using ClockDeviceType = ddk::Device<ClockDevice, ddk::Unbindable>;
 
 class ClockDevice : public ClockDeviceType,
                     public ddk::ClockProtocol<ClockDevice, ddk::base_protocol> {
@@ -21,7 +21,7 @@ class ClockDevice : public ClockDeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t ClockEnable();

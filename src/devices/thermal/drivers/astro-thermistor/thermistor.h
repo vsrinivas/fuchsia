@@ -16,7 +16,7 @@
 namespace thermal {
 
 class AstroThermistor;
-using DeviceType = ddk::Device<AstroThermistor, ddk::Initializable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AstroThermistor, ddk::Initializable, ddk::Unbindable>;
 
 class AstroThermistor : public DeviceType {
  public:
@@ -29,7 +29,7 @@ class AstroThermistor : public DeviceType {
 
   void DdkInit(ddk::InitTxn txn);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   fbl::RefPtr<AmlSaradcDevice> saradc_;

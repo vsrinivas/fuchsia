@@ -158,7 +158,7 @@ zx_status_t HidDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   return ZX_OK;
 }
 
-void HidDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void HidDevice::DdkUnbind(ddk::UnbindTxn txn) {
   {
     fbl::AutoLock lock(&instance_lock_);
     for (auto& instance : instance_list_) {

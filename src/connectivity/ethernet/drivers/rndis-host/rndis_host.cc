@@ -350,7 +350,7 @@ zx_status_t RndisHost::PrepareDataPacket(usb_request_t* req, const void* data, s
   return ZX_OK;
 }
 
-void RndisHost::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void RndisHost::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void RndisHost::DdkRelease() {
   if (thread_started_) {

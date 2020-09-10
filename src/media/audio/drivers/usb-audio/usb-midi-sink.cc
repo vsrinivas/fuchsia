@@ -48,7 +48,7 @@ void UsbMidiSink::WriteComplete(usb_request_t* req) {
   UpdateSignals();
 }
 
-void UsbMidiSink::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbMidiSink::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock al(&mutex_);
   dead_ = true;
 

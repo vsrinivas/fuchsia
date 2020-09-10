@@ -24,7 +24,7 @@ using llcpp::fuchsia::device::lifecycle::test::Lifecycle;
 using llcpp::fuchsia::device::lifecycle::test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType = ddk::Device<TestLifecycleDriver, ddk::UnbindableNew, ddk::Messageable,
+using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable,
                                ddk::ChildPreReleaseable>;
 
 class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
@@ -36,7 +36,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
 
   // Device protocol implementation.
   void DdkChildPreRelease(void* child_ctx);
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.

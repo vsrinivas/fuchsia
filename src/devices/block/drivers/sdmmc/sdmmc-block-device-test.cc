@@ -765,7 +765,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnUnbind) {
   user_.Queue(op4->operation(), OperationCallback, &ctx);
   user_.Queue(op5->operation(), OperationCallback, &ctx);
 
-  dut_.DdkUnbindNew(ddk::UnbindTxn(dut_.zxdev()));
+  dut_.DdkUnbind(ddk::UnbindTxn(dut_.zxdev()));
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 

@@ -504,7 +504,7 @@ zx_off_t VPartition::DdkGetSize() {
   return sz;
 }
 
-void VPartition::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void VPartition::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void VPartition::DdkRelease() { delete this; }
 

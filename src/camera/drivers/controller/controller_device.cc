@@ -27,7 +27,7 @@ enum {
 };
 }  // namespace
 
-void ControllerDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void ControllerDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

@@ -88,7 +88,7 @@ int hid_device_thread(void* arg) {
 
 HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
                      fbl::Array<const uint8_t> report_desc, zx::socket data)
-    : ddk::Device<HidDevice, ddk::Initializable, ddk::UnbindableNew>(device),
+    : ddk::Device<HidDevice, ddk::Initializable, ddk::Unbindable>(device),
       boot_device_(config->boot_device),
       dev_class_(config->dev_class),
       report_desc_(std::move(report_desc)),
@@ -110,7 +110,7 @@ void HidDevice::DdkRelease() {
   delete this;
 }
 
-void HidDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void HidDevice::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(DEBUG, "hidctl: DdkUnbind");
   fbl::AutoLock lock(&lock_);
   if (data_.is_valid()) {

@@ -25,13 +25,13 @@ constexpr auto kVid = 0x18D1;
 constexpr auto kDid = 0x2;
 
 class TestFunction;
-using DeviceType = ddk::Device<TestFunction, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<TestFunction, ddk::Unbindable>;
 class TestFunction : public DeviceType, public ddk::UsbFunctionInterfaceProtocol<TestFunction> {
  public:
   TestFunction(zx_device_t* parent) : DeviceType(parent), function_(parent) {}
   zx_status_t Bind();
   // |ddk::Device|
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   // |ddk::Device|
   void DdkRelease();
 

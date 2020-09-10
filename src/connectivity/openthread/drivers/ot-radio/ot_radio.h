@@ -62,7 +62,7 @@ enum {
 std::string GetNewFirmwareVersion();
 #endif
 
-class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew, ddk::Messageable>,
+class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Messageable>,
                       public llcpp::fuchsia::lowpan::spinel::DeviceSetup::Interface {
  public:
   explicit OtRadioDevice(zx_device_t* device);
@@ -78,7 +78,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew, ddk:
   zx_status_t Init();
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t ShutDown();
   void RemoveDevice();

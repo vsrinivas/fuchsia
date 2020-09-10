@@ -589,7 +589,7 @@ void DwI2c::ShutDown() {
   }
 }
 
-void DwI2c::DdkUnbindNew(ddk::UnbindTxn txn) {
+void DwI2c::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

@@ -15,7 +15,7 @@
 namespace vreg {
 
 class TestVregDevice;
-using DeviceType = ddk::Device<TestVregDevice, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<TestVregDevice, ddk::Unbindable>;
 
 class TestVregDevice : public DeviceType,
                        public ddk::VregProtocol<TestVregDevice, ddk::base_protocol> {
@@ -24,7 +24,7 @@ class TestVregDevice : public DeviceType,
 
   explicit TestVregDevice(zx_device_t* parent) : DeviceType(parent) {}
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Vreg Implementation.
@@ -52,7 +52,7 @@ zx_status_t TestVregDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void TestVregDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void TestVregDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestVregDevice::DdkRelease() { delete this; }
 

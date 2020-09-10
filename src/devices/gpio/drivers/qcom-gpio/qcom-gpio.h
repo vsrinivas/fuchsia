@@ -28,7 +28,7 @@
 namespace gpio {
 
 class QcomGpioDevice;
-using DeviceType = ddk::Device<QcomGpioDevice, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<QcomGpioDevice, ddk::Unbindable>;
 
 class QcomGpioDevice : public DeviceType,
                        public ddk::GpioImplProtocol<QcomGpioDevice, ddk::base_protocol> {
@@ -48,7 +48,7 @@ class QcomGpioDevice : public DeviceType,
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t GpioImplConfigIn(uint32_t index, uint32_t flags);

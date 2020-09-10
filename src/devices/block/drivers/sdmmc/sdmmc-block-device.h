@@ -128,7 +128,7 @@ class RpmbDevice : public RpmbDeviceType,
 };
 
 class SdmmcBlockDevice;
-using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableNew, ddk::Suspendable>;
+using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::Unbindable, ddk::Suspendable>;
 
 class SdmmcBlockDevice : public SdmmcBlockDeviceType {
  public:
@@ -146,7 +146,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   zx_status_t AddDevice() TA_EXCL(lock_);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkRelease() { delete this; }
 

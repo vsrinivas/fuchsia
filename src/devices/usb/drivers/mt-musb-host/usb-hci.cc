@@ -199,7 +199,7 @@ zx_status_t UsbHci::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void UsbHci::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbHci::DdkUnbind(ddk::UnbindTxn txn) {
   if (irq_thread_.joinable()) {
     irq_.destroy();
     irq_thread_.join();

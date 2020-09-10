@@ -21,7 +21,7 @@
 namespace aml_nna {
 
 class AmlNnaDevice;
-using AmlNnaDeviceType = ddk::Device<AmlNnaDevice, ddk::GetProtocolable, ddk::UnbindableNew>;
+using AmlNnaDeviceType = ddk::Device<AmlNnaDevice, ddk::GetProtocolable, ddk::Unbindable>;
 
 class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_NNA> {
  public:
@@ -40,7 +40,7 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   // Methods required by the ddk.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
   ddk::PDev pdev_;

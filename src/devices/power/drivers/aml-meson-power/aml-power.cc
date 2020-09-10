@@ -373,7 +373,7 @@ zx_status_t AmlPower::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* curre
 
 void AmlPower::DdkRelease() { delete this; }
 
-void AmlPower::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlPower::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
   zx_status_t st;

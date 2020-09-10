@@ -661,7 +661,7 @@ void UsbXhci::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, 0);
 }
 
-void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbXhci::DdkUnbind(ddk::UnbindTxn txn) {
   // Prevent anything external to us from queueing any more work during shutdown.
   sync_completion_wait(&init_complete_, ZX_TIME_INFINITE);
 

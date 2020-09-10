@@ -25,7 +25,7 @@
 namespace {
 
 class TestDevice;
-using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::UnbindableNew>;
+using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::Unbindable>;
 
 class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
  public:
@@ -34,7 +34,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // Methods required by the TestProtocol mixin
   void TestSetOutputSocket(zx::socket socket);
@@ -53,7 +53,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::UnbindableNew>;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::Unbindable>;
 
 class TestRootDevice : public TestRootDeviceType {
  public:
@@ -64,7 +64,7 @@ class TestRootDevice : public TestRootDeviceType {
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
   static zx_status_t FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
                                       zx_handle_t client_remote_raw, fidl_txn_t* txn);
@@ -145,7 +145,7 @@ zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void TestDevice::DdkRelease() { delete this; }
 
-void TestDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void TestDevice::DdkUnbind(ddk::UnbindTxn txn) {
   TestDestroy();
   txn.Reply();
 }

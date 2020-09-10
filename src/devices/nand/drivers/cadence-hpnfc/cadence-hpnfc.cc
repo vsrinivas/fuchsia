@@ -601,7 +601,7 @@ zx_status_t CadenceHpnfc::RawNandGetNandInfo(nand_info_t* out_info) {
   return ZX_OK;
 }
 
-void CadenceHpnfc::DdkUnbindNew(ddk::UnbindTxn txn) {
+void CadenceHpnfc::DdkUnbind(ddk::UnbindTxn txn) {
   StopInterruptThread();
   txn.Reply();
 }

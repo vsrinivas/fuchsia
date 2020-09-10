@@ -928,7 +928,7 @@ void EthDev0::DestroyAllEthDev() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
 }
 
-void EthDev0::DdkUnbindNew(ddk::UnbindTxn txn) {
+void EthDev0::DdkUnbind(ddk::UnbindTxn txn) {
   // Tear down shared memory, fifos, and threads
   // to encourage any open instances to close.
   DestroyAllEthDev();

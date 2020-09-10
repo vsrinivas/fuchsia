@@ -15,7 +15,7 @@ namespace usb_bus {
 
 class UsbBus;
 class UsbDevice;
-using UsbBusType = ddk::Device<UsbBus, ddk::UnbindableNew>;
+using UsbBusType = ddk::Device<UsbBus, ddk::Unbindable>;
 
 class UsbBus : public UsbBusType,
                public ddk::UsbBusProtocol<UsbBus, ddk::base_protocol>,
@@ -26,7 +26,7 @@ class UsbBus : public UsbBusType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB Bus protocol implementation.

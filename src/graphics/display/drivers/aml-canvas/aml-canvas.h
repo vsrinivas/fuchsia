@@ -27,7 +27,7 @@ namespace aml_canvas {
 constexpr size_t kNumCanvasEntries = 256;
 
 class AmlCanvas;
-using DeviceType = ddk::Device<AmlCanvas, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AmlCanvas, ddk::Unbindable>;
 
 class AmlCanvas : public DeviceType,
                   public ddk::AmlogicCanvasProtocol<AmlCanvas, ddk::base_protocol> {
@@ -45,7 +45,7 @@ class AmlCanvas : public DeviceType,
 
   // Required by ddk::Device
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
   fbl::Mutex lock_;

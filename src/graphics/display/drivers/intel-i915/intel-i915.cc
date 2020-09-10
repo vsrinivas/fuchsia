@@ -1944,7 +1944,7 @@ bool Controller::DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf
 
 // Ddk methods
 
-void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Controller::DdkUnbind(ddk::UnbindTxn txn) {
   device_async_remove(zx_gpu_dev_);
 
   {

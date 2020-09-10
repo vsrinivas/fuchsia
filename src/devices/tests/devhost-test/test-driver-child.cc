@@ -22,13 +22,13 @@
 #include "test-metadata.h"
 
 class TestDevhostDriverChild;
-using DeviceType = ddk::Device<TestDevhostDriverChild, ddk::UnbindableNew, ddk::Initializable>;
+using DeviceType = ddk::Device<TestDevhostDriverChild, ddk::Unbindable, ddk::Initializable>;
 class TestDevhostDriverChild : public DeviceType {
  public:
   TestDevhostDriverChild(zx_device_t* parent) : DeviceType(parent) {}
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
   void DdkInit(ddk::InitTxn txn);
 

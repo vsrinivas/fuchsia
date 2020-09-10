@@ -215,7 +215,7 @@ zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device,
   return ZX_OK;
 }
 
-void UsbBus::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbBus::DdkUnbind(ddk::UnbindTxn txn) {
   hci_.SetBusInterface(nullptr, nullptr);
 
   for (auto device : devices_) {

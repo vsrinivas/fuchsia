@@ -283,7 +283,7 @@ zx_status_t UsbVirtualBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void UsbVirtualBus::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbVirtualBus::DdkUnbind(ddk::UnbindTxn txn) {
   if (!device_thread_started_) {
     // Initialization failed, nothing to shut down.
     return txn.Reply();

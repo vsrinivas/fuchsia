@@ -156,7 +156,7 @@ void Mt8167I2c::ShutDown() {
   thrd_join(irq_thread_, NULL);
 }
 
-void Mt8167I2c::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Mt8167I2c::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

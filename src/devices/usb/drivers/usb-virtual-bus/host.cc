@@ -35,7 +35,7 @@ void Device::RequestComplete(usb_request_t* request) {
 
 Device::~Device() {}
 
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
   cancel_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
     usb_client_.CancelAll(bulk_out_addr_);
     unbind_txn.Reply();

@@ -75,7 +75,7 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
 };
 
 using ControllerParent =
-    ddk::Device<Controller, ddk::UnbindableNew, ddk::Openable, ddk::Messageable>;
+    ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::Messageable>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
@@ -88,7 +88,7 @@ class Controller : public ControllerParent,
 
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(std::unique_ptr<display::Controller>* device_ptr);
 

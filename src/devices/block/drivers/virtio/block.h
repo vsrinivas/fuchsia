@@ -35,7 +35,7 @@ struct block_txn_t {
 class Ring;
 class BlockDevice;
 using DeviceType =
-    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableNew>;
+    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
 class BlockDevice : public Device,
                     // Mixins for protocol device:
                     public DeviceType,
@@ -48,7 +48,7 @@ class BlockDevice : public Device,
 
   // DDKTL device hooks:
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   zx_off_t DdkGetSize() const { return config_.capacity * config_.blk_size; }
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 

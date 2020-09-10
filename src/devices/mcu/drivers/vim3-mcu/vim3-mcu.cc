@@ -54,7 +54,7 @@ zx_status_t StmMcu::Create(void* ctx, zx_device_t* parent) {
 }
 void StmMcu::ShutDown() {}
 
-void StmMcu::DdkUnbindNew(ddk::UnbindTxn txn) {
+void StmMcu::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

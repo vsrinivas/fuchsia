@@ -29,7 +29,7 @@ using llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice;
 using llcpp::fuchsia::device::schedule::work::test::TestDevice;
 
 class TestScheduleWorkDriver;
-using DeviceType = ddk::Device<TestScheduleWorkDriver, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<TestScheduleWorkDriver, ddk::Unbindable, ddk::Messageable>;
 
 class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
  public:
@@ -47,7 +47,7 @@ class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
 
   zx_status_t Bind();
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   void ScheduleWork(uint32_t batch_size, uint32_t num_work_items,

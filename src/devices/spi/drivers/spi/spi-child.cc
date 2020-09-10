@@ -58,7 +58,7 @@ zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_coun
   return ZX_OK;
 }
 
-void SpiChild::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void SpiChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void SpiChild::DdkRelease() { __UNUSED bool dummy = Release(); }
 

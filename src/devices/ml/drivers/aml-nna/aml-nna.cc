@@ -137,7 +137,7 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-void AmlNnaDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlNnaDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlNnaDevice::DdkRelease() { delete this; }
 

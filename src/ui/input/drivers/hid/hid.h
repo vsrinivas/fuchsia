@@ -33,7 +33,7 @@ typedef uint8_t input_report_id_t;
 
 class HidDevice;
 
-using HidDeviceType = ddk::Device<HidDevice, ddk::UnbindableNew, ddk::Openable>;
+using HidDeviceType = ddk::Device<HidDevice, ddk::Unbindable, ddk::Openable>;
 
 class HidDevice : public HidDeviceType,
                   public ddk::HidDeviceProtocol<HidDevice, ddk::base_protocol> {
@@ -44,7 +44,7 @@ class HidDevice : public HidDeviceType,
   zx_status_t Bind(ddk::HidbusProtocolClient hidbus_proto);
   void DdkRelease();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // |HidDeviceProtocol|
   zx_status_t HidDeviceRegisterListener(const hid_report_listener_protocol_t* listener);

@@ -72,7 +72,7 @@ class As370BuckRegulator : public As370Regulator {
 };
 
 class As370Power;
-using As370PowerType = ddk::Device<As370Power, ddk::UnbindableNew>;
+using As370PowerType = ddk::Device<As370Power, ddk::Unbindable>;
 
 class As370Power : public As370PowerType,
                    public ddk::PowerImplProtocol<As370Power, ddk::base_protocol> {
@@ -89,7 +89,7 @@ class As370Power : public As370PowerType,
 
   // Device protocol implementation
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t PowerImplGetPowerDomainStatus(uint32_t index, power_domain_status_t* out_status);
   zx_status_t PowerImplEnablePowerDomain(uint32_t index);

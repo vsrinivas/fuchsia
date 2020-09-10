@@ -36,7 +36,7 @@ using AcpiRemoveNotifyHandlerFunc = fit::function<ACPI_STATUS(
     ACPI_HANDLE handle, UINT32 handler_type, ACPI_NOTIFY_HANDLER handler)>;
 
 class AcpiLidDevice;
-using DeviceType = ddk::Device<AcpiLidDevice, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AcpiLidDevice, ddk::Unbindable>;
 
 // An instance of a PNP0C0D Lid device. It presents a HID interface with a single input, the state
 // of the lid switch.
@@ -83,7 +83,7 @@ class AcpiLidDevice : public DeviceType,
   zx_status_t HidbusGetProtocol(uint8_t* protocol);
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   static const uint8_t kHidDescriptor[];

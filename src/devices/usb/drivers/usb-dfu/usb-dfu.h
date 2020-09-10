@@ -15,7 +15,7 @@
 namespace usb {
 
 class Dfu;
-using DfuBase = ddk::Device<Dfu, ddk::Messageable, ddk::UnbindableNew>;
+using DfuBase = ddk::Device<Dfu, ddk::Messageable, ddk::Unbindable>;
 
 class Dfu : public DfuBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
  public:
@@ -28,7 +28,7 @@ class Dfu : public DfuBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> 
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // FIDL message implementation.

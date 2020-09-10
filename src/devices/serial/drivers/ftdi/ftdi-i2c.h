@@ -18,7 +18,7 @@
 namespace ftdi_mpsse {
 
 class FtdiI2c;
-using DeviceType = ddk::Device<FtdiI2c, ddk::Initializable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<FtdiI2c, ddk::Initializable, ddk::Unbindable>;
 
 // This class represents a single I2C bus created from 3 pins of an FTDI device.
 // It implements the standard I2cImpl driver. It is created with metadata that will
@@ -48,7 +48,7 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
 
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
   uint32_t I2cImplGetBusCount() { return 1; }

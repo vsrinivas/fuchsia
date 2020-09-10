@@ -374,7 +374,7 @@ void OpteeController::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-void OpteeController::DdkUnbindNew(ddk::UnbindTxn txn) {
+void OpteeController::DdkUnbind(ddk::UnbindTxn txn) {
   // Initiate the removal of this device and all of its children.
   txn.Reply();
 }

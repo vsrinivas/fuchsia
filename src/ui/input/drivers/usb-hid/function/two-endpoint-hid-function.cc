@@ -229,7 +229,7 @@ zx_status_t FakeUsbHidFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbHidFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
+void FakeUsbHidFunction::DdkUnbind(ddk::UnbindTxn txn) {
   {
     fbl::AutoLock lock(&mtx_);
     active_ = false;

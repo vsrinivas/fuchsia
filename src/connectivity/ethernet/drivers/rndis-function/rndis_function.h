@@ -30,7 +30,7 @@
 
 class RndisFunction;
 
-using RndisFunctionType = ddk::Device<RndisFunction, ddk::UnbindableNew, ddk::Suspendable>;
+using RndisFunctionType = ddk::Device<RndisFunction, ddk::Unbindable, ddk::Suspendable>;
 
 class RndisFunction : public RndisFunctionType,
                       public ddk::UsbFunctionInterfaceProtocol<RndisFunction>,
@@ -41,7 +41,7 @@ class RndisFunction : public RndisFunctionType,
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         function_(parent) {}
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkRelease();
 

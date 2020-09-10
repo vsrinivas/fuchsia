@@ -161,7 +161,7 @@ void FtdiI2c::WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<u
   *bytes_written = new_index - index;
 }
 
-void FtdiI2c::DdkUnbindNew(ddk::UnbindTxn txn) {
+void FtdiI2c::DdkUnbind(ddk::UnbindTxn txn) {
   if (enable_thread_started_) {
     enable_thread_started_ = false;
     thrd_join(enable_thread_, NULL);

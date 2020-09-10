@@ -22,7 +22,7 @@
 
 namespace i2c {
 
-void I2cDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void I2cDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void I2cDevice::DdkRelease() { delete this; }
 

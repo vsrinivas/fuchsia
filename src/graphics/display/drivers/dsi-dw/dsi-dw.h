@@ -33,7 +33,7 @@ namespace dsi_dw {
 
 class DsiDw;
 
-using DeviceType = ddk::Device<DsiDw, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<DsiDw, ddk::Unbindable>;
 
 class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_protocol> {
  public:
@@ -60,7 +60,7 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   zx_status_t DsiImplReadReg(uint32_t reg, uint32_t* val);
   zx_status_t DsiImplEnableBist(uint32_t pattern);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

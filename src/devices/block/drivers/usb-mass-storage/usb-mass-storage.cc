@@ -72,7 +72,7 @@ void UsbMassStorageDevice::DdkRelease() {
   delete this;
 }
 
-void UsbMassStorageDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbMassStorageDevice::DdkUnbind(ddk::UnbindTxn txn) {
   // terminate our worker thread
   {
     fbl::AutoLock l(&txn_lock_);

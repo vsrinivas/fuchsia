@@ -250,7 +250,7 @@ void Device::OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size
   *memory_size = override_size;
 }
 
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
   // Try to ensure all tasks started before this call finish before shutting down the loop.
   async::PostTask(loop_.dispatcher(), [this]() { loop_.Quit(); });
   // JoinThreads waits for the Quit() to execute and cause the thread to exit.

@@ -40,7 +40,7 @@ constexpr uint64_t kPortKeyDebugFakeInterrupt = 0x01;
 
 // This provides ZX_PROTOCOL_GDC.
 class GdcDevice;
-using GdcDeviceType = ddk::Device<GdcDevice, ddk::UnbindableNew>;
+using GdcDeviceType = ddk::Device<GdcDevice, ddk::Unbindable>;
 
 class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::base_protocol> {
  public:
@@ -62,7 +62,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
 
   // Methods required by the ddk.
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // ZX_PROTOCOL_GDC (Refer to gdc.banjo for documentation).
   zx_status_t GdcInitTask(const buffer_collection_info_2_t* input_buffer_collection,

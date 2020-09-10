@@ -19,7 +19,7 @@
 namespace usb {
 
 class HciTest;
-using HciTestBase = ddk::Device<HciTest, ddk::UnbindableNew, ddk::Messageable, ddk::Initializable>;
+using HciTestBase = ddk::Device<HciTest, ddk::Unbindable, ddk::Messageable, ddk::Initializable>;
 
 class HciTest : public HciTestBase,
                 public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST>,
@@ -31,7 +31,7 @@ class HciTest : public HciTestBase,
   // Spawns device node based on parent node.
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
+  void DdkUnbind(ddk::UnbindTxn txn) {
     if (test_thread_.has_value()) {
       if (test_thread_->joinable()) {
         test_thread_->join();

@@ -26,7 +26,7 @@ using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType =
-    ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable, ddk::Suspendable,
+    ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable, ddk::Suspendable,
                 ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable, ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
  public:
@@ -49,7 +49,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void SetTestStatusInfo(::llcpp::fuchsia::device::power::test::TestStatusInfo test_info,
                          SetTestStatusInfoCompleter::Sync completer) override;
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);

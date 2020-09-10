@@ -59,7 +59,7 @@ struct AmlGpioInterrupt {
 };
 
 class AmlGxlGpio;
-using DeviceType = ddk::Device<AmlGxlGpio, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AmlGxlGpio, ddk::Unbindable>;
 
 class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, ddk::base_protocol> {
  public:
@@ -77,7 +77,7 @@ class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, d
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:

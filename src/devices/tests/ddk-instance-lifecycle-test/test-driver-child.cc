@@ -31,7 +31,7 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, zx::channel li
   return status;
 }
 
-void TestLifecycleDriverChild::DdkUnbindNew(ddk::UnbindTxn txn) {
+void TestLifecycleDriverChild::DdkUnbind(ddk::UnbindTxn txn) {
   zx_status_t status = Lifecycle::SendOnUnbindEvent(zx::unowned(lifecycle_));
   ZX_ASSERT(status == ZX_OK);
   txn.Reply();

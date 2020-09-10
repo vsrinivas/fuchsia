@@ -34,7 +34,7 @@ static bool isBufferCollectionValid(const buffer_collection_info_2_t* buffer_col
 }
 
 class TestGdcDevice;
-using DeviceType = ddk::Device<TestGdcDevice, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<TestGdcDevice, ddk::Unbindable>;
 
 class TestGdcDevice : public DeviceType,
                       public ddk::GdcProtocol<TestGdcDevice, ddk::base_protocol> {
@@ -88,7 +88,7 @@ class TestGdcDevice : public DeviceType,
   }
 
   // Methods required by the ddk mixins
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 };
 
@@ -108,7 +108,7 @@ zx_status_t TestGdcDevice::Create(zx_device_t* parent) {
   return ZX_OK;
 }
 
-void TestGdcDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void TestGdcDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestGdcDevice::DdkRelease() { delete this; }
 

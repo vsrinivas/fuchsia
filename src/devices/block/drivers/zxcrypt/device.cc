@@ -104,7 +104,7 @@ zx_off_t Device::DdkGetSize() {
 
 // TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
 // this on demand.
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
   LOG_ENTRY();
   bool was_active = active_.exchange(false);
   ZX_ASSERT(was_active);

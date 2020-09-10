@@ -25,7 +25,7 @@
 namespace power {
 
 class AmlPower;
-using AmlPowerType = ddk::Device<AmlPower, ddk::UnbindableNew>;
+using AmlPowerType = ddk::Device<AmlPower, ddk::Unbindable>;
 
 class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, ddk::base_protocol> {
  private:
@@ -86,7 +86,7 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
 
   // Device protocol implementation
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t PowerImplGetPowerDomainStatus(uint32_t index, power_domain_status_t* out_status);
   zx_status_t PowerImplEnablePowerDomain(uint32_t index);

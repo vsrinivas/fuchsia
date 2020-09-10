@@ -140,7 +140,7 @@ zx_status_t AmlThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
 
 zx_status_t AmlThermal::ThermalConnect(zx::channel ch) { return ZX_ERR_NOT_SUPPORTED; }
 
-void AmlThermal::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlThermal::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlThermal::DdkRelease() { delete this; }
 

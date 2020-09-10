@@ -26,7 +26,7 @@
 
 namespace spi {
 
-void DwSpi::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void DwSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void DwSpi::DdkRelease() { delete this; }
 

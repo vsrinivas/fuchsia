@@ -30,7 +30,7 @@
 namespace dwc2 {
 
 class Dwc2;
-using Dwc2Type = ddk::Device<Dwc2, ddk::Initializable, ddk::UnbindableNew, ddk::Suspendable>;
+using Dwc2Type = ddk::Device<Dwc2, ddk::Initializable, ddk::Unbindable, ddk::Suspendable>;
 
 class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protocol> {
  public:
@@ -42,7 +42,7 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
 
   // Device protocol implementation.
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
 

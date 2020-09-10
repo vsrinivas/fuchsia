@@ -715,7 +715,7 @@ zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partiti
   return fuchsia_hardware_block_volume_VolumeManagerActivate_reply(txn, status);
 }
 
-void VPartitionManager::DdkUnbindNew(ddk::UnbindTxn txn) {
+void VPartitionManager::DdkUnbind(ddk::UnbindTxn txn) {
   // Wait untill all work has been completed, before removing the device.
   sync_completion_wait(&worker_completed_, zx::duration::infinite().get());
 

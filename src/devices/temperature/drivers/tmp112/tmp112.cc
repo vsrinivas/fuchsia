@@ -14,7 +14,7 @@
 
 namespace temperature {
 
-void Tmp112Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Tmp112Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Tmp112Device::DdkRelease() { delete this; }
 

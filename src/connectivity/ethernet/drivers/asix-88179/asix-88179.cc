@@ -847,7 +847,7 @@ void Asix88179Ethernet::DdkInit(ddk::InitTxn txn) {
   }
 }
 
-void Asix88179Ethernet::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Asix88179Ethernet::DdkUnbind(ddk::UnbindTxn txn) {
   cancel_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
     Shutdown();
     unbind_txn.Reply();

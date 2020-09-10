@@ -36,7 +36,7 @@ class HidCtl : public ddk::Device<HidCtl, ddk::Messageable> {
                                        fidl_txn_t* txn);
 };
 
-class HidDevice : public ddk::Device<HidDevice, ddk::Initializable, ddk::UnbindableNew>,
+class HidDevice : public ddk::Device<HidDevice, ddk::Initializable, ddk::Unbindable>,
                   public ddk::HidbusProtocol<HidDevice, ddk::base_protocol> {
  public:
   HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
@@ -44,7 +44,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Initializable, ddk::Unbinda
 
   void DdkRelease();
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);

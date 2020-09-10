@@ -75,7 +75,7 @@ static_assert(sizeof(AmlInfoFormat) == 8, "sizeof(AmlInfoFormat) must be exactly
 static_assert(sizeof(AmlInfoFormat[2]) == 16, "AmlInfoFormat has unexpected padding");
 
 class AmlRawNand;
-using DeviceType = ddk::Device<AmlRawNand, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AmlRawNand, ddk::Unbindable>;
 
 class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, ddk::base_protocol> {
  public:
@@ -94,7 +94,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   virtual ~AmlRawNand() = default;
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t Bind();
   zx_status_t Init();

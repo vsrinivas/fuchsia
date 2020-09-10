@@ -143,7 +143,7 @@ zx_status_t HisiClock::ClockImplGetInput(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void HisiClock::DdkUnbindNew(ddk::UnbindTxn txn) {
+void HisiClock::DdkUnbind(ddk::UnbindTxn txn) {
   DeInit();
   txn.Reply();
 }

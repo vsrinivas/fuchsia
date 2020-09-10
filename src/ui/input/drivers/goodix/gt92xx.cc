@@ -294,7 +294,7 @@ zx_status_t Gt92xxDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 
 void Gt92xxDevice::DdkRelease() { delete this; }
 
-void Gt92xxDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Gt92xxDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

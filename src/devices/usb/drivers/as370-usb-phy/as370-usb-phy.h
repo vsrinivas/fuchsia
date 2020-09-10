@@ -15,7 +15,7 @@
 namespace as370_usb_phy {
 
 class UsbPhy;
-using UsbPhyType = ddk::Device<UsbPhy, ddk::UnbindableNew>;
+using UsbPhyType = ddk::Device<UsbPhy, ddk::Unbindable>;
 
 // This is the main class for the platform bus driver.
 class UsbPhy : public UsbPhyType {
@@ -25,7 +25,7 @@ class UsbPhy : public UsbPhyType {
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

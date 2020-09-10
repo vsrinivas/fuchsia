@@ -90,7 +90,7 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   }
 }
 
-void FragmentProxy::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void FragmentProxy::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void FragmentProxy::DdkRelease() { delete this; }
 

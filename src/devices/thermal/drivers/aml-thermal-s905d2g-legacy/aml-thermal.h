@@ -26,7 +26,7 @@
 namespace thermal {
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Unbindable, ddk::Messageable>;
 
 class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
  public:
@@ -45,7 +45,7 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
   // Ddk Hooks
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

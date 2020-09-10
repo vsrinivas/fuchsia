@@ -43,7 +43,7 @@ constexpr uint64_t kPortKeyDebugFakeInterrupt = 0x01;
 
 // This provides ZX_PROTOCOL_GE2D.
 class Ge2dDevice;
-using Ge2dDeviceType = ddk::Device<Ge2dDevice, ddk::UnbindableNew>;
+using Ge2dDeviceType = ddk::Device<Ge2dDevice, ddk::Unbindable>;
 
 class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, ddk::base_protocol> {
  public:
@@ -62,7 +62,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
 
   // Methods required by the ddk.
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // ZX_PROTOCOL_GE2DC (Refer to ge2d.banjo for documentation).
   zx_status_t Ge2dInitTaskResize(const buffer_collection_info_2_t* input_buffer_collection,

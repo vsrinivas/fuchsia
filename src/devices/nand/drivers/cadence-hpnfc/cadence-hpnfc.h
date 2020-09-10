@@ -18,7 +18,7 @@
 namespace rawnand {
 
 class CadenceHpnfc;
-using DeviceType = ddk::Device<CadenceHpnfc, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<CadenceHpnfc, ddk::Unbindable>;
 
 class CadenceHpnfc : public DeviceType,
                      public ddk::RawNandProtocol<CadenceHpnfc, ddk::base_protocol> {
@@ -32,7 +32,7 @@ class CadenceHpnfc : public DeviceType,
         fifo_mmio_(std::move(fifo_mmio)),
         interrupt_(std::move(interrupt)) {}
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer, size_t data_size,

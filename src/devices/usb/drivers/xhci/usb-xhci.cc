@@ -186,7 +186,7 @@ void UsbXhci::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, 0);
 }
 
-void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbXhci::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(INFO, "UsbXhci::DdkUnbind");
   if (init_success_) {
     xhci_shutdown(xhci_.get());

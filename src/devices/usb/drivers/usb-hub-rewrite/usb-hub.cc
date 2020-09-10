@@ -287,7 +287,7 @@ zx_status_t UsbHubDevice::Bind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-void UsbHubDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void UsbHubDevice::DdkRelease() { delete this; }
 

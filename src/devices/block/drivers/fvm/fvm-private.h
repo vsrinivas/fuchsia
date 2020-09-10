@@ -41,7 +41,7 @@ using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 // Forward declaration
 class VPartitionManager;
 using ManagerDeviceType =
-    ddk::Device<VPartitionManager, ddk::Initializable, ddk::Messageable, ddk::UnbindableNew>;
+    ddk::Device<VPartitionManager, ddk::Initializable, ddk::Messageable, ddk::Unbindable>;
 
 class VPartitionManager : public ManagerDeviceType {
  public:
@@ -85,7 +85,7 @@ class VPartitionManager : public ManagerDeviceType {
 
   void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void SetFormatInfoForTest(const fvm::FormatInfo& format_info) { format_info_ = format_info; }

@@ -46,7 +46,7 @@ struct I2cHidDesc {
 } __PACKED;
 
 class I2cHidbus;
-using DeviceType = ddk::Device<I2cHidbus, ddk::Initializable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<I2cHidbus, ddk::Initializable, ddk::Unbindable>;
 
 class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::base_protocol> {
  public:
@@ -70,7 +70,7 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
   zx_status_t HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(ddk::I2cChannel i2c);
 

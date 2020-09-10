@@ -21,7 +21,7 @@ class RcgFrequencyTable;
 class MsmClkRcg;
 
 class Msm8x53Clk;
-using DeviceType = ddk::Device<Msm8x53Clk, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Msm8x53Clk, ddk::Unbindable>;
 
 class Msm8x53Clk : public DeviceType,
                    public ddk::ClockImplProtocol<Msm8x53Clk, ddk::base_protocol> {
@@ -45,7 +45,7 @@ class Msm8x53Clk : public DeviceType,
 
   // Device Protocol Implementation.
   zx_status_t Bind();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Protected for tests.

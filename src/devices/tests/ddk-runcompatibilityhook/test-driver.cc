@@ -16,14 +16,14 @@
 
 class TestCompatibilityHookDriver;
 using DeviceType = ddk::Device<TestCompatibilityHookDriver, ddk::Initializable,
-                               ddk::UnbindableNew>;
+                               ddk::Unbindable>;
 class TestCompatibilityHookDriver : public DeviceType,
                                     public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_COMPAT_CHILD> {
  public:
   TestCompatibilityHookDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:

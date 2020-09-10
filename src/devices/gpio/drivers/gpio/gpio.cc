@@ -64,7 +64,7 @@ zx_status_t GpioDevice::GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actua
   return gpio_.SetDriveStrength(pin_, ds_ua, out_actual_ds_ua);
 }
 
-void GpioDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void GpioDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void GpioDevice::DdkRelease() { delete this; }
 

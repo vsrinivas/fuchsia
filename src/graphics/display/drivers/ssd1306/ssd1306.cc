@@ -126,7 +126,7 @@ zx_status_t Ssd1306::EnableScreen() {
   return ZX_OK;
 }
 
-void Ssd1306::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Ssd1306::DdkUnbind(ddk::UnbindTxn txn) {
   thrd_join(enable_thread_, NULL);
   txn.Reply();
 }

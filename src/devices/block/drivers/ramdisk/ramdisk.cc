@@ -85,7 +85,7 @@ zx_status_t Ramdisk::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 
 zx_off_t Ramdisk::DdkGetSize() { return block_size_ * block_count_; }
 
-void Ramdisk::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Ramdisk::DdkUnbind(ddk::UnbindTxn txn) {
   {
     fbl::AutoLock lock(&lock_);
     dead_ = true;

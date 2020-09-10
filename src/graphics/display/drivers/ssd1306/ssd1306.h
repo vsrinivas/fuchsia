@@ -17,7 +17,7 @@
 namespace ssd1306 {
 
 class Ssd1306;
-using DeviceType = ddk::Device<Ssd1306, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<Ssd1306, ddk::Unbindable, ddk::Messageable>;
 class Ssd1306 : public DeviceType,
                 public ddk::DotmatrixDisplayProtocol<Ssd1306, ddk::base_protocol> {
  public:
@@ -25,7 +25,7 @@ class Ssd1306 : public DeviceType,
 
   zx_status_t Bind(ddk::I2cChannel i2c);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
   void DotmatrixDisplayGetConfig(dotmatrix_display_config_t* out_config);

@@ -47,7 +47,7 @@ struct VariableLengthDescriptor {
 
 class UsbHubDevice;
 using UsbHub =
-    ddk::Device<UsbHubDevice, ddk::UnbindableNew, ddk::Initializable, ddk::GetProtocolable>;
+    ddk::Device<UsbHubDevice, ddk::Unbindable, ddk::Initializable, ddk::GetProtocolable>;
 using Request = usb::Request<void>;
 class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDevice> {
  public:
@@ -135,7 +135,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   void DdkRelease();
 

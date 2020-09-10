@@ -175,7 +175,7 @@ zx_status_t FakeUsbHidFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbHidFunction::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void FakeUsbHidFunction::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void FakeUsbHidFunction::DdkRelease() { delete this; }
 

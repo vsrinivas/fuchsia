@@ -444,7 +444,7 @@ zx_status_t ScsiDevice::Init() {
   return status;
 }
 
-void ScsiDevice::DdkUnbindNew(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
+void ScsiDevice::DdkUnbind(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
 
 void ScsiDevice::DdkRelease() {
   {

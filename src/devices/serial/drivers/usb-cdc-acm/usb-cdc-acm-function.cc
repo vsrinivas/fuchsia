@@ -42,7 +42,7 @@ namespace fake_usb_cdc_acm_function {
 // echos it back on the next read, unless the write is exactly a single '0' byte, in which case
 // the next read will be an empty response.
 class FakeUsbCdcAcmFunction;
-using DeviceType = ddk::Device<FakeUsbCdcAcmFunction, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<FakeUsbCdcAcmFunction, ddk::Unbindable>;
 class FakeUsbCdcAcmFunction : public DeviceType,
                               public ddk::UsbFunctionInterfaceProtocol<FakeUsbCdcAcmFunction> {
  public:
@@ -50,7 +50,7 @@ class FakeUsbCdcAcmFunction : public DeviceType,
   zx_status_t Bind();
 
   // |ddk::Device| mix-in implementations.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   size_t UsbFunctionInterfaceGetDescriptorsSize();
@@ -304,7 +304,7 @@ zx_status_t FakeUsbCdcAcmFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbCdcAcmFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
+void FakeUsbCdcAcmFunction::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
   active_ = false;
   event_.Signal();

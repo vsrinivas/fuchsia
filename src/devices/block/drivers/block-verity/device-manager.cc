@@ -80,7 +80,7 @@ zx_status_t DeviceManager::Bind() {
   return ZX_OK;
 }
 
-void DeviceManager::DdkUnbindNew(ddk::UnbindTxn txn) {
+void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
   // Mark the device as getting-removed, so we refuse all other FIDL calls.
   state_ = kRemoved;

@@ -463,7 +463,7 @@ class XhciMmioHarness : public XhciHarness {
   void TearDown() override {
     auto device = device_.release();
     ddk::UnbindTxn txn(device->zxdev());
-    device->DdkUnbindNew(std::move(txn));
+    device->DdkUnbind(std::move(txn));
     ASSERT_OK(ddk_.WaitUntilRemove());
   }
 };

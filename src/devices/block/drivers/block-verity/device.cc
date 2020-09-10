@@ -49,8 +49,8 @@ zx_off_t Device::DdkGetSize() {
   return data_size;
 }
 
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(INFO, "mutable DdkUnbindNew");
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
+  zxlogf(INFO, "mutable DdkUnbind");
   txn.Reply();
 }
 

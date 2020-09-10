@@ -21,7 +21,7 @@
 namespace usb_hid {
 
 class UsbHidbus;
-using DeviceType = ddk::Device<UsbHidbus, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<UsbHidbus, ddk::Unbindable>;
 
 class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::base_protocol> {
  public:
@@ -48,7 +48,7 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
   zx_status_t HidbusGetProtocol(uint8_t* protocol);
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void UsbHidRelease();
   void DdkRelease();
   void FindDescriptors(usb::Interface interface, usb_hid_descriptor_t** hid_desc,

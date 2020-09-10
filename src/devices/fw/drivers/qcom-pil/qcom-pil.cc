@@ -276,7 +276,7 @@ zx_status_t PilDevice::Init() { return ZX_OK; }
 
 void PilDevice::ShutDown() {}
 
-void PilDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void PilDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

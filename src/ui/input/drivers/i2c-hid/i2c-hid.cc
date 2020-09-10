@@ -422,7 +422,7 @@ void I2cHidbus::Shutdown() {
   }
 }
 
-void I2cHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
+void I2cHidbus::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
   txn.Reply();
 }

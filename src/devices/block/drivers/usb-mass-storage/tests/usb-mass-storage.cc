@@ -559,7 +559,7 @@ TEST(Ums, TestRead) {
                         parent_dev.last_transfer->data.size()));
   }
   // Unbind
-  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
+  dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   EXPECT_EQ(4, parent_dev.block_devs);
   ASSERT_FALSE(has_zero_duration);
 }
@@ -620,7 +620,7 @@ TEST(Ums, TestWrite) {
                         transaction.op.rw.length * kBlockSize));
   }
   // Unbind
-  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
+  dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
@@ -663,7 +663,7 @@ TEST(Ums, TestFlush) {
     EXPECT_EQ(xfer_type, parent_dev.transfer_type);
   }
   // Unbind
-  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
+  dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
@@ -689,7 +689,7 @@ TEST(Ums, CbwStallDoesNotFreezeDriver) {
   usb_protocol_ops_t ops;
   Setup(&parent_dev, &dev, &ops, RejectCacheCbw);
   // Unbind
-  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
+  dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
@@ -715,7 +715,7 @@ TEST(Ums, DataStageStallDoesNotFreezeDriver) {
   usb_protocol_ops_t ops;
   Setup(&parent_dev, &dev, &ops, RejectCacheDataStage);
   // Unbind
-  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
+  dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }

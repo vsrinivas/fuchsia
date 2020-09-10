@@ -723,7 +723,7 @@ void UsbVideoStream::DeactivateVideoBuffer() {
   }
 }
 
-void UsbVideoStream::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbVideoStream::DdkUnbind(ddk::UnbindTxn txn) {
   // Unpublish our device node.
   txn.Reply();
 }

@@ -92,7 +92,7 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
   return vmo;
 }
 
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
   tracef("unbind\n");
   txn.Reply();
 }

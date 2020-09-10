@@ -92,7 +92,7 @@ typedef volatile struct dw_dmadescr {
 
 namespace eth {
 
-class DWMacDevice : public ddk::Device<DWMacDevice, ddk::UnbindableNew>,
+class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
                     public ddk::EthernetImplProtocol<DWMacDevice, ddk::base_protocol>,
                     public ddk::EthMacProtocol<DWMacDevice> {
  public:
@@ -101,7 +101,7 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::UnbindableNew>,
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // ZX_PROTOCOL_ETHERNET_IMPL ops.
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);

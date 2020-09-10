@@ -114,7 +114,7 @@ zx_status_t BlockDevice::Bind() {
   return DdkAdd(kDeviceName);
 }
 
-void BlockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void BlockDevice::DdkUnbind(ddk::UnbindTxn txn) {
   Kill();
   sync_completion_signal(&wake_signal_);
   txn.Reply();

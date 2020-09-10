@@ -21,7 +21,7 @@ namespace {
 using llcpp::fuchsia::device::instancelifecycle::test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType = ddk::Device<TestLifecycleDriver, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable>;
 
 class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
  public:
@@ -29,7 +29,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
   ~TestLifecycleDriver() {}
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.

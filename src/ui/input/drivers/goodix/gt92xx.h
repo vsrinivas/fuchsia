@@ -44,12 +44,12 @@
 
 namespace goodix {
 
-class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::UnbindableNew>,
+class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
                      public ddk::HidbusProtocol<Gt92xxDevice, ddk::base_protocol> {
  public:
   Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient intr,
                ddk::GpioProtocolClient reset)
-      : ddk::Device<Gt92xxDevice, ddk::UnbindableNew>(device),
+      : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
         i2c_(std::move(i2c)),
         int_gpio_(std::move(intr)),
         reset_gpio_(std::move(reset)) {}
@@ -59,7 +59,7 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::UnbindableNew>,
   static zx_status_t Create(zx_device_t* device);
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn) __TA_EXCLUDES(client_lock_);
+  void DdkUnbind(ddk::UnbindTxn txn) __TA_EXCLUDES(client_lock_);
 
   // Hidbus required methods
   void HidbusStop();

@@ -282,7 +282,7 @@ void UsbTest::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, 0);
 }
 
-void UsbTest::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbTest::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(DEBUG, "%s", __func__);
   txn.Reply();
 }

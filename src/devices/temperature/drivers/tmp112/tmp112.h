@@ -37,7 +37,7 @@ constexpr uint16_t kTemperatureNormalModeShift = 4;
 constexpr float kTemperatureResolution = 0.0625;
 
 class Tmp112Device;
-using DdkDeviceType = ddk::Device<Tmp112Device, ddk::UnbindableNew, ddk::Messageable>;
+using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageable>;
 namespace temperature_fidl = llcpp::fuchsia::hardware::temperature;
 
 class Tmp112Device : public DdkDeviceType,
@@ -52,7 +52,7 @@ class Tmp112Device : public DdkDeviceType,
   float RegToTemperatureCelsius(uint16_t reg);
 
   // Ddk Hooks
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

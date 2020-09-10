@@ -506,7 +506,7 @@ void Tcs3400Device::ShutDown() {
   }
 }
 
-void Tcs3400Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Tcs3400Device::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

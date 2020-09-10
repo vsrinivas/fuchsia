@@ -131,7 +131,7 @@ inline constexpr uint32_t kDataCmdDat = 0;
 
 class IntelI2cController;
 using IntelI2cControllerType =
-    ddk::Device<IntelI2cController, ddk::Initializable, ddk::UnbindableNew>;
+    ddk::Device<IntelI2cController, ddk::Initializable, ddk::Unbindable>;
 
 class IntelI2cController : public IntelI2cControllerType,
                            public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {
@@ -173,7 +173,7 @@ class IntelI2cController : public IntelI2cControllerType,
   zx_status_t I2cImplTransact(const uint32_t bus_id, const i2c_impl_op_t* op_list,
                               const size_t op_count);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

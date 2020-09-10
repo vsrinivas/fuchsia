@@ -482,7 +482,7 @@ void NelsonUsbPhy::UsbPhyConnectStatusChanged(bool connected) {
   return;
 }
 
-void NelsonUsbPhy::DdkUnbindNew(ddk::UnbindTxn txn) {
+void NelsonUsbPhy::DdkUnbind(ddk::UnbindTxn txn) {
   irq_.destroy();
   thrd_join(irq_thread_, nullptr);
 

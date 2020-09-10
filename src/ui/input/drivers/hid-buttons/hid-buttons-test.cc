@@ -89,7 +89,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
     }
   }
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
+  void DdkUnbind(ddk::UnbindTxn txn) {
     // ShutDown() assigns nullptr to the function_ pointers.  Normally, the structures being pointed
     // at would be freed by the real DDK as a consequence of unbinding them.  However, in the test,
     // they need to be freed manually (necessitating a copy of the pointer).
@@ -104,7 +104,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
   }
   void DdkRelease() { delete this; }
 
-  void ShutDownTest() { DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice)); }
+  void ShutDownTest() { DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice)); }
 
   void SetupGpio(zx::interrupt irq, size_t gpio_index) {
     auto* mock = gpio_mocks_[gpio_index];

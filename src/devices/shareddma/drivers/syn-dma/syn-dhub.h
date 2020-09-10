@@ -25,7 +25,7 @@
 namespace as370 {
 
 class SynDhub;
-using DeviceType = ddk::Device<SynDhub, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<SynDhub, ddk::Unbindable>;
 
 class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::base_protocol> {
  public:
@@ -44,7 +44,7 @@ class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::b
   uint32_t SharedDmaGetBufferPosition(uint32_t dma_id);
   zx_status_t SharedDmaSetNotifyCallback(uint32_t dma_id, const dma_notify_t* cb);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
+  void DdkUnbind(ddk::UnbindTxn txn) {
     Shutdown();
     txn.Reply();
   }

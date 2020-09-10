@@ -384,7 +384,7 @@ void Alc5663Device::Shutdown() {
   }
 }
 
-void Alc5663Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Alc5663Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Alc5663Device::DdkRelease() { delete this; }
 

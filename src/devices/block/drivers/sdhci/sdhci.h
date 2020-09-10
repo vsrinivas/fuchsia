@@ -25,7 +25,7 @@
 namespace sdhci {
 
 class Sdhci;
-using DeviceType = ddk::Device<Sdhci, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Sdhci, ddk::Unbindable>;
 
 class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_protocol> {
  public:
@@ -59,7 +59,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t SdmmcHostInfo(sdmmc_host_info_t* out_info);
   zx_status_t SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) TA_EXCL(mtx_);

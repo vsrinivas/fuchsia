@@ -57,7 +57,7 @@ void UsbMidiSource::ReadComplete(usb_request_t* req) {
   UpdateSignals();
 }
 
-void UsbMidiSource::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbMidiSource::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock al(&mutex_);
   dead_ = true;
 

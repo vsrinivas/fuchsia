@@ -111,7 +111,7 @@ TEST(VirtualBusUnitTest, UnbindDuringControlRequest) {
 
   // Request the device begin unbinding.
   // This should wake up the worker thread, which will block until the control request completes.
-  bus->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  bus->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   fake_dci.CompleteControlRequest();
 

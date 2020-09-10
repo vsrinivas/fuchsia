@@ -875,7 +875,7 @@ void AmlRawNand::DdkRelease() {
 
 void AmlRawNand::CleanUpIrq() { irq_.destroy(); }
 
-void AmlRawNand::DdkUnbindNew(ddk::UnbindTxn txn) {
+void AmlRawNand::DdkUnbind(ddk::UnbindTxn txn) {
   CleanUpIrq();
   txn.Reply();
 }

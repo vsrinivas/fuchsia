@@ -140,7 +140,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
 }
 
 OtRadioDevice::OtRadioDevice(zx_device_t* device)
-    : ddk::Device<OtRadioDevice, ddk::UnbindableNew, ddk::Messageable>(device),
+    : ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Messageable>(device),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 zx_status_t OtRadioDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -630,7 +630,7 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
 
 void OtRadioDevice::DdkRelease() { delete this; }
 
-void OtRadioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void OtRadioDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

@@ -15,7 +15,7 @@
 namespace spi {
 
 class MtkSpi;
-using DeviceType = ddk::Device<MtkSpi, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<MtkSpi, ddk::Unbindable>;
 
 class MtkSpi : public DeviceType, public ddk::SpiImplProtocol<MtkSpi, ddk::base_protocol> {
  public:
@@ -24,7 +24,7 @@ class MtkSpi : public DeviceType, public ddk::SpiImplProtocol<MtkSpi, ddk::base_
 
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   uint32_t SpiImplGetChipSelectCount() { return 1; }

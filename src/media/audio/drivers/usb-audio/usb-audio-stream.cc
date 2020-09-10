@@ -272,7 +272,7 @@ void UsbAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   completer.Close(ZX_ERR_INTERNAL);
 }
 
-void UsbAudioStream::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbAudioStream::DdkUnbind(ddk::UnbindTxn txn) {
   // Close all of our client event sources if we have not already.
   default_domain_->Deactivate();
 

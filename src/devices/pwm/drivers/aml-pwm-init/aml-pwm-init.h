@@ -15,13 +15,13 @@
 namespace pwm_init {
 
 class PwmInitDevice;
-using PwmInitDeviceType = ddk::Device<PwmInitDevice, ddk::UnbindableNew>;
+using PwmInitDeviceType = ddk::Device<PwmInitDevice, ddk::Unbindable>;
 
 class PwmInitDevice : public PwmInitDeviceType {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:

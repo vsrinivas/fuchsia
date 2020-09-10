@@ -36,7 +36,7 @@ class MesonCpuClock;
 class MesonRateClock;
 
 class AmlClock;
-using DeviceType = ddk::Device<AmlClock, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlClock, ddk::Unbindable, ddk::Messageable>;
 
 class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
  public:
@@ -68,7 +68,7 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void ShutDown();

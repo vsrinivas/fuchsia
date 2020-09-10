@@ -73,7 +73,7 @@ class Ft8201InputReportsReader : public fuchsia_input_report::InputReportsReader
 };
 
 class Ft8201Device;
-using DeviceType = ddk::Device<Ft8201Device, ddk::Messageable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Ft8201Device, ddk::Messageable, ddk::Unbindable>;
 
 class Ft8201Device : public DeviceType,
                      fuchsia_input_report::InputDevice::Interface,
@@ -96,7 +96,7 @@ class Ft8201Device : public DeviceType,
   void DdkRelease() { delete this; }
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   void GetInputReportsReader(zx::channel server,
                              GetInputReportsReaderCompleter::Sync completer) override;

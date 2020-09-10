@@ -290,7 +290,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   return ZX_OK;
 }
 
-void SdmmcBlockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void SdmmcBlockDevice::DdkUnbind(ddk::UnbindTxn txn) {
   StopWorkerThread();
   txn.Reply();
 }

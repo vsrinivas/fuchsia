@@ -38,9 +38,9 @@ class TestSdhci : public Sdhci {
     return Sdhci::SdmmcRequest(req);
   }
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
+  void DdkUnbind(ddk::UnbindTxn txn) {
     run_thread_ = false;
-    Sdhci::DdkUnbindNew(std::move(txn));
+    Sdhci::DdkUnbind(std::move(txn));
   }
 
   uint8_t reset_mask() {
@@ -172,7 +172,7 @@ TEST_F(SdhciTest, DdkLifecycle) {
 
   fake_ddk::Bind bind;
   dut_->DdkAdd("sdhci");
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   EXPECT_TRUE(bind.Ok());
 }
@@ -189,7 +189,7 @@ TEST_F(SdhciTest, BaseClockFromDriver) {
 
   mock_sdhci_.ExpectGetBaseClock(0xabcdef);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   EXPECT_EQ(dut_->base_clock(), 0xabcdef);
 }
@@ -199,7 +199,7 @@ TEST_F(SdhciTest, BaseClockFromHardware) {
 
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(104).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   EXPECT_EQ(dut_->base_clock(), 104'000'000);
 }
@@ -221,7 +221,7 @@ TEST_F(SdhciTest, HostInfo) {
       .set_v3_64_bit_system_address_support(1)
       .WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   sdmmc_host_info_t host_info = {};
   EXPECT_OK(dut_->SdmmcHostInfo(&host_info));
@@ -243,7 +243,7 @@ TEST_F(SdhciTest, HostInfoNoDma) {
       .set_v3_64_bit_system_address_support(1)
       .WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   sdmmc_host_info_t host_info = {};
   EXPECT_OK(dut_->SdmmcHostInfo(&host_info));
@@ -259,7 +259,7 @@ TEST_F(SdhciTest, HostInfoNoTuning) {
   Capabilities1::Get().FromValue(0).WriteTo(&mmio_);
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(1).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   sdmmc_host_info_t host_info = {};
   EXPECT_OK(dut_->SdmmcHostInfo(&host_info));
@@ -274,7 +274,7 @@ TEST_F(SdhciTest, SetSignalVoltage) {
   Capabilities0::Get().FromValue(0).set_voltage_3v3_support(1).set_voltage_1v8_support(1).WriteTo(
       &mmio_);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   PresentState::Get().FromValue(0).set_dat_3_0(0b0001).WriteTo(&mmio_);
 
@@ -307,7 +307,7 @@ TEST_F(SdhciTest, SetBusWidth) {
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get().FromValue(0).set_bus_width_8_support(1).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   auto ctrl1 = HostControl1::Get().FromValue(0);
 
@@ -335,7 +335,7 @@ TEST_F(SdhciTest, SetBusFreq) {
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   auto clock = ClockControl::Get().FromValue(0);
 
@@ -364,7 +364,7 @@ TEST_F(SdhciTest, SetBusFreqTimeout) {
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   ClockControl::Get().FromValue(0).set_internal_clock_stable(1).WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcSetBusFreq(12'500'000));
@@ -378,7 +378,7 @@ TEST_F(SdhciTest, SetBusFreqInternalClockEnable) {
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   ClockControl::Get()
       .FromValue(0)
@@ -500,7 +500,7 @@ TEST_F(SdhciTest, RequestCommandOnly) {
   EXPECT_EQ(request.response[2], 0xc14b059e);
   EXPECT_EQ(request.response[3], 0x7329a9e3);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, RequestWithData) {
@@ -608,7 +608,7 @@ TEST_F(SdhciTest, RequestWithData) {
     EXPECT_EQ(buffer[i], 0xe99dd637);
   }
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, RequestAbort) {
@@ -650,7 +650,7 @@ TEST_F(SdhciTest, RequestAbort) {
   EXPECT_EQ(dut_->reset_mask(),
             SoftwareReset::Get().FromValue(0).set_reset_dat(1).set_reset_cmd(1).reg_value());
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, DmaRequest64Bit) {
@@ -710,7 +710,7 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
   EXPECT_EQ(descriptors[3].address, PAGE_SIZE);
   EXPECT_EQ(descriptors[3].length, PAGE_SIZE);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, DmaRequest32Bit) {
@@ -767,7 +767,7 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
   EXPECT_EQ(descriptors[3].address, PAGE_SIZE);
   EXPECT_EQ(descriptors[3].length, PAGE_SIZE);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, SdioInBandInterrupt) {
@@ -793,7 +793,7 @@ TEST_F(SdhciTest, SdioInBandInterrupt) {
   dut_->TriggerCardInterrupt();
   sync_completion_wait(&callback_called, ZX_TIME_INFINITE);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, DmaSplitOneBoundary) {
@@ -852,7 +852,7 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
   EXPECT_EQ(descriptors[2].address, 0xb000'0000);
   EXPECT_EQ(descriptors[2].length, 256 - 4);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, DmaSplitManyBoundaries) {
@@ -912,7 +912,7 @@ TEST_F(SdhciTest, DmaSplitManyBoundaries) {
   EXPECT_EQ(descriptors[4].address, 0xabcd'0400);
   EXPECT_EQ(descriptors[4].length, 128);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(SdhciTest, DmaNoBoundaries) {
@@ -967,7 +967,7 @@ TEST_F(SdhciTest, DmaNoBoundaries) {
   EXPECT_EQ(descriptors[1].address, 0xb000'0000);
   EXPECT_EQ(descriptors[1].length, 256 - 4);
 
-  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 }  // namespace sdhci

@@ -24,7 +24,7 @@ static constexpr size_t INTR_MAX_PACKET = 64;
 namespace usb_function_test {
 
 class UsbTest;
-using UsbTestType = ddk::Device<UsbTest, ddk::UnbindableNew, ddk::Suspendable>;
+using UsbTestType = ddk::Device<UsbTest, ddk::Unbindable, ddk::Suspendable>;
 class UsbTest : public UsbTestType, public ddk::UsbFunctionInterfaceProtocol<UsbTest> {
  public:
   explicit UsbTest(zx_device_t* parent) : UsbTestType(parent) {}
@@ -42,7 +42,7 @@ class UsbTest : public UsbTestType, public ddk::UsbFunctionInterfaceProtocol<Usb
 
   zx_status_t UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t alt_setting);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   void DdkSuspend(ddk::SuspendTxn txn);
 

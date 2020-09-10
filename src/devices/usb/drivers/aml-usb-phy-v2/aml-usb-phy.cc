@@ -429,7 +429,7 @@ void AmlUsbPhy::UsbPhyConnectStatusChanged(bool connected) {
   dwc2_connected_ = connected;
 }
 
-void AmlUsbPhy::DdkUnbindNew(ddk::UnbindTxn txn) {
+void AmlUsbPhy::DdkUnbind(ddk::UnbindTxn txn) {
   irq_.destroy();
   if (irq_thread_started_) {
     thrd_join(irq_thread_, nullptr);

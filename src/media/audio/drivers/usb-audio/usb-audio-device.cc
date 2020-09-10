@@ -476,7 +476,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
   }
 }
 
-void UsbAudioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbAudioDevice::DdkUnbind(ddk::UnbindTxn txn) {
   // Unpublish our device node.
   txn.Reply();
 }

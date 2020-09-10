@@ -15,13 +15,13 @@
 #include "test-metadata.h"
 
 class TestCompatibilityHookDriverChild;
-using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::Unbindable>;
 class TestCompatibilityHookDriverChild : public DeviceType {
  public:
   TestCompatibilityHookDriverChild(zx_device_t* parent) : DeviceType(parent) {}
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
+  void DdkUnbind(ddk::UnbindTxn txn) {
     if (test_metadata_.remove_in_unbind) {
       txn.Reply();
     } else {

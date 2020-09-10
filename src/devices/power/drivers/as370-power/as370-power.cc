@@ -250,7 +250,7 @@ zx_status_t As370Power::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* cur
 
 void As370Power::DdkRelease() { delete this; }
 
-void As370Power::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void As370Power::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 zx_status_t As370Power::InitializePowerDomains(const ddk::I2cProtocolClient& i2c) {
   for (size_t i = 0; i < kAs370NumPowerDomains; i++) {

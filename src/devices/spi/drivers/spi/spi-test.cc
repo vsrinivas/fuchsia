@@ -58,7 +58,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
       }
       for (size_t i = 0; i < children_copy.size(); i++) {
         zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(children_copy[i]);
-        children_copy[i]->DdkUnbindNew(ddk::UnbindTxn(zxdev));
+        children_copy[i]->DdkUnbind(ddk::UnbindTxn(zxdev));
       }
       return ZX_OK;
     } else {
@@ -187,7 +187,7 @@ TEST(SpiDevice, SpiTest) {
 
   // clean it up
   zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(ddk.bus_device_);
-  ddk.bus_device_->DdkUnbindNew(ddk::UnbindTxn(zxdev));
+  ddk.bus_device_->DdkUnbind(ddk::UnbindTxn(zxdev));
   EXPECT_EQ(ddk.children_.size(), 0, "");
   EXPECT_EQ(ddk.bus_device_, nullptr, "");
 }

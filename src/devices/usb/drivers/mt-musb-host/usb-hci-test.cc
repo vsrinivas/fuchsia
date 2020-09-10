@@ -54,7 +54,7 @@ TEST_F(HciTest, TestReadEndpointNumber) {
 
   EXPECT_OK(hci.Init());
   EXPECT_EQ(3, regs::INDEX::Get().ReadFrom(&v).selected_endpoint());
-  hci.DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  hci.DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
 
 TEST_F(HciTest, DdkLifecycle) {

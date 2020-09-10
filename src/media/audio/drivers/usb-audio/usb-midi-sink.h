@@ -19,7 +19,7 @@ namespace audio {
 namespace usb {
 
 class UsbMidiSink;
-using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::UnbindableNew, ddk::Openable, ddk::Closable,
+using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable, ddk::Closable,
                                     ddk::Writable, ddk::Messageable>;
 
 class UsbMidiSink : public UsbMidiSinkBase,
@@ -38,7 +38,7 @@ class UsbMidiSink : public UsbMidiSinkBase,
                             const usb_endpoint_descriptor_t* ep, size_t req_size);
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);

@@ -22,7 +22,7 @@ namespace i2c {
 
 class I2cChild;
 
-using I2cChildType = ddk::Device<I2cChild, ddk::UnbindableNew, ddk::Messageable>;
+using I2cChildType = ddk::Device<I2cChild, ddk::Unbindable, ddk::Messageable>;
 
 namespace fidl_i2c = llcpp::fuchsia::hardware::i2c;
 
@@ -35,7 +35,7 @@ class I2cChild : public I2cChildType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);

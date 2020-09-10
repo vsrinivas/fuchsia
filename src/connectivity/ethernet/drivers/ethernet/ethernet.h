@@ -57,7 +57,7 @@ struct TransmitInfo {
 using TransmitBuffer = eth::Operation<TransmitInfo>;
 using TransmitBufferPool = eth::OperationPool<TransmitInfo>;
 
-using EthDev0Type = ddk::Device<EthDev0, ddk::Openable, ddk::UnbindableNew>;
+using EthDev0Type = ddk::Device<EthDev0, ddk::Openable, ddk::Unbindable>;
 
 class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERNET> {
  public:
@@ -72,7 +72,7 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
 
   static zx_status_t EthBind(void* ctx, zx_device_t* dev);
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t AddDevice();

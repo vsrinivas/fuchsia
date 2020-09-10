@@ -27,7 +27,7 @@ constexpr uint64_t kPortKeyShutDown = 0x01;
 constexpr uint64_t kPortKeyTouchIrq = 0x02;
 
 class Cy8cmbr3108;
-using Cy8cmbr3108Type = ddk::Device<Cy8cmbr3108, ddk::UnbindableNew>;
+using Cy8cmbr3108Type = ddk::Device<Cy8cmbr3108, ddk::Unbindable>;
 
 class Cy8cmbr3108 : public Cy8cmbr3108Type,
                     public ddk::HidbusProtocol<Cy8cmbr3108, ddk::base_protocol> {
@@ -53,7 +53,7 @@ class Cy8cmbr3108 : public Cy8cmbr3108Type,
 
   // Device protocol implementation.
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   static bool RunTest(void* ctx, zx_device_t* parent, zx_handle_t channel);
   void ShutDown() TA_EXCL(client_lock_);

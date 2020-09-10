@@ -648,7 +648,7 @@ int MtUsb::IrqThread() {
   }
 }
 
-void MtUsb::DdkUnbindNew(ddk::UnbindTxn txn) {
+void MtUsb::DdkUnbind(ddk::UnbindTxn txn) {
   irq_.destroy();
   thrd_join(irq_thread_, nullptr);
   txn.Reply();

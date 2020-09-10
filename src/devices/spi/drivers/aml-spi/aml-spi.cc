@@ -31,7 +31,7 @@ enum {
   FRAGMENT_GPIO0,
 };
 
-void AmlSpi::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSpi::DdkRelease() { delete this; }
 

@@ -1097,7 +1097,7 @@ void AmlSdEmmc::ShutDown() {
   }
 }
 
-void AmlSdEmmc::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlSdEmmc::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSdEmmc::DdkSuspend(ddk::SuspendTxn txn) {
   ShutDown();

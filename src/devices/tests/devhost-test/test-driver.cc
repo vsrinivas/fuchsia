@@ -22,7 +22,7 @@ using llcpp::fuchsia::device::devhost::test::TestDevice;
 
 class TestDevhostDriver;
 using DeviceType =
-    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::UnbindableNew, ddk::Messageable>;
+    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
                           public TestDevice::Interface {
@@ -30,7 +30,7 @@ class TestDevhostDriver : public DeviceType,
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
   void AddChildDevice(AddChildDeviceCompleter::Sync completer) override;
 

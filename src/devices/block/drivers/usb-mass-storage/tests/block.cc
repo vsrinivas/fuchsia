@@ -71,7 +71,7 @@ TEST(UmsBlock, AddTest) {
               "Parameters must be set to user-provided values.");
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
-  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -95,7 +95,7 @@ TEST(UmsBlock, GetSizeTest) {
   context.info.block_count = params.total_blocks;
   dev.SetBlockDeviceParameters(params);
   EXPECT_EQ(params.block_size * params.total_blocks, dev.DdkGetSize());
-  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -112,7 +112,7 @@ TEST(UmsBlock, NotSupportedTest) {
   txn.op.command = BLOCK_OP_MASK;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, context.status);
-  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -128,7 +128,7 @@ TEST(UmsBlock, ReadTest) {
   ums::Transaction txn;
   txn.op.command = BLOCK_OP_READ;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
-  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -145,7 +145,7 @@ TEST(UmsBlock, WriteTest) {
   txn.op.command = BLOCK_OP_WRITE;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -162,7 +162,7 @@ TEST(UmsBlock, FlushTest) {
   txn.op.command = BLOCK_OP_FLUSH;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 

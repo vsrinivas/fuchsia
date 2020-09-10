@@ -922,7 +922,7 @@ zx_status_t UsbPeripheral::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void UsbPeripheral::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbPeripheral::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(DEBUG, "%s", __func__);
   ClearFunctions();
   txn.Reply();

@@ -285,7 +285,7 @@ void OpteeClient::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-void OpteeClient::DdkUnbindNew(ddk::UnbindTxn txn) { Shutdown(); }
+void OpteeClient::DdkUnbind(ddk::UnbindTxn txn) { Shutdown(); }
 
 void OpteeClient::Shutdown() {
   if (controller_ != nullptr) {

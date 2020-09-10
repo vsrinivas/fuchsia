@@ -515,7 +515,7 @@ void As370Gpio::Shutdown() {
   thrd_join(thread_, nullptr);
 }
 
-void As370Gpio::DdkUnbindNew(ddk::UnbindTxn txn) {
+void As370Gpio::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
   txn.Reply();
 }

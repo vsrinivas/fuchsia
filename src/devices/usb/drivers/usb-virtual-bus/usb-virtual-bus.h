@@ -30,7 +30,7 @@ class UsbVirtualBus;
 class UsbVirtualDevice;
 class UsbVirtualHost;
 using UsbVirtualBusType =
-    ddk::Device<UsbVirtualBus, ddk::Initializable, ddk::UnbindableNew, ddk::Messageable>;
+    ddk::Device<UsbVirtualBus, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
 
 // This is the main class for the USB virtual bus.
 class UsbVirtualBus : public UsbVirtualBusType,
@@ -43,7 +43,7 @@ class UsbVirtualBus : public UsbVirtualBusType,
   // Device protocol implementation.
   void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB device controller protocol implementation.

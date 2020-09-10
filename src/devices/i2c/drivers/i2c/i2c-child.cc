@@ -149,7 +149,7 @@ zx_status_t I2cChild::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
   return ZX_ERR_NOT_FOUND;
 }
 
-void I2cChild::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void I2cChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void I2cChild::DdkRelease() { delete this; }
 

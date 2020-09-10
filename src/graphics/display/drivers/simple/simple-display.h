@@ -21,7 +21,7 @@
 #include <ddktl/protocol/display/controller.h>
 
 class SimpleDisplay;
-using DeviceType = ddk::Device<SimpleDisplay, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<SimpleDisplay, ddk::Unbindable>;
 
 class SimpleDisplay : public DeviceType,
                       public ddk::DisplayControllerImplProtocol<SimpleDisplay, ddk::base_protocol> {
@@ -30,7 +30,7 @@ class SimpleDisplay : public DeviceType,
                 uint32_t height, uint32_t stride, zx_pixel_format_t format);
   ~SimpleDisplay() = default;
 
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(const char* name, std::unique_ptr<SimpleDisplay>* controller_ptr);
 

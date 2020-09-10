@@ -60,7 +60,7 @@ enum FanLevel {
   FL3,
 };
 class StmMcu;
-using DeviceType = ddk::Device<StmMcu, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<StmMcu, ddk::Unbindable>;
 
 class StmMcu : public DeviceType {
  public:
@@ -70,7 +70,7 @@ class StmMcu : public DeviceType {
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   zx_status_t SetFanLevel(FanLevel level);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

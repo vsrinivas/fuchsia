@@ -46,7 +46,7 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableNew, ddk::Messageable,
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 // Exposes the FTL library as a Fuchsia BlockDevice protocol.
@@ -60,7 +60,7 @@ class BlockDevice : public DeviceType,
 
   zx_status_t Bind();
   void DdkRelease() { delete this; }
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // Performs the object initialization.
   zx_status_t Init();

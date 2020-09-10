@@ -21,14 +21,14 @@ using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriver;
 using DeviceType =
-    ddk::Device<TestPowerDriver, ddk::UnbindableNew, ddk::Suspendable, ddk::Messageable>;
+    ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable, ddk::Messageable>;
 class TestPowerDriver : public DeviceType,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD>,
                         public TestDevice::Interface {
  public:
   TestPowerDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
   void DdkSuspend(ddk::SuspendTxn txn) {
     current_power_state_ = static_cast<DevicePowerState>(txn.requested_state());

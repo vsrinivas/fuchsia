@@ -24,7 +24,7 @@ namespace nand {
 using Transaction = nand::BorrowedOperation<>;
 
 class NandDevice;
-using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable>;
 
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:
@@ -40,7 +40,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return device_get_size(parent()); }
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease();
 
   // Nand protocol implementation.

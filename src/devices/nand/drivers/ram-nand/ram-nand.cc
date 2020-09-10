@@ -205,7 +205,7 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
   return ZX_OK;
 }
 
-void NandDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void NandDevice::DdkUnbind(ddk::UnbindTxn txn) {
   Kill();
   sync_completion_signal(&wake_signal_);
   txn.Reply();

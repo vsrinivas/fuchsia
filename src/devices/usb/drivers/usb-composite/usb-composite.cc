@@ -295,7 +295,7 @@ zx_status_t UsbComposite::GetAdditionalDescriptorList(uint8_t last_interface_id,
   return ZX_OK;
 }
 
-void UsbComposite::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbComposite::DdkUnbind(ddk::UnbindTxn txn) {
   {
     fbl::AutoLock lock(&lock_);
     for (auto interface : interfaces_) {

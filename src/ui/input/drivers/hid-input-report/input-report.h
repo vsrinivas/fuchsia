@@ -20,7 +20,7 @@
 namespace hid_input_report_dev {
 
 class InputReport;
-using DeviceType = ddk::Device<InputReport, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<InputReport, ddk::Unbindable, ddk::Messageable>;
 class InputReport : public DeviceType,
                     public InputReportBase,
                     fuchsia_input_report::InputDevice::Interface,
@@ -33,7 +33,7 @@ class InputReport : public DeviceType,
 
   // DDK Functions.
   zx_status_t Bind();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

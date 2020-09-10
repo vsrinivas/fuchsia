@@ -300,7 +300,7 @@ zx_status_t As370Clk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
 
 zx_status_t As370Clk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
-void As370Clk::DdkUnbindNew(ddk::UnbindTxn txn) {
+void As370Clk::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&lock_);
 
   global_mmio_.reset();

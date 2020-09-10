@@ -94,7 +94,7 @@ zx_off_t VerifiedDevice::DdkGetSize() {
   return data_size;
 }
 
-void VerifiedDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void VerifiedDevice::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
   // Change internal state to stop servicing new block requests.
   if (state_ == kFailed) {

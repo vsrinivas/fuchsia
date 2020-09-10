@@ -25,7 +25,7 @@ constexpr auto kVid = 0x18D1;
 constexpr auto kDid = 0x2;
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable>;
 class Device : public DeviceType,
                public ::llcpp::fuchsia::hardware::usb::virtualbustest::BusTest::Interface,
                public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
@@ -36,7 +36,7 @@ class Device : public DeviceType,
   zx_status_t Bind();
 
   void RunTest();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   void DdkRelease();
   static zx_status_t Bind(zx_device_t* device);

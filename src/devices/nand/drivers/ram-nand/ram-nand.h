@@ -50,7 +50,7 @@ struct NandParams : public fuchsia_hardware_nand_Info {
 };
 
 class NandDevice;
-using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::UnbindableNew,
+using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::Unbindable,
                                ddk::Messageable>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
@@ -70,7 +70,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return params_.GetSize(); }
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // Fidl RamNand implementation.

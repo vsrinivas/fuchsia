@@ -245,7 +245,7 @@ zx_status_t UsbDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
   return status;
 }
 
-void UsbDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void UsbDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void UsbDevice::DdkRelease() {
   StopCallbackThread();

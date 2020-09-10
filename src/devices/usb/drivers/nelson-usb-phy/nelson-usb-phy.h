@@ -21,7 +21,7 @@
 namespace nelson_usb_phy {
 
 class NelsonUsbPhy;
-using NelsonUsbPhyType = ddk::Device<NelsonUsbPhy, ddk::UnbindableNew, ddk::ChildPreReleaseable>;
+using NelsonUsbPhyType = ddk::Device<NelsonUsbPhy, ddk::Unbindable, ddk::ChildPreReleaseable>;
 
 // This is the main class for the platform bus driver.
 class NelsonUsbPhy : public NelsonUsbPhyType,
@@ -37,7 +37,7 @@ class NelsonUsbPhy : public NelsonUsbPhyType,
   zx_status_t UsbPhyNotifyDeviceRemoved();
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   void DdkChildPreRelease(void* child_ctx);
 

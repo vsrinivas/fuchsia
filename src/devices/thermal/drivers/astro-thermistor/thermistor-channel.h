@@ -21,7 +21,7 @@
 namespace thermal {
 
 class ThermistorChannel;
-using DeviceType2 = ddk::Device<ThermistorChannel, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType2 = ddk::Device<ThermistorChannel, ddk::Unbindable, ddk::Messageable>;
 
 namespace FidlTemperature = llcpp::fuchsia::hardware::temperature;
 
@@ -36,7 +36,7 @@ class ThermistorChannel : public DeviceType2,
   void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) override;
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
  private:
   const fbl::RefPtr<AmlSaradcDevice> adc_;
@@ -45,7 +45,7 @@ class ThermistorChannel : public DeviceType2,
 };
 
 class RawChannel;
-using DeviceType3 = ddk::Device<RawChannel, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType3 = ddk::Device<RawChannel, ddk::Unbindable, ddk::Messageable>;
 
 namespace FidlAdc = llcpp::fuchsia::hardware::adc;
 
@@ -61,7 +61,7 @@ class RawChannel : public DeviceType3,
   void GetResolution(GetResolutionCompleter::Sync completer) override;
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
  private:
   const fbl::RefPtr<AmlSaradcDevice> adc_;

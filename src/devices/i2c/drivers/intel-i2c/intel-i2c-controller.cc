@@ -824,7 +824,7 @@ zx_status_t IntelI2cController::AddSubordinates() {
   return ZX_OK;
 }
 
-void IntelI2cController::DdkUnbindNew(ddk::UnbindTxn txn) {
+void IntelI2cController::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %lu", irq_handle_.get(), irq_thread_);
 
   irq_handle_.destroy();

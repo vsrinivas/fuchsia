@@ -235,7 +235,7 @@ zx_status_t Msm8x53Power::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* c
 
 void Msm8x53Power::DdkRelease() { delete this; }
 
-void Msm8x53Power::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Msm8x53Power::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 zx_status_t Msm8x53Power::PmicArbInit() {
   // Read version

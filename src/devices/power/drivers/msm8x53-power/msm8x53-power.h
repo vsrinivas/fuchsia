@@ -28,7 +28,7 @@ struct Msm8x53PowerDomainInfo {
 };
 
 class Msm8x53Power;
-using Msm8x53PowerType = ddk::Device<Msm8x53Power, ddk::UnbindableNew>;
+using Msm8x53PowerType = ddk::Device<Msm8x53Power, ddk::Unbindable>;
 
 class Msm8x53Power : public Msm8x53PowerType,
                      public ddk::PowerImplProtocol<Msm8x53Power, ddk::base_protocol> {
@@ -48,7 +48,7 @@ class Msm8x53Power : public Msm8x53PowerType,
 
   // Device protocol implementation
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t PowerImplGetPowerDomainStatus(uint32_t index, power_domain_status_t* out_status);
   zx_status_t PowerImplEnablePowerDomain(uint32_t index);

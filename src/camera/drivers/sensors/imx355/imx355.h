@@ -67,7 +67,7 @@ struct IntegrationTime {
 };
 
 class Imx355Device;
-using DeviceType = ddk::Device<Imx355Device, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Imx355Device, ddk::Unbindable>;
 
 class Imx355Device : public DeviceType,
                      public ddk::CameraSensor2Protocol<Imx355Device, ddk::base_protocol> {
@@ -104,7 +104,7 @@ class Imx355Device : public DeviceType,
   static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
 
   // Methods required by the ddk mixins
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   bool IsSensorOutOfReset() {

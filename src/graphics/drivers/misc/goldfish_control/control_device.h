@@ -30,7 +30,7 @@ namespace goldfish {
 
 class Control;
 using ControlType =
-    ddk::Device<Control, ddk::UnbindableNew, ddk::Messageable, ddk::GetProtocolable>;
+    ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk::GetProtocolable>;
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
@@ -58,7 +58,7 @@ class Control : public ControlType,
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync completer) override;
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);

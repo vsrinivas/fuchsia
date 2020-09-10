@@ -1759,7 +1759,7 @@ zx_status_t ClientProxy::DdkClose(uint32_t flags) {
   return ZX_OK;
 }
 
-void ClientProxy::DdkUnbindNew(ddk::UnbindTxn txn) {
+void ClientProxy::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(INFO, "ClientProxy::DdkUnbind");
   CloseOnControllerLoop();
   txn.Reply();

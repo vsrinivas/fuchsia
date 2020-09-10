@@ -191,7 +191,7 @@ zx_status_t UsbPhy::Init() {
   return ZX_OK;
 }
 
-void UsbPhy::DdkUnbindNew(ddk::UnbindTxn txn) {
+void UsbPhy::DdkUnbind(ddk::UnbindTxn txn) {
   RemoveDwc2Device();
   txn.Reply();
 }

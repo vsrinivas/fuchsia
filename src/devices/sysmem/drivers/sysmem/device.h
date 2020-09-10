@@ -36,7 +36,7 @@
 namespace sysmem_driver {
 
 class Device;
-using DdkDeviceType = ddk::Device<Device, ddk::Messageable, ddk::UnbindableNew>;
+using DdkDeviceType = ddk::Device<Device, ddk::Messageable, ddk::Unbindable>;
 
 class Driver;
 class BufferCollectionToken;
@@ -64,7 +64,7 @@ class Device final : public DdkDeviceType,
 
   // Ddk mixin implementations.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() {
     // Don't do anything. The sysmem driver assumes it's alive for the
     // lifetime of the system.

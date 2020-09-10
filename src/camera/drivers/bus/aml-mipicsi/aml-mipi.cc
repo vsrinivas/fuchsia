@@ -200,7 +200,7 @@ zx_status_t AmlMipiDevice::MipiCsiDeInit() {
   return ZX_OK;
 }
 
-void AmlMipiDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlMipiDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlMipiDevice::DdkRelease() { delete this; }
 

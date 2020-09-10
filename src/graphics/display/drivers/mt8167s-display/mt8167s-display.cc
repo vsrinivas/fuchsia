@@ -616,7 +616,7 @@ void Mt8167sDisplay::Shutdown() {
   thrd_join(vsync_thread_, nullptr);
 }
 
-void Mt8167sDisplay::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Mt8167sDisplay::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
   txn.Reply();
 }

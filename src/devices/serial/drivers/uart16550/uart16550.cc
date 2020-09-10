@@ -409,7 +409,7 @@ void Uart16550::DdkRelease() {
   delete this;
 }
 
-void Uart16550::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Uart16550::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 bool Uart16550::SupportsAutomaticFlowControl() const { return uart_fifo_len_ == kFifoDepth16750; }
 

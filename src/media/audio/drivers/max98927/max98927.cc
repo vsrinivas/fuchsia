@@ -86,7 +86,7 @@ zx_status_t Max98927Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_audiocodec_Device_dispatch(this, txn, msg, &kOps);
 }
 
-void Max98927Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Max98927Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Max98927Device::DdkRelease() { delete this; }
 

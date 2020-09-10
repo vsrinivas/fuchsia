@@ -14,7 +14,7 @@
 namespace silergy {
 
 class SyBuck;
-using SyBuckType = ddk::Device<SyBuck, ddk::UnbindableNew>;
+using SyBuckType = ddk::Device<SyBuck, ddk::Unbindable>;
 
 class SyBuck : public SyBuckType, public ddk::VregProtocol<SyBuck, ddk::base_protocol> {
  public:
@@ -35,7 +35,7 @@ class SyBuck : public SyBuckType, public ddk::VregProtocol<SyBuck, ddk::base_pro
 
   // Device Protocol Implementation
   void DdkRelease() {}
-  void DdkUnbindNew(ddk::UnbindTxn txn) {}
+  void DdkUnbind(ddk::UnbindTxn txn) {}
 
  protected:
   zx_status_t Init();

@@ -31,14 +31,14 @@ class TapCtl : public ddk::Device<TapCtl, ddk::Messageable> {
                          zx::channel device);
 };
 
-class TapDevice : public ddk::Device<TapDevice, ddk::UnbindableNew>,
+class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
                   public ddk::EthernetImplProtocol<TapDevice, ddk::base_protocol> {
  public:
   TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap_Config* config,
             zx::channel server);
 
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
   void EthernetImplStop();

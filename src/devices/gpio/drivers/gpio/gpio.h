@@ -18,7 +18,7 @@
 namespace gpio {
 
 class GpioDevice;
-using GpioDeviceType = ddk::Device<GpioDevice, ddk::UnbindableNew, ddk::Messageable>;
+using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::Messageable>;
 using ::llcpp::fuchsia::hardware::gpio::Gpio;
 using ::llcpp::fuchsia::hardware::gpio::GpioFlags;
 
@@ -45,7 +45,7 @@ class GpioDevice : public GpioDeviceType,
     Gpio::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t GpioConfigIn(uint32_t flags);

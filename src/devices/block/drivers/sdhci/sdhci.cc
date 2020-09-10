@@ -877,7 +877,7 @@ zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_resp
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Sdhci::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Sdhci::DdkUnbind(ddk::UnbindTxn txn) {
   // stop irq thread
   irq_.destroy();
   thrd_join(irq_thread_, nullptr);

@@ -796,7 +796,7 @@ zx_status_t DsiDw::SendCmd(const mipi_dsi_cmd_t& cmd) {
   return status;
 }
 
-void DsiDw::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void DsiDw::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void DsiDw::DdkRelease() { delete this; }
 

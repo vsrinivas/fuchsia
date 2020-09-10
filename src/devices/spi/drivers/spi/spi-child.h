@@ -29,7 +29,7 @@ class SpiChild : public SpiChildType,
       : SpiChildType(parent), spi_(spi), cs_(channel->cs) {}
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync completer) override;

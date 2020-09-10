@@ -58,7 +58,7 @@ void TestLifecycleDriverChild::DdkInit(ddk::InitTxn txn) {
   }
 }
 
-void TestLifecycleDriverChild::DdkUnbindNew(ddk::UnbindTxn txn) {
+void TestLifecycleDriverChild::DdkUnbind(ddk::UnbindTxn txn) {
   ZX_ASSERT(!init_txn_);
   if (async_remove_) {
     unbind_txn_ = std::move(txn);

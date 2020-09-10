@@ -21,7 +21,7 @@
 namespace mt_usb {
 
 class MtUsb;
-using MtUsbType = ddk::Device<MtUsb, ddk::UnbindableNew>;
+using MtUsbType = ddk::Device<MtUsb, ddk::Unbindable>;
 
 class MtUsb : public MtUsbType, public ddk::UsbDciProtocol<MtUsb, ddk::base_protocol> {
  public:
@@ -30,7 +30,7 @@ class MtUsb : public MtUsbType, public ddk::UsbDciProtocol<MtUsb, ddk::base_prot
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB DCI protocol implementation.

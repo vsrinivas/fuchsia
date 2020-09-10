@@ -16,7 +16,7 @@
 namespace clk {
 
 class As370Clk;
-using DeviceType = ddk::Device<As370Clk, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<As370Clk, ddk::Unbindable>;
 
 class As370Clk : public DeviceType, public ddk::ClockImplProtocol<As370Clk, ddk::base_protocol> {
  public:
@@ -36,7 +36,7 @@ class As370Clk : public DeviceType, public ddk::ClockImplProtocol<As370Clk, ddk:
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out);
 
   // Device Protocol Implementation.
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Protected for unit tests.

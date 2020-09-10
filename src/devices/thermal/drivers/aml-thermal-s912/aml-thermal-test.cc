@@ -419,7 +419,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
   ASSERT_OK(status);
   ASSERT_TRUE(FloatNear(temperature, 96.0f));
 
-  dut.DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+  dut.DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
   dut.JoinWorkerThread();
 
   fan0.VerifyAndClear();

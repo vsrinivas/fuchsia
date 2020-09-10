@@ -236,7 +236,7 @@ void Cy8cmbr3108::ShutDown() {
   client_.clear();
 }
 
-void Cy8cmbr3108::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Cy8cmbr3108::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

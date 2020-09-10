@@ -10,7 +10,7 @@
 
 namespace spi {
 
-void SpiDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void SpiDevice::DdkUnbind(ddk::UnbindTxn txn) {
   children_.reset();
 
   txn.Reply();

@@ -198,7 +198,7 @@ void QcomGpioDevice::ShutDown() {
   thrd_join(thread_, NULL);
 }
 
-void QcomGpioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void QcomGpioDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

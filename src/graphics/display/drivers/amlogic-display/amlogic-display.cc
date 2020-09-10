@@ -491,7 +491,7 @@ void AmlogicDisplay::DdkResume(ddk::ResumeTxn txn) {
   txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
 }
 
-void AmlogicDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AmlogicDisplay::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlogicDisplay::DdkRelease() {
   if (osd_) {

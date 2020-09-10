@@ -532,7 +532,7 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync comple
   completer.Reply(ZX_OK, handle, handle_type);
 }
 
-void Control::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Control::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Control::DdkRelease() { delete this; }
 

@@ -27,7 +27,7 @@
 namespace mailbox {
 
 class AmlMailbox;
-using DeviceType = ddk::Device<AmlMailbox, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AmlMailbox, ddk::Unbindable>;
 
 class AmlMailbox : public DeviceType, public ddk::MailboxProtocol<AmlMailbox, ddk::base_protocol> {
  public:
@@ -39,7 +39,7 @@ class AmlMailbox : public DeviceType, public ddk::MailboxProtocol<AmlMailbox, dd
 
   // DDK Hooks.
   void DdkRelease();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // ZX_PROTOCOL_MAILBOX protocol.
   zx_status_t MailboxSendCommand(const mailbox_channel_t* channel, const mailbox_data_buf_t* mdata);

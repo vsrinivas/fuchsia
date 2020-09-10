@@ -269,7 +269,7 @@ class DeviceTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    device_->DdkUnbindNew(ddk::UnbindTxn{fake_ddk::kFakeDevice});
+    device_->DdkUnbind(ddk::UnbindTxn{fake_ddk::kFakeDevice});
     ASSERT_TRUE(ddk_.get_remove_called());
     device_->DdkRelease();
   }

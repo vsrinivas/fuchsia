@@ -35,7 +35,7 @@
 namespace fragment {
 
 class FragmentProxy;
-using FragmentProxyBase = ddk::Device<FragmentProxy, ddk::UnbindableNew, ddk::GetProtocolable>;
+using FragmentProxyBase = ddk::Device<FragmentProxy, ddk::Unbindable, ddk::GetProtocolable>;
 
 class FragmentProxy : public FragmentProxyBase,
                       public ddk::AmlogicCanvasProtocol<FragmentProxy>,
@@ -64,7 +64,7 @@ class FragmentProxy : public FragmentProxyBase,
                             zx_handle_t raw_rpc);
 
   zx_status_t DdkGetProtocol(uint32_t, void*);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t Rpc(const ProxyRequest* req, size_t req_length, ProxyResponse* resp,

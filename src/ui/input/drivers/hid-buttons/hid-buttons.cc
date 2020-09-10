@@ -403,7 +403,7 @@ void HidButtonsDevice::ShutDown() {
   buttons_function_ = nullptr;
 }
 
-void HidButtonsDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+void HidButtonsDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
 }

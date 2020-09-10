@@ -197,7 +197,7 @@ zx_status_t Ft8201Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void Ft8201Device::DdkUnbindNew(ddk::UnbindTxn txn) {
+void Ft8201Device::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
   txn.Reply();
 }

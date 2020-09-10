@@ -1141,7 +1141,7 @@ void RndisFunction::ShutdownComplete() {
   }
 }
 
-void RndisFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
+void RndisFunction::DdkUnbind(ddk::UnbindTxn txn) {
   if (shutdown_callback_.has_value()) {
     txn.Reply();
     return;

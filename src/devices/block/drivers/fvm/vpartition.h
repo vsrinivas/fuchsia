@@ -28,7 +28,7 @@ class VPartitionManager;
 class VPartition;
 
 using PartitionDeviceType =
-    ddk::Device<VPartition, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableNew>;
+    ddk::Device<VPartition, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
 
 class VPartition : public PartitionDeviceType,
                    public ddk::BlockImplProtocol<VPartition, ddk::base_protocol>,
@@ -42,7 +42,7 @@ class VPartition : public PartitionDeviceType,
   // Device Protocol
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_off_t DdkGetSize();
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Block Protocol

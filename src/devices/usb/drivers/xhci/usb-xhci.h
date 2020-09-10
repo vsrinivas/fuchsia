@@ -21,7 +21,7 @@
 namespace usb_xhci {
 
 class UsbXhci;
-using UsbXhciType = ddk::Device<UsbXhci, ddk::Initializable, ddk::Suspendable, ddk::UnbindableNew>;
+using UsbXhciType = ddk::Device<UsbXhci, ddk::Initializable, ddk::Suspendable, ddk::Unbindable>;
 
 // This is the main class for the USB XHCI host controller driver.
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
@@ -34,7 +34,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Device protocol implementation.
   void DdkInit(ddk::InitTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB HCI protocol implementation.

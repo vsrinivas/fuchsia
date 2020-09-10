@@ -17,7 +17,7 @@
 namespace codec {
 
 class TestAudioCodecDevice;
-using DeviceType = ddk::Device<TestAudioCodecDevice, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<TestAudioCodecDevice, ddk::Unbindable>;
 
 class TestAudioCodecDevice : public DeviceType,
                              public ddk::CodecProtocol<TestAudioCodecDevice, ddk::base_protocol> {
@@ -87,7 +87,7 @@ class TestAudioCodecDevice : public DeviceType,
   }
 
   // Methods required by the ddk mixins
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 };
 
@@ -107,7 +107,7 @@ zx_status_t TestAudioCodecDevice::Create(zx_device_t* parent) {
   return ZX_OK;
 }
 
-void TestAudioCodecDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void TestAudioCodecDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestAudioCodecDevice::DdkRelease() { delete this; }
 

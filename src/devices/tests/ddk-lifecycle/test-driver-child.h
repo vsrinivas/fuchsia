@@ -12,7 +12,7 @@
 
 class TestLifecycleDriverChild;
 using DeviceType =
-    ddk::Device<TestLifecycleDriverChild, ddk::Initializable, ddk::UnbindableNew, ddk::Openable>;
+    ddk::Device<TestLifecycleDriverChild, ddk::Initializable, ddk::Unbindable, ddk::Openable>;
 
 class TestLifecycleDriverChild : public DeviceType,
                                  public fbl::RefCounted<TestLifecycleDriverChild> {
@@ -26,7 +26,7 @@ class TestLifecycleDriverChild : public DeviceType,
   ~TestLifecycleDriverChild() {}
 
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   void AsyncRemove(fit::function<void()> callback);
   void CompleteUnbind();
