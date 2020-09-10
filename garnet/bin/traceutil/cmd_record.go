@@ -46,7 +46,7 @@ func NewCmdRecord() *cmdRecord {
 	cmd := &cmdRecord{
 		flags: flag.NewFlagSet("record", flag.ExitOnError),
 	}
-	cmd.flags.StringVar(&cmd.keyFile, "key-file", "", "SSH key file to use. The default is $FUCHSIA_DIR/.ssh/pkey.")
+	cmd.flags.StringVar(&cmd.keyFile, "key-file", "", "SSH key file to use. The default is ~/.ssh/fuchsia_ed25519.")
 	cmd.flags.StringVar(&cmd.filePrefix, "file-prefix", "",
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
 	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname. Can also be set in environment with TRACEUTIL_TARGET_HOST.")
