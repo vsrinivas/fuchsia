@@ -54,15 +54,14 @@ zx_status_t Imx355Device::CameraSensor2GetAvailableModes(operating_mode_t* out_m
                                                          size_t modes_count,
                                                          size_t* out_modes_actual) {
   std::lock_guard guard(lock_);
-
-  if (available_modes.size() < modes_count) {
-    modes_count = available_modes.size();
+  if (modes_count > available_modes.size()) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  for (size_t i = 0; i < modes_count; i++) {
+  for (size_t i = 0; i < available_modes.size(); i++) {
     out_modes_list[i] = available_modes[i];
   }
-  *out_modes_actual = modes_count;
+  *out_modes_actual = available_modes.size();
   return ZX_OK;
 }
 

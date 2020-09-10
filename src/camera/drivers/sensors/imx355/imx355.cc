@@ -54,6 +54,8 @@ fit::result<uint8_t, zx_status_t> Imx355Device::GetRegisterValueFromSequence(uin
 }
 
 zx_status_t Imx355Device::InitPdev() {
+  printf("****\n****\n**** IMX355!\n****\n****\n");
+
   std::lock_guard guard(lock_);
 
   // I2c for communicating with the sensor.
