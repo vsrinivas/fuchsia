@@ -4,16 +4,13 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_target") {
+ffx_plugin("ffx_update") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [
-    "flash:ffx_flash",
-    "list:ffx_list",
-    "off:ffx_off",
-    "reboot:ffx_reboot",
-    "update:ffx_update",
+  with_unit_tests = true
+  deps = []
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
   ]
-
-  sources = [ "src/args.rs" ]
 }
