@@ -36,9 +36,12 @@ go_library("conformance_tests_library") {
 }
 
 copy("copy_test_utils") {
-  sources =
-      [ "//third_party/go/src/syscall/zx/fidl/fidl_test/testutil_test.go" ]
-  outputs = [ "${generated_dir}/testutil_test.go" ]
+  sources = [
+    "//third_party/go/src/syscall/zx/fidl/fidl_test/testutil_test.go",
+    "//third_party/go/src/syscall/zx/fidl/fidl_test/zx_fuchsia_test.go",
+    "//third_party/go/src/syscall/zx/fidl/fidl_test/zx_notfuchsia_test.go",
+  ]
+  outputs = [ "${generated_dir}/{{source_file_part}}" ]
 }
 
 go_test("fidl_go_conformance_tests") {
