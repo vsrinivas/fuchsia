@@ -2,19 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
-config("fuzzing_build_mode_unsafe_for_production") {
-  defines = [ "FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION" ]
-}
-
 config("fuzzing_verbose_logging") {
   defines = [ "FUZZING_VERBOSE_LOGGING" ]
-}
-
-# Enables conditional compilation for Rust code with a #[cfg(fuzz)] attribute.
-config("rust") {
-  rustflags = [
-    "--cfg",
-    "fuzz",
-  ]
 }

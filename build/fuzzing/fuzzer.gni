@@ -7,8 +7,19 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 
-# TODO(aarongreen): SEC-224.  Add tests to catch fuzzer building/packaging
-# regressions.
+# A list of configs present in fuzzer toolchain variants.
+#
+# GN logic that needs to behave differently between fuzzer and non-fuzzer variants can determine the
+# variant type by checking the `toolchain_variant.configs`, e.g.
+#    if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs == toolchain_variant.configs) {
+#        # Not using a fuzzer toolchain variant.
+#    } else {
+#        # Using a fuzzer toolchain variant.
+#    }
+#
+# This approach works even with the way `import` caches this file.
+#
+fuzzer_configs = [ "//build/config/fuzzer" ]
 
 # Defines a fuzzer binary.
 #
@@ -173,6 +184,7 @@ template("fuzzer") {
 
     # Explicitly forward visibility for nested scopes.
     forward_variables_from(invoker, [ "visibility" ])
+    configs -= [ "//build/config/fuzzer:engine" ]
     deps += [
       ":$corpus_target",
       "//src/lib/fuzzing/cpp:fuzzer_test",
@@ -207,10 +219,8 @@ template("fuzzer") {
   }
 }
 
-# See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
 set_defaults("fuzzer") {
-  configs = default_executable_configs +
-            [ "//build/fuzzing:fuzzing_build_mode_unsafe_for_production" ]
+  configs = default_executable_configs + [ "//build/config/fuzzer:engine" ]
 }
 
 # TODO(48118): Add LSan

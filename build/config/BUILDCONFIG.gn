@@ -816,8 +816,8 @@ declare_args() {
       forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
       toolchain_args = _asan_fuzzer_toolchain_args
       configs += [
+        "//build/config/fuzzer",
         "//build/config/sanitizers:rust-asan",
-        "//build/config/sanitizers:fuzzer",
       ]
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs
@@ -827,8 +827,8 @@ declare_args() {
     {
       name = "ubsan-fuzzer"
       configs = [
+        "//build/config/fuzzer",
         "//build/config/sanitizers:ubsan",
-        "//build/config/sanitizers:fuzzer",
       ]
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs

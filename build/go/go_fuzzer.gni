@@ -85,7 +85,6 @@ template("go_fuzzer") {
 
     # Examine the toolchain configs to detect if it is being built as part of a fuzzer variant.
     # If not, the fuzzer unit test will be built instead.
-    fuzzer_configs = [ "//build/config/sanitizers:fuzzer" ]
     if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs ==
         toolchain_variant.configs) {
       wrapper_name = test_wrapper_name

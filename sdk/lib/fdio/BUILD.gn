@@ -12,6 +12,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/unification/zbi/resource.gni")
 import("//build/unification/zx_library.gni")
 
@@ -36,7 +37,6 @@ config("fdio_includes") {
 # specify the "foosan" varaint for the toolchain variant to be available.
 # `fx set`ensures this by adding a `select_variant` scope for libfdio.so itself
 # with its "-fuzz-with" parameter.
-fuzzer_configs = [ "//build/config/sanitizers:fuzzer" ]
 if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     toolchain_variant.configs) {
   group("fdio") {

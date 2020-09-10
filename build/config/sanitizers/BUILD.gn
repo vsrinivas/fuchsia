@@ -137,24 +137,6 @@ variant("ubsan") {
 sanitizer_default_options("ubsan_default_options") {
 }
 
-variant("fuzzer") {
-  common_flags = [ "-fsanitize=fuzzer" ]
-
-  # TODO (TC-251): This shouldn't be necessary, but libzircon isn't currently
-  # linked into libFuzzer on Fuchsia.
-  if (is_fuchsia) {
-    libs = [ "zircon" ]
-  }
-
-  rustflags = [
-    "-Cpasses=sancov",
-    "-Cllvm-args=-sanitizer-coverage-level=4",
-    "-Cllvm-args=-sanitizer-coverage-trace-compares",
-    "-Cllvm-args=-sanitizer-coverage-inline-8bit-counters",
-    "-Cllvm-args=-sanitizer-coverage-pc-table",
-  ]
-}
-
 variant("sancov") {
   common_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
 }

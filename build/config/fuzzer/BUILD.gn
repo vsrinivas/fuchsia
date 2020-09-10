@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/variant.gni")
+
+# Add the sanitizer coverage instrumentation used by libFuzzer.
+#
+# See the following for more details:
+#
+#   https://llvm.org/docs/LibFuzzer.html#fuzzer-usage
+#     Specifies the the fuzzing flags for LLVM.
+#
+#   https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerTracePC.cpp
+#     Includes details on which types of coverage are enabled for fuzzing.
+#
+#   https://clang.llvm.org/docs/SanitizerCoverage.html
+#     Provides a description of each type of coverage.
+#
+variant("fuzzer") {
+  common_flags = [ "-fsanitize=fuzzer-no-link" ]
+
+  # See the note on the //build/config/sanitizers:rust-asan variant.
+  # This config should only be used with Rust code to build staticlibs that are
+  # subsequently linked by the clang toolchain.
+  rustflags = [
+    "-Cpasses=sancov",
+    "-Cllvm-args=-sanitizer-coverage-level=4",
+    "-Cllvm-args=-sanitizer-coverage-trace-compares",
+    "-Cllvm-args=-sanitizer-coverage-inline-8bit-counters",
+    "-Cllvm-args=-sanitizer-coverage-pc-table",
+  ]
+
+  # LLVM-specified macro that can be used to disable fuzzer-hostile code.
+  # See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
+  defines = [ "FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION" ]
+}
+
+# Instructs the linker to link against libFuzzer, a.k.a. libclang_rt.fuzzer.a.
+# LibFuzzer acts as the fuzzing "engine", using collected coverage data
+# to identify which test inputs should be added to the corpus, performing
+# mutations on corpus elements to create new test inputs, and invoking the fuzz
+# target (https://llvm.org/docs/LibFuzzer.html#fuzz-target) with each test
+# input.
+config("engine") {
+  ldflags = [ "-fsanitize=fuzzer" ]
+
+  # TODO(fxb/27011): This shouldn't be necessary, but libzircon isn't currently
+  # linked into libFuzzer on Fuchsia.
+  if (is_fuchsia) {
+    libs = [ "zircon" ]
+  }
+}
