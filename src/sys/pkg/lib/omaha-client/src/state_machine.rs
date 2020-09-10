@@ -5,7 +5,7 @@
 use crate::{
     common::{App, AppSet, CheckOptions, CheckTiming},
     configuration::Config,
-    http_request::HttpRequest,
+    http_request::{self, HttpRequest},
     installer::{Installer, Plan},
     metrics::{Metrics, MetricsReporter, UpdateCheckFailureReason},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
@@ -29,9 +29,12 @@ use futures::{
 };
 use http::response::Parts;
 use log::{error, info, warn};
-use std::rc::Rc;
-use std::str::Utf8Error;
-use std::time::{Duration, Instant, SystemTime};
+use std::{
+    cmp::min,
+    rc::Rc,
+    str::Utf8Error,
+    time::{Duration, Instant, SystemTime},
+};
 use thiserror::Error;
 
 pub mod update_check;
@@ -51,6 +54,8 @@ const TARGET_VERSION: &str = "target_version";
 const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
 // How long do we wait after not allowed to reboot to check again.
 const CHECK_REBOOT_ALLOWED_INTERVAL: Duration = Duration::from_secs(30 * 60);
+// This header contains the number of seconds client must not contact server again.
+const X_RETRY_AFTER: &str = "X-Retry-After";
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform update checks over time or to perform a single update check process.
@@ -107,16 +112,17 @@ pub enum State {
 /// collection of error types.
 #[derive(Error, Debug)]
 pub enum OmahaRequestError {
-    #[error("Unexpected JSON error constructing update check: {}", _0)]
-    Json(serde_json::Error),
+    #[error("Unexpected JSON error constructing update check: {0}")]
+    Json(#[from] serde_json::Error),
 
-    #[error("Error building update check HTTP request: {}", _0)]
-    HttpBuilder(http::Error),
+    #[error("Error building update check HTTP request: {0}")]
+    HttpBuilder(#[from] http::Error),
 
-    #[error("Hyper error performing update check: {}", _0)]
-    Hyper(hyper::Error),
+    // TODO: This still contains hyper user error which should be split out.
+    #[error("HTTP transport error performing update check: {0}")]
+    HttpTransport(#[from] http_request::Error),
 
-    #[error("HTTP error performing update check: {}", _0)]
+    #[error("HTTP error performing update check: {0}")]
     HttpStatus(hyper::StatusCode),
 }
 
@@ -126,24 +132,6 @@ impl From<request_builder::Error> for OmahaRequestError {
             request_builder::Error::Json(e) => OmahaRequestError::Json(e),
             request_builder::Error::Http(e) => OmahaRequestError::HttpBuilder(e),
         }
-    }
-}
-
-impl From<hyper::Error> for OmahaRequestError {
-    fn from(err: hyper::Error) -> Self {
-        OmahaRequestError::Hyper(err)
-    }
-}
-
-impl From<serde_json::Error> for OmahaRequestError {
-    fn from(err: serde_json::Error) -> Self {
-        OmahaRequestError::Json(err)
-    }
-}
-
-impl From<http::Error> for OmahaRequestError {
-    fn from(err: http::Error) -> Self {
-        OmahaRequestError::HttpBuilder(err)
     }
 }
 
@@ -490,11 +478,6 @@ where
                 // Update check succeeded, update |last_update_time|.
                 self.context.schedule.last_update_time = Some(self.time_source.now().into());
 
-                // Update the service dictated poll interval (which is an Option<>, so doesn't
-                // need to be tested for existence here).
-                self.context.state.server_dictated_poll_interval =
-                    result.server_dictated_poll_interval;
-
                 // Increment |consecutive_failed_update_attempts| if any app failed to install,
                 // otherwise reset it to 0.
                 if result
@@ -533,7 +516,7 @@ where
                         OmahaRequestError::Json(_) | OmahaRequestError::HttpBuilder(_) => {
                             UpdateCheckFailureReason::Internal
                         }
-                        OmahaRequestError::Hyper(_) | OmahaRequestError::HttpStatus(_) => {
+                        OmahaRequestError::HttpTransport(_) | OmahaRequestError::HttpStatus(_) => {
                             UpdateCheckFailureReason::Network
                         }
                     },
@@ -589,7 +572,8 @@ where
         self.report_check_interval().await;
 
         // Construct a request for the app(s).
-        let mut request_builder = RequestBuilder::new(&self.config, &request_params);
+        let config = self.config.clone();
+        let mut request_builder = RequestBuilder::new(&config, &request_params);
         for app in &apps {
             request_builder = request_builder.add_update_check(app).add_ping(app);
         }
@@ -601,7 +585,7 @@ where
         let max_omaha_request_attempts = 3;
         let (_parts, data) = loop {
             request_builder = request_builder.request_id(GUID::new());
-            match Self::do_omaha_request(&mut self.http, &request_builder).await {
+            match self.do_omaha_request_and_update_context(&request_builder, co).await {
                 Ok(res) => {
                     break res;
                 }
@@ -615,18 +599,23 @@ where
                     self.set_state(State::ErrorCheckingForUpdate, co).await;
                     return Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
-                Err(OmahaRequestError::Hyper(e)) => {
+                Err(OmahaRequestError::HttpTransport(e)) => {
                     warn!("Unable to contact Omaha: {:?}", e);
                     // Don't retry if the error was caused by user code, which means we weren't
                     // using the library correctly.
-                    if omaha_request_attempt >= max_omaha_request_attempts || e.is_user() {
+                    if omaha_request_attempt >= max_omaha_request_attempts
+                        || e.is_user()
+                        || self.context.state.server_dictated_poll_interval.is_some()
+                    {
                         self.set_state(State::ErrorCheckingForUpdate, co).await;
                         return Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
                 Err(OmahaRequestError::HttpStatus(e)) => {
                     warn!("Unable to contact Omaha: {:?}", e);
-                    if omaha_request_attempt >= max_omaha_request_attempts {
+                    if omaha_request_attempt >= max_omaha_request_attempts
+                        || self.context.state.server_dictated_poll_interval.is_some()
+                    {
                         self.set_state(State::ErrorCheckingForUpdate, co).await;
                         return Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
@@ -651,12 +640,14 @@ where
             Err(err) => {
                 warn!("Unable to parse Omaha response: {:?}", err);
                 self.set_state(State::ErrorCheckingForUpdate, co).await;
-                let event = Event {
-                    event_type: EventType::UpdateComplete,
-                    errorcode: Some(EventErrorCode::ParseResponse),
-                    ..Event::default()
-                };
-                self.report_omaha_event(&request_params, event, &apps, &session_id).await;
+                self.report_omaha_event_and_update_context(
+                    &request_params,
+                    Event::error(EventErrorCode::ParseResponse),
+                    &apps,
+                    &session_id,
+                    co,
+                )
+                .await;
                 return Err(UpdateCheckError::ResponseParser(err));
             }
         };
@@ -673,7 +664,7 @@ where
 
         let some_app_has_update = statuses.iter().any(|(_id, status)| **status == OmahaStatus::Ok);
         if !some_app_has_update {
-            // A succesfull, no-update, check
+            // A successful, no-update, check
 
             self.set_state(State::NoUpdateAvailable, co).await;
             Ok(Self::make_response(response, update_check::Action::NoUpdate))
@@ -685,11 +676,11 @@ where
                 Ok(plan) => plan,
                 Err(e) => {
                     error!("Unable to construct install plan! {}", e);
-                    // report_error emits InstallationError, need to emit InstallingUpdate first
                     self.set_state(State::InstallingUpdate, co).await;
-                    self.report_error(
+                    self.set_state(State::InstallationError, co).await;
+                    self.report_omaha_event_and_update_context(
                         &request_params,
-                        EventErrorCode::ConstructInstallPlan,
+                        Event::error(EventErrorCode::ConstructInstallPlan),
                         &apps,
                         &session_id,
                         co,
@@ -714,7 +705,14 @@ where
                         event_result: EventResult::UpdateDeferred,
                         ..Event::default()
                     };
-                    self.report_omaha_event(&request_params, event, &apps, &session_id).await;
+                    self.report_omaha_event_and_update_context(
+                        &request_params,
+                        event,
+                        &apps,
+                        &session_id,
+                        co,
+                    )
+                    .await;
 
                     self.set_state(State::InstallationDeferredByPolicy, co).await;
                     return Ok(Self::make_response(
@@ -724,11 +722,9 @@ where
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
-                    // report_error emits InstallationError, need to emit InstallingUpdate first
-                    self.set_state(State::InstallingUpdate, co).await;
-                    self.report_error(
+                    self.report_omaha_event_and_update_context(
                         &request_params,
-                        EventErrorCode::DeniedByPolicy,
+                        Event::error(EventErrorCode::DeniedByPolicy),
                         &apps,
                         &session_id,
                         co,
@@ -739,11 +735,12 @@ where
             }
 
             self.set_state(State::InstallingUpdate, co).await;
-            self.report_success_event(
+            self.report_omaha_event_and_update_context(
                 &request_params,
-                EventType::UpdateDownloadStarted,
+                Event::success(EventType::UpdateDownloadStarted),
                 &apps,
                 &session_id,
+                co,
             )
             .await;
 
@@ -769,9 +766,10 @@ where
             let (install_result, ()) = future::join(perform_install, yield_progress).await;
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
-                self.report_error(
+                self.set_state(State::InstallationError, co).await;
+                self.report_omaha_event_and_update_context(
                     &request_params,
-                    EventErrorCode::Installation,
+                    Event::error(EventErrorCode::Installation),
                     &apps,
                     &session_id,
                     co,
@@ -788,21 +786,23 @@ where
                 ));
             }
 
-            self.report_success_event(
+            self.report_omaha_event_and_update_context(
                 &request_params,
-                EventType::UpdateDownloadFinished,
+                Event::success(EventType::UpdateDownloadFinished),
                 &apps,
                 &session_id,
+                co,
             )
             .await;
 
             // TODO: Verify downloaded update if needed.
 
-            self.report_success_event(
+            self.report_omaha_event_and_update_context(
                 &request_params,
-                EventType::UpdateComplete,
+                Event::success(EventType::UpdateComplete),
                 &apps,
                 &session_id,
+                co,
             )
             .await;
 
@@ -843,52 +843,23 @@ where
         }
     }
 
-    /// Set the current state to |InstallationError| and report the error event to Omaha.
-    async fn report_error<'a>(
-        &'a mut self,
-        request_params: &'a RequestParams,
-        errorcode: EventErrorCode,
-        apps: &'a Vec<App>,
-        session_id: &GUID,
-        co: &mut async_generator::Yield<StateMachineEvent>,
-    ) {
-        self.set_state(State::InstallationError, co).await;
-
-        let event = Event {
-            event_type: EventType::UpdateComplete,
-            errorcode: Some(errorcode),
-            ..Event::default()
-        };
-        self.report_omaha_event(&request_params, event, apps, session_id).await;
-    }
-
-    /// Report a successful event to Omaha, for example download started, download finished, etc.
-    async fn report_success_event<'a>(
-        &'a mut self,
-        request_params: &'a RequestParams,
-        event_type: EventType,
-        apps: &'a Vec<App>,
-        session_id: &GUID,
-    ) {
-        let event = Event { event_type, event_result: EventResult::Success, ..Event::default() };
-        self.report_omaha_event(&request_params, event, apps, session_id).await;
-    }
-
     /// Report the given |event| to Omaha, errors occurred during reporting are logged but not
     /// acted on.
-    async fn report_omaha_event<'a>(
+    async fn report_omaha_event_and_update_context<'a>(
         &'a mut self,
         request_params: &'a RequestParams,
         event: Event,
         apps: &'a Vec<App>,
         session_id: &GUID,
+        co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
-        let mut request_builder = RequestBuilder::new(&self.config, &request_params);
+        let config = self.config.clone();
+        let mut request_builder = RequestBuilder::new(&config, &request_params);
         for app in apps {
             request_builder = request_builder.add_event(app, &event);
         }
         request_builder = request_builder.session_id(session_id.clone()).request_id(GUID::new());
-        if let Err(e) = Self::do_omaha_request(&mut self.http, &request_builder).await {
+        if let Err(e) = self.do_omaha_request_and_update_context(&request_builder, co).await {
             warn!("Unable to report event to Omaha: {:?}", e);
         }
     }
@@ -898,19 +869,21 @@ where
         let apps = self.app_set.to_vec().await;
         let request_params =
             RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: true };
-        let mut request_builder = RequestBuilder::new(&self.config, &request_params);
+        let config = self.config.clone();
+        let mut request_builder = RequestBuilder::new(&config, &request_params);
         for app in &apps {
             request_builder = request_builder.add_ping(app);
         }
         request_builder = request_builder.session_id(GUID::new()).request_id(GUID::new());
 
-        let (_parts, data) = match Self::do_omaha_request(&mut self.http, &request_builder).await {
-            Ok(res) => res,
-            Err(e) => {
-                error!("Ping Omaha failed: {:#}", anyhow!(e));
-                return;
-            }
-        };
+        let (_parts, data) =
+            match self.do_omaha_request_and_update_context(&request_builder, co).await {
+                Ok(res) => res,
+                Err(e) => {
+                    error!("Ping Omaha failed: {:#}", anyhow!(e));
+                    return;
+                }
+            };
 
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
@@ -926,11 +899,6 @@ where
         co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
 
         let result = Self::make_response(response, update_check::Action::NoUpdate);
-        if result.server_dictated_poll_interval != self.context.state.server_dictated_poll_interval
-        {
-            self.context.state.server_dictated_poll_interval = result.server_dictated_poll_interval;
-            co.yield_(StateMachineEvent::ProtocolStateChange(self.context.state.clone())).await;
-        }
 
         self.app_set.update_from_omaha(&result.app_responses).await;
 
@@ -946,11 +914,40 @@ where
     ///
     /// This function also converts an HTTP error response into an Error, to divert those into the
     /// error handling paths instead of the Ok() path.
-    async fn do_omaha_request<'a>(
-        http: &'a mut HR,
+    ///
+    /// If a valid X-Retry-After header is found in the response, this function will update the
+    /// server dictated poll interval in context.
+    async fn do_omaha_request_and_update_context<'a>(
+        &'a mut self,
         builder: &RequestBuilder<'a>,
+        co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
-        let (parts, body) = Self::make_request(http, builder.build()?).await?;
+        let (parts, body) = Self::make_request(&mut self.http, builder.build()?).await?;
+        // Clients MUST respect this header even if paired with non-successful HTTP response code.
+        let server_dictated_poll_interval = parts.headers.get(X_RETRY_AFTER).and_then(|header| {
+            match header
+                .to_str()
+                .map_err(|e| anyhow!(e))
+                .and_then(|s| s.parse::<u64>().map_err(|e| anyhow!(e)))
+            {
+                Ok(seconds) => {
+                    // Servers SHOULD NOT send a value in excess of 86400 (24 hours), and clients
+                    // SHOULD treat values greater than 86400 as 86400.
+                    Some(Duration::from_secs(min(seconds, 86400)))
+                }
+                Err(e) => {
+                    error!("Unable to parse {} header: {:#}", X_RETRY_AFTER, e);
+                    None
+                }
+            }
+        });
+        if self.context.state.server_dictated_poll_interval != server_dictated_poll_interval {
+            self.context.state.server_dictated_poll_interval = server_dictated_poll_interval;
+            co.yield_(StateMachineEvent::ProtocolStateChange(self.context.state.clone())).await;
+            let mut storage = self.storage_ref.lock().await;
+            self.context.persist(&mut *storage).await;
+            storage.commit_or_log().await;
+        }
         if !parts.status.is_success() {
             // Convert HTTP failure responses into Errors.
             Err(OmahaRequestError::HttpStatus(parts.status))
@@ -969,7 +966,7 @@ where
     async fn make_request(
         http_client: &mut HR,
         request: http::Request<hyper::Body>,
-    ) -> Result<(Parts, Vec<u8>), hyper::Error> {
+    ) -> Result<(Parts, Vec<u8>), http_request::Error> {
         info!("Making http request to: {}", request.uri());
         let res = http_client.request(request).await.map_err(|err| {
             warn!("Unable to perform request: {}", err);
@@ -1028,7 +1025,6 @@ where
                     result: action.clone(),
                 })
                 .collect(),
-            server_dictated_poll_interval: None,
         }
     }
 
@@ -1235,11 +1231,7 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event {
-                event_type: EventType::UpdateComplete,
-                errorcode: Some(EventErrorCode::ParseResponse),
-                ..Event::default()
-            };
+            let event = Event::error(EventErrorCode::ParseResponse);
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1273,11 +1265,7 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event {
-                event_type: EventType::UpdateComplete,
-                errorcode: Some(EventErrorCode::ConstructInstallPlan),
-                ..Event::default()
-            };
+            let event = Event::error(EventErrorCode::ConstructInstallPlan);
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1315,11 +1303,7 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event {
-                event_type: EventType::UpdateComplete,
-                errorcode: Some(EventErrorCode::Installation),
-                ..Event::default()
-            };
+            let event = Event::error(EventErrorCode::Installation);
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1407,11 +1391,7 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event {
-                event_type: EventType::UpdateComplete,
-                errorcode: Some(EventErrorCode::DeniedByPolicy),
-                ..Event::default()
-            };
+            let event = Event::error(EventErrorCode::DeniedByPolicy);
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1752,21 +1732,134 @@ mod tests {
     #[test]
     fn test_persist_server_dictated_poll_interval() {
         block_on(async {
-            // TODO: update this test to have a mocked http response with server dictated poll
-            // interval when out code support parsing it from the response.
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "noupdate"
+                }
+              }]
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let response = hyper::Response::builder()
+                .header(X_RETRY_AFTER, 1234)
+                .body(response.into())
+                .unwrap();
+            let http = MockHttpRequest::new(response);
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
-            StateMachineBuilder::new_stub()
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
                 .storage(Rc::clone(&storage))
-                .oneshot_check()
-                .await
-                .map(|_| ())
-                .collect::<()>()
+                .build()
                 .await;
+            state_machine.oneshot().await.unwrap();
+
+            assert_eq!(
+                state_machine.context.state.server_dictated_poll_interval,
+                Some(Duration::from_secs(1234))
+            );
 
             let storage = storage.lock().await;
-            assert!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await.is_none());
+            assert_eq!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await, Some(1234000000));
             assert!(storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_persist_server_dictated_poll_interval_http_error() {
+        block_on(async {
+            let response = hyper::Response::builder()
+                .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
+                .header(X_RETRY_AFTER, 1234)
+                .body(hyper::Body::empty())
+                .unwrap();
+            let http = MockHttpRequest::new(response);
+            let storage = Rc::new(Mutex::new(MemStorage::new()));
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
+            assert_matches!(
+                state_machine.oneshot().await,
+                Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpStatus(_)))
+            );
+
+            assert_eq!(
+                state_machine.context.state.server_dictated_poll_interval,
+                Some(Duration::from_secs(1234))
+            );
+
+            let storage = storage.lock().await;
+            assert_eq!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await, Some(1234000000));
+            assert!(storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_persist_server_dictated_poll_interval_max_duration() {
+        block_on(async {
+            let response = hyper::Response::builder()
+                .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
+                .header(X_RETRY_AFTER, 123456789)
+                .body(hyper::Body::empty())
+                .unwrap();
+            let http = MockHttpRequest::new(response);
+            let storage = Rc::new(Mutex::new(MemStorage::new()));
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
+            assert_matches!(
+                state_machine.oneshot().await,
+                Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpStatus(_)))
+            );
+
+            assert_eq!(
+                state_machine.context.state.server_dictated_poll_interval,
+                Some(Duration::from_secs(86400))
+            );
+
+            let storage = storage.lock().await;
+            assert_eq!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await, Some(86400000000));
+            assert!(storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_server_dictated_poll_interval_with_transport_error_no_retry() {
+        block_on(async {
+            let mut http = MockHttpRequest::empty();
+            http.add_error(http_request::mock_errors::make_transport_error());
+            let mut storage = MemStorage::new();
+            storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 1234000000);
+            storage.commit();
+            let storage = Rc::new(Mutex::new(storage));
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
+            // This verifies that state machine does not retry because MockHttpRequest will only
+            // return the transport error on the first request, any additional requests will get
+            // HttpStatus error.
+            assert_matches!(
+                state_machine.oneshot().await,
+                Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpTransport(_)))
+            );
+
+            assert_eq!(
+                state_machine.context.state.server_dictated_poll_interval,
+                Some(Duration::from_secs(1234))
+            );
         });
     }
 

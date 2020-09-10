@@ -330,7 +330,6 @@ mod tests {
                 user_counting: UserCounting::ClientRegulatedByDate(None),
                 result: update_check::Action::Updated,
             }],
-            server_dictated_poll_interval: None,
         });
         node.add_result(SystemTime::UNIX_EPOCH, &result);
         node.add_result(SystemTime::UNIX_EPOCH + Duration::from_secs(100000), &result);

@@ -268,6 +268,23 @@ pub struct Event {
     pub previous_version: Option<String>,
 }
 
+impl Event {
+    /// Creates a new successful event for the given event type.
+    pub fn success(event_type: EventType) -> Self {
+        Self { event_type, event_result: EventResult::Success, ..Self::default() }
+    }
+
+    /// Creates a new error event for the given event error code.
+    pub fn error(errorcode: EventErrorCode) -> Self {
+        Self {
+            event_type: EventType::UpdateComplete,
+            event_result: EventResult::Error,
+            errorcode: Some(errorcode),
+            ..Self::default()
+        }
+    }
+}
+
 /// The type of event that is being reported.  These are specified by the Omaha protocol.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request

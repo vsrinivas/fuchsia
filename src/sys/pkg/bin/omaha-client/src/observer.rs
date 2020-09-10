@@ -216,10 +216,7 @@ mod tests {
             user_counting: UserCounting::ClientRegulatedByDate(None),
             result: update_check::Action::NoUpdate,
         };
-        let result = Ok(update_check::Response {
-            app_responses: vec![app_response],
-            server_dictated_poll_interval: None,
-        });
+        let result = Ok(update_check::Response { app_responses: vec![app_response] });
         observer.on_update_check_result(&result).await;
         assert!(observer.notified_cobalt);
     }

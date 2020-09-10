@@ -6,18 +6,15 @@
 
 use futures::{future::BoxFuture, prelude::*};
 use hyper::{Body, Client, Request, Response};
-use omaha_client::http_request::HttpRequest;
+use omaha_client::http_request::{Error, HttpRequest};
 
 pub struct FuchsiaHyperHttpRequest {
     client: Client<hyper_rustls::HttpsConnector<fuchsia_hyper::HyperConnector>, Body>,
 }
 
 impl HttpRequest for FuchsiaHyperHttpRequest {
-    fn request(
-        &mut self,
-        req: Request<Body>,
-    ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
-        self.client.request(req).boxed()
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, Error>> {
+        self.client.request(req).map_err(|e| e.into()).boxed()
     }
 }
 

@@ -84,9 +84,6 @@ impl Context {
 pub struct Response {
     /// The set of responses for all the apps in the request.
     pub app_responses: Vec<AppResponse>,
-
-    /// If Omaha dictated that a longer poll interval be used, it will be reported here.
-    pub server_dictated_poll_interval: Option<Duration>,
 }
 
 /// For each application that had an update check performed, a new App (potentially with new Cohort

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::http_request::HttpRequest;
+use crate::http_request::{Error, HttpRequest};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hyper::{Body, Request, Response};
@@ -17,21 +17,18 @@ pub struct MockHttpRequest {
     // The last request made using this mock.
     request: Rc<RefCell<Request<Body>>>,
     // The queue of fake responses for the upcoming requests.
-    responses: VecDeque<Response<Body>>,
+    responses: VecDeque<Result<Response<Body>, Error>>,
 }
 
 impl HttpRequest for MockHttpRequest {
-    fn request(
-        &mut self,
-        req: Request<Body>,
-    ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, Error>> {
         self.request.replace(req);
 
-        future::ok(if let Some(resp) = self.responses.pop_front() {
+        future::ready(if let Some(resp) = self.responses.pop_front() {
             resp
         } else {
             // No response to return, generate a 500 internal server error
-            Response::builder().status(500).body(Body::empty()).unwrap()
+            Ok(Response::builder().status(500).body(Body::empty()).unwrap())
         })
         .boxed()
     }
@@ -39,7 +36,7 @@ impl HttpRequest for MockHttpRequest {
 
 impl MockHttpRequest {
     pub fn new(res: Response<Body>) -> Self {
-        Self { responses: vec![res].into(), ..Default::default() }
+        Self { responses: vec![Ok(res)].into(), ..Default::default() }
     }
 
     pub fn empty() -> Self {
@@ -55,7 +52,11 @@ impl MockHttpRequest {
     }
 
     pub fn add_response(&mut self, res: Response<Body>) {
-        self.responses.push_back(res);
+        self.responses.push_back(Ok(res));
+    }
+
+    pub fn add_error(&mut self, error: Error) {
+        self.responses.push_back(Err(error));
     }
 
     pub fn assert_method(&self, method: &hyper::Method) {
