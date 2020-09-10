@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(54160): Keep in sync with //build/config/zircon/instrumentation/BUILD.gn
+
 import("$zx_build_config/instrumentation/sanitizer_default_options.gni")
 
 config("asan") {

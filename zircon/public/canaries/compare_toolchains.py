@@ -177,6 +177,27 @@ _ALL_TOOLCHAINS = [
         },
         'no_shared': True,
     },
+    {
+        'name': 'kernel.phys32',
+        'gn': {
+            'toolchain': '//zircon/kernel/arch/x86/phys:kernel.phys32',
+        },
+        'zn': {
+            'toolchain': '//kernel/arch/x86/phys:kernel.phys32-x64-clang',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'kernel.phys32-gcc',
+        'variants': ['gcc'],
+        'gn': {
+            'toolchain': '//zircon/kernel/arch/x86/phys:kernel.phys32-gcc',
+        },
+        'zn': {
+            'toolchain': '//kernel/arch/x86/phys:kernel.phys32-x64-gcc',
+        },
+        'no_shared': True,
+    },
 ]
 
 _GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]

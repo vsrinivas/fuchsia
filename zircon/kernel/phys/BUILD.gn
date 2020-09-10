@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(54160): Keep in sync with BUILD.zircon.gn
+
+import("//build/unification/global_variables.gni")
+
+if (toolchain.environment == "kernel.phys" ||
+    toolchain.environment == "kernel.phys32") {
+  config("defines") {
+    # Always enable tests and asserts in phys code.
+    defines = [ "LK_DEBUGLEVEL=2" ]
+  }
+}

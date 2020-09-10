@@ -1,0 +1,101 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(54160): Keep in sync with BUILD.zircon.gn
+
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+import("//build/unification/global_variables.gni")
+
+if (current_toolchain == default_toolchain) {
+  # Default toolchain (current_cpu == "") just defines the phys32 environment.
+  # This largely matches $zx/kernel/phys:kernel.phys and should be kept up to
+  # date with changes.
+  zircon_toolchain_suite("kernel.phys32") {
+    cpu = "x64"
+    os = "fuchsia"
+    environment = "kernel.phys32"
+    with_shared = false
+
+    toolchain_variant_args = {
+      configs = [ "//zircon/kernel/arch/x86/phys:phys32_config" ]
+
+      # Always enable frame pointers.
+      # NOTE: This works because frame_pointers is added in the
+      # phys32_config definition below.
+      remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+
+      tags = [ "kernel" ]
+    }
+
+    exclude_variant_tags = [
+      # There is no possibility of fancy runtimes like ASan for phys.
+      "instrumentation-runtime",
+
+      # TOOD(51994): Remove this when profile is supported.
+      "instrumented",
+    ]
+  }
+} else if (toolchain.environment == "kernel.phys32") {
+  # ... or here in the other phys environment.
+
+  config("phys32_config") {
+    configs = [
+      "$zx/kernel:standalone",
+      "$zx/kernel:warnings",
+      "$zx/kernel/arch/x86:abi",
+      "$zx/kernel/phys:defines",
+
+      # All physmem code is inherently sensitive and in a position for any
+      # bug to be unusually dangerous.  So compile with undefined behavior
+      # checking in all builds, regardless of variant.  This is only the
+      # basic support that requires no runtime code.
+      "$zx_build_config/instrumentation:ubsan-trap",
+
+      # This overrides some of the common settings (like PIE) that aren't
+      # broken out into removable configs, so it must come last.
+      ":x86-32",
+    ]
+
+    # NOTE: This works because default_frame_pointers is listed in
+    # remove_common_configs in the zircon_toolchain_suite() call above!
+    configs += [ "$zx_build_config:frame_pointers" ]
+  }
+
+  group("phys32_config_deps") {
+  }
+
+  # phys32 code is 32-bit (i686) and loaded at a fixed address.
+  config("x86-32") {
+    cflags = [
+      "-m32",
+      "-mcx16",
+      "-fno-pic",
+      "-fno-pie",
+    ]
+    ldflags = cflags + [ "-Wl,-m,elf_i386" ]
+
+    if (is_gcc) {
+      cflags += [ "-mpreferred-stack-boundary=4" ]  # log2, i.e. 16
+
+      # BFD ld doesn't handle phys.ld for the fixed-address case right.
+      ldflags += [ "-fuse-ld=gold" ]
+    } else {
+      cflags += [
+        "-mstack-alignment=16",  # Same as GCC's -mpreferred-stack-boundary=4.
+        "-fsanitize=safe-stack",  # Enable all available paranoia for phys.
+      ]
+
+      # Clang defaults to PIE but lld has a switch to reverse that.  GNU
+      # linkers have no such switch, but GCC doesn't pass -pie by default.
+      ldflags += [ "-Wl,--no-pie" ]
+    }
+
+    asmflags = cflags
+  }
+
+  group("x86-32_deps") {
+  }
+}
