@@ -42,12 +42,6 @@ constexpr ErrorDef<Token::KindAndSubkind> ErrExpectedOrdinalOrCloseBrace(
 constexpr ErrorDef ErrMustHaveNonReservedMember(
     "must have at least one non reserved member; you can use an empty struct to "
     "define a placeholder variant");
-constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifyFlexible(
-    "cannot specify flexible for {}");
-constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifyStrict(
-    "cannot specify strictness for {}");
-constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifyResource(
-    "cannot specify resource for {}");
 constexpr ErrorDef ErrDocCommentOnParameters("cannot have doc comment on parameters");
 constexpr ErrorDef ErrXunionDeprecated("xunion is deprecated, please use `flexible union` instead");
 constexpr ErrorDef ErrStrictXunionDeprecated(
@@ -63,6 +57,12 @@ constexpr WarningDef WarnDocCommentMustBeFollowedByDeclaration(
 constexpr ErrorDef ErrMustHaveOneProperty("must have at least one property");
 constexpr ErrorDef ErrOldHandleSyntax(
     "handle<type> is no longer supported, please use zx.handle:TYPE");
+constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrCannotSpecifyModifier(
+    "cannot specify modifier {} for {}");
+constexpr ErrorDef<Token::KindAndSubkind> ErrDuplicateModifier(
+    "duplicate occurrence of modifier {}");
+constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrConflictingModifier(
+    "modifier {} conflicts with modifier {}");
 
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration

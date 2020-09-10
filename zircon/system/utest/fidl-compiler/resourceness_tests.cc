@@ -16,7 +16,7 @@ namespace {
 
 const fidl::ExperimentalFlags FLAGS(fidl::ExperimentalFlags::Flag::kDefaultNoHandles);
 
-void invalid_resource_modifier(const std::string& definition) {
+void invalid_resource_modifier(const std::string& type, const std::string& definition) {
   std::string fidl_library = "library example;\n\n" + definition + "\n";
 
   TestLibrary library(fidl_library, FLAGS);
@@ -25,11 +25,13 @@ void invalid_resource_modifier(const std::string& definition) {
 
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyResource);
+  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyModifier);
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "resource");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), type);
 }
 
 TEST(ResourcenessTests, bad_bits_resourceness) {
-  invalid_resource_modifier(R"FIDL(
+  invalid_resource_modifier("bits", R"FIDL(
 resource bits Foo {
     BAR = 0x1;
 };
@@ -37,7 +39,7 @@ resource bits Foo {
 }
 
 TEST(ResourcenessTests, bad_enum_resourceness) {
-  invalid_resource_modifier(R"FIDL(
+  invalid_resource_modifier("enum", R"FIDL(
 resource enum Foo {
     BAR = 1;
 };
@@ -45,21 +47,44 @@ resource enum Foo {
 }
 
 TEST(ResourcenessTests, bad_const_resourceness) {
-  invalid_resource_modifier(R"FIDL(
+  invalid_resource_modifier("const", R"FIDL(
 resource const uint32 BAR = 1;
 )FIDL");
 }
 
 TEST(ResourcenessTests, bad_protocol_resourceness) {
-  invalid_resource_modifier(R"FIDL(
+  invalid_resource_modifier("protocol", R"FIDL(
 resource protocol Foo {};
 )FIDL");
 }
 
 TEST(ResourcenessTests, bad_using_resourceness) {
-  invalid_resource_modifier(R"FIDL(
+  invalid_resource_modifier("using", R"FIDL(
 resource using B = bool;
 )FIDL");
+}
+
+TEST(ResourcenessTests, bad_duplicate_modifier) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource struct One {};
+resource resource struct Two {};            // line 5
+resource resource resource struct Three {}; // line 6
+  )FIDL");
+  ASSERT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateModifier);
+  EXPECT_EQ(errors[0]->span->position().line, 5);
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "resource");
+  ASSERT_ERR(errors[1], fidl::ErrDuplicateModifier);
+  EXPECT_EQ(errors[1]->span->position().line, 6);
+  ASSERT_SUBSTR(errors[1]->msg.c_str(), "resource");
+  ASSERT_ERR(errors[2], fidl::ErrDuplicateModifier);
+  EXPECT_EQ(errors[2]->span->position().line, 6);
+  ASSERT_SUBSTR(errors[2]->msg.c_str(), "resource");
 }
 
 TEST(ResourcenessTests, good_resource_struct) {
@@ -433,6 +458,27 @@ struct Boros {
   ASSERT_ERR(errors[0], fidl::ErrTypeMustBeResource);
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "Boros");
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "bad_member");
+}
+
+TEST(ResourcenessTests, strict_resource_order_independent) {
+  std::string fidl_library = R"FIDL(
+library example;
+
+strict resource union SR { 1: bool b; };
+resource strict union RS { 1: bool b; };
+)FIDL";
+
+  TestLibrary library(fidl_library, FLAGS);
+  library.set_warnings_as_errors(true);
+  ASSERT_TRUE(library.Compile());
+
+  const auto strict_resource = library.LookupUnion("SR");
+  EXPECT_EQ(strict_resource->strictness, fidl::types::Strictness::kStrict);
+  EXPECT_EQ(strict_resource->resourceness, fidl::types::Resourceness::kResource);
+
+  const auto resource_strict = library.LookupUnion("RS");
+  EXPECT_EQ(resource_strict->strictness, fidl::types::Strictness::kStrict);
+  EXPECT_EQ(resource_strict->resourceness, fidl::types::Resourceness::kResource);
 }
 
 }  // namespace

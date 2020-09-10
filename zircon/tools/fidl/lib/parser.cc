@@ -42,8 +42,6 @@ namespace fidl {
 
 namespace {
 
-using types::Strictness;
-
 enum {
   More,
   Done,
@@ -152,18 +150,48 @@ std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const std::optional<So
   return nullptr;
 }
 
-std::optional<types::Strictness> Parser::MaybeParseStrictness() {
-  switch (Peek().combined()) {
-    case CASE_IDENTIFIER(Token::Subkind::kStrict):
-      ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStrict));
-      assert(Ok() && "we should have just seen a strict token");
-      return std::optional{types::Strictness::kStrict};
-    case CASE_IDENTIFIER(Token::Subkind::kFlexible):
-      ConsumeToken(IdentifierOfSubkind(Token::Subkind::kFlexible));
-      assert(Ok() && "we should have just seen a flexible token");
-      return std::optional{types::Strictness::kFlexible};
-    default:
-      return std::nullopt;
+Parser::Modifiers Parser::ParseModifiers() {
+  Modifiers modifiers;
+  Token token;
+
+  // Consume tokens until we get one that isn't a modifier, treating duplicates
+  // and conflicts as immediately recovered errors. For conflicts (e.g. "strict
+  // flexible" or "flexible strict"), we use the earliest one.
+  for (;;) {
+    switch (Peek().combined()) {
+      case CASE_IDENTIFIER(Token::Subkind::kStrict):
+      case CASE_IDENTIFIER(Token::Subkind::kFlexible):
+        token = ConsumeToken(OfKind(Token::Kind::kIdentifier)).value();
+        if (modifiers.strictness) {
+          if (token.subkind() == modifiers.strictness_token->subkind()) {
+            Fail(ErrDuplicateModifier, token, token.kind_and_subkind());
+            RecoverOneError();
+          } else {
+            Fail(ErrConflictingModifier, token, token.kind_and_subkind(),
+                 modifiers.strictness_token->kind_and_subkind());
+            RecoverOneError();
+          }
+        } else {
+          const auto value = token.subkind() == Token::Subkind::kStrict
+                                 ? types::Strictness::kStrict
+                                 : types::Strictness::kFlexible;
+          modifiers.strictness = value;
+          modifiers.strictness_token = token;
+        }
+        break;
+      case CASE_IDENTIFIER(Token::Subkind::kResource):
+        token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource)).value();
+        if (modifiers.resourceness) {
+          Fail(ErrDuplicateModifier, token, token.kind_and_subkind());
+          RecoverOneError();
+        } else {
+          modifiers.resourceness = types::Resourceness::kResource;
+          modifiers.resourceness_token = token;
+        }
+        break;
+      default:
+        return modifiers;
+    }
   }
 }
 
@@ -461,10 +489,13 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
 }
 
 std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,
-                                               ASTScope& scope) {
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
+                                               ASTScope& scope, const Modifiers& modifiers) {
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers</* none */>(modifiers, decl_token.value());
+
   auto using_path = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
@@ -584,11 +615,13 @@ std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
 }
 
 std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::BitsMember>> members;
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kBits));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kBits));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers<types::Strictness>(modifiers, decl_token.value());
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -638,17 +671,20 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
   if (members.empty())
     return Fail(ErrMustHaveOneMember);
 
-  return std::make_unique<raw::BitsDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                std::move(identifier), std::move(maybe_type_ctor),
-                                                std::move(members), strictness);
+  return std::make_unique<raw::BitsDeclaration>(
+      scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+      std::move(maybe_type_ctor), std::move(members),
+      modifiers.strictness.value_or(types::Strictness::kStrict));
 }
 
 std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kConst));
-
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kConst));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers</* none */>(modifiers, decl_token.value());
+
   auto type_ctor = ParseTypeConstructor();
   if (!Ok())
     return Fail();
@@ -689,11 +725,13 @@ std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
 }
 
 std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::EnumMember>> members;
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kEnum));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kEnum));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers<types::Strictness>(modifiers, decl_token.value());
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -743,9 +781,10 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
   if (members.empty())
     return Fail(ErrMustHaveOneMember);
 
-  return std::make_unique<raw::EnumDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                std::move(identifier), std::move(maybe_type_ctor),
-                                                std::move(members), strictness);
+  return std::make_unique<raw::EnumDeclaration>(
+      scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+      std::move(maybe_type_ctor), std::move(members),
+      modifiers.strictness.value_or(types::Strictness::kStrict));
 }
 
 std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
@@ -922,13 +961,15 @@ void Parser::ParseProtocolMember(
 }
 
 std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::ComposeProtocol>> composed_protocols;
   std::vector<std::unique_ptr<raw::ProtocolMethod>> methods;
 
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers</* none */>(modifiers, decl_token.value());
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -984,12 +1025,14 @@ std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration(
 }
 
 std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::ResourceProperty>> properties;
 
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResourceDefinition));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResourceDefinition));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers</* none */>(modifiers, decl_token.value());
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -1080,12 +1123,15 @@ std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
 }
 
 std::unique_ptr<raw::ServiceDeclaration> Parser::ParseServiceDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::ServiceMember>> members;
 
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kService));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kService));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers</* none */>(modifiers, decl_token.value());
+
   auto identifier = ParseIdentifier();
   if (!Ok())
     return Fail();
@@ -1148,13 +1194,15 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
 }
 
 std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-    types::Resourceness resourceness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::StructMember>> members;
 
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStruct));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStruct));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers<types::Resourceness>(modifiers, decl_token.value());
+
   auto identifier = ParseIdentifier();
   if (!Ok())
     return Fail();
@@ -1185,6 +1233,12 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
   }
   if (!Ok())
     Fail();
+
+  auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
+  // TODO(fxbug.dev/7989) This is just to avoid goldens churn, and should be removed.
+  if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
+    resourceness = types::Resourceness::kResource;
+  }
 
   return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                   std::move(identifier), std::move(members),
@@ -1231,13 +1285,15 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
 }
 
 std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness,
-    types::Resourceness resourceness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::TableMember>> members;
 
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTable));
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTable));
   if (!Ok())
     return Fail();
+
+  ValidateModifiers<types::Resourceness>(modifiers, decl_token.value());
+
   auto identifier = ParseIdentifier();
   if (!Ok())
     return Fail();
@@ -1277,9 +1333,15 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
   if (!Ok())
     Fail();
 
+  auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
+  // TODO(fxbug.dev/7989) This is just to avoid goldens churn, and should be removed.
+  if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
+    resourceness = types::Resourceness::kResource;
+  }
+
   return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                  std::move(identifier), std::move(members),
-                                                 strictness, resourceness);
+                                                 types::Strictness::kFlexible, resourceness);
 }
 
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
@@ -1323,9 +1385,14 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness,
-    types::Resourceness resourceness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
   std::vector<std::unique_ptr<raw::UnionMember>> members;
+
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
+  if (!Ok())
+    return Fail();
+
+  ValidateModifiers<types::Strictness, types::Resourceness>(modifiers, decl_token.value());
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -1372,9 +1439,15 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
   if (!contains_non_reserved_member)
     return Fail(ErrMustHaveNonReservedMember);
 
-  return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                 std::move(identifier), std::move(members),
-                                                 strictness, resourceness);
+  auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
+  // TODO(fxbug.dev/7989) This is just to avoid goldens churn, and should be removed.
+  if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
+    resourceness = types::Resourceness::kResource;
+  }
+
+  return std::make_unique<raw::UnionDeclaration>(
+      scope.GetSourceElement(), std::move(attributes), std::move(identifier), std::move(members),
+      modifiers.strictness.value_or(types::Strictness::kStrict), resourceness);
 }
 
 std::unique_ptr<raw::File> Parser::ParseFile() {
@@ -1414,59 +1487,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     if (!Ok())
       return More;
 
-    // TODO(fxb/59467): Accept modifiers in any order.
-    auto maybe_strictness = MaybeParseStrictness();
-    if (!Ok())
-      return More;
-
-    auto resourceness = types::Resourceness::kValue;
-    switch (Peek().combined()) {
-      case CASE_IDENTIFIER(Token::Subkind::kResource):
-        ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource));
-        assert(Ok() && "we should have just seen a resource token");
-        resourceness = types::Resourceness::kResource;
-        break;
-    }
-
-    if (maybe_strictness) {
-      switch (Peek().combined()) {
-        case CASE_TOKEN(Token::Kind::kEndOfFile):
-          Fail();
-          return Done;
-        case CASE_IDENTIFIER(Token::Subkind::kBits):
-        case CASE_IDENTIFIER(Token::Subkind::kEnum):
-        case CASE_IDENTIFIER(Token::Subkind::kUnion):
-        case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-          break;
-        default:
-          // TODO(fxbug.dev/57409): Improve this error message.
-          Fail(ErrCannotSpecifyStrict, Peek());
-          return More;
-      }
-    }
-
-    if (resourceness == types::Resourceness::kResource) {
-      switch (Peek().combined()) {
-        case CASE_TOKEN(Token::Kind::kEndOfFile):
-          Fail();
-          return Done;
-        case CASE_IDENTIFIER(Token::Subkind::kStruct):
-        case CASE_IDENTIFIER(Token::Subkind::kTable):
-        case CASE_IDENTIFIER(Token::Subkind::kUnion):
-        case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-          break;
-        default:
-          // TODO(fxbug.dev/57409): Improve this error message.
-          Fail(ErrCannotSpecifyResource, Peek());
-      }
-    }
-
-    // Unless the flag is enabled, make everything a resource regardless of
-    // whether the modifier is there. This is just to avoid goldens churn.
-    // TODO(fxbug.dev/7989) remove this.
-    if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
-      resourceness = types::Resourceness::kResource;
-    }
+    const auto modifiers = ParseModifiers();
 
     switch (Peek().combined()) {
       default:
@@ -1478,68 +1499,62 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kBits): {
         done_with_library_imports = true;
-        add(&bits_declaration_list, [&] {
-          return ParseBitsDeclaration(std::move(attributes), scope,
-                                      maybe_strictness.value_or(types::Strictness::kStrict));
-        });
+        add(&bits_declaration_list,
+            [&] { return ParseBitsDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kConst): {
         done_with_library_imports = true;
         add(&const_declaration_list,
-            [&] { return ParseConstDeclaration(std::move(attributes), scope); });
+            [&] { return ParseConstDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kEnum): {
         done_with_library_imports = true;
-        add(&enum_declaration_list, [&] {
-          return ParseEnumDeclaration(std::move(attributes), scope,
-                                      maybe_strictness.value_or(types::Strictness::kStrict));
-        });
+        add(&enum_declaration_list,
+            [&] { return ParseEnumDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kProtocol): {
         done_with_library_imports = true;
         add(&protocol_declaration_list,
-            [&] { return ParseProtocolDeclaration(std::move(attributes), scope); });
+            [&] { return ParseProtocolDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kResourceDefinition): {
         done_with_library_imports = true;
         add(&resource_declaration_list,
-            [&] { return ParseResourceDeclaration(std::move(attributes), scope); });
+            [&] { return ParseResourceDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kService): {
         done_with_library_imports = true;
         add(&service_declaration_list,
-            [&] { return ParseServiceDeclaration(std::move(attributes), scope); });
+            [&] { return ParseServiceDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kStruct): {
         done_with_library_imports = true;
         add(&struct_declaration_list,
-            [&] { return ParseStructDeclaration(std::move(attributes), scope, resourceness); });
+            [&] { return ParseStructDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kTable): {
         done_with_library_imports = true;
-        add(&table_declaration_list, [&] {
-          return ParseTableDeclaration(std::move(attributes), scope, types::Strictness::kFlexible,
-                                       resourceness);
-        });
+        add(&table_declaration_list,
+            [&] { return ParseTableDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
-        auto using_decl = ParseUsing(std::move(attributes), scope);
+        auto using_decl = ParseUsing(std::move(attributes), scope, modifiers);
         if (using_decl == nullptr) {
           // Failed to parse using declaration.
           return Done;
@@ -1555,18 +1570,13 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kUnion): {
         done_with_library_imports = true;
-        ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
-        add(&union_declaration_list, [&] {
-          return ParseUnionDeclaration(std::move(attributes), scope,
-                                       maybe_strictness.value_or(types::Strictness::kStrict),
-                                       resourceness);
-        });
+        add(&union_declaration_list,
+            [&] { return ParseUnionDeclaration(std::move(attributes), scope, modifiers); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-        auto strictness = maybe_strictness.value_or(types::Strictness::kFlexible);
-        switch (strictness) {
+        switch (modifiers.strictness.value_or(types::Strictness::kFlexible)) {
           case types::Strictness::kFlexible:
             Fail(ErrXunionDeprecated);
             return More;
@@ -1624,7 +1634,7 @@ bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfDecl() {
-  recovered_errors_ = reporter_->errors().size();
+  RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
       Token::Kind::kRightCurly,
@@ -1648,7 +1658,7 @@ Parser::RecoverResult Parser::RecoverToEndOfDecl() {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfMember() {
-  recovered_errors_ = reporter_->errors().size();
+  RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
       Token::Kind::kSemicolon,
@@ -1670,7 +1680,7 @@ Parser::RecoverResult Parser::RecoverToEndOfMember() {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfParam() {
-  recovered_errors_ = reporter_->errors().size();
+  RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
       Token::Kind::kComma,      Token::Kind::kRightParen, Token::Kind::kSemicolon,

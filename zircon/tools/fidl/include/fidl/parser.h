@@ -161,7 +161,7 @@ class Parser {
           break;
         case OnNoMatch::kReportAndRecover:
           Fail(std::move(error));
-          recovered_errors_++;
+          RecoverOneError();
           return std::nullopt;
         case OnNoMatch::kIgnore:
           return std::nullopt;
@@ -230,7 +230,32 @@ class Parser {
   std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                       const Args&... args);
 
-  std::optional<types::Strictness> MaybeParseStrictness();
+  struct Modifiers {
+    std::optional<types::Strictness> strictness;
+    std::optional<Token> strictness_token;
+    std::optional<types::Resourceness> resourceness;
+    std::optional<Token> resourceness_token;
+  };
+
+  Modifiers ParseModifiers();
+
+  // Reports an error if |modifiers| contains a modifier whose type is not
+  // included in |Allowlist|. The |decl_token| should be "struct", "enum", etc.
+  // Marks the error as recovered so that parsing will continue.
+  template <typename... Allowlist>
+  void ValidateModifiers(const Modifiers& modifiers, Token decl_token) {
+    const auto fail = [&](std::optional<Token> token) {
+      Fail(ErrCannotSpecifyModifier, token.value(), token.value().kind_and_subkind(),
+           decl_token.kind_and_subkind());
+      RecoverOneError();
+    };
+    if (!(std::is_same_v<types::Strictness, Allowlist> || ...) && modifiers.strictness) {
+      fail(modifiers.strictness_token);
+    }
+    if (!(std::is_same_v<types::Resourceness, Allowlist> || ...) && modifiers.resourceness) {
+      fail(modifiers.resourceness_token);
+    }
+  }
 
   std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
   std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
@@ -251,20 +276,21 @@ class Parser {
       std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope);
   std::unique_ptr<raw::AttributeList> MaybeParseAttributeList(bool for_parameter = false);
 
-  std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+  std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
+                                         const Modifiers&);
 
   std::unique_ptr<raw::TypeConstructor> ParseTypeConstructor();
 
   std::unique_ptr<raw::BitsMember> ParseBitsMember();
   std::unique_ptr<raw::BitsDeclaration> ParseBitsDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::EnumMember> ParseEnumMember();
   std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::Parameter> ParseParameter();
   std::unique_ptr<raw::ParameterList> ParseParameterList();
@@ -278,29 +304,27 @@ class Parser {
   void ParseProtocolMember(std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
                            std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods);
   std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::ResourceProperty> ParseResourcePropertyDeclaration();
   std::unique_ptr<raw::ResourceDeclaration> ParseResourceDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::ServiceMember> ParseServiceMember();
   std::unique_ptr<raw::ServiceDeclaration> ParseServiceDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::StructMember> ParseStructMember();
   std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Resourceness);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::TableMember> ParseTableMember();
   std::unique_ptr<raw::TableDeclaration> ParseTableDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness,
-      types::Resourceness);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::UnionMember> ParseUnionMember();
   std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness,
-      types::Resourceness);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::File> ParseFile();
 
@@ -339,6 +363,8 @@ class Parser {
   // Not to be confused with Parser::Success, which is called after parsing to
   // check if any errors were reported during parsing, regardless of recovery.
   bool Ok() const { return reporter_->errors().size() == recovered_errors_; }
+  void RecoverOneError() { recovered_errors_++; }
+  void RecoverAllErrors() { recovered_errors_ = reporter_->errors().size(); }
   size_t recovered_errors_ = 0;
 
   std::map<std::string_view, types::HandleSubtype> handle_subtype_table_;

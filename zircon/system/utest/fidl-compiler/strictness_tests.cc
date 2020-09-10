@@ -21,7 +21,8 @@ void invalid_strictness(const std::string& type, const std::string& definition) 
 
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyStrict);
+  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyModifier);
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
   ASSERT_SUBSTR(errors[0]->msg.c_str(), type.c_str());
 }
 
@@ -33,6 +34,50 @@ void redundant_strictness(const std::string& strictness, const std::string& defi
   //
   // The original code for this is at
   // <https://fuchsia.git.corp.google.com/fuchsia/+/d66c40c674e1a37fc674c016e76cebd7c8edcd2d/zircon/system/utest/fidl-compiler/strictness_tests.cc#31>.
+}
+
+TEST(StrictnessTests, bad_duplicate_modifier) {
+  TestLibrary library(R"FIDL(
+library example;
+
+strict union One { 1: bool b; };
+strict strict union Two { 1: bool b; };          // line 5
+strict strict strict union Three { 1: bool b; }; // line 6
+  )FIDL");
+  ASSERT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateModifier);
+  EXPECT_EQ(errors[0]->span->position().line, 5);
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
+  ASSERT_ERR(errors[1], fidl::ErrDuplicateModifier);
+  EXPECT_EQ(errors[1]->span->position().line, 6);
+  ASSERT_SUBSTR(errors[1]->msg.c_str(), "strict");
+  ASSERT_ERR(errors[2], fidl::ErrDuplicateModifier);
+  EXPECT_EQ(errors[2]->span->position().line, 6);
+  ASSERT_SUBSTR(errors[2]->msg.c_str(), "strict");
+}
+
+TEST(StrictnessTests, bad_conflicting_modifiers) {
+  TestLibrary library(R"FIDL(
+library example;
+
+strict flexible union SF { 1: bool b; }; // line 4
+flexible strict union FS { 1: bool b; }; // line 5
+  )FIDL");
+  ASSERT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrConflictingModifier);
+  EXPECT_EQ(errors[0]->span->position().line, 4);
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "flexible");
+  ASSERT_ERR(errors[1], fidl::ErrConflictingModifier);
+  EXPECT_EQ(errors[1]->span->position().line, 5);
+  ASSERT_SUBSTR(errors[1]->msg.c_str(), "strict");
+  ASSERT_SUBSTR(errors[1]->msg.c_str(), "flexible");
 }
 
 TEST(StrictnessTests, bits_strictness) {
