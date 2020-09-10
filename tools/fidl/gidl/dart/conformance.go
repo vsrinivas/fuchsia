@@ -139,9 +139,6 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
-		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
-			continue
-		}
 		valueStr := visit(encodeSuccess.Value, decl)
 		valueType := typeName(decl)
 		for _, encoding := range encodeSuccess.Encodings {
@@ -166,9 +163,6 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		decl, err := schema.ExtractDeclaration(decodeSuccess.Value, decodeSuccess.HandleDefs)
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
-		}
-		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
-			continue
 		}
 		valueStr := visit(decodeSuccess.Value, decl)
 		valueType := typeName(decl)

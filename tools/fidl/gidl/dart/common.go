@@ -72,7 +72,12 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+			unknownData := field.Value.(gidlir.UnknownData)
+			return fmt.Sprintf(
+				"%s.with$UnknownData(%d, fidl.UnknownRawData(%s, []))",
+				value.Name,
+				field.Key.UnknownOrdinal,
+				bytesBuilder(unknownData.Bytes))
 		}
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
