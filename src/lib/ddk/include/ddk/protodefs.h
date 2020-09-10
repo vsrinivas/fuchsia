@@ -168,6 +168,6 @@ DDK_PROTOCOL_DEF(DISPLAY_CLAMP_RGB_IMPL,  144, "display-clamprgb-impl", PF_NOPUB
 DDK_PROTOCOL_DEF(TEMPERATURE,             145, "temperature", 0)
 DDK_PROTOCOL_DEF(VREG,                    146, "vreg", 0)
 DDK_PROTOCOL_DEF(ADC,                     147, "adc", 0)
-
+DDK_PROTOCOL_DEF(DSI,                     148, "dsi", PF_NOPUB)
 #undef DDK_PROTOCOL_DEF
 #endif

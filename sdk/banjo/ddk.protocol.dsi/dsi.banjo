@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.dsi;
+using zx;
+
+[Layout = "ddk-protocol"]
+protocol Dsi {
+    /// This function takes the server end of a FIDL connection that will serve
+    /// fuchsia.hardware.dsi.
+    ///
+    /// This is meant to be used by the display driver. This connection will stay
+    /// open and valid throughout the lifecycle of the display driver.
+    ///
+    /// The protocol only accepts one client at a time.
+    /// Returns ZX_OK upon successful connection.
+    Connect(handle<channel> server) -> (zx.status status);
+};

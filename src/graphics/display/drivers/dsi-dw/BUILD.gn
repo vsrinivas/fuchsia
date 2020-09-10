@@ -16,6 +16,7 @@ driver_module("dsi-dw") {
   ]
   sources = [ "dsi-dw.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.dsi",
     "//sdk/banjo/ddk.protocol.dsiimpl",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.i2c",
