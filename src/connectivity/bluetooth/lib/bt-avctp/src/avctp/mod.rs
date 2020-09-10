@@ -4,13 +4,13 @@
 
 use {
     fuchsia_bluetooth::types::Channel,
-    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
         ready,
         stream::{FusedStream, Stream},
         task::{Context, Poll, Waker},
     },
+    log::{info, trace, warn},
     parking_lot::Mutex,
     slab::Slab,
     std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
@@ -102,7 +102,7 @@ impl PeerInner {
         let key = self.response_waiters.lock().insert(ResponseWaiter::default());
         let id = TxLabel::try_from(key as u8);
         if id.is_err() {
-            fx_log_warn!(tag: "avctp", "Transaction IDs are exhausted");
+            warn!("Transaction IDs are exhausted");
             self.response_waiters.lock().remove(key);
         }
         id
@@ -174,7 +174,7 @@ impl PeerInner {
         loop {
             let packet_size = match self.channel.poll_datagram(cx, &mut buf) {
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-                    fx_vlog!(tag: "avctp", 1, "Peer closed");
+                    trace!("Peer closed");
                     return Ok(true);
                 }
                 Poll::Ready(Err(e)) => return Err(Error::PeerRead(e)),
@@ -184,7 +184,7 @@ impl PeerInner {
             if packet_size == 0 {
                 continue;
             }
-            fx_vlog!(tag: "avctp", 2, "received packet {:#?}", buf);
+            trace!("received packet {:?}", buf);
             // Detects General Reject condition and sends the response back.
             // On other headers with errors, sends BAD_HEADER to the peer
             // and attempts to continue.
@@ -192,7 +192,7 @@ impl PeerInner {
                 Err(_) => {
                     // Only possible error is OutOfRange
                     // Returned only when the packet is too small, can't make a meaningful reject.
-                    fx_log_info!(tag: "avctp", "received unrejectable message");
+                    info!("received unrejectable message");
                     buf = buf.split_off(packet_size);
                     continue;
                 }
@@ -202,7 +202,7 @@ impl PeerInner {
             // We only support AV remote targeted AVCTP messages on this socket.
             // Send a rejection AVCTP messages with invalid profile id bit set to true.
             if avctp_header.profile_id() != AV_REMOTE_PROFILE {
-                fx_log_info!(tag: "avctp", "received packet not targeted at remote profile service class");
+                info!("received packet not targeted at remote profile service class");
                 let resp_avct = avctp_header.create_invalid_profile_id_response();
                 self.send_packet(&resp_avct, &[])?;
                 buf = buf.split_off(packet_size);
@@ -211,7 +211,7 @@ impl PeerInner {
 
             if packet_size == avctp_header.encoded_len() {
                 // Only the avctp header was sent with no payload.
-                fx_log_info!(tag: "avctp", "received incomplete packet");
+                info!("received incomplete packet");
                 buf = buf.split_off(packet_size);
                 continue;
             }
@@ -242,7 +242,7 @@ impl PeerInner {
                             waker.wake();
                         }
                     } else {
-                        fx_vlog!(tag: "avctp", 1, "response for {:?} we did not send, dropping", avctp_header.label());
+                        trace!("response for {:?} we did not send, dropping", avctp_header.label());
                     };
                     buf = rest;
                     // Note: we drop any TxLabel response we are not waiting for
@@ -451,7 +451,7 @@ impl Stream for CommandResponseStream {
         if let Some(id) = &this.id {
             Poll::Ready(match ready!(this.inner.poll_recv_response(id, cx)) {
                 Ok(packet) => {
-                    fx_vlog!(tag: "avctp", 2, "received response packet {:#?}", packet);
+                    trace!("received response packet {:?}", packet);
                     if packet.header().is_invalid_profile_id() {
                         Some(Err(Error::InvalidProfileId))
                     } else {

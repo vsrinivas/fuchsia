@@ -5,9 +5,9 @@
 use {
     fuchsia_async::{Time, TimeoutExt},
     fuchsia_bluetooth::types::Channel,
-    fuchsia_syslog::{fx_log_info, fx_vlog},
     fuchsia_zircon::Duration,
     futures::{future, future::Ready, stream::FilterMap, Stream, StreamExt},
+    log::{info, trace},
     std::convert::TryFrom,
 };
 
@@ -147,7 +147,7 @@ impl Peer {
             // The only type of subunit we support other than panel is unit subunit when a
             // unit info or sub unit info command is sent.
             (true, Some(SubunitType::Unit), &OpCode::UnitInfo) => {
-                fx_vlog!(tag: "avctp", 2, "received UNITINFO command");
+                trace!("received UNITINFO command");
                 // The packet needs to be 8 bytes long according to spec. First three bytes are
                 // handled in the response header. Remaining buf is initialized to 0xff.
                 let mut pbuf: [u8; 5] = [0xff; 5];
@@ -165,7 +165,7 @@ impl Peer {
                 }
             }
             (true, Some(SubunitType::Unit), &OpCode::SubUnitInfo) => {
-                fx_vlog!(tag: "avctp", 2, "received SUBUNITINFO command");
+                trace!("received SUBUNITINFO command");
                 // The packet needs to be 8 bytes long according to spec. First three bytes are
                 // handled in the response header. Remaining buf is initialized to 0xff.
                 let mut pbuf: [u8; 5] = [0xff; 5];
@@ -181,7 +181,7 @@ impl Peer {
             (_, Some(SubunitType::Panel), &OpCode::Passthrough)
             | (_, Some(SubunitType::Panel), &OpCode::VendorDependent) => Some(Ok(cmd)),
             _ => {
-                fx_log_info!(tag: "avctp", "received invalid command");
+                info!("received invalid command");
                 match cmd.send_response(ResponseType::NotImplemented, &[]) {
                     Err(e) => Some(Err(e)),
                     Ok(_) => None,
