@@ -22,6 +22,10 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/heap.h"
 
+#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
+#include <ddktl/protocol/goldfish/addressspace.h> // nogncheck
+#endif
+
 namespace goldfish {
 
 class Control;
@@ -64,6 +68,14 @@ class Control : public ControlType,
   void RemoveHeap(Heap* heap);
 
  private:
+  zx_status_t Init();
+
+#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
+  zx_status_t InitAddressSpaceDeviceLocked() TA_REQ(lock_);
+#endif
+
+  zx_status_t InitPipeDeviceLocked() TA_REQ(lock_);
+
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
@@ -83,6 +95,9 @@ class Control : public ControlType,
   fbl::Mutex lock_;
   ddk::GoldfishPipeProtocolClient pipe_;
   ddk::GoldfishControlProtocolClient control_;
+#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
+  ddk::GoldfishAddressSpaceProtocolClient address_space_;
+#endif
   int32_t id_ = 0;
   zx::bti bti_ TA_GUARDED(lock_);
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
@@ -91,6 +106,11 @@ class Control : public ControlType,
   fbl::DoublyLinkedList<std::unique_ptr<Heap>> heaps_ TA_GUARDED(lock_);
 
   zx::event pipe_event_;
+
+#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
+  std::unique_ptr<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient>
+      address_space_child_;
+#endif
 
   // TODO(TC-383): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
