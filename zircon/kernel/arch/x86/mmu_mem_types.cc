@@ -18,6 +18,7 @@
 #include <arch/x86/registers.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
+#include <ktl/atomic.h>
 
 /* address widths from mmu.c */
 extern uint8_t g_paddr_width;
@@ -83,8 +84,8 @@ static struct mtrrs* target_mtrrs = &THE_MTRRS;
 static void x86_pat_sync_task(void* context);
 struct pat_sync_task_context {
   /* Barrier counters for the two barriers described in Intel's algorithm */
-  volatile int barrier1;
-  volatile int barrier2;
+  ktl::atomic<int> barrier1;
+  ktl::atomic<int> barrier2;
 };
 
 void x86_mmu_mem_type_init(void) {
@@ -149,8 +150,8 @@ static void x86_pat_sync_task(void* raw_context) {
   cpu_num_t cpu = arch_curr_cpu_num();
 
   /* Step 3: Wait for all processors to reach this point. */
-  atomic_and(&context->barrier1, ~(1 << cpu));
-  while (context->barrier1 != 0) {
+  context->barrier1.fetch_and(~(1 << cpu));
+  while (context->barrier1.load() != 0) {
     arch::Yield();
   }
 
@@ -232,8 +233,8 @@ static void x86_pat_sync_task(void* raw_context) {
   }
 
   /* Step 14: Wait for all processors to reach this point. */
-  atomic_and(&context->barrier2, ~(1 << cpu));
-  while (context->barrier2 != 0) {
+  context->barrier2.fetch_and(~(1 << cpu));
+  while (context->barrier2.load() != 0) {
     arch::Yield();
   }
 }

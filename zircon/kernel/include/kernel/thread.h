@@ -26,7 +26,6 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/deadline.h>
 #include <kernel/scheduler_state.h>
@@ -34,6 +33,7 @@
 #include <kernel/task_runtime_stats.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <ktl/atomic.h>
 #include <ktl/string_view.h>
 #include <lockdep/thread_lock_state.h>
 #include <vm/kstack.h>
@@ -439,9 +439,9 @@ class PreemptionState {
   void PreemptDisable() {
     DEBUG_ASSERT(PreemptDisableCount() < 0xffff);
 
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     ++disable_counts_;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
   // PreemptReenable() decrements the preempt_disable counter.  See
@@ -449,9 +449,9 @@ class PreemptionState {
   void PreemptReenable() {
     DEBUG_ASSERT(PreemptDisableCount() > 0);
 
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     uint32_t new_count = --disable_counts_;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 
     if (new_count == 0) {
       DEBUG_ASSERT(!arch_blocking_disallowed());
@@ -466,9 +466,9 @@ class PreemptionState {
   void PreemptReenableNoResched() {
     DEBUG_ASSERT(PreemptDisableCount() > 0);
 
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     --disable_counts_;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
   // ReschedDisable() increments the resched_disable counter for the
@@ -486,9 +486,9 @@ class PreemptionState {
   void ReschedDisable() {
     DEBUG_ASSERT(ReschedDisableCount() < 0xffff);
 
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     disable_counts_ += 1 << 16;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
   // ReschedReenable() decrements the preempt_disable counter.  See
@@ -496,10 +496,10 @@ class PreemptionState {
   void ReschedReenable() {
     DEBUG_ASSERT(ReschedDisableCount() > 0);
 
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     uint32_t new_count = disable_counts_ - (1 << 16);
     disable_counts_ = new_count;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 
     if (new_count == 0) {
       DEBUG_ASSERT(!arch_blocking_disallowed());
@@ -599,21 +599,21 @@ class TaskState {
 class MemoryAllocationState {
  public:
   void Disable() {
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     disable_count_++;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
   void Enable() {
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     DEBUG_ASSERT(disable_count_ > 0);
     disable_count_--;
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
   // Returns true if memory allocation is allowed.
   bool IsEnabled() {
-    atomic_signal_fence();
+    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     return disable_count_ == 0;
   }
 

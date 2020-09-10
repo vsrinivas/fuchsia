@@ -23,6 +23,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 #include <ktl/iterator.h>
 #include <pretty/hexdump.h>
 
@@ -334,8 +335,8 @@ static void context_switch_test() {
   Thread::Current::SleepRelative(ZX_MSEC(100));
 }
 
-static volatile int atomic;
-static volatile int atomic_count;
+static ktl::atomic<int> atomic_var;
+static ktl::atomic<int> atomic_count;
 
 static int atomic_tester(void* arg) {
   int add = (int)(uintptr_t)arg;
@@ -346,17 +347,17 @@ static int atomic_tester(void* arg) {
   TRACEF("add %d, %d iterations\n", add, iter);
 
   for (i = 0; i < iter; i++) {
-    atomic_add(&atomic, add);
+    atomic_var.fetch_add(add);
   }
 
-  int old = atomic_add(&atomic_count, -1);
+  int old = atomic_count.fetch_sub(1);
   TRACEF("exiting, old count %d\n", old);
 
   return 0;
 }
 
 static void atomic_test(void) {
-  atomic = 0;
+  atomic_var = 0;
   atomic_count = 8;
 
   printf("testing atomic routines\n");
@@ -380,17 +381,17 @@ static void atomic_test(void) {
     thread->Join(NULL, ZX_TIME_INFINITE);
   }
 
-  printf("atomic count == %d (should be zero)\n", atomic);
+  printf("atomic count == %d (should be zero)\n", atomic_var.load());
 }
 
-static volatile int preempt_count;
+static ktl::atomic<int> preempt_count;
 
 static int preempt_tester(void* arg) {
   spin(1000000);
 
   printf("exiting ts %" PRIi64 " ns\n", current_time());
 
-  atomic_add(&preempt_count, -1);
+  preempt_count.fetch_sub(1);
 
   return 0;
 }

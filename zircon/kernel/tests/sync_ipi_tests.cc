@@ -29,10 +29,10 @@
 static void inorder_count_task(void* raw_context) {
   ASSERT(arch_ints_disabled());
   ASSERT(arch_blocking_disallowed());
-  int* inorder_counter = (int*)raw_context;
+  ktl::atomic<int>* inorder_counter = reinterpret_cast<ktl::atomic<int>*>(raw_context);
   cpu_num_t cpu_num = arch_curr_cpu_num();
 
-  int oldval = atomic_add(inorder_counter, 1);
+  int oldval = inorder_counter->fetch_add(1);
   ASSERT(oldval == (int)cpu_num);
   LTRACEF("  CPU %u checked in\n", cpu_num);
 }
@@ -40,15 +40,15 @@ static void inorder_count_task(void* raw_context) {
 static void counter_task(void* raw_context) {
   ASSERT(arch_ints_disabled());
   ASSERT(arch_blocking_disallowed());
-  int* counter = (int*)raw_context;
-  atomic_add(counter, 1);
+  ktl::atomic<int>* counter = reinterpret_cast<ktl::atomic<int>*>(raw_context);
+  (*counter)++;
 }
 
 static int deadlock_test_thread(void* arg) {
   Event* gate = (Event*)arg;
   gate->Wait();
 
-  int counter = 0;
+  ktl::atomic<int> counter(0);
   interrupt_saved_state_t int_state = arch_interrupt_save();
   mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
   arch_interrupt_restore(int_state);
@@ -95,7 +95,7 @@ static bool sync_ipi_tests() {
   /* Test that we're actually blocking and only signaling the ones we target */
   for (uint i = 0; i < runs; ++i) {
     LTRACEF("Sequential test\n");
-    int inorder_counter = 0;
+    ktl::atomic<int> inorder_counter = 0;
     for (cpu_num_t i = 0; i < num_cpus; ++i) {
       mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, inorder_count_task, &inorder_counter);
       LTRACEF("  Finished signaling CPU %u\n", i);
@@ -105,7 +105,7 @@ static bool sync_ipi_tests() {
   /* Test that we can signal multiple CPUs at the same time */
   for (uint i = 0; i < runs; ++i) {
     LTRACEF("Counter test (%u CPUs)\n", num_cpus);
-    int counter = 0;
+    ktl::atomic<int> counter = 0;
 
     {
       InterruptDisableGuard irqd;
@@ -113,8 +113,8 @@ static bool sync_ipi_tests() {
       mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
     }
 
-    LTRACEF("  Finished signaling all but local (%d)\n", counter);
-    ASSERT((uint)counter == num_cpus - 1);
+    LTRACEF("  Finished signaling all but local (%d)\n", counter.load());
+    ASSERT((uint)counter.load() == num_cpus - 1);
   }
 
   for (uint i = 0; i < runs; ++i) {

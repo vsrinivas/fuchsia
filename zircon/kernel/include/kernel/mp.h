@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
