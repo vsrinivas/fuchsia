@@ -731,7 +731,7 @@ TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed2) {
 
 // Check that component log stats are sent to cobalt's logger.
 TEST_F(SystemMetricsDaemonTest, LogLogStats) {
-  // Report 5 error logs, 3 kernel logs, and no per-component error logs.
+  // Report 5 error logs, 3 kernel logs, and no per-component error log or granular records.
   fake_log_stats_fetcher_->AddErrorCount(5);
   fake_log_stats_fetcher_->AddKlogCount(3);
   LogLogStats();
@@ -744,21 +744,49 @@ TEST_F(SystemMetricsDaemonTest, LogLogStats) {
   EXPECT_EQ(3u, fake_logger_.logged_events()[1].payload.event_count().count);
   fake_logger_.reset_logged_events();
 
-  // Report 4 error logs,9 0 kernel logs, and 3 logs for appmgr.
+  // Report 4 error logs, 0 kernel logs, 3 logs for appmgr, and 2 granular records.
+  const uint64_t line_no1 = 123;
+  const uint64_t line_no2 = 9999;
   fake_log_stats_fetcher_->AddErrorCount(4);
   fake_log_stats_fetcher_->AddComponentErrorCount(cobalt::ComponentEventCode::Appmgr, 3);
+  fake_log_stats_fetcher_->AddGranularRecord("path/to/file.cc", line_no1, 321);
+  fake_log_stats_fetcher_->AddGranularRecord("qwerty", line_no2, 11);
   LogLogStats();
   RunLoopUntilIdle();
-  CheckValues(cobalt::kLogCobaltEvents, 2,
-              fuchsia_system_metrics::kPerComponentErrorLogCountMetricId,
-              cobalt::ComponentEventCode::Appmgr, -1, 3);
-  EXPECT_EQ(4u, fake_logger_.logged_events()[0].payload.event_count().count);
+  CheckValues(cobalt::kLogCobaltEvents, 2, fuchsia_system_metrics::kGranularErrorLogCountMetricId,
+              (line_no2 - 1) % 1023, -1, 5);
+
+  // 4 total error logs
   EXPECT_EQ(fuchsia_system_metrics::kErrorLogCountMetricId,
             fake_logger_.logged_events()[0].metric_id);
-  EXPECT_EQ(0u, fake_logger_.logged_events()[1].payload.event_count().count);
+  EXPECT_EQ(4u, fake_logger_.logged_events()[0].payload.event_count().count);
+
+  // 0 kernal logs
   EXPECT_EQ(fuchsia_system_metrics::kKernelLogCountMetricId,
             fake_logger_.logged_events()[1].metric_id);
+  EXPECT_EQ(0u, fake_logger_.logged_events()[1].payload.event_count().count);
+  EXPECT_EQ(0u, fake_logger_.logged_events()[1].payload.event_count().count);
+
+  // 3 logs for appmgr
+  EXPECT_EQ(fuchsia_system_metrics::kPerComponentErrorLogCountMetricId,
+            fake_logger_.logged_events()[2].metric_id);
   EXPECT_EQ(3u, fake_logger_.logged_events()[2].payload.event_count().count);
+  EXPECT_EQ(3u, fake_logger_.logged_events()[2].payload.event_count().count);
+
+  // First granular record
+  EXPECT_EQ(fuchsia_system_metrics::kGranularErrorLogCountMetricId,
+            fake_logger_.logged_events()[3].metric_id);
+  EXPECT_EQ(321u, fake_logger_.logged_events()[3].payload.event_count().count);
+  EXPECT_EQ(line_no1 - 1, fake_logger_.logged_events()[3].event_codes[0]);
+  EXPECT_EQ("path/to/file.cc", fake_logger_.logged_events()[3].component);
+
+  // Second granular record
+  EXPECT_EQ(fuchsia_system_metrics::kGranularErrorLogCountMetricId,
+            fake_logger_.logged_events()[4].metric_id);
+  EXPECT_EQ(11u, fake_logger_.logged_events()[4].payload.event_count().count);
+  EXPECT_EQ((line_no2 - 1) % 1023, fake_logger_.logged_events()[4].event_codes[0]);
+  EXPECT_EQ("qwerty", fake_logger_.logged_events()[4].component);
+
   fake_logger_.reset_logged_events();
 }
 

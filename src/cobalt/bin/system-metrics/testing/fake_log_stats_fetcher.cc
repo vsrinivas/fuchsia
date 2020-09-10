@@ -19,6 +19,11 @@ void FakeLogStatsFetcher::AddKlogCount(int klog_count) {
   pending_metrics_.klog_count += klog_count;
 }
 
+void FakeLogStatsFetcher::AddGranularRecord(const std::string& file_path, uint64_t line_no,
+                                            uint64_t count) {
+  pending_metrics_.granular_stats.emplace_back(file_path, line_no, count);
+}
+
 void FakeLogStatsFetcher::AddComponentErrorCount(ComponentEventCode component_id,
                                                  uint64_t error_count) {
   pending_metrics_.per_component_error_count[component_id] += error_count;

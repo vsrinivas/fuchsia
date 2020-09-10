@@ -63,6 +63,7 @@ source_set("system_metrics_daemon_lib") {
     "//src/lib/fsl",
     "//third_party/cobalt/src/registry:buckets_config",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",

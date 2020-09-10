@@ -28,6 +28,11 @@ const char kBaselineArchive[] = R"(
            "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
              "error_logs": 4
            }
+        },
+        "granular_stats": {
+          "0": {
+            "overflowed": false
+          }
         }
       }
     }
@@ -40,7 +45,8 @@ class LogStatsFetcherImplTest : public gtest::TestLoopFixture {
   LogStatsFetcherImplTest()
       : fake_archive_(kBaselineArchive),
         fetcher_(
-            dispatcher(), [this] { return BindArchiveAccessor(); }, kComponentCodeMap) {
+            dispatcher(), [this] { return BindArchiveAccessor(); }, kComponentCodeMap,
+            &fake_clock_) {
     RunLoopUntilIdle();
   }
 
@@ -65,6 +71,7 @@ class LogStatsFetcherImplTest : public gtest::TestLoopFixture {
 
   fidl::BindingSet<fuchsia::diagnostics::ArchiveAccessor> bindings_;
   FakeArchive fake_archive_;
+  abs_clock::FakeClock fake_clock_;
   LogStatsFetcherImpl fetcher_;
 };
 
@@ -81,6 +88,11 @@ TEST_F(LogStatsFetcherImplTest, Simple) {
            "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
              "error_logs": 6
            }
+        },
+        "granular_stats": {
+          "0": {
+            "overflowed": false
+          }
         }
       }
     }
@@ -113,6 +125,11 @@ TEST_F(LogStatsFetcherImplTest, CountDrops) {
            "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
              "error_logs": 1
            }
+        },
+        "granular_stats": {
+          "0": {
+            "overflowed": false
+          }
         }
       }
     }
@@ -148,6 +165,11 @@ TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
            "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx": {
              "error_logs": 1
            }
+        },
+        "granular_stats": {
+          "0": {
+            "overflowed": false
+          }
         }
       }
     }
@@ -182,6 +204,11 @@ TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
            "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx": {
              "error_logs": 1
            }
+        },
+        "granular_stats": {
+          "0": {
+            "overflowed": false
+          }
         }
       }
     }
@@ -198,6 +225,109 @@ TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
   EXPECT_EQ(2u, metrics.per_component_error_count.size());
   EXPECT_EQ(2u, metrics.per_component_error_count[ComponentEventCode::Appmgr]);
   EXPECT_EQ(1u, metrics.per_component_error_count[ComponentEventCode::Other]);
+}
+
+TEST_F(LogStatsFetcherImplTest, GranularStats) {
+  const char archive[] = R"(
+{
+  "moniker": "core/archivist",
+  "payload": {
+    "root": {
+      "log_stats": {
+        "error_logs": 8,
+        "kernel_logs": 5,
+        "by_component": {},
+        "granular_stats": {
+          "0": {
+            "overflowed": false,
+            "0": {
+              "file_path": "path/to/file.cc",
+              "line_no": 123,
+              "count": 3
+            }
+          }
+        }
+      }
+    }
+  }
+}
+)";
+  ReplaceArchive(archive);
+
+  // We should not report bucket 0 until at least 15 minutes has passed.
+  fake_clock_.AdvanceTime(zx::min(10));
+  LogStatsFetcher::Metrics metrics;
+  ASSERT_TRUE(FetchMetricsSync(&metrics));
+  EXPECT_EQ(0u, metrics.granular_stats.size());
+
+  // Now bucket 0 should be reported.
+  fake_clock_.AdvanceTime(zx::min(10));
+  ASSERT_TRUE(FetchMetricsSync(&metrics));
+  EXPECT_EQ(1u, metrics.granular_stats.size());
+  EXPECT_EQ(LogStatsFetcher::GranularStatsRecord("path/to/file.cc", 123, 3),
+            metrics.granular_stats[0]);
+
+  // Bucket 0 should not be reported twice.
+  fake_clock_.AdvanceTime(zx::min(1));
+  ASSERT_TRUE(FetchMetricsSync(&metrics));
+  EXPECT_EQ(0u, metrics.granular_stats.size());
+
+  // Bucket 1 is created. It should not be reported until at least 30 minutes has passed.
+  const char archive2[] = R"(
+{
+  "moniker": "core/archivist",
+  "payload": {
+    "root": {
+      "log_stats": {
+        "error_logs": 8,
+        "kernel_logs": 5,
+        "by_component": {},
+        "granular_stats": {
+          "0": {
+            "overflowed": false,
+            "0": {
+              "file_path": "path/to/file.cc",
+              "line_no": 123,
+              "count": 3
+            }
+          },
+          "1": {
+            "overflowed": false,
+            "0": {
+              "file_path": "another_file.cc",
+              "line_no": 15,
+              "count": 1
+            },
+            "1": {
+              "file_path": "src/lib/test.cpp",
+              "line_no": 150,
+              "count": 5
+            }
+          }
+        }
+      }
+    }
+  }
+}
+)";
+  ReplaceArchive(archive2);
+  fake_clock_.AdvanceTime(zx::min(1));
+  ASSERT_TRUE(FetchMetricsSync(&metrics));
+  EXPECT_EQ(0u, metrics.granular_stats.size());
+
+  // Advance time. Now more than 30 minutes has passed and bucket 1 should be reported.
+  fake_clock_.AdvanceTime(zx::min(10));
+  ASSERT_TRUE(FetchMetricsSync(&metrics));
+  EXPECT_EQ(2u, metrics.granular_stats.size());
+  EXPECT_EQ(LogStatsFetcher::GranularStatsRecord("another_file.cc", 15, 1),
+            metrics.granular_stats[0]);
+  EXPECT_EQ(LogStatsFetcher::GranularStatsRecord("src/lib/test.cpp", 150, 5),
+            metrics.granular_stats[1]);
+
+  // Bucket 1 should not be reported twice.
+  fake_clock_.AdvanceTime(zx::min(1));
+  ASSERT_TRUE(FetchMetricsSync(&metrics));
+  EXPECT_EQ(0u, metrics.granular_stats.size());
 }
 
 }  // namespace

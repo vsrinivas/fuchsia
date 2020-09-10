@@ -450,6 +450,13 @@ void SystemMetricsDaemon::LogLogStats() {
               .as_count_event(0, it.second));
     }
 
+    for (auto& record : metrics.granular_stats) {
+      events.push_back(CobaltEventBuilder(fuchsia_system_metrics::kGranularErrorLogCountMetricId)
+                           .with_event_code((record.line_no - 1) % 1023)
+                           .with_component(record.file_path)
+                           .as_count_event(0, record.count));
+    }
+
     fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
     ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
     if (status != fuchsia::cobalt::Status::OK) {

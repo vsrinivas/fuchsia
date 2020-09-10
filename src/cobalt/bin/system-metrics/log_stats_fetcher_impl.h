@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <abs_clock/clock.h>
+
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher.h"
 
 namespace cobalt {
@@ -26,11 +28,11 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
   // config file (located in kDefaultAllowlistFilePath).
   LogStatsFetcherImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context);
 
-  // This constructor is intended to be used in tests that need a fake ArchiveAccessor and
-  // allowlist.
+  // This constructor is intended to be used in tests to inject fake dependencies.
   LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
                       fit::function<fuchsia::diagnostics::ArchiveAccessorPtr()> connector,
-                      std::unordered_map<std::string, ComponentEventCode> component_code_map);
+                      std::unordered_map<std::string, ComponentEventCode> component_code_map,
+                      abs_clock::Clock* clock);
 
   // Overridden from LogStatsFetcher:
   void FetchMetrics(MetricsCallback metrics_callback) override;
@@ -52,8 +54,15 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
   // invalid.
   bool CalculateKlogCount(const inspect::contrib::DiagnosticsData& inspect, uint64_t* result);
 
+  // Extracts the granular log stats from inspect and populates a vector of GranularLogStatsRecords.
+  // Each record contains the file path and line number of the location that an error log was
+  // generated.
+  bool PopulateGranularStats(const inspect::contrib::DiagnosticsData& inspect,
+                             std::vector<GranularStatsRecord>* granular_stats);
+
   uint64_t last_reported_total_error_count_ = 0;
   uint64_t last_reported_klog_count_ = 0;
+  int64_t last_reported_bucket_id_ = -1;
   MetricsCallback metrics_callback_;
   async::Executor executor_;
   inspect::contrib::ArchiveReader archive_reader_;
@@ -63,6 +72,8 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
 
   // Map from component event codes (as defined in metrics.yaml) to the last known error count
   std::unordered_map<ComponentEventCode, uint64_t> per_component_error_count_;
+
+  abs_clock::Clock* const clock_;
 };
 
 }  // namespace cobalt

@@ -8,6 +8,8 @@
 
 #include <fstream>
 
+#include "src/lib/fxl/strings/string_number_conversions.h"
+
 namespace cobalt {
 
 namespace {
@@ -36,16 +38,18 @@ LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
     : LogStatsFetcherImpl(
           dispatcher,
           [context]() { return context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(); },
-          LoadAllowlist(kDefaultAllowlistFilePath)) {}
+          LoadAllowlist(kDefaultAllowlistFilePath), abs_clock::RealClock::Get()) {}
 
 LogStatsFetcherImpl::LogStatsFetcherImpl(
     async_dispatcher_t* dispatcher,
     fit::function<fuchsia::diagnostics::ArchiveAccessorPtr()> connector,
-    std::unordered_map<std::string, ComponentEventCode> component_code_map)
+    std::unordered_map<std::string, ComponentEventCode> component_code_map, abs_clock::Clock* clock)
     : executor_(dispatcher),
       archive_reader_(connector(), {"core/archivist:root/log_stats:*",
-                                    "core/archivist:root/log_stats/by_component/*:error_logs"}),
-      component_code_map_(std::move(component_code_map)) {
+                                    "core/archivist:root/log_stats/by_component/*:error_logs",
+                                    "core/archivist:root/log_stats/granular_stats"}),
+      component_code_map_(std::move(component_code_map)),
+      clock_(clock) {
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only
   // includes logs since the daemon started as opposed to since the  boot time. This is especially
   // important if the daemon had previously crashed and has been relaunched.
@@ -85,6 +89,10 @@ void LogStatsFetcherImpl::OnInspectSnapshotReady(
   }
 
   if (!CalculateKlogCount(data_vector[0], &metrics.klog_count)) {
+    return;
+  }
+
+  if (!PopulateGranularStats(data_vector[0], &metrics.granular_stats)) {
     return;
   }
 
@@ -195,6 +203,95 @@ bool LogStatsFetcherImpl::CalculateKlogCount(const inspect::contrib::Diagnostics
   }
   FX_LOGS(DEBUG) << "Current klog count: " << new_klog_count << ", since last report: " << *result;
   last_reported_klog_count_ = new_klog_count;
+  return true;
+}
+
+bool LogStatsFetcherImpl::PopulateGranularStats(const inspect::contrib::DiagnosticsData& inspect,
+                                                std::vector<GranularStatsRecord>* granular_stats) {
+  const rapidjson::Value& granular_stats_value =
+      inspect.GetByPath({"root", "log_stats", "granular_stats"});
+  if (!granular_stats_value.IsObject()) {
+    FX_LOGS(ERROR) << "granular_stats doesn't exist or is not an object";
+    return false;
+  }
+
+  // Calculate the current bucket number which is the number of 15 minute intervals that has passed
+  // since boot time. Older buckets need to be reported.
+  int64_t current_bucket_id = clock_->Now().get() / (1000 * 1000 * 1000) / 60 / 15;
+
+  int64_t last_reported_bucket_id = -1;
+
+  for (auto& bucket_entry : granular_stats_value.GetObject()) {
+    int64_t bucket_id;
+    if (!fxl::StringToNumberWithError(bucket_entry.name.GetString(), &bucket_id)) {
+      FX_LOGS(ERROR) << "Bucket id is not an integer: " << bucket_entry.name.GetString();
+      return false;
+    }
+
+    // Don't report if this bucket has already been reported or it's still being populated (i.e.
+    // the current bucket).
+    if (bucket_id <= last_reported_bucket_id_ || bucket_id >= current_bucket_id)
+      continue;
+
+    if (!bucket_entry.value.IsObject()) {
+      FX_LOGS(ERROR) << "Granular stats bucket is not an object";
+      return false;
+    }
+
+    const auto& bucket_object = bucket_entry.value.GetObject();
+    last_reported_bucket_id = std::max(last_reported_bucket_id, bucket_id);
+
+    // Go through the list of all records in this bucket.
+    for (uint32_t record_index = 0;; ++record_index) {
+      std::string record_index_str = fxl::NumberToString(record_index);
+      auto record_member = bucket_object.FindMember(record_index_str);
+      if (record_member == bucket_object.MemberEnd()) {
+        break;
+      }
+      if (!record_member->value.IsObject()) {
+        FX_LOGS(ERROR) << "Record is not an object";
+        return false;
+      }
+      auto record_object = record_member->value.GetObject();
+      auto file_path_member = record_object.FindMember("file_path");
+      if (file_path_member == record_object.MemberEnd()) {
+        FX_LOGS(ERROR) << "File path entry doesn't exist";
+        return false;
+      }
+      if (!file_path_member->value.IsString()) {
+        FX_LOGS(ERROR) << "File path entry is not a string";
+        return false;
+      }
+      auto line_no_member = record_object.FindMember("line_no");
+      if (line_no_member == record_object.MemberEnd()) {
+        FX_LOGS(ERROR) << "Line number entry doesn't exist";
+        return false;
+      }
+      if (!line_no_member->value.IsUint64()) {
+        FX_LOGS(ERROR) << "Line number is not an uint64";
+        return false;
+      }
+      if (line_no_member->value.GetUint64() == 0) {
+        FX_LOGS(ERROR) << "Line number must be positive";
+        return false;
+      }
+      auto count_member = record_object.FindMember("count");
+      if (count_member == record_object.MemberEnd()) {
+        FX_LOGS(ERROR) << "Count entry doesn't exist";
+        return false;
+      }
+      if (!count_member->value.IsUint64()) {
+        FX_LOGS(ERROR) << "Count is not uint64";
+        return false;
+      }
+      granular_stats->emplace_back(file_path_member->value.GetString(),
+                                   line_no_member->value.GetUint64(),
+                                   count_member->value.GetUint64());
+    }
+  }
+
+  last_reported_bucket_id_ = std::max(last_reported_bucket_id_, last_reported_bucket_id);
+
   return true;
 }
 

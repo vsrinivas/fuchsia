@@ -18,6 +18,7 @@ class FakeLogStatsFetcher : public LogStatsFetcher {
   void AddErrorCount(int error_count);
   void AddKlogCount(int klog_count);
   void AddComponentErrorCount(ComponentEventCode component_id, uint64_t error_count);
+  void AddGranularRecord(const std::string& file_path, uint64_t line_no, uint64_t count);
 
   // Overridden from LogStatsFetcher:
   void FetchMetrics(MetricsCallback metrics_callback) override;
