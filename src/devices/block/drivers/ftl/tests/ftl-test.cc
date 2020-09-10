@@ -13,7 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "ftl-shell.h"
-#include "test/ndm-ram-driver.h"
+#include "ndm-ram-driver.h"
 
 namespace {
 

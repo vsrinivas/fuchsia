@@ -34,5 +34,5 @@ driver_module("nand") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:tests" ]
+  deps = [ "tests" ]
 }

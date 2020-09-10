@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZXIO_TEST_FILE_TEST_SUITE_H_
-#define ZIRCON_SYSTEM_ULIB_ZXIO_TEST_FILE_TEST_SUITE_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZXIO_TESTS_FILE_TEST_SUITE_H_
+#define ZIRCON_SYSTEM_ULIB_ZXIO_TESTS_FILE_TEST_SUITE_H_
 
 #include <lib/zxio/zxio.h>
 
@@ -17,4 +17,4 @@ void ReadWrite(zxio_t* io);
 
 }  // namespace FileTestSuite
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZXIO_TEST_FILE_TEST_SUITE_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZXIO_TESTS_FILE_TEST_SUITE_H_

@@ -20,8 +20,8 @@
 #include "lib/fidl/llcpp/array.h"
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
-#include "test/base.h"
-#include "test/fidl_client.h"
+#include "base.h"
+#include "fidl_client.h"
 
 // These must be included after base.h and fidl_client.h because the Banjo bindings use #defines
 // that conflict with enum names in the FIDL bindings.

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file has been copied from src/devices/block/drivers/ftl/test/launch.h.
+// This file has been copied from src/devices/block/drivers/ftl/tests/launch.h.
 
 // Launches a new process to execute the desired command. Returns the exit code
 // of the executed program, and -1 if a problem was found during launch.

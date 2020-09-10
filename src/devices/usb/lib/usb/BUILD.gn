@@ -6,7 +6,7 @@ import("//build/unification/zx_library.gni")
 
 group("tests") {
   testonly = true
-  deps = [ "test:tests" ]
+  deps = [ "tests" ]
 }
 
 zx_library("usb") {

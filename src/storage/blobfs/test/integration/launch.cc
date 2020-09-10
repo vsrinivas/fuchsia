@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file has been copied from src/devices/block/drivers/ftl/test/launch.cc.
+// This file has been copied from src/devices/block/drivers/ftl/tests/launch.cc.
 
 #include "launch.h"
 

@@ -145,7 +145,7 @@ group("deprecated_package_underscore") {
     "//garnet/examples/intl/wisdom/rust:intl_wisdom_rust",
     "//garnet/examples/intl/wisdom/rust/client:intl_wisdom_client_rust_tests",
     "//garnet/examples/intl/wisdom/rust/server:intl_wisdom_server_rust_tests",
-    "//garnet/examples/intl/wisdom/test:intl_wisdom_test",
+    "//garnet/examples/intl/wisdom/tests:intl_wisdom_test",
     "//garnet/examples/profiler:profiler_example",
     "//garnet/examples/tcp/tcp_file_sender:tcp_file_sender",
     "//garnet/go/src/benchmarking:go_benchmarking_tests",

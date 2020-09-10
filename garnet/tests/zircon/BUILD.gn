@@ -6,7 +6,7 @@ import("//build/fuzzing/fuzzer.gni")
 
 # When migrating Zircon fuzzers to the Fuchsia build, add them to this list.
 _migrated_fuzzers = [
-  "//src/devices/block/drivers/ftl/test:ftl-read-write-fuzzer",
+  "//src/devices/block/drivers/ftl/tests:ftl-read-write-fuzzer",
   "//src/media/audio/drivers/intel-hda/controller:nhlt-fuzzer",
   "//zircon/system/ulib/affine/test:affine-fuzzer",
   "//zircon/system/ulib/bitmap/test:raw-bitmap-fuzzer",

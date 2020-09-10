@@ -18,8 +18,7 @@ void SetFlag(uint8_t flag, uint8_t* where) { *where = *where | flag; }
 
 void ClearFlag(uint8_t flag, uint8_t* where) { *where = *where & static_cast<uint8_t>(~flag); }
 
-bool IsFlagSet(uint8_t flag, const uint8_t* where) { return (*where & flag) == flag;
-}
+bool IsFlagSet(uint8_t flag, const uint8_t* where) { return (*where & flag) == flag; }
 
 }  // namespace
 

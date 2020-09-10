@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_ALC5663_TEST_FAKE_I2C_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_ALC5663_TEST_FAKE_I2C_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_ALC5663_TESTS_FAKE_I2C_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_ALC5663_TESTS_FAKE_I2C_H_
 
 #include <endian.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -138,4 +138,4 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
 
 }  // namespace audio::alc5663
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_ALC5663_TEST_FAKE_I2C_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_ALC5663_TESTS_FAKE_I2C_H_

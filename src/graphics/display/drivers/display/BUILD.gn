@@ -64,5 +64,5 @@ source_set("shared") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:tests" ]
+  deps = [ "tests" ]
 }

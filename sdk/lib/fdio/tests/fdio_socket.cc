@@ -402,8 +402,7 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
   server_socket.reset();
   auto return_code_and_errno = fut.get();
   EXPECT_EQ(return_code_and_errno.first, -1);
-  ASSERT_EQ(return_code_and_errno.second, ECONNRESET, "%s",
-            strerror(return_code_and_errno.second));
+  ASSERT_EQ(return_code_and_errno.second, ECONNRESET, "%s", strerror(return_code_and_errno.second));
 
   ASSERT_EQ(close(client_fd), 0, "%s", strerror(errno));
 };

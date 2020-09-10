@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../image.h"
+#include "../layer.h"
 
 #include <zircon/pixelformat.h>
 
@@ -13,7 +13,7 @@
 #include "../../fake/fake-display.h"
 #include "../controller.h"
 #include "../fence.h"
-#include "../layer.h"
+#include "../image.h"
 #include "base.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
@@ -24,16 +24,15 @@ class LayerTest : public TestBase {
  public:
   fbl::RefPtr<Image> CreateReadyImage() {
     image_t dc_image = {
-      .width = kDisplayWidth,
-      .height = kDisplayHeight,
-      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-      .type = fhd::TYPE_SIMPLE,
-      .handle = 0,
+        .width = kDisplayWidth,
+        .height = kDisplayHeight,
+        .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+        .type = fhd::TYPE_SIMPLE,
+        .handle = 0,
     };
     EXPECT_OK(display()->ImportVmoImage(&dc_image, zx::vmo(0), 0));
     EXPECT_NE(dc_image.handle, 0);
-    auto image = fbl::AdoptRef(
-        new Image(controller(), dc_image, zx::vmo(0), /*stride=*/0));
+    auto image = fbl::AdoptRef(new Image(controller(), dc_image, zx::vmo(0), /*stride=*/0));
     image->id = next_image_id_++;
     image->Acquire();
     return image;
@@ -48,16 +47,11 @@ class LayerTest : public TestBase {
 
 TEST_F(LayerTest, PrimaryBasic) {
   Layer l(1);
-  fhd::ImageConfig image_config = {
-    .width = kDisplayWidth,
-    .height = kDisplayHeight,
-    .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-    .type = fhd::TYPE_SIMPLE
-  };
-  fhd::Frame frame = {
-    .width = kDisplayWidth,
-    .height = kDisplayHeight
-  };
+  fhd::ImageConfig image_config = {.width = kDisplayWidth,
+                                   .height = kDisplayHeight,
+                                   .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+                                   .type = fhd::TYPE_SIMPLE};
+  fhd::Frame frame = {.width = kDisplayWidth, .height = kDisplayHeight};
   l.SetPrimaryConfig(image_config);
   l.SetPrimaryPosition(fhd::Transform::IDENTITY, frame, frame);
   l.SetPrimaryAlpha(fhd::AlphaMode::DISABLE, 0);

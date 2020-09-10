@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_NDM_RAM_DRIVER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_NDM_RAM_DRIVER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_NDM_RAM_DRIVER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_NDM_RAM_DRIVER_H_
 
 #include <inttypes.h>
 #include <lib/ftl/ndm-driver.h>
@@ -125,4 +125,4 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   uint32_t num_bad_blocks_ = 0;
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_NDM_RAM_DRIVER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_NDM_RAM_DRIVER_H_

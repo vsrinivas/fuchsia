@@ -60,18 +60,18 @@ Update [/zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h][block-h
 
 1. If your type needs a new header (typically if it is not a VALUE):
 
-   Define the header bitfields for your type with a struct. For example: `struct 
+   Define the header bitfields for your type with a struct. For example: `struct
    MyFooBlockFields final : public BlockFields`.
 
 1. If your type needs a new payload (it requires using the second 8
 bytes of the block):
 
-   Define the payload bitfields for your type with a struct. For example: `struct 
+   Define the payload bitfields for your type with a struct. For example: `struct
    MyFooBlockPayload final`.
 
 1. If your type contains enums (such as `format`):
 
-   Define a new enum at the top of block.h. For example: `enum class MyFooBlockFormat : 
+   Define a new enum at the top of block.h. For example: `enum class MyFooBlockFormat :
    uint8_t`.
 
 ### Type wrapper declaration {#type-decl}
@@ -86,7 +86,7 @@ Update [/zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h][types-h
 
 Determine:
 
-* If you can reuse an existing wrapper depending on the operations you need to 
+* If you can reuse an existing wrapper depending on the operations you need to
    support:
    1. If you need to support `Add`, `Subtract`, and `Set`: `using MyFoo =
       internal::NumericProperty<T>`, where T is the argument type to those
@@ -171,7 +171,7 @@ This section describes how to make your new type readable.
 1. Update [/zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h][hierarchy-header]:
 1. Based on your type:
    * A value (child of Node):
-     1. Update `PropertyFormat` enum with a new number for your type. This 
+     1. Update `PropertyFormat` enum with a new number for your type. This
         must be sequential in this specific enum and does not need to match the
         format type ordinal you chose.
      1. Create a new value type. For example, `using MyFooValue =
@@ -179,19 +179,19 @@ This section describes how to make your new type readable.
      1. Update `PropertyValue` variant with the new value. Note: The index in
        `fit::internal::variant` must match the value of `PropertyFormat`.
     * Not a value:
-      You need to make your own in-memory representation objects in the 
+      You need to make your own in-memory representation objects in the
       [/zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h][hierarchy-header] file.
 1. Update the actual reader in [/zircon/system/ulib/inspect/reader.cc][reader-cc]:
-   1. Update `InnerScanBlocks` to dispatch your type. 
+   1. Update `InnerScanBlocks` to dispatch your type.
       If you are creating a new Property, you  may only have to add  your `BlockType`.
    1. If you need a custom parser, implement `InnerParseMyFoo` which takes
       a parent (if needed) and the pointer to the scanned block.
 
 ### Implement tests {#implement-tests}
 
-1. Update [/zircon/system/ulib/inspect/test/state\_unittest.cc][state-unittest-cc] with
+1. Update [/zircon/system/ulib/inspect/tests/state\_unittest.cc][state-unittest-cc] with
 tests for your low-level operations.
-1. Update [/zircon/system/ulib/inspect/test/reader\_unittest.cc][reader-unittest-cc] with
+1. Update [/zircon/system/ulib/inspect/tests/reader\_unittest.cc][reader-unittest-cc] with
 tests for your high-level reader implementation.
 
 # Update Validator {#update-validator}
@@ -210,10 +210,10 @@ TODO(43131)
 [block-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h
 [hierarchy-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h
 [reader-cc]: /zircon/system/ulib/inspect/reader.cc
-[reader-unittest-cc]: /zircon/system/ulib/inspect/test/reader_unittest.cc
+[reader-unittest-cc]: /zircon/system/ulib/inspect/tests/reader_unittest.cc
 [state-cc]: /zircon/system/ulib/inspect/vmo/state.cc
 [state-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/state.h
-[state-unittest-cc]: /zircon/system/ulib/inspect/test/state_unittest.cc
+[state-unittest-cc]: /zircon/system/ulib/inspect/tests/state_unittest.cc
 [types-cc]: /zircon/system/ulib/inspect/vmo/types.cc
 [types-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h
 [inspect-vmo]: /docs/concepts/components/v2/inspect/vmo_format.md

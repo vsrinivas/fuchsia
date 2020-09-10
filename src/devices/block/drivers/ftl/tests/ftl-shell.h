@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_FTL_SHELL_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_FTL_SHELL_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_FTL_SHELL_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_FTL_SHELL_H_
 
 #include <lib/ftl/volume.h>
 
@@ -33,4 +33,4 @@ class FtlShell : public ftl::FtlInstance {
   uint32_t num_pages_ = 0;
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_FTL_SHELL_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_FTL_SHELL_H_
