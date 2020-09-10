@@ -6,6 +6,7 @@ package ninjalog
 
 import (
 	"bytes"
+	"container/heap"
 	"io/ioutil"
 	"reflect"
 	"sort"
@@ -711,6 +712,36 @@ func TestStatsByType(t *testing.T) {
 	}
 }
 
+func TestMinHeap(t *testing.T) {
+	steps := []Step{
+		{End: 5 * time.Second},                              // Duration = 5s
+		{End: 15 * time.Second},                             // Duratoin = 15s
+		{Start: 10 * time.Second, End: 20 * time.Second},    // Duration = 10s
+		{Start: 199 * time.Second, End: 200 * time.Second},  // Duration = 1s
+		{Start: 100 * time.Second, End: 1000 * time.Second}, // Duration = 900s
+	}
+
+	mh := new(minHeap)
+	for _, step := range steps {
+		heap.Push(mh, step)
+	}
+	var gotHeapSortedSteps []Step
+	for mh.Len() > 0 {
+		gotHeapSortedSteps = append(gotHeapSortedSteps, heap.Pop(mh).(Step))
+	}
+
+	wantSteps := []Step{
+		{Start: 199 * time.Second, End: 200 * time.Second},  // Duration = 1s
+		{End: 5 * time.Second},                              // Duration = 5s
+		{Start: 10 * time.Second, End: 20 * time.Second},    // Duration = 10s
+		{End: 15 * time.Second},                             // Duration = 15s
+		{Start: 100 * time.Second, End: 1000 * time.Second}, // Duration = 900s
+	}
+	if !cmp.Equal(gotHeapSortedSteps, wantSteps) {
+		t.Errorf("Got heap sorted steps: %#v, want: %#v", gotHeapSortedSteps, wantSteps)
+	}
+}
+
 func TestSlowestSteps(t *testing.T) {
 	for _, tc := range []struct {
 		desc  string
@@ -732,26 +763,26 @@ func TestSlowestSteps(t *testing.T) {
 				{End: time.Second},
 				{End: 20 * time.Second},
 				{End: 3 * time.Second},
-				{End: 40 * time.Second},
+				{Start: 30 * time.Second, End: 40 * time.Second},
 				{End: 5 * time.Second},
 			},
 			n:    1,
-			want: []Step{{End: 40 * time.Second}},
+			want: []Step{{End: 20 * time.Second}},
 		},
 		{
 			desc: "top 3",
 			steps: []Step{
 				{End: time.Second},
-				{End: 20 * time.Second},
+				{Start: 19 * time.Second, End: 20 * time.Second},
 				{End: 3 * time.Second},
-				{End: 40 * time.Second},
+				{Start: 10 * time.Second, End: 40 * time.Second},
 				{End: 5 * time.Second},
 			},
 			n: 3,
 			want: []Step{
-				{End: 40 * time.Second},
-				{End: 20 * time.Second},
+				{Start: 10 * time.Second, End: 40 * time.Second},
 				{End: 5 * time.Second},
+				{End: 3 * time.Second},
 			},
 		},
 		{

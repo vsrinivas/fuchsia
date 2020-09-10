@@ -105,16 +105,6 @@ func (s Steps) Less(i, j int) bool {
 	}
 	return s[i].Out < s[j].Out
 }
-func (s *Steps) Push(x interface{}) { *s = append(*s, x.(Step)) }
-func (s *Steps) Pop() interface{} {
-	l := len(*s)
-	if l == 0 {
-		return Step{}
-	}
-	step := (*s)[l-1]
-	*s = (*s)[:l-1]
-	return step
-}
 
 // Reverse reverses steps.
 // It would be more efficient if steps is already sorted than using sort.Reverse.
@@ -581,21 +571,41 @@ func StatsByType(steps []Step, weighted map[string]time.Duration, typeOf func(St
 	return stats
 }
 
+// minHeap is a heap of `Step`s. Its root is always the shortest Step in terms
+// of duration.
+type minHeap []Step
+
+func (h minHeap) Len() int      { return len(h) }
+func (h minHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+func (h minHeap) Less(i, j int) bool {
+	return h[i].Duration() < h[j].Duration()
+}
+func (h *minHeap) Push(x interface{}) { *h = append(*h, x.(Step)) }
+func (h *minHeap) Pop() interface{} {
+	l := (*h).Len()
+	if l == 0 {
+		return Step{}
+	}
+	step := (*h)[l-1]
+	*h = (*h)[:l-1]
+	return step
+}
+
 // SlowestSteps returns the `n` steps that took the longest time to finish.
 //
 // Returned steps are sorted on build time in descending order (step takes the
 // longest time to build is the first element).
 func SlowestSteps(steps []Step, n int) []Step {
-	minHeap := new(Steps)
+	mh := new(minHeap)
 	for _, step := range steps {
-		heap.Push(minHeap, step)
-		if minHeap.Len() > n {
-			heap.Pop(minHeap)
+		heap.Push(mh, step)
+		if mh.Len() > n {
+			heap.Pop(mh)
 		}
 	}
 	var res []Step
-	for minHeap.Len() > 0 {
-		res = append(res, heap.Pop(minHeap).(Step))
+	for mh.Len() > 0 {
+		res = append(res, heap.Pop(mh).(Step))
 	}
 	for left, right := 0, len(res)-1; left < right; left, right = left+1, right-1 {
 		res[left], res[right] = res[right], res[left]
