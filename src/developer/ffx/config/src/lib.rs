@@ -7,8 +7,8 @@ use {
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
     crate::mapping::{
-        config::config, data::data, env_var::env_var, file_check::file_check, flatten::flatten,
-        home::home, identity::identity,
+        config::config, data::data, env_var::env_var, file_check::file_check, filter::filter,
+        flatten::flatten, home::home, identity::identity,
     },
     anyhow::{anyhow, bail, Context, Result},
     serde_json::Value,
@@ -55,6 +55,12 @@ pub struct ConfigQuery<'a> {
     build_dir: Option<&'a str>,
 }
 
+pub trait HandleArrays {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a>;
+}
+
 impl<'a> Default for ConfigQuery<'a> {
     fn default() -> Self {
         Self { name: None, level: None, build_dir: None }
@@ -72,7 +78,7 @@ where
 
 pub async fn get<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
 where
-    T: TryFrom<ConfigValue>,
+    T: TryFrom<ConfigValue> + HandleArrays,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     U: Into<ConfigQuery<'a>>,
 {
@@ -80,13 +86,13 @@ where
     let home_mapper = home(&env_var_mapper);
     let config_mapper = config(&home_mapper);
     let data_mapper = data(&config_mapper);
-    let flatten_env_var_mapper = flatten(&data_mapper);
+    let flatten_env_var_mapper = T::handle(&data_mapper);
     get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
 pub async fn file<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
 where
-    T: TryFrom<ConfigValue>,
+    T: TryFrom<ConfigValue> + HandleArrays,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     U: Into<ConfigQuery<'a>>,
 {
@@ -95,7 +101,7 @@ where
     let home_mapper = home(&env_var_mapper);
     let config_mapper = config(&home_mapper);
     let data_mapper = data(&config_mapper);
-    let flatten_env_var_mapper = flatten(&data_mapper);
+    let flatten_env_var_mapper = T::handle(&data_mapper);
     get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
@@ -245,6 +251,30 @@ impl From<Option<Value>> for ConfigValue {
     }
 }
 
+impl HandleArrays for Value {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+}
+
+impl HandleArrays for Option<Value> {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+}
+
+impl HandleArrays for String {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+}
+
 impl TryFrom<ConfigValue> for String {
     type Error = ConfigError;
 
@@ -256,11 +286,27 @@ impl TryFrom<ConfigValue> for String {
     }
 }
 
+impl HandleArrays for Option<String> {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+}
+
 impl TryFrom<ConfigValue> for Option<String> {
     type Error = ConfigError;
 
     fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
         Ok(value.0.and_then(|v| v.as_str().map(|s| s.to_string())))
+    }
+}
+
+impl HandleArrays for u64 {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
     }
 }
 
@@ -287,6 +333,14 @@ impl TryFrom<ConfigValue> for u64 {
     }
 }
 
+impl HandleArrays for bool {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+}
+
 impl TryFrom<ConfigValue> for bool {
     type Error = ConfigError;
 
@@ -310,6 +364,14 @@ impl TryFrom<ConfigValue> for bool {
     }
 }
 
+impl HandleArrays for PathBuf {
+    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+}
+
 impl TryFrom<ConfigValue> for PathBuf {
     type Error = ConfigError;
 
@@ -317,6 +379,44 @@ impl TryFrom<ConfigValue> for PathBuf {
         value
             .0
             .and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string())))
+            .ok_or(anyhow!("no configuration value found").into())
+    }
+}
+
+impl<T: TryFrom<ConfigValue>> HandleArrays for Vec<T> {
+    fn handle<'a, F: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a F,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        filter(next)
+    }
+}
+
+impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|val| match val.as_array() {
+                Some(v) => {
+                    let result: Vec<T> = v
+                        .iter()
+                        .filter_map(|i| ConfigValue(Some(i.clone())).try_into().ok())
+                        .collect();
+                    if result.len() > 0 {
+                        Some(result)
+                    } else {
+                        None
+                    }
+                }
+                None => {
+                    if val.is_object() {
+                        None
+                    } else {
+                        ConfigValue(Some(val)).try_into().map(|x| vec![x]).ok()
+                    }
+                }
+            })
             .ok_or(anyhow!("no configuration value found").into())
     }
 }
@@ -532,5 +632,27 @@ mod test {
         assert!(validate_type::<PathBuf>(json!(true)).is_none());
         assert!(validate_type::<PathBuf>(json!({"test": "whatever"})).is_none());
         assert!(validate_type::<PathBuf>(json!(["test", "test2"])).is_none());
+    }
+
+    #[test]
+    fn test_converting_array() -> Result<()> {
+        let c = |val: Value| -> ConfigValue { ConfigValue(Some(val)) };
+        let conv_elem: Vec<String> = c(json!("test")).try_into()?;
+        assert_eq!(1, conv_elem.len());
+        let conv_string: Vec<String> = c(json!(["test", "test2"])).try_into()?;
+        assert_eq!(2, conv_string.len());
+        let conv_bool: Vec<bool> = c(json!([true, "false", false])).try_into()?;
+        assert_eq!(3, conv_bool.len());
+        let conv_bool_2: Vec<bool> = c(json!([36, "false", false])).try_into()?;
+        assert_eq!(2, conv_bool_2.len());
+        let conv_num: Vec<u64> = c(json!([3, "36", 1000])).try_into()?;
+        assert_eq!(3, conv_num.len());
+        let conv_num_2: Vec<u64> = c(json!([3, "false", 1000])).try_into()?;
+        assert_eq!(2, conv_num_2.len());
+        let bad_elem: std::result::Result<Vec<u64>, ConfigError> = c(json!("test")).try_into();
+        assert!(bad_elem.is_err());
+        let bad_elem_2: std::result::Result<Vec<u64>, ConfigError> = c(json!(["test"])).try_into();
+        assert!(bad_elem_2.is_err());
+        Ok(())
     }
 }

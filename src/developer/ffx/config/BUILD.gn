@@ -44,6 +44,7 @@ if (is_host) {
       "src/mapping/data.rs",
       "src/mapping/env_var.rs",
       "src/mapping/file_check.rs",
+      "src/mapping/filter.rs",
       "src/mapping/flatten.rs",
       "src/mapping/home.rs",
       "src/mapping/identity.rs",

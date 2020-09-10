@@ -8,6 +8,7 @@ pub(crate) mod config;
 pub(crate) mod data;
 pub(crate) mod env_var;
 pub(crate) mod file_check;
+pub(crate) mod filter;
 pub(crate) mod flatten;
 pub(crate) mod home;
 pub(crate) mod identity;
