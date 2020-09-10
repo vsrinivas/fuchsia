@@ -5,9 +5,9 @@
 use {
     fidl_fuchsia_hardware_audio::*,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::task::Waker,
+    log::info,
 };
 
 use crate::driver::frames_from_duration;
@@ -118,7 +118,7 @@ impl FrameVmo {
         self.start_time = Some(time);
         self.latest_notify = time;
         if let Some(waker) = self.wake_on_start.take() {
-            fx_log_info!("ringing the start waker");
+            info!("ringing the start waker");
             waker.wake();
         }
         Ok(())
@@ -153,12 +153,12 @@ impl FrameVmo {
         }
         let now = fasync::Time::now();
         if until > now.into() {
-            fx_log_info!("Can't get frames from the future");
+            info!("Can't get frames from the future");
             return Err(Error::OutOfRange);
         }
         let start_time = self.start_time.clone().unwrap();
         if from < start_time {
-            fx_log_info!("Can't get frames from before start, delivering what we have");
+            info!("Can't get frames from before start, delivering what we have");
             from = start_time;
         }
 

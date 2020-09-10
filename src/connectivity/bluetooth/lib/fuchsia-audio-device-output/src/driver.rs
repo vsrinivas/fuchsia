@@ -8,7 +8,6 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_hardware_audio::*,
     fidl_fuchsia_media, fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
         select,
@@ -16,6 +15,7 @@ use {
         task::{Context, Poll},
         Future, StreamExt,
     },
+    log::{info, warn},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc},
 };
@@ -88,7 +88,7 @@ impl Stream for AudioFrameStream {
         match res {
             Ok((frames, missed)) => {
                 if missed > 0 {
-                    fx_log_info!("Missed {} frames due to slow polling", missed);
+                    info!("Missed {} frames due to slow polling", missed);
                 }
                 self.last_frame_time = Some(now);
                 Poll::Ready(Some(Ok(frames)))
@@ -231,15 +231,15 @@ impl SoftPcmOutput {
                     match stream_config_request {
                         Some(Ok(r)) => {
                             if let Err(e) = self.handle_stream_request(r) {
-                                fx_log_warn!("stream config request error: {:?}", e)
+                                warn!("stream config request error: {:?}", e)
                             }
                         },
                         Some(Err(e)) => {
-                            fx_log_warn!("stream config error: {:?}, stopping", e);
+                            warn!("stream config error: {:?}, stopping", e);
                             return
                         },
                         None => {
-                            fx_log_warn!("no stream config error, stopping");
+                            warn!("no stream config error, stopping");
                             return
                         },
                     }
@@ -248,15 +248,15 @@ impl SoftPcmOutput {
                     match ring_buffer_request {
                         Some(Ok(r)) => {
                             if let Err(e) = self.handle_ring_buffer_request(r) {
-                                fx_log_warn!("ring buffer request error: {:?}", e)
+                                warn!("ring buffer request error: {:?}", e)
                             }
                         },
                         Some(Err(e)) => {
-                            fx_log_warn!("ring buffer error: {:?}, stopping", e);
+                            warn!("ring buffer error: {:?}, stopping", e);
                             return
                         },
                         None => {
-                            fx_log_warn!("no ring buffer error, stopping");
+                            warn!("no ring buffer error, stopping");
                             return
                         },
                     }
@@ -329,14 +329,14 @@ impl SoftPcmOutput {
             }
             StreamConfigRequest::SetGain { target_state, control_handle: _ } => {
                 if let Some(true) = target_state.muted {
-                    fx_log_warn!("Mute is not supported");
+                    warn!("Mute is not supported");
                 }
                 if let Some(true) = target_state.agc_enabled {
-                    fx_log_warn!("AGC is not supported");
+                    warn!("AGC is not supported");
                 }
                 if let Some(gain) = target_state.gain_db {
                     if gain != 0.0 {
-                        fx_log_warn!("Non-zero gain setting not supported");
+                        warn!("Non-zero gain setting not supported");
                     }
                 }
             }
@@ -367,7 +367,7 @@ impl SoftPcmOutput {
                     None => {
                         let mut error = Err(GetVmoError::InternalError);
                         if let Err(e) = responder.send(&mut error) {
-                            fx_log_warn!("Error on get vmo error send: {:?}", e);
+                            warn!("Error on get vmo error send: {:?}", e);
                         }
                         return Ok(());
                     }
@@ -397,13 +397,13 @@ impl SoftPcmOutput {
             RingBufferRequest::Start { responder } => {
                 let time = fasync::Time::now();
                 if let Err(e) = self.frame_vmo.lock().start(time.into()) {
-                    fx_log_warn!("Error on frame vmo start: {:?}", e);
+                    warn!("Error on frame vmo start: {:?}", e);
                 }
                 responder.send(time.into_nanos() as i64)?;
             }
             RingBufferRequest::Stop { responder } => {
                 if self.frame_vmo.lock().stop() == false {
-                    fx_log_warn!("Stopping a not started ring buffer");
+                    warn!("Stopping a not started ring buffer");
                 }
                 responder.send()?;
             }
