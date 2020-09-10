@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_MINI_PROCESS_SUBPROCESS_H_
-#define ZIRCON_SYSTEM_ULIB_MINI_PROCESS_SUBPROCESS_H_
+#pragma once
 
 #include <zircon/syscalls.h>
 
@@ -27,7 +26,6 @@ typedef struct {
   __typeof(zx_vmo_create_contiguous)* vmo_contiguous_create;
   __typeof(zx_vmo_create_physical)* vmo_physical_create;
   __typeof(zx_vmo_replace_as_executable)* vmo_replace_as_executable;
-  __typeof(zx_thread_exit)* thread_exit;
 } minip_ctx_t;
 
 // Subsequent messages and replies are of this format. The |what| parameter is
@@ -38,5 +36,3 @@ typedef struct {
 } minip_cmd_t;
 
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr);
-
-#endif  // ZIRCON_SYSTEM_ULIB_MINI_PROCESS_SUBPROCESS_H_

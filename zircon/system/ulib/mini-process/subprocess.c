@@ -26,8 +26,8 @@
 
 // Specify an explicit section for the function defeats hot/cold section
 // splitting optimizations.
-__attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t channel,
-                                                                    uintptr_t fnptr) {
+__attribute__((section(".text.not-split")))
+void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
   if (fnptr == 0) {
     // In this mode we don't have a VDSO so we don't care what the handle is
     // and therefore we busy-loop. Unless external steps are taken this will
@@ -251,16 +251,14 @@ __attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t 
           goto reply;
         }
 
-        // The following don't send a message so the client will get ZX_CHANNEL_PEER_CLOSED.
+        // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
+        // message so the client will get ZX_CHANNEL_PEER_CLOSED.
 
         if (what & MINIP_CMD_BUILTIN_TRAP)
           __builtin_trap();
 
         if (what & MINIP_CMD_EXIT_NORMAL)
           ctx.process_exit(0);
-
-        if (what & MINIP_CMD_THREAD_EXIT)
-          ctx.thread_exit();
 
         // Did not match any known message.
         cmd.status = ZX_ERR_WRONG_TYPE;

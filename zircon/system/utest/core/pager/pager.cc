@@ -2109,6 +2109,33 @@ TEST(Pager, WritingZeroFork) {
   vmo.write(&data, 0, sizeof(data));
 }
 
+// Test that a thread blocked on a page fault can be killed cleanly.
+TEST(Pager, CleanThreadKill) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 1;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Faulting thread that remains blocked on a page fault until killed.
+  TestThread t([vmo]() -> bool { return check_buffer(vmo, 0, 1, true); });
+  ASSERT_TRUE(t.Start());
+
+  // Wait for the faulting thread to block on a page fault first.
+  ASSERT_TRUE(t.WaitForBlocked());
+
+  // Make sure we saw the page fault request. Don't service it.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Kill the faulting thread.
+  ASSERT_TRUE(t.Kill());
+
+  // Make sure the faulting thread does not take a fatal exception when killed.
+  // The thread does fail since its page fault never completes, but it does not crash.
+  ASSERT_TRUE(t.WaitForFailure());
+}
+
 // Test that if we resize a vmo while it is waiting on a page to fullfill the commit for a pin
 // request that neither the resize nor the pin cause a crash and fail gracefully.
 TEST(Pager, ResizeBlockedPin) {
