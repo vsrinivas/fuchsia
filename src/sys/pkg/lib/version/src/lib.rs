@@ -4,6 +4,10 @@
 
 use {
     itertools::Itertools,
+    serde::{
+        de::{self, Visitor},
+        Deserialize, Deserializer, Serialize, Serializer,
+    },
     std::{fmt, str::FromStr},
 };
 
@@ -65,9 +69,45 @@ macro_rules! impl_from {
 }
 impl_from!([u32; 1], [u32; 2], [u32; 3], [u32; 4]);
 
+struct VersionVisitor;
+
+impl<'de> Visitor<'de> for VersionVisitor {
+    type Value = Version;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a string of the format A.B.C.D")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Version::from_str(v).map_err(|e| de::Error::custom(e))
+    }
+}
+
+impl<'de> Deserialize<'de> for Version {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(VersionVisitor)
+    }
+}
+
+impl Serialize for Version {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_version_display() {
         let version = Version::from([1, 2, 3, 4]);
@@ -144,5 +184,23 @@ mod tests {
         assert!(Version::from([1]) < Version::from([1, 0, 1, 0]));
         assert!(Version::from([1, 0]) < Version::from([1, 0, 0, 1]));
         assert!(Version::from([1, 0, 0]) > Version::from([0, 1, 2, 0]));
+    }
+
+    #[test]
+    fn test_version_deserialize() {
+        let v: Version = serde_json::from_str(r#""1.2.3.4""#).unwrap();
+        assert_eq!(v, Version::from([1, 2, 3, 4]));
+        let v: Version = serde_json::from_str(r#""1.2.3""#).unwrap();
+        assert_eq!(v, Version::from([1, 2, 3]));
+        serde_json::from_str::<Version>(r#""1.2.3.4.5""#)
+            .expect_err("Parsing invalid version should fail");
+    }
+
+    #[test]
+    fn test_version_serialize() {
+        let v = Version::from([1, 2, 3, 4]);
+        assert_eq!(serde_json::to_string(&v).unwrap(), r#""1.2.3.4""#);
+        let v = Version::from([1, 2, 3]);
+        assert_eq!(serde_json::to_string(&v).unwrap(), r#""1.2.3.0""#);
     }
 }

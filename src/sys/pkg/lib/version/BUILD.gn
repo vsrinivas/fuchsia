@@ -13,8 +13,11 @@ rustc_library("version") {
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
 
   sources = [ "src/lib.rs" ]
 }
