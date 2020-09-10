@@ -18,7 +18,7 @@ namespace handler {
 // Mostly exposed for testing purposes, but valid as a standalone function.
 zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 
-zx::vmo GenerateMinidump(zx::exception exception);
+zx::vmo GenerateMinidump(const zx::exception& exception);
 
 }  // namespace handler
 }  // namespace exceptions

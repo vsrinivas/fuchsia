@@ -67,7 +67,7 @@ zx::thread GetThread(const zx::exception& exception) {
 
 }  // namespace
 
-zx::vmo GenerateMinidump(zx::exception exception) {
+zx::vmo GenerateMinidump(const zx::exception& exception) {
   zx::process process = GetProcess(exception);
   if (!process.is_valid())
     return {};

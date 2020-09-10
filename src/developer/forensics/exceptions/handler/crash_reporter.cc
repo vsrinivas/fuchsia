@@ -3,7 +3,9 @@
 
 #include "src/developer/forensics/exceptions/handler/crash_reporter.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/exception.h>
 
 #include "src/developer/forensics/exceptions/handler/component_lookup.h"
 #include "src/developer/forensics/exceptions/handler/minidump.h"
@@ -14,6 +16,40 @@
 namespace forensics {
 namespace exceptions {
 namespace handler {
+namespace {
+
+// Either resets the exception immediately if the process only has one thread or with a 5s delay
+// otherwise.
+void ResetException(async_dispatcher_t* dispatcher, zx::exception exception) {
+  zx::process process;
+  if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get process handle from exception";
+    exception.reset();
+    return;
+  }
+
+  size_t num_threads{0};
+  if (const zx_status_t status = zx_object_get_info(process.get(), ZX_INFO_PROCESS_THREADS, nullptr,
+                                                    0u, nullptr, &num_threads);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get thread info from process " << process.get();
+    exception.reset();
+    return;
+  }
+
+  if (num_threads > 1) {
+    // If the process has multiple threads, delay resetting |exception| for 5 seconds. If one of the
+    // other threads is in an exception, releasing |exception| immediately may result in the process
+    // being terminated by the kernel before the minidump for the other thread is generated.
+    async::PostDelayedTask(
+        dispatcher, [exception = std::move(exception)]() mutable { exception.reset(); },
+        zx::sec(5));
+  } else {
+    exception.reset();
+  }
+}
+
+}  // namespace
 
 using fuchsia::feedback::CrashReport;
 using fuchsia::sys::internal::SourceIdentity;
@@ -33,8 +69,9 @@ void CrashReporter::Send(const std::string crashed_process_name,
   builder.SetProcessName(crashed_process_name);
 
   if (exception.is_valid()) {
-    // We only need the exception to generate the minidump – after that we can release it.
-    zx::vmo minidump = GenerateMinidump(std::move(exception));
+    zx::vmo minidump = GenerateMinidump(exception);
+    ResetException(dispatcher_, std::move(exception));
+
     if (minidump.is_valid()) {
       builder.SetMinidump(std::move(minidump));
     } else {
