@@ -233,7 +233,14 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 	files = append(files, buildAPIs...)
 
+	// Sign the tools for release builds.
 	tools := artifactory.ToolUploads(m, path.Join(buildsUUIDDir, toolDirName))
+	if pkey != nil {
+		tools, err = artifactory.Sign(tools, pkey)
+		if err != nil {
+			return err
+		}
+	}
 	files = append(files, tools...)
 
 	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName, buildidDirName)
