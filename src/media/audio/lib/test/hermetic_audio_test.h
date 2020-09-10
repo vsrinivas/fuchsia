@@ -46,14 +46,16 @@ class HermeticAudioTest : public TestFixture {
 
   // The returned pointers are owned by this class.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  VirtualOutput<SampleFormat>* CreateOutput(const audio_stream_unique_id_t& device_id,
-                                            TypedFormat<SampleFormat> format, size_t frame_count,
-                                            DevicePlugProperties* plug_properties = nullptr);
+  VirtualOutput<SampleFormat>* CreateOutput(
+      const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
+      size_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
+      float device_gain_db = 0);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  VirtualInput<SampleFormat>* CreateInput(const audio_stream_unique_id_t& device_id,
-                                          TypedFormat<SampleFormat> format, size_t frame_count,
-                                          DevicePlugProperties* plug_properties = nullptr);
+  VirtualInput<SampleFormat>* CreateInput(
+      const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
+      size_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
+      float device_gain_db = 0);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioRendererShim<SampleFormat>* CreateAudioRenderer(

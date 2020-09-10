@@ -54,7 +54,7 @@ echo $PWD
 for input in `ls *_input.wav`; do
   ringbuffer=`echo $input | sed -E 's/(.*)_input.wav/\1_ring_buffer.wav/'`
   newoutput=`echo $input | sed -E 's/(.*)_input.wav/\1_output.wav/'`
-  oldoutput="$TESTDATA/$newoutput"
+  oldoutput="$TESTDATA/"`echo $input | sed -E 's/(.*)_input.wav/\1_expected_output.wav/'`
   echo
 
   # If the test case does not have an _output.wav, it doesn't use goldens.

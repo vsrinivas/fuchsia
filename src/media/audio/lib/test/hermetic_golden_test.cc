@@ -191,7 +191,8 @@ void HermeticGoldenTest::RunWaveformTest(
   const auto& expected_output = tc.expected_output;
 
   auto device = CreateOutput(AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS, expected_output.format(),
-                             AddSlackToOutputFrames(expected_output.NumFrames()));
+                             AddSlackToOutputFrames(expected_output.NumFrames()), std::nullopt,
+                             tc.pipeline.output_device_gain_db);
   auto renderer = CreateAudioRenderer(input.format(), input.NumFrames());
 
   // Render the input at a time such that the first frame of audio will be rendered into
@@ -247,7 +248,8 @@ void HermeticGoldenTest::RunImpulseTest(
 
   auto num_output_frames = input_frame_to_output_frame(num_input_frames);
   auto device = CreateOutput(AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS, tc.output_format,
-                             AddSlackToOutputFrames(num_output_frames));
+                             AddSlackToOutputFrames(num_output_frames), std::nullopt,
+                             tc.pipeline.output_device_gain_db);
   auto renderer = CreateAudioRenderer(tc.input_format, num_input_frames);
 
   // Write all of the impulses to an input buffer so we can easily write the full
@@ -299,7 +301,7 @@ void HermeticGoldenTest::RunImpulseTest(
       SCOPED_TRACE(testing::Message() << "Channel " << chan);
       auto output_chan = AudioBufferSlice<OutputF>(&ring_buffer).GetChannel(chan);
       auto slice = AudioBufferSlice(&output_chan, search_start_frame, search_end_frame);
-      auto output_frame = FindImpulseLeftEdge(slice, kNoiseFloor);
+      auto output_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
       if (!output_frame) {
         ADD_FAILURE() << "Could not find impulse " << k << " in ring buffer\n"
                       << "Expected at ring buffer frame " << expected_output_frame << "\n"

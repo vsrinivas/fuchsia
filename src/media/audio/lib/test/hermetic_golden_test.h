@@ -43,6 +43,10 @@ class HermeticGoldenTest : public HermeticAudioTest {
     // These should be upper-bounds; they don't need to be exact.
     size_t pos_filter_width = 0;
     size_t neg_filter_width = 0;
+
+    // Gain of the pipeline's output device.
+    // The test will assert that the output device is created with device gain set to this value.
+    float output_device_gain_db = 0;
   };
 
   ////////////////////////////////////////////////////////////////////////////////////////

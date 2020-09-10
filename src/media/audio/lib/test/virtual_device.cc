@@ -14,10 +14,12 @@ template <class Iface>
 VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                                     const audio_stream_unique_id_t& device_id, Format format,
                                     size_t frame_count, size_t inspect_id,
-                                    DevicePlugProperties* plug_properties)
+                                    std::optional<DevicePlugProperties> plug_properties,
+                                    float expected_gain_db)
     : format_(format),
       frame_count_(frame_count),
       inspect_id_(inspect_id),
+      expected_gain_db_(expected_gain_db),
       rb_(format, frame_count) {
   environment->ConnectToService(device_.NewRequest());
   fixture->AddErrorHandler(device_, "VirtualAudioDevice");
@@ -83,8 +85,8 @@ void VirtualDevice<Iface>::WatchEvents() {
                      << ext_delay;
   };
 
-  device_.events().OnSetGain = [](bool cur_mute, bool cur_agc, float cur_gain_db) {
-    EXPECT_EQ(cur_gain_db, 0.0f);
+  device_.events().OnSetGain = [this](bool cur_mute, bool cur_agc, float cur_gain_db) {
+    EXPECT_EQ(cur_gain_db, expected_gain_db_);
     EXPECT_FALSE(cur_mute);
     EXPECT_FALSE(cur_agc);
     AUDIO_LOG(DEBUG) << "OnSetGain callback: " << cur_mute << ", " << cur_agc << ", "

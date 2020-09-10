@@ -64,7 +64,8 @@ class VirtualDevice {
  protected:
   VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                 const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
-                size_t inspect_id, DevicePlugProperties* plug_properties);
+                size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
+                float expected_gain_db);
 
   void ResetEvents();
   void WatchEvents();
@@ -72,6 +73,7 @@ class VirtualDevice {
   const Format format_;
   const size_t frame_count_;
   const size_t inspect_id_;
+  const float expected_gain_db_;
 
   fidl::InterfacePtr<Interface> device_;
   audio_sample_format_t driver_format_;
@@ -104,9 +106,10 @@ class VirtualOutput : public VirtualOutputImpl {
   // appropriately bound into the test environment.
   VirtualOutput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                 const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
-                size_t inspect_id, DevicePlugProperties* plug_properties)
+                size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
+                float expected_gain_db)
       : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties) {}
+                      plug_properties, expected_gain_db) {}
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -123,9 +126,10 @@ class VirtualInput : public VirtualInputImpl {
   // appropriately bound into the test environment.
   VirtualInput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
-               size_t inspect_id, DevicePlugProperties* plug_properties)
+               size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
+               float expected_gain_db)
       : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties) {}
+                      plug_properties, expected_gain_db) {}
 };
 
 }  // namespace media::audio::test
