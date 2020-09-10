@@ -49,6 +49,7 @@ represent per-CPU activity in the kernel, which includes interrupts and
 thread scheduling.
 
 The fair scheduler emits duration events including the following:
+
 * **sched_block**: The active thread blocks on a Zircon object, futex,
   kernel-internal lock.
 * **sched_unblock**: The active thread unblocks another thread due to
@@ -65,6 +66,7 @@ The fair scheduler emits duration events including the following:
   CPU and a different thread _might_ need to run.
 
 The fair scheduler emits flow events including the following:
+
 * **sched_latency**: A flow that connects the point in time right after a thread
   enters the run queue to the point in time right before the (potentially
   different) target CPU context switches to the thread. This flow event is
@@ -91,6 +93,7 @@ scheduling a good choice as the primary scheduling discipline in a general
 purpose operating system.
 
 Briefly, these properties are:
+
 * **Intuitive bandwidth allocation mechanism**: A thread with twice the weight
   of another thread will receive approximately twice the CPU time, relative to
   the other thread over time. Whereas, a thread with the same weight as another
@@ -170,6 +173,7 @@ The following sections define the scheduler in more precise terms.
 ### Per-Thread Scheduling State
 
 For each thread **P[i]** we define the following state:
+
 * Weight **w[i]**: Real number representing the relative weight of the thread.
 * Start Time **s[i]**: The start time of the thread in the CPU's virtual
   timeline.
@@ -180,6 +184,7 @@ For each thread **P[i]** we define the following state:
 ### Per-CPU Scheduling State
 
 For each CPU **C[j]** we define the following state:
+
 * Number of Threads **n[j]**: The number of runnable threads competing on the
   CPU.
 * Scheduling Period **p[j]**: The period in which all competing threads on the
@@ -195,6 +200,7 @@ the weights of the _ready_ threads and the current _running_ thread.
 ### Tunable State
 
 We define the following tunable state, which may either be global or per-CPU:
+
 * Minimum Granularity **M**: The smallest time slice allocated to any thread.
 * Target Latency **L**: The target scheduling period for the CPU unless there
   are too many threads to give each thread as least one minimum granularity time
