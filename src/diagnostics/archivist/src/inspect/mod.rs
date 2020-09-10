@@ -787,6 +787,8 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    // TODO(59745): Reenable when this cannot time out.
+    #[ignore]
     async fn canonical_inspect_reader_stress_test() {
         // Test that 3 directories, each with 33 vmos, has snapshots served over 3 batches
         // each of which contains the 33 vmos of one component.
