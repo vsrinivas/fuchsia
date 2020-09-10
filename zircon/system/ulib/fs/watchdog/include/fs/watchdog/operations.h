@@ -92,7 +92,8 @@ class FsOperationTracker : public OperationTracker {
     start_time_ = std::chrono::steady_clock::now();
     watchdog_ = watchdog;
     if (track) {
-      ZX_DEBUG_ASSERT(watchdog_->Track(this).is_ok());
+      auto result = watchdog_->Track(this);
+      ZX_DEBUG_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
     }
   }
 

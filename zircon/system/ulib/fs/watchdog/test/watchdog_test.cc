@@ -148,7 +148,9 @@ TEST(Watchdog, TryToAddDuplicate) {
   EXPECT_TRUE(watchdog->Start().is_ok());
   TestOperation op(kTestOperationName1, kOperationTimeout);
   TestOperationTracker tracker(&op, watchdog.get());
-  ASSERT_EQ(watchdog->Track(&tracker).error_value(), ZX_ERR_ALREADY_EXISTS);
+  auto result = watchdog->Track(&tracker);
+  ASSERT_FALSE(result.is_ok());
+  ASSERT_EQ(result.error_value(), ZX_ERR_ALREADY_EXISTS);
 }
 
 TEST(Watchdog, TryToAddDuplicateAfterTimeout) {

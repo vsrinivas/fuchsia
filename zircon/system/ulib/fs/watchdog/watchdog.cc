@@ -197,7 +197,7 @@ void Watchdog::Run() {
           ++iter;
           continue;
         }
-        healthy_operations_.erase(iter++);
+        iter = healthy_operations_.erase(iter);
         timed_out_operations_.insert({tracker->GetId(), tracker});
         fprintf(out_stream_, "Operation:%s id:%lu exceeded timeout(%lluns < %lluns)",
                 tracker->Name().data(), tracker->GetId(), tracker->Timeout().count(),
