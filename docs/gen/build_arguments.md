@@ -1023,6 +1023,12 @@ From //build/go/go_build.gni:20
 
 From //build/go/go_build.gni:16
 
+### goldfish_control_use_composite_device
+
+**Current value (from the default):** `false`
+
+From //src/graphics/drivers/misc/goldfish_control/BUILD.gn:9
+
 ### goma_dir
 Directory containing the Goma source code.  This can be a GN
 source-absolute path ("//...") or a system absolute path.
