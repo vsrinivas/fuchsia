@@ -507,6 +507,12 @@ pub struct RepositoryUrl {
     url: RepoUrl,
 }
 
+impl RepositoryUrl {
+    pub fn url(&self) -> &RepoUrl {
+        &self.url
+    }
+}
+
 impl TryFrom<&fidl::RepositoryUrl> for RepositoryUrl {
     type Error = RepositoryUrlParseError;
 

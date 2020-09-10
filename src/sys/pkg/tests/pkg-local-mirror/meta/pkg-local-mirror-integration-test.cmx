@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/pkg-local-mirror-integration-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

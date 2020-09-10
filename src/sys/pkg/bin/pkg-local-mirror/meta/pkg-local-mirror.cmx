@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/pkg-local-mirror"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

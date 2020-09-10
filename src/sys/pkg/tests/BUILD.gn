@@ -10,6 +10,7 @@ group("tests") {
     "isolated-ota:tests",
     "omaha-client:tests",
     "pkg-cache:tests",
+    "pkg-local-mirror:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
     "system-update-checker:tests",

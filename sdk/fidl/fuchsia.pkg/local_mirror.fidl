@@ -14,9 +14,12 @@ protocol LocalMirror {
     ///
     /// + request `repo_url` the URL of the TUF repository for which to return
     ///     metadata.
-    /// + request `path` the path of the metadata file in the TUF repository.
+    /// + request `path` the path of the metadata file, relative to the
+    ///     repository_metadata directory for the specific TUF repository.
     /// + request `metadata` a server end for a TUF metadata file to be opened
-    ///     with `OPEN_RIGHT_READABLE`.
+    ///     with `OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE`. If the metadata
+    ///     directory exists but the requested file does not, the client end
+    ///     will receive an OnOpen with `Status::NOT_FOUND`.
     /// * error a `GetMetadataError` value
     GetMetadata(
         RepositoryUrl repo_url,
@@ -38,16 +41,9 @@ protocol LocalMirror {
 
 /// Error type for [`fuchsia.pkg/LocalMirror.GetMetadata`].
 enum GetMetadataError {
-    /// Attached storage does not have a directory corresponding to the provided
-    /// `repo_url`.
-    MISSING_REPO_URL_DIRECTORY = 1;
-
-    /// Attached storage does not have the requested metadata file.
-    MISSING_METADATA_FILE = 2;
-
-    /// The requested metadata file was found, but an error occurred while
-    /// opening it.
-    ERROR_OPENING_METADATA = 3;
+    /// An error occured when opening requested metadata file. This may (though
+    /// does not necessarily) indicate the metadata directory does not exist.
+    ERROR_OPENING_METADATA = 1;
 };
 
 /// Error type for [`fuchsia.pkg/LocalMirror.GetBlob`].
