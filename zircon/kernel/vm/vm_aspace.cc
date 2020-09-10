@@ -296,7 +296,7 @@ zx_status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* n
           this, name, vmo.get(), offset, size, ptr ? *ptr : 0, align_pow2, vmm_flags,
           arch_mmu_flags);
 
-  DEBUG_ASSERT(!is_user() || !(arch_mmu_flags & ARCH_MMU_FLAG_PERM_USER));
+  DEBUG_ASSERT(!is_user());
 
   size = ROUNDUP(size, PAGE_SIZE);
   if (size == 0) {

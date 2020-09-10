@@ -9,5 +9,6 @@ source_set("debugcommands") {
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/unittest",
   ]
 }

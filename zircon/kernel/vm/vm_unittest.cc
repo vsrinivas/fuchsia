@@ -194,6 +194,33 @@ class StubPageSource : public PageSource {
   zx_status_t WaitOnEvent(Event* event) { panic("Not implemented\n"); }
 };
 
+// Helper function to allocate memory in a user address space.
+zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inout_ptr<void>* ptr) {
+  ASSERT(aspace->is_user());
+
+  size = ROUNDUP(size, PAGE_SIZE);
+  if (size == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  vmo->set_name(name, strlen(name));
+  static constexpr const uint kArchFlags = kArchRwFlags | ARCH_MMU_FLAG_PERM_USER;
+  fbl::RefPtr<VmMapping> mapping;
+  status = aspace->RootVmar()->CreateVmMapping(0, size, 0, 0, vmo, 0, kArchFlags, name, &mapping);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *ptr = make_user_inout_ptr(reinterpret_cast<void*>(mapping->base()));
+  return ZX_OK;
+}
+
 }  // namespace
 
 static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObject>* out_vmo) {
@@ -781,20 +808,14 @@ static bool pmm_get_arena_info_test() {
 
 static uint32_t test_rand(uint32_t seed) { return (seed = seed * 1664525 + 1013904223); }
 
-// These two functions do direct access to specially-mapped memory that is
-// outside the normal range of kernel pointers.  Hence any memory access instrumentation
-// instrumentation needs to be disabled in these functions.
-
 // fill a region of memory with a pattern based on the address of the region
-NO_ASAN static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
+static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
   uint32_t* ptr = (uint32_t*)_ptr;
 
   ASSERT(IS_ALIGNED((uintptr_t)ptr, 4));
 
   uint32_t val = (uint32_t)seed;
-#if UINTPTR_MAX > UINT32_MAX
   val ^= (uint32_t)(seed >> 32);
-#endif
   for (size_t i = 0; i < len / 4; i++) {
     ptr[i] = val;
 
@@ -802,19 +823,57 @@ NO_ASAN static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
   }
 }
 
+// just like |fill_region|, but for user memory
+static void fill_region_user(uintptr_t seed, user_inout_ptr<void> _ptr, size_t len) {
+  user_inout_ptr<uint32_t> ptr = _ptr.reinterpret<uint32_t>();
+
+  ASSERT(IS_ALIGNED(ptr.get(), 4));
+
+  uint32_t val = (uint32_t)seed;
+  val ^= (uint32_t)(seed >> 32);
+  for (size_t i = 0; i < len / 4; i++) {
+    zx_status_t status = ptr.element_offset(i).copy_to_user(val);
+    ASSERT(status == ZX_OK);
+
+    val = test_rand(val);
+  }
+}
+
 // test a region of memory against a known pattern
-NO_ASAN static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
+static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
   uint32_t* ptr = (uint32_t*)_ptr;
 
   ASSERT(IS_ALIGNED((uintptr_t)ptr, 4));
 
   uint32_t val = (uint32_t)seed;
-#if UINTPTR_MAX > UINT32_MAX
   val ^= (uint32_t)(seed >> 32);
-#endif
   for (size_t i = 0; i < len / 4; i++) {
     if (ptr[i] != val) {
       unittest_printf("value at %p (%zu) is incorrect: 0x%x vs 0x%x\n", &ptr[i], i, ptr[i], val);
+      return false;
+    }
+
+    val = test_rand(val);
+  }
+
+  return true;
+}
+
+// just like |test_region|, but for user memory
+static bool test_region_user(uintptr_t seed, user_inout_ptr<void> _ptr, size_t len) {
+  user_inout_ptr<uint32_t> ptr = _ptr.reinterpret<uint32_t>();
+
+  ASSERT(IS_ALIGNED(ptr.get(), 4));
+
+  uint32_t val = (uint32_t)seed;
+  val ^= (uint32_t)(seed >> 32);
+  for (size_t i = 0; i < len / 4; i++) {
+    auto p = ptr.element_offset(i);
+    uint32_t actual;
+    zx_status_t status = p.copy_from_user(&actual);
+    ASSERT(status == ZX_OK);
+    if (actual != val) {
+      unittest_printf("value at %p (%zu) is incorrect: 0x%x vs 0x%x\n", p.get(), i, actual, val);
       return false;
     }
 
@@ -832,6 +891,22 @@ static bool fill_and_test(void* ptr, size_t len) {
 
   // test that the pattern is read back properly
   auto result = test_region((uintptr_t)ptr, ptr, len);
+  EXPECT_TRUE(result, "testing region for corruption");
+
+  END_TEST;
+}
+
+// just like |fill_and_test|, but for user memory
+static bool fill_and_test_user(user_inout_ptr<void> ptr, size_t len) {
+  BEGIN_TEST;
+
+  const auto seed = reinterpret_cast<uintptr_t>(ptr.get());
+
+  // fill it with a pattern
+  fill_region_user(seed, ptr, len);
+
+  // test that the pattern is read back properly
+  auto result = test_region_user(seed, ptr, len);
   EXPECT_TRUE(result, "testing region for corruption");
 
   END_TEST;
@@ -902,11 +977,7 @@ static bool vmm_alloc_contiguous_smoke_test() {
 static bool multiple_regions_test() {
   BEGIN_TEST;
 
-  // As we create a user aspace whose pointers we will directly touch we must disable the scanner
-  // to prevent our mappings from being removed from underneath us.
-  AutoVmScannerDisable scanner_disable;
-
-  void* ptr;
+  user_inout_ptr<void> ptr{nullptr};
   static const size_t alloc_size = 16 * 1024;
 
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
@@ -916,32 +987,29 @@ static bool multiple_regions_test() {
   vmm_set_active_aspace(aspace.get());
 
   // allocate region 0
-  zx_status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, kArchRwFlags);
+  zx_status_t err = AllocUser(aspace.get(), "test0", alloc_size, &ptr);
   ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-  ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
   // fill with known pattern and test
-  if (!fill_and_test(ptr, alloc_size)) {
+  if (!fill_and_test_user(ptr, alloc_size)) {
     all_ok = false;
   }
 
   // allocate region 1
-  err = aspace->Alloc("test1", 16384, &ptr, 0, 0, kArchRwFlags);
+  err = AllocUser(aspace.get(), "test1", alloc_size, &ptr);
   ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-  ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
   // fill with known pattern and test
-  if (!fill_and_test(ptr, alloc_size)) {
+  if (!fill_and_test_user(ptr, alloc_size)) {
     all_ok = false;
   }
 
   // allocate region 2
-  err = aspace->Alloc("test2", 16384, &ptr, 0, 0, kArchRwFlags);
+  err = AllocUser(aspace.get(), "test2", alloc_size, &ptr);
   ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-  ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
   // fill with known pattern and test
-  if (!fill_and_test(ptr, alloc_size)) {
+  if (!fill_and_test_user(ptr, alloc_size)) {
     all_ok = false;
   }
 
@@ -1009,8 +1077,8 @@ static bool vmaspace_alloc_smoke_test() {
   BEGIN_TEST;
   auto aspace = VmAspace::Create(0, "test aspace2");
 
-  void* ptr;
-  auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, kArchRwFlags);
+  user_inout_ptr<void> ptr{nullptr};
+  auto err = AllocUser(aspace.get(), "test", PAGE_SIZE, &ptr);
   ASSERT_EQ(ZX_OK, err, "allocating region\n");
 
   // destroy the aspace, which should drop all the internal refs to it

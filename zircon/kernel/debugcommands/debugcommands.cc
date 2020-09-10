@@ -11,6 +11,8 @@
 #include <endian.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/instrumentation/asan.h>
+#include <lib/unittest/user_memory.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +23,13 @@
 
 #include <arch/ops.h>
 #include <kernel/thread.h>
+#include <ktl/unique_ptr.h>
 #include <platform/debug.h>
 #include <vm/pmm.h>
+
+#if defined(__x86_64__)
+#include <arch/x86/feature.h>
+#endif
 
 static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags);
@@ -34,6 +41,7 @@ static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -51,6 +59,7 @@ STATIC_COMMAND("mtest", "simple memory test", &cmd_memtest)
 STATIC_COMMAND("crash", "intentionally crash", &cmd_crash)
 STATIC_COMMAND("crash_stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 STATIC_COMMAND("crash_recurse", "intentionally overrun the stack by recursing", &cmd_recurse)
+STATIC_COMMAND("crash_user_read", "intentionally read user memory", &cmd_crash_user_read)
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
@@ -352,6 +361,39 @@ static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags) {
   printf("survived.\n");
 
   return 0;
+}
+
+// Marked with NO_ASAN because this will be called with a pointer to user memory.
+NO_ASAN uint8_t read_byte(const uint8_t *p) { return *p; }
+
+static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags) {
+  // TODO(fxbug.dev/59284): Once we support PAN enable this for arm64.
+#if defined(__x86_64__)
+  if (!g_x86_feature_has_smap) {
+    printf("cpu does not support smap; will not crash.\n");
+    return -1;
+  }
+#else
+  printf("only supported on x64; will not crash.\n");
+  return -1;
+#endif
+
+  ktl::unique_ptr<testing::UserMemory> mem = testing::UserMemory::Create(PAGE_SIZE);
+  if (mem == nullptr) {
+    printf("failed to allocate user memory; will not crash.\n");
+    return -1;
+  }
+  const uint8_t *p = mem->user_in<uint8_t>().get();
+  if (p == nullptr) {
+    printf("failed to get pointer; will not crash.\n");
+    return -1;
+  }
+
+  printf("about to crash..\n");
+  uint8_t b = read_byte(p);
+
+  printf("read %02hhx; did not crash.\n", b);
+  return -1;
 }
 
 #define DEBUG_CMDLINE_MAX 1024

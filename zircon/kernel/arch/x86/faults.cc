@@ -274,10 +274,14 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  /* check for a potential SMAP failure */
-  if (unlikely(!(error_code & PFEX_U) && (error_code & PFEX_P) && g_x86_feature_has_smap &&
-               !(frame->flags & X86_FLAGS_AC) && is_user_address(va))) {
-    /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */
+  // Check for an SMAP violation.
+  //
+  // By policy, the kernel is not allowed to access user memory except when performing a
+  // user_copy. SMAP is used to enforce the policy.
+  if (unlikely(!(error_code & PFEX_U) &&          // fault taken in kernel mode
+               g_x86_feature_has_smap &&          // CPU supports SMAP
+               !(frame->flags & X86_FLAGS_AC) &&  // SMAP was enabled at time of fault
+               is_user_address(va))) {            // faulting address is a user address
     printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n",
            va);
     return ZX_ERR_ACCESS_DENIED;
