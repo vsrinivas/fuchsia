@@ -101,9 +101,6 @@ protocol LicenseSession {
     /// * error an [`Error`] indicating the reason for failure.
     GenerateLicenseRequest(LicenseInitData init_data) -> () error Error;
 
-    [Transitional, Deprecated]
-    GenerateLicenseRelease2() -> () error Error;
-
     /// Initiates the release process for the license session.
     ///
     /// This will cause the [`LicenseSession`] to destroy the license and/or
@@ -119,7 +116,6 @@ protocol LicenseSession {
     /// the `LicenseSession` channel.
     ///
     /// * error an [`Error`] indicating the reason for failure.
-    [Transitional]
     GenerateLicenseRelease() -> () error Error;
 
     /// Updates the [`LicenseSession`] with a message from the license server.
