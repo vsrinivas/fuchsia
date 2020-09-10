@@ -1123,7 +1123,6 @@ mod tests {
     use crate::{
         common::{
             App, CheckOptions, PersistedApp, ProtocolState, UpdateCheckSchedule, UserCounting,
-            Version,
         },
         configuration::Updater,
         http_request::mock::MockHttpRequest,
@@ -1150,6 +1149,7 @@ mod tests {
     use serde_json::json;
     use std::cell::RefCell;
     use std::time::Duration;
+    use version::Version;
 
     fn make_test_app_set() -> AppSet {
         AppSet::new(vec![App::builder("{00000000-0000-0000-0000-000000000001}", [1, 2, 3, 4])

@@ -7,12 +7,13 @@ use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use log::{error, warn};
 use omaha_client::{
-    common::{App, AppSet, Version},
+    common::{App, AppSet},
     configuration::{Config, Updater},
     protocol::{request::OS, Cohort},
 };
 use std::fs;
 use std::io;
+use version::Version;
 
 /// This struct is the overall "configuration" of the omaha client.  Minus the PolicyConfig.  That
 /// should probably be included in here as well, eventually.

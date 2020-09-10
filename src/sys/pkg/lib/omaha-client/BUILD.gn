@@ -14,12 +14,12 @@ rustc_library("omaha-client") {
 
   deps = [
     "//src/sys/pkg/lib/async-generator",
+    "//src/sys/pkg/lib/version",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:rand",

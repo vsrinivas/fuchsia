@@ -25,7 +25,7 @@ use {
     futures::prelude::*,
     log::error,
     omaha_client::{
-        common::{App, AppSet, Version},
+        common::{App, AppSet},
         configuration::{Config, Updater},
         http_request::HttpRequest,
         metrics::StubMetricsReporter,
@@ -36,6 +36,7 @@ use {
         time::StandardTimeSource,
     },
     std::{rc::Rc, sync::Arc},
+    version::Version,
 };
 
 /// Get a |Config| object to use when making requests to Omaha.

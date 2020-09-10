@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{common::Version, protocol::request::OS};
+use crate::protocol::request::OS;
+use version::Version;
 
 /// This is the name and version of the updater binary that is built using this crate.
 ///
@@ -33,7 +34,6 @@ pub struct Config {
 pub mod test_support {
 
     use super::*;
-    use crate::{common::Version, protocol::request::OS};
 
     /// Handy generator for an updater configuration.  Used to reduce test boilerplate.
     pub fn config_generator() -> Config {

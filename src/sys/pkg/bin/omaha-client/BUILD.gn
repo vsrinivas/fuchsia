@@ -52,6 +52,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/omaha-client",
     "//src/sys/pkg/lib/system-health-check",
+    "//src/sys/pkg/lib/version",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",

@@ -25,6 +25,7 @@ group("lib") {
     "system-image",
     "tuf",
     "update-package",
+    "version",
   ]
 }
 
@@ -51,5 +52,6 @@ group("tests") {
     "system-image:tests",
     "tuf:tests",
     "update-package:tests",
+    "version:tests",
   ]
 }
