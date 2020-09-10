@@ -5,6 +5,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 
 #include <assert.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <cmath>
@@ -123,6 +124,7 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
   }
 
   if (total_compressed_log_size == 0) {
+    FX_LOGS(WARNING) << "The encoded previous boot log is empty";
     return false;
   }
 
@@ -137,14 +139,21 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
     uncompressed_log += decoder->Decode(block);
   }
 
+  if (uncompressed_log.empty()) {
+    FX_LOGS(WARNING) << "The decoded previous boot log is empty";
+    return false;
+  }
+
   // Sort logs.
   uncompressed_log = SortLog(uncompressed_log);
 
   if (uncompressed_log.empty()) {
+    FX_LOGS(WARNING) << "The post-processed previous boot log is empty";
     return false;
   }
 
   if (!files::WriteFile(output_file_path, uncompressed_log)) {
+    FX_LOGS(WARNING) << "Could not write the previous boot log file: " << output_file_path;
     return false;
   }
 
