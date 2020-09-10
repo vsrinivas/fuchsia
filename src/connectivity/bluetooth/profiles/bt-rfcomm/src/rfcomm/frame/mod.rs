@@ -73,7 +73,7 @@ macro_rules! tofrom_decodable_enum {
 }
 
 /// Errors associated with parsing an RFCOMM Frame.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum FrameParseError {
     #[error("Provided buffer is too small")]
     BufferTooSmall,
@@ -87,6 +87,8 @@ pub enum FrameParseError {
     UnsupportedFrameType,
     #[error("Mux Command type is unsupported")]
     UnsupportedMuxCommandType,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 pub_decodable_enum! {
@@ -156,7 +158,7 @@ bitfield! {
 }
 
 impl ControlField {
-    fn frame_type(&self) -> Result<FrameType, Error> {
+    fn frame_type(&self) -> Result<FrameType, anyhow::Error> {
         // The P/F bit is ignored when determining Frame Type. See RFCOMM 4.2 and GSM 5.2.1.3.
         const FRAME_TYPE_MASK: u8 = 0b11101111;
         FrameType::try_from(self.frame_type_raw() & FRAME_TYPE_MASK)
@@ -266,6 +268,7 @@ mod tests {
     use super::*;
 
     use crate::rfcomm::frame::fcs::calculate_fcs;
+    use matches::assert_matches;
 
     #[test]
     fn test_is_mux_startup_frame() {
@@ -285,7 +288,7 @@ mod tests {
     fn test_parse_too_small_frame() {
         let role = Role::Unassigned;
         let buf: &[u8] = &[0x00];
-        assert_eq!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -297,7 +300,7 @@ mod tests {
             0b00000001, // Length Field - Bit0 = 1: Indicates one octet length.
             0x00,       // Random FCS.
         ];
-        assert_eq!(Frame::parse(role, buf), Err(FrameParseError::InvalidDLCI(1)));
+        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::InvalidDLCI(1)));
     }
 
     /// It's possible that a remote device sends a packet with an invalid frame.
@@ -311,7 +314,7 @@ mod tests {
             0b00000001, // Length Field - Bit1 = 0 indicates 1 octet length.
             0x00,       // Random FCS.
         ];
-        assert_eq!(Frame::parse(role, buf), Err(FrameParseError::UnsupportedFrameType));
+        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::UnsupportedFrameType));
     }
 
     /// It's possible that the remote peer sends a packet for a valid frame, but the session
@@ -325,7 +328,7 @@ mod tests {
             0b00000001, // Length Field - Bit1 = 0 indicates 1 octet length.
             0x00,       // Random FCS.
         ];
-        assert_eq!(Frame::parse(role, buf), Err(FrameParseError::InvalidFrame));
+        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::InvalidFrame));
     }
 
     #[test]
@@ -338,7 +341,7 @@ mod tests {
             0b00000001, // Second octet of length.
                         // Missing FCS.
         ];
-        assert_eq!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -405,7 +408,7 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         buf.push(fcs);
 
-        assert_eq!(Frame::parse(role, &buf[..]), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(Frame::parse(role, &buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]

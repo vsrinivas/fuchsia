@@ -39,6 +39,7 @@ rustc_binary("bin") {
     "src/profile_registrar.rs",
     "src/rfcomm/frame/fcs.rs",
     "src/rfcomm/frame/mod.rs",
+    "src/rfcomm/frame/mux_commands/dlc_parameter_negotiation.rs",
     "src/rfcomm/frame/mux_commands/mod.rs",
     "src/rfcomm/mod.rs",
     "src/rfcomm/server.rs",

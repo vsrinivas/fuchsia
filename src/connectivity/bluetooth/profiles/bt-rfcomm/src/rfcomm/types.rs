@@ -30,7 +30,7 @@ impl ServerChannel {
 /// 5-bit Server Channel.
 /// DLCIs 1 and 62-63 are reserved and never used in RFCOMM.
 /// See RFCOMM 5.4.
-#[derive(Clone, Hash, Eq, Debug, PartialEq)]
+#[derive(Clone, Copy, Hash, Eq, Debug, PartialEq)]
 pub struct DLCI(u8);
 
 impl DLCI {

@@ -9,6 +9,8 @@ use {
     std::convert::TryFrom,
 };
 
+mod dlc_parameter_negotiation;
+
 use crate::pub_decodable_enum;
 use crate::rfcomm::{frame::FrameParseError, types::CommandResponse};
 
@@ -84,7 +86,7 @@ bitfield! {
 }
 
 /// Represents an RFCOMM multiplexer command.
-// TODO(58681): Update to store the various MuxCommand objects when implemented.
+// TODO(58681): Update to store the parameters for the various command types.
 #[derive(Debug, PartialEq)]
 struct MuxCommand {
     /// The type of this MuxCommand - see RFCOMM 4.3 for the supported commands.
@@ -148,10 +150,12 @@ impl Decodable for MuxCommand {
 mod tests {
     use super::*;
 
+    use matches::assert_matches;
+
     #[test]
     fn test_parse_mux_command_empty_buf() {
         let empty_buf = [];
-        assert_eq!(MuxCommand::decode(&empty_buf[..]), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(MuxCommand::decode(&empty_buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -160,7 +164,10 @@ mod tests {
             0b11111101, // Type field, unrecognized command type.
             0b00000001, // Length field, 0 length.
         ];
-        assert_eq!(MuxCommand::decode(&buf[..]), Err(FrameParseError::UnsupportedMuxCommandType));
+        assert_matches!(
+            MuxCommand::decode(&buf[..]),
+            Err(FrameParseError::UnsupportedMuxCommandType)
+        );
     }
 
     #[test]
@@ -178,7 +185,7 @@ mod tests {
             0b00000010, // Length field, octet 9.
             0b00000000, // Length values - shouldn't matter since we error early.
         ];
-        assert_eq!(MuxCommand::decode(&buf[..]), Err(FrameParseError::InvalidFrame));
+        assert_matches!(MuxCommand::decode(&buf[..]), Err(FrameParseError::InvalidFrame));
     }
 
     #[test]
@@ -189,7 +196,7 @@ mod tests {
             0b00000010, // Length data octet 1.
                         // Missing octet 2 of length.
         ];
-        assert_eq!(MuxCommand::decode(&buf[..]), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(MuxCommand::decode(&buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -210,7 +217,7 @@ mod tests {
             command_type: MuxCommandType::DLCParameterNegotiation,
             command_response: CommandResponse::Command,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -227,7 +234,7 @@ mod tests {
             command_type: MuxCommandType::TestCommand,
             command_response: CommandResponse::Command,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -240,7 +247,7 @@ mod tests {
             command_type: MuxCommandType::FlowControlOnCommand,
             command_response: CommandResponse::Response,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -253,7 +260,7 @@ mod tests {
             command_type: MuxCommandType::FlowControlOffCommand,
             command_response: CommandResponse::Command,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -268,7 +275,7 @@ mod tests {
             command_type: MuxCommandType::ModemStatusCommand,
             command_response: CommandResponse::Command,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -282,7 +289,7 @@ mod tests {
             command_type: MuxCommandType::NonSupportedCommandResponse,
             command_response: CommandResponse::Response,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -296,7 +303,7 @@ mod tests {
             command_type: MuxCommandType::RemotePortNegotiationCommand,
             command_response: CommandResponse::Command,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -311,6 +318,6 @@ mod tests {
             command_type: MuxCommandType::RemoteLineStatusCommand,
             command_response: CommandResponse::Command,
         };
-        assert_eq!(MuxCommand::decode(&buf[..]), Ok(expected));
+        assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
     }
 }
