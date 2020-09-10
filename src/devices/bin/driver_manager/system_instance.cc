@@ -165,9 +165,9 @@ zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
     LOGF(ERROR, "Failed to create svc_job: %s", zx_status_get_string(status));
     return status;
   }
-  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
-  // this job is created from the root job. The processes spawned under this job will eventually
-  // move out of driver_manager into their own components.
+  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS
+  // since this job is created from the root job. The processes spawned under this job will
+  // eventually move out of driver_manager into their own components.
   static const zx_policy_basic_v2_t policy[] = {
       {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
       {ZX_POL_NEW_PROCESS, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
@@ -195,9 +195,9 @@ zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
     LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
     return status;
   }
-  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
-  // this job is created from the root job. The driver_host job should move to being created from
-  // something other than the root job. (Although note that it can't simply be created from
+  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS
+  // since this job is created from the root job. The driver_host job should move to being created
+  // from something other than the root job. (Although note that it can't simply be created from
   // driver_manager's own job, because that has timer slack job policy automatically applied by the
   // ELF runner.)
   static const zx_policy_basic_v2_t policy[] = {
@@ -932,7 +932,37 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
   }
 }
 
-zx::channel SystemInstance::CloneFs(const char* path) const {
+zx_status_t DirectoryFilter::Initialize(const zx::channel& forwarding_directory,
+                                        fbl::Span<const char*> allow_filter) {
+  for (const auto& name : allow_filter) {
+    zx_status_t status = root_dir_->AddEntry(
+        name, fbl::MakeRefCounted<fs::Service>([&forwarding_directory, name](zx::channel request) {
+          return fdio_service_connect_at(forwarding_directory.get(), name, request.release());
+        }));
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t SystemInstance::InitializeDriverHostSvcDir() {
+  if (driver_host_svc_) {
+    return ZX_OK;
+  }
+  zx_status_t status = loop_.StartThread("driver_host_svc_loop");
+  if (status != ZX_OK) {
+    return status;
+  }
+  driver_host_svc_.emplace(loop_.dispatcher());
+  const char* kAllowedServices[] = {
+      "fuchsia.scheduler.ProfileProvider",
+      "fuchsia.tracing.provider.Registry",
+  };
+  return driver_host_svc_->Initialize(svchost_outgoing_, fbl::Span(kAllowedServices));
+}
+
+zx::channel SystemInstance::CloneFs(const char* path) {
   if (!strcmp(path, "dev")) {
     return devfs_root_clone();
   }
@@ -944,6 +974,11 @@ zx::channel SystemInstance::CloneFs(const char* path) const {
   if (!strcmp(path, "svc")) {
     zx::unowned_channel fs = zx::unowned_channel(svchost_outgoing_);
     status = fdio_service_clone_to(fs->get(), h1.release());
+  } else if (!strcmp(path, "driver_host_svc")) {
+    status = InitializeDriverHostSvcDir();
+    if (status == ZX_OK) {
+      status = driver_host_svc_->Serve(std::move(h1));
+    }
   } else if (!strncmp(path, "dev/", 4)) {
     zx::unowned_channel fs = devfs_root_borrow();
     path += 4;

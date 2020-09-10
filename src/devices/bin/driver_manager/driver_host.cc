@@ -66,10 +66,9 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
 
   actions[actions_count++] =
       fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = config.name}};
-  // TODO: constrain to /svc/device
   actions[actions_count++] = fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/svc", .handle = config.fs_provider->CloneFs("svc").release()},
+      .ns = {.prefix = "/svc", .handle = config.fs_provider->CloneFs("driver_host_svc").release()},
   };
   actions[actions_count++] = fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,

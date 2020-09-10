@@ -32,7 +32,7 @@ struct DriverHostConfig {
   const zx::unowned_resource root_resource;
 
   const LoaderServiceConnector* loader_service_connector;
-  const FsProvider* fs_provider;
+  FsProvider* fs_provider;
 
   Coordinator* coordinator;
 };

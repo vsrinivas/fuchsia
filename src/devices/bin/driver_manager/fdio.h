@@ -58,7 +58,7 @@ class FsProvider {
   // their corresponding root connection, where the request is forwarded.
   //
   // This function is implemented by both devmgr and fshost.
-  virtual zx::channel CloneFs(const char* path) const = 0;
+  virtual zx::channel CloneFs(const char* path) = 0;
 };
 
 class DevmgrLauncher {

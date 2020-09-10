@@ -7,8 +7,13 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/span.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 
 #include "coordinator.h"
 #include "fdio.h"
@@ -18,12 +23,31 @@ constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
 zx_status_t wait_for_file(const char* path, zx::time deadline);
 
+// Host's a vfs which forwards a subset of requests to a channel.
+class DirectoryFilter {
+ public:
+  DirectoryFilter(async_dispatcher_t* dispatcher)
+      : root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()), vfs_(dispatcher) {}
+
+  // |forwarding_dir| must outlive DirectoryFilter object.
+  zx_status_t Initialize(const zx::channel& forwarding_dir, fbl::Span<const char*> allow_filter);
+
+  zx_status_t Serve(zx::channel request) {
+    return vfs_.ServeDirectory(root_dir_, std::move(request));
+  }
+
+ private:
+  fbl::RefPtr<fs::PseudoDir> root_dir_;
+  fs::SynchronousVfs vfs_;
+};
+
 class SystemInstance : public FsProvider {
  public:
   SystemInstance();
+  ~SystemInstance() { loop_.Shutdown(); }
 
   // Implementation required to implement FsProvider
-  zx::channel CloneFs(const char* path) const override;
+  zx::channel CloneFs(const char* path) override;
 
   // The heart of the public API, in the order that things get called during
   // startup.
@@ -58,6 +82,8 @@ class SystemInstance : public FsProvider {
   // Private helper functions.
   void do_autorun(const char* name, const char* cmd, const zx::resource& root_resource);
 
+  zx_status_t InitializeDriverHostSvcDir();
+
   // The handle used to transmit messages to miscsvc.
   zx::channel miscsvc_client_;
 
@@ -89,6 +115,11 @@ class SystemInstance : public FsProvider {
   zx::channel virtcon_fidl_;
 
   DevmgrLauncher launcher_;
+
+  // Hosts vfs which filters driver host svc requests to /svc provided by svchost.
+  // Lazily initialized.
+  std::optional<DirectoryFilter> driver_host_svc_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_INSTANCE_H_
