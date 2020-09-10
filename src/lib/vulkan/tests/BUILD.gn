@@ -47,6 +47,9 @@ executable("test_image_pipe_swapchain") {
     "//zircon/public/lib/zx",
   ]
 
+  # TODO(fxbug.dev/58615): Fix + remove.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   # TODO(fxb/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
