@@ -251,9 +251,7 @@ TEST(ParserTest, VariableDeclFail) {
   const auto kTestString = "vars = 0";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'vars = 0'])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, TwoVariableDecl) {
@@ -279,9 +277,7 @@ TEST(ParserTest, TwoVariableDeclFail) {
       "var y = 0";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'varx = 0;\nvar y = 0'])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, TwoVariableDeclTrailingChars) {
@@ -291,15 +287,7 @@ TEST(ParserTest, TwoVariableDeclTrailingChars) {
       "xxx";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('x') '=' Expression(Integer('0'))) ';' "
-      "VariableDecl('var' Identifier('y') '=' Expression(Integer('0'))) ';' E[Unexpected 'xxx'])",
-      parse->ToString(kTestString));
-
-  CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Integer(0))), Skip(),
-                            VariableDecl("y", false, Expression(Integer(0)))));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, TwoVariableDeclConst) {
@@ -386,21 +374,14 @@ TEST(ParserTest, VariableDeclIntegerZeroFirst) {
   const auto kTestString = "var s = 0912";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'var s = 0912'])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclIntegerHexNoMark) {
   const auto kTestString = "var s = 0abc";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('s') '=' "
-      "Expression(Integer('0'))) E[Unexpected 'abc'])",
-      parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclString) {
@@ -462,9 +443,7 @@ TEST(ParserTest, VariableDeclStringDangling) {
   const auto kTestString = "var s = \"bob";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'var s = \"bob'])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclObject) {
@@ -566,37 +545,28 @@ TEST(ParserTest, VariableDeclObjectDangling) {
   const auto kTestString = "var s = { foo: { bar: 7 }, baz: 23, bang: \"hiiii\"";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'var s = { foo: { bar: 7 }, baz: 23, bang: \"hiiii\"'])",
-            parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclObjectDanglingField) {
   const auto kTestString = "var s = { foo: ";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'var s = { foo: '])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclObjectNoFieldSeparator) {
   const auto kTestString = "var s = { foo 6 }";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'var s = { foo 6 }'])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclStringBadEscape) {
   const auto kTestString = "var s = \"bob\\qbob\"";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unexpected 'var s = \"bob\\qbob\"'])", parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclPath) {
@@ -635,10 +605,8 @@ TEST(ParserTest, VariableDeclRootOnlyPath) {
   auto parse = Parse(kTestString);
   EXPECT_FALSE(parse->HasErrors());
 
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('x') '=' "
-      "Expression(Path('/'))))",
-      parse->ToString(kTestString));
+  EXPECT_EQ("Program(VariableDecl('var' Identifier('x') '=' Expression(Path('/'))))",
+            parse->ToString(kTestString));
 
   CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(false, {})))));
 }
@@ -649,10 +617,8 @@ TEST(ParserTest, VariableDeclDotOnlyPath) {
   auto parse = Parse(kTestString);
   EXPECT_FALSE(parse->HasErrors());
 
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('x') '=' "
-      "Expression(Path('.'))))",
-      parse->ToString(kTestString));
+  EXPECT_EQ("Program(VariableDecl('var' Identifier('x') '=' Expression(Path('.'))))",
+            parse->ToString(kTestString));
 
   CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(true, {})))));
 }
@@ -663,10 +629,8 @@ TEST(ParserTest, VariableDeclDotSlashPath) {
   auto parse = Parse(kTestString);
   EXPECT_FALSE(parse->HasErrors());
 
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('x') '=' "
-      "Expression(Path('.' '/'))))",
-      parse->ToString(kTestString));
+  EXPECT_EQ("Program(VariableDecl('var' Identifier('x') '=' Expression(Path('.' '/'))))",
+            parse->ToString(kTestString));
 
   CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(true, {})))));
 }
@@ -720,12 +684,7 @@ TEST(ParserTest, VariableDeclPathDanglingQuote) {
   const auto kTestString = "var x = ./somew` oo oo ";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('x') '=' "
-      "Expression(Path('.' '/' 'somew'))) E[Unexpected '` oo oo '])",
-      parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclPathInObject) {
@@ -918,24 +877,14 @@ TEST(ParserTest, VariableDeclAddSubtractDangle) {
   const auto kTestString = "var s = 1 - 2 + ";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('s') '=' "
-      "Expression(AddSub(Integer('1') '-' Integer('2')))) E[Unexpected '+ '])",
-      parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 TEST(ParserTest, VariableDeclAddSubtractTogether) {
   const auto kTestString = "var s = 1 - + 2";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ(
-      "Program(VariableDecl('var' Identifier('s') '=' "
-      "Expression(Integer('1'))) E[Unexpected '- + 2'])",
-      parse->ToString(kTestString));
+  EXPECT_FALSE(parse);
 }
 
 }  // namespace shell::parser

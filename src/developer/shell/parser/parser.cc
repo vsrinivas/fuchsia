@@ -11,78 +11,72 @@
 namespace shell::parser {
 namespace {
 
-ParseResultStream Whitespace(ParseResultStream prefixes);
+ParseResult Whitespace(ParseResult prefix);
 
 // Create a parser that runs a sequence of parsers consecutively, with optional whitespace parsed
 // between each parser.
-fit::function<ParseResultStream(ParseResultStream)> WSSeq(
-    fit::function<ParseResultStream(ParseResultStream)> first) {
+fit::function<ParseResult(ParseResult)> WSSeq(fit::function<ParseResult(ParseResult)> first) {
   return Seq(Maybe(Whitespace), std::move(first), Maybe(Whitespace));
 }
 
 template <typename... Args>
-fit::function<ParseResultStream(ParseResultStream)> WSSeq(
-    fit::function<ParseResultStream(ParseResultStream)> first, Args... args) {
+fit::function<ParseResult(ParseResult)> WSSeq(fit::function<ParseResult(ParseResult)> first,
+                                              Args... args) {
   return Seq(Maybe(Whitespace), std::move(first), WSSeq(std::move(args)...));
 }
 
-ParseResultStream IdentifierCharacter(ParseResultStream prefixes);
+ParseResult IdentifierCharacter(ParseResult prefix);
 
 // Parse a keyword.
 template <typename T = ast::Terminal>
-fit::function<ParseResultStream(ParseResultStream)> KW(const std::string& keyword) {
+fit::function<ParseResult(ParseResult)> KW(const std::string& keyword) {
   return Seq(Token<T>(keyword), Not(IdentifierCharacter));
 }
 
 // Token Rules -------------------------------------------------------------------------------------
 
-ParseResultStream IdentifierCharacter(ParseResultStream prefixes) {
-  return CharGroup("identifier character", "a-zA-Z0-9_")(std::move(prefixes));
+ParseResult IdentifierCharacter(ParseResult prefix) {
+  return CharGroup("a-zA-Z0-9_")(std::move(prefix));
 }
 
-ParseResultStream Whitespace(ParseResultStream prefixes) {
-  return NT<ast::Whitespace>(OnePlus(
-      Alt(AnyChar("space", " \n\r\t"), Seq(Token("#"), ZeroPlus(AnyCharBut("non-newline", "\n")),
-                                           Token("\n")))))(std::move(prefixes));
+ParseResult Whitespace(ParseResult prefix) {
+  return NT<ast::Whitespace>(
+      OnePlus(Alt(AnyChar(" \n\r\t"), Seq(Token("#"), ZeroPlus(AnyCharBut("\n")), Token("\n")))))(
+      std::move(prefix));
 }
 
-ParseResultStream Digit(ParseResultStream prefixes) {
-  return CharGroup("digit", "0-9")(std::move(prefixes));
+ParseResult Digit(ParseResult prefix) { return CharGroup("0-9")(std::move(prefix)); }
+
+ParseResult HexDigit(ParseResult prefix) { return CharGroup("a-fA-F0-9")(std::move(prefix)); }
+
+ParseResult UnescapedIdentifier(ParseResult prefix) {
+  return Token<ast::UnescapedIdentifier>(OnePlus(IdentifierCharacter))(std::move(prefix));
 }
 
-ParseResultStream HexDigit(ParseResultStream prefixes) {
-  return CharGroup("hex digit", "a-fA-F0-9")(std::move(prefixes));
+ParseResult PathCharacter(ParseResult prefix) {
+  return Seq(Not(Whitespace), AnyCharBut("`&;|/\\()[]{}"))(std::move(prefix));
 }
 
-ParseResultStream UnescapedIdentifier(ParseResultStream prefixes) {
-  return Token<ast::UnescapedIdentifier>(OnePlus(IdentifierCharacter))(std::move(prefixes));
-}
-
-ParseResultStream PathCharacter(ParseResultStream prefixes) {
-  return Seq(Not(Whitespace), AnyCharBut("path character", "`&;|/\\()[]{}"))(std::move(prefixes));
-}
-
-ParseResultStream PathElement(ParseResultStream prefixes) {
+ParseResult PathElement(ParseResult prefix) {
   return Alt(Token<ast::PathEscape>(Seq(Token("\\"), AnyChar)),
              Token<ast::PathElement>(OnePlus(PathCharacter)),
-             Seq(Token<ast::PathEscape>("`"),
-                 Token<ast::PathElement>(ZeroPlus(AnyCharBut("character other than '`'", "`"))),
-                 Token<ast::PathEscape>("`")))(std::move(prefixes));
+             Seq(Token<ast::PathEscape>("`"), Token<ast::PathElement>(ZeroPlus(AnyCharBut("`"))),
+                 Token<ast::PathEscape>("`")))(std::move(prefix));
 }
 
 // Grammar Rules -----------------------------------------------------------------------------------
 
 // Parses an identifier
 //     myVariable
-ParseResultStream Identifier(ParseResultStream prefixes) {
-  return NT<ast::Identifier>(Seq(Not(Digit), UnescapedIdentifier))(std::move(prefixes));
+ParseResult Identifier(ParseResult prefix) {
+  return NT<ast::Identifier>(Seq(Not(Digit), UnescapedIdentifier))(std::move(prefix));
 }
 
 // Parses a root path with at least one element and no trailing slash
 //     /foo
 //     /foo/bar
-ParseResultStream RootPath(ParseResultStream prefixes) {
-  return OnePlus(Seq(Token<ast::PathSeparator>("/"), OnePlus(PathElement)))(std::move(prefixes));
+ParseResult RootPath(ParseResult prefix) {
+  return OnePlus(Seq(Token<ast::PathSeparator>("/"), OnePlus(PathElement)))(std::move(prefix));
 }
 
 // Parses a path
@@ -93,30 +87,30 @@ ParseResultStream RootPath(ParseResultStream prefixes) {
 //     ./
 //     /
 //     .
-ParseResultStream Path(ParseResultStream prefixes) {
+ParseResult Path(ParseResult prefix) {
   return NT<ast::Path>(Alt(Seq(Maybe(Token<ast::PathElement>(".")), RootPath, Maybe(Token("/"))),
                            Seq(Maybe(Token<ast::PathElement>(".")), Token<ast::PathSeparator>("/")),
-                           Token<ast::PathElement>(".")))(std::move(prefixes));
+                           Token<ast::PathElement>(".")))(std::move(prefix));
 }
 
 // Parses an unadorned decimal Integer
 //     0
 //     12345
 //     12_345
-ParseResultStream DecimalInteger(ParseResultStream prefixes) {
-  return Alt(Seq(Token<ast::DecimalGroup>("0"), Not(Digit)),
-             Seq(Not(Token("0")), Token<ast::DecimalGroup>(OnePlus(Digit)),
-                 ZeroPlus(Seq(Token("_"), Token<ast::DecimalGroup>(OnePlus(Digit))))))(
-      std::move(prefixes));
+ParseResult DecimalInteger(ParseResult prefix) {
+  return Alt(
+      Seq(Token<ast::DecimalGroup>("0"), Not(Digit)),
+      Seq(Not(Token("0")), Token<ast::DecimalGroup>(OnePlus(Digit)),
+          ZeroPlus(Seq(Token("_"), Token<ast::DecimalGroup>(OnePlus(Digit))))))(std::move(prefix));
 }
 
 // Parses a hexadecimal integer marked by '0x'
 //     0x1234abcd
 //     0x12_abcd
-ParseResultStream HexInteger(ParseResultStream prefixes) {
+ParseResult HexInteger(ParseResult prefix) {
   return Seq(Token("0x"), Seq(Token<ast::HexGroup>(OnePlus(HexDigit)),
                               ZeroPlus(Seq(Token("_"), Token<ast::HexGroup>(OnePlus(HexDigit))))))(
-      std::move(prefixes));
+      std::move(prefix));
 }
 
 // Parses an integer.
@@ -125,48 +119,47 @@ ParseResultStream HexInteger(ParseResultStream prefixes) {
 //     12_345
 //     0x1234abcd
 //     0x12_abcd
-ParseResultStream Integer(ParseResultStream prefixes) {
+ParseResult Integer(ParseResult prefix) {
   // TODO: Binary integers, once we ask the FIDL team about them.
-  return NT<ast::Integer>(Alt(HexInteger, DecimalInteger))(std::move(prefixes));
+  return NT<ast::Integer>(Alt(HexInteger, DecimalInteger))(std::move(prefix));
 }
 
 // Parse a Real (unimplemented).
-ParseResultStream Real(ParseResultStream prefixes) { return std::move(prefixes).Fail(); }
+ParseResult Real(ParseResult prefix) { return ParseResult::kEnd; }
 
 // Parses an escape sequence.
 //     \n
 //     \r
 //     \xF0
-ParseResultStream EscapeSequence(ParseResultStream prefixes) {
+ParseResult EscapeSequence(ParseResult prefix) {
   return Alt(Token<ast::EscapeSequence>("\\n"), Token<ast::EscapeSequence>("\\t"),
              Token<ast::EscapeSequence>("\\\n"), Token<ast::EscapeSequence>("\\r"),
              Token<ast::EscapeSequence>("\\\\"), Token<ast::EscapeSequence>("\\\""),
              Token<ast::EscapeSequence>(
-                 Seq(Token<ast::EscapeSequence>("\\u"), Multi(6, HexDigit))))(std::move(prefixes));
+                 Seq(Token<ast::EscapeSequence>("\\u"), Multi(6, HexDigit))))(std::move(prefix));
 }
 
 // Parses a sequence of characters that might be within a string body.
 //     The quick brown fox jumped over the lazy dog.
-ParseResultStream StringEntity(ParseResultStream prefixes) {
-  return Alt(Token<ast::StringEntity>(OnePlus(AnyCharBut("string body character", "\n\\\""))),
-             EscapeSequence)(std::move(prefixes));
+ParseResult StringEntity(ParseResult prefix) {
+  return Alt(Token<ast::StringEntity>(OnePlus(AnyCharBut("\n\\\""))),
+             EscapeSequence)(std::move(prefix));
 }
 
 // Parses an ordinary string literal.
 //     "The quick brown fox jumped over the lazy dog."
 //     "A newline.\nA tab\tA code point\xF0"
-ParseResultStream NormalString(ParseResultStream prefixes) {
-  return NT<ast::String>(Seq(Token("\""), ZeroPlus(StringEntity), Token("\"")))(
-      std::move(prefixes));
+ParseResult NormalString(ParseResult prefix) {
+  return NT<ast::String>(Seq(Token("\""), ZeroPlus(StringEntity), Token("\"")))(std::move(prefix));
 }
 
 // Parse an ordinary string literal, or a multiline string literal.
 //     "The quick brown fox jumped over the lazy dog."
 //     "A newline.\nA tab\tA code point\xF0"
 // TODO: Decide on a MultiString syntax we like.
-ParseResultStream String(ParseResultStream prefixes) {
-  // return Alt(NormalString, MultiString)(prefixes);
-  return NormalString(std::move(prefixes));
+ParseResult String(ParseResult prefix) {
+  // return Alt(NormalString, MultiString)(prefix);
+  return NormalString(std::move(prefix));
 }
 
 // Parse an Atom (a simple literal value).
@@ -175,107 +168,110 @@ ParseResultStream String(ParseResultStream prefixes) {
 //     my_variable
 //     3.2156
 //     ./some/path
-ParseResultStream Atom(ParseResultStream prefixes) {
-  return Alt(Identifier, String, Real, Integer, Path)(std::move(prefixes));
+ParseResult Atom(ParseResult prefix) {
+  return Alt(Identifier, String, Real, Integer, Path)(std::move(prefix));
 }
 
-ParseResultStream LogicalOr(ParseResultStream prefixes);
+ParseResult LogicalOr(ParseResult prefix);
 const auto& SimpleExpression = LogicalOr;
 
 // Parse a field in an object literal.
 //     foo: 6
 //     "bar & grill": "Open now"
-ParseResultStream Field(ParseResultStream prefixes) {
+ParseResult Field(ParseResult prefix) {
   return NT<ast::Field>(WSSeq(Alt(NormalString, Identifier), Token<ast::FieldSeparator>(":"),
-                              SimpleExpression))(std::move(prefixes));
+                              SimpleExpression))(std::move(prefix));
 }
 
 // Parse the body of an object literal.
 //     foo: 6
 //     foo: 6, "bar & grill": "Open now",
-ParseResultStream ObjectBody(ParseResultStream prefixes) {
-  return WSSeq(Field, ZeroPlus(WSSeq(Token(","), Field)), Maybe(Token(",")))(std::move(prefixes));
+ParseResult ObjectBody(ParseResult prefix) {
+  return WSSeq(Field, ZeroPlus(WSSeq(Token(","), Field)), Maybe(Token(",")))(std::move(prefix));
 }
 
 // Parse an object literal.
 //     {}
 //     { foo: 6, "bar & grill": "Open now" }
 //     { foo: { bar: 6 }, "bar & grill": "Open now" }
-ParseResultStream Object(ParseResultStream prefixes) {
-  return NT<ast::Object>(WSSeq(Token("{"), Maybe(ObjectBody), Token("}")))(std::move(prefixes));
+ParseResult Object(ParseResult prefix) {
+  return NT<ast::Object>(WSSeq(Token("{"), Maybe(ObjectBody), Token("}")))(std::move(prefix));
 }
 
 // Parse a Value.
 //     "The quick brown fox jumped over the lazy dog."
 //     0x1234abcd
 //     { foo: 3, bar: 6 }
-ParseResultStream Value(ParseResultStream prefixes) {
+ParseResult Value(ParseResult prefix) {
   /* Eventual full version of this rule is:
-  return Alt(List, Object, Range, Lambda, Parenthetical, Block, If, Atom)(std::move(prefixes));
+  return Alt(List, Object, Range, Lambda, Parenthetical, Block, If, Atom)(std::move(prefix));
   */
-  return Alt(Object, Atom)(std::move(prefixes));
+  return Alt(Object, Atom)(std::move(prefix));
 }
 
 // Unimplemented.
-ParseResultStream Lookup(ParseResultStream prefixes) { return Value(std::move(prefixes)); }
+ParseResult Lookup(ParseResult prefix) { return Value(std::move(prefix)); }
 
 // Unimplemented.
-ParseResultStream Negate(ParseResultStream prefixes) { return Lookup(std::move(prefixes)); }
+ParseResult Negate(ParseResult prefix) { return Lookup(std::move(prefix)); }
 
 // Unimplemented.
-ParseResultStream Mul(ParseResultStream prefixes) { return Negate(std::move(prefixes)); }
+ParseResult Mul(ParseResult prefix) { return Negate(std::move(prefix)); }
 
 // Parse an addition expression.
 //     2 + 2
-ParseResultStream Add(ParseResultStream prefixes) {
-  return LAssoc<ast::AddSub>(
-      Seq(Mul, Maybe(Whitespace)),
-      WSSeq(Token<ast::Operator>(AnyChar("+ or -", "+-")), Mul))(std::move(prefixes));
+ParseResult Add(ParseResult prefix) {
+  return LAssoc<ast::AddSub>(Seq(Mul, Maybe(Whitespace)),
+                             WSSeq(Token<ast::Operator>(AnyChar("+-")), Mul))(std::move(prefix));
 }
 
 // Unimplemented.
-ParseResultStream Comparison(ParseResultStream prefixes) { return Add(std::move(prefixes)); }
+ParseResult Comparison(ParseResult prefix) { return Add(std::move(prefix)); }
 
 // Unimplemented.
-ParseResultStream LogicalNot(ParseResultStream prefixes) { return Comparison(std::move(prefixes)); }
+ParseResult LogicalNot(ParseResult prefix) { return Comparison(std::move(prefix)); }
 
 // Unimplemented.
-ParseResultStream LogicalAnd(ParseResultStream prefixes) { return LogicalNot(std::move(prefixes)); }
+ParseResult LogicalAnd(ParseResult prefix) { return LogicalNot(std::move(prefix)); }
 
 // Unimplemented.
-ParseResultStream LogicalOr(ParseResultStream prefixes) { return LogicalAnd(std::move(prefixes)); }
+ParseResult LogicalOr(ParseResult prefix) { return LogicalAnd(std::move(prefix)); }
 
 // Parses an expression. This is effectively unimplemented right now.
-ParseResultStream Expression(ParseResultStream prefixes) {
+ParseResult Expression(ParseResult prefix) {
   // Unimplemented
-  return NT<ast::Expression>(SimpleExpression)(std::move(prefixes));
+  return NT<ast::Expression>(SimpleExpression)(std::move(prefix));
 }
 
 // Parses a variable declaration:
 //     var foo = 4.5
 //     const foo = "Ham sandwich"
-ParseResultStream VariableDecl(ParseResultStream prefixes) {
+ParseResult VariableDecl(ParseResult prefix) {
   return NT<ast::VariableDecl>(WSSeq(Alt(KW<ast::Var>("var"), KW<ast::Const>("const")), Identifier,
-                                     Token("="), Expression))(std::move(prefixes));
+                                     Token("="), Expression))(std::move(prefix));
 }
 
 // Parses the body of a program, but doesn't create an AST node. This is useful because the rule is
 // recursive, but we want to flatten its structure.
-ParseResultStream ProgramContent(ParseResultStream prefixes) {
+ParseResult ProgramContent(ParseResult prefix) {
   /* Eventual full version of this rule is:
   return Alt(WSSeq(VariableDecl, Maybe(WSSeq(AnyChar(";&", "; or &"), ProgramMeta))),
              WSSeq(FunctionDecl, Program),
              WSSeq(Expression, Maybe(WSSeq(AnyChar(";&", "; or &"), ProgramMeta))),
-  Empty)(prefixes);
+  Empty)(prefix);
   */
-  return Alt(WSSeq(VariableDecl, Maybe(WSSeq(AnyChar("; or &", ";&"), ProgramContent))),
-             Empty)(std::move(prefixes));
+  return Alt(WSSeq(VariableDecl, Maybe(WSSeq(AnyChar(";&"), ProgramContent))),
+             Empty)(std::move(prefix));
 }
 
 }  // namespace
 
 std::shared_ptr<ast::Node> Parse(std::string_view text) {
-  return NT<ast::Program>(Seq(ProgramContent, EOS))(text).Next().node();
+  if (auto res = NT<ast::Program>(Seq(ProgramContent, EOS))(ParseResult(text))) {
+    return res.node();
+  }
+
+  return nullptr;
 }
 
 }  // namespace shell::parser

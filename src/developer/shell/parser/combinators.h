@@ -12,41 +12,37 @@ namespace shell::parser {
 
 // Create a parser that runs a sequence of parsers consecutively.
 template <typename... Args>
-fit::function<ParseResultStream(ParseResultStream)> Seq(
-    fit::function<ParseResultStream(ParseResultStream)> first, Args... args) {
+fit::function<ParseResult(ParseResult)> Seq(fit::function<ParseResult(ParseResult)> first,
+                                            Args... args) {
   return Seq(std::move(first), Seq(std::move(args)...));
 }
 
-fit::function<ParseResultStream(ParseResultStream)> Seq(
-    fit::function<ParseResultStream(ParseResultStream)> a,
-    fit::function<ParseResultStream(ParseResultStream)> b);
-fit::function<ParseResultStream(ParseResultStream)> Seq(
-    fit::function<ParseResultStream(ParseResultStream)> first);
+fit::function<ParseResult(ParseResult)> Seq(fit::function<ParseResult(ParseResult)> a,
+                                            fit::function<ParseResult(ParseResult)> b);
+fit::function<ParseResult(ParseResult)> Seq(fit::function<ParseResult(ParseResult)> first);
 
 // Given a list of parsers, produce a parser which tries to parse each of them in sequence and
 // returns the first successful result.
 template <typename... Args>
-fit::function<ParseResultStream(ParseResultStream)> Alt(
-    fit::function<ParseResultStream(ParseResultStream)> first, Args... args) {
+fit::function<ParseResult(ParseResult)> Alt(fit::function<ParseResult(ParseResult)> first,
+                                            Args... args) {
   return Alt(std::move(first), Alt(std::move(args)...));
 }
 
-fit::function<ParseResultStream(ParseResultStream)> Alt(
-    fit::function<ParseResultStream(ParseResultStream)> a);
-fit::function<ParseResultStream(ParseResultStream)> Alt(
-    fit::function<ParseResultStream(ParseResultStream)> a,
-    fit::function<ParseResultStream(ParseResultStream)> b);
+fit::function<ParseResult(ParseResult)> Alt(fit::function<ParseResult(ParseResult)> a);
+fit::function<ParseResult(ParseResult)> Alt(fit::function<ParseResult(ParseResult)> a,
+                                            fit::function<ParseResult(ParseResult)> b);
 
 // Parser which always returns success and consumes no output.
-ParseResultStream Empty(ParseResultStream prefixes);
+ParseResult Empty(ParseResult prefix);
 
 // End Of Stream. Parser which only succeeds if there is no more input.
-ParseResultStream EOS(ParseResultStream prefixes);
+ParseResult EOS(ParseResult prefix);
 
 // Produce a parser which runs the given parser, and returns its result, unless it fails in which
 // case it returns an empty parse.
-inline fit::function<ParseResultStream(ParseResultStream)> Maybe(
-    fit::function<ParseResultStream(ParseResultStream)> child) {
+inline fit::function<ParseResult(ParseResult)> Maybe(
+    fit::function<ParseResult(ParseResult)> child) {
   return Alt(std::move(child), Empty);
 }
 
@@ -54,36 +50,32 @@ inline fit::function<ParseResultStream(ParseResultStream)> Maybe(
 // the produced parser succeeds, and if the given parser succeeds, the produced parser fails. Either
 // way the produced parser does not advance the parse position and produces no nodes on success, and
 // one error node on failure.
-fit::function<ParseResultStream(ParseResultStream)> Not(
-    fit::function<ParseResultStream(ParseResultStream)> inv);
+fit::function<ParseResult(ParseResult)> Not(fit::function<ParseResult(ParseResult)> inv);
 
 // Produce a parser which sequentially repeats a given parser between min and max times.
-fit::function<ParseResultStream(ParseResultStream)> Multi(
-    size_t min, size_t max, fit::function<ParseResultStream(ParseResultStream)> child);
+fit::function<ParseResult(ParseResult)> Multi(size_t min, size_t max,
+                                              fit::function<ParseResult(ParseResult)> child);
 
 // Produce a parser which sequentially repeats a given parser exactly count times.
-fit::function<ParseResultStream(ParseResultStream)> Multi(
-    size_t count, fit::function<ParseResultStream(ParseResultStream)> child);
+fit::function<ParseResult(ParseResult)> Multi(size_t count,
+                                              fit::function<ParseResult(ParseResult)> child);
 
 // Produce a parser which sequentially repeats a given parser zero or more times.
-inline fit::function<ParseResultStream(ParseResultStream)> ZeroPlus(
-    fit::function<ParseResultStream(ParseResultStream)> child) {
+inline fit::function<ParseResult(ParseResult)> ZeroPlus(
+    fit::function<ParseResult(ParseResult)> child) {
   return Multi(0, std::numeric_limits<size_t>::max(), std::move(child));
 }
 
 // Produce a parser which sequentially repeats a given parser one or more times.
-inline fit::function<ParseResultStream(ParseResultStream)> OnePlus(
-    fit::function<ParseResultStream(ParseResultStream)> child) {
+inline fit::function<ParseResult(ParseResult)> OnePlus(
+    fit::function<ParseResult(ParseResult)> child) {
   return Multi(1, std::numeric_limits<size_t>::max(), std::move(child));
 }
 
 // Collect the results of the contained parse as a nonterminal and assign a name.
 template <typename T>
-fit::function<ParseResultStream(ParseResultStream)> NT(
-    fit::function<ParseResultStream(ParseResultStream)> a) {
-  return [a = std::move(a)](ParseResultStream prefixes) {
-    return a(std::move(prefixes).Mark()).Reduce<T>();
-  };
+fit::function<ParseResult(ParseResult)> NT(fit::function<ParseResult(ParseResult)> a) {
+  return [a = std::move(a)](ParseResult prefix) { return a(std::move(prefix).Mark()).Reduce<T>(); };
 }
 
 // Parse a left-associative sequence of non-terminals.
@@ -110,15 +102,14 @@ fit::function<ParseResultStream(ParseResultStream)> NT(
 //
 // but insert some stack cleverness so we get the nonterminal structure we expect.
 template <typename T>
-fit::function<ParseResultStream(ParseResultStream)> LAssoc(
-    fit::function<ParseResultStream(ParseResultStream)> operand,
-    fit::function<ParseResultStream(ParseResultStream)> continuation) {
-  auto combined =
-      Seq(std::move(operand), ZeroPlus(Seq(std::move(continuation), [](ParseResultStream p) {
-            return std::move(p).Reduce<T>(false);
-          })));
-  return [combined = std::move(combined)](ParseResultStream prefixes) {
-    return combined(std::move(prefixes).Mark()).DropMarker();
+fit::function<ParseResult(ParseResult)> LAssoc(
+    fit::function<ParseResult(ParseResult)> operand,
+    fit::function<ParseResult(ParseResult)> continuation) {
+  auto combined = Seq(std::move(operand), ZeroPlus(Seq(std::move(continuation), [](ParseResult p) {
+                        return std::move(p).Reduce<T>(false);
+                      })));
+  return [combined = std::move(combined)](ParseResult prefix) {
+    return combined(std::move(prefix).Mark()).DropMarker();
   };
 }
 

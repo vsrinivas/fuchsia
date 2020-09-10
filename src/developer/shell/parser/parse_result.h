@@ -13,8 +13,7 @@
 
 namespace shell::parser {
 
-// A particular parse which is emitted from a ParseResultStream. Successful parses will only
-// produce one of these, but error parses may produce multiple recovery parses.
+// The result of parsing.
 class ParseResult {
   // Frame in a stack of parsed nodes.
   struct Frame {
@@ -29,6 +28,7 @@ class ParseResult {
   ParseResult(const ParseResult &) = default;
   explicit ParseResult(std::string_view text) : ParseResult(text, 0, 0, 0, 0, nullptr, nullptr) {}
 
+  bool is_end() const { return frame_ == nullptr; }
   size_t offset() const { return offset_; }
   size_t error_score() const { return error_internal_ + std::max(error_insert_, error_delete_); }
   std::string_view unit() const { return unit_; }
@@ -38,6 +38,10 @@ class ParseResult {
   // Move parsing ahead by len bytes, and push a token of that length.
   template <typename T = ast::Terminal>
   ParseResult Advance(size_t size) {
+    if (is_end()) {
+      return kEnd;
+    }
+
     return ParseResult(unit_, offset_ + size, 0, 0, error_score(),
                        std::make_shared<T>(offset_, size, tail().substr(0, size)), frame_);
   }
@@ -50,6 +54,10 @@ class ParseResult {
   // An example use case would be the parser-modifying version of Token(), which parses a new
   // non-terminal on the stack, then concatenates its children to create a new terminal instead.
   ParseResult SetNode(std::shared_ptr<ast::Node> node) {
+    if (is_end()) {
+      return kEnd;
+    }
+
     return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_, node,
                        frame_->prev);
   }
@@ -57,12 +65,20 @@ class ParseResult {
   // Insert an error indicating a token of the given size was expected. ident names the token in the
   // error message. The parse position does not change.
   ParseResult Expected(size_t size, const std::string &ident) {
+    if (is_end()) {
+      return kEnd;
+    }
+
     return ParseResult(unit_, offset_, error_insert_ + size, error_delete_, error_internal_,
                        std::make_unique<ast::Error>(offset_, 0, "Expected " + ident), frame_);
   }
 
   // Skip the given number of bytes and push an error token indicating they were skipped.
   ParseResult Skip(size_t size) {
+    if (is_end()) {
+      return kEnd;
+    }
+
     return ParseResult(
         unit_, offset_ + size, error_insert_, error_delete_ + size, error_internal_,
         std::make_unique<ast::Error>(offset_, size,
@@ -72,12 +88,20 @@ class ParseResult {
 
   // Push an error on to the stack and add internal error to this state.
   ParseResult InjectError(size_t error_amount, std::shared_ptr<ast::Node> error_node) {
+    if (is_end()) {
+      return kEnd;
+    }
+
     return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_ + error_amount,
                        error_node, frame_);
   }
 
   // Push a marker frame onto the stack. The next Reduce() call will reduce up to here.
   ParseResult Mark() {
+    if (is_end()) {
+      return kEnd;
+    }
+
     return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_, nullptr,
                        frame_);
   }
@@ -99,19 +123,21 @@ class ParseResult {
   // Remove the marker frame nearest the top of the stack without disturbing the rest of the stack.
   // This is useful if we call reduce with pop_marker = false.
   ParseResult DropMarker() {
-    ParseResult ret(unit_, offset_, error_insert_, error_delete_, error_internal_);
-    ret.frame_ = DropMarkerFrame();
-    return ret;
+    if (auto frame = DropMarkerFrame()) {
+      ParseResult ret(unit_, offset_, error_insert_, error_delete_, error_internal_);
+      ret.frame_ = frame;
+      return ret;
+    }
+
+    return kEnd;
   }
 
-  operator bool() const { return frame_ != nullptr; }
+  explicit operator bool() const { return !is_end(); }
 
   // A null parse result indicating no further error alternatives.
   static const ParseResult kEnd;
 
  private:
-  friend class ParseResultStream;
-
   ParseResult(std::string_view unit, size_t offset, size_t error_insert, size_t error_delete,
               size_t error_internal)
       : offset_(offset),
@@ -133,7 +159,9 @@ class ParseResult {
       frame = frame_;
     }
 
-    if (frame->is_stack_bottom()) {
+    if (!frame) {
+      return nullptr;
+    } else if (frame->is_stack_bottom()) {
       return frame;
     } else if (frame->is_marker_frame()) {
       return frame->prev;
@@ -166,71 +194,6 @@ class ParseResult {
 
   // Last node that was parsed at this position.
   std::shared_ptr<Frame> frame_;
-};
-
-// Result of a parse operation. Produces one or more ParseResult values in order of increasing
-// amount of error consumed.
-//
-// ParseResultStream is a single-use iterator. You call Next() on it to retrieve the results it
-// yields until it yields a null result, at which point it will never yield a valid result again.
-// For this reason, code that queries a ParseResultStream should usually consume it. Several methods
-// on ParseResultStream produce a new ParseResultStream that modifies the results, and those methods
-// always require an RValue receiver to ensure semantics are correct.
-class ParseResultStream {
- public:
-  ParseResultStream(bool ok, fit::function<ParseResult()> next) : ok_(ok), next_(std::move(next)) {}
-  ParseResultStream(const char *text) : ParseResultStream(std::string_view(text)) {}
-  ParseResultStream(std::string_view text) : ParseResultStream(ParseResult(text)) {}
-  explicit ParseResultStream(ParseResult result)
-      : ParseResultStream(/*ok=*/true, [result]() mutable {
-          auto ret = result;
-          result = ParseResult::kEnd;
-          return ret;
-        }) {}
-
-  // Whether the last combinator succeeded.
-  bool ok() { return ok_; }
-
-  // Retrieve the next element from the stream.
-  ParseResult Next() { return next_(); }
-
-  // Push a marker frame onto the stack for each result we yield. This is how we parse
-  // non-terminals. We push a marker, start parsing the child nodes of the non-terminal, then call
-  // Reduce() to pop everything up to and including the marker and make them children of a new node.
-  ParseResultStream Mark() && {
-    return std::move(*this).Map([](ParseResult p) { return p.Mark(); });
-  }
-
-  // Reduce every result that is output from this stream. This is the other half of Mark() and is
-  // used to turn stacks of child nodes into single non-terminals.
-  template <typename T>
-  ParseResultStream Reduce(bool pop_marker = true) && {
-    return std::move(*this).Map([pop_marker](ParseResult p) { return p.Reduce<T>(pop_marker); });
-  }
-
-  // Drop a marker frame from every result that is output from this stream. See
-  // ParseResult::DropMarker.
-  ParseResultStream DropMarker() && {
-    return std::move(*this).Map([](ParseResult p) { return p.DropMarker(); });
-  }
-
-  // Fork a parse result stream into two identical streams. Each will yield the same data, and data
-  // will be queued such that calling Next on one will not affect the output of the other.
-  std::pair<ParseResultStream, ParseResultStream> Fork() &&;
-
-  // Set ok() to false.
-  ParseResultStream Fail() &&;
-
-  // Attempt to parse the tail left after each parse result in this stream with the results of
-  // another parser.
-  ParseResultStream Follow(fit::function<ParseResultStream(ParseResult)> next) &&;
-
-  // Rewrite the results output from this stream.
-  ParseResultStream Map(fit::function<ParseResult(ParseResult)> mapper) &&;
-
- private:
-  bool ok_;
-  fit::function<ParseResult()> next_;
 };
 
 template <typename T>

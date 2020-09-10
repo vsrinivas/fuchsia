@@ -5,29 +5,17 @@
 #include "src/developer/shell/parser/text_match.h"
 
 namespace shell::parser {
-namespace internal {}  // namespace internal
-
 namespace {
 
 // Produce a parser which parses any single character from the given list. If invert is true,
 // character must NOT be in the list instead.
-fit::function<ParseResultStream(ParseResultStream)> AnyCharMayInvert(std::string_view chars,
-                                                                     bool invert,
-                                                                     const std::string& name) {
-  return [chars, invert, name](ParseResultStream prefixes) {
-    return std::move(prefixes).Follow([chars, invert, name](ParseResult prefix) {
-      auto tail = prefix.tail();
-      return internal::FixedTextResult(
-          std::move(prefix), name,
-          tail.size() > 0 && (chars.find(tail[0]) == std::string::npos) == invert, 1,
-          [chars, invert, tail]() {
-            if (invert) {
-              return tail.find_first_not_of(chars);
-            } else {
-              return tail.find_first_of(chars);
-            }
-          });
-    });
+fit::function<ParseResult(ParseResult)> AnyCharMayInvert(std::string_view chars, bool invert) {
+  return [chars, invert](ParseResult prefix) {
+    if (prefix.tail().size() > 0 && (chars.find(prefix.tail()[0]) == std::string::npos) == invert) {
+      return prefix.Advance(1);
+    }
+
+    return ParseResult::kEnd;
   };
 }
 
@@ -54,36 +42,23 @@ bool MatchCharGroup(std::string_view chars, char c) {
 
 }  // namespace
 
-fit::function<ParseResultStream(ParseResultStream)> AnyChar(const std::string& name,
-                                                            std::string_view chars) {
-  return AnyCharMayInvert(chars, false, name);
+fit::function<ParseResult(ParseResult)> AnyChar(std::string_view chars) {
+  return AnyCharMayInvert(chars, false);
 }
 
-ParseResultStream AnyChar(ParseResultStream prefixes) {
-  return AnyCharBut("a character", "")(std::move(prefixes));
+ParseResult AnyChar(ParseResult prefix) { return AnyCharBut("")(std::move(prefix)); }
+
+fit::function<ParseResult(ParseResult)> AnyCharBut(std::string_view chars) {
+  return AnyCharMayInvert(chars, true);
 }
 
-fit::function<ParseResultStream(ParseResultStream)> AnyCharBut(const std::string& name,
-                                                               std::string_view chars) {
-  return AnyCharMayInvert(chars, true, name);
-}
+fit::function<ParseResult(ParseResult)> CharGroup(std::string_view chars) {
+  return [chars](ParseResult prefix) {
+    if (prefix.tail().size() > 0 && MatchCharGroup(chars, prefix.tail()[0])) {
+      return prefix.Advance(1);
+    }
 
-fit::function<ParseResultStream(ParseResultStream)> CharGroup(const std::string& name,
-                                                              std::string_view chars) {
-  return [chars, name](ParseResultStream prefixes) {
-    return std::move(prefixes).Follow([chars, name](ParseResult prefix) {
-      auto tail = prefix.tail();
-      bool matched = tail.size() > 0 && MatchCharGroup(chars, tail[0]);
-      return internal::FixedTextResult(std::move(prefix), name, matched, 1, [chars, tail]() {
-        size_t i = 0;
-
-        while (i < tail.size() && !MatchCharGroup(chars, tail[i])) {
-          i++;
-        }
-
-        return i;
-      });
-    });
+    return ParseResult::kEnd;
   };
 }
 

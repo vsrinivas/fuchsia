@@ -165,6 +165,11 @@ bool Command::Parse(const std::string& line) {
 
   auto node = parser::Parse(line);
 
+  if (!node) {
+    parse_error_ = Err(ErrorType::kBadParse, "Command not recognized.");
+    return false;
+  }
+
   if (node->HasErrors()) {
     parse_error_ = Err(ErrorType::kBadParse, CollectErrors(*node));
     return false;

@@ -66,7 +66,7 @@ TEST_F(Executor, ExecuteObjectDecl) {
   tester.Test("var c = { a:1, b:2 }", "", "Variable 'c' already defined.First definition.");
 
   // An error from the parser:
-  tester.Test("var c = { a:1,", "", "Invalid command: Unexpected 'var c = { a:1,'");
+  tester.Test("var c = { a:1,", "", "Invalid command: Command not recognized.");
 }
 
 }  // namespace
