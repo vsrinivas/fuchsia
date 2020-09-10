@@ -15,12 +15,12 @@ use {
         types::{Address, BondingData, HostData, PeerId},
     },
     fuchsia_inspect,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{
         channel::{mpsc, oneshot},
         future::{Future, FutureExt},
         stream::StreamExt,
     },
+    log::{error, info},
     serde_json,
     std::collections::HashMap,
     std::ops::Deref,
@@ -141,7 +141,7 @@ impl Stash {
         let (sender, receiver) = mpsc::channel::<Request>(STASH_MSG_QUEUE_CAPACITY);
         fasync::Task::spawn(run_stash(receiver, inner).map(|r| {
             if let Err(e) = r {
-                fx_log_err!("Error running stash: {}", e);
+                error!("Error running stash: {}", e);
             }
         }))
         .detach();
@@ -243,7 +243,7 @@ impl StashInner {
             .map(|bond| {
                 let node = self.inspect.create_child(format!("bond {}", bond.identifier));
                 let bond = Inspectable::new(bond, node);
-                fx_log_info!("storing bond (id: {})", bond.identifier);
+                info!("storing bond (id: {})", bond.identifier);
                 bond
             })
             .collect();
@@ -282,7 +282,7 @@ impl StashInner {
     /// Removes persisted bond for a peer and removes its information from any adapters that have
     /// it. Returns an error for failures but not if the peer isn't found.
     async fn rm_peer(&mut self, peer_id: PeerId) -> Result<(), Error> {
-        fx_log_info!("rm_peer (id: {})", peer_id);
+        info!("rm_peer (id: {})", peer_id);
 
         // Delete the persisted bond blob.
         self.proxy.delete_value(&bonding_data_key(peer_id))?;
@@ -300,7 +300,7 @@ impl StashInner {
 
     /// Updates the host data for the host with the given identity address.
     async fn store_host_data(&mut self, local_addr: &Address, data: HostData) -> Result<(), Error> {
-        fx_log_info!("store_host_data (local address: {})", local_addr);
+        info!("store_host_data (local address: {})", local_addr);
 
         // Persist the serialized blob.
         let serialized = serde_json::to_string(&HostDataSerializer(&data.clone().into()))?;
@@ -346,7 +346,7 @@ impl StashInner {
                         bonding_map.entry(bonding_data.local_address).or_insert(HashMap::new());
                     local_address_entries.insert(bonding_data.identifier.clone(), bonding_data);
                 } else {
-                    fx_log_err!("stash malformed: bonding data should be a string");
+                    error!("stash malformed: bonding data should be a string");
                     return Err(format_err!("failed to initialize stash"));
                 }
             }
@@ -374,7 +374,7 @@ impl StashInner {
                     let host_data = HostDataDeserializer::from_json(&json)?;
                     host_data_map.insert(host_address, host_data.into());
                 } else {
-                    fx_log_err!("stash malformed: host data should be a string");
+                    error!("stash malformed: host data should be a string");
                     return Err(BtError::new("failed to initialize stash").into());
                 }
             }
@@ -408,7 +408,7 @@ pub async fn init_stash(
     let (stash, stash_run) = build_stash(inner);
     fasync::Task::spawn(stash_run.map(|r| {
         if let Err(e) = r {
-            fx_log_err!("Error running stash: {}", e);
+            error!("Error running stash: {}", e);
         }
     }))
     .detach();

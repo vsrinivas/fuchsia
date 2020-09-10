@@ -21,9 +21,9 @@ use {
         fuchsia_single_component_package_url,
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::try_join5, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    log::{error, info, warn},
     pin_utils::pin_mut,
     std::collections::HashMap,
 };
@@ -52,11 +52,11 @@ const BT_GAP_COMPONENT_ID: &'static str = "bt-gap";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["bt-gap"]).expect("Can't init logger");
-    fx_log_info!("Starting bt-gap...");
+    fuchsia_syslog::init_with_tags(&["bt-gap"]).expect("Can't init logger");
+    info!("Starting bt-gap...");
     let result = run().await.context("Error running BT-GAP");
     if let Err(e) = &result {
-        fx_log_err!("{:?}", e)
+        error!("{:?}", e)
     };
     Ok(result?)
 }
@@ -82,7 +82,7 @@ async fn launch_profile_forwarding_component(
     let mut rfcomm_fs = ServiceFs::new();
     rfcomm_fs
         .add_service_at(ProfileMarker::NAME, move |chan| {
-            fx_log_info!("Connecting Profile Service to Adapter");
+            info!("Connecting Profile Service to Adapter");
             fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
             None
         })
@@ -113,11 +113,11 @@ fn relay_profile_channel(
 ) {
     match &component {
         Some((rfcomm_component, _env)) => {
-            fx_log_info!("Passing Profile to RFCOMM Service");
+            info!("Passing Profile to RFCOMM Service");
             let _ = rfcomm_component.pass_to_service::<ProfileMarker>(chan);
         }
         None => {
-            fx_log_info!("Directly connecting Profile Service to Adapter");
+            info!("Directly connecting Profile Service to Adapter");
             fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
         }
     }
@@ -190,7 +190,7 @@ async fn run() -> Result<(), Error> {
                 AdapterAdded(device_path) => {
                     let result = watch_hd.add_adapter(&device_path).await;
                     if let Err(e) = &result {
-                        fx_log_warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
+                        warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
                     }
                     result?
                 }
@@ -213,7 +213,7 @@ async fn run() -> Result<(), Error> {
     {
         Ok((rfcomm, env)) => Some((rfcomm, env)),
         Err(e) => {
-            fx_log_warn!("bt-gap unable to launch bt-rfcomm: {:?}", e);
+            warn!("bt-gap unable to launch bt-rfcomm: {:?}", e);
             None
         }
     };
@@ -226,12 +226,12 @@ async fn run() -> Result<(), Error> {
     fs.dir("svc")
         .add_fidl_service(move |s| control_service(control_hd.clone(), s))
         .add_service_at(CentralMarker::NAME, move |chan| {
-            fx_log_info!("Connecting CentralService to Adapter");
+            info!("Connecting CentralService to Adapter");
             fasync::Task::spawn(central_hd.clone().request_host_service(chan, LeCentral)).detach();
             None
         })
         .add_service_at(PeripheralMarker::NAME, move |chan| {
-            fx_log_info!("Connecting Peripheral Service to Adapter");
+            info!("Connecting Peripheral Service to Adapter");
             fasync::Task::spawn(peripheral_hd.clone().request_host_service(chan, LePeripheral))
                 .detach();
             None
@@ -241,7 +241,7 @@ async fn run() -> Result<(), Error> {
             None
         })
         .add_service_at(Server_Marker::NAME, move |chan| {
-            fx_log_info!("Connecting Gatt Service to Adapter");
+            info!("Connecting Gatt Service to Adapter");
             fasync::Task::spawn(gatt_hd.clone().request_host_service(chan, LeGatt)).detach();
             None
         })
@@ -252,34 +252,34 @@ async fn run() -> Result<(), Error> {
         // asks, whenever, but clients should not rely on this. The implementation will change once
         // we have a better solution.
         .add_fidl_service(move |request_stream| {
-            fx_log_info!("Serving Bootstrap Service");
+            info!("Serving Bootstrap Service");
             fasync::Task::spawn(
                 services::bootstrap::run(bootstrap_hd.clone(), request_stream)
-                    .unwrap_or_else(|e| fx_log_warn!("Bootstrap service failed: {:?}", e)),
+                    .unwrap_or_else(|e| warn!("Bootstrap service failed: {:?}", e)),
             )
             .detach();
         })
         .add_fidl_service(move |request_stream| {
-            fx_log_info!("Serving Access Service");
+            info!("Serving Access Service");
             fasync::Task::spawn(
                 services::access::run(access_hd.clone(), request_stream)
-                    .unwrap_or_else(|e| fx_log_warn!("Access service failed: {:?}", e)),
+                    .unwrap_or_else(|e| warn!("Access service failed: {:?}", e)),
             )
             .detach();
         })
         .add_fidl_service(move |request_stream| {
-            fx_log_info!("Serving Configuration Service");
+            info!("Serving Configuration Service");
             fasync::Task::spawn(
                 services::configuration::run(config_hd.clone(), request_stream)
-                    .unwrap_or_else(|e| fx_log_warn!("Configuration service failed: {:?}", e)),
+                    .unwrap_or_else(|e| warn!("Configuration service failed: {:?}", e)),
             )
             .detach();
         })
         .add_fidl_service(move |request_stream| {
-            fx_log_info!("Serving HostWatcher Service");
+            info!("Serving HostWatcher Service");
             fasync::Task::spawn(
                 services::host_watcher::run(hostwatcher_hd.clone(), request_stream)
-                    .unwrap_or_else(|e| fx_log_warn!("HostWatcher service failed: {:?}", e)),
+                    .unwrap_or_else(|e| warn!("HostWatcher service failed: {:?}", e)),
             )
             .detach();
         });
@@ -298,7 +298,7 @@ async fn run() -> Result<(), Error> {
 }
 
 fn control_service(hd: HostDispatcher, stream: ControlRequestStream) {
-    fx_log_info!("Spawning Control Service");
+    info!("Spawning Control Service");
     fasync::Task::spawn(
         services::start_control_service(hd.clone(), stream)
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),

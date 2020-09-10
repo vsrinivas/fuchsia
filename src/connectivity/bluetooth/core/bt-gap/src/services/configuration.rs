@@ -5,18 +5,18 @@
 use {
     anyhow::Error,
     fidl_fuchsia_bluetooth_sys::{ConfigurationRequest, ConfigurationRequestStream},
-    fuchsia_syslog::fx_log_info,
     futures::prelude::*,
+    log::info,
 };
 
 use crate::host_dispatcher::HostDispatcher;
 /// Start processing Configuration FIDL protocol messages from the given |stream|.
 pub async fn run(hd: HostDispatcher, mut stream: ConfigurationRequestStream) -> Result<(), Error> {
-    fx_log_info!("fuchsia.bluetooth.sys.Configuration session started");
+    info!("fuchsia.bluetooth.sys.Configuration session started");
     while let Some(event) = stream.next().await {
         handler(hd.clone(), event?).await?;
     }
-    fx_log_info!("fuchsia.bluetooth.sys.Configuration session terminated");
+    info!("fuchsia.bluetooth.sys.Configuration session terminated");
     Ok(())
 }
 

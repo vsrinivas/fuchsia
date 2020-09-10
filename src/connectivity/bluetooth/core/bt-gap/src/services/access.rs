@@ -10,11 +10,11 @@ use {
         pairing_options::{BondableMode, PairingOptions},
         Peer, PeerId, Technology,
     },
-    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     futures::{
         future::{pending, BoxFuture},
         select, FutureExt, Stream, StreamExt,
     },
+    log::{info, trace, warn},
     parking_lot::Mutex,
     std::{collections::HashMap, mem, sync::Arc},
 };
@@ -32,7 +32,7 @@ struct AccessSession {
 }
 
 pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<(), Error> {
-    fx_log_info!("fuchsia.bluetooth.sys.Access session started");
+    info!("fuchsia.bluetooth.sys.Access session started");
     let mut watch_peers_subscriber = hd.watch_peers().await;
     let mut session: AccessSession = Default::default();
     let mut discovery_pending = pending().boxed();
@@ -58,7 +58,7 @@ pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<
         };
     }
 
-    fx_log_info!("fuchsia.bluetooth.sys.Access session terminated");
+    info!("fuchsia.bluetooth.sys.Access session terminated");
     Ok(())
 }
 
@@ -76,7 +76,7 @@ async fn handler(
                     hd.set_pairing_delegate(proxy);
                 }
                 Err(err) => {
-                    fx_log_warn!(
+                    warn!(
                         "Ignoring Invalid Pairing Delegate passed to SetPairingDelegate: {}",
                         err
                     );
@@ -87,19 +87,18 @@ async fn handler(
         }
         AccessRequest::SetLocalName { name, control_handle: _ } => {
             if let Err(e) = hd.set_name(name).await {
-                fx_log_warn!("Error setting local name: {:?}", e);
+                warn!("Error setting local name: {:?}", e);
             }
             Ok(())
         }
         AccessRequest::SetDeviceClass { device_class, control_handle: _ } => {
             if let Err(e) = hd.set_device_class(device_class).await {
-                fx_log_warn!("Error setting local name: {:?}", e);
+                warn!("Error setting local name: {:?}", e);
             }
             Ok(())
         }
         AccessRequest::MakeDiscoverable { token, responder } => {
-            let stream =
-                token.into_stream().expect("The implementation of into_Stream() never fails");
+            let stream = token.into_stream().unwrap(); // into_stream never fails
             let mut result = hd
                 .set_discoverable()
                 .await
@@ -111,8 +110,7 @@ async fn handler(
             responder.send(&mut result).map_err(Error::from)
         }
         AccessRequest::StartDiscovery { token, responder } => {
-            let stream =
-                token.into_stream().expect("The implementation of into_Stream() never fails");
+            let stream = token.into_stream().unwrap(); // into_stream never fails
             let mut result = hd
                 .start_discovery()
                 .await
@@ -139,7 +137,7 @@ async fn handler(
             let id = PeerId::from(id);
             let result = hd.connect(id).await;
             if let Err(e) = &result {
-                fx_log_warn!("Error connecting to peer {}: {:?}", id, e);
+                warn!("Error connecting to peer {}: {:?}", id, e);
             }
             responder.send(&mut result.map_err(|e| e.into()))?;
             Ok(())
@@ -148,7 +146,7 @@ async fn handler(
             let id = PeerId::from(id);
             let result = hd.disconnect(id).await;
             if let Err(e) = &result {
-                fx_log_warn!("Error disconnecting from peer {}: {:?}", id, e);
+                warn!("Error disconnecting from peer {}: {:?}", id, e);
             }
             responder.send(&mut result.map_err(|e| e.into()))?;
             Ok(())
@@ -159,15 +157,13 @@ async fn handler(
             // We currently do not support NonBondable mode on the classic Br/Edr transport
             // If NonBondable is asked for a Br/Edr pairing, return an InvalidArguments error
             if opts.bondable == BondableMode::NonBondable && opts.transport == Technology::Classic {
-                fx_log_info!(
-                    "Rejecting Pair() call; non-bondable mode is not allowed for Br/Edr transport"
-                );
+                info!("Rejecting Pair: non-bondable mode not allowed for BR/EDR");
                 responder.send(&mut Err(sys::Error::InvalidArguments))?;
                 return Ok(());
             }
             let result = hd.pair(id, opts).await;
             if let Err(e) = &result {
-                fx_log_warn!("Error pairing with peer {}: {:?}", id, e);
+                warn!("Error pairing with peer {}: {:?}", id, e);
             }
             let mut result = result.map_err(|e| match e.into() {
                 sys::Error::PeerNotFound => sys::Error::PeerNotFound,
@@ -182,7 +178,7 @@ async fn handler(
             let id = PeerId::from(id);
             let result = hd.forget(id).await;
             if let Err(e) = &result {
-                fx_log_warn!("Error forgetting peer {}: {:?}", id, e);
+                warn!("Error forgetting peer {}: {:?}", id, e);
             }
             responder.send(&mut result.map_err(|e| e.into()))?;
             Ok(())
@@ -197,5 +193,5 @@ async fn watch_stream_for_session<S: Stream + Send + 'static, T: Send + 'static>
     stream.map(|_| ()).collect::<()>().await;
     // the remote end closed; drop our session token
     mem::drop(token);
-    fx_vlog!(1, "ProcedureToken dropped");
+    trace!("ProcedureToken dropped");
 }

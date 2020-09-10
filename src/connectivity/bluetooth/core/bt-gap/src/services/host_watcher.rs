@@ -7,9 +7,9 @@ use {
     async_helpers::hanging_get::asynchronous as hanging_get,
     fidl_fuchsia_bluetooth_sys::{self as sys, HostWatcherRequest, HostWatcherRequestStream},
     fuchsia_bluetooth::types::host_info::HostInfo,
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::StreamExt,
+    log::warn,
 };
 
 use crate::host_dispatcher::*;
@@ -49,7 +49,7 @@ async fn handler(
 pub fn observe_hosts(new_hosts: &Vec<HostInfo>, responder: sys::HostWatcherWatchResponder) -> bool {
     let mut hosts = new_hosts.into_iter().map(|host| sys::HostInfo::from(host));
     if let Err(err) = responder.send(&mut hosts) {
-        fx_log_warn!("Unable to respond to host_watcher watch hanging get: {:?}", err);
+        warn!("Unable to respond to host_watcher watch hanging get: {:?}", err);
     }
     true
 }

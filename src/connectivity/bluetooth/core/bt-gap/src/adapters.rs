@@ -9,10 +9,10 @@
 use {
     anyhow::Error,
     fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
-    fuchsia_syslog::fx_log_warn,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{FutureExt, Stream, TryStreamExt},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    log::warn,
     std::{
         io,
         path::{Path, PathBuf},
@@ -46,7 +46,7 @@ async fn as_adapter_msg(msg: WatchMessage) -> Result<Option<AdapterEvent>, io::E
         WatchEvent::REMOVE_FILE => Some(AdapterRemoved(path)),
         WatchEvent::IDLE => None,
         e => {
-            fx_log_warn!("Unrecognized host watch event: {:?}", e);
+            warn!("Unrecognized host watch event: {:?}", e);
             None
         }
     })

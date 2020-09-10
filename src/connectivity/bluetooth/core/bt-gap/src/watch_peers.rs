@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_bluetooth as btfidl, fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::types::{Peer, PeerId},
-    fuchsia_syslog::fx_log_warn,
+    log::warn,
     parking_lot::Mutex,
     std::collections::{HashMap, HashSet},
     std::sync::Arc,
@@ -59,7 +59,7 @@ impl PeerWatcher {
         let mut updated = raw_updated.iter().map(|p| (*p).into());
 
         if let Err(err) = watcher.responder.send(&mut updated, &mut removed.iter_mut()) {
-            fx_log_warn!("Unable to respond to watch_peers hanging get: {:?}", err);
+            warn!("Unable to respond to watch_peers hanging get: {:?}", err);
         } else {
             // Apply only the truncated updates to our cache of the client's state; Updates that we
             // didn't send will need to be sent in the next update

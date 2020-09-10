@@ -12,8 +12,8 @@ use {
         inspect::Inspectable,
         types::{BondingData, HostData, HostInfo, Peer, PeerId},
     },
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     futures::{Future, FutureExt, StreamExt, TryFutureExt},
+    log::{error, info, trace, warn},
     parking_lot::RwLock,
     pin_utils::pin_mut,
     std::{
@@ -34,11 +34,11 @@ pub struct HostDiscoverySession {
 
 impl Drop for HostDiscoverySession {
     fn drop(&mut self) {
-        fx_vlog!(1, "HostDiscoverySession ended");
+        trace!("HostDiscoverySession ended");
         if let Some(host) = self.adap.upgrade() {
             if let Err(err) = host.write().stop_discovery() {
                 // TODO(45325) - we should close the host channel if an error is returned
-                fx_log_warn!("Unexpected error response when stopping discovery: {:?}", err);
+                warn!("Unexpected error response when stopping discovery: {:?}", err);
             }
         }
     }
@@ -265,16 +265,16 @@ async fn handle_fidl_events<H: HostListener>(
     while let Some(event) = stream.next().await {
         match event? {
             HostEvent::OnNewBondingData { data } => {
-                fx_log_info!("Received bonding data");
+                info!("Received bonding data");
                 let data: BondingData = match data.try_into() {
                     Err(e) => {
-                        fx_log_err!("Invalid bonding data, ignoring: {:#?}", e);
+                        error!("Invalid bonding data, ignoring: {:#?}", e);
                         continue;
                     }
                     Ok(data) => data,
                 };
                 if let Err(e) = listener.on_new_host_bond(data.into()).await {
-                    fx_log_err!("Failed to persist bonding data: {:#?}", e);
+                    error!("Failed to persist bonding data: {:#?}", e);
                 }
             }
         };

@@ -10,8 +10,8 @@ use {
         LocalServiceDelegateRequestStream as ServiceDelegateReqStream, LocalServiceMarker,
         Server_Proxy,
     },
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::{channel::mpsc, SinkExt, StreamExt},
+    log::{info, warn},
 };
 
 use crate::host_dispatcher::HostDispatcher;
@@ -105,7 +105,7 @@ impl GasProxy {
                 error
             ));
         }
-        fx_log_info!("Published Generic Access Service to local device database.");
+        info!("Published Generic Access Service to local device database.");
         Ok(GasProxy {
             delegate_request_stream,
             gas_task_channel,
@@ -179,7 +179,7 @@ impl GenericAccessService {
     pub async fn run(mut self) {
         while let Some(request) = self.generic_access_req_stream.next().await {
             self.process_service_delegate_req(request).unwrap_or_else(|e| {
-                fx_log_warn!("Error handling Generic Access Service Request: {:?}", e);
+                warn!("Error handling Generic Access Service Request: {:?}", e);
             });
         }
     }
@@ -198,7 +198,6 @@ mod tests {
             LocalServiceDelegateRequest as ServiceDelegateReq, LocalServiceMarker, Server_Marker,
         },
         fuchsia_async as fasync, fuchsia_inspect as inspect,
-        fuchsia_syslog::fx_log_warn,
         futures::FutureExt,
         std::collections::HashMap,
     };
@@ -222,7 +221,7 @@ mod tests {
         };
         fasync::Task::spawn(gas_proxy.run().map(|r| {
             r.unwrap_or_else(|err| {
-                fx_log_warn!("Error running Generic Access proxy in task: {:?}", err);
+                warn!("Error running Generic Access proxy in task: {:?}", err);
             })
         }))
         .detach();
@@ -310,7 +309,7 @@ mod tests {
         };
         fasync::Task::spawn(gas_proxy.run().map(|r| {
             r.unwrap_or_else(|err| {
-                fx_log_warn!("Error running Generic Access proxy in task: {:?}", err);
+                warn!("Error running Generic Access proxy in task: {:?}", err);
             })
         }))
         .detach();

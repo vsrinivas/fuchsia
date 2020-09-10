@@ -37,7 +37,6 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{HostId, Peer, PeerId},
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::{
         channel::{mpsc, oneshot},
         future::{self, BoxFuture, FutureExt},
@@ -45,6 +44,7 @@ use {
         sink::SinkExt,
         stream::StreamExt,
     },
+    log::{info, warn},
     std::convert::TryFrom,
 };
 
@@ -155,7 +155,7 @@ impl PairingDispatcher {
                                 if let Err(e) = self.upstream.on_pairing_complete(peer, false) {
                                     // If we receive an error communicating with upstream,
                                     // terminate
-                                    fx_log_warn!("Error notifying upstream when downstream closed: {}", e);
+                                    warn!("Error notifying upstream when downstream closed: {}", e);
                                     return true;
                                 }
                             }
@@ -175,7 +175,7 @@ impl PairingDispatcher {
                             Ok((status, passkey)) => {
                                 let result = downstream.send(status, passkey);
                                 if let Err(e) = result {
-                                    fx_log_warn!("Error replying to pairing request from bt-host: {}", e);
+                                    warn!("Error replying to pairing request from bt-host: {}", e);
                                     // TODO(45325) - when errors occur communicating with a downstream
                                     // host, we should unregister and remove that host
                                 }
@@ -186,7 +186,7 @@ impl PairingDispatcher {
                                 // channel. If we receive any error, we consider the upstream closed and
                                 // terminate the dispatcher. Terminating will result in the downstream
                                 // request being canceled so we do not need to specifically notify.
-                                fx_log_warn!("Terminating Pairing Delegate: Error handling pairing request: {}", e);
+                                warn!("Terminating Pairing Delegate: Error handling pairing request: {}", e);
                                 true
                             }
                         }
@@ -201,7 +201,7 @@ impl PairingDispatcher {
                 match host_added {
                     Some((id, proxy)) => {
                         if let Err(e) = self.start_handling_host(id.clone(), proxy) {
-                            fx_log_warn!("Failed to register pairing delegate channel for bt-host {}", id)
+                            warn!("Failed to register pairing delegate channel for bt-host {}", id)
                         }
                         false
                     }
@@ -230,13 +230,9 @@ impl PairingDispatcher {
                         self.inflight_requests.insert(host, id, response)
                     }
                     Err(e) => {
-                        fx_log_warn!("PairingRequest received with invalid Peer: {:?}", e);
+                        warn!("PairingRequest received with invalid Peer: {:?}", e);
                         if let Err(e) = responder.send(false, 0) {
-                            fx_log_warn!(
-                                "Error communicating with downstream bt-host {}: {:?}",
-                                host,
-                                e
-                            );
+                            warn!("Error communicating with downstream bt-host {}: {:?}", host, e);
                             // TODO(45325) - when errors occur communicating with a downstream
                             // host, we should unregister and remove that host
                         }
@@ -246,7 +242,7 @@ impl PairingDispatcher {
             }
             OnPairingComplete { id, success, control_handle: _ } => {
                 if self.upstream.on_pairing_complete(id.into(), success).is_err() {
-                    fx_log_warn!(
+                    warn!(
                         "Failed to propagate OnPairingComplete for peer {}; upstream cancelled",
                         PeerId::from(id)
                     );
@@ -257,7 +253,7 @@ impl PairingDispatcher {
             }
             OnRemoteKeypress { id, keypress, control_handle: _ } => {
                 if self.upstream.on_remote_keypress(id.into(), keypress).is_err() {
-                    fx_log_warn!(
+                    warn!(
                         "Failed to propagate OnRemoteKeypress for peer {}; upstream cancelled",
                         PeerId::from(id)
                     );
@@ -294,7 +290,7 @@ impl PairingDispatcherHandle {
         let sent = async move { channel.send((host_id, proxy)).await };
         fasync::Task::spawn(async move {
             if let Err(_) = sent.await {
-                fx_log_info!("Failed to send channel for Host {:?} to pairing delegate", id)
+                info!("Failed to send channel for Host {:?} to pairing delegate", id)
             }
         })
         .detach();

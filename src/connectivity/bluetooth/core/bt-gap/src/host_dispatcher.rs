@@ -23,13 +23,13 @@ use {
         },
     },
     fuchsia_inspect::{self as inspect, unique_name, Property},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{
         channel::{mpsc, oneshot},
         future::BoxFuture,
         FutureExt,
     },
+    log::{error, info, trace, warn},
     parking_lot::RwLock,
     slab::Slab,
     std::{
@@ -127,10 +127,7 @@ impl Drop for DiscoverableRequestToken {
             fasync::Task::spawn(async move {
                 if let Err(err) = await_response.await {
                     // TODO(45325) - we should close the host channel if an error is returned
-                    fx_log_warn!(
-                        "Unexpected error response when disabling discoverable: {:?}",
-                        err
-                    );
+                    warn!("Unexpected error response when disabling discoverable: {:?}", err);
                 }
             })
             .detach();
@@ -253,7 +250,7 @@ impl HostDispatcherState {
                 self.output,
             );
         } else {
-            fx_log_info!("Failed to set PairingDelegate; another Delegate is active");
+            info!("Failed to set PairingDelegate; another Delegate is active");
         }
     }
 
@@ -353,7 +350,7 @@ impl HostDispatcherState {
     }
 
     fn add_host(&mut self, id: HostId, host: Arc<RwLock<HostDevice>>) {
-        fx_log_info!("Host added: {}", id.to_string());
+        info!("Host added: {}", id.to_string());
         self.host_devices.insert(id, host.clone());
 
         // Update inspect state
@@ -372,10 +369,7 @@ impl HostDispatcherState {
 
     /// Updates the active adapter and notifies listeners
     fn set_active_id(&mut self, id: Option<HostId>) {
-        fx_log_info!(
-            "New active adapter: {}",
-            id.map_or("<none>".to_string(), |id| id.to_string())
-        );
+        info!("New active adapter: {}", id.map_or("<none>".to_string(), |id| id.to_string()));
         self.active_id = id;
         if let Some(host_info) = self.get_active_host_info() {
             let mut adapter_info = control::AdapterInfo::from(host_info);
@@ -519,7 +513,7 @@ impl HostDispatcher {
         for (host_id, device) in host_devices {
             let fut = device.read().apply_sys_settings(&new_settings);
             if let Err(e) = fut.await {
-                fx_log_warn!("Unable to apply new settings to host {}: {:?}", host_id, e);
+                warn!("Unable to apply new settings to host {}: {:?}", host_id, e);
                 let failed_host_path = device.read().path.clone();
                 self.rm_adapter(&failed_host_path).await;
             }
@@ -618,10 +612,10 @@ impl HostDispatcher {
             match fut.await {
                 Ok(()) => adapters_removed += 1,
                 Err(types::Error::SysError(sys::Error::PeerNotFound)) => {
-                    fx_vlog!(1, "No peer {} on adapter {:?}; ignoring", peer_id, adapter_path);
+                    trace!("No peer {} on adapter {:?}; ignoring", peer_id, adapter_path);
                 }
                 err => {
-                    fx_log_err!("Could not forget peer {} on adapter {:?}", peer_id, adapter_path);
+                    error!("Could not forget peer {} on adapter {:?}", peer_id, adapter_path);
                     return err;
                 }
             }
@@ -744,7 +738,7 @@ impl HostDispatcher {
         self.notify_event_listeners(|listener| {
             let _res = listener
                 .send_on_device_updated(&mut d)
-                .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
+                .map_err(|e| error!("Failed to send device updated event: {:?}", e));
         });
 
         let update_peer = peer.clone();
@@ -781,7 +775,7 @@ impl HostDispatcher {
             state.notify_event_listeners(|listener| {
                 let _res = listener
                     .send_on_device_removed(&id.to_string())
-                    .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
+                    .map_err(|e| error!("Failed to send device removed event: {:?}", e));
             });
             state.watch_peers_publisher.clone()
         };
@@ -818,7 +812,7 @@ impl HostDispatcher {
             generic_access_service::GasProxy::new(gatt_server_proxy, gas_channel).await?;
         fasync::Task::spawn(gas_proxy.run().map(|r| {
             r.unwrap_or_else(|err| {
-                fx_log_warn!("Error passing message through Generic Access proxy: {:?}", err);
+                warn!("Error passing message through Generic Access proxy: {:?}", err);
             })
         }))
         .detach();
@@ -850,7 +844,7 @@ impl HostDispatcher {
         let node = self.state.read().inspect.hosts().create_child(unique_name("device_"));
         let host_dev = bt::util::open_rdwr(host_path)?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
-        fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
+        info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
         let host_device = init_host(host_path, node).await?;
 
         // TODO(armansito): Make sure that the bt-host device is left in a well-known state if any
@@ -892,7 +886,7 @@ impl HostDispatcher {
         fasync::Task::spawn(host_device::watch_events(self.clone(), host_device.clone()).map(
             |r| {
                 r.unwrap_or_else(|err| {
-                    fx_log_warn!("Error handling host event: {:?}", err);
+                    warn!("Error handling host event: {:?}", err);
                     // TODO(fxb/44180): This should probably remove the bt-host since termination of the
                     // `watch_events` task indicates that it no longer functions properly.
                 })
@@ -939,7 +933,7 @@ impl HostDispatcher {
                 .collect();
 
             let id_strs: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
-            fx_log_info!("Host removed: {} (path: {:?})", id_strs.join(","), host_path);
+            info!("Host removed: {} (path: {:?})", id_strs.join(","), host_path);
 
             for id in &ids {
                 hd.host_devices.remove(id);
@@ -963,7 +957,7 @@ impl HostDispatcher {
 
         if new_adapter_activated {
             if let Err(err) = self.configure_newly_active_adapter().await {
-                fx_log_warn!("Failed to persist state on adapter change: {:?}", err);
+                warn!("Failed to persist state on adapter change: {:?}", err);
             }
         }
         self.notify_host_watchers().await;
@@ -1038,7 +1032,7 @@ impl WhenHostsFound {
                 {
                     let mut inner = hd.state.write();
                     if inner.host_devices.len() == 0 {
-                        fx_log_info!("No bt-host devices found");
+                        info!("No bt-host devices found");
                         inner.resolve_host_requests();
                     }
                 }
@@ -1111,7 +1105,7 @@ async fn try_restore_bonds(
     let fut = host_device.read().restore_bonds(data);
     let res = fut.await;
     res.map_err(|e| {
-        fx_log_err!("failed to restore bonding data for host: {:?}", e);
+        error!("failed to restore bonding data for host: {:?}", e);
         e
     })
 }
@@ -1130,16 +1124,16 @@ async fn assign_host_data(
     // Obtain an existing IRK or generate a new one if one doesn't already exists for |address|.
     let data = match hd.stash().get_host_data(address.clone()).await? {
         Some(host_data) => {
-            fx_vlog!(1, "restored IRK");
+            trace!("restored IRK");
             host_data.clone()
         }
         None => {
             // Generate a new IRK.
-            fx_vlog!(1, "generating new IRK");
+            trace!("generating new IRK");
             let new_data = HostData { irk: Some(generate_irk()?) };
 
             if let Err(e) = hd.stash().store_host_data(address.clone(), new_data.clone()).await {
-                fx_log_err!("failed to persist local IRK");
+                error!("failed to persist local IRK");
                 return Err(e.into());
             }
             new_data

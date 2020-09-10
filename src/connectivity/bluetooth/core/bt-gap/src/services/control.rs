@@ -11,8 +11,8 @@ use {
         bt_fidl_status,
         types::{HostId, PeerId},
     },
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::prelude::*,
+    log::{info, warn},
     std::sync::Arc,
 };
 
@@ -135,7 +135,7 @@ async fn handler(
             let status = match delegate.map(|d| d.into_proxy()) {
                 Some(Ok(proxy)) => hd.set_control_pairing_delegate(Some(proxy)),
                 Some(Err(err)) => {
-                    fx_log_warn!(
+                    warn!(
                         "Invalid Pairing Delegate passed to SetPairingDelegate - ignoring: {}",
                         err
                     );
@@ -157,7 +157,7 @@ async fn handler(
                     responder.send(&mut status_response(result))
                 }
                 Err(err) => {
-                    fx_log_info!("fuchsia.bluetooth.control.Control client tried to set invalid active adapter: {}", identifier);
+                    info!("fuchsia.bluetooth.control.Control client tried to set invalid active adapter: {}", identifier);
                     responder.send(&mut bt_fidl_status!(Failed, format!("{}", err)))
                 }
             }
