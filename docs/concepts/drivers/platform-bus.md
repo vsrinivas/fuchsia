@@ -3,7 +3,7 @@
 ## Introduction
 
 The term **platform bus** refers to a specific Zircon driver with source code located at
-[//fuchsia/src/devices/bus/drivers/platform/](/src/devices/bus/drivers/platform/)).
+[//fuchsia/src/devices/bus/drivers/platform/](/src/devices/bus/drivers/platform/).
 However this term also refers to the framework that manages the lower level drivers in Zircon.
 In this document, **platform bus driver** refers to a specific driver and **platform bus**
 refers to the general framework.
@@ -30,7 +30,7 @@ eMMC or NAND storage, etc., with higher level drivers loading on top of that.
 by the board driver. One common example of this is the GPIO driver, which is often needed by the
 board driver for pin-muxing. In the past, the platform bus used to also proxy these drivers'
 protocols to platform devices, but now we use composite devices instead.
-Over time we will likely phase out the use of protocol implementation drivers in the platform bus
+Over time, we will likely phase out the use of protocol implementation drivers in the platform bus
 and replace it with a new approach that does not require blocking to wait for drivers to load.
 
 - Finally, the **platform proxy driver** a companion to the platform bus driver that loads
@@ -83,9 +83,9 @@ to be added to the platform bus driver's devhost.
 
 The internals of composite platform devices are a bit different than the non-composite case.
 Instead of using the platform proxy driver, the devmgr **component** and **component proxy** drivers
-proxy the platform device protcol instead. For example, in the diagram above we have a composite device
+proxy the platform device protocol instead. For example, in the diagram above we have a composite device
 for an audio driver with a platform device as its first component and an I2C channel as its second.
-The audio driver is started in a new devhost, and the devmmgr component and component proxy drivers
+The audio driver is started in a new devhost, and the devmgr component and component proxy drivers
 are responsible for proxying the PDEV and I2C protocols to the audio driver.
 
 ## Platform Device Protocol
@@ -97,7 +97,7 @@ BTIs, and SMC ranges to the platform device driver. Rather than requesting MMIOs
 physical addresses or IRQ numbers, these resource are requested by a zero-based index.
 This allows us to have platform device drivers for particular IP that works across multiple
 platforms, since the knowledge of the exact MMIO addresses and interrupt numbers do not need to be
-known by the driver. Instead the board driver configures the MMIO addresses and IRQ numbers in the
+known by the driver. Instead, the board driver configures the MMIO addresses and IRQ numbers in the
 `PbusDev` struct passed via `AddDevice()`.
 
 The platform device protocol is also available to protocol implementation drivers.
