@@ -907,6 +907,16 @@ declare_args() {
         },
       ]
     },
+    {
+      name = "host_asan-ubsan"
+      select_variant = []
+      select_variant = [
+        {
+          variant = "asan-ubsan"
+          host = true
+        },
+      ]
+    },
 
     {
       name = "host_profile"

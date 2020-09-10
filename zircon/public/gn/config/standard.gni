@@ -525,6 +525,15 @@ variant_shorthands = [
     ]
   },
   {
+    name = "host_asan-ubsan"
+    selectors = [
+      {
+        variant = "asan-ubsan"
+        host = true
+      },
+    ]
+  },
+  {
     name = "host_profile"
     selectors = [
       {
