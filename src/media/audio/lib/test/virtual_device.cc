@@ -21,61 +21,61 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
       inspect_id_(inspect_id),
       expected_gain_db_(expected_gain_db),
       rb_(format, frame_count) {
-  environment->ConnectToService(device_.NewRequest());
-  fixture->AddErrorHandler(device_, "VirtualAudioDevice");
+  environment->ConnectToService(fidl_.NewRequest());
+  fixture->AddErrorHandler(fidl_, "VirtualAudioDevice");
   WatchEvents();
 
   std::array<uint8_t, 16> device_id_array;
   std::copy(std::begin(device_id.data), std::end(device_id.data), std::begin(device_id_array));
-  device_->SetUniqueId(device_id_array);
+  fidl_->SetUniqueId(device_id_array);
 
   if (plug_properties) {
-    device_->SetPlugProperties(plug_properties->plug_change_time.get(), plug_properties->plugged,
-                               plug_properties->hardwired, plug_properties->can_notify);
+    fidl_->SetPlugProperties(plug_properties->plug_change_time.get(), plug_properties->plugged,
+                             plug_properties->hardwired, plug_properties->can_notify);
   }
 
   if (!AudioSampleFormatToDriverSampleFormat(format_.sample_format(), &driver_format_)) {
     FX_CHECK(false) << "Failed to convert Fmt 0x" << std::hex
                     << static_cast<uint32_t>(format_.sample_format()) << " to driver format.";
   }
-  device_->ClearFormatRanges();
-  device_->AddFormatRange(driver_format_, format_.frames_per_second(), format_.frames_per_second(),
-                          format_.channels(), format_.channels(), ASF_RANGE_FLAG_FPS_CONTINUOUS);
+  fidl_->ClearFormatRanges();
+  fidl_->AddFormatRange(driver_format_, format_.frames_per_second(), format_.frames_per_second(),
+                        format_.channels(), format_.channels(), ASF_RANGE_FLAG_FPS_CONTINUOUS);
 
-  device_->SetFifoDepth(kFifoDepthBytes);
-  device_->SetExternalDelay(kExternalDelay.get());
+  fidl_->SetFifoDepth(kFifoDepthBytes);
+  fidl_->SetExternalDelay(kExternalDelay.get());
 
-  device_->SetRingBufferRestrictions(frame_count, frame_count, frame_count);
+  fidl_->SetRingBufferRestrictions(frame_count, frame_count, frame_count);
 
   auto ring_buffer_ms = static_cast<size_t>(
       static_cast<double>(frame_count) / static_cast<double>(format_.frames_per_second()) * 1000);
-  device_->SetNotificationFrequency(ring_buffer_ms / kNotifyMs);
+  fidl_->SetNotificationFrequency(ring_buffer_ms / kNotifyMs);
 
-  device_->Add();
+  fidl_->Add();
 }
 
 template <class Iface>
 VirtualDevice<Iface>::~VirtualDevice() {
   ResetEvents();
-  if (device_.is_bound()) {
-    device_->Remove();
+  if (fidl_.is_bound()) {
+    fidl_->Remove();
   }
 }
 
 template <class Iface>
 void VirtualDevice<Iface>::ResetEvents() {
-  device_.events().OnSetFormat = nullptr;
-  device_.events().OnSetGain = nullptr;
-  device_.events().OnBufferCreated = nullptr;
-  device_.events().OnStart = nullptr;
-  device_.events().OnStop = nullptr;
-  device_.events().OnPositionNotify = nullptr;
+  fidl_.events().OnSetFormat = nullptr;
+  fidl_.events().OnSetGain = nullptr;
+  fidl_.events().OnBufferCreated = nullptr;
+  fidl_.events().OnStart = nullptr;
+  fidl_.events().OnStop = nullptr;
+  fidl_.events().OnPositionNotify = nullptr;
 }
 
 template <class Iface>
 void VirtualDevice<Iface>::WatchEvents() {
-  device_.events().OnSetFormat = [this](uint32_t fps, uint32_t fmt, uint32_t num_chans,
-                                        zx_duration_t ext_delay) {
+  fidl_.events().OnSetFormat = [this](uint32_t fps, uint32_t fmt, uint32_t num_chans,
+                                      zx_duration_t ext_delay) {
     received_set_format_ = true;
     EXPECT_EQ(fps, format_.frames_per_second());
     EXPECT_EQ(fmt, driver_format_);
@@ -85,7 +85,7 @@ void VirtualDevice<Iface>::WatchEvents() {
                      << ext_delay;
   };
 
-  device_.events().OnSetGain = [this](bool cur_mute, bool cur_agc, float cur_gain_db) {
+  fidl_.events().OnSetGain = [this](bool cur_mute, bool cur_agc, float cur_gain_db) {
     EXPECT_EQ(cur_gain_db, expected_gain_db_);
     EXPECT_FALSE(cur_mute);
     EXPECT_FALSE(cur_agc);
@@ -93,9 +93,9 @@ void VirtualDevice<Iface>::WatchEvents() {
                      << cur_gain_db;
   };
 
-  device_.events().OnBufferCreated = [this](zx::vmo ring_buffer_vmo,
-                                            uint32_t driver_reported_frame_count,
-                                            uint32_t notifications_per_ring) {
+  fidl_.events().OnBufferCreated = [this](zx::vmo ring_buffer_vmo,
+                                          uint32_t driver_reported_frame_count,
+                                          uint32_t notifications_per_ring) {
     ASSERT_EQ(frame_count_, driver_reported_frame_count);
     ASSERT_TRUE(received_set_format_);
     rb_vmo_ = std::move(ring_buffer_vmo);
@@ -104,7 +104,7 @@ void VirtualDevice<Iface>::WatchEvents() {
                      << notifications_per_ring << " notifs/ring";
   };
 
-  device_.events().OnStart = [this](zx_time_t start_time) {
+  fidl_.events().OnStart = [this](zx_time_t start_time) {
     ASSERT_TRUE(received_set_format_);
     ASSERT_TRUE(rb_vmo_.is_valid());
     received_start_ = true;
@@ -116,14 +116,14 @@ void VirtualDevice<Iface>::WatchEvents() {
     AUDIO_LOG(DEBUG) << "OnStart callback: " << start_time;
   };
 
-  device_.events().OnStop = [this](zx_time_t stop_time, uint32_t ring_pos) {
+  fidl_.events().OnStop = [this](zx_time_t stop_time, uint32_t ring_pos) {
     received_stop_ = true;
     stop_time_ = zx::time(stop_time);
     stop_pos_ = ring_pos;
     AUDIO_LOG(DEBUG) << "OnStop callback: " << stop_time << ", " << ring_pos;
   };
 
-  device_.events().OnPositionNotify = [this](zx_time_t monotonic_time, uint32_t ring_pos) {
+  fidl_.events().OnPositionNotify = [this](zx_time_t monotonic_time, uint32_t ring_pos) {
     // compare to prev ring_pos - if less, then add rb_.SizeBytes().
     if (ring_pos < ring_pos_) {
       running_ring_pos_ += rb_.SizeBytes();

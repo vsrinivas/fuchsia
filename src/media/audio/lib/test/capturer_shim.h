@@ -25,7 +25,7 @@ class CapturerShimImpl {
 
   ~CapturerShimImpl() {}
 
-  fuchsia::media::AudioCapturerPtr& capturer() { return capturer_; }
+  fuchsia::media::AudioCapturerPtr& fidl() { return fidl_; }
   VmoBackedBuffer& payload() { return payload_buffer_; }
 
   size_t num_payload_frames() const { return payload_frame_count_; }
@@ -48,7 +48,7 @@ class CapturerShimImpl {
   const size_t payload_frame_count_;
   const size_t inspect_id_;
 
-  fuchsia::media::AudioCapturerPtr capturer_;
+  fuchsia::media::AudioCapturerPtr fidl_;
   VmoBackedBuffer payload_buffer_;
 };
 
@@ -70,13 +70,13 @@ class AudioCapturerShim : public CapturerShimImpl {
                     size_t inspect_id)
       : CapturerShimImpl(format, payload_frame_count, inspect_id) {
     audio_core->CreateAudioCapturerWithConfiguration(format.stream_type(), std::move(config),
-                                                     capturer_.NewRequest());
-    fixture->AddErrorHandler(capturer_, "AudioCapturer");
+                                                     fidl_.NewRequest());
+    fixture->AddErrorHandler(fidl_, "AudioCapturer");
 
-    capturer_->SetPcmStreamType({.sample_format = format_.sample_format(),
-                                 .channels = format_.channels(),
-                                 .frames_per_second = format_.frames_per_second()});
-    capturer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(true));
+    fidl_->SetPcmStreamType({.sample_format = format_.sample_format(),
+                             .channels = format_.channels(),
+                             .frames_per_second = format_.frames_per_second()});
+    fidl_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(true));
   }
 };
 
@@ -100,17 +100,16 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
       : CapturerShimImpl(format, payload_frame_count, inspect_id), fixture_(fixture) {
     auto vmo = payload_buffer_.CreateAndMapVmo(true);
     ultrasound_factory->CreateCapturer(
-        capturer_.NewRequest(),
-        [this, vmo = std::move(vmo)](auto ref_clock, auto stream_type) mutable {
+        fidl_.NewRequest(), [this, vmo = std::move(vmo)](auto ref_clock, auto stream_type) mutable {
           created_ = true;
           reference_clock_ = std::move(ref_clock);
           EXPECT_EQ(stream_type.sample_format, format_.sample_format());
           EXPECT_EQ(stream_type.channels, format_.channels());
           EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
           // TODO(55243): Enable AddPayloadBuffer before the capturer is created.
-          capturer_->AddPayloadBuffer(0, std::move(vmo));
+          fidl_->AddPayloadBuffer(0, std::move(vmo));
         });
-    fixture->AddErrorHandler(capturer_, "UltrasoundCapturer");
+    fixture->AddErrorHandler(fidl_, "UltrasoundCapturer");
   }
 
   void WaitForDevice() {

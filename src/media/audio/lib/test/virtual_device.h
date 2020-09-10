@@ -39,7 +39,7 @@ class VirtualDevice {
 
   ~VirtualDevice();
 
-  fidl::InterfacePtr<Interface>& virtual_device() { return device_; }
+  fidl::InterfacePtr<Interface>& fidl() { return fidl_; }
   size_t frame_count() const { return frame_count_; }
 
   uint64_t token() const { return token_; }
@@ -75,7 +75,7 @@ class VirtualDevice {
   const size_t inspect_id_;
   const float expected_gain_db_;
 
-  fidl::InterfacePtr<Interface> device_;
+  fidl::InterfacePtr<Interface> fidl_;
   audio_sample_format_t driver_format_;
   zx::vmo rb_vmo_;
   VmoBackedBuffer rb_;

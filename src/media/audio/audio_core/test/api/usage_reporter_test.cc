@@ -84,7 +84,7 @@ class UsageReporterTest : public HermeticAudioTest {
   void StartRendererWithUsage(AudioRenderUsage usage) {
     auto format = Format::Create<AudioSampleFormat::SIGNED_16>(1, 8000).value();  // arbitrary
     auto r = CreateAudioRenderer(format, 1024, usage);
-    r->renderer()->PlayNoReply(0, 0);
+    r->fidl()->PlayNoReply(0, 0);
   }
 
   void StartCapturerWithUsage(AudioCaptureUsage usage) {
@@ -93,7 +93,7 @@ class UsageReporterTest : public HermeticAudioTest {
     cfg.set_usage(usage);
     auto c = CreateAudioCapturer(
         format, 1024, fuchsia::media::AudioCapturerConfiguration::WithInput(std::move(cfg)));
-    c->capturer()->StartAsyncCapture(1024);
+    c->fidl()->StartAsyncCapture(1024);
   }
 };
 

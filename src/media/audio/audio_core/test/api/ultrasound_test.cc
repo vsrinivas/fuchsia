@@ -126,12 +126,11 @@ TEST_F(UltrasoundTest, RendererDoesNotSupportSetPcmStreamType) {
   auto renderer = CreateRenderer();
 
   std::optional<zx_status_t> renderer_error;
-  renderer->renderer().set_error_handler(
-      [&renderer_error](auto status) { renderer_error = {status}; });
+  renderer->fidl().set_error_handler([&renderer_error](auto status) { renderer_error = {status}; });
 
   // Call SetPcmStreamType. We use the current stream type here to ensure we're definitely
   // requesting a supported stream type.
-  renderer->renderer()->SetPcmStreamType(kUltrasoundFormat.stream_type());
+  renderer->fidl()->SetPcmStreamType(kUltrasoundFormat.stream_type());
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&renderer_error] { return renderer_error.has_value(); });
@@ -144,10 +143,9 @@ TEST_F(UltrasoundTest, RendererDoesNotSupportSetUsage) {
   auto renderer = CreateRenderer();
 
   std::optional<zx_status_t> renderer_error;
-  renderer->renderer().set_error_handler(
-      [&renderer_error](auto status) { renderer_error = {status}; });
+  renderer->fidl().set_error_handler([&renderer_error](auto status) { renderer_error = {status}; });
 
-  renderer->renderer()->SetUsage(fuchsia::media::AudioRenderUsage::MEDIA);
+  renderer->fidl()->SetUsage(fuchsia::media::AudioRenderUsage::MEDIA);
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&renderer_error] { return renderer_error.has_value(); });
@@ -160,11 +158,10 @@ TEST_F(UltrasoundTest, RendererDoesNotSupportBindGainControl) {
   auto renderer = CreateRenderer();
 
   std::optional<zx_status_t> renderer_error;
-  renderer->renderer().set_error_handler(
-      [&renderer_error](auto status) { renderer_error = {status}; });
+  renderer->fidl().set_error_handler([&renderer_error](auto status) { renderer_error = {status}; });
 
   fuchsia::media::audio::GainControlPtr gain_control;
-  renderer->renderer()->BindGainControl(gain_control.NewRequest());
+  renderer->fidl()->BindGainControl(gain_control.NewRequest());
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&renderer_error] { return renderer_error.has_value(); });
@@ -177,15 +174,14 @@ TEST_F(UltrasoundTest, RendererDoesNotSupportSetReferenceClock) {
   auto renderer = CreateRenderer();
 
   std::optional<zx_status_t> renderer_error;
-  renderer->renderer().set_error_handler(
-      [&renderer_error](auto status) { renderer_error = {status}; });
+  renderer->fidl().set_error_handler([&renderer_error](auto status) { renderer_error = {status}; });
 
   auto result = clock::DuplicateClock(renderer->reference_clock());
   ASSERT_TRUE(result.is_ok());
   zx::clock clock_to_set = result.take_value();
   ASSERT_TRUE(clock_to_set.is_valid());
 
-  renderer->renderer()->SetReferenceClock(std::move(clock_to_set));
+  renderer->fidl()->SetReferenceClock(std::move(clock_to_set));
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&renderer_error] { return renderer_error.has_value(); });
@@ -228,12 +224,11 @@ TEST_F(UltrasoundTest, CapturerDoesNotSupportSetPcmStreamType) {
   auto capturer = CreateCapturer();
 
   std::optional<zx_status_t> capturer_error;
-  capturer->capturer().set_error_handler(
-      [&capturer_error](auto status) { capturer_error = {status}; });
+  capturer->fidl().set_error_handler([&capturer_error](auto status) { capturer_error = {status}; });
 
   // Call SetPcmStreamType. We use the current stream type here to ensure we're definitely
   // requesting a supported stream type.
-  capturer->capturer()->SetPcmStreamType(kUltrasoundFormat.stream_type());
+  capturer->fidl()->SetPcmStreamType(kUltrasoundFormat.stream_type());
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&capturer_error] { return capturer_error.has_value(); });
@@ -246,10 +241,9 @@ TEST_F(UltrasoundTest, CapturerDoesNotSupportSetUsage) {
   auto capturer = CreateCapturer();
 
   std::optional<zx_status_t> capturer_error;
-  capturer->capturer().set_error_handler(
-      [&capturer_error](auto status) { capturer_error = {status}; });
+  capturer->fidl().set_error_handler([&capturer_error](auto status) { capturer_error = {status}; });
 
-  capturer->capturer()->SetUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+  capturer->fidl()->SetUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&capturer_error] { return capturer_error.has_value(); });
@@ -262,11 +256,10 @@ TEST_F(UltrasoundTest, CapturerDoesNotSupportBindGainControl) {
   auto capturer = CreateCapturer();
 
   std::optional<zx_status_t> capturer_error;
-  capturer->capturer().set_error_handler(
-      [&capturer_error](auto status) { capturer_error = {status}; });
+  capturer->fidl().set_error_handler([&capturer_error](auto status) { capturer_error = {status}; });
 
   fuchsia::media::audio::GainControlPtr gain_control;
-  capturer->capturer()->BindGainControl(gain_control.NewRequest());
+  capturer->fidl()->BindGainControl(gain_control.NewRequest());
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&capturer_error] { return capturer_error.has_value(); });
@@ -279,15 +272,14 @@ TEST_F(UltrasoundTest, CapturerDoesNotSupportSetReferenceClock) {
   auto capturer = CreateCapturer();
 
   std::optional<zx_status_t> capturer_error;
-  capturer->capturer().set_error_handler(
-      [&capturer_error](auto status) { capturer_error = {status}; });
+  capturer->fidl().set_error_handler([&capturer_error](auto status) { capturer_error = {status}; });
 
   auto result = clock::DuplicateClock(capturer->reference_clock());
   ASSERT_TRUE(result.is_ok());
   zx::clock clock_to_set = result.take_value();
   ASSERT_TRUE(clock_to_set.is_valid());
 
-  capturer->capturer()->SetReferenceClock(std::move(clock_to_set));
+  capturer->fidl()->SetReferenceClock(std::move(clock_to_set));
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
   RunLoopUntil([&capturer_error] { return capturer_error.has_value(); });

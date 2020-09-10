@@ -31,7 +31,7 @@ class RendererShimImpl {
 
   ~RendererShimImpl();
 
-  fuchsia::media::AudioRendererPtr& renderer() { return renderer_; }
+  fuchsia::media::AudioRendererPtr& fidl() { return fidl_; }
   VmoBackedBuffer& payload() { return payload_buffer_; }
   const Format& format() const { return format_; }
 
@@ -106,7 +106,7 @@ class RendererShimImpl {
   const size_t inspect_id_;
 
   VmoBackedBuffer payload_buffer_;
-  fuchsia::media::AudioRendererPtr renderer_;
+  fuchsia::media::AudioRendererPtr fidl_;
   std::optional<zx::duration> min_lead_time_;
   TimelineRate pts_ticks_per_second_;
   TimelineRate pts_ticks_per_frame_;
@@ -129,17 +129,17 @@ class AudioRendererShim : public RendererShimImpl {
                     size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
                     size_t inspect_id)
       : RendererShimImpl(format, payload_frame_count, inspect_id) {
-    audio_core->CreateAudioRenderer(renderer_.NewRequest());
-    fixture->AddErrorHandler(renderer_, "AudioRenderer");
+    audio_core->CreateAudioRenderer(fidl_.NewRequest());
+    fixture->AddErrorHandler(fidl_, "AudioRenderer");
     WatchEvents();
 
-    renderer_->SetUsage(usage);
-    renderer_->SetPcmStreamType({.sample_format = format_.sample_format(),
-                                 .channels = format_.channels(),
-                                 .frames_per_second = format_.frames_per_second()});
+    fidl_->SetUsage(usage);
+    fidl_->SetPcmStreamType({.sample_format = format_.sample_format(),
+                             .channels = format_.channels(),
+                             .frames_per_second = format_.frames_per_second()});
 
     SetPtsUnits(format_.frames_per_second(), 1);
-    renderer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
+    fidl_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
   }
 
   bool created() const { return min_lead_time_.has_value(); }
@@ -163,18 +163,18 @@ class UltrasoundRendererShim : public RendererShimImpl {
                          Format format, size_t payload_frame_count, size_t inspect_id)
       : RendererShimImpl(format, payload_frame_count, inspect_id), fixture_(fixture) {
     ultrasound_factory->CreateRenderer(
-        renderer_.NewRequest(), [this](auto ref_clock, auto stream_type) {
+        fidl_.NewRequest(), [this](auto ref_clock, auto stream_type) {
           created_ = true;
           reference_clock_ = std::move(ref_clock);
           EXPECT_EQ(stream_type.sample_format, format_.sample_format());
           EXPECT_EQ(stream_type.channels, format_.channels());
           EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
         });
-    fixture->AddErrorHandler(renderer_, "UltrasoundRenderer");
+    fixture->AddErrorHandler(fidl_, "UltrasoundRenderer");
 
     WatchEvents();
     SetPtsUnits(format_.frames_per_second(), 1);
-    renderer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
+    fidl_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
   }
 
   void WaitForDevice() {

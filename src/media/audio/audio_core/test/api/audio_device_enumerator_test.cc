@@ -29,7 +29,7 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
  protected:
   template <typename DeviceT>
   void TestSetDeviceGain(DeviceT* device) {
-    device->device().events().OnSetGain = nullptr;
+    device->fidl().events().OnSetGain = nullptr;
     audio_dev_enum_.events().OnDeviceGainChanged =
         AddCallback("OnDeviceGainChanged", [device](uint64_t token, AudioGainInfo info) {
           EXPECT_EQ(token, device->token());
@@ -78,28 +78,28 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
     // Repeat the plug-unplug cycle many times.
     for (int k = 0; k < 20; k++) {
       // Unplug d2.
-      d2->device()->ChangePlugState(zx::clock::get_monotonic().get(), false);
+      d2->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), false);
       audio_dev_enum_.events().OnDefaultDeviceChanged = AddCallback(
           "OnDefaultDeviceChanged after unplug Device2",
           [d1](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, d1->token()); });
       ExpectCallback();
 
       // Unplug d1.
-      d1->device()->ChangePlugState(zx::clock::get_monotonic().get(), false);
+      d1->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), false);
       audio_dev_enum_.events().OnDefaultDeviceChanged =
           AddCallback("OnDefaultDeviceChanged after unplug Device1",
                       [](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, 0u); });
       ExpectCallback();
 
       // Plug d1.
-      d1->device()->ChangePlugState(zx::clock::get_monotonic().get(), true);
+      d1->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), true);
       audio_dev_enum_.events().OnDefaultDeviceChanged = AddCallback(
           "OnDefaultDeviceChanged after plug Device1",
           [d1](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, d1->token()); });
       ExpectCallback();
 
       // Plug d2.
-      d2->device()->ChangePlugState(zx::clock::get_monotonic().get(), true);
+      d2->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), true);
       audio_dev_enum_.events().OnDefaultDeviceChanged = AddCallback(
           "OnDefaultDeviceChanged after plug Device2",
           [d2](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, d2->token()); });
@@ -179,13 +179,13 @@ TEST_F(AudioDeviceEnumeratorTest, AddRemoveDevice_Output) {
 
 TEST_F(AudioDeviceEnumeratorTest, RemoveDeviceUnplugged_Input) {
   auto device = CreateInput({0xff, 0x00}, kFormat, kFrameRate);
-  device->device()->ChangePlugState(zx::clock::get_monotonic().get(), false);
+  device->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), false);
   RunLoopUntilIdle();
 }
 
 TEST_F(AudioDeviceEnumeratorTest, RemoveDeviceUnplugged_Output) {
   auto device = CreateOutput({0xff, 0x00}, kFormat, kFrameRate);
-  device->device()->ChangePlugState(zx::clock::get_monotonic().get(), false);
+  device->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), false);
   RunLoopUntilIdle();
 }
 

@@ -76,8 +76,8 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
   std::optional<int64_t> last_capture_pts;
   AudioBuffer<ASF::SIGNED_16> capture_buffer(format_, 0);
 
-  capturer_->capturer().events().OnPacketProduced = [this, &first_capture_pts, &last_capture_pts,
-                                                     &capture_buffer](StreamPacket p) mutable {
+  capturer_->fidl().events().OnPacketProduced = [this, &first_capture_pts, &last_capture_pts,
+                                                 &capture_buffer](StreamPacket p) mutable {
     EXPECT_EQ(p.payload_buffer_id, 0u);
     if (!first_capture_pts) {
       EXPECT_TRUE(p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY);
@@ -91,7 +91,7 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
                                     data.samples().end());
   };
 
-  capturer_->capturer()->StartAsyncCapture(kPacketFrames);
+  capturer_->fidl()->StartAsyncCapture(kPacketFrames);
 
   // Write data to the input ring_buffer which should be readable 100ms from now.
   // This gives us plenty of time to start the capturer before the data will be read.
@@ -107,8 +107,8 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
   });
 
   // Stop the capture so we don't overflow while running the following tests.
-  capturer_->capturer().events().OnPacketProduced = nullptr;
-  capturer_->capturer()->StopAsyncCaptureNoReply();
+  capturer_->fidl().events().OnPacketProduced = nullptr;
+  capturer_->fidl()->StopAsyncCaptureNoReply();
 
   // The captured data should be silence up to start_time, followed by the input_buffer,
   // followed by more silence.
@@ -188,14 +188,14 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
 
     // Collect all captured packets.
     std::vector<CapturedPacket> captured_packets;
-    capturer->capturer().events().OnPacketProduced = [capturer, &captured_packets](StreamPacket p) {
+    capturer->fidl().events().OnPacketProduced = [capturer, &captured_packets](StreamPacket p) {
       EXPECT_EQ(p.payload_buffer_id, 0u);
       captured_packets.push_back({
           .pts = p.pts,
           .data = capturer->SnapshotPacket(p),
       });
     };
-    capturer->capturer()->StartAsyncCapture(kPacketFrames);
+    capturer->fidl()->StartAsyncCapture(kPacketFrames);
 
     // Play inputs starting at `now + min_lead_time + tolerance`, where tolerance estimates
     // the maximum scheduling delay between reading the clock and the last call to Play.
@@ -320,8 +320,8 @@ class AudioCapturerReleaseTest : public HermeticAudioTest {
 TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
   zx::time start_pts;
   size_t count = 0;
-  capturer_->capturer().events().OnPacketProduced = [this, &count,
-                                                     &start_pts](fuchsia::media::StreamPacket p) {
+  capturer_->fidl().events().OnPacketProduced = [this, &count,
+                                                 &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
 
     // Check that we're receiving the expected packets.
@@ -343,7 +343,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
     count++;
   };
 
-  capturer_->capturer()->StartAsyncCapture(kFramesPerPacket);
+  capturer_->fidl()->StartAsyncCapture(kFramesPerPacket);
 
   // To verify that we're automatically recycling packets, we need to loop
   // through the payload buffer at least twice.
@@ -368,8 +368,8 @@ class AudioCapturerReleaseNewBehaviorTest : public AudioCapturerReleaseTest {
 TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased) {
   zx::time start_pts;
   size_t count = 0;
-  capturer_->capturer().events().OnPacketProduced = [this, &count,
-                                                     &start_pts](fuchsia::media::StreamPacket p) {
+  capturer_->fidl().events().OnPacketProduced = [this, &count,
+                                                 &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
 
     // Check that we're receiving the expected packets.
@@ -391,10 +391,10 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased
     count++;
 
     // Manually release.
-    capturer_->capturer()->ReleasePacket(p);
+    capturer_->fidl()->ReleasePacket(p);
   };
 
-  capturer_->capturer()->StartAsyncCapture(kFramesPerPacket);
+  capturer_->fidl()->StartAsyncCapture(kFramesPerPacket);
 
   // To verify that we're automatically recycling packets, we need to loop
   // through the payload buffer at least twice.
@@ -413,8 +413,8 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   // Do NOT manually release any packets.
   zx::time start_pts;
   size_t count = 0;
-  capturer_->capturer().events().OnPacketProduced = [this, &count, &start_pts,
-                                                     &packets](fuchsia::media::StreamPacket p) {
+  capturer_->fidl().events().OnPacketProduced = [this, &count, &start_pts,
+                                                 &packets](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
 
     // Check that we're receiving the expected packets.
@@ -439,7 +439,7 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
     packets.push_back(p);
   };
 
-  capturer_->capturer()->StartAsyncCapture(kFramesPerPacket);
+  capturer_->fidl()->StartAsyncCapture(kFramesPerPacket);
 
   // We expect exactly kNumPackets.
   const zx::duration kLoopTimeout = zx::sec(10);
@@ -456,8 +456,8 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   // After releasing all packets, we should get at least one more packet.
   // This packet has a discontinuous timestamp.
   count = 0;
-  capturer_->capturer().events().OnPacketProduced = [this, &count,
-                                                     &start_pts](fuchsia::media::StreamPacket p) {
+  capturer_->fidl().events().OnPacketProduced = [this, &count,
+                                                 &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("after release, packet %lu", count));
 
     // All further packets should be some time after the endpoint of the last released packet.
@@ -472,7 +472,7 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   };
 
   for (auto& p : packets) {
-    capturer_->capturer()->ReleasePacket(p);
+    capturer_->fidl()->ReleasePacket(p);
   }
   RunLoopWithTimeoutOrUntil([this, &count]() { return ErrorOccurred() || count > 0; },
                             kLoopTimeout);

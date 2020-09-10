@@ -179,7 +179,7 @@ void HermeticAudioTest::Unbind(VirtualInputImpl* device) {
                          [device](const auto& it) { return it.second.input.get() == device; });
   FX_CHECK(it != devices_.end());
 
-  device->virtual_device().Unbind();
+  device->fidl().Unbind();
   devices_.erase(it);
 }
 
@@ -188,7 +188,7 @@ void HermeticAudioTest::Unbind(VirtualOutputImpl* device) {
                          [device](const auto& it) { return it.second.output.get() == device; });
   FX_CHECK(it != devices_.end());
 
-  device->virtual_device().Unbind();
+  device->fidl().Unbind();
   devices_.erase(it);
 }
 
@@ -198,7 +198,7 @@ void HermeticAudioTest::Unbind(RendererShimImpl* renderer) {
       [renderer](const std::unique_ptr<RendererShimImpl>& p) { return p.get() == renderer; });
   FX_CHECK(it != renderers_.end());
 
-  renderer->renderer().Unbind();
+  renderer->fidl().Unbind();
   renderers_.erase(it);
 }
 
@@ -208,7 +208,7 @@ void HermeticAudioTest::Unbind(CapturerShimImpl* capturer) {
       [capturer](const std::unique_ptr<CapturerShimImpl>& p) { return p.get() == capturer; });
   FX_CHECK(it != capturers_.end());
 
-  capturer->capturer().Unbind();
+  capturer->fidl().Unbind();
   capturers_.erase(it);
 }
 

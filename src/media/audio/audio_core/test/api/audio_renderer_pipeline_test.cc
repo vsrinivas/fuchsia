@@ -151,7 +151,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   renderer_->PlaySynchronized(this, output_, 0);
   renderer_->WaitForPackets(this, {first_packets[0], first_packets[1]});
 
-  renderer_->renderer()->DiscardAllPackets(AddCallback(
+  renderer_->fidl()->DiscardAllPackets(AddCallback(
       "DiscardAllPackets", []() { AUDIO_LOG(DEBUG) << "DiscardAllPackets #1 complete"; }));
   ExpectCallback();
 

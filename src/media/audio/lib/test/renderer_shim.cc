@@ -16,13 +16,13 @@ namespace media::audio::test {
 RendererShimImpl::~RendererShimImpl() { ResetEvents(); }
 
 void RendererShimImpl::ResetEvents() {
-  renderer_->EnableMinLeadTimeEvents(false);
-  renderer_.events().OnMinLeadTimeChanged = nullptr;
+  fidl_->EnableMinLeadTimeEvents(false);
+  fidl_.events().OnMinLeadTimeChanged = nullptr;
 }
 
 void RendererShimImpl::WatchEvents() {
-  renderer_->EnableMinLeadTimeEvents(true);
-  renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
+  fidl_->EnableMinLeadTimeEvents(true);
+  fidl_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
     AUDIO_LOG(DEBUG) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
     // Sometimes, this can be invoked before the Renderer is actually linked.
     // When that happens, the reported lead time is zero as it hasn't been computed yet.
@@ -35,14 +35,14 @@ void RendererShimImpl::WatchEvents() {
 
 void RendererShimImpl::SetPtsUnits(uint32_t ticks_per_second_numerator,
                                    uint32_t ticks_per_second_denominator) {
-  renderer_->SetPtsUnits(ticks_per_second_numerator, ticks_per_second_denominator);
+  fidl_->SetPtsUnits(ticks_per_second_numerator, ticks_per_second_denominator);
   pts_ticks_per_second_ = TimelineRate(ticks_per_second_numerator, ticks_per_second_denominator);
   pts_ticks_per_frame_ =
       TimelineRate::Product(pts_ticks_per_second_, TimelineRate(1, format_.frames_per_second()));
 }
 
 void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64_t media_time) {
-  renderer_->Play(
+  fidl_->Play(
       reference_time.get(), media_time,
       fixture->AddCallback("Play", [&reference_time, &media_time](int64_t actual_reference_time,
                                                                   int64_t actual_media_time) {
@@ -112,7 +112,7 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
 
       AUDIO_LOG(TRACE) << " sending pkt at pts " << packet->start_pts << ", frame " << frame
                        << " of slice";
-      renderer_->SendPacket(stream_packet, [packet]() {
+      fidl_->SendPacket(stream_packet, [packet]() {
         AUDIO_LOG(TRACE) << " return pkt at pts " << packet->start_pts;
         packet->returned = true;
       });

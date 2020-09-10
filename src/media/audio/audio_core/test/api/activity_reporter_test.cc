@@ -29,7 +29,7 @@ class ActivityReporterTest : public HermeticAudioTest {
   AudioRendererShim<AudioSampleFormat::SIGNED_16>* CreateAndPlayWithUsage(AudioRenderUsage usage) {
     auto format = Format::Create<AudioSampleFormat::SIGNED_16>(1, 8000).value();  // arbitrary
     auto r = CreateAudioRenderer(format, 1024, usage);
-    r->renderer()->PlayNoReply(0, 0);
+    r->fidl()->PlayNoReply(0, 0);
     return r;
   }
 
@@ -62,7 +62,7 @@ TEST_F(ActivityReporterTest, AddAndRemove) {
               UnorderedElementsAreArray({AudioRenderUsage::BACKGROUND, AudioRenderUsage::MEDIA}));
 
   add_callback("WatchRenderActivity AfterPauseBackground");
-  r1->renderer()->PauseNoReply();
+  r1->fidl()->PauseNoReply();
   ExpectCallback();
   EXPECT_THAT(active_usages, UnorderedElementsAreArray({AudioRenderUsage::MEDIA}));
 
