@@ -153,7 +153,6 @@ group("tests") {
     "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-bootfs-test",
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-bootfs-test",
     "//zircon/system/ulib/zx/test:zx-bootfs-test",
-    "//zircon/system/ulib/zxio/test:zxio-bootfs-test",
     "//zircon/system/ulib/zxtest/test:zxtest-bootfs-test",
     "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-bootfs-test",
     "//zircon/system/utest/blobfs-bench:blobfs-bench-package",

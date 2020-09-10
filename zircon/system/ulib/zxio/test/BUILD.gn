@@ -13,16 +13,20 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
-  testonly = true
+fuchsia_unittest_package("zxio-unittest-package") {
+  manifest = "meta/zxio_test.cmx"
   deps = [ ":zxio" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":zxio-unittest-package" ]
 }
 
 test("zxio") {
   output_name = "zxio-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "c-compilation-test.c",
     "debuglog-test.cc",
@@ -55,9 +59,4 @@ test("zxio") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/zxio",
   ]
-}
-
-bootfs_test("zxio-bootfs-test") {
-  name = "zxio-test"
-  deps = [ ":zxio" ]
 }

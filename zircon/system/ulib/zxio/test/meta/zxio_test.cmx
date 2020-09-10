@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.WriteOnlyLog"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/zxio-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.WriteOnlyLog"
+        ]
+    }
+}
