@@ -37,6 +37,10 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   using SetMinimumRgbFn = std::function<void(uint8_t)>;
   using ImportEventFn = std::function<void(zx::event event, uint64_t event_id)>;
   using AcknowledgeVsyncFn = std::function<void(uint64_t cookie)>;
+  using SetDisplayLayersFn = std::function<void(uint64_t, std::vector<uint64_t>)>;
+  using SetLayerPrimaryPositionFn =
+      std::function<void(uint64_t, fuchsia::hardware::display::Transform,
+                         fuchsia::hardware::display::Frame, fuchsia::hardware::display::Frame)>;
 
   MockDisplayController() : binding_(this) {}
 
@@ -66,6 +70,12 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   void set_minimum_rgb_fn(SetMinimumRgbFn fn) { set_minimum_rgb_fn_ = std::move(fn); }
 
+  void set_set_display_layers_fn(SetDisplayLayersFn fn) { set_display_layers_fn_ = std::move(fn); }
+
+  void set_layer_primary_position_fn(SetLayerPrimaryPositionFn fn) {
+    set_layer_primary_position_fn_ = std::move(fn);
+  }
+
   void SetDisplayColorConversion(uint64_t display_id, std::array<float, 3> preoffsets,
                                  std::array<float, 9> coefficients,
                                  std::array<float, 3> postoffsets) override {
@@ -82,6 +92,31 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     }
 
     callback(std::move(result));
+  }
+
+  void CreateLayer(CreateLayerCallback callback) override {
+    static uint64_t layer_id = 1;
+    callback(ZX_OK, layer_id++);
+  }
+
+  void SetDisplayLayers(uint64_t display_id, ::std::vector<uint64_t> layer_ids) override {
+    if (set_display_layers_fn_) {
+      set_display_layers_fn_(display_id, layer_ids);
+    }
+  }
+
+  void ImportImage(fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id,
+                   uint32_t index, ImportImageCallback callback) override {
+    static uint64_t image_id = 1;
+    callback(ZX_OK, image_id++);
+  }
+
+  void SetLayerPrimaryPosition(uint64_t layer_id, fuchsia::hardware::display::Transform transform,
+                               fuchsia::hardware::display::Frame src_frame,
+                               fuchsia::hardware::display::Frame dest_frame) override {
+    if (set_layer_primary_position_fn_) {
+      set_layer_primary_position_fn_(layer_id, transform, src_frame, dest_frame);
+    }
   }
 
   void set_check_config_fn(CheckConfigFn fn) { check_config_fn_ = std::move(fn); }
@@ -120,6 +155,8 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   SetMinimumRgbFn set_minimum_rgb_fn_;
   ImportEventFn import_event_fn_;
   AcknowledgeVsyncFn acknowledge_vsync_fn_;
+  SetDisplayLayersFn set_display_layers_fn_;
+  SetLayerPrimaryPositionFn set_layer_primary_position_fn_;
 
   fidl::Binding<fuchsia::hardware::display::Controller> binding_;
   zx::channel device_channel_;

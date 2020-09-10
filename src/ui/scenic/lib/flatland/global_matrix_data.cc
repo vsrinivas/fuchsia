@@ -109,6 +109,18 @@ GlobalMatrixVector ComputeGlobalMatrices(
 }
 
 // static
+GlobalMatrixVector SelectMatrices(const GlobalMatrixVector& matrices,
+                                  const GlobalIndexVector& indices) {
+  GlobalMatrixVector selection;
+
+  for (auto index : indices) {
+    selection.push_back(matrices[index]);
+  }
+
+  return selection;
+}
+
+// static
 GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices) {
   GlobalRectangleVector rectangles;
 

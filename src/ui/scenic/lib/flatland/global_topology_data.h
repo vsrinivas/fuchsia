@@ -12,6 +12,9 @@
 
 namespace flatland {
 
+// A vector of indices that reference global vectors, such as the global topology vector.
+using GlobalIndexVector = std::vector<size_t>;
+
 struct GlobalTopologyData {
   // The LinkSystem stores topology links as a key-value pair of TransformHandles. This type alias
   // is declared because while this map is created by the LinkSystem, it is only ever consumed

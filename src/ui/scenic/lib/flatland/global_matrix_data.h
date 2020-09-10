@@ -34,6 +34,11 @@ using GlobalRectangleVector = std::vector<escher::Rectangle2D>;
 // Computes the global rectangle for each matrix in |matrices|.
 GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices);
 
+// Returns the vector of matrices that correspond to the provided indices, from the original
+// global matrix vector.
+GlobalMatrixVector SelectMatrices(const GlobalMatrixVector& matrices,
+                                  const GlobalIndexVector& indices);
+
 }  // namespace flatland
 
 #endif  // SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_MATRIX_DATA_H_

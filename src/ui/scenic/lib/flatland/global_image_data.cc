@@ -9,22 +9,24 @@
 namespace flatland {
 
 // static
-GlobalImageVector ComputeGlobalImageData(const GlobalTopologyData::TopologyVector& global_topology,
-                                         const UberStruct::InstanceMap& uber_structs) {
+GlobalImageData ComputeGlobalImageData(const GlobalTopologyData::TopologyVector& global_topology,
+                                       const UberStruct::InstanceMap& uber_structs) {
+  GlobalIndexVector indices;
   GlobalImageVector images;
 
-  for (const auto& handle : global_topology) {
+  for (uint32_t index = 0; index < global_topology.size(); index++) {
     // Every entry in the global topology comes from an UberStruct.
+    const auto& handle = global_topology[index];
     const auto uber_struct_kv = uber_structs.find(handle.GetInstanceId());
     FX_DCHECK(uber_struct_kv != uber_structs.end());
 
     const auto image_kv = uber_struct_kv->second->images.find(handle);
     if (image_kv != uber_struct_kv->second->images.end()) {
       images.push_back(image_kv->second);
+      indices.push_back(index);
     }
   }
-
-  return images;
+  return {.indices = std::move(indices), .images = std::move(images)};
 }
 
 }  // namespace flatland

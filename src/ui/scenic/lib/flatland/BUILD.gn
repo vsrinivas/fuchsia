@@ -10,6 +10,8 @@ config("glm_config") {
 
 source_set("flatland") {
   sources = [
+    "engine.cc",
+    "engine.h",
     "flatland.cc",
     "flatland.h",
     "flatland_presenter.h",
@@ -34,6 +36,8 @@ source_set("flatland") {
   public_configs = [ ":glm_config" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//src/lib/fxl",
 
@@ -47,6 +51,7 @@ source_set("flatland") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",

@@ -253,7 +253,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     const auto matrices =
         flatland::ComputeGlobalMatrices(data.topology_vector, data.parent_indices, snapshot);
     const auto rectangles = flatland::ComputeGlobalRectangles(matrices);
-    const auto images = flatland::ComputeGlobalImageData(data.topology_vector, snapshot);
+    const auto image_data = flatland::ComputeGlobalImageData(data.topology_vector, snapshot);
 
     link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, matrices,
                               display_pixel_scale_, snapshot);
@@ -264,7 +264,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return {.topology_data = std::move(data),
             .matrix_vector = std::move(matrices),
             .rectangle_vector = std::move(rectangles),
-            .image_vector = std::move(images)};
+            .image_vector = std::move(image_data.images)};
   }
 
   void CreateLink(Flatland* parent, Flatland* child, ContentId id,
