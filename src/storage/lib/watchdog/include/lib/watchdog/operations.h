@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_WATCHDOG_OPERATIONS_H_
-#define FS_WATCHDOG_OPERATIONS_H_
+#ifndef SRC_STORAGE_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_OPERATIONS_H_
+#define SRC_STORAGE_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_OPERATIONS_H_
 
 #include <lib/syslog/logger.h>
+#include <lib/watchdog/watchdog.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 
@@ -13,7 +14,6 @@
 #include <string_view>
 
 #include <fbl/macros.h>
-#include <fs/watchdog/watchdog.h>
 
 namespace fs_watchdog {
 
@@ -102,9 +102,7 @@ class FsOperationTracker : public OperationTracker {
   FsOperationTracker& operator=(const FsOperationTracker&) = delete;
   FsOperationTracker& operator=(FsOperationTracker&&) = delete;
 
-  ~FsOperationTracker() {
-    [[maybe_unused]] auto ignored_result = Complete();
-  }
+  ~FsOperationTracker() { [[maybe_unused]] auto ignored_result = Complete(); }
 
   // Returns the operation's unique id across all tracked operations.
   OperationTrackerId GetId() const final { return id_; }
@@ -154,4 +152,4 @@ class FsOperationTracker : public OperationTracker {
 };
 
 }  // namespace fs_watchdog
-#endif  // FS_WATCHDOG_OPERATIONS_H_
+#endif  // SRC_STORAGE_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_OPERATIONS_H_

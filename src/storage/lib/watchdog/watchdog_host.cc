@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/watchdog/watchdog.h>
 #include <zircon/assert.h>
-
-#include <fs/watchdog/watchdog.h>
 
 namespace fs_watchdog {
 namespace {

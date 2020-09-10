@@ -4,6 +4,8 @@
 
 #include <lib/syslog/global.h>
 #include <lib/syslog/logger.h>
+#include <lib/watchdog/operations.h>
+#include <lib/watchdog/watchdog.h>
 #include <unistd.h>
 
 #include <chrono>
@@ -17,8 +19,6 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fs/watchdog/operations.h>
-#include <fs/watchdog/watchdog.h>
 #include <zxtest/zxtest.h>
 
 namespace fs_watchdog {

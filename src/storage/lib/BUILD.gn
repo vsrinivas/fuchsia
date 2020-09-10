@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "paver:tests" ]
+  deps = [
+    "paver:tests",
+    "watchdog:tests",
+  ]
 }

@@ -12,13 +12,47 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 import("//build/unification/zx_library.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":watchdog-unittest" ]
+}
+
+test("watchdog_unittest") {
+  testonly = true
+  sources = [ "watchdog_test.cc" ]
+  deps = [
+    "//src/storage/lib/watchdog",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/syslog",
+  ]
+
+  include_dirs = [ ".." ]
+}
+
+bootfs_test("watchdog-unit-bootfs-test") {
+  name = "watchdog-unittest"
+  deps = [ ":watchdog-unittest" ]
+}
+
+fuchsia_unittest_package("watchdog-unittest") {
+  executable_path = "test/watchdog_unittest"
+  deps = [ ":watchdog_unittest" ]
+}
 
 zx_library("watchdog") {
   sdk = "source"
   sdk_headers = [
-    "fs/watchdog/watchdog.h",
-    "fs/watchdog/operations.h",
+    "lib/watchdog/watchdog.h",
+    "lib/watchdog/operations.h",
   ]
   host = true
   deps = [

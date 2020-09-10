@@ -4,6 +4,8 @@
 
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
+#include <lib/watchdog/operations.h>
+#include <lib/watchdog/watchdog.h>
 #include <lib/zx/process.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -22,8 +24,6 @@
 #include <thread>
 
 #include <fs/locking.h>
-#include <fs/watchdog/operations.h>
-#include <fs/watchdog/watchdog.h>
 #include <inspector/inspector.h>
 
 namespace fs_watchdog {

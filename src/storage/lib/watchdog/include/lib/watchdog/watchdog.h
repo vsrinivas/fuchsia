@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_WATCHDOG_WATCHDOG_H_
-#define FS_WATCHDOG_WATCHDOG_H_
+#ifndef SRC_STORAGE_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_WATCHDOG_H_
+#define SRC_STORAGE_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_WATCHDOG_H_
 
 #ifdef __Fuchsia__
 #include <lib/syslog/logger.h>
@@ -127,4 +127,4 @@ std::unique_ptr<WatchdogInterface> CreateWatchdog(const Options& options = {});
 
 }  // namespace fs_watchdog
 
-#endif  // FS_WATCHDOG_WATCHDOG_H_
+#endif  // SRC_STORAGE_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_WATCHDOG_H_
