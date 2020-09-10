@@ -11,11 +11,11 @@ use {
         types::{Channel, PeerId},
     },
     fuchsia_component::{client, client::App, server::NestedEnvironment},
-    fuchsia_syslog::fx_log_info,
     futures::{
         stream::{StreamExt, TryStreamExt},
         Future, Stream,
     },
+    log::info,
     parking_lot::RwLock,
     std::{
         collections::{HashMap, HashSet},
@@ -163,12 +163,9 @@ impl MockPeer {
             let observer_clone = observer.clone();
             match event {
                 ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                    fx_log_info!(
+                    info!(
                         "Peer {:?}. Component {:?}, terminated. Code: {}. Reason: {:?}",
-                        peer_id,
-                        handle,
-                        return_code,
-                        termination_reason
+                        peer_id, handle, return_code, termination_reason
                     );
                     detached.detach();
                     observer_clone.map(|o| Self::relay_terminated(&o, url_clone));
@@ -264,7 +261,7 @@ impl MockPeer {
         let service_mgr_clone = self.service_mgr.clone();
         let closed_fut = async move {
             let _ = service_event_stream.map(|_| ()).collect::<()>().await;
-            fx_log_info!("Peer {} unregistering service advertisement", peer_id);
+            info!("Peer {} unregistering service advertisement", peer_id);
             detached_service.detach();
             service_mgr_clone.write().unregister_service(&reg_handle_clone);
         };
@@ -324,7 +321,7 @@ impl MockPeer {
         let closed_fut = async move {
             let _ = search_stream.map(|_| ()).collect::<()>().await;
             if search_mgr_clone.write().remove(search_handle) {
-                fx_log_info!("Peer {} unregistering service search {:?}", peer_id, uuid);
+                info!("Peer {} unregistering service search {:?}", peer_id, uuid);
             }
         };
 

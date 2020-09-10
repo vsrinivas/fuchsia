@@ -20,9 +20,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{self, channel::mpsc, future::FutureExt, select, sink::SinkExt, stream::StreamExt},
+    log::{error, info},
     parking_lot::Mutex,
     std::{
         collections::{hash_map::Entry, HashMap, HashSet},
@@ -174,16 +174,16 @@ impl TestProfileServer {
                 match interface.into_stream() {
                     Ok(stream) => {
                         if let Err(e) = sender.send((id, stream)).await {
-                            fx_log_err!("Error relaying ProfileRequestStream: {:?}", e);
+                            error!("Error relaying ProfileRequestStream: {:?}", e);
                             responder.control_handle().shutdown_with_epitaph(zx::Status::INTERNAL);
                             return;
                         }
                         if let Err(e) = responder.send() {
-                            fx_log_err!("Error sending on responder: {:?}", e);
+                            error!("Error sending on responder: {:?}", e);
                         }
                     }
                     Err(e) => {
-                        fx_log_err!("Peer {} unable to connect ProfileProxy: {:?}", id, e);
+                        error!("Peer {} unable to connect ProfileProxy: {:?}", id, e);
                         responder.control_handle().shutdown_with_epitaph(zx::Status::BAD_HANDLE);
                     }
                 }
@@ -191,7 +191,7 @@ impl TestProfileServer {
             MockPeerRequest::LaunchProfile { component_url, responder, .. } => {
                 let launch_result = self.launch_profile(id, component_url).is_ok();
                 if let Err(e) = responder.send(launch_result) {
-                    fx_log_err!("Error sending on responder: {:?}", e);
+                    error!("Error sending on responder: {:?}", e);
                 }
             }
         }
@@ -241,7 +241,7 @@ impl TestProfileServer {
                             mock_peer_requests.push(request_stream.tagged(id).with_epitaph(id));
                         }
                         Err(e) => {
-                            fx_log_err!("Error registering peer {}: {:?}", id, e);
+                            error!("Error registering peer {}: {:?}", id, e);
                         }
                     }
                     let _ = responder.send();
@@ -253,14 +253,14 @@ impl TestProfileServer {
                             self.handle_mock_peer_request(peer_id, request, profile_stream_sender.clone()).await;
                         },
                         Some(StreamItem::Item((peer_id, Err(e)))) => {
-                            fx_log_err!("Peer {} received MockPeerRequest error: {:?}", peer_id, e);
+                            error!("Peer {} received MockPeerRequest error: {:?}", peer_id, e);
                         }
                         Some(StreamItem::Epitaph(peer_id)) => {
                             // The MockPeerRequestStream associated with `peer_id` has been
                             // exhausted, signaled by the epitaph. This means the peer has
                             // disconnected from the piconet.
                             if let Err(e) = self.unregister_peer(peer_id) {
-                                fx_log_err!("Error unregistering peer {}: {:?}", peer_id, e);
+                                error!("Error unregistering peer {}: {:?}", peer_id, e);
                             }
                         },
                         None => (),
@@ -361,7 +361,7 @@ impl TestProfileServerInner {
     ) {
         let res = match self.peers.entry(id) {
             Entry::Vacant(_) => {
-                fx_log_info!("Peer {} not registered.", id);
+                info!("Peer {} not registered.", id);
                 return;
             }
             Entry::Occupied(mut entry) => entry.get_mut().new_advertisement(services, receiver),
@@ -377,7 +377,7 @@ impl TestProfileServerInner {
                 .detach();
                 self.find_matching_searches(id, svc_ids);
             }
-            Err(e) => fx_log_info!("Peer {} error advertising service: {:?}", id, e),
+            Err(e) => info!("Peer {} error advertising service: {:?}", id, e),
         }
     }
 
@@ -421,7 +421,7 @@ impl TestProfileServerInner {
     ) {
         match self.peers.entry(id) {
             Entry::Vacant(_) => {
-                fx_log_info!("Peer {} not registered.", id);
+                info!("Peer {} not registered.", id);
                 return;
             }
             Entry::Occupied(mut entry) => {
@@ -498,7 +498,7 @@ async fn handle_test_client_connection(
     while let Some(request) = stream.next().await {
         match request {
             Ok(request) => sender.send(request).await.expect("send to handler failed"),
-            Err(e) => fx_log_err!("Client connection failed: {}", e),
+            Err(e) => error!("Client connection failed: {}", e),
         }
     }
 }

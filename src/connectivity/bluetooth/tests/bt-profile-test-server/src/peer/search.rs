@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         ProtocolDescriptor, SearchResultsProxy, ServiceClassProfileIdentifier,
     },
-    fuchsia_syslog::fx_log_info,
+    log::info,
     slab::Slab,
     std::collections::{HashMap, HashSet},
 };
@@ -126,7 +126,7 @@ impl SearchSet {
                 match search.send_service_found(service.clone()) {
                     Ok(true) => notified += 1,
                     Ok(false) => {}
-                    Err(e) => fx_log_info!("Error sending search results: {:?}", e),
+                    Err(e) => info!("Error sending search results: {:?}", e),
                 }
             }
         }

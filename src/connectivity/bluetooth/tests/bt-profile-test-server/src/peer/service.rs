@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_syslog::fx_log_warn,
+    log::warn,
     slab::Slab,
     std::collections::{HashMap, HashSet},
 };
@@ -119,7 +119,7 @@ impl ServiceSet {
         for record in &records {
             // The requested PSMs must not be registered already.
             if !record.is_disjoint(&existing_psms) {
-                fx_log_warn!("PSM already registered");
+                warn!("PSM already registered");
                 return None;
             }
         }
