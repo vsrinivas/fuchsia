@@ -16,6 +16,7 @@ pub use {fields::*, reason::*, status::*};
 #[derive(Debug)]
 pub enum MgmtBody<B: ByteSlice> {
     Beacon { bcn_hdr: LayoutVerified<B, BeaconHdr>, elements: B },
+    ProbeReq { elements: B },
     ProbeResp { probe_resp_hdr: LayoutVerified<B, ProbeRespHdr>, elements: B },
     Authentication { auth_hdr: LayoutVerified<B, AuthHdr>, elements: B },
     AssociationReq { assoc_req_hdr: LayoutVerified<B, AssocReqHdr>, elements: B },
@@ -33,6 +34,7 @@ impl<B: ByteSlice> MgmtBody<B> {
                 let (bcn_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtBody::Beacon { bcn_hdr, elements })
             }
+            MgmtSubtype::PROBE_REQ => Some(MgmtBody::ProbeReq { elements: bytes }),
             MgmtSubtype::PROBE_RESP => {
                 let (probe_resp_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtBody::ProbeResp { probe_resp_hdr, elements })

@@ -195,7 +195,7 @@ pub async fn remove_network(
         .expect("client controller failed to remove network");
 }
 
-async fn assert_next_client_listener_update(
+pub async fn assert_next_client_listener_update(
     listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     networks: Vec<fidl_policy::NetworkState>,
 ) {

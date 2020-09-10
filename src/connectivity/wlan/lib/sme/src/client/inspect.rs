@@ -248,7 +248,8 @@ impl BssInfoNode {
             .wmm_param
             .as_ref()
             .map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
-        Self {
+
+        let mut this = Self {
             node,
             bssid,
             bssid_hash,
@@ -261,7 +262,9 @@ impl BssInfoNode {
             _is_wmm_assoc: is_wmm_assoc,
             _wmm_param: wmm_param,
             wsc: None,
-        }
+        };
+        this.update_wsc_node(bss_info);
+        this
     }
 
     fn update(&mut self, bss_info: &BssInfo, hasher: &InspectHasher) {
@@ -273,6 +276,10 @@ impl BssInfoNode {
         self.snr_db.set(bss_info.snr_db as i64);
         self.channel.set(bss_info.channel as u64);
         self.protection.set(&format!("{}", bss_info.protection));
+        self.update_wsc_node(bss_info);
+    }
+
+    fn update_wsc_node(&mut self, bss_info: &BssInfo) {
         match &bss_info.probe_resp_wsc {
             Some(wsc) => match self.wsc.as_mut() {
                 Some(wsc_node) => wsc_node.update(wsc),

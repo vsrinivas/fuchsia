@@ -20,6 +20,7 @@ const IE_RSNE: &str = "rsne";
 const IE_BSS_MAX_IDLE_PERIOD: &str = "bss_max_idle_period";
 const IE_DSSS_PARAM_SET: &str = "dsss_param_set";
 const IE_WPA1: &str = "wpa1";
+const IE_WSC: &str = "wsc";
 const IE_TIM: &str = "tim";
 
 /// Field carrying necessary meta information to generate relevant tokens.
@@ -38,6 +39,7 @@ pub enum Ie {
     BssMaxIdlePeriod,
     DsssParamSet,
     Wpa1,
+    Wsc,
     Tim,
 }
 
@@ -172,6 +174,10 @@ impl BufferWrite for IeDefinition {
                 // IE + Vendor OUI + Vendor specific type + WPA1 body
                 frame_len!(wpa1, self.optional, IE_PREFIX_LEN + 4 + wpa1.len())
             }
+            Ie::Wsc => {
+                // IE + Vendor OUI + Vendor specific type + WSC body
+                frame_len!(wsc, self.optional, IE_PREFIX_LEN + 4 + wsc.len())
+            }
             Ie::Tim => frame_len!(
                 tim,
                 IE_PREFIX_LEN + std::mem::size_of::<ie::TimHeader>() + tim.bitmap.len()
@@ -228,6 +234,7 @@ impl BufferWrite for IeDefinition {
             Ie::Wpa1 => {
                 apply_on!(wpa1, self.optional, &self.value, ie::write_wpa1_ie(&mut w, &wpa1)?)
             }
+            Ie::Wsc => apply_on!(wsc, self.optional, &self.value, ie::write_wsc_ie(&mut w, &wsc)?),
             Ie::Tim => {
                 apply_on!(tim, &self.value, ie::write_tim(&mut w, &tim.header, &tim.bitmap)?)
             }
@@ -254,6 +261,7 @@ impl BufferWrite for IeDefinition {
             Ie::BssMaxIdlePeriod => declare_var!(bss_max_idle_period, self.optional, &self.value),
             Ie::DsssParamSet => declare_var!(dsss, &self.value),
             Ie::Wpa1 => declare_var!(wpa1, self.optional, &self.value),
+            Ie::Wsc => declare_var!(wsc, self.optional, &self.value),
             Ie::Tim => declare_var!(tim, &self.value),
         })
     }
@@ -339,6 +347,7 @@ impl Parse for IeDefinition {
             IE_RSNE => Ie::Rsne,
             IE_BSS_MAX_IDLE_PERIOD => Ie::BssMaxIdlePeriod,
             IE_WPA1 => Ie::Wpa1,
+            IE_WSC => Ie::Wsc,
             unknown => return Err(Error::new(name.span(), format!("unknown IE: '{}'", unknown))),
         };
         Ok(IeDefinition { name, value, type_, optional, emit_offset })

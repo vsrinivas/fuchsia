@@ -140,6 +140,15 @@ fuchsia_component("verify-ethernet") {
   ]
 }
 
+fuchsia_component("verify-wlan-inspect") {
+  testonly = true
+  manifest = "meta/verify_wlan_inspect.cmx"
+  deps = [
+    "verify_wlan_inspect",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_test_package("wlan-hw-sim-test") {
   test_components = [
     ":configure-legacy-privacy-off",
@@ -157,6 +166,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":sim-client-vs-sim-ap",
     ":simulate-scan",
     ":verify-ethernet",
+    ":verify-wlan-inspect",
   ]
 }
 

@@ -142,6 +142,59 @@ pub fn send_beacon(
     Ok(())
 }
 
+pub fn send_probe_resp(
+    channel: &WlanChan,
+    bssid: &mac::Bssid,
+    ssid: &[u8],
+    protection: &Protection,
+    wsc_ie: Option<&[u8]>,
+    proxy: &WlantapPhyProxy,
+) -> Result<(), anyhow::Error> {
+    let rsne = default_wpa2_psk_rsne();
+    let wpa1_ie = default_wpa1_vendor_ie();
+
+    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+        headers: {
+            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::PROBE_RESP),
+                CLIENT_MAC_ADDR,
+                *bssid,
+                mac::SequenceControl(0).with_seq_num(123),
+            ),
+            mac::ProbeRespHdr: &mac::ProbeRespHdr {
+                timestamp: 0,
+                // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
+                beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
+                capabilities: mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true),
+            },
+        },
+        ies: {
+            ssid: ssid,
+            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
+            extended_supported_rates: { /* continues from supported_rates */ },
+            dsss_param_set: &ie::DsssParamSet { current_chan: channel.primary },
+            rsne?: match protection {
+                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+                Protection::Open | Protection::Wep | Protection::Wpa1 => None,
+                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(&rsne),
+                _ => panic!("unsupported fake beacon: {:?}", protection),
+            },
+            wpa1?: match protection {
+                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+                Protection::Open | Protection::Wep => None,
+                Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(&wpa1_ie),
+                Protection::Wpa2Personal => None,
+                _ => panic!("unsupported fake beacon: {:?}", protection),
+            },
+            wsc?: wsc_ie,
+        }
+    })?;
+    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    Ok(())
+}
+
 pub fn send_authentication(
     channel: &WlanChan,
     bssid: &mac::Bssid,

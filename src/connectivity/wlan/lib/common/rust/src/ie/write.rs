@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{constants::*, fields::*, id::Id, rsn::rsne, wpa},
+    super::{constants::*, fields::*, id::Id, rsn::rsne, wpa, wsc},
     crate::{
         appendable::{Appendable, BufferTooSmall},
         error::FrameWriteError,
@@ -291,6 +291,19 @@ pub fn write_wpa1_ie<B: Appendable>(
     buf.append_value(&Oui::MSFT)?;
     buf.append_byte(wpa::VENDOR_SPECIFIC_TYPE)?;
     wpa_ie.write_into(buf)
+}
+
+/// Writes the entire WSC IE into the given buffer, including the vendor IE header.
+pub fn write_wsc_ie<B: Appendable>(buf: &mut B, wsc: &[u8]) -> Result<(), BufferTooSmall> {
+    let len = std::mem::size_of::<Oui>() + 1 + wsc.len();
+    if !buf.can_append(len + 2) {
+        return Err(BufferTooSmall);
+    }
+    buf.append_value(&Id::VENDOR_SPECIFIC)?;
+    buf.append_byte(len as u8)?;
+    buf.append_value(&Oui::MSFT)?;
+    buf.append_byte(wsc::VENDOR_SPECIFIC_TYPE)?;
+    buf.append_bytes(wsc)
 }
 
 fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
