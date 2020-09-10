@@ -49,6 +49,7 @@ void ViewManager::RegisterViewForSemantics(
 
   auto close_channel_callback = [this, koid](zx_status_t status) {
     if (auto it = view_wrapper_map_.find(koid); it != view_wrapper_map_.end()) {
+      FX_LOGS(INFO) << "View Manager is closing channel with koid:" << koid;
       it->second->CloseChannel(status);
     }
     wait_map_.erase(koid);
