@@ -385,13 +385,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(static_cast<size_t>(n), pfd.size());
   for (auto const& pfd : pfd) {
-    // TODO(fxbug.dev/53759): why does POLLERR not manifest immediately?
-    //
-    // This was previously caused by netstack shutting sockets down before closing them, but that
-    // behaviour is no longer present.
-    //
-    // I suspect the source of this race is in fdio or zxio.
-    ASSERT_TRUE(pfd.revents & (POLLOUT | POLLHUP)) << pfd.revents;
+    ASSERT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
   }
 
   // Now that the socket's endpoint has been closed, clone the socket again to increase the
