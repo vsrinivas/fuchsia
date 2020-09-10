@@ -7,6 +7,7 @@ executable("ping") {
   sources = [ "ping.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/system/ulib/inet6",
   ]

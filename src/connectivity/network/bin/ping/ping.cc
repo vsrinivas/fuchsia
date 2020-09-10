@@ -20,6 +20,9 @@
 #include <cstring>
 #include <memory>
 
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+
 #define USEC_TO_MSEC(x) (float(x) / 1000.0)
 
 typedef struct {
@@ -242,12 +245,12 @@ int main(int argc, char** argv) {
 
   options.Print();
 
-  struct addrinfo hints;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_RAW;
-  hints.ai_flags = 0;
+  struct addrinfo hints = {
+      .ai_family = AF_UNSPEC,
+      .ai_socktype = SOCK_RAW,
+  };
   struct addrinfo* info;
+  auto undo = fbl::MakeAutoCall([&info]() { freeaddrinfo(info); });
   if (getaddrinfo(options.host, NULL, &hints, &info)) {
     fprintf(stderr, "ping: unknown host %s\n", options.host);
     return -1;
@@ -280,8 +283,8 @@ int main(int argc, char** argv) {
       return -1;
   }
 
-  int s = socket(info->ai_family, SOCK_DGRAM, proto);
-  if (s < 0) {
+  fbl::unique_fd s(socket(info->ai_family, SOCK_DGRAM, proto));
+  if (!s) {
     fprintf(stderr, "Could not acquire ICMP socket: %s\n", strerror(errno));
     return -1;
   }
@@ -294,31 +297,38 @@ int main(int argc, char** argv) {
   auto packet = reinterpret_cast<packet_t*>(sent.get());
   auto received_packet = reinterpret_cast<packet_t*>(rcvd.get());
 
-  ssize_t r = 0;
   const zx_ticks_t ticks_per_usec = zx_ticks_per_second() / 1000000;
 
   while (options.count-- > 0) {
-    memset(packet, 0, sent_packet_size);
-    packet->hdr.type = type;
-    packet->hdr.code = 0;
-    packet->hdr.un.echo.id = 0;
-    packet->hdr.un.echo.sequence = htons(sequence++);
+    *packet = {
+        .hdr =
+            {
+                .type = type,
+                .code = 0,
+                .un.echo =
+                    {
+                        .id = 0,
+                        .sequence = htons(sequence++),
+                    },
+            },
+    };
     strcpy(packet->payload, ping_message);
     // Netstack will overwrite the checksum
     zx_ticks_t before = zx_ticks_get();
-    r = sendto(s, packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
+    ssize_t r = sendto(s.get(), packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
     if (r < 0) {
       fprintf(stderr, "ping: Could not send packet\n");
       return -1;
     }
 
-    struct pollfd fd;
-    fd.fd = s;
-    fd.events = POLLIN;
+    struct pollfd fd = {
+        .fd = s.get(),
+        .events = POLLIN,
+    };
     switch (poll(&fd, 1, static_cast<int>(options.timeout_msec))) {
       case 1:
         if (fd.revents & POLLIN) {
-          r = recvfrom(s, received_packet, sent_packet_size, 0, NULL, NULL);
+          r = recvfrom(s.get(), received_packet, sent_packet_size, 0, NULL, NULL);
           if (!ValidateReceivedPacket(*packet, sent_packet_size, *received_packet, r, options)) {
             fprintf(stderr, "ping: Received packet didn't match sent packet: %d\n",
                     packet->hdr.un.echo.sequence);
@@ -350,8 +360,6 @@ int main(int argc, char** argv) {
       usleep(static_cast<unsigned int>(options.interval_msec * 1000));
     }
   }
-  freeaddrinfo(info);
   stats.Print();
-  close(s);
   return 0;
 }
