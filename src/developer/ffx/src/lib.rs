@@ -7,6 +7,6 @@ use {anyhow::Result, ffx_core::ffx_plugin, ffx_lib_args::Ffx, std::env, std::pro
 #[ffx_plugin()]
 pub async fn help(_cmd: Ffx) -> Result<()> {
     let ffx_path = env::current_exe()?;
-    Command::new(ffx_path).arg("help").spawn()?;
+    Command::new(ffx_path).arg("help").status()?;
     Ok(())
 }
