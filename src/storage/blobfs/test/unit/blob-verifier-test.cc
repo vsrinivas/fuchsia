@@ -20,7 +20,7 @@ class BlobVerifierTest : public testing::Test {
   void SetUp() override { srand(testing::UnitTest::GetInstance()->random_seed()); }
 
  private:
-  BlobfsMetrics metrics_;
+  BlobfsMetrics metrics_{false};
 };
 
 void GenerateTree(const uint8_t* data, size_t len, Digest* out_digest,

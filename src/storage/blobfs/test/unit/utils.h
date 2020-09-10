@@ -83,7 +83,7 @@ class MockTransactionManager : public TransactionManager {
   }
 
  private:
-  BlobfsMetrics metrics_{};
+  BlobfsMetrics metrics_{false};
   Superblock superblock_{};
   fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
   TransactionCallback transaction_callback_ __TA_GUARDED(lock_);

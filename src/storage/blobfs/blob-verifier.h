@@ -65,6 +65,8 @@ class BlobVerifier {
 
   size_t GetTreeLength() const { return tree_verifier_.GetTreeLength(); }
 
+  const Digest& digest() { return digest_; }
+
  private:
   // Use |Create| or |CreateWithoutTree| to construct.
   explicit BlobVerifier(BlobfsMetrics* metrics);

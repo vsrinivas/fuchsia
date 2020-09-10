@@ -206,4 +206,8 @@ zx_library("blobfs") {
     # TODO(fxb/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
+
+  # To enable blobfs page-in metrics, uncomment the line below.
+  # Note that this feature requires a large Inspect VMO (>512KB) for blobfs.
+  # defines = [ "BLOBFS_ENABLE_PAGE_IN_METRICS" ]
 }

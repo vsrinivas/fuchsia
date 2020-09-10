@@ -281,9 +281,10 @@ zx_status_t BlobLoader::InitForDecompression(
     case CompressionAlgorithm::ZSTD:
       // Callers should have guarded against calling this code path with an algorithm that
       // does not support paging.
-      FS_TRACE_ERROR("Algorithm %s does not support paging; this path should not be called.\n"
-                     "This is most likely programmer error.\n",
-                     CompressionAlgorithmToString(algorithm));
+      FS_TRACE_ERROR(
+          "Algorithm %s does not support paging; this path should not be called.\n"
+          "This is most likely programmer error.\n",
+          CompressionAlgorithmToString(algorithm));
       ZX_DEBUG_ASSERT(false);
       return ZX_ERR_NOT_SUPPORTED;
   }

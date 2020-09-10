@@ -292,7 +292,7 @@ class BlobfsPagerTest : public testing::Test {
   }
 
  private:
-  BlobfsMetrics metrics_ = {};
+  BlobfsMetrics metrics_{false};
   std::unique_ptr<UserPager> pager_;
   // Owned by |pager_|.
   MockTransferBuffer* buffer_ = nullptr;

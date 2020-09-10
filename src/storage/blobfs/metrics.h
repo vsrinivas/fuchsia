@@ -29,10 +29,16 @@ namespace blobfs {
 // Alias for the LatencyEvent used in blobfs.
 using LatencyEvent = fs_metrics::CompositeLatencyEvent;
 
+// This struct holds the inspect node for a blob and a map from block index to page-in frequency.
+struct BlobPageInFrequencies {
+  inspect::Node blob_root_node;
+  std::map<uint32_t, inspect::UintProperty> offset_map;
+};
+
 // This class is not thread-safe except for the read_metrics() and verification_metrics() accessors.
 class BlobfsMetrics {
  public:
-  BlobfsMetrics();
+  explicit BlobfsMetrics(bool should_record_page_in = false);
   ~BlobfsMetrics();
 
   // Print information about metrics to stdout.
@@ -74,6 +80,12 @@ class BlobfsMetrics {
   // This method must only be called from the blobfs main thread.
   void IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration);
 
+  // Increments the frequency count for blocks in the range [|offset|, |offset| + |length|).
+  // This method must only be called from the pager thread.
+  // NOTE: This method is a NOP unless |BLOBFS_ENABLE_PAGE_IN_METRICS| compiler flag
+  // has been set in the BUILD.gn
+  void IncrementPageIn(const fbl::String& merkle_hash, uint64_t offset, uint64_t length);
+
   // Accessors for ReadMetrics. The metrics objects returned are NOT thread-safe.
   // The metrics objects are to be used by exactly one thread (main or pager).
   // Used to increment relevant metrics from the blobfs main thread and the user pager thread.
@@ -99,6 +111,8 @@ class BlobfsMetrics {
   // The maximum size of the VMO is set to 64KB. In practice, we have not seen this
   // inspect VMO need more than 32KB. This gives the VMO enough space to grow if
   // we add more data in the future.
+  // WARNING: When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
+  // TODO(59043): Inspect should print warnings about overflowing the maximum size of a VMO.
   inspect::Inspector inspector_ = inspect::Inspector(
       inspect::InspectSettings{.maximum_size = 65536});
   inspect::Node& root_ = inspector_.GetRoot();
@@ -129,6 +143,7 @@ class BlobfsMetrics {
   inspect::Node lookup_stats_ = root_.CreateChild("lookup_stats");
   inspect::Node paged_read_stats_ = root_.CreateChild("paged_read_stats");
   inspect::Node unpaged_read_stats_ = root_.CreateChild("unpaged_read_stats");
+  inspect::Node page_in_frequency_stats_ = root_.CreateChild("page_in_frequency_stats");
 
   // Allocation properties
   inspect::UintProperty blobs_created_property_ =
@@ -159,6 +174,10 @@ class BlobfsMetrics {
   ReadMetrics unpaged_read_metrics_{&unpaged_read_stats_};
   zx::ticks total_read_merkle_time_ticks_ = {};
   uint64_t bytes_merkle_read_from_disk_ = 0;
+
+  // PAGE-IN FREQUENCY STATS
+  bool should_record_page_in = false;
+  std::map<fbl::String, BlobPageInFrequencies> all_page_in_frequencies_;
 
   // VERIFICATION STATS
   VerificationMetrics verification_metrics_;

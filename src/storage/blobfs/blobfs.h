@@ -306,7 +306,11 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // by inspecting its koid.
   uint64_t fs_id_legacy_ = 0;
 
-  BlobfsMetrics metrics_ = {};
+#ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
+  BlobfsMetrics metrics_{true};
+#else
+  BlobfsMetrics metrics_{false};
+#endif
 
   std::unique_ptr<pager::UserPager> pager_ = nullptr;
 

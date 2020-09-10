@@ -9,9 +9,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fzl/time.h>
 #include <lib/inspect/cpp/inspector.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/zx/time.h>
+#include <zircon/assert.h>
 
+#include <string>
+
+#include <fbl/algorithm.h>
 #include <fs/metrics/events.h>
 #include <fs/service.h>
 #include <fs/trace.h>
@@ -47,7 +52,8 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
 
 }  // namespace
 
-BlobfsMetrics::BlobfsMetrics() {
+BlobfsMetrics::BlobfsMetrics(bool should_record_page_in)
+    : should_record_page_in(should_record_page_in) {
   // Add a node that allows querying the size of the Inspect VMO at runtime
   root_.CreateLazyNode(
       "inspect_vmo_stats",
@@ -133,6 +139,8 @@ void BlobfsMetrics::Dump() {
   FS_TRACE_INFO("Inspect VMO:\n");
   FS_TRACE_INFO("  Maximum Size (bytes) = %zu\n", inspector_.GetStats().maximum_size);
   FS_TRACE_INFO("  Current Size (bytes) = %zu\n", inspector_.GetStats().size);
+  FS_TRACE_INFO("Page-in Metrics Recording Enabled = %s\n",
+                should_record_page_in ? "true" : "false");
 }
 
 void BlobfsMetrics::ScheduleMetricFlush() {
@@ -193,6 +201,48 @@ void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode& inode) {
 void BlobfsMetrics::IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration) {
   total_read_merkle_time_ticks_ += read_duration;
   bytes_merkle_read_from_disk_ += read_size;
+}
+
+void BlobfsMetrics::IncrementPageIn(const fbl::String& merkle_hash, uint64_t offset,
+                                    uint64_t length) {
+  // Page-in metrics are a developer feature that is not intended to be used
+  // in production. Enabling this feature also requires increasing the size of
+  // the Inspect VMO considerably (>512KB).
+  if (!should_record_page_in) {
+    return;
+  }
+
+  inspect::InspectStats stats = inspector_.GetStats();
+  if (stats.maximum_size <= stats.size) {
+    FS_TRACE_ERROR("Blobfs has run out of space in the Inspect VMO.\n");
+    FS_TRACE_ERROR("To record page-in metrics accurately, increase the VMO size.\n");
+    FS_TRACE_ERROR("    Maximum size  : %zu\n", stats.maximum_size);
+    FS_TRACE_ERROR("    Current size  : %zu\n", stats.size);
+    should_record_page_in = false;
+    return;
+  }
+
+  if (all_page_in_frequencies_.find(merkle_hash) == all_page_in_frequencies_.end()) {
+    // We have no page in metrics on this blob yet. Create a new child node.
+    all_page_in_frequencies_[merkle_hash].blob_root_node =
+        page_in_frequency_stats_.CreateChild(merkle_hash.c_str());
+  }
+
+  BlobPageInFrequencies& blob_frequencies = all_page_in_frequencies_[merkle_hash];
+
+  // Calculate the start+end frame indexes to increment
+  uint32_t cur = fbl::round_down(offset, kBlobfsBlockSize) / kBlobfsBlockSize;
+  uint32_t end = fbl::round_up(offset + length, kBlobfsBlockSize) / kBlobfsBlockSize;
+
+  for (; cur < end; cur += 1) {
+    if (blob_frequencies.offset_map.find(cur) == blob_frequencies.offset_map.end()) {
+      // We have no frequencies recorded at this frame index. Create a new property.
+      blob_frequencies.offset_map[cur] =
+          blob_frequencies.blob_root_node.CreateUint(std::to_string(cur), 1);
+    } else {
+      blob_frequencies.offset_map[cur].Add(1);
+    }
+  }
 }
 
 }  // namespace blobfs

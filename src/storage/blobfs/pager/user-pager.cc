@@ -182,6 +182,9 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     return ToPagerErrorStatus(status);
   }
 
+  fbl::String merkle_root_hash = info.verifier->digest().ToString();
+  metrics_->IncrementPageIn(merkle_root_hash, offset, length);
+
   return PagerErrorStatus::kOK;
 }
 
@@ -212,6 +215,7 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   // Read from storage into the transfer buffer.
   size_t read_offset = fbl::round_down(mapping.compressed_offset, kBlobfsBlockSize);
   size_t read_len = (mapping.compressed_length + offset_of_compressed_data);
+
   auto populate_status = transfer_buffer_->Populate(read_offset, read_len, info);
   if (!populate_status.is_ok()) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to populate transfer vmo: %s\n",
@@ -289,6 +293,10 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
                    zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
+
+  fbl::String merkle_root_hash = info.verifier->digest().ToString();
+  metrics_->IncrementPageIn(merkle_root_hash, read_offset, read_len);
+
   return PagerErrorStatus::kOK;
 }
 
