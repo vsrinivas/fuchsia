@@ -102,6 +102,7 @@ rustc_library("lib") {
     "src/logs/listener/pool.rs",
     "src/logs/message.rs",
     "src/logs/mod.rs",
+    "src/logs/server.rs",
     "src/logs/socket.rs",
     "src/logs/stats.rs",
     "src/logs/testing.rs",

@@ -57,7 +57,6 @@ impl LifecycleServer {
     /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
     /// a node hierarchy fails to format, its vmo is an empty string.
     fn format_events(
-        format: &fidl_fuchsia_diagnostics::Format,
         lifecycle_containers: Vec<LifecycleDataContainer>,
     ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
         lifecycle_containers
@@ -78,7 +77,7 @@ impl LifecycleServer {
                     lifecycle_container.event_timestamp.into_nanos(),
                     Vec::new(),
                 );
-                formatter::write_schema_to_formatted_content(lifecycle_data, format)
+                formatter::serialize_to_formatted_json_content(lifecycle_data)
             })
             .collect()
     }
@@ -118,12 +117,15 @@ impl DiagnosticsServer for LifecycleServer {
 
                     iter = iter + 1;
 
-                    let formatted_content: Vec<
-                        Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
-                    > = LifecycleServer::format_events(self.format(), snapshot_batch);
-
-                    let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
-                        formatted_content.into_iter().filter_map(Result::ok).collect();
+                    let mut filtered_results = vec![];
+                    for result in LifecycleServer::format_events(snapshot_batch) {
+                        if let Ok(r) = result {
+                            filtered_results.push(r);
+                            self.stats().add_result();
+                        } else {
+                            self.stats().add_result_error();
+                        }
+                    }
 
                     responder.send(&mut Ok(filtered_results))?;
                 }

@@ -18,7 +18,7 @@ use fuchsia_component::client;
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::sink::{Sink, SinkExt};
 use serde::de::DeserializeOwned;
-use serde_json;
+use serde_json::Value as JsonValue;
 use std::{hash::Hash, str::FromStr};
 
 pub use fidl_fuchsia_diagnostics::DataType;
@@ -168,20 +168,17 @@ impl ArchiveReader {
 
     /// Connects to the ArchiveAccessor and returns inspect data matching provided selectors.
     /// Returns the raw json for each hierarchy fetched.
-    pub async fn snapshot_raw(&self, ty: DataType) -> Result<serde_json::Value, Error> {
+    pub async fn snapshot_raw(&self, ty: DataType) -> Result<JsonValue, Error> {
         let timeout = self.timeout;
         let data_future = self.snapshot_raw_inner(ty);
         let data = match timeout {
             Some(timeout) => data_future.on_timeout(timeout.after_now(), || Ok(Vec::new())).await?,
             None => data_future.await?,
         };
-        Ok(serde_json::Value::Array(data))
+        Ok(JsonValue::Array(data))
     }
 
-    async fn snapshot_raw_inner(
-        &self,
-        data_type: DataType,
-    ) -> Result<Vec<serde_json::Value>, Error> {
+    async fn snapshot_raw_inner(&self, data_type: DataType) -> Result<Vec<JsonValue>, Error> {
         loop {
             let mut result = Vec::new();
             let iterator = self.batch_iterator(data_type, StreamMode::Snapshot)?;
@@ -235,7 +232,7 @@ async fn drain_batch_iterator<S, E>(
     mut results: S,
 ) -> Result<(), Error>
 where
-    S: Sink<serde_json::Value, Error = E> + Unpin,
+    S: Sink<JsonValue, Error = E> + Unpin,
     E: std::error::Error + Send + Sync + 'static,
 {
     loop {
@@ -249,9 +246,22 @@ where
                     let mut buf = vec![0; data.size as usize];
                     data.vmo.read(&mut buf, 0).context("reading vmo")?;
                     let hierarchy_json = std::str::from_utf8(&buf).unwrap();
-                    let output: serde_json::Value =
+                    let output: JsonValue =
                         serde_json::from_str(&hierarchy_json).context("valid json")?;
-                    results.send(output).await.context("sending result")?;
+
+                    match output {
+                        output @ JsonValue::Object(_) => {
+                            results.send(output).await.context("sending result")?;
+                        }
+                        JsonValue::Array(values) => {
+                            for value in values {
+                                results.send(value).await.context("sending result")?;
+                            }
+                        }
+                        _ => unreachable!(
+                            "ArchiveAccessor only returns top-level objects and arrays"
+                        ),
+                    }
                 }
                 _ => unreachable!("JSON was requested, no other data type should be received"),
             }

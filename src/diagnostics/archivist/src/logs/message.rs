@@ -10,6 +10,7 @@ use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fuchsia_inspect_node_hierarchy::NodeHierarchy;
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
+use serde::Serialize;
 use std::{
     convert::TryFrom,
     fmt::Write,
@@ -37,7 +38,7 @@ pub const PLACEHOLDER_MONIKER: &str = "TODO(monikers)";
 pub const PLACEHOLDER_URL: &str = "fuchsia-pkg://todo#populate-real-urls.cmx";
 
 /// Our internal representation for a log message.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Message(LogsData);
 
 impl Accounted for Message {

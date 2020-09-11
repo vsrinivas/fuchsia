@@ -377,7 +377,8 @@ impl ReaderServer {
             batch_item.hierarchy_data.errors,
         );
 
-        formatter::write_schema_to_formatted_content(inspect_data, format)
+        anyhow::ensure!(matches!(format, Format::Json), "only JSON is supported right now");
+        formatter::serialize_to_formatted_json_content(inspect_data)
     }
 }
 #[async_trait]

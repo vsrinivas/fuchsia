@@ -17,8 +17,9 @@ use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, prelude::*};
 
-pub use diagnostics_data::LifecycleType;
-pub use diagnostics_reader::{Inspect, Lifecycle};
+pub use diagnostics_data::{LifecycleType, Severity};
+pub use diagnostics_reader::{Inspect, Lifecycle, Logs};
+pub use fuchsia_inspect_node_hierarchy::assert_data_tree;
 
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";

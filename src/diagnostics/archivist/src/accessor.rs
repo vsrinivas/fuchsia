@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        diagnostics, inspect, lifecycle, repository::DiagnosticsDataRepository,
-        server::DiagnosticsServer,
+        diagnostics, inspect, lifecycle, logs::server::LogServer,
+        repository::DiagnosticsDataRepository, server::DiagnosticsServer,
     },
     anyhow::{bail, format_err, Error},
     fidl::endpoints::ServerEnd,
@@ -211,11 +211,37 @@ impl ArchiveAccessor {
 
     fn handle_stream_logs(
         &self,
-        _result_stream: ServerEnd<BatchIteratorMarker>,
-        _stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
-    ) -> Result<(), Error> {
-        error!("stream logs not yet implemented");
-        Ok(())
+        result_stream: ServerEnd<BatchIteratorMarker>,
+        stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
+    ) {
+        macro_rules! unwrap_or_warn {
+            ($e:expr) => {
+                match $e {
+                    Some(v) => v,
+                    None => {
+                        warn!(concat!(stringify!($e), " was None, returning"));
+                        return;
+                    }
+                }
+            };
+        }
+
+        let manager = self.diagnostics_repo.read().log_manager();
+        let logs_stats = Arc::new(diagnostics::DiagnosticsServerStats::for_logs(
+            self.archive_accessor_stats.clone(),
+        ));
+
+        let stream_mode = unwrap_or_warn!(stream_parameters.stream_mode);
+        let format = unwrap_or_warn!(stream_parameters.format);
+
+        match LogServer::new(manager, format, logs_stats) {
+            Ok(server) => server.spawn(stream_mode, result_stream).detach(),
+            Err(e) => {
+                warn!("couldn't stream logs: {:?}", e);
+                // TODO a better epitaph strategy
+                result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).ok();
+            }
+        }
     }
 
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
@@ -247,7 +273,7 @@ impl ArchiveAccessor {
                                     stream_parameters,
                                 )?,
                                 Some(DataType::Logs) => {
-                                    self.handle_stream_logs(result_stream, stream_parameters)?
+                                    self.handle_stream_logs(result_stream, stream_parameters);
                                 }
                                 None => {
                                     warn!("Client failed to specify a valid data type.");
