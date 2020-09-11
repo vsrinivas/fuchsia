@@ -60,3 +60,31 @@ func TestOvernetSerial(t *testing.T) {
 
 	i.WaitForLogMessage("Established Client Overnet serial connection")
 }
+
+// Test that ascendd can connect to overnetstack via serial.
+func TestNoSpinningIfNoSerial(t *testing.T) {
+	distro, err := qemu.Unpack()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer distro.Delete()
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := distro.Create(qemu.Params{
+		Arch:          arch,
+		ZBI:           zbiPath(t),
+		AppendCmdline: "console.shell=false kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=false",
+	})
+
+	ascendd := exec.Command(ascenddPath(t), "--serial", "-")
+	err = i.StartPiped(ascendd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer i.Kill()
+
+	i.WaitForLogMessage("SERIAL LINK Debug completed with failure")
+}

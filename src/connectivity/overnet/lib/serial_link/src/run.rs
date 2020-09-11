@@ -30,7 +30,7 @@ pub async fn run(
     router: Weak<Router>,
     skipped: impl AsyncWrite + Unpin + Send,
     descriptor: Option<&crate::descriptor::Descriptor>,
-) -> Result<(), Error> {
+) -> Error {
     let router = WeakRouter(router);
     let mut file_handler = FileHandler { read, write, skipped };
     loop {
@@ -47,11 +47,16 @@ pub async fn run(
                 {
                     log::warn!("serial handler failed: {:?}", e);
                 }
+                Ok(())
             })
-            .await?;
-        file_handler
+            .await
+            .expect("no errors allowed from main loop");
+        if let Err(e) = file_handler
             .run(|fragment_reader, fragment_writer| reset(role, fragment_reader, fragment_writer))
-            .await?;
+            .await
+        {
+            return e;
+        }
         fuchsia_async::Timer::new(Duration::from_millis(100)).await;
     }
 }
@@ -71,7 +76,7 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send, S: AsyncWrite + 
     async fn run<'a, F, Fut>(&'a mut self, f: F) -> Result<(), Error>
     where
         F: FnOnce(StreamSplitter<&'a mut S>, FragmentWriter) -> Fut,
-        Fut: Send + Future<Output = ()>,
+        Fut: Send + Future<Output = Result<(), Error>>,
     {
         const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
         let (framer_writer, framer_reader) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
@@ -92,14 +97,14 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send, S: AsyncWrite + 
         let fut = f(fragment_reader, fragment_writer).boxed();
 
         match future::select(fut, support).await {
-            Either::Left((_, _)) => {
-                log::trace!("main task finished");
-                Ok(())
+            Either::Left((r, _)) => {
+                log::trace!("main task finished: {:?}", r);
+                r
             }
             Either::Right((r, m)) => {
-                if m.now_or_never().is_some() {
-                    log::trace!("main task finished at the last moment");
-                    Ok(())
+                if let Some(r) = m.now_or_never() {
+                    log::trace!("main task finished at the last moment: {:?}", r);
+                    r
                 } else {
                     log::trace!("support task finished: {:?}", r);
                     match r {
@@ -235,23 +240,22 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
     role: Role,
     mut fragment_reader: StreamSplitter<OutputSink>,
     mut fragment_writer: FragmentWriter,
-) {
+) -> Result<(), Error> {
     let drain_time = match role {
         Role::Client => Duration::from_secs(3),
         Role::Server => Duration::from_secs(1),
     };
-    if let Err(e) = futures::future::try_join(
+    // This will fail only if I/O fails, and if that fails we cannot recover.
+    futures::future::try_join(
         drain(&mut fragment_reader, drain_time),
         send_reset(&mut fragment_writer),
     )
-    .await
-    {
-        log::warn!("reset failed: {:?}", e);
-    }
+    .await?;
     // Explicitly drop here to remind us that we don't want to inadvertently close
     // one side of the fragment reader/writer until both drain and send_reset are done.
     drop(fragment_reader);
     drop(fragment_writer);
+    Ok(())
 }
 
 async fn drain<OutputSink: AsyncWrite + Unpin>(
@@ -410,9 +414,11 @@ mod test {
                     None,
                 );
                 let _fwd = Task::spawn(
-                    futures::future::try_join(run_client, run_server)
-                        .map_err(|e| panic!(e))
-                        .map(drop),
+                    futures::future::join(
+                        async move { panic!("should never terminate: {:?}", run_client.await) },
+                        async move { panic!("should never terminate: {:?}", run_server.await) },
+                    )
+                    .map(drop),
                 );
                 futures::future::try_join(
                     await_peer(rtr_client.clone(), rtr_server.node_id()),

@@ -51,7 +51,7 @@ pub async fn run_serial_link_handlers(
                     }
                 }
                 let (rx, tx) = Dev::new(cli).split();
-                run(
+                let error = run(
                     Role::Server,
                     rx,
                     tx,
@@ -59,8 +59,9 @@ pub async fn run_serial_link_handlers(
                     ReportSkipped::new("skipped serial bytes"),
                     Some(&desc),
                 )
-                .await
-                .context(format!("during run on descriptor: {}", text_desc))
+                .await;
+                eprintln!("SERIAL LINK {} completed with failure: {:?}", text_desc, error);
+                Ok(())
             }
         })
         .await
@@ -87,12 +88,12 @@ fn convert_io_result<R>(
     match r {
         Ok(Ok(r)) => Ok(r),
         Err(e) => {
-            println!("serial i/o fidl error: {:?}", e);
+            log::trace!("serial i/o fidl error: {:?}", e);
             Err(std::io::Error::new(std::io::ErrorKind::Other, e))
         }
         Ok(Err(zx::sys::ZX_OK)) => panic!(),
         Ok(Err(e)) => {
-            println!("serial i/o zircon error: {:?}", e);
+            log::trace!("serial i/o zircon error: {:?}", e);
             Err(zx::Status::from_raw(e).into_io_error())
         }
     }

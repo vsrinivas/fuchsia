@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{bail, format_err, Context as _, Error};
+use anyhow::{bail, Error};
 use async_std::{
     fs::{File, OpenOptions},
     io::{stdin, stdout},
@@ -42,17 +42,18 @@ pub async fn run_serial_link_handlers(
         .try_for_each_concurrent(None, |desc| {
             let router = router.clone();
             async move {
-                match desc {
-                    Descriptor::StdioPipe => run(
-                        Role::Client,
-                        stdin(),
-                        stdout(),
-                        router,
-                        OutputSink::new(output_sink),
-                        Some(&desc),
-                    )
-                    .await
-                    .context("serial-over-stdio"),
+                let error = match desc {
+                    Descriptor::StdioPipe => {
+                        run(
+                            Role::Client,
+                            stdin(),
+                            stdout(),
+                            router,
+                            OutputSink::new(output_sink),
+                            Some(&desc),
+                        )
+                        .await
+                    }
                     Descriptor::Device { ref path, config } => {
                         let f = OpenOptions::new()
                             .read(true)
@@ -76,9 +77,10 @@ pub async fn run_serial_link_handlers(
                             Some(&desc),
                         )
                         .await
-                        .with_context(move || format_err!("serial over {:?}", path))
                     }
-                }
+                };
+                log::warn!("serial loop completed with failure: {:?}", error);
+                Ok(())
             }
         })
         .await
