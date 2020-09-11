@@ -10,7 +10,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge::{DaemonProxy, Target},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     std::io::{stdout, Write},
     std::time::Duration,
@@ -48,10 +48,11 @@ async fn doctor<W: Write>(
     retry_delay: Duration,
 ) -> Result<()> {
     let mut proxy_opt: Option<DaemonProxy> = None;
+    let mut targets_opt: Option<Vec<Target>> = None;
     for i in 0..retry_count {
         proxy_opt = None;
         if i > 0 {
-            daemon_manager.kill_all()?;
+            daemon_manager.kill_all().await?;
             writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
         }
 
@@ -60,7 +61,7 @@ async fn doctor<W: Write>(
             writeln!(writer, "{}", NONE_RUNNING).unwrap();
             print_status_line(writer, KILLING_ZOMBIE_DAEMONS);
 
-            if daemon_manager.kill_all()? {
+            if daemon_manager.kill_all().await? {
                 writeln!(writer, "{}", ZOMBIE_KILLED).unwrap();
             } else {
                 writeln!(writer, "{}", NONE_RUNNING).unwrap();
@@ -106,22 +107,6 @@ async fn doctor<W: Write>(
                 writeln!(writer, "{}", SUCCESS).unwrap();
             }
         }
-        break;
-    }
-
-    if proxy_opt.is_none() {
-        writeln!(writer, "{}", DAEMON_CHECKS_FAILED).unwrap();
-        writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
-        return Ok(());
-    }
-
-    let daemon = proxy_opt.take().unwrap();
-    let mut rcs_successful = false;
-
-    for i in 0..retry_count {
-        if i > 0 {
-            writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
-        }
 
         let status_str;
         if target_str.is_empty() {
@@ -131,7 +116,12 @@ async fn doctor<W: Write>(
         }
 
         print_status_line(writer, &status_str);
-        let targets = match timeout(retry_delay, daemon.list_targets(target_str)).await {
+        targets_opt = match timeout(
+            retry_delay,
+            proxy_opt.as_ref().unwrap().list_targets(target_str),
+        )
+        .await
+        {
             Err(_) => {
                 writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
                 continue;
@@ -142,19 +132,37 @@ async fn doctor<W: Write>(
             }
             Ok(t) => {
                 writeln!(writer, "{}", SUCCESS).unwrap();
-                t.unwrap()
+                Some(t.unwrap())
             }
         };
 
-        if targets.len() == 0 {
-            if i == retry_count - 1 {
-                writeln!(writer, "{}", NO_TARGETS_FOUND_EXTENDED).unwrap();
-                writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
-                return Ok(());
-            } else {
-                writeln!(writer, "{}", NO_TARGETS_FOUND_SHORT).unwrap();
-                continue;
-            }
+        if targets_opt.is_some() && targets_opt.as_ref().unwrap().len() == 0 {
+            writeln!(writer, "{}", NO_TARGETS_FOUND_SHORT).unwrap();
+            continue;
+        }
+
+        break;
+    }
+
+    if proxy_opt.is_none() {
+        writeln!(writer, "{}", DAEMON_CHECKS_FAILED).unwrap();
+        writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
+        return Ok(());
+    }
+
+    if targets_opt.is_none() || targets_opt.as_ref().unwrap().len() == 0 {
+        writeln!(writer, "\n{}", NO_TARGETS_FOUND_EXTENDED).unwrap();
+        writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
+        return Ok(());
+    }
+
+    let targets = targets_opt.unwrap();
+    let daemon = proxy_opt.take().unwrap();
+    let mut rcs_successful = false;
+
+    for i in 0..retry_count {
+        if i > 0 {
+            writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
         }
 
         // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
@@ -302,7 +310,7 @@ mod test {
 
     #[async_trait]
     impl DaemonManager for FakeDaemonManager {
-        fn kill_all(&self) -> Result<bool> {
+        async fn kill_all(&self) -> Result<bool> {
             let mut state = self.state_manager.lock().unwrap();
             assert!(!state.kill_results.is_empty(), "too many calls to kill_all");
             state.kill_results.remove(0)
@@ -527,6 +535,8 @@ mod test {
                 format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
+                String::from("No targets found"),
+                String::default(),
                 BUG_URL.to_string(),
             ],
         );
@@ -560,6 +570,8 @@ mod test {
                 format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
+                String::from("No targets found"),
+                String::default(),
                 BUG_URL.to_string(),
             ],
         );
@@ -570,10 +582,10 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_two_tries_daemon_running_list_fails() {
         let fake = FakeDaemonManager::new(
-            vec![true],
-            vec![],
-            vec![],
-            vec![Ok(setup_daemon_server_list_fails())],
+            vec![true, false],
+            vec![Ok(true), Ok(false)],
+            vec![Ok(())],
+            vec![Ok(setup_daemon_server_list_fails()), Ok(setup_daemon_server_list_fails())],
         );
 
         let mut output = String::new();
@@ -590,12 +602,7 @@ mod test {
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!(
-                    // TODO(jwing): Print error on a new line so that this
-                    // doesn't have to match the entire error message.
-                    "{}{}",
-                    LISTING_TARGETS_NO_FILTER, FAILED_WITH_ERROR
-                ),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, FAILED_WITH_ERROR),
                 String::from("PEER_CLOSED"),
                 String::default(),
                 String::default(),
@@ -603,14 +610,18 @@ mod test {
                 String::default(),
                 String::default(),
                 String::from("Attempt 2 of 2"),
-                String::default(),
+                format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
+                format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
+                format!("{}{}", SPAWNING_DAEMON, SUCCESS),
+                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
+                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, FAILED_WITH_ERROR),
                 String::from("PEER_CLOSED"),
                 String::default(),
                 String::default(),
                 String::from("PEER_CLOSED"),
                 String::default(),
-                String::default(),
-                String::from("Connecting to RCS failed"),
+                String::from("No targets found"),
                 String::default(),
                 BUG_URL.to_string(),
             ],
@@ -653,9 +664,6 @@ mod test {
                 format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
-                String::default(),
-                String::from("Attempt 2 of 2"),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
                 BUG_URL.to_string(),
@@ -800,6 +808,8 @@ mod test {
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
                 format!("{}{}", LISTING_TARGETS_WITH_FAKE_FILTER, SUCCESS),
+                String::from("No targets found"),
+                String::default(),
                 String::from("No targets found"),
                 String::default(),
                 BUG_URL.to_string(),
