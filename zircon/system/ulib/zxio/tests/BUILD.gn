@@ -59,4 +59,7 @@ test("zxio") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/zxio",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
