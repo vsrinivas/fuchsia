@@ -10,6 +10,8 @@
     "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cmx",
     "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
+    "fuchsia.net.neighbor.Controller": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.neighbor.View": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.stack.Log": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",

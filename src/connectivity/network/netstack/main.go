@@ -33,6 +33,7 @@ import (
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
 	"fidl/fuchsia/net/interfaces"
+	"fidl/fuchsia/net/neighbor"
 	"fidl/fuchsia/net/routes"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -478,6 +479,32 @@ func Main() {
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(interfaces.StateName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		impl := &neighborImpl{ns: ns}
+
+		viewStub := neighbor.ViewWithCtxStub{Impl: impl}
+		appCtx.OutgoingService.AddService(
+			neighbor.ViewName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &viewStub, c, func(err error) {
+					_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
+				})
+				return nil
+			},
+		)
+
+		controllerStub := neighbor.ControllerWithCtxStub{Impl: impl}
+		appCtx.OutgoingService.AddService(
+			neighbor.ControllerName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &controllerStub, c, func(err error) {
+					_ = syslog.WarnTf(neighbor.ControllerName, "%s", err)
 				})
 				return nil
 			},
