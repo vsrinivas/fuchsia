@@ -70,7 +70,7 @@ class VulkanExtensionTest : public testing::Test {
   void set_use_protected_memory(bool use) { use_protected_memory_ = use; }
   bool device_supports_protected_memory() const { return device_supports_protected_memory_; }
 
- private:
+ protected:
   using UniqueBufferCollection =
       vk::UniqueHandle<vk::BufferCollectionFUCHSIA, vk::DispatchLoaderDynamic>;
 
@@ -101,7 +101,7 @@ class VulkanExtensionTest : public testing::Test {
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   vk::UniqueImage vk_image_;
-  VkDeviceMemory vk_device_memory_{};
+  VkDeviceMemory vk_device_memory_ = VK_NULL_HANDLE;
   vk::DispatchLoaderDynamic loader_;
 };
 
@@ -163,7 +163,8 @@ bool VulkanExtensionTest::InitVulkan() {
     }
   }
 
-  std::vector<const char *> enabled_device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
+  std::vector<const char *> enabled_device_extensions{VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
+                                                      VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
   vk::DeviceCreateInfo device_info;
   device_info.pNext = device_supports_protected_memory_ ? &protected_memory : nullptr;
   device_info.pQueueCreateInfos = &ctx_->queue_info();
@@ -655,6 +656,10 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
 
   ASSERT_TRUE(
       Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, true, GetParam(), false, all_constraints));
+  if (vk_device_memory_) {
+    vkFreeMemory(*ctx_->device(), vk_device_memory_, nullptr);
+    vk_device_memory_ = VK_NULL_HANDLE;
+  }
   ASSERT_TRUE(Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, 64, true, GetParam(), false, all_constraints));
 }
 

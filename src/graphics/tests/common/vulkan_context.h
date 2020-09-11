@@ -53,7 +53,8 @@ class VulkanContext {
                 const vk::DeviceCreateInfo &device_info,
                 const vk::DeviceQueueCreateInfo &queue_info,
                 const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
-                vk::Optional<const vk::AllocationCallbacks> allocator = nullptr);
+                vk::Optional<const vk::AllocationCallbacks> allocator = nullptr,
+                bool validation_layers_enabled = true);
 
   explicit VulkanContext(size_t physical_device_index,
                          const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
@@ -68,6 +69,9 @@ class VulkanContext {
   bool set_device_info(const vk::DeviceCreateInfo &device_info);
   bool set_queue_info(const vk::DeviceQueueCreateInfo &queue_info);
   bool set_queue_flag_bits(const vk::QueueFlagBits &queue_flag_bits);
+  void set_validation_layers_enabled(bool enabled) { validation_layers_enabled_ = enabled; }
+  // Set to true to ignore validation errors and allow the test to pass even with errors.
+  void set_validation_errors_ignored(bool allowed) { validation_errors_ignored_ = allowed; }
 
   const vk::InstanceCreateInfo &instance_info() const { return instance_info_; }
   const vk::DeviceCreateInfo &device_info() const { return device_info_; }
@@ -79,6 +83,7 @@ class VulkanContext {
   const vk::Queue &queue() const;
   int queue_family_index() const;
   const vk::QueueFlagBits &queue_flag_bits() const { return queue_flag_bits_; }
+  bool validation_errors_ignored() const { return validation_errors_ignored_; }
 
  private:
   FRIEND_TEST(VkContext, Unique);
@@ -88,9 +93,20 @@ class VulkanContext {
   bool queue_family_initialized_ = false;
   bool device_initialized_ = false;
 
+  // By default validation errors should fail the test.
+  bool validation_errors_ignored_ = false;
+
   // These ivars are listed in order of their use in initialization.
   vk::UniqueInstance instance_;
   vk::InstanceCreateInfo instance_info_;
+  // These vectors may be referenced by |instance_info_|.
+  std::vector<const char *> layers_;
+  std::vector<const char *> extensions_;
+  // By default validation layers should be enabled. A test may want to disable them if it's testing
+  // completely invalid behavior that could cause the layers to crash, or if it's a benchmark.
+  bool validation_layers_enabled_ = true;
+  vk::DispatchLoaderDynamic loader_;
+  vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> messenger_;
 
   vk::PhysicalDevice physical_device_;
   size_t physical_device_index_;
@@ -132,6 +148,7 @@ class VulkanContext::Builder {
   Builder &set_queue_info(const vk::DeviceQueueCreateInfo &queue_info);
   Builder &set_device_info(const vk::DeviceCreateInfo &device_info);
   Builder &set_queue_flag_bits(const vk::QueueFlagBits &queue_flag_bits);
+  Builder &set_validation_layers_enabled(bool enabled);
 
  private:
   vk::InstanceCreateInfo instance_info_;
@@ -140,6 +157,7 @@ class VulkanContext::Builder {
   vk::DeviceQueueCreateInfo queue_info_;
   vk::DeviceCreateInfo device_info_;
   vk::QueueFlagBits queue_flag_bits_;
+  bool validation_layers_enabled_ = true;
   vk::Optional<const vk::AllocationCallbacks> allocator_;
 };
 

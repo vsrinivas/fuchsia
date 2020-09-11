@@ -59,7 +59,7 @@ bool VkCopyTest::Initialize() {
     return false;
   }
 
-  ctx_ = VulkanContext::Builder{}.Unique();
+  ctx_ = VulkanContext::Builder{}.set_validation_layers_enabled(false).Unique();
 
   if (!ctx_) {
     RTN_MSG(false, "Failed to initialize Vulkan.\n");

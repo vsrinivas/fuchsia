@@ -11,12 +11,23 @@
 
 #include "vulkan/vulkan.hpp"
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData) {
+  auto context = reinterpret_cast<VulkanContext *>(pUserData);
+  EXPECT_TRUE(context->validation_errors_ignored()) << pCallbackData->pMessage;
+  return VK_FALSE;
+}
+
 VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
                              size_t physical_device_index, const vk::DeviceCreateInfo &device_info,
                              const vk::DeviceQueueCreateInfo &queue_info,
                              const vk::QueueFlagBits &queue_flag_bits,
-                             vk::Optional<const vk::AllocationCallbacks> allocator)
+                             vk::Optional<const vk::AllocationCallbacks> allocator,
+                             bool validation_layers_enabled)
     : instance_info_(instance_info),
+      validation_layers_enabled_(validation_layers_enabled),
       physical_device_index_(physical_device_index),
       queue_family_index_(kInvalidQueueFamily),
       queue_flag_bits_(queue_flag_bits),
@@ -38,6 +49,23 @@ bool VulkanContext::InitInstance() {
     RTN_MSG(false, "Instance is already initialized.\n");
   }
   vk::ResultValue<vk::UniqueInstance> rv_instance(vk::Result::eNotReady, vk::UniqueInstance{});
+
+  if (validation_layers_enabled_) {
+    // Copy and modify the input lists of layers and extensions to add the validation layer and the
+    // debug utils extension (so we can check for validation errors).
+    std::copy(instance_info_.ppEnabledLayerNames,
+              instance_info_.ppEnabledLayerNames + instance_info_.enabledLayerCount,
+              std::back_inserter(layers_));
+    layers_.push_back("VK_LAYER_KHRONOS_validation");
+    instance_info_.ppEnabledLayerNames = layers_.data();
+    instance_info_.enabledLayerCount = layers_.size();
+    std::copy(instance_info_.ppEnabledExtensionNames,
+              instance_info_.ppEnabledExtensionNames + instance_info_.enabledExtensionCount,
+              std::back_inserter(extensions_));
+    extensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    instance_info_.ppEnabledExtensionNames = extensions_.data();
+    instance_info_.enabledExtensionCount = extensions_.size();
+  }
   if (allocator_) {
     // Verify valid use of callbacks.
     if (!(allocator_->pfnAllocation && allocator_->pfnReallocation && allocator_->pfnFree)) {
@@ -57,6 +85,23 @@ bool VulkanContext::InitInstance() {
   if (vk::Result::eSuccess != rv_instance.result) {
     RTN_MSG(false, "VK Error: 0x%x - Create instance.\n", rv_instance.result);
   }
+  if (instance_ && validation_layers_enabled_) {
+    loader_.init(*rv_instance.value, vkGetInstanceProcAddr);
+    vk::DebugUtilsMessengerCreateInfoEXT create_info;
+    create_info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    create_info.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
+    create_info.pfnUserCallback = debug_utils_callback;
+    create_info.pUserData = this;
+
+    auto rv_messenger =
+        rv_instance.value->createDebugUtilsMessengerEXTUnique(create_info, nullptr, loader_);
+    if (rv_messenger.result != vk::Result::eSuccess) {
+      RTN_MSG(false, "VK Error: 0x%x - CreateDebugUtilsMessengeEXT\n", rv_messenger.result);
+    }
+    messenger_ = std::move(rv_messenger.value);
+  }
+
   instance_ = std::move(rv_instance.value);
   instance_initialized_ = true;
   return true;
@@ -244,10 +289,15 @@ VulkanContext::Builder &VulkanContext::Builder::set_queue_flag_bits(
   return *this;
 }
 
+VulkanContext::Builder &VulkanContext::Builder::set_validation_layers_enabled(bool enabled) {
+  validation_layers_enabled_ = enabled;
+  return *this;
+}
+
 std::unique_ptr<VulkanContext> VulkanContext::Builder::Unique() const {
-  auto context =
-      std::make_unique<VulkanContext>(instance_info_, physical_device_index_, device_info_,
-                                      queue_info_, queue_flag_bits_, allocator_);
+  auto context = std::make_unique<VulkanContext>(instance_info_, physical_device_index_,
+                                                 device_info_, queue_info_, queue_flag_bits_,
+                                                 allocator_, validation_layers_enabled_);
   if (!context->Init()) {
     RTN_MSG(nullptr, "Failed to initialize VulkanContext.\n")
   }
