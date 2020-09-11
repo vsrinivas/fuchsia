@@ -1,18 +1,19 @@
 # Sandboxing
 
-This document describes how sandboxing works in Fuchsia.
+This document describes how sandboxing works for a process
+in Fuchsia.
 
-## An empty process has nothing
+## A new process has nothing
 
-On Fuchsia, a newly created process has nothing. A newly created process cannot
-access any kernel objects, cannot allocate memory, and cannot even execute code.
-Of course, such a process isn't very useful, which is why we typically create
-processes with some initial resources and capabilities.
+In Fuchsia, a newly created process is empty. It cannot
+access any kernel objects, allocate memory, or execute code.
+Because of this, processes are usually created with some
+initial resources and capabilities.
 
 Most commonly, a process starts executing some code with an initial stack, some
-command line arguments, environment variables, a set of initial handles. One of
-the most important initial handles is the `PA_VMAR_ROOT`, which the process can
-use to map additional memory into its address space.
+command line arguments, some environment variables, and a set of initial handles.
+[Zircon program loading and dynamic linking](/docs/concepts/booting/program_loading.md) describes
+the resources provided to programs when starting.
 
 ## Namespaces are the gateway to the world
 
@@ -48,14 +49,14 @@ order to play some useful role in the system. For example, the service
 components.
 
 Processes that are not components may or may not have `/svc`. These processes
-receive whatever `/svc` their creator decided to provide to them.
+receive whatever `/svc` their creator provided to them.
 
 ## Configuring additional namespaces
 
-If a process requires access to additional resources (e.g., device drivers),
+If a component requires access to additional resources (for example, device drivers),
 the package can request access to additional names by including the `sandbox`
 property in its  [Component Manifest](/docs/concepts/components/v1/component_manifests.md)
-for the package. For example, to request direct access the input drive,
+for the package. For example, to request direct access to the input drive,
 include the following `dev` array in your `sandbox`:
 
 ```
@@ -63,15 +64,3 @@ include the following `dev` array in your `sandbox`:
     "dev": [ "class/input" ]
 }
 ```
-
-In the current implementation, the [AppMgr](/docs/glossary.md#appmgr) grants all such
-requests, but that is likely to change as the system evolves.
-
-## Building a package
-
-To build a package, use the `package()` macro in `gn` defined in
-[`//build/package.gni`](/build/package.gni).
-See the documentation for the `package()` macro for details about including resources.
-
-For examples, see [/garnet/packages/prod/fortune]
-and [/examples/fortune/BUILD.gn].
