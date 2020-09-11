@@ -78,7 +78,6 @@ group("tests") {
     # //src.
     "//zircon/kernel/lib/devicetree/tests",
     "//zircon/system/ulib:tests",
-    "//zircon/system/ulib/zbitl/test",
     "//zircon/system/utest:tests",
   ]
 }

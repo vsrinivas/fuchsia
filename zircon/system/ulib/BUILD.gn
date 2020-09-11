@@ -15,6 +15,7 @@ group("tests") {
     "hid-parser/test:tests",
     "inspect:tests",
     "sysconfig-client:tests",
+    "zbitl/test",
     "zxio:tests",
   ]
 }
