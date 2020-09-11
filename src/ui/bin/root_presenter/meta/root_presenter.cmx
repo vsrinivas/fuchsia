@@ -19,6 +19,7 @@
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.activity.Tracker",
+            "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic"
         ]

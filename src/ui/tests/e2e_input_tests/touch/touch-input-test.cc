@@ -10,6 +10,7 @@
 #include <fuchsia/test/ui/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
@@ -113,6 +114,9 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
       }
       is_ok =
           services->AddServiceWithLaunchInfo(std::move(launch), fuchsia::ui::scenic::Scenic::Name_);
+      FX_CHECK(is_ok == ZX_OK);
+      is_ok = services->AddServiceWithLaunchInfo({.url = kScenic},
+                                                 fuchsia::ui::pointerinjector::Registry::Name_);
       FX_CHECK(is_ok == ZX_OK);
     }
 

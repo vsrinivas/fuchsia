@@ -20,9 +20,9 @@
 
 #include <limits>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/bin/root_presenter/activity_notifier.h"
@@ -49,7 +49,7 @@ class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::views::Focuser,
             public ui_input::InputDeviceImpl::Listener {
  public:
-  App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher);
+  App(sys::ComponentContext* component_context, async_dispatcher_t* dispatcher);
   ~App() = default;
 
   // |InputDeviceImpl::Listener|
@@ -74,6 +74,11 @@ class App : public fuchsia::ui::policy::Presenter,
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
+  // For testing.
+  bool is_presentation_initialized() const {
+    return presentation_ && presentation_->is_initialized();
+  }
+
  private:
   // |DeviceListenerRegistry|
   void RegisterMediaButtonsListener(
@@ -93,7 +98,7 @@ class App : public fuchsia::ui::policy::Presenter,
   // |fuchsia.ui.views.Focuser|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
 
-  std::unique_ptr<sys::ComponentContext> component_context_;
+  sys::ComponentContext* const component_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;

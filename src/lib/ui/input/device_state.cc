@@ -340,7 +340,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
   fuchsia::ui::input::TouchscreenDescriptor* descriptor = device_state_->touchscreen_descriptor();
   FX_DCHECK(descriptor);
 
-  std::vector<fuchsia::ui::input::PointerEvent> old_pointers = pointers_;
+  std::vector<fuchsia::ui::input::PointerEvent> old_pointers = std::move(pointers_);
   pointers_.clear();
 
   uint64_t now = input_report.event_time;
@@ -349,7 +349,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
     fuchsia::ui::input::PointerEvent pt;
     pt.event_time = now;
     pt.device_id = device_state_->device_id();
-    pt.phase = fuchsia::ui::input::PointerEventPhase::DOWN;
+    pt.phase = fuchsia::ui::input::PointerEventPhase::ADD;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
       FX_DCHECK(touch.finger_id >= 0);
       if (it->pointer_id == static_cast<uint32_t>(touch.finger_id)) {
@@ -390,21 +390,6 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
 
     pointers_.push_back(pt);
 
-    // For now when we get DOWN we need to fake trigger ADD first.
-    if (pt.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
-      fuchsia::ui::input::PointerEvent add = fidl::Clone(pt);
-      add.phase = fuchsia::ui::input::PointerEventPhase::ADD;
-
-      // TODO(SCN-1278): Use proper trace_id field for tracing flow.
-      trace_async_id_t add_async_id = TRACE_NONCE();
-      PointerTraceHACK(add_async_id, &add.radius_major, &add.radius_minor);
-      TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", add_async_id);
-
-      fuchsia::ui::input::InputEvent ev;
-      ev.set_pointer(std::move(add));
-      device_state_->callback()(std::move(ev));
-    }
-
     TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", pt_async_id);
 
     fuchsia::ui::input::InputEvent ev;
@@ -413,35 +398,18 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
   }
 
   for (const auto& pointer : old_pointers) {
-    {
-      fuchsia::ui::input::PointerEvent old = fidl::Clone(pointer);
-      old.phase = fuchsia::ui::input::PointerEventPhase::UP;
-      old.event_time = now;
+    fuchsia::ui::input::PointerEvent old = fidl::Clone(pointer);
+    old.phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
+    old.event_time = now;
 
-      // TODO(SCN-1278): Use proper trace_id field for tracing flow.
-      trace_async_id_t old_id = TRACE_NONCE();
-      PointerTraceHACK(old_id, &old.radius_major, &old.radius_minor);
-      TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", old_id);
+    // TODO(SCN-1278): Use proper trace_id field for tracing flow.
+    trace_async_id_t old_id = TRACE_NONCE();
+    PointerTraceHACK(old_id, &old.radius_major, &old.radius_minor);
+    TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", old_id);
 
-      fuchsia::ui::input::InputEvent ev;
-      ev.set_pointer(std::move(old));
-      device_state_->callback()(std::move(ev));
-    }
-
-    {
-      fuchsia::ui::input::PointerEvent old = fidl::Clone(pointer);
-      old.phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
-      old.event_time = now;
-
-      // TODO(SCN-1278): Use proper trace_id field for tracing flow.
-      trace_async_id_t old_id = TRACE_NONCE();
-      PointerTraceHACK(old_id, &old.radius_major, &old.radius_minor);
-      TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", old_id);
-
-      fuchsia::ui::input::InputEvent ev;
-      ev.set_pointer(std::move(old));
-      device_state_->callback()(std::move(ev));
-    }
+    fuchsia::ui::input::InputEvent ev;
+    ev.set_pointer(std::move(old));
+    device_state_->callback()(std::move(ev));
   }
 }
 
