@@ -9,7 +9,7 @@
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <wifi/wifi-config.h>
@@ -19,12 +19,12 @@
 
 namespace vim {
 
-static const pbus_mmio_t aml_sd_emmc_mmios[] = {{
+static const pbus_mmio_t aml_sdmmc_mmios[] = {{
     .base = 0xD0070000,
     .length = 0x2000,
 }};
 
-static const pbus_irq_t aml_sd_emmc_irqs[] = {
+static const pbus_irq_t aml_sdmmc_irqs[] = {
     {
         .irq = 248,
         // c++ initialization error
@@ -33,14 +33,14 @@ static const pbus_irq_t aml_sd_emmc_irqs[] = {
     },
 };
 
-static const pbus_bti_t aml_sd_emmc_btis[] = {
+static const pbus_bti_t aml_sdmmc_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_SDIO,
     },
 };
 
-static aml_sd_emmc_config_t config = {
+static aml_sdmmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
     .max_freq = 200000000,
@@ -54,7 +54,7 @@ static const wifi_config_t wifi_config = {
     .cc_table = {},
 };
 
-static const pbus_metadata_t aml_sd_emmc_metadata[] = {
+static const pbus_metadata_t aml_sdmmc_metadata[] = {
     {
         .type = DEVICE_METADATA_EMMC_CONFIG,
         .data_buffer = &config,
@@ -67,21 +67,21 @@ static const pbus_metadata_t aml_sd_emmc_metadata[] = {
     },
 };
 
-static const pbus_dev_t aml_sd_emmc_dev = []() {
+static const pbus_dev_t aml_sdmmc_dev = []() {
   pbus_dev_t dev = {};
 
   dev.name = "aml-sdio";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SD_EMMC_A;
-  dev.mmio_list = aml_sd_emmc_mmios;
-  dev.mmio_count = countof(aml_sd_emmc_mmios);
-  dev.irq_list = aml_sd_emmc_irqs;
-  dev.irq_count = countof(aml_sd_emmc_irqs);
-  dev.bti_list = aml_sd_emmc_btis;
-  dev.bti_count = countof(aml_sd_emmc_btis);
-  dev.metadata_list = aml_sd_emmc_metadata;
-  dev.metadata_count = countof(aml_sd_emmc_metadata);
+  dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
+  dev.mmio_list = aml_sdmmc_mmios;
+  dev.mmio_count = countof(aml_sdmmc_mmios);
+  dev.irq_list = aml_sdmmc_irqs;
+  dev.irq_count = countof(aml_sdmmc_irqs);
+  dev.bti_list = aml_sdmmc_btis;
+  dev.bti_count = countof(aml_sdmmc_btis);
+  dev.metadata_list = aml_sdmmc_metadata;
+  dev.metadata_count = countof(aml_sdmmc_metadata);
   return dev;
 }();
 
@@ -160,10 +160,10 @@ zx_status_t Vim::SdioInit() {
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
-  status = pbus_.CompositeDeviceAdd(&aml_sd_emmc_dev, sdio_fragments, std::size(sdio_fragments),
+  status = pbus_.CompositeDeviceAdd(&aml_sdmmc_dev, sdio_fragments, std::size(sdio_fragments),
                                     UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SdioInit could not add aml_sd_emmc_dev: %d", status);
+    zxlogf(ERROR, "SdioInit could not add aml_sdmmc_dev: %d", status);
     return status;
   }
 

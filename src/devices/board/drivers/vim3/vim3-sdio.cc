@@ -9,7 +9,7 @@
 #include <ddk/protocol/sdmmc.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 
 #include "vim3.h"
 
@@ -36,7 +36,7 @@ static const pbus_bti_t sdio_btis[] = {
     },
 };
 
-static aml_sd_emmc_config_t config = {
+static aml_sdmmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400'000,
     .max_freq = 200'000'000,
@@ -74,7 +74,7 @@ zx_status_t Vim3::SdioInit() {
   sdio_dev.name = "aml_sdio";
   sdio_dev.vid = PDEV_VID_AMLOGIC;
   sdio_dev.pid = PDEV_PID_GENERIC;
-  sdio_dev.did = PDEV_DID_AMLOGIC_SD_EMMC_A;
+  sdio_dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
   sdio_dev.mmio_list = sdio_mmios;
   sdio_dev.mmio_count = countof(sdio_mmios);
   sdio_dev.irq_list = sdio_irqs;

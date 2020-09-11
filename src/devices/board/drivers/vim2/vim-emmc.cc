@@ -9,7 +9,7 @@
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 
@@ -41,7 +41,7 @@ static const pbus_bti_t emmc_btis[] = {
     },
 };
 
-static aml_sd_emmc_config_t config = {
+static aml_sdmmc_config_t config = {
     // As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
     .supports_dma = true,
     .min_freq = 400000,
@@ -87,7 +87,7 @@ zx_status_t Vim::EmmcInit() {
   emmc_dev.name = "aml_emmc";
   emmc_dev.vid = PDEV_VID_AMLOGIC;
   emmc_dev.pid = PDEV_PID_GENERIC;
-  emmc_dev.did = PDEV_DID_AMLOGIC_SD_EMMC_C;
+  emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
   emmc_dev.mmio_list = emmc_mmios;
   emmc_dev.mmio_count = countof(emmc_mmios);
   emmc_dev.irq_list = emmc_irqs;

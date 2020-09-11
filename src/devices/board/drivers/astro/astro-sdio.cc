@@ -13,7 +13,7 @@
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <wifi/wifi-config.h>
@@ -80,7 +80,7 @@ static const pbus_bti_t sd_emmc_btis[] = {
     },
 };
 
-static aml_sd_emmc_config_t config = {
+static aml_sdmmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400'000,
     .max_freq = 208'000'000,
@@ -127,7 +127,7 @@ static const pbus_dev_t sd_emmc_dev = []() {
   dev.name = "aml-sdio";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SD_EMMC_B;
+  dev.did = PDEV_DID_AMLOGIC_SDMMC_B;
   dev.mmio_list = sd_emmc_mmios;
   dev.mmio_count = countof(sd_emmc_mmios);
   dev.irq_list = sd_emmc_irqs;
@@ -180,7 +180,7 @@ static const device_fragment_t wifi_composite[] = {
 // Composite binding rules for SDIO.
 static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SD_EMMC_RESET),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SDIO_RESET),
 };
 constexpr zx_bind_inst_t pwm_e_match[] = {
     BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
@@ -267,7 +267,7 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
   hiu_base->Write32(hhi_gclock_val, HHI_GCLK_MPEG0_OFFSET << 2);
 
   uint32_t hh1_sd_emmc_clock_val =
-      hiu_base->Read32(HHI_SD_EMMC_CLK_CNTL_OFFSET << 2) & AML_SDIO_PORTB_SD_EMMC_CLK_VAL;
+      hiu_base->Read32(HHI_SD_EMMC_CLK_CNTL_OFFSET << 2) & AML_SDIO_PORTB_SDMMC_CLK_VAL;
   hiu_base->Write32(hh1_sd_emmc_clock_val, HHI_SD_EMMC_CLK_CNTL_OFFSET << 2);
 
   return status;

@@ -90,7 +90,7 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_VOLUME_BOTH},
     {GPIO_MIC_PRIVACY},
     // For SDIO.
-    {GPIO_SD_EMMC_RESET},
+    {GPIO_SDIO_RESET},
     // For Bluetooth.
     {GPIO_SOC_WIFI_LPO_32k768},
     {GPIO_SOC_BT_REG_ON},

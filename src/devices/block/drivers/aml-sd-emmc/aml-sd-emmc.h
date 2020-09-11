@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
 
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -18,19 +18,19 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/span.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 
 namespace sdmmc {
 
-class AmlSdEmmc;
-using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::Suspendable, ddk::Unbindable>;
+class AmlSdmmc;
+using AmlSdmmcType = ddk::Device<AmlSdmmc, ddk::Suspendable, ddk::Unbindable>;
 
-class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk::base_protocol> {
+class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::base_protocol> {
  public:
-  explicit AmlSdEmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
-                     ddk::MmioPinnedBuffer pinned_mmio, aml_sd_emmc_config_t config,
-                     zx::interrupt irq, const ddk::GpioProtocolClient& gpio)
-      : AmlSdEmmcType(parent),
+  explicit AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
+                    ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
+                    const ddk::GpioProtocolClient& gpio)
+      : AmlSdmmcType(parent),
         mmio_(std::move(mmio)),
         bti_(std::move(bti)),
         pinned_mmio_(std::move(pinned_mmio)),
@@ -40,7 +40,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
         dead_(false),
         pending_txn_(false) {}
 
-  virtual ~AmlSdEmmc() {}
+  virtual ~AmlSdmmc() {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation
@@ -64,7 +64,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
 
   // Visible for tests
   zx_status_t Init();
-  void set_board_config(const aml_sd_emmc_config_t& board_config) { board_config_ = board_config; }
+  void set_board_config(const aml_sdmmc_config_t& board_config) { board_config_ = board_config; }
 
  protected:
   // Visible for tests
@@ -107,15 +107,15 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   uint32_t max_delay() const;
 
   void ConfigureDefaultRegs();
-  void SetupCmdDesc(sdmmc_req_t* req, aml_sd_emmc_desc_t** out_desc);
+  void SetupCmdDesc(sdmmc_req_t* req, aml_sdmmc_desc_t** out_desc);
   // Prepares the VMO and sets up the data descriptors
-  zx_status_t SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* cur_desc,
-                                aml_sd_emmc_desc_t** last_desc);
+  zx_status_t SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_desc,
+                                aml_sdmmc_desc_t** last_desc);
   // Sets up the data descriptors using the ping/pong buffers
-  zx_status_t SetupDataDescsPio(sdmmc_req_t* req, aml_sd_emmc_desc_t* desc,
-                                aml_sd_emmc_desc_t** last_desc);
-  zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sd_emmc_desc_t* desc,
-                             aml_sd_emmc_desc_t** last_desc);
+  zx_status_t SetupDataDescsPio(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
+                                aml_sdmmc_desc_t** last_desc);
+  zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
+                             aml_sdmmc_desc_t** last_desc);
   zx_status_t FinishReq(sdmmc_req_t* req);
   void ClearStatus();
   zx_status_t WaitForInterrupt(sdmmc_req_t* req);
@@ -127,7 +127,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   ddk::MmioPinnedBuffer pinned_mmio_;
   const ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
-  aml_sd_emmc_config_t board_config_;
+  aml_sdmmc_config_t board_config_;
 
   sdmmc_host_info_t dev_info_;
   ddk::IoBuffer descs_buffer_;
@@ -141,4 +141,4 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
 
 }  // namespace sdmmc
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SDMMC_H_

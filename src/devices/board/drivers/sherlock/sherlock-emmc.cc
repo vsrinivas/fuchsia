@@ -13,7 +13,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
@@ -44,7 +44,7 @@ constexpr pbus_bti_t emmc_btis[] = {
     },
 };
 
-static aml_sd_emmc_config_t sherlock_config = {
+static aml_sdmmc_config_t sherlock_config = {
     .supports_dma = true,
     // As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
     .min_freq = 400'000,
@@ -53,7 +53,7 @@ static aml_sd_emmc_config_t sherlock_config = {
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
 
-static aml_sd_emmc_config_t luis_config = {
+static aml_sdmmc_config_t luis_config = {
     .supports_dma = true,
     .min_freq = 400'000,
     .max_freq = 166'666'667,  // The expected eMMC clock frequency on Luis is 166 MHz.
@@ -139,7 +139,7 @@ zx_status_t Sherlock::EmmcInit() {
   emmc_dev.name = "sherlock-emmc";
   emmc_dev.vid = PDEV_VID_AMLOGIC;
   emmc_dev.pid = PDEV_PID_GENERIC;
-  emmc_dev.did = PDEV_DID_AMLOGIC_SD_EMMC_C;
+  emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
   emmc_dev.mmio_list = emmc_mmios;
   emmc_dev.mmio_count = countof(emmc_mmios);
   emmc_dev.irq_list = emmc_irqs;

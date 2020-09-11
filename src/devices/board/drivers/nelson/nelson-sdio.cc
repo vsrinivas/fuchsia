@@ -13,7 +13,7 @@
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 #include <wifi/wifi-config.h>
@@ -80,7 +80,7 @@ static const pbus_bti_t sd_emmc_btis[] = {
     },
 };
 
-static aml_sd_emmc_config_t config = {
+static aml_sdmmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400'000,
     .max_freq = 208'000'000,
@@ -130,7 +130,7 @@ static const pbus_dev_t sd_emmc_dev = []() {
   dev.name = "aml-sdio";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SD_EMMC_A;
+  dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
   dev.mmio_list = sd_emmc_mmios;
   dev.mmio_count = countof(sd_emmc_mmios);
   dev.irq_list = sd_emmc_irqs;

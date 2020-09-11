@@ -16,7 +16,7 @@
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 #include <wifi/wifi-config.h>
@@ -72,7 +72,7 @@ constexpr pbus_bti_t sd_emmc_btis[] = {
     },
 };
 
-constexpr aml_sd_emmc_config_t sd_emmc_config = {
+constexpr aml_sdmmc_config_t sd_emmc_config = {
     .supports_dma = false,
     .min_freq = 500'000,      // 500KHz
     .max_freq = 208'000'000,  // 208MHz
@@ -136,7 +136,7 @@ const pbus_dev_t sdio_dev = []() {
   dev.name = "sherlock-sd-emmc";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SD_EMMC_A;
+  dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
   dev.mmio_list = sd_emmc_mmios;
   dev.mmio_count = countof(sd_emmc_mmios);
   dev.bti_list = sd_emmc_btis;

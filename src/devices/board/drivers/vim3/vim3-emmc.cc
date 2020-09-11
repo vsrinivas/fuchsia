@@ -9,7 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
-#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
 
@@ -39,7 +39,7 @@ static const pbus_bti_t emmc_btis[] = {
     },
 };
 
-static aml_sd_emmc_config_t config = {
+static aml_sdmmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
     .max_freq = 120000000,
@@ -94,7 +94,7 @@ zx_status_t Vim3::EmmcInit() {
   emmc_dev.name = "aml_emmc";
   emmc_dev.vid = PDEV_VID_AMLOGIC;
   emmc_dev.pid = PDEV_PID_GENERIC;
-  emmc_dev.did = PDEV_DID_AMLOGIC_SD_EMMC_C;
+  emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
   emmc_dev.mmio_list = emmc_mmios;
   emmc_dev.mmio_count = countof(emmc_mmios);
   emmc_dev.irq_list = emmc_irqs;

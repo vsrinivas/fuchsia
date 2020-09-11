@@ -2,49 +2,49 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
 
 #include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
 
-constexpr uint32_t kAmlSdEmmcClockOffset = 0x00;
-constexpr uint32_t kAmlSdEmmcDelayV2Offset = 0x04;
-constexpr uint32_t kAmlSdEmmcDelay1Offset = 0x04;
-constexpr uint32_t kAmlSdEmmcDelay2Offset = 0x08;
-constexpr uint32_t kAmlSdEmmcAdjustV2Offset = 0x08;
-constexpr uint32_t kAmlSdEmmcAdjustOffset = 0x0c;
-constexpr uint32_t kAmlSdEmmcCaloutOffset = 0x10;
-constexpr uint32_t kAmlSdEmmcCaloutV2Offset = 0x14;
+constexpr uint32_t kAmlSdmmcClockOffset = 0x00;
+constexpr uint32_t kAmlSdmmcDelayV2Offset = 0x04;
+constexpr uint32_t kAmlSdmmcDelay1Offset = 0x04;
+constexpr uint32_t kAmlSdmmcDelay2Offset = 0x08;
+constexpr uint32_t kAmlSdmmcAdjustV2Offset = 0x08;
+constexpr uint32_t kAmlSdmmcAdjustOffset = 0x0c;
+constexpr uint32_t kAmlSdmmcCaloutOffset = 0x10;
+constexpr uint32_t kAmlSdmmcCaloutV2Offset = 0x14;
 
-constexpr uint32_t kAmlSdEmmcStartOffset = 0x40;
-constexpr uint32_t kAmlSdEmmcCfgOffset = 0x44;
-constexpr uint32_t kAmlSdEmmcStatusOffset = 0x48;
-constexpr uint32_t kAmlSdEmmcIrqEnOffset = 0x4c;
-constexpr uint32_t kAmlSdEmmcCmdCfgOffset = 0x50;
-constexpr uint32_t kAmlSdEmmcCmdArgOffset = 0x54;
-constexpr uint32_t kAmlSdEmmcCmdDatOffset = 0x58;
-constexpr uint32_t kAmlSdEmmcCmdRespOffset = 0x5c;
-constexpr uint32_t kAmlSdEmmcCmdResp1Offset = 0x60;
-constexpr uint32_t kAmlSdEmmcCmdResp2Offset = 0x64;
-constexpr uint32_t kAmlSdEmmcCmdResp3Offset = 0x68;
-constexpr uint32_t kAmlSdEmmcCmdBusErrOffset = 0x6c;
-constexpr uint32_t kAmlSdEmmcCurCfgOffset = 0x70;
-constexpr uint32_t kAmlSdEmmcCurArgOffset = 0x74;
-constexpr uint32_t kAmlSdEmmcCurDatOffset = 0x78;
-constexpr uint32_t kAmlSdEmmcCurRespOffset = 0x7c;
-constexpr uint32_t kAmlSdEmmcNextCfgOffset = 0x80;
-constexpr uint32_t kAmlSdEmmcNextArgOffset = 0x84;
-constexpr uint32_t kAmlSdEmmcNextDatOffset = 0x88;
-constexpr uint32_t kAmlSdEmmcNextRespOffset = 0x8c;
-constexpr uint32_t kAmlSdEmmcRxdOffset = 0x90;
-constexpr uint32_t kAmlSdEmmcTxdOffset = 0x94;
-constexpr uint32_t kAmlSdEmmcSramDescOffset = 0x200;
-constexpr uint32_t kAmlSdEmmcPingOffset = 0x400;
-constexpr uint32_t kAmlSdEmmcPongOffset = 0x600;
+constexpr uint32_t kAmlSdmmcStartOffset = 0x40;
+constexpr uint32_t kAmlSdmmcCfgOffset = 0x44;
+constexpr uint32_t kAmlSdmmcStatusOffset = 0x48;
+constexpr uint32_t kAmlSdmmcIrqEnOffset = 0x4c;
+constexpr uint32_t kAmlSdmmcCmdCfgOffset = 0x50;
+constexpr uint32_t kAmlSdmmcCmdArgOffset = 0x54;
+constexpr uint32_t kAmlSdmmcCmdDatOffset = 0x58;
+constexpr uint32_t kAmlSdmmcCmdRespOffset = 0x5c;
+constexpr uint32_t kAmlSdmmcCmdResp1Offset = 0x60;
+constexpr uint32_t kAmlSdmmcCmdResp2Offset = 0x64;
+constexpr uint32_t kAmlSdmmcCmdResp3Offset = 0x68;
+constexpr uint32_t kAmlSdmmcCmdBusErrOffset = 0x6c;
+constexpr uint32_t kAmlSdmmcCurCfgOffset = 0x70;
+constexpr uint32_t kAmlSdmmcCurArgOffset = 0x74;
+constexpr uint32_t kAmlSdmmcCurDatOffset = 0x78;
+constexpr uint32_t kAmlSdmmcCurRespOffset = 0x7c;
+constexpr uint32_t kAmlSdmmcNextCfgOffset = 0x80;
+constexpr uint32_t kAmlSdmmcNextArgOffset = 0x84;
+constexpr uint32_t kAmlSdmmcNextDatOffset = 0x88;
+constexpr uint32_t kAmlSdmmcNextRespOffset = 0x8c;
+constexpr uint32_t kAmlSdmmcRxdOffset = 0x90;
+constexpr uint32_t kAmlSdmmcTxdOffset = 0x94;
+constexpr uint32_t kAmlSdmmcSramDescOffset = 0x200;
+constexpr uint32_t kAmlSdmmcPingOffset = 0x400;
+constexpr uint32_t kAmlSdmmcPongOffset = 0x600;
 
-class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
+class AmlSdmmcClock : public hwreg::RegisterBase<AmlSdmmcClock, uint32_t> {
  public:
   static constexpr uint32_t kCtsOscinClkFreq = 24000000;  // 24MHz
   static constexpr uint32_t kCtsOscinClkSrc = 0;
@@ -66,7 +66,7 @@ class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
   static constexpr uint32_t kMaxDelay = 63;
   static constexpr uint32_t kMaxDelayV2 = 15;
 
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcClock>(kAmlSdEmmcClockOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcClock>(kAmlSdmmcClockOffset); }
 
   DEF_FIELD(5, 0, cfg_div);
   DEF_FIELD(7, 6, cfg_src);
@@ -82,7 +82,7 @@ class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
   DEF_BIT(31, cfg_nand);
 };
 
-class AmlSdEmmcCfg : public hwreg::RegisterBase<AmlSdEmmcCfg, uint32_t> {
+class AmlSdmmcCfg : public hwreg::RegisterBase<AmlSdmmcCfg, uint32_t> {
  public:
   static constexpr uint32_t kBusWidth1Bit = 0;
   static constexpr uint32_t kBusWidth4Bit = 1;
@@ -92,7 +92,7 @@ class AmlSdEmmcCfg : public hwreg::RegisterBase<AmlSdEmmcCfg, uint32_t> {
   static constexpr uint32_t kDefaultRespTimeout = 8;  // 256 core clock cycles
   static constexpr uint32_t kDefaultRcCc = 4;         // 16 core clock cycles
 
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCfg>(kAmlSdEmmcCfgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCfg>(kAmlSdmmcCfgOffset); }
 
   DEF_FIELD(1, 0, bus_width);
   DEF_BIT(2, ddr);
@@ -115,10 +115,10 @@ class AmlSdEmmcCfg : public hwreg::RegisterBase<AmlSdEmmcCfg, uint32_t> {
   DEF_FIELD(31, 28, ip_txd_adj);
 };
 
-class AmlSdEmmcStatus : public hwreg::RegisterBase<AmlSdEmmcStatus, uint32_t> {
+class AmlSdmmcStatus : public hwreg::RegisterBase<AmlSdmmcStatus, uint32_t> {
  public:
   static constexpr uint32_t kClearStatus = 0x7fff;
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcStatus>(kAmlSdEmmcStatusOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcStatus>(kAmlSdmmcStatusOffset); }
 
   DEF_FIELD(7, 0, rxd_err);
   DEF_BIT(8, txd_err);
@@ -137,15 +137,15 @@ class AmlSdEmmcStatus : public hwreg::RegisterBase<AmlSdEmmcStatus, uint32_t> {
   DEF_BIT(31, core_busy);
 };
 
-class AmlSdEmmcCmdCfg : public hwreg::RegisterBase<AmlSdEmmcCmdCfg, uint32_t> {
+class AmlSdmmcCmdCfg : public hwreg::RegisterBase<AmlSdmmcCmdCfg, uint32_t> {
  public:
   static constexpr uint32_t kDefaultCmdTimeout = 0xc;  // 2^12 ms.
   static constexpr uint32_t kMaxBlockSize = 512;       // 9 bits
 
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdCfg>(kAmlSdEmmcCmdCfgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdCfg>(kAmlSdmmcCmdCfgOffset); }
 
   void set_length(uint32_t length) {
-    if (length >= AmlSdEmmcCmdCfg::kMaxBlockSize) {
+    if (length >= AmlSdmmcCmdCfg::kMaxBlockSize) {
       // Controller supports 512bytes and uses 0 to denote that.
       length = 0;
     }
@@ -169,34 +169,34 @@ class AmlSdEmmcCmdCfg : public hwreg::RegisterBase<AmlSdEmmcCmdCfg, uint32_t> {
   DEF_BIT(31, owner);
 };
 
-class AmlSdEmmcIrqEn : public hwreg::RegisterBase<AmlSdEmmcIrqEn, uint32_t> {
+class AmlSdmmcIrqEn : public hwreg::RegisterBase<AmlSdmmcIrqEn, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcIrqEn>(kAmlSdEmmcIrqEnOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcIrqEn>(kAmlSdmmcIrqEnOffset); }
 };
 
-class AmlSdEmmcCmdResp : public hwreg::RegisterBase<AmlSdEmmcCmdResp, uint32_t> {
+class AmlSdmmcCmdResp : public hwreg::RegisterBase<AmlSdmmcCmdResp, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdResp>(kAmlSdEmmcCmdRespOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdResp>(kAmlSdmmcCmdRespOffset); }
 };
 
-class AmlSdEmmcCmdResp1 : public hwreg::RegisterBase<AmlSdEmmcCmdResp1, uint32_t> {
+class AmlSdmmcCmdResp1 : public hwreg::RegisterBase<AmlSdmmcCmdResp1, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdResp1>(kAmlSdEmmcCmdResp1Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdResp1>(kAmlSdmmcCmdResp1Offset); }
 };
 
-class AmlSdEmmcCmdResp2 : public hwreg::RegisterBase<AmlSdEmmcCmdResp2, uint32_t> {
+class AmlSdmmcCmdResp2 : public hwreg::RegisterBase<AmlSdmmcCmdResp2, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdResp2>(kAmlSdEmmcCmdResp2Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdResp2>(kAmlSdmmcCmdResp2Offset); }
 };
 
-class AmlSdEmmcCmdResp3 : public hwreg::RegisterBase<AmlSdEmmcCmdResp3, uint32_t> {
+class AmlSdmmcCmdResp3 : public hwreg::RegisterBase<AmlSdmmcCmdResp3, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdResp3>(kAmlSdEmmcCmdResp3Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdResp3>(kAmlSdmmcCmdResp3Offset); }
 };
 
-class AmlSdEmmcDelayV2 : public hwreg::RegisterBase<AmlSdEmmcDelayV2, uint32_t> {
+class AmlSdmmcDelayV2 : public hwreg::RegisterBase<AmlSdmmcDelayV2, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelayV2>(kAmlSdEmmcDelayV2Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcDelayV2>(kAmlSdmmcDelayV2Offset); }
 
   DEF_FIELD(3, 0, dly_0);
   DEF_FIELD(7, 4, dly_1);
@@ -208,9 +208,9 @@ class AmlSdEmmcDelayV2 : public hwreg::RegisterBase<AmlSdEmmcDelayV2, uint32_t> 
   DEF_FIELD(31, 28, dly_7);
 };
 
-class AmlSdEmmcDelay1 : public hwreg::RegisterBase<AmlSdEmmcDelay1, uint32_t> {
+class AmlSdmmcDelay1 : public hwreg::RegisterBase<AmlSdmmcDelay1, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay1>(kAmlSdEmmcDelay1Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcDelay1>(kAmlSdmmcDelay1Offset); }
 
   DEF_FIELD(5, 0, dly_0);
   DEF_FIELD(11, 6, dly_1);
@@ -219,9 +219,9 @@ class AmlSdEmmcDelay1 : public hwreg::RegisterBase<AmlSdEmmcDelay1, uint32_t> {
   DEF_FIELD(29, 24, dly_4);
 };
 
-class AmlSdEmmcDelay2 : public hwreg::RegisterBase<AmlSdEmmcDelay2, uint32_t> {
+class AmlSdmmcDelay2 : public hwreg::RegisterBase<AmlSdmmcDelay2, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay2>(kAmlSdEmmcDelay2Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcDelay2>(kAmlSdmmcDelay2Offset); }
 
   DEF_FIELD(5, 0, dly_5);
   DEF_FIELD(11, 6, dly_6);
@@ -230,78 +230,78 @@ class AmlSdEmmcDelay2 : public hwreg::RegisterBase<AmlSdEmmcDelay2, uint32_t> {
   DEF_FIELD(29, 24, dly_9);
 };
 
-class AmlSdEmmcCalout : public hwreg::RegisterBase<AmlSdEmmcCalout, uint32_t> {
+class AmlSdmmcCalout : public hwreg::RegisterBase<AmlSdmmcCalout, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCalout>(kAmlSdEmmcCaloutOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCalout>(kAmlSdmmcCaloutOffset); }
 };
 
-class AmlSdEmmcCmdArg : public hwreg::RegisterBase<AmlSdEmmcCmdArg, uint32_t> {
+class AmlSdmmcCmdArg : public hwreg::RegisterBase<AmlSdmmcCmdArg, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdArg>(kAmlSdEmmcCmdArgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdArg>(kAmlSdmmcCmdArgOffset); }
 };
 
-class AmlSdEmmcCmdDat : public hwreg::RegisterBase<AmlSdEmmcCmdDat, uint32_t> {
+class AmlSdmmcCmdDat : public hwreg::RegisterBase<AmlSdmmcCmdDat, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdDat>(kAmlSdEmmcCmdDatOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdDat>(kAmlSdmmcCmdDatOffset); }
 };
 
-class AmlSdEmmcCmdBusErr : public hwreg::RegisterBase<AmlSdEmmcCmdBusErr, uint32_t> {
+class AmlSdmmcCmdBusErr : public hwreg::RegisterBase<AmlSdmmcCmdBusErr, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdBusErr>(kAmlSdEmmcCmdBusErrOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdBusErr>(kAmlSdmmcCmdBusErrOffset); }
 };
 
-class AmlSdEmmcCurCfg : public hwreg::RegisterBase<AmlSdEmmcCurCfg, uint32_t> {
+class AmlSdmmcCurCfg : public hwreg::RegisterBase<AmlSdmmcCurCfg, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCurCfg>(kAmlSdEmmcCurCfgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCurCfg>(kAmlSdmmcCurCfgOffset); }
 };
 
-class AmlSdEmmcCurArg : public hwreg::RegisterBase<AmlSdEmmcCurArg, uint32_t> {
+class AmlSdmmcCurArg : public hwreg::RegisterBase<AmlSdmmcCurArg, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCurArg>(kAmlSdEmmcCurArgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCurArg>(kAmlSdmmcCurArgOffset); }
 };
 
-class AmlSdEmmcCurDat : public hwreg::RegisterBase<AmlSdEmmcCurDat, uint32_t> {
+class AmlSdmmcCurDat : public hwreg::RegisterBase<AmlSdmmcCurDat, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCurDat>(kAmlSdEmmcCurDatOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCurDat>(kAmlSdmmcCurDatOffset); }
 };
 
-class AmlSdEmmcCurResp : public hwreg::RegisterBase<AmlSdEmmcCurResp, uint32_t> {
+class AmlSdmmcCurResp : public hwreg::RegisterBase<AmlSdmmcCurResp, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCurResp>(kAmlSdEmmcCurRespOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCurResp>(kAmlSdmmcCurRespOffset); }
 };
 
-class AmlSdEmmcNextCfg : public hwreg::RegisterBase<AmlSdEmmcNextCfg, uint32_t> {
+class AmlSdmmcNextCfg : public hwreg::RegisterBase<AmlSdmmcNextCfg, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcNextCfg>(kAmlSdEmmcNextCfgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcNextCfg>(kAmlSdmmcNextCfgOffset); }
 };
 
-class AmlSdEmmcNextArg : public hwreg::RegisterBase<AmlSdEmmcNextArg, uint32_t> {
+class AmlSdmmcNextArg : public hwreg::RegisterBase<AmlSdmmcNextArg, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcNextArg>(kAmlSdEmmcNextArgOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcNextArg>(kAmlSdmmcNextArgOffset); }
 };
 
-class AmlSdEmmcNextDat : public hwreg::RegisterBase<AmlSdEmmcNextDat, uint32_t> {
+class AmlSdmmcNextDat : public hwreg::RegisterBase<AmlSdmmcNextDat, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcNextDat>(kAmlSdEmmcNextDatOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcNextDat>(kAmlSdmmcNextDatOffset); }
 };
 
-class AmlSdEmmcNextResp : public hwreg::RegisterBase<AmlSdEmmcNextResp, uint32_t> {
+class AmlSdmmcNextResp : public hwreg::RegisterBase<AmlSdmmcNextResp, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcNextResp>(kAmlSdEmmcNextRespOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcNextResp>(kAmlSdmmcNextRespOffset); }
 };
 
-class AmlSdEmmcStart : public hwreg::RegisterBase<AmlSdEmmcStart, uint32_t> {
+class AmlSdmmcStart : public hwreg::RegisterBase<AmlSdmmcStart, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcStart>(kAmlSdEmmcStartOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcStart>(kAmlSdmmcStartOffset); }
 
   DEF_BIT(0, desc_int);
   DEF_BIT(1, desc_busy);
   DEF_FIELD(31, 2, desc_addr);
 };
 
-class AmlSdEmmcAdjust : public hwreg::RegisterBase<AmlSdEmmcAdjust, uint32_t> {
+class AmlSdmmcAdjust : public hwreg::RegisterBase<AmlSdmmcAdjust, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcAdjust>(kAmlSdEmmcAdjustOffset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcAdjust>(kAmlSdmmcAdjustOffset); }
   DEF_FIELD(11, 8, cali_sel);
   DEF_BIT(12, cali_enable);
   DEF_BIT(13, adj_fixed);
@@ -311,9 +311,9 @@ class AmlSdEmmcAdjust : public hwreg::RegisterBase<AmlSdEmmcAdjust, uint32_t> {
   DEF_BIT(22, adj_auto);
 };
 
-class AmlSdEmmcAdjustV2 : public hwreg::RegisterBase<AmlSdEmmcAdjustV2, uint32_t> {
+class AmlSdmmcAdjustV2 : public hwreg::RegisterBase<AmlSdmmcAdjustV2, uint32_t> {
  public:
-  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcAdjustV2>(kAmlSdEmmcAdjustV2Offset); }
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcAdjustV2>(kAmlSdmmcAdjustV2Offset); }
   DEF_FIELD(3, 0, dly_8);
   DEF_FIELD(7, 4, dly_9);
   DEF_FIELD(11, 8, cali_sel);
@@ -325,4 +325,4 @@ class AmlSdEmmcAdjustV2 : public hwreg::RegisterBase<AmlSdEmmcAdjustV2, uint32_t
   DEF_BIT(22, adj_auto);
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
