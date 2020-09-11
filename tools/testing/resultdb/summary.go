@@ -60,7 +60,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 	testResult := []*sinkpb.TestResult{}
 	// Ignore error, testStatus will be set to sinkpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
 	// And when passed to determineExpected, sinkpb.TestStatus_STATUS_UNSPECIFIED will be handled correctly.
-	testStatus, _ := testDetailResultToResultDBStatus(testDetail.Result)
+	// testStatus, _ := testDetailResultToResultDBStatus(testDetail.Result)
 
 	for _, testCase := range testCases {
 		testID := fmt.Sprintf("%s/%s:%s", testDetail.Name, testCase.SuiteName, testCase.CaseName)
@@ -68,19 +68,19 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 			TestId: testID,
 			Tags:   []*resultpb.StringPair{{Key: "format", Value: testCase.Format}},
 		}
-		testCaseStatus, err := testCaseStatusToResultDBStatus(testCase.Status)
-		if err != nil {
-			log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testID, err)
-			continue
-		}
-		r.Status = testCaseStatus
+		// testCaseStatus, err := testCaseStatusToResultDBStatus(testCase.Status)
+		// if err != nil {
+		// 	log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testID, err)
+		// 	continue
+		// }
+		// r.Status = testCaseStatus
 		if startTime, err := ptypes.TimestampProto(testDetail.StartTime); err == nil {
 			r.StartTime = startTime
 		}
 		if testCase.Duration > 0 {
 			r.Duration = ptypes.DurationProto(testCase.Duration)
 		}
-		r.Expected = determineExpected(testStatus, testCaseStatus)
+		// r.Expected = determineExpected(testStatus, testCaseStatus)
 		testResult = append(testResult, &r)
 	}
 	return testResult
@@ -93,12 +93,12 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
 	}
-	testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
-	if err != nil {
-		log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testDetail.Name, err)
-		return nil, err
-	}
-	r.Status = testStatus
+	// testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
+	// if err != nil {
+	// 	log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testDetail.Name, err)
+	// 	return nil, err
+	// }
+	// r.Status = testStatus
 
 	if startTime, err := ptypes.TimestampProto(testDetail.StartTime); err == nil {
 		r.StartTime = startTime
@@ -116,7 +116,7 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 	} else {
 		log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
 	}
-	r.Expected = determineExpected(testStatus, sinkpb.TestStatus_STATUS_UNSPECIFIED)
+	// r.Expected = determineExpected(testStatus, sinkpb.TestStatus_STATUS_UNSPECIFIED)
 	return &r, nil
 }
 
