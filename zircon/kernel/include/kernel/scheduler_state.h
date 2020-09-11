@@ -69,7 +69,7 @@ struct SchedDeadlineParams {
       : capacity_ns{capacity_ns},
         deadline_ns{deadline_ns},
         period_ns{period_ns},
-        utilization{capacity_ns / period_ns} {}
+        utilization{capacity_ns / deadline_ns} {}
 
   constexpr SchedDeadlineParams(const SchedDeadlineParams&) = default;
   constexpr SchedDeadlineParams& operator=(const SchedDeadlineParams&) = default;
@@ -78,7 +78,7 @@ struct SchedDeadlineParams {
       : capacity_ns{params.capacity},
         deadline_ns{params.relative_deadline},
         period_ns{params.period},
-        utilization{capacity_ns / period_ns} {}
+        utilization{capacity_ns / deadline_ns} {}
   constexpr SchedDeadlineParams& operator=(const zx_sched_deadline_params_t& params) {
     *this = SchedDeadlineParams{params};
     return *this;
