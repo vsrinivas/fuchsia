@@ -6,7 +6,96 @@
 
 # TODO(54160): Keep in sync with BUILD.zircon.gn
 
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
+
+if (current_toolchain == default_toolchain) {
+  foreach(cpu,
+          [
+            "x64",
+            "arm64",
+          ]) {
+    kernel_cpu = cpu
+    if (cpu == "x64") {
+      kernel_cpu = "x86"
+    }
+
+    zircon_toolchain_suite("kernel.phys_$cpu") {
+      cpu = cpu
+      os = "fuchsia"
+      environment = "kernel.phys"
+      with_shared = false
+
+      toolchain_variant_args = {
+        configs = [ "//zircon/kernel/phys:phys_config" ]
+
+        # Always enable frame pointers. This works because frame_pointers
+        # is added as part of :phys_config below.
+        remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+
+        tags = [ "kernel" ]
+      }
+
+      exclude_variant_tags = [
+        # There is no possibility of fancy runtimes like ASan for phys.
+        "instrumentation-runtime",
+
+        # TOOD(51994): Remove this when profile is supported.
+        "instrumented",
+      ]
+
+      # Append the arch-specific lists.  The phys/phys.gni file in each
+      # arch subdirectory defines phys_* lists to append to the parameters.
+      import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
+      toolchain_variant_args.tags += phys_tags
+      exclude_variant_tags += phys_exclude_variant_tags
+
+      toolchain_args = {
+        if (zircon_optimize == "none") {
+          # phys code doesn't stay sufficiently purely position-independent
+          # without optimization.
+          zircon_optimize = "debug"
+        } else if (zircon_optimize == "size") {
+          # ... and likewise size optimizations.
+          zircon_optimize = "speed"
+        }
+      }
+    }
+  }
+} else if (toolchain.environment == "kernel.phys") {
+  kernel_cpu = current_cpu
+  if (kernel_cpu == "x64") {
+    kernel_cpu = "x86"
+  }
+
+  config("phys_config") {
+    configs = [
+      "$zx/kernel:standalone",
+      "$zx_build_config:pure",
+      "$zx/kernel:warnings",
+      "$zx/kernel/arch/$kernel_cpu:abi",
+      ":defines",
+
+      # All physmem code is inherently sensitive and in a position for
+      # any bug to be unusually dangerous.  So compile with minimal
+      # undefined behavior checking in all builds, regardless of variant.
+      "$zx_build_config/instrumentation:ubsan-trap",
+    ]
+
+    # Always enable frame pointers.
+    configs += [ "$zx_build_config:frame_pointers" ]
+
+    # Add arch-specific configs here. The reason this is not done
+    # in the zircon_toolchain_suite() call is because every config listed
+    # in toolchain_variant_args.configs 'foo' needs to have a corresponding
+    # 'foo_deps' group.
+    import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
+    configs += phys_configs
+  }
+
+  group("phys_config_deps") {
+  }
+}
 
 if (toolchain.environment == "kernel.phys" ||
     toolchain.environment == "kernel.phys32") {

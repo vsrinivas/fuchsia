@@ -13,11 +13,19 @@ import("//build/toolchain/variant_tags.gni")
 # filtering to happen during variant toolchain selection, or directly inside
 # a target's build rules by looking at `toolchain_variant.tags`.
 #
-all_toolchain_tags =
-    all_variant_tags + [
-      # This tag is used for toolchains that are only used to build parts of the
-      # Zircon kernel. Generally this means there is no C standard library. Some
-      # Zircon targets affect their build settings based on the presence of this
-      # tag.
-      "kernel",
-    ]
+all_toolchain_tags = all_variant_tags
+all_toolchain_tags += [
+  # This tag is used for toolchains that are only used to build parts of the
+  # Zircon kernel. Generally this means there is no C standard library. Some
+  # Zircon targets affect their build settings based on the presence of this
+  # tag.
+  "kernel",
+
+  # This tag is used by Zircon toolchains that generate code that assumes that
+  # unaligned access will crash the system.
+  "strict-align",
+
+  # This tag is used by Zircon toolchains that enables the 'tiny' code generation
+  # model (i.e. the program and its statically defined symbols must be within 1 GiB).
+  "tiny",
+]

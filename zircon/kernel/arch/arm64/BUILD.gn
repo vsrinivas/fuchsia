@@ -51,3 +51,19 @@ if (current_toolchain == default_toolchain) {
   group("physmem_config_deps") {
   }
 }
+
+if (toolchain.environment == "physmem" ||
+    toolchain.environment == "kernel.phys") {
+  # These set the ABI contract between C++ and assembly code.
+  # This is kept consistent between the kernel proper and phys
+  # so (pure PIC) code should be callable from the kernel proper.
+  config("abi") {
+    # x15 is reserved so we can use it to point at the per-CPU structure.
+    cflags = [ "-ffixed-x15" ]
+
+    if (!is_gcc) {
+      # Use the right thread-pointer ABI for the kernel.
+      cflags += [ "-mtp=el1" ]
+    }
+  }
+}

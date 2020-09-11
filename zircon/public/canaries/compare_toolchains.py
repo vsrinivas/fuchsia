@@ -198,6 +198,48 @@ _ALL_TOOLCHAINS = [
         },
         'no_shared': True,
     },
+    {
+        'name': 'kernel.phys-x64',
+        'gn': {
+            'toolchain': '//zircon/kernel/phys:kernel.phys_x64',
+        },
+        'zn': {
+            'toolchain': '//kernel/phys:kernel.phys-x64-clang',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'kernel.phys-arm64',
+        'gn': {
+            'toolchain': '//zircon/kernel/phys:kernel.phys_arm64',
+        },
+        'zn': {
+            'toolchain': '//kernel/phys:kernel.phys-arm64-clang',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'kernel.phys-x64-gcc',
+        'variants': ['gcc'],
+        'gn': {
+            'toolchain': '//zircon/kernel/phys:kernel.phys_x64-gcc',
+        },
+        'zn': {
+            'toolchain': '//kernel/phys:kernel.phys-x64-gcc',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'kernel.phys-arm64-gcc',
+        'variants': ['gcc'],
+        'gn': {
+            'toolchain': '//zircon/kernel/phys:kernel.phys_arm64-gcc',
+        },
+        'zn': {
+            'toolchain': '//kernel/phys:kernel.phys-arm64-gcc',
+        },
+        'no_shared': True,
+    },
 ]
 
 _GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]
