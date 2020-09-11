@@ -2134,6 +2134,11 @@ uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size) {
   }
 }
 
+// Extract the provided information elements into the BSS description.
+// Note: be careful if you call this function more than once on the same bss description struct.
+// For example, if you provide an ie buffer that has an SSID IE in the first call, and then provide
+// an ie buffer that does not have an SSID IE in the second call, the end result will be that the
+// bss description struct still has the SSID that was extracted in the first call.
 void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
   bss->vendor_ie_len = 0;
   size_t offset = 0;

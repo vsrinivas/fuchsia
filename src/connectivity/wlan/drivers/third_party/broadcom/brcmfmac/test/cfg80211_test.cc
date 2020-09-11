@@ -21,7 +21,7 @@
 namespace {
 
 TEST(Cfg80211, ExtractIes) {
-  uint8_t ies[] = {
+  const uint8_t ies[] = {
       0x00, 0x03, 0x66, 0x6f, 0x6f,                                // SSID
       0x01, 0x08, 0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c,  // Supported rates
       0x32, 0x01, 0x55,  // Extended supported rates. Note: Couldn't find a packet capture with
@@ -39,26 +39,76 @@ TEST(Cfg80211, ExtractIes) {
   wlanif_bss_description_t bss = {};
   brcmf_extract_ies(ies, sizeof(ies), &bss);
 
-  uint8_t ssid_bytes[] = {0x66, 0x6f, 0x6f};
-  EXPECT_EQ(bss.ssid.len, sizeof(ssid_bytes));
+  const uint8_t ssid_bytes[] = {0x66, 0x6f, 0x6f};
+  ASSERT_EQ(bss.ssid.len, sizeof(ssid_bytes));
   EXPECT_EQ(std::memcmp(bss.ssid.data, ssid_bytes, sizeof(ssid_bytes)), 0);
 
-  uint8_t rates_bytes[] = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c, 0x55};
-  EXPECT_EQ(bss.num_rates, sizeof(rates_bytes));  // 8 supported rates, 1 extended supported rate
+  const uint8_t rates_bytes[] = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c, 0x55};
+  ASSERT_EQ(bss.num_rates, sizeof(rates_bytes));  // 8 supported rates, 1 extended supported rate
   EXPECT_EQ(std::memcmp(bss.rates, rates_bytes, sizeof(rates_bytes)), 0);
 
-  uint8_t rsne_bytes[] = {0x30, 0x02, 0x88, 0x99};
-  EXPECT_EQ(bss.rsne_len, sizeof(rsne_bytes));
+  const uint8_t rsne_bytes[] = {0x30, 0x02, 0x88, 0x99};
+  ASSERT_EQ(bss.rsne_len, sizeof(rsne_bytes));
   EXPECT_EQ(std::memcmp(bss.rsne, rsne_bytes, sizeof(rsne_bytes)), 0);
 
-  uint8_t vendor_ie_bytes[] = {0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa,
-                               0xdd, 0x05, 0x00, 0x50, 0xf2, 0x04, 0xbb};
-  EXPECT_EQ(bss.vendor_ie_len, sizeof(vendor_ie_bytes));
+  const uint8_t vendor_ie_bytes[] = {0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa,
+                                     0xdd, 0x05, 0x00, 0x50, 0xf2, 0x04, 0xbb};
+  ASSERT_EQ(bss.vendor_ie_len, sizeof(vendor_ie_bytes));
   EXPECT_EQ(std::memcmp(bss.vendor_ie, vendor_ie_bytes, sizeof(vendor_ie_bytes)), 0);
 }
 
+TEST(Cfg80211, ExtractIes_WithNoSsidIe) {
+  const uint8_t ies[] = {
+      0x01, 0x08, 0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c,  // Supported rates
+      0x32, 0x01, 0x55,  // Extended supported rates. Note: Couldn't find a packet capture with
+                         // this IE. Made up a value, so it's probably invalid.
+      0x30, 0x02, 0x88, 0x99,  // RSNE (note: invalid, but good enough for testing)
+
+      // Vendor IEs
+      0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa  // WPA (note: invalid, but good enough for testing)
+  };
+
+  wlanif_bss_description_t bss = {};
+  brcmf_extract_ies(ies, sizeof(ies), &bss);
+
+  EXPECT_EQ(bss.ssid.len, 0);
+
+  const uint8_t rates_bytes[] = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c, 0x55};
+  ASSERT_EQ(bss.num_rates, sizeof(rates_bytes));  // 8 supported rates, 1 extended supported rate
+  EXPECT_EQ(std::memcmp(bss.rates, rates_bytes, sizeof(rates_bytes)), 0);
+
+  const uint8_t rsne_bytes[] = {0x30, 0x02, 0x88, 0x99};
+  ASSERT_EQ(bss.rsne_len, sizeof(rsne_bytes));
+  EXPECT_EQ(std::memcmp(bss.rsne, rsne_bytes, sizeof(rsne_bytes)), 0);
+
+  const uint8_t vendor_ie_bytes[] = {0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa};
+  ASSERT_EQ(bss.vendor_ie_len, sizeof(vendor_ie_bytes));
+  EXPECT_EQ(std::memcmp(bss.vendor_ie, vendor_ie_bytes, sizeof(vendor_ie_bytes)), 0);
+}
+
+// Extract the same IE type multiple times and make sure the BSS description changes.
+TEST(Cfg80211, ExtractIes_RepeatedIeExtractionOverwrites) {
+  // SSID information element.
+  const uint8_t first_ssid_ie[] = {0x00, 0x04, 0x66, 0x6f, 0x6f, 0x8};
+  const uint8_t first_ssid_bytes[] = {0x66, 0x6f, 0x6f, 0x8};
+
+  wlanif_bss_description_t bss = {};
+  brcmf_extract_ies(first_ssid_ie, sizeof(first_ssid_ie), &bss);
+
+  ASSERT_EQ(bss.ssid.len, sizeof(first_ssid_bytes));
+  EXPECT_EQ(std::memcmp(bss.ssid.data, first_ssid_bytes, sizeof(first_ssid_bytes)), 0);
+
+  const uint8_t second_ssid_ie[] = {0x00, 0x03, 0x11, 0x7a, 0x9};
+  const uint8_t second_ssid_bytes[] = {0x11, 0x7a, 0x9};
+
+  brcmf_extract_ies(second_ssid_ie, sizeof(second_ssid_ie), &bss);
+
+  ASSERT_EQ(bss.ssid.len, sizeof(second_ssid_bytes));
+  EXPECT_EQ(std::memcmp(bss.ssid.data, second_ssid_bytes, sizeof(second_ssid_bytes)), 0);
+}
+
 TEST(Cfg80211, ExtractIes_ResetVendorIeLength) {
-  uint8_t ies[] = {
+  const uint8_t ies[] = {
       // Vendor IEs
       0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa,  // WPA (note: invalid, but good enough for testing)
   };
@@ -70,7 +120,7 @@ TEST(Cfg80211, ExtractIes_ResetVendorIeLength) {
 
   brcmf_extract_ies(ies, sizeof(ies), &bss);
   uint8_t vendor_ie_bytes[] = {0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa};
-  EXPECT_EQ(bss.vendor_ie_len, sizeof(vendor_ie_bytes));
+  ASSERT_EQ(bss.vendor_ie_len, sizeof(vendor_ie_bytes));
   EXPECT_EQ(std::memcmp(bss.vendor_ie, vendor_ie_bytes, sizeof(vendor_ie_bytes)), 0);
 }
 
