@@ -3,11 +3,103 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/sdk/sdk_atom.gni")
 
 template("zx_host_tool") {
-  not_needed(invoker, [ "sdk_migrated" ])
-  executable(target_name) {
-    forward_variables_from(invoker, "*", [ "sdk_migrated" ])
+  if (is_host) {
+    not_needed(invoker, [ "sdk_migrated" ])
+    executable(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "sdk_migrated",
+                               "target_name",
+                             ])
+    }
+
+    output_dir = root_out_dir
+    if (defined(invoker.output_dir)) {
+      output_dir = invoker.output_dir
+    }
+    output_name = target_name
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    }
+    output_extension = ""
+    if (current_os == "win") {
+      output_extension = "exe"
+    }
+    if (defined(invoker.output_extension)) {
+      output_extension = invoker.output_extension
+    }
+
+    output_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+
+    tool_name = target_name
+    file_base = "tools/$tool_name"
+    tool_src = output_file
+
+    # TODO(fxb/42999): remove extra atom
+    if (current_cpu == host_cpu) {
+      sdk_atom("${target_name}_sdk_legacy") {
+        id = "sdk://$file_base"
+        category = "partner"
+
+        meta = {
+          dest = "$file_base-meta.json"
+          schema = "host_tool"
+          value = {
+            type = "host_tool"
+            name = tool_name
+            root = "tools"
+            files = [ file_base ]
+          }
+        }
+
+        files = [
+          {
+            source = tool_src
+            dest = file_base
+          },
+        ]
+        non_sdk_deps = [ ":${tool_name}" ]
+      }
+    }
+
+    if (host_os == "linux" || host_os == "mac") {
+      file_base = "tools/$current_cpu/$tool_name"
+    }
+
+    sdk_atom("${tool_name}_sdk") {
+      id = "sdk://$file_base"
+      category = "partner"
+
+      meta = {
+        dest = "$file_base-meta.json"
+        schema = "host_tool"
+        value = {
+          type = "host_tool"
+          name = tool_name
+          root = "tools"
+          files = [ file_base ]
+        }
+      }
+
+      files = [
+        {
+          source = tool_src
+          dest = file_base
+        },
+      ]
+      non_sdk_deps = [ ":${tool_name}" ]
+    }
+  } else {
+    # Not on host, don't compile anything.
+    not_needed(invoker, "*")
+    not_needed([ "target_name" ])
   }
 }
 
