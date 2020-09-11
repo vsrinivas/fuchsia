@@ -15,6 +15,7 @@
 #include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
+#include <ddktl/protocol/dsi.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/goldfish/addressspace.h>
 #include <ddktl/protocol/goldfish/pipe.h>
@@ -55,7 +56,8 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::UsbModeSwitchProtocol<FragmentProxy>,
                       public ddk::VregProtocol<FragmentProxy>,
                       public ddk::GoldfishAddressSpaceProtocol<FragmentProxy>,
-                      public ddk::GoldfishPipeProtocol<FragmentProxy> {
+                      public ddk::GoldfishPipeProtocol<FragmentProxy>,
+                      public ddk::DsiProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -168,6 +170,9 @@ class FragmentProxy : public FragmentProxyBase,
 
   // USB Mode Switch
   zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
+
+  // DSI
+  zx_status_t DsiConnect(zx::channel server);
 
  private:
   zx::channel rpc_;

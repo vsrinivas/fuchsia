@@ -1063,6 +1063,32 @@ zx_status_t Fragment::RpcVreg(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
+zx_status_t Fragment::RpcDsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
+  if (!dsi_client_.proto_client().is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const DsiProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  *out_resp_size = sizeof(ProxyResponse);
+  switch (req->op) {
+    case DsiOp::CONNECT:
+      if (req_handle_count != 1) {
+        zxlogf(ERROR, "%s: expected one handle for %u", __func__, static_cast<uint32_t>(req->op));
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return dsi_client_.proto_client().Connect(zx::channel(req_handles[0].release()));
+    default:
+      zxlogf(ERROR, "%s: unknown rpmb op %u", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   zx::unowned_channel channel(raw_channel);
   if (!channel->is_valid()) {
@@ -1175,6 +1201,10 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_VREG:
       status = RpcVreg(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_DSI:
+      status = RpcDsi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                      resp_handles, &resp_handle_count);
       break;
     default:
       zxlogf(ERROR, "%s: unknown protocol %u", __func__, req_header->proto_id);

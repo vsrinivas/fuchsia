@@ -453,6 +453,15 @@ struct GoldfishAddressSpaceProxyResponse {
   ProxyResponse header;
 };
 
+enum class DsiOp {
+  CONNECT,
+};
+
+struct DsiProxyRequest {
+  ProxyRequest header;
+  DsiOp op;
+};
+
 }  // namespace fragment
 
 #endif  // SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_
