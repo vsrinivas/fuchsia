@@ -269,7 +269,7 @@ success("CorrectPaddingEndOfInlineObject1Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject1ByteLowerByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject1Byte,
     bytes = {
         v1 = [
@@ -280,7 +280,7 @@ decode_failure("BadPaddingEndOfInlineObject1ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject1ByteUpperByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject1Byte,
     bytes = {
         v1 = [
@@ -304,7 +304,7 @@ success("CorrectPaddingEndOfInlineObject2Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject2ByteLowerByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject2Byte,
     bytes = {
         v1 = [
@@ -315,7 +315,7 @@ decode_failure("BadPaddingEndOfInlineObject2ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject2ByteUpperByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject2Byte,
     bytes = {
         v1 = [
@@ -352,7 +352,7 @@ decode_failure("BadPaddingEndOfInlineObject3ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject3ByteUpperByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject3Byte,
     bytes = {
         v1 = [
@@ -376,7 +376,7 @@ success("CorrectPaddingEndOfInlineObject4Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject4ByteLowerByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject4Byte,
     bytes = {
         v1 = [
@@ -387,7 +387,7 @@ decode_failure("BadPaddingEndOfInlineObject4ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject4ByteUpperByte") {
-    bindings_denylist = [go, llcpp, cpp, dart],
+    bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject4Byte,
     bytes = {
         v1 = [

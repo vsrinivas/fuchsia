@@ -371,8 +371,14 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint32_t next_out_of_line;
   zx_status_t status;
+  size_t primary_size;
+  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
+    drop_all_handles();
+    return status;
+  }
+
+  uint32_t next_out_of_line;
   if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
                                                        out_error_msg)) != ZX_OK)) {
     drop_all_handles();
@@ -380,6 +386,14 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   }
 
   uint8_t* b = reinterpret_cast<uint8_t*>(bytes);
+  for (size_t i = primary_size; i < size_t(next_out_of_line); i++) {
+    if (b[i] != 0) {
+      set_error("non-zero padding bytes detected");
+      drop_all_handles();
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
   FidlDecoder<Mode::Decode, uint8_t> decoder(b, num_bytes, handles, num_handles, next_out_of_line,
                                              out_error_msg);
   fidl::Walk(decoder, type, DecodingPosition<uint8_t>{b});
@@ -461,14 +475,26 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint32_t next_out_of_line;
   zx_status_t status;
+  size_t primary_size;
+  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
+    return status;
+  }
+
+  uint32_t next_out_of_line;
   if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
       ZX_OK) {
     return status;
   }
 
   const uint8_t* b = reinterpret_cast<const uint8_t*>(bytes);
+  for (size_t i = primary_size; i < size_t(next_out_of_line); i++) {
+    if (b[i] != 0) {
+      set_error("non-zero padding bytes detected");
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
   FidlDecoder<Mode::Validate, const uint8_t> validator(
       b, num_bytes, (zx_handle_t*)(nullptr), num_handles, next_out_of_line, out_error_msg);
   fidl::Walk(validator, type, DecodingPosition<const uint8_t>{b});

@@ -1283,7 +1283,9 @@ TEST(Primitives, validate_invalid_bool) {
 }
 
 TEST(Bits, validate_zero_16bit_bits) {
-  Int16Bits message{.bits = 0};
+  Int16Bits message;
+  memset(std::launder(&message), 0, sizeof(message));
+  message.bits = 0;
 
   const char* error = nullptr;
   auto status =
@@ -1293,7 +1295,9 @@ TEST(Bits, validate_zero_16bit_bits) {
 }
 
 TEST(Bits, validate_valid_16bit_bits) {
-  Int16Bits message{.bits = 1u | 16u};
+  Int16Bits message;
+  memset(std::launder(&message), 0, sizeof(message));
+  message.bits = 1u | 16u;
 
   const char* error = nullptr;
   auto status =
@@ -1303,7 +1307,9 @@ TEST(Bits, validate_valid_16bit_bits) {
 }
 
 TEST(Bits, validate_invalid_16bit_bits) {
-  Int16Bits message{.bits = 1u << 7u};
+  Int16Bits message;
+  memset(std::launder(&message), 0, sizeof(message));
+  message.bits = 1u << 7u;
 
   const char* error = nullptr;
   auto status =
@@ -1313,7 +1319,9 @@ TEST(Bits, validate_invalid_16bit_bits) {
 }
 
 TEST(Bits, validate_zero_32bit_bits) {
-  Int32Bits message{.bits = 0};
+  Int32Bits message;
+  memset(std::launder(&message), 0, sizeof(message));
+  message.bits = 0;
 
   const char* error = nullptr;
   auto status =
@@ -1324,7 +1332,9 @@ TEST(Bits, validate_zero_32bit_bits) {
 
 TEST(Bits, validate_valid_32bit_bits) {
   // The valid bits are position 7, 12, and 27.
-  Int32Bits message{.bits = (1u << 6u) | (1u << 11u) | (1u << 26u)};
+  Int32Bits message;
+  memset(std::launder(&message), 0, sizeof(message));
+  message.bits = (1u << 6u) | (1u << 11u) | (1u << 26u);
 
   const char* error = nullptr;
   auto status =
@@ -1335,7 +1345,9 @@ TEST(Bits, validate_valid_32bit_bits) {
 
 TEST(Bits, validate_invalid_32bit_bits) {
   // The valid bits are position 7, 12, and 27.
-  Int32Bits message{.bits = 1u};
+  Int32Bits message;
+  memset(std::launder(&message), 0, sizeof(message));
+  message.bits = 1u;
 
   const char* error = nullptr;
   auto status =
@@ -1353,7 +1365,9 @@ void TestValidEnum(const fidl_type_t* coding_table) {
            std::numeric_limits<Underlying>::min(),
            std::numeric_limits<Underlying>::max(),
        }) {
-    T message{.e = valid_value};
+    T message;
+    memset(std::launder(&message), 0, sizeof(message));
+    message.e = valid_value;
     const char* error = nullptr;
     auto status = fidl_validate(coding_table, &message, sizeof(message), 0, &error);
     EXPECT_EQ(status, ZX_OK);
@@ -1371,7 +1385,9 @@ void TestInvalidEnum(const fidl_type_t* coding_table) {
            static_cast<Underlying>(std::numeric_limits<Underlying>::min() + 1),
            static_cast<Underlying>(std::numeric_limits<Underlying>::max() - 1),
        }) {
-    T message{.e = invalid_value};
+    T message;
+    memset(std::launder(&message), 0, sizeof(message));
+    message.e = invalid_value;
     const char* error = nullptr;
     auto status = fidl_validate(coding_table, &message, sizeof(message), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
@@ -1379,43 +1395,65 @@ void TestInvalidEnum(const fidl_type_t* coding_table) {
   }
 }
 
-TEST(Enums, validate_int8_enum) {
-  TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
-  TestInvalidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
-}
+TEST(Enums, validate_int8_enum) { TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable); }
 
 TEST(Enums, validate_int16_enum) {
   TestValidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable);
-  TestInvalidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable);
 }
 
 TEST(Enums, validate_int32_enum) {
   TestValidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable);
-  TestInvalidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable);
 }
 
 TEST(Enums, validate_int64_enum) {
   TestValidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable);
-  TestInvalidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable);
 }
 
 TEST(Enums, validate_uint8_enum) {
   TestValidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable);
-  TestInvalidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable);
 }
 
 TEST(Enums, validate_uint16_enum) {
   TestValidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable);
-  TestInvalidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable);
 }
 
 TEST(Enums, validate_uint32_enum) {
   TestValidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable);
-  TestInvalidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable);
 }
 
 TEST(Enums, validate_uint64_enum) {
   TestValidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_int8_enum) {
+  TestInvalidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_int16_enum) {
+  TestInvalidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_int32_enum) {
+  TestInvalidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_int64_enum) {
+  TestInvalidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_uint8_enum) {
+  TestInvalidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_uint16_enum) {
+  TestInvalidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_uint32_enum) {
+  TestInvalidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable);
+}
+
+TEST(Enums, validate_invalid_uint64_enum) {
   TestInvalidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable);
 }
 
