@@ -7,11 +7,21 @@ use {
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     fidl_fuchsia_netstack as fnetstack,
     futures::{stream::FusedStream, TryStreamExt},
+    itertools::Itertools,
+    log::info,
 };
 
 // TODO(https://github.com/bitflags/bitflags/issues/180): replace this function with normal BitOr.
 const fn const_bitor(left: fnetstack::Flags, right: fnetstack::Flags) -> fnetstack::Flags {
     fnetstack::Flags::from_bits_truncate(left.bits() | right.bits())
+}
+
+// Returns true iff any byte in the supplied `IpAddress` is non-zero.
+fn address_populated(addr: &IpAddress) -> bool {
+    match addr {
+        IpAddress::Ipv4(Ipv4Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
+        IpAddress::Ipv6(Ipv6Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
+    }
 }
 
 // Returns true iff the supplied `NetInterface` appears to provide network connectivity, i.e. is up,
@@ -20,13 +30,19 @@ fn network_available(net_interface: fnetstack::NetInterface) -> bool {
     const REQUIRED_FLAGS: fnetstack::Flags =
         const_bitor(fnetstack::Flags::Up, fnetstack::Flags::Dhcp);
     let fnetstack::NetInterface { flags, addr, .. } = net_interface;
-    if !flags.contains(REQUIRED_FLAGS) {
-        return false;
-    }
-    match addr {
-        IpAddress::Ipv4(Ipv4Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
-        IpAddress::Ipv6(Ipv6Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
-    }
+    flags.contains(REQUIRED_FLAGS) && address_populated(&addr)
+}
+
+// Returns a short log string summarizing the relevant state of a network interface.
+fn log_string(net_interface: &fnetstack::NetInterface) -> String {
+    let fnetstack::NetInterface { name, flags, features, addr, .. } = net_interface;
+    format!(
+        "{}/flag={}/feat={}/addr={}",
+        name,
+        flags.bits(),
+        features.bits(),
+        address_populated(&addr)
+    )
 }
 
 /// Returns Ok once the netstack indicates Internet connectivity should be available.
@@ -37,6 +53,7 @@ pub async fn wait_for_network_available(
         if let Some(fnetstack::NetstackEvent::OnInterfacesChanged { interfaces }) =
             netstack_events.try_next().await?
         {
+            info!("interface change: {}", interfaces.iter().map(log_string).join(", "));
             if interfaces.into_iter().any(network_available) {
                 return Ok(());
             }

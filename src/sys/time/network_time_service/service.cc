@@ -95,13 +95,16 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
         FX_LOGS(ERROR) << "Time server indicated OK status but did not return a time";
         break;
       case time_server::BAD_RESPONSE:
+        FX_LOGS(INFO) << "Failed to poll time with BAD_RESPONSE";
         status = time_external::Status::PROTOCOL;
         break;
       case time_server::NETWORK_ERROR:
+        FX_LOGS(INFO) << "Failed to poll time with NETWORK_ERROR";
         status = time_external::Status::NETWORK;
         break;
       case time_server::NOT_SUPPORTED:
       default:
+        FX_LOGS(INFO) << "Failed to poll time";
         status = time_external::Status::UNKNOWN_UNHEALTHY;
         break;
     }
