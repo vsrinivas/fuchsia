@@ -169,8 +169,8 @@ Do the following:
     ```
 
     Some text editors use the `pubspec.yaml` file to recognize that this test is
-    a Dart package. Provide the content of `OWNERS` and `README.md` files
-    later when you contribue the test to the Fuchsia project.
+    a Dart package. Provide the content of `OWNERS` and `README.md` files later
+    when you contribue the test to the Fuchsia project.
 
 ## Build the test {#build-the-test}
 
@@ -184,9 +184,9 @@ Fuchsia image to include the test in the build artifacts:
     fx set terminal.x64 --with //src/tests/end_to_end/my_e2e_test_example:test
     ```
 
-    `//src/tests/end_to_end/my_e2e_test_example` is the path to your new
-    test directory. The `test` target group, as defined in the `BUILD.gn`
-    file, includes `my_new_e2e_test`.
+    `//src/tests/end_to_end/my_e2e_test_example` is the path to your new test
+    directory. The `test` target group, as defined in the `BUILD.gn` file,
+    includes `my_new_e2e_test`.
 
 1.  Build your Fuchsia image:
 
@@ -194,9 +194,8 @@ Fuchsia image to include the test in the build artifacts:
     fx build
     ```
 
-    When the `fx build` command completes, your build artifacts now
-    include the `my_new_e2e_test` end-to-end test, which you can run
-    from your host machine.
+    When the `fx build` command completes, your build artifacts now include the
+    `my_new_e2e_test` end-to-end test, which you can run from your host machine.
 
 ## Start the emulator {#start-the-emulator}
 
@@ -284,15 +283,14 @@ Use the following resources for writing new tests:
 *   The [developer guide](https://pub.dev/packages/test){:.external} for writing
     Dart tests.
 *   The source code of existing end-to-end tests, for example:
-    *   <code>[audio_record_test.dart](/src/tests/end_to_end/audio_record/test/audio_record_test.dart)</code>
     *   <code>[can_browse_web_tes.dart](/src/tests/end_to_end/can_browse_web/test/can_browse_web_test.dart)</code>
     *   <code>[screen_is_not_black_test.dart](/src/tests/end_to_end/screen_is_not_black/test/screen_is_not_black_test.dart)</code>
 *   The source code of the <code>[sl4f](/src/tests/end_to_end/sl4f/test/)</code>
     end-to-end test, which tests various
     [facades](/docs/concepts/testing/sl4f.md#facades-in-sl4f) in
-    [SL4F](/docs/concepts/testing/sl4f.md). See these tests to understand how you
-    may want to invoke some facades for testing certain features of a Fuchsia
-    product, for example:
+    [SL4F](/docs/concepts/testing/sl4f.md). See these tests to understand how
+    you may want to invoke some facades for testing certain features of a
+    Fuchsia product, for example:
     *   [Audio facade test](/src/tests/end_to_end/sl4f/test/audio_test.dart) -
         Insert and capture audio on the device.
     *   [DeviceLog facade test](/src/tests/end_to_end/sl4f/test/device_log_test.dart) -

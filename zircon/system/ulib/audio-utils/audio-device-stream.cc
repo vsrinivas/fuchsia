@@ -56,16 +56,23 @@ zx_status_t AudioDeviceStream::Open() {
   auto res = zx::channel::create(0, &local, &remote);
   if (res != ZX_OK) {
     printf("Failed to create channel (res %d)\n", res);
+    return res;
   }
   res = fdio_service_connect(name(), remote.release());
   if (res != ZX_OK) {
     printf("Failed to obtain channel (res %d)\n", res);
+    return res;
   }
   audio_fidl::Device::SyncClient client_wrap(std::move(local));
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
-  stream_ch_ = std::move(channel_wrap->channel);
+  if (!channel_wrap.ok()) {
+    res = channel_wrap.status();
+    printf("GetChannel failed with error %s (res %d)\n", channel_wrap.error(), res);
+    return res;
+  }
 
-  return res;
+  stream_ch_ = std::move(channel_wrap->channel);
+  return ZX_OK;
 }
 
 zx_status_t AudioDeviceStream::GetSupportedFormats(const SupportedFormatsCallback& cb) const {
