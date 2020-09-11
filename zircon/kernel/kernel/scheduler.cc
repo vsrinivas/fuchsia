@@ -1056,11 +1056,11 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
         state->time_slice_ns_.raw_value(), state->fair_.initial_time_slice_ns.raw_value(),
         normalized_timeslice_remainder.raw_value());
 
-    if (placement == Placement::Insertion || normalized_timeslice_remainder <= SchedRemainder{0}) {
+    if (placement == Placement::Insertion || normalized_timeslice_remainder <= 0) {
       state->start_time_ = ktl::max(state->finish_time_, virtual_time_);
       state->fair_.normalized_timeslice_remainder = SchedRemainder{1};
     } else if (placement == Placement::Preemption) {
-      DEBUG_ASSERT(state->time_slice_ns_ > SchedDuration{0});
+      DEBUG_ASSERT(state->time_slice_ns_ > 0);
       state->fair_.normalized_timeslice_remainder = normalized_timeslice_remainder;
     }
 
@@ -1085,7 +1085,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
       // Determine how much time is left before the deadline. This might be less
       // than the remaining time slice or negative if the thread blocked.
       const SchedDuration time_until_deadline_ns = state->finish_time_ - now;
-      if (time_until_deadline_ns <= SchedDuration{0} || state->time_slice_ns_ <= SchedDuration{0}) {
+      if (time_until_deadline_ns <= 0 || state->time_slice_ns_ <= 0) {
         const SchedTime period_finish_ns = state->start_time_ + state->deadline_.period_ns;
 
         state->start_time_ = now >= period_finish_ns ? now : period_finish_ns;
@@ -1608,9 +1608,10 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority,
         current->runnable_fair_task_count_--;
         current->runnable_deadline_task_count_++;
       } else {
-        // Remove old utilization from the run queue. Wait to update the
+        // Remove the old utilization from the run queue. Wait to update the
         // exported value until the new value is added below.
         current->total_deadline_utilization_ -= state->deadline_.utilization;
+        DEBUG_ASSERT(current->total_deadline_utilization_ >= 0);
       }
 
       // Update the deadline params and the run queue.

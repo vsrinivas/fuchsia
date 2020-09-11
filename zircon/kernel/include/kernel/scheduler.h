@@ -396,7 +396,7 @@ class Scheduler {
   // value is an estimate of the average queuimg time for this CPU, given the
   // current set of active threads.
   TA_GUARDED(thread_lock)
-  SchedDuration total_expected_runtime_ns_{SchedNs(0)};
+  SchedDuration total_expected_runtime_ns_{0};
 
   // The sum of the worst case utilization of all active deadline threads on
   // this CPU.
