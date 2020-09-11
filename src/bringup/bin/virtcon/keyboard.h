@@ -61,7 +61,7 @@ class Keyboard {
   // will delete Keyboard if reconnecting fails.
   void InputReaderUnbound(fidl::UnbindInfo info, zx::channel chan);
 
-  // Attempt to connect to an InputReportReader and start a ReadInputReports call.
+  // Attempt to connect to an InputReportsReader and start a ReadInputReports call.
   zx_status_t StartReading();
 
   // Send a report to the device that enables/disables the capslock LED.
