@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, bail, Result},
+    anyhow::{anyhow, Result},
     ffx_config::{
         env_file, environment::Environment, get, print_config, raw, remove, set, ConfigLevel,
     },
@@ -11,8 +11,7 @@ use {
         ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
         SetCommand, SubCommand,
     },
-    ffx_core::ffx_plugin,
-    ffx_error::printable_error,
+    ffx_core::{ffx_bail, ffx_plugin},
     serde_json::Value,
     std::collections::HashMap,
     std::io::Write,
@@ -79,13 +78,13 @@ fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Resul
                     env.build = Some(build);
                 }
             },
-            None => bail!(printable_error!("Missing --build-dir flag")),
+            None => ffx_bail!("Missing --build-dir flag"),
         },
         ConfigLevel::Global => match env.global.as_mut() {
             Some(v) => *v = file_str,
             None => env.global = Some(file_str),
         },
-        _ => bail!(printable_error!("This configuration is not stored in the enivronment.")),
+        _ => ffx_bail!("This configuration is not stored in the enivronment."),
     }
     env.save(&file)
 }

@@ -38,7 +38,6 @@ template("ffx") {
              ":" + suite_name + "_args",
              ":" + suite_name + "_sub_command",
              ":" + suite_name + "_suite",
-             "//src/developer/ffx/common/error",
              "//src/developer/ffx/config:lib",
              "//src/developer/ffx/core:lib",
              "//src/developer/ffx/daemon:lib",

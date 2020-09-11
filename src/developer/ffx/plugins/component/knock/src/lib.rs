@@ -5,8 +5,7 @@
 use {
     anyhow::{Context, Result},
     ffx_component::SELECTOR_FORMAT_HELP,
-    ffx_core::ffx_plugin,
-    ffx_error::printable_error,
+    ffx_core::{ffx_error, ffx_plugin},
     ffx_knock_args::KnockCommand,
     fidl::handle::Channel,
     fidl_fuchsia_developer_remotecontrol as rc, fuchsia_zircon_status as zx_status, selectors,
@@ -26,10 +25,7 @@ async fn knock<W: Write>(
 ) -> Result<()> {
     let writer = &mut write;
     let selector = selectors::parse_selector(selector).map_err(|e| {
-        printable_error!(format!(
-            "Invalid selector '{}': {}\n{}",
-            selector, e, SELECTOR_FORMAT_HELP
-        ))
+        ffx_error!("Invalid selector '{}': {}\n{}", selector, e, SELECTOR_FORMAT_HELP)
     })?;
 
     let (client, server) = Channel::create()?;

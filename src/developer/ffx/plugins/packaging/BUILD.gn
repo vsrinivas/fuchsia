@@ -10,7 +10,6 @@ ffx_plugin("ffx_packaging") {
   with_unit_tests = true
   config_data = [ "data/config.json" ]
   deps = [
-    "//src/developer/ffx/common/error",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-merkle",

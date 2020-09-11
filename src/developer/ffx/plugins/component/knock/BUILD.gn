@@ -10,7 +10,6 @@ ffx_plugin("ffx_knock") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
-    "//src/developer/ffx/common/error",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fuchsia-async",

@@ -17,6 +17,7 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:home",
+      "//third_party/rust_crates:thiserror",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
 

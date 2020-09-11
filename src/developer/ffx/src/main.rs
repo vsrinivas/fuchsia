@@ -4,8 +4,8 @@
 
 use {
     anyhow::{Context, Result},
+    ffx_core::FfxError,
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
-    ffx_error::FfxError,
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,

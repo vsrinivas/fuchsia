@@ -5,8 +5,7 @@
 use {
     anyhow::{Context, Result},
     ffx_component::SELECTOR_FORMAT_HELP,
-    ffx_core::ffx_plugin,
-    ffx_error::printable_error,
+    ffx_core::{ffx_error, ffx_plugin},
     ffx_select_args::SelectCommand,
     fidl_fuchsia_developer_remotecontrol as rc, selectors,
     std::io::{stdout, Write},
@@ -25,10 +24,7 @@ async fn select<W: Write>(
 ) -> Result<()> {
     let writer = &mut write;
     let selector = selectors::parse_selector(selector).map_err(|e| {
-        printable_error!(format!(
-            "Invalid selector '{}': {}\n{}",
-            selector, e, SELECTOR_FORMAT_HELP
-        ))
+        ffx_error!("Invalid selector '{}': {}\n{}", selector, e, SELECTOR_FORMAT_HELP)
     })?;
 
     match remote_proxy.select(selector).await.context("awaiting select call")? {
