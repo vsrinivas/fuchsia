@@ -664,6 +664,9 @@ config("rodso") {
   }
 }
 
+group("rodso_deps") {
+}
+
 config("auto_var_init") {
   if (!is_gcc) {
     # Automatically initialize variables with a pattern.

@@ -240,11 +240,61 @@ _ALL_TOOLCHAINS = [
         },
         'no_shared': True,
     },
+    {
+        'name': 'userboot_arm64',
+        'gn':
+            {
+                'toolchain':
+                    '//zircon/kernel/lib/userabi/userboot:userboot_arm64',
+            },
+        'zn':
+            {
+                'toolchain':
+                    '//kernel/lib/userabi/userboot:userboot-arm64-clang',
+            },
+        'no_shared': True,
+    },
+    {
+        'name': 'userboot_x64',
+        'gn':
+            {
+                'toolchain':
+                    '//zircon/kernel/lib/userabi/userboot:userboot_x64',
+            },
+        'zn': {
+            'toolchain': '//kernel/lib/userabi/userboot:userboot-x64-clang',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'userboot_arm64-gcc',
+        'variants': ['gcc'],
+        'gn':
+            {
+                'toolchain':
+                    '//zircon/kernel/lib/userabi/userboot:userboot_arm64-gcc',
+            },
+        'zn': {
+            'toolchain': '//kernel/lib/userabi/userboot:userboot-arm64-gcc',
+        },
+        'no_shared': True,
+    },
+    {
+        'name': 'userboot_x64-gcc',
+        'variants': ['gcc'],
+        'gn':
+            {
+                'toolchain':
+                    '//zircon/kernel/lib/userabi/userboot:userboot_x64-gcc',
+            },
+        'zn': {
+            'toolchain': '//kernel/lib/userabi/userboot:userboot-x64-gcc',
+        },
+        'no_shared': True,
+    },
 ]
 
-_GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]
-
-_ZN_TOOLCHAINS = [e['zn']['toolchain'] for e in _ALL_TOOLCHAINS]
+_TOOLCHAIN_NAMES = [e['name'] for e in _ALL_TOOLCHAINS]
 
 # The list of GN tool names that needs to be compared. The others are ignored
 # by this script (e.g. Objective-C, Rust and Copy + Stamp).
@@ -257,10 +307,6 @@ _CLANG_BINPREFIX = '../../prebuilt/third_party/clang/linux-x64/bin'
 def _entry_to_variant_name(e):
     """Return the variant-specific name for entry |e| in _ALL_TOOLCHAINS."""
     return '-'.join(e.get('variants', []))
-
-
-_ALL_VARIANT_NAMES = sorted(
-    {_entry_to_variant_name(e) for e in _ALL_TOOLCHAINS})
 
 
 def _recreate_directory(dir_path):
@@ -287,14 +333,14 @@ def _write_dict_as_json(json_file, rules):
         json.dump(rules, f, indent=2, sort_keys=True)
 
 
-def _generate_gn_args_for_gn_build(variant_name):
+def _generate_gn_args_for_gn_build(toolchains, variant_name):
     """Generate the args.gn file used by the GN canary build."""
     result = '# Auto-generated - DO NOT EDIT\n'
     result += 'base_package_labels = []\n'
     result += 'cache_package_labels = []\n'
     result += 'universe_package_labels = [\n'
 
-    for t in _ALL_TOOLCHAINS:
+    for t in toolchains:
         if variant_name == _entry_to_variant_name(t):
             result += '  "//zircon/public/canaries:canaries(%s)",' % t['gn'][
                 'toolchain']
@@ -306,11 +352,11 @@ def _generate_gn_args_for_gn_build(variant_name):
     return result
 
 
-def _generate_gn_args_for_zn_build(variant_name):
+def _generate_gn_args_for_zn_build(toolchains, variant_name):
     """Generate the args.gn file used by the ZN canary build."""
     result = '# Auto-generated - DO NOT EDIT\n'
     result += "default_deps = [\n"
-    for t in _ALL_TOOLCHAINS:
+    for t in toolchains:
         if variant_name == _entry_to_variant_name(t):
             result += '  "//public/canaries:canaries(%s)",' % t['zn'][
                 'toolchain']
@@ -622,6 +668,10 @@ def main():
         action='store_true',
         help='Print differences with error messages.')
     parser.add_argument(
+        '--toolchain',
+        help=
+        'Comma-separated list of toolchains to check. Default is all of them')
+    parser.add_argument(
         '--root-dir',
         help='Root Fuchsia source directory. Default is auto-detected.')
     parser.add_argument(
@@ -693,11 +743,26 @@ def main():
         ninja_path = os.path.join(
             root_dir, 'prebuilt', 'third_party', 'ninja', host_name, 'ninja')
 
+    all_toolchains = _ALL_TOOLCHAINS
+    if args.toolchain:
+        toolchain_names = set(args.toolchain.split(','))
+        for name in toolchain_names:
+            if name not in _TOOLCHAIN_NAMES:
+                parser.error(
+                    'Invalid toolchain name %s, should be one of:\n%s\n' %
+                    (name, '\n'.join('  %s' % t for t in _TOOLCHAIN_NAMES)))
+        all_toolchains = [
+            t for t in _ALL_TOOLCHAINS if t['name'] in toolchain_names
+        ]
+
+    all_variant_names = sorted(
+        {_entry_to_variant_name(e) for e in all_toolchains})
+
     # Generate all GN and ZN output directories, based on the variants being used.
     gn_out_dirs = {}
     zn_out_dirs = {}
 
-    for variant in _ALL_VARIANT_NAMES:
+    for variant in all_variant_names:
         suffix = '-' + variant if variant else ''
         gn_out_dir = os.path.join(
             root_dir, 'out', args.out_prefix + suffix + '.gn')
@@ -712,7 +777,7 @@ def main():
             _recreate_directory(gn_out_dir)
             _write_file(
                 os.path.join(gn_out_dir, 'args.gn'),
-                _generate_gn_args_for_gn_build(variant))
+                _generate_gn_args_for_gn_build(all_toolchains, variant))
 
             # Populate $ROOT_DIR/out/$PREFIX.gn now.
             subprocess.check_call(
@@ -724,7 +789,7 @@ def main():
             _recreate_directory(zn_out_dir)
             _write_file(
                 os.path.join(zn_out_dir, 'args.gn'),
-                _generate_gn_args_for_zn_build(variant))
+                _generate_gn_args_for_zn_build(all_toolchains, variant))
 
             # Populate $ROOT_DIR/out/$PREFIX.zn now
             subprocess.check_call(
@@ -734,7 +799,7 @@ def main():
                 ],
                 cwd=root_dir)
 
-    for t in _ALL_TOOLCHAINS:
+    for t in all_toolchains:
         gn_toolchain = t['gn']['toolchain']
         zn_toolchain = t['zn']['toolchain']
 
