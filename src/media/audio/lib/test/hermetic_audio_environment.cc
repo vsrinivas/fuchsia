@@ -129,8 +129,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
 
   fuchsia::sys::LaunchInfo devmgr_launch_info;
   // This URL should be made more flexible for future tests.
-  devmgr_launch_info.url =
-      "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-test-devmgr.cmx";
+  devmgr_launch_info.url = options_.devmgr_url;
   devmgr_services_ =
       sys::ServiceDirectory::CreateWithRequest(&devmgr_launch_info.directory_request);
 
