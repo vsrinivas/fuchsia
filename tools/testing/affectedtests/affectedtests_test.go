@@ -5,6 +5,7 @@
 package affectedtests
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
@@ -28,7 +29,7 @@ func TestCoreDOT(t *testing.T) {
 	if err = json.Unmarshal(testsJSONContents, &testSpecs); err != nil {
 		t.Fatalf("Failed to unmarshal test JSON: %s", err)
 	}
-	dotPath := filepath.Join(*testDataFlag, "core", "ninja.dot")
+	dotPath := filepath.Join(*testDataFlag, "core", "ninja.dot.gz")
 
 	for _, tc := range []struct {
 		desc string
@@ -56,7 +57,13 @@ func TestCoreDOT(t *testing.T) {
 			}
 			defer dotFile.Close()
 
-			actual, err := AffectedTests(tc.srcs, testSpecs, dotFile)
+			dotFileUnzipped, err := gzip.NewReader(dotFile)
+			if err != nil {
+				t.Fatalf("Failed to unzip file %q: %s", dotPath, err)
+			}
+			defer dotFileUnzipped.Close()
+
+			actual, err := AffectedTests(tc.srcs, testSpecs, dotFileUnzipped)
 			if err != nil {
 				t.Fatalf("AffectedTests(%v, _, _) failed: %s", tc.srcs, err)
 			}
