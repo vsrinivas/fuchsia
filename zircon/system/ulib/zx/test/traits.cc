@@ -7,6 +7,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/time.h>
+#include <lib/test-exceptions/exception-handling.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
@@ -391,6 +392,6 @@ TEST(TraitsTestCase, ExceptionTraits) {
   ASSERT_NO_FATAL_FAILURES(Waiting(exception));
   ASSERT_NO_FATAL_FAILURES(Peering(exception));
 
-  ASSERT_OK(thread.kill());
+  ASSERT_OK(test_exceptions::ExitExceptionZxThread(std::move(exception)));
   ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
 }

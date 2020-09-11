@@ -21,16 +21,19 @@
 #include <lib/zx/vmar.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <threads.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/limits.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/threads.h>
 #include <zircon/types.h>
 
 #include <utility>
 
+#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "util.h"
@@ -490,8 +493,6 @@ TEST(ZxTestCase, ThreadCreate) {
   ASSERT_OK(zx::thread::create(*zx::process::self(), name, sizeof(name), 0u, &thread));
   EXPECT_TRUE(thread.is_valid());
   EXPECT_OK(validate_handle(thread.get()));
-
-  EXPECT_OK(thread.kill());
 }
 
 TEST(ZxTestCase, ThreadSetProfile) {
@@ -505,32 +506,39 @@ TEST(ZxTestCase, ThreadSetProfile) {
   info.priority = ZX_PRIORITY_LOWEST;
   ASSERT_OK(zx::profile::create(GetRootJob(), 0u, &info, &profile));
   EXPECT_OK(thread.set_profile(profile, 0u));
-
-  EXPECT_OK(thread.kill());
 }
 
-// No shadow call stack because this thread is directly zx_thread_start()d, and so won't have x18
-// set up on ARM. See fxb/39288.
-__NO_SAFESTACK void thread_suspend_test_fn(uintptr_t, uintptr_t) {
-  zx_nanosleep(zx_deadline_after(ZX_SEC(1000)));
-  zx_thread_exit();
+int thread_suspend_test_fn(void* arg) {
+  zx_handle_t* event_wait = reinterpret_cast<zx_handle_t*>(arg);
+  zx_object_wait_one(*event_wait, ZX_USER_SIGNAL_0, zx::time::infinite().get(), nullptr);
+  return 0;
 }
 
 TEST(ZxTestCase, ThreadSuspend) {
-  zx::thread thread;
-  ASSERT_OK(zx::thread::create(*zx::process::self(), "test", 4, 0, &thread));
+  zx_handle_t event_wait;
+  ASSERT_OK(zx_event_create(0, &event_wait));
+  fbl::AutoCall ac([event_wait] { ASSERT_OK(zx_handle_close(event_wait)); });
 
-  // Make a little stack and start the thread. Note: stack grows down so pass the high address.
-  alignas(16) static uint8_t stack_storage[64];
-  uint8_t* stack = stack_storage + sizeof(stack_storage);
-  ASSERT_OK(thread.start(&thread_suspend_test_fn, stack, 0, 0));
+  // We can't use syscalls to create the thread here because we are running and exiting the
+  // thread. Going through the C APIs is the easiest way to ensure that ASAN and other
+  // sanitizers will be happy.
+  thrd_t thread;
+  ASSERT_EQ(thrd_create(&thread, thread_suspend_test_fn, reinterpret_cast<void*>(&event_wait)),
+            thrd_success);
+
+  zx::unowned_thread zx_thread(thrd_get_zx_handle(thread));
 
   zx::suspend_token suspend;
-  EXPECT_OK(thread.suspend(&suspend));
+  EXPECT_OK(zx_thread->suspend(&suspend));
   EXPECT_TRUE(suspend);
+  ASSERT_OK(zx_thread->wait_one(ZX_THREAD_SUSPENDED, zx::time::infinite(), nullptr));
 
   suspend.reset();
-  EXPECT_OK(thread.kill());
+  ASSERT_OK(zx_object_signal(event_wait, 0, ZX_USER_SIGNAL_0));
+
+  int result = 0;
+  ASSERT_EQ(thrd_join(thread, &result), thrd_success);
+  ASSERT_EQ(result, 0);
 }
 
 TEST(ZxTestCase, ProcessSelf) {

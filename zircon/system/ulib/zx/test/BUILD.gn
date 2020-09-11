@@ -39,6 +39,7 @@ test("zx") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/test-exceptions",
   ]
 }
 
