@@ -46,9 +46,7 @@ group("tests") {
   deps = [ ":triage_configs_test($host_toolchain)" ]
 }
 
-if (is_host) {
-  triage_config_test("triage_configs_test") {
-    sources = triage_files
-    source_dir = "."
-  }
+triage_config_test("triage_configs_test") {
+  sources = triage_files
+  source_dir = "."
 }

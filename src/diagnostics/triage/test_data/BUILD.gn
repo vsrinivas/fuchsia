@@ -14,16 +14,14 @@ group("tests") {
   deps = [ ":triage_sample_config_test($host_toolchain)" ]
 }
 
-if (is_host) {
-  triage_config_test("triage_sample_config_test") {
-    sources = [
-      "annotation_tests.triage",
-      "error_rate.triage",
-      "log_tests.triage",
-      "map_fold.triage",
-      "other.triage",
-      "sample.triage",
-      "sample_tags.triage",
-    ]
-  }
+triage_config_test("triage_sample_config_test") {
+  sources = [
+    "annotation_tests.triage",
+    "error_rate.triage",
+    "log_tests.triage",
+    "map_fold.triage",
+    "other.triage",
+    "sample.triage",
+    "sample_tags.triage",
+  ]
 }
