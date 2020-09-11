@@ -6,7 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 
 declare_args() {
-  goldfish_control_use_composite_device = false
+  goldfish_control_use_composite_device = true
 }
 
 driver_module("control_driver") {
