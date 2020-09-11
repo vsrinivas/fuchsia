@@ -87,7 +87,7 @@ impl SafeOp for f64 {
 /// Generate create, set, add and subtract methods for a metric.
 macro_rules! metric_fns {
     ($name:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             pub fn [<create_ $name _metric>](
                 &mut self,
                 name: &str,
@@ -145,7 +145,7 @@ macro_rules! metric_fns {
 
 macro_rules! array_fns {
     ($name:ident, $type:ident, $value:ident) => {
-        paste::item! {
+        paste::paste! {
             pub fn [<create_ $name _array>](
                 &mut self,
                 name: &str,

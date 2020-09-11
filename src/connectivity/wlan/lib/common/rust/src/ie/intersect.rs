@@ -25,7 +25,7 @@ use {
 
 macro_rules! impl_intersect {
   ($struct_name:ident { $($op:ident: $field:ident),* $(,)?}) => {
-    paste::item! {
+    paste::paste! {
       impl Intersect for $struct_name {
         fn intersect(&self, other: &Self) -> Self {
           Self(0)

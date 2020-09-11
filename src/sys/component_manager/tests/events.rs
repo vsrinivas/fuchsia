@@ -840,7 +840,7 @@ macro_rules! create_event {
             )*
         }
     ) => {
-        paste::item! {
+        paste::paste! {
             pub struct [<$event_type Payload>] {
                 $(pub $client_protocol_name: $client_protocol_ty,)*
                 $(pub $server_protocol_name: Option<zx::Channel>,)*
@@ -936,7 +936,7 @@ macro_rules! create_event {
                             )*
 
                             #[allow(dead_code)]
-                            let payload = paste::expr! {
+                            let payload = paste::paste! {
                                 [<$event_type Payload>] {
                                     $($data_name,)*
                                     $($client_protocol_name,)*

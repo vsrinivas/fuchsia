@@ -140,7 +140,7 @@ impl InspectType for HistogramsSubtrees {}
 
 macro_rules! fn_log_per_antenna_histograms {
     ($name:ident, $field:ident, $histogram_ty:ty, $sample:ident => $sample_index_expr:expr) => {
-        paste::item! {
+        paste::paste! {
             pub fn [<log_per_antenna_ $name _histograms>](
                 &mut self,
                 histograms: &[$histogram_ty],

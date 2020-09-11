@@ -88,7 +88,7 @@ impl Unit for Vec<u8> {
 macro_rules! impl_unit_primitive {
     ({ $($impl_t:ty), *}, $inspect_t:ty, $prop_name:ident, $prop_name_cap:ident) => {
         $(
-            paste::item! {
+            paste::paste! {
                 impl Unit for $impl_t {
                     type Data = [<$prop_name_cap Property>];
 

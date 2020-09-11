@@ -126,7 +126,7 @@ mod multi_char_range_tests {
 
     macro_rules! test_range_inclusive_int {
         ($t:ty) => {
-            paste::item! {
+            paste::paste! {
                 #[test]
                 fn [<test_char_range_inclusive_ $t>]() {
                     let source: std::ops::RangeInclusive<$t> = 0x0..=0x9;

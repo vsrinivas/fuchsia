@@ -15,10 +15,10 @@
 macro_rules! fidl_process_full {
     ($interface:ident $(,$setting_type:expr, $fidl_settings:ty,
             $fidl_responder:ty, $change_func_key:ty, $handle_func:ident)+$(,)*) => {
-        type HandleResult<'a> = LocalBoxFuture<'a, Result<Option<paste::item!{[<$interface Request>]}>, anyhow::Error>>;
+        type HandleResult<'a> = LocalBoxFuture<'a, Result<Option<paste::paste!{[<$interface Request>]}>, anyhow::Error>>;
 
         pub mod fidl_io {
-            paste::item!{use fidl_fuchsia_settings::{[<$interface Marker>], [<$interface RequestStream>]};}
+            paste::paste!{use fidl_fuchsia_settings::{[<$interface Marker>], [<$interface RequestStream>]};}
             use super::*;
             use fuchsia_async as fasync;
             use crate::fidl_processor::{FidlProcessor};
@@ -26,7 +26,7 @@ macro_rules! fidl_process_full {
             use crate::message::base::MessengerType;
 
             pub fn spawn (switchboard_messenger_factory: switchboard::message::Factory,
-                    stream: paste::item!{[<$interface RequestStream>]}) {
+                    stream: paste::paste!{[<$interface RequestStream>]}) {
                 fasync::Task::local(async move {
                     let messenger = if let Ok((messenger, _)) = switchboard_messenger_factory.create(MessengerType::Unbound).await {
                         messenger
@@ -34,7 +34,7 @@ macro_rules! fidl_process_full {
                         return
                     };
 
-                    let mut processor = FidlProcessor::<paste::item!{[<$interface Marker>]}>::new(stream, messenger).await;
+                    let mut processor = FidlProcessor::<paste::paste!{[<$interface Marker>]}>::new(stream, messenger).await;
                         $(processor
                             .register::<$fidl_settings, $fidl_responder, $change_func_key>(
                                 $setting_type,
@@ -64,7 +64,7 @@ macro_rules! fidl_process {
     ($interface:ident, $setting_type:expr, $handle_func:ident
             $(,$item_setting_type:expr, $fidl_settings:ty, $fidl_responder:ty,
             $item_handle_func:ident)*$(,)*) => {
-        paste::item! {
+        paste::paste! {
             $crate::fidl_process_full!(
                 $interface,
                 $setting_type,
@@ -82,7 +82,7 @@ macro_rules! fidl_process {
     // by providing the responder type and handle function.
     ($interface:ident, $setting_type:expr, $handle_func:ident
             $(, $fidl_responder:ty, $item_handle_func:ident)*$(,)*) => {
-        paste::item! {
+        paste::paste! {
             $crate::fidl_process_full!(
                 $interface,
                 $setting_type,
@@ -104,7 +104,7 @@ macro_rules! fidl_process {
     // fidl interface and fidl setting type differ in name.
     ($interface:ident, $setting_type:expr, $fidl_settings:ident,
             $handle_func:ident) => {
-        paste::item! {
+        paste::paste! {
             $crate::fidl_process_full!(
                 $interface,
                 $setting_type,
@@ -129,7 +129,7 @@ macro_rules! fidl_process_2 {
     ($interface:ident, $setting_type:expr, $handle_func:ident
             $(,$item_setting_type:expr, $fidl_settings:ty, $fidl_responder:ty,
             $item_handle_func:ident)*$(,)*) => {
-        paste::item! {
+        paste::paste! {
             $crate::fidl_process_full!(
                 $interface,
                 $setting_type,

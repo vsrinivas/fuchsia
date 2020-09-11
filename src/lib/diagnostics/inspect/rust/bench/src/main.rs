@@ -52,7 +52,7 @@ const NAME: &str = "name";
 
 macro_rules! bench_numeric_property_fn {
     ($name:ident, $type:ty, $Property:expr) => {
-        paste::item! {
+        paste::paste! {
             fn [<bench_ $name _property>](root: &Node) {
                 let property = {
                     ftrace::duration!("benchmark",
@@ -89,7 +89,7 @@ macro_rules! bench_numeric_property_fn {
 macro_rules! bench_array_fn_impls {
     ($name:ident, $type:ty, $Array:expr, [$($size:expr),*]) => {
         $(
-            paste::item! {
+            paste::paste! {
                 fn [<bench_ $name _array_ $size>](root: &Node, iteration: usize) {
                     let index = iteration % $size;
                     let array = {
@@ -157,7 +157,7 @@ where
 macro_rules! bench_histogram_fn_impls {
     ($name:ident, $type:ty, $Histogram:expr, $histogram_type:ident, [$($size:expr),*]) => {
         $(
-            paste::item! {
+            paste::paste! {
                 fn [<bench_ $name _ $histogram_type _histogram_ $size>](root: &Node) {
                     let (params, value) = [<get_ $histogram_type _bench_data>]($size);
                     let histogram = {
@@ -210,7 +210,7 @@ fn get_bytes_value(size: usize) -> Vec<u8> {
 macro_rules! bench_property_fn_impl {
     ($name:ident, $Property:expr, [$($size:expr),*]) => {
         $(
-            paste::item! {
+            paste::paste! {
                 fn [<bench_ $name _property_ $size>](root: &Node) {
                     let initial_value = [<get_ $name _value>](0);
                     let value = [<get_ $name _value>]($size);
@@ -323,7 +323,7 @@ fn bench_heap_extend() {
 
 macro_rules! single_iteration_fn {
     (array_sizes: [$($array_size:expr),*], property_sizes: [$($prop_size:expr),*]) => {
-        paste::item! {
+        paste::paste! {
             fn single_iteration(iteration: usize) {
                 let inspector = create_inspector();
                 let root = get_root(&inspector);

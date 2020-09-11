@@ -57,7 +57,7 @@ pub trait Inspect {
 /// Implement `Inspect` for a fuchsia_inspect property.
 macro_rules! impl_inspect_property {
     ($prop_name:ident, $prop_name_cap:ident) => {
-        paste::item! {
+        paste::paste! {
             impl Inspect for &mut [<$prop_name_cap Property>] {
                 fn iattach(self, parent: &Node, name: impl AsRef<str>) -> Result<(), AttachError> {
                     let default = <[<$prop_name_cap Property>] as Property<'_>>::Type::default();

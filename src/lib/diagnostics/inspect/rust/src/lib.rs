@@ -435,7 +435,7 @@ impl InnerType for InnerLazyNodeType {
 ///    for the wrapped type.
 macro_rules! inspect_type_impl {
     ($(#[$attr:meta])* struct $name:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             $(#[$attr])*
             /// NOTE: do not rely on PartialEq implementation for true comparison.
             /// Instead leverage the reader.
@@ -488,7 +488,7 @@ macro_rules! inspect_type_impl {
 ///   `type`: the type of the numeric property (example: f64)
 macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             #[must_use]
             #[allow(missing_docs)]
             pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
@@ -519,7 +519,7 @@ macro_rules! create_numeric_property_fn {
 ///   `type`: the type of the numeric property (example: f64)
 macro_rules! create_array_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             #[must_use]
             #[allow(missing_docs)]
             pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: usize)
@@ -550,7 +550,7 @@ macro_rules! create_array_property_fn {
 ///   `type`: the type of the numeric property (example: f64)
 macro_rules! create_linear_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             #[must_use]
             #[allow(missing_docs)]
             pub fn [<create_ $name _linear_histogram>](
@@ -577,7 +577,7 @@ macro_rules! create_linear_histogram_property_fn {
 ///   `type`: the type of the numeric property (example: f64)
 macro_rules! create_exponential_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             #[must_use]
             #[allow(missing_docs)]
             pub fn [<create_ $name _exponential_histogram>](
@@ -605,7 +605,7 @@ macro_rules! create_exponential_histogram_property_fn {
 ///   `disposition`: identifier for the type of LinkNodeDisposition.
 macro_rules! create_lazy_property_fn {
     ($fn_suffix:ident, $disposition:ident) => {
-        paste::item! {
+        paste::paste! {
             #[must_use]
             pub fn [<create_lazy_ $fn_suffix>]<F>(&self, name: impl AsRef<str>, callback: F) -> LazyNode
             where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
@@ -849,7 +849,7 @@ pub trait NumericProperty {
 ///   `name`: the readble name of the type of the function (example: double)
 macro_rules! numeric_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
-        paste::item! {
+        paste::paste! {
             fn $fn_name(&self, value: $type) {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
                     inner_ref.state.lock().[<$fn_name _ $name _metric>](inner_ref.block_index, value)
@@ -868,7 +868,7 @@ macro_rules! numeric_property_fn {
 ///   `type`: the type of the argument of the function to generate (example: f64)
 macro_rules! numeric_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             inspect_type_impl!(
                 /// Inspect API Numeric Property data type.
                 struct [<$name_cap Property>],
@@ -908,7 +908,7 @@ numeric_property!(double, Double, f64);
 ///   `bytes`: an optional method to get the bytes of the property
 macro_rules! property {
     ($name:ident, $type:ty $(, $bytes:ident)?) => {
-        paste::item! {
+        paste::paste! {
             inspect_type_impl!(
                 /// Inspect API Property data type.
                 struct [<$name Property>],
@@ -975,7 +975,7 @@ pub trait ArrayProperty {
 ///   `name`: the readble name of the type of the function (example: double)
 macro_rules! array_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
-        paste::item! {
+        paste::paste! {
             fn $fn_name(&self, index: usize, value: $type) {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
                     inner_ref.state.lock().[<$fn_name _array_ $name _slot>](inner_ref.block_index, index, value)
@@ -993,7 +993,7 @@ macro_rules! array_property_fn {
 ///   `type`: the type of the argument of the function to generate (example: f64)
 macro_rules! array_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             inspect_type_impl!(
                 /// Inspect API Array Property data type.
                 struct [<$name_cap ArrayProperty>],
@@ -1044,7 +1044,7 @@ pub trait HistogramProperty {
 
 macro_rules! histogram_property {
     ($histogram_type:ident, $name_cap:ident, $type:ident, $clear_start_index:expr) => {
-        paste::item! {
+        paste::paste! {
             impl HistogramProperty for [<$name_cap $histogram_type HistogramProperty>] {
                 type Type = $type;
 
@@ -1072,7 +1072,7 @@ macro_rules! histogram_property {
 
 macro_rules! linear_histogram_property {
     ($name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             #[derive(Debug)]
             pub struct [<$name_cap LinearHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],
@@ -1109,7 +1109,7 @@ macro_rules! linear_histogram_property {
 
 macro_rules! exponential_histogram_property {
     ($name_cap:ident, $type:ident) => {
-        paste::item! {
+        paste::paste! {
             #[derive(Debug)]
             pub struct [<$name_cap ExponentialHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],

@@ -171,7 +171,7 @@ macro_rules! register_fidl_handler {
         if false $(|| $components.contains(&SettingType::$target))+
         {
             let factory = $messenger_factory.clone();
-            $service_dir.add_fidl_service(move |stream: paste::item!{[<$interface RequestStream>]}| {
+            $service_dir.add_fidl_service(move |stream: paste::paste!{[<$interface RequestStream>]}| {
                 crate::$handler_mod::fidl_io::spawn(factory.clone(), stream);
             });
         }

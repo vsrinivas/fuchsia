@@ -318,7 +318,7 @@ impl<Key: Clone> IntoProperty<Key> for Vec<Bucket<NumericValue>> {
 macro_rules! parse_numeric_vec_impls {
     ($($type:ty),*) => {
         $(
-            paste::item! {
+            paste::paste! {
                 fn [<parse_ $type _vec>](vec: &Vec<NumericValue>) -> Option<Vec<$type>> {
                     vec.iter().map(|value| value.[<as_ $type>]()).collect::<Option<Vec<_>>>()
                 }
