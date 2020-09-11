@@ -1,0 +1,120 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.dsi;
+using zx;
+
+const uint32 MAX_PAYLOAD_SIZE = 64;
+
+// This enum is used to configure DSI interface in either Video or Command mode
+enum DsiMode : uint8 {
+    VIDEO = 1;
+    COMMAND = 2;
+};
+
+// This enum is used to configure the type of video mode
+enum VideoMode : uint8 {
+    NON_BURST_PULSE = 1;
+    NON_BURST_EVENT = 2;
+    BURST = 3;
+};
+
+/// Supported color codes for the DSI interface
+enum ColorCode : uint8 {
+    PACKED_16BIT_565 = 1;
+    PACKED_18BIT_666 = 2;
+    LOOSE_24BIT_666 = 3;
+    PACKED_24BIT_888 = 4;
+};
+
+// This is the top level table used to populated all DSI configuration registers
+/// Vendor-provided configurations based on hardware/lcd type.
+table DisplaySetting {
+    1: uint32 lane_num;
+    2: uint32 bit_rate_max;
+    3: uint32 clock_factor;
+    4: uint32 lcd_clock;
+    5: uint32 h_active;
+    6: uint32 v_active;
+    7: uint32 h_period;
+    8: uint32 v_period;
+    9: uint32 hsync_width;
+    10: uint32 hsync_bp;
+    11: uint32 hsync_pol;
+    12: uint32 vsync_width;
+    13: uint32 vsync_bp;
+    14: uint32 vsync_pol;
+};
+
+/// Vendor specific data
+table VendorConfig {
+    1: uint32 lp_escape_time;
+    2: uint32 lp_cmd_pkt_size;
+    3: uint32 phy_timer_clkhs_to_lp;
+    4: uint32 phy_timer_clklp_to_hs;
+    5: uint32 phy_timer_hs_to_lp;
+    6: uint32 phy_timer_lp_to_hs;
+    7: uint8 auto_clklane;
+};
+
+/// Complete MIPI-DSI and MIPI D-PHY configuration information
+table DsiConfig {
+    1: DisplaySetting display_setting;
+    2: VideoMode video_mode_type;
+    3: ColorCode color_coding;
+    4: VendorConfig vendor_config;
+};
+
+/// Generic MIPI-DSI command structure
+table MipiDsiCmd {
+    1: uint8 virtual_channel_id;
+    2: uint8 dsi_data_type; // DSI data type as defined by mipi-dsi library
+    3: uint32 write_lenth; // Write length in bytes
+    4: uint32 expected_read_length; // Expected read length in bytes
+    5: uint32 flags; // optional flags as defined by mipi-dsi library
+};
+
+[Discoverable]
+protocol DsiBase {
+    /// This function is used to send a MIPI-DSI command.
+    SendCmd(MipiDsiCmd cmd, vector<uint8>:MAX_PAYLOAD_SIZE txdata)
+        -> (vector<uint8>:MAX_PAYLOAD_SIZE rxdata) error zx.status;
+};
+
+[Discoverable]
+protocol DsiExtended {
+    compose DsiBase;
+    /// This function is used to configure all the DSI parameters needed to operated in both
+    /// Command and Video Mode.
+    Config(DsiConfig dsi_config) -> () error zx.status;
+    /// This function is called to power up the DSI interface.
+    PowerUp() -> ();
+    /// This function is called to power down the DSI interface.
+    PowerDown() -> ();
+    /// This function is used to change modes between Video and Command.
+    SetMode(DsiMode mode) -> ();
+    /// This function returns true if the DSI IP block is powered on and not in reset.
+    IsPoweredUp() -> (bool on);
+    /// This function resets the DSI IP block.
+    Reset() -> ();
+    /// This function configures the MIPI D-PHY block if it exists within the DSI IP block.
+    PhyConfig(DsiConfig dsi_config) -> () error zx.status;
+    /// This function is used to power up the MIPI D-PHY block.
+    PhyPowerUp() -> ();
+    /// This function is used to power down the MIPI D-PHY block.
+    PhyPowerDown() -> ();
+    /// This function is used to communicate with the MIPI D-PHY block.
+    PhySendCode(uint32 code, uint32 parameter) -> ();
+    /// This function returns ZX_OK once MIPI D-PHY block is ready. MIPI D-PHY block is
+    /// considered ready once the LOCK Bit and StopStateClk bit are set.
+    PhyWaitForReady() -> () error zx.status;
+    /// This function allows writing to any register within the DSI IP block. This could be used
+    /// for debug purposes during development stages.
+    WriteReg(uint32 reg, uint32 val) -> () error zx.status;
+    /// This function returns the value of any register within the DSI IP block.
+    ReadReg(uint32 reg) -> (uint32 val) error zx.status;
+    /// This function enables Built-In Self-Test (BIST) pattern generation.
+    EnableBist(uint32 pattern) -> () error zx.status;
+    /// This function prints the value of all DSI IP block registers.
+    PrintDsiRegisters() -> ();
+};
