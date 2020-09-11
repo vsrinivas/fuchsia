@@ -9,15 +9,15 @@ void CodeGenerator::GenerateIncludes(fidl_codec::PrettyPrinter& printer) {
   printer << "#include <lib/async-loop/default.h>\n";
   printer << "#include <lib/async/default.h>\n";
   printer << "#include <lib/syslog/cpp/macros.h>\n";
-  printer << "\n";
+  printer << '\n';
   printer << "#include <gtest/gtest.h>\n";
-  printer << "\n";
+  printer << '\n';
   printer << "#include \"lib/sys/cpp/component_context.h\"\n";
-  printer << "\n";
+  printer << '\n';
 
   GenerateFidlIncludes(printer);
 
-  printer << "\n";
+  printer << '\n';
 }
 
 void CodeGenerator::GenerateFidlIncludes(fidl_codec::PrettyPrinter& printer) {

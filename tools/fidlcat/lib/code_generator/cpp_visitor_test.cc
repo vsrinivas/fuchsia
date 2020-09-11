@@ -82,7 +82,7 @@ TEST_F(CppVariableGenerateTest, GenerateInitialization) {
 }
 
 TEST_F(CppVariableGenerateTest, GenerateAssertStatement) {
-  var_->GenerateAssertStatement(printer_);
+  var_->GenerateAssertStatement(printer_, false);
   EXPECT_EQ(out_.str(),
             "uint64_t my_variable_name_expected = 42;\n"
             "ASSERT_EQ(my_variable_name, my_variable_name_expected);\n");

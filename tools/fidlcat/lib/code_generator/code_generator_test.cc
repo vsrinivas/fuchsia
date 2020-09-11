@@ -152,7 +152,7 @@ TEST_F(TestGeneratorTest, GenerateAsyncCall) {
   std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>> async_calls = {pair1, pair2};
 
   test_generator_.GenerateAsyncCallsFromIterator(printer_, async_calls, async_calls.begin(),
-                                                 "// end of async calls\n");
+                                                 "// end of async calls\n", false);
 
   std::string expected =
       "int64_t in_base_0 = 2;\n"
@@ -232,6 +232,7 @@ TEST_F(TestGeneratorTest, GenerateSyncCall) {
       "int64_t out_result_0;\n"
       "std::string out_result_words_0;\n"
       "proxy_sync_->Exponentiation(in_base_0, in_exponent_0, &out_result_0, &out_result_words_0);\n"
+      "\n"
       "int64_t out_result_0_expected = 8;\n"
       "ASSERT_EQ(out_result_0, out_result_0_expected);\n"
       "\n"
@@ -287,7 +288,7 @@ TEST_F(TestGeneratorTest, GenerateGroup) {
   groups.emplace_back(std::move(group_1));
   groups.emplace_back(std::move(group_2));
 
-  test_generator_.GenerateGroup(printer_, groups, 0);
+  test_generator_.GenerateGroup(printer_, groups, 0, false);
 
   std::string expected_1 =
       "void Proxy::group_0() {\n"
@@ -334,9 +335,10 @@ TEST_F(TestGeneratorTest, GenerateGroup) {
 
   os_.str("");
 
-  test_generator_.GenerateGroup(printer_, groups, 1);
+  test_generator_.GenerateGroup(printer_, groups, 1, true);
 
   std::string expected_2 =
+      "\n"
       "void Proxy::group_1() {\n"
       "  int64_t out_result_2;\n"
       "  std::string out_result_words_2;\n"

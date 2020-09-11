@@ -53,7 +53,11 @@ class CppVariable {
 
   virtual inline std::string GTestAssert() const { return "ASSERT_EQ"; }
 
-  virtual void GenerateAssertStatement(PrettyPrinter& printer) const {
+  virtual void GenerateAssertStatement(PrettyPrinter& printer, bool prepend_new_line) const {
+    if (prepend_new_line) {
+      printer << '\n';
+    }
+
     std::string old_name = name();
 
     this->GenerateInitialization(printer, "_expected");

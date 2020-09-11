@@ -25,8 +25,8 @@ void TestGenerator::GenerateTests() {
   }
 
   std::cout << "Writing tests on disk\n"
-            << "  process name: " << dispatcher_->processes().begin()->second->name() << "\n"
-            << "  output directory: " << output_directory_ << "\n";
+            << "  process name: " << dispatcher_->processes().begin()->second->name() << '\n'
+            << "  output directory: " << output_directory_ << '\n';
 
   for (const auto& [handle_id, calls] : call_log()) {
     std::string protocol_name;
@@ -54,11 +54,11 @@ void TestGenerator::GenerateTests() {
         std::cout << " (crashed)";
       }
       std::cout << " " << call_info->enclosing_interface_name() << "." << call_info->method_name()
-                << "\n";
+                << '\n';
     }
 
     WriteTestToFile(protocol_name);
-    std::cout << "\n";
+    std::cout << '\n';
   }
 }
 
@@ -135,12 +135,12 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
       output_directory_ /
       std::filesystem::path(ToSnakeCase(protocol_name) + "_" +
                             std::to_string(test_counter_[std::string(protocol_name)]++) + ".cc");
-  std::cout << "... Writing to " << file_name << "\n";
+  std::cout << "... Writing to " << file_name << '\n';
 
   std::ofstream target_file;
   target_file.open(file_name, std::ofstream::out);
   if (target_file.fail()) {
-    FX_LOGS(ERROR) << "Could not open " << file_name << "\n";
+    FX_LOGS(ERROR) << "Could not open " << file_name << '\n';
     return;
   }
 
@@ -162,7 +162,11 @@ void TestGenerator::GenerateAsyncCallsFromIterator(
     fidl_codec::PrettyPrinter& printer,
     const std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>& async_calls,
     std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>::iterator iterator,
-    std::string_view final_statement) {
+    std::string_view final_statement, bool prepend_new_line) {
+  if (prepend_new_line) {
+    printer << '\n';
+  }
+
   if (iterator == async_calls.end()) {
     printer << final_statement;
     return;
@@ -210,25 +214,25 @@ void TestGenerator::GenerateAsyncCallsFromIterator(
   printer << ") {\n";
   {
     fidl_codec::Indent indent(printer);
-    separator = "";
+    bool next_block_prepend_new_line = false;
+    bool prepend_new_line = false;
     for (const auto& argument : output_arguments) {
-      printer << separator;
-      argument->GenerateAssertStatement(printer);
-      separator = "\n";
+      // We want blank lines between assertions.
+      argument->GenerateAssertStatement(printer, prepend_new_line);
+      next_block_prepend_new_line = true;
+      prepend_new_line = true;
     }
-    printer << "\n";
-    GenerateAsyncCallsFromIterator(printer, async_calls, std::next(iterator), final_statement);
+    GenerateAsyncCallsFromIterator(printer, async_calls, std::next(iterator), final_statement,
+                                   next_block_prepend_new_line);
   }
-  printer << "});";
-
-  printer << "\n";
+  printer << "});\n";
 }
 
 void TestGenerator::GenerateAsyncCall(fidl_codec::PrettyPrinter& printer,
                                       std::pair<FidlCallInfo*, FidlCallInfo*> call_info_pair,
                                       std::string_view final_statement) {
   auto async_calls = std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>{call_info_pair};
-  GenerateAsyncCallsFromIterator(printer, async_calls, async_calls.begin(), final_statement);
+  GenerateAsyncCallsFromIterator(printer, async_calls, async_calls.begin(), final_statement, false);
 }
 
 void TestGenerator::GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info) {
@@ -249,7 +253,7 @@ void TestGenerator::GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCal
   printer << "(";
 
   // Passes input arguments to the fidl call
-  std::string separator = "";
+  std::string separator;
   for (auto argument : input_arguments) {
     printer << separator;
     argument->GenerateName(printer);
@@ -264,11 +268,8 @@ void TestGenerator::GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCal
 
   printer << ");\n";
 
-  separator = "";
   for (const auto& argument : output_arguments) {
-    printer << separator;
-    argument->GenerateAssertStatement(printer);
-    separator = "\n";
+    argument->GenerateAssertStatement(printer, true);
   }
 }
 
@@ -292,20 +293,18 @@ void TestGenerator::GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallIn
   }
 
   printer << ") {\n";
+  separator = "";
   {
     fidl_codec::Indent indent(printer);
-    separator = "";
+    bool prepend_new_line = false;
     for (const auto& argument : output_arguments) {
-      printer << separator;
-      argument->GenerateAssertStatement(printer);
-      separator = "\n";
+      argument->GenerateAssertStatement(printer, prepend_new_line);
+      prepend_new_line = true;
     }
-    printer << separator;
+    printer << '\n';
     printer << finish_statement;
   }
-  printer << "};";
-
-  printer << "\n";
+  printer << "};\n";
 }
 
 void TestGenerator::GenerateFireAndForget(fidl_codec::PrettyPrinter& printer,
@@ -324,8 +323,7 @@ void TestGenerator::GenerateFireAndForget(fidl_codec::PrettyPrinter& printer,
     separator = ", ";
   }
 
-  printer << ");";
-  printer << "\n";
+  printer << ");\n";
 }
 
 std::string TestGenerator::GenerateSynchronizingConditionalWithinGroup(
@@ -338,7 +336,7 @@ std::string TestGenerator::GenerateSynchronizingConditionalWithinGroup(
     output << "received_" << index << "_" << req_index << "_ = "
            << "true;\n";
     output << "if (";
-    auto separator = "";
+    std::string separator;
     for (size_t i = 0; i < batch->size(); i++) {
       if (i != req_index) {
         output << separator << "received_" << index << "_" << i << "_";
@@ -346,11 +344,12 @@ std::string TestGenerator::GenerateSynchronizingConditionalWithinGroup(
       }
     }
     output << ") {\n";
-    output << "  " << final_statement;
-    output << "}\n";
+    output << "  " << final_statement << '\n';
+    output << "}";
   } else {
     output << final_statement;
   }
+  output << '\n';
 
   return output.str();
 }
@@ -358,16 +357,19 @@ std::string TestGenerator::GenerateSynchronizingConditionalWithinGroup(
 void TestGenerator::GenerateGroup(
     fidl_codec::PrettyPrinter& printer,
     std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>& groups,
-    size_t index) {
+    size_t index, bool prepend_new_line) {
+  if (prepend_new_line) {
+    printer << '\n';
+  }
   printer << "void Proxy::group_" << index << "() {\n";
   {
     fidl_codec::Indent indent(printer);
     std::string final_statement;
 
     if (index == groups.size() - 1) {
-      final_statement = "loop_.Quit();\n";
+      final_statement = "loop_.Quit();";
     } else {
-      final_statement = "group_" + std::to_string(index + 1) + "();\n";
+      final_statement = "group_" + std::to_string(index + 1) + "();";
     }
 
     // Prints each call within the group
@@ -388,6 +390,7 @@ void TestGenerator::GenerateGroup(
         } else {
           GenerateFireAndForget(printer, call_info_pair.first);
         }
+        printer << '\n';
         printer << final_statement_join;
       } else if (call_info_pair.first == nullptr) {
         // Only the first element of the pair is present. This is an event.

@@ -28,7 +28,7 @@ class TestGenerator : public CodeGenerator {
       fidl_codec::PrettyPrinter& printer,
       const std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>& async_calls,
       std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>::iterator iterator,
-      std::string_view final_statement);
+      std::string_view final_statement, bool prepend_new_line);
 
   void GenerateAsyncCall(fidl_codec::PrettyPrinter& printer,
                          std::pair<FidlCallInfo*, FidlCallInfo*> call_info_pair,
@@ -46,7 +46,7 @@ class TestGenerator : public CodeGenerator {
   void GenerateGroup(
       fidl_codec::PrettyPrinter& printer,
       std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>& groups,
-      size_t index);
+      size_t index, bool prepend_new_line);
 
   void GenerateTests();
 
