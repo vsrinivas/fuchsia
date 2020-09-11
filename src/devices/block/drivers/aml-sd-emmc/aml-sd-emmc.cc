@@ -1101,6 +1101,11 @@ void AmlSdEmmc::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSdEmmc::DdkSuspend(ddk::SuspendTxn txn) {
   ShutDown();
+
+  // DdkRelease() is not always called after this, so manually unpin the DMA buffers.
+  pinned_mmio_.reset();
+  descs_buffer_.release();
+
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
