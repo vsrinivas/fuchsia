@@ -5,9 +5,7 @@
 # This parameter contains tests that were originally provided by the ZN build
 # and inserted into bootfs or system images.
 # This list is mostly used by //bundles/bringup:tests.
-common_test_contents = [
-  "//src/storage/bin/factoryfs",
-]
+common_test_contents = []
 
 if (target_cpu == "x64") {
   common_test_contents += [
