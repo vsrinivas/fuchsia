@@ -5,7 +5,7 @@
 use rustc_hash::FxHashMap;
 use surpass::{
     self,
-    painter::BufferLayout,
+    painter::{BufferLayout, Rect},
     rasterizer::{self, Rasterizer},
     LinesBuilder,
 };
@@ -142,7 +142,12 @@ impl Composition {
         }
     }
 
-    pub fn render(&mut self, mut buffer: Buffer<'_>, background_color: [f32; 4]) {
+    pub fn render(
+        &mut self,
+        mut buffer: Buffer<'_>,
+        background_color: [f32; 4],
+        crop: Option<Rect>,
+    ) {
         self.remove_disabled();
 
         for (layer_id, layer) in &self.layers {
@@ -177,7 +182,7 @@ impl Composition {
                 .unwrap_or(0);
             let segments = rasterizer.segments().get(0..=last_segment).unwrap_or(&[]);
 
-            layout.print(&mut buffer.buffer, segments, background_color, |order| {
+            layout.print(&mut buffer.buffer, segments, background_color, crop, |order| {
                 let layer_id = orders_to_layers
                     .get(&order)
                     .expect("orders_to_layers was not populated in Composition::render");
@@ -220,7 +225,11 @@ mod tests {
         let mut buffer = [GREEN];
         let mut composition = Composition::new();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 1, ..Default::default() }, REDF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 1, ..Default::default() },
+            REDF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN]);
     }
@@ -235,7 +244,11 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(1, 0))
             .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -251,7 +264,11 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
         composition.insert_in_layer(layer_id, &pixel_path(2, 0));
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN, RED, RED]);
     }
@@ -267,7 +284,11 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() })
             .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN, RED_GREEN_50, RED_GREEN_50]);
     }
@@ -284,7 +305,11 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() })
             .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -310,7 +335,11 @@ mod tests {
             .insert_in_layer(layer_id2, &pixel_path(3, 0))
             .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 4, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 4, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [RED, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -320,7 +349,11 @@ mod tests {
 
         composition.get_mut(layer_id0).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -330,7 +363,11 @@ mod tests {
 
         composition.get_mut(layer_id2).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            GREENF,
+            None,
+        );
 
         assert_eq!(buffer, [GREEN, RED, GREEN, GREEN]);
         assert_eq!(composition.builder().len(), 4);

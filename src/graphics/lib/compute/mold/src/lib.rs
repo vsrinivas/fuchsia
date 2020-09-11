@@ -19,4 +19,4 @@ pub use path::Path;
 pub use point::Point;
 pub use utils::clear_buffer;
 
-pub use surpass::painter::{BlendMode, Fill, FillRule, Style};
+pub use surpass::painter::{BlendMode, Fill, FillRule, Rect, Style};

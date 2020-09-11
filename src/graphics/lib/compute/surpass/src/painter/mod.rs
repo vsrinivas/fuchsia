@@ -18,7 +18,7 @@ use crate::{
 mod buffer_layout;
 
 use buffer_layout::TileSlice;
-pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher};
+pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher, Rect};
 
 const LAST_BYTE_MASK: i32 = 0b1111_1111;
 const LAST_BIT_MASK: i32 = 0b1;
@@ -408,26 +408,6 @@ impl Painter {
         }
     }
 
-    fn covers_negative_i(&mut self, segments: &[CompactSegment]) -> Option<usize> {
-        search_last_by_key(segments, false, |segment| segment.tile_i().is_negative())
-            .map(|i| {
-                let i = i + 1;
-                let mut left: BTreeMap<u16, [i8; TILE_SIZE]> = BTreeMap::new();
-
-                for segment in &segments[i..] {
-                    left.entry(segment.layer()).or_insert_with(|| [0; TILE_SIZE])
-                        [segment.tile_y() as usize] += segment.cover();
-                }
-
-                for (layer, covers) in left {
-                    self.queue.push_back(CoverCarry { layer, covers });
-                }
-
-                i
-            })
-            .ok()
-    }
-
     fn compute_srgb(&mut self) {
         let colors: &[f32x8] = unsafe {
             slice::from_raw_parts(mem::transmute(self.colors.as_ptr()), self.colors.len() / 2)
@@ -469,14 +449,54 @@ impl Painter {
         clear_color: [f32; 4],
         flusher: Option<&Box<dyn Flusher>>,
         row: ChunksExactMut<'_, TileSlice>,
+        crop: Option<Rect>,
     ) where
         F: Fn(u16) -> Style + Send + Sync,
     {
-        if let Some(end) = self.covers_negative_i(segments) {
-            segments = &segments[..end];
+        let mut covers_left_of_row: BTreeMap<u16, [i8; TILE_SIZE]> = BTreeMap::new();
+        let mut populate_covers = |limit: Option<i16>| {
+            let query = search_last_by_key(segments, false, |segment| match limit {
+                Some(limit) => (segment.tile_i() - limit).is_positive(),
+                None => segment.tile_i().is_negative(),
+            });
+
+            if let Ok(i) = query {
+                let i = i + 1;
+
+                for segment in match limit {
+                    Some(_) => &segments[..i],
+                    None => &segments[i..],
+                } {
+                    covers_left_of_row.entry(segment.layer()).or_insert_with(|| [0; TILE_SIZE])
+                        [segment.tile_y() as usize] += segment.cover();
+                }
+
+                match limit {
+                    Some(_) => segments = &segments[i..],
+                    None => segments = &segments[..i],
+                }
+            }
+        };
+
+        populate_covers(None);
+
+        if let Some(rect) = &crop {
+            if rect.horizontal.start > 0 {
+                populate_covers(Some(rect.horizontal.start as i16 - 1));
+            }
+        }
+
+        for (layer, covers) in covers_left_of_row {
+            self.queue.push_back(CoverCarry { layer, covers });
         }
 
         for (i, tile) in row.enumerate() {
+            if let Some(rect) = &crop {
+                if !rect.horizontal.contains(&i) {
+                    continue;
+                }
+            }
+
             let current_segments =
                 search_last_by_key(segments, i as i16, |segment| segment.tile_i())
                     .map(|last_index| {
