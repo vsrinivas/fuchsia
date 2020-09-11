@@ -19,13 +19,16 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/watch_handler",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/time/lib/httpdate-hyper",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:log",
   ]
 
   sources = [
+    "src/httpsdate.rs",
     "src/main.rs",
     "src/push_source.rs",
   ]
@@ -33,7 +36,10 @@ rustc_binary("bin") {
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:matches",
+  ]
 }
 
 fuchsia_component("service") {

@@ -2,22 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod httpsdate;
 mod push_source;
 
-use crate::push_source::{PushSource, Update, UpdateAlgorithm};
+use crate::{
+    httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy},
+    push_source::PushSource,
+};
 use anyhow::{Context, Error};
-use async_trait::async_trait;
-use fidl_fuchsia_time_external::{Properties, PushSourceRequestStream, Status};
+use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use futures::{channel::mpsc::Sender, future::join, StreamExt, TryFutureExt};
+use fuchsia_zircon as zx;
+use futures::{future::join, StreamExt, TryFutureExt};
 use log::warn;
+
+/// Retry strategy used while polling for time.
+const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
+    min_between_failures: zx::Duration::from_seconds(1),
+    max_exponent: 3,
+    tries_per_exponent: 3,
+    between_successes: zx::Duration::from_minutes(30),
+};
+
+/// URI used to obtain time samples.
+// TODO(satsukiu): Decide on correct endpoint and move to config data.
+const REQUEST_URI: &str = "https://www.google.com/generate_204";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging")?;
 
-    let push_source = PushSource::new(DummyAlgorithm, Status::Ok);
+    let update_algorithm = HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?);
+    let push_source = PushSource::new(update_algorithm, Status::Ok);
     let update_fut = push_source.poll_updates();
 
     let mut fs = ServiceFs::new();
@@ -32,21 +49,4 @@ async fn main() -> Result<(), Error> {
 
     let (update_res, _service) = join(update_fut, service_fut).await;
     update_res
-}
-
-/// Temporary definition of an UpdateAlgorithm. Will be replaced with a source that makes HTTPS
-/// calls.
-struct DummyAlgorithm;
-
-#[async_trait]
-impl UpdateAlgorithm for DummyAlgorithm {
-    async fn update_device_properties(&self, _properties: Properties) {
-        // do nothing
-    }
-
-    async fn generate_updates(&self, _sink: Sender<Update>) -> Result<(), Error> {
-        // do nothing and hang
-        futures::future::pending::<()>().await;
-        Ok(())
-    }
 }
