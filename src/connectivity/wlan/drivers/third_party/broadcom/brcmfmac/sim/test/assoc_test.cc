@@ -317,7 +317,10 @@ void AssocTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
 
 void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.deauth_conf_count++; }
 
-void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { context_.deauth_ind_count++; }
+void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+  context_.deauth_ind_count++;
+  client_ifc_.stats_.deauth_indications.push_back(*ind);
+}
 
 void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
   context_.signal_ind_count++;
@@ -985,6 +988,10 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
+
+  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
+  const wlanif_deauth_indication_t& deauth_ind = client_ifc_.stats_.deauth_indications.front();
+  EXPECT_EQ(deauth_ind.locally_initiated, false);
 }
 
 // After assoc & disassoc, send disassoc again to test event handling

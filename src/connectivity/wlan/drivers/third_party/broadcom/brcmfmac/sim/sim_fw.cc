@@ -1202,7 +1202,7 @@ void SimFirmware::DisassocLocalClient(uint32_t reason) {
     // driver now
     simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, bssid, reason);
     hw_.Tx(disassoc_req_frame);
-    SetStateToDisassociated(reason);
+    SetStateToDisassociated(reason, true);
   } else {
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, kClientIfidx);
   }
@@ -1239,17 +1239,23 @@ void SimFirmware::HandleDisconnectForClientIF(
     return;
   }
 
-  SetStateToDisassociated(reason);
+  SetStateToDisassociated(reason, false);
   AssocClearContext();
 }
 
 // precondition: was associated
-void SimFirmware::SetStateToDisassociated(uint32_t reason) {
+void SimFirmware::SetStateToDisassociated(uint32_t reason, bool locally_initiated) {
   // Disable beacon watchdog that triggers disconnect
   DisableBeaconWatchdog();
+  uint32_t disassoc_event = BRCMF_E_DISASSOC;
+
+  // Firmware sends DISASSOC_IND when AP initiates the disassociation.
+  if (!locally_initiated) {
+    disassoc_event = BRCMF_E_DISASSOC_IND;
+  }
 
   // Proprogate disassociation to driver code
-  SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
+  SendEventToDriver(0, nullptr, disassoc_event, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
                     reason, assoc_state_.opts->bssid, kDisassocEventDelay);
   SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
                     reason, assoc_state_.opts->bssid, kLinkEventDelay);

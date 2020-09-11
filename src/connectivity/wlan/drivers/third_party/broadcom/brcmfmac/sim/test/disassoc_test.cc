@@ -43,8 +43,7 @@ TEST_F(SimTest, Disassoc) {
   // Verify reason code is propagated
   EXPECT_EQ(deauth_ind.reason_code, kDisassocReason);
   // Deauthenticated by AP so not locally initiated
-  // TODO(fxbug.dev/57613): Figure out what |locally_initiated| should be when AP disassociates
-  // client EXPECT_EQ(deauth_ind.locally_initiated, false);
+  EXPECT_EQ(deauth_ind.locally_initiated, false);
 }
 
 }  // namespace wlan::brcmfmac

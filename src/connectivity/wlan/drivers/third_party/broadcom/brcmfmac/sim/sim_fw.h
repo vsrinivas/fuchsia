@@ -335,7 +335,7 @@ class SimFirmware {
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(uint32_t reason);
-  void SetStateToDisassociated(uint32_t reason);
+  void SetStateToDisassociated(uint32_t reason, bool locally_initiated);
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
