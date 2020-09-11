@@ -44,6 +44,10 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
 __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   // make sure the thread saves a copy of the current cpu pointer
   t->arch().current_percpu_ptr = riscv64_get_percpu();
+  __asm__ volatile(
+      "mv   %0, sp"
+      : "=r" (t->arch().sp)
+      :: "memory");
 }
 
 __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {

@@ -16,6 +16,17 @@
 __BEGIN_CDECLS
 
 struct riscv64_percpu {
+  // The CPU number is used internally in Zircon
+  cpu_num_t cpu_num;
+
+  // The hart id is used by other components (SBI/PLIC etc...)
+  uint hart_id;
+
+  // Whether blocking is disallowed.  See arch_blocking_disallowed().
+  uint32_t blocking_disallowed;
+
+  // Number of spinlocks currently held.
+  uint32_t num_spinlocks;
 } __ALIGNED(MAX_CACHE_LINE);
 
 register struct riscv64_percpu *__riscv64_percpu __asm("x31");
@@ -29,21 +40,28 @@ static inline struct riscv64_percpu *riscv64_get_percpu(void) {
 }
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
-  return 0;
+  return riscv64_get_percpu()->cpu_num;
+}
+
+static inline cpu_num_t riscv64_curr_hart_id(void) {
+  return riscv64_get_percpu()->hart_id;
 }
 
 // TODO(ZX-3068) get num_cpus from topology.
 // This needs to be set very early (before arch_init).
 static inline void arch_set_num_cpus(uint cpu_count) {
+  extern uint riscv64_num_cpus;
+  riscv64_num_cpus = cpu_count;
 }
 
 static inline uint arch_max_num_cpus(void) {
-  return 1;
+  extern uint riscv64_num_cpus;
+
+  return riscv64_num_cpus;
 }
 
-#define READ_PERCPU_FIELD32(field) 0
-
-#define WRITE_PERCPU_FIELD32(field, value)
+#define READ_PERCPU_FIELD32(field) riscv64_get_percpu()->field
+#define WRITE_PERCPU_FIELD32(field, value) riscv64_get_percpu()->field = value
 
 __END_CDECLS
 
