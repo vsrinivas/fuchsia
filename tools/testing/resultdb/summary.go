@@ -58,9 +58,10 @@ func SummaryToResultSink(s *runtests.TestSummary, outputRoot string) []*sinkpb.T
 // mapped to result_sink.Status.
 func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *runtests.TestDetails) []*sinkpb.TestResult {
 	testResult := []*sinkpb.TestResult{}
-	// Ignore error, testStatus will be set to sinkpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
-	// And when passed to determineExpected, sinkpb.TestStatus_STATUS_UNSPECIFIED will be handled correctly.
-	// testStatus, _ := testDetailResultToResultDBStatus(testDetail.Result)
+
+	// Ignore error, testStatus will be set to resultpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
+	// And when passed to determineExpected, resultpb.TestStatus_STATUS_UNSPECIFIED will be handled correctly.
+	testStatus, _ := testDetailResultToResultDBStatus(testDetail.Result)
 
 	for _, testCase := range testCases {
 		testID := fmt.Sprintf("%s/%s:%s", testDetail.Name, testCase.SuiteName, testCase.CaseName)
@@ -68,19 +69,19 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 			TestId: testID,
 			Tags:   []*resultpb.StringPair{{Key: "format", Value: testCase.Format}},
 		}
-		// testCaseStatus, err := testCaseStatusToResultDBStatus(testCase.Status)
-		// if err != nil {
-		// 	log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testID, err)
-		// 	continue
-		// }
-		// r.Status = testCaseStatus
+		testCaseStatus, err := testCaseStatusToResultDBStatus(testCase.Status)
+		if err != nil {
+			log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testID, err)
+			continue
+		}
+		r.Status = testCaseStatus
 		if startTime, err := ptypes.TimestampProto(testDetail.StartTime); err == nil {
 			r.StartTime = startTime
 		}
 		if testCase.Duration > 0 {
 			r.Duration = ptypes.DurationProto(testCase.Duration)
 		}
-		// r.Expected = determineExpected(testStatus, testCaseStatus)
+		r.Expected = determineExpected(testStatus, testCaseStatus)
 		testResult = append(testResult, &r)
 	}
 	return testResult
@@ -93,12 +94,12 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
 	}
-	// testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
-	// if err != nil {
-	// 	log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testDetail.Name, err)
-	// 	return nil, err
-	// }
-	// r.Status = testStatus
+	testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
+	if err != nil {
+		log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testDetail.Name, err)
+		return nil, err
+	}
+	r.Status = testStatus
 
 	if startTime, err := ptypes.TimestampProto(testDetail.StartTime); err == nil {
 		r.StartTime = startTime
@@ -116,7 +117,8 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 	} else {
 		log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
 	}
-	// r.Expected = determineExpected(testStatus, sinkpb.TestStatus_STATUS_UNSPECIFIED)
+
+	r.Expected = determineExpected(testStatus, resultpb.TestStatus_STATUS_UNSPECIFIED)
 	return &r, nil
 }
 
@@ -130,41 +132,41 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 // If a test is reported "PASS", then we will report all test cases within the same
 // test to pass as well. If a test is reported other than "PASS" or "SKIP", we will
 // process the test cases based on the test case result.
-func determineExpected(testStatus sinkpb.TestStatus, testCaseStatus sinkpb.TestStatus) bool {
+func determineExpected(testStatus resultpb.TestStatus, testCaseStatus resultpb.TestStatus) bool {
 	switch testStatus {
-	case sinkpb.TestStatus_PASS, sinkpb.TestStatus_SKIP:
+	case resultpb.TestStatus_PASS, resultpb.TestStatus_SKIP:
 		return true
-	case sinkpb.TestStatus_FAIL, sinkpb.TestStatus_CRASH, sinkpb.TestStatus_ABORT, sinkpb.TestStatus_STATUS_UNSPECIFIED:
+	case resultpb.TestStatus_FAIL, resultpb.TestStatus_CRASH, resultpb.TestStatus_ABORT, resultpb.TestStatus_STATUS_UNSPECIFIED:
 		switch testCaseStatus {
-		case sinkpb.TestStatus_PASS, sinkpb.TestStatus_SKIP:
+		case resultpb.TestStatus_PASS, resultpb.TestStatus_SKIP:
 			return true
-		case sinkpb.TestStatus_FAIL, sinkpb.TestStatus_CRASH, sinkpb.TestStatus_ABORT, sinkpb.TestStatus_STATUS_UNSPECIFIED:
+		case resultpb.TestStatus_FAIL, resultpb.TestStatus_CRASH, resultpb.TestStatus_ABORT, resultpb.TestStatus_STATUS_UNSPECIFIED:
 			return false
 		}
 	}
 	return false
 }
 
-func testCaseStatusToResultDBStatus(result testparser.TestCaseStatus) (sinkpb.TestStatus, error) {
+func testCaseStatusToResultDBStatus(result testparser.TestCaseStatus) (resultpb.TestStatus, error) {
 	switch result {
 	case testparser.Pass:
-		return sinkpb.TestStatus_PASS, nil
+		return resultpb.TestStatus_PASS, nil
 	case testparser.Fail:
-		return sinkpb.TestStatus_FAIL, nil
+		return resultpb.TestStatus_FAIL, nil
 	case testparser.Skip:
-		return sinkpb.TestStatus_SKIP, nil
+		return resultpb.TestStatus_SKIP, nil
 	}
-	return sinkpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
+	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
 }
 
-func testDetailResultToResultDBStatus(result runtests.TestResult) (sinkpb.TestStatus, error) {
+func testDetailResultToResultDBStatus(result runtests.TestResult) (resultpb.TestStatus, error) {
 	switch result {
 	case runtests.TestSuccess:
-		return sinkpb.TestStatus_PASS, nil
+		return resultpb.TestStatus_PASS, nil
 	case runtests.TestFailure:
-		return sinkpb.TestStatus_FAIL, nil
+		return resultpb.TestStatus_FAIL, nil
 	}
-	return sinkpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
+	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
 }
 
 func isReadable(p string) bool {

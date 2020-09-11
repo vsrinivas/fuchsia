@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
+	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
@@ -71,51 +71,51 @@ func TestIsReadable(t *testing.T) {
 
 func TestDetermineExpected(t *testing.T) {
 	testCases := []struct {
-		testStatus     sinkpb.TestStatus
-		testCaseStatus sinkpb.TestStatus
+		testStatus     resultpb.TestStatus
+		testCaseStatus resultpb.TestStatus
 		expected       bool
 	}{
 		{
 			// test passed, test case result is ignored.
-			testStatus:     sinkpb.TestStatus_PASS,
-			testCaseStatus: sinkpb.TestStatus_FAIL,
+			testStatus:     resultpb.TestStatus_PASS,
+			testCaseStatus: resultpb.TestStatus_FAIL,
 			expected:       true,
 		},
 		{
 			// test failed and has test case status,
 			// report on test case result.
-			testStatus:     sinkpb.TestStatus_FAIL,
-			testCaseStatus: sinkpb.TestStatus_PASS,
+			testStatus:     resultpb.TestStatus_FAIL,
+			testCaseStatus: resultpb.TestStatus_PASS,
 			expected:       true,
 		},
 		{
 			// test failed and no test case status,
 			// report test result.
-			testStatus:     sinkpb.TestStatus_FAIL,
-			testCaseStatus: sinkpb.TestStatus_STATUS_UNSPECIFIED,
+			testStatus:     resultpb.TestStatus_FAIL,
+			testCaseStatus: resultpb.TestStatus_STATUS_UNSPECIFIED,
 			expected:       false,
 		},
 		{
 			// cannot determine test status,
 			// report on test cast result.
-			testStatus:     sinkpb.TestStatus_STATUS_UNSPECIFIED,
-			testCaseStatus: sinkpb.TestStatus_PASS,
+			testStatus:     resultpb.TestStatus_STATUS_UNSPECIFIED,
+			testCaseStatus: resultpb.TestStatus_PASS,
 			expected:       true,
 		},
 		{
 			// cannot determine both test and test case result
-			testStatus:     sinkpb.TestStatus_STATUS_UNSPECIFIED,
-			testCaseStatus: sinkpb.TestStatus_STATUS_UNSPECIFIED,
+			testStatus:     resultpb.TestStatus_STATUS_UNSPECIFIED,
+			testCaseStatus: resultpb.TestStatus_STATUS_UNSPECIFIED,
 			expected:       false,
 		},
 		{
-			testStatus:     sinkpb.TestStatus_PASS,
-			testCaseStatus: sinkpb.TestStatus_PASS,
+			testStatus:     resultpb.TestStatus_PASS,
+			testCaseStatus: resultpb.TestStatus_PASS,
 			expected:       true,
 		},
 		{
-			testStatus:     sinkpb.TestStatus_FAIL,
-			testCaseStatus: sinkpb.TestStatus_FAIL,
+			testStatus:     resultpb.TestStatus_FAIL,
+			testCaseStatus: resultpb.TestStatus_FAIL,
 			expected:       false,
 		},
 	}
