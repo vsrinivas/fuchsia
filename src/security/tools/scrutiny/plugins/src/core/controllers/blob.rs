@@ -9,6 +9,7 @@ use {
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
+    scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::env,
@@ -64,6 +65,19 @@ impl DataController for BlobController {
 
     fn description(&self) -> String {
         "Returns a base64 encoded blob for the given merkle.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("blob - Returns a base64 encoded blob for a given merkle.")
+            .summary("blob")
+            .description(
+                "Provides a base64 encoded blob for any given merkle \
+            This is useful for extracting the contents of certain merkles in the \
+            system quickly.",
+            )
+            .arg("--merkle", "The merkle you want to extract")
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {

@@ -8,6 +8,7 @@ use {
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
+    scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},
@@ -22,8 +23,22 @@ impl DataController for RoutesGraphController {
         let routes = model.routes().read().unwrap();
         Ok(serde_json::to_value(routes.clone())?)
     }
+
     fn description(&self) -> String {
         "Returns every route between components".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("routes - Dumps every route between components.")
+            .summary("routes")
+            .description(
+                "Dumps every route used between components. \
+            This dumps all the routes in the Data Model and is intended \
+            as a way to export this data into a file for further analysis as \
+            raw data.",
+            )
+            .build()
     }
 }
 
@@ -76,6 +91,17 @@ impl DataController for ComponentUsesGraphController {
 
     fn description(&self) -> String {
         "Returns all the services a given component uses.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("component.uses - Shows all the services a component uses.")
+            .summary("component.uses --component_id 123")
+            .description(
+                "Lists every component that this component uses. See \
+            component.from_uri to retrieve the component_id.",
+            )
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
@@ -132,6 +158,17 @@ impl DataController for ComponentUsedGraphController {
 
     fn description(&self) -> String {
         "Returns all the components a given component is used by.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("component.used - Shows all the services a component is used by.")
+            .summary("component.used --component_id 123")
+            .description(
+                "Lists every component that this component is used by. See \
+            component.from_uri to retrieve the component_id.",
+            )
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {

@@ -27,6 +27,7 @@ if (!is_fuchsia) {
     sources = [
       "src/bootfs.rs",
       "src/lib.rs",
+      "src/usage.rs",
       "src/zbi.rs",
       "src/zstd.rs",
     ]

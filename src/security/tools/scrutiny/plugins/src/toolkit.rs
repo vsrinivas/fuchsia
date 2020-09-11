@@ -15,7 +15,7 @@ use {
         model::model::*,
         plugin,
     },
-    scrutiny_utils::{bootfs::*, zbi::*},
+    scrutiny_utils::{bootfs::*, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::env,
@@ -84,7 +84,17 @@ impl DataController for ZbiExtractController {
     }
 
     fn usage(&self) -> String {
-        "/tool/zbi/extract --input /path/to/zbi --output /out/dir".to_string()
+        UsageBuilder::new()
+            .name("tool.zbi.extract - Extracts Zircon Boot Images")
+            .summary("tool.zbi.extract --input foo.zbi --output /foo/bar")
+            .description(
+                "Extracts zircon boot images into their sections \
+            some recognized sections like bootfs are further parsed out into \
+            directories.",
+            )
+            .arg("--input", "Path to the input zbi file")
+            .arg("--output", "Path to the output directory")
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
@@ -172,7 +182,18 @@ impl DataController for PackageExtractController {
     }
 
     fn usage(&self) -> String {
-        "/tool/package/extract --url fuchsia-pkg://fuchsia.com/foo --output /out/dir".to_string()
+        UsageBuilder::new()
+            .name("tool.package.extract - Extracts Fuchsia package to a directory.")
+            .summary("tool.package.extract --url fuchsia-pkg://fuchsia.com/foo --output /tmp/foo")
+            .description(
+                "Extracts package from a given url to some provided file path. \
+                Internally this is resolving the URL and extracting the internal
+                Fuchsia Archive and resolving all the merkle paths.
+                ",
+            )
+            .arg("--url", "Package url that you wish to extract.")
+            .arg("--output", "Path to the output directory")
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {

@@ -14,6 +14,7 @@ use {
         model::model::*,
         plugin,
     },
+    scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::sync::Arc,
@@ -43,6 +44,19 @@ impl DataController for ComponentSearchController {
 
     fn description(&self) -> String {
         "Searches for matching component urls across all components.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("search.components - Search for components with a given url pattern.")
+            .summary("search.components --url fuchsia-pkg://some_url_pattern")
+            .description(
+                "Searches all the component urls and returns the components\
+            that match the selected url pattern.
+            ",
+            )
+            .arg("--url", "Searches for matching url components.")
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
@@ -76,6 +90,19 @@ impl DataController for ManifestSearchController {
 
     fn description(&self) -> String {
         "Searches for matching manifest file names in all packages.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("search.manifests - Search matching manifest patterns.")
+            .summary("search.manifests --manifest deprecated_feature")
+            .description(
+                "Searches for a specific pattern or protocol used in \
+            CMX files. This is useful if you want to search for all the manifests \
+            that contain a certain feature, protocol or pattern.",
+            )
+            .arg("--manifest", "The manifest pattern to search for.")
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
@@ -112,6 +139,20 @@ impl DataController for PackageSearchController {
         "Searches for matching file names in all packages.".to_string()
     }
 
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("search.packages - Search for files in packages.")
+            .summary("search.packages --files some_file_name ")
+            .description(
+                "Searches for specific file names within all the \
+            indexed packages. This is useful if you want to track down which
+            packages are using a certain shared library or which package a
+            certain configuration file is in.",
+            )
+            .arg("--files", "The file to search for.")
+            .build()
+    }
+
     fn hints(&self) -> Vec<(String, HintDataType)> {
         vec![("--files".to_string(), HintDataType::NoType)]
     }
@@ -138,8 +179,22 @@ impl DataController for RouteSearchController {
         }
         Ok(json!(response))
     }
+
     fn description(&self) -> String {
         "Searches for matching service names across all routes.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("search.routes - Searchs all the routes for a particular service.")
+            .summary("search.routes --service_name Some.Service.Name")
+            .description(
+                "Searches all of the routes indexed for a particular service \
+            name usage.
+            ",
+            )
+            .arg("--service_name", "Searches all the routes for usage of the service name")
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {

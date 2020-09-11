@@ -5,6 +5,7 @@
 use {
     anyhow::Result,
     scrutiny::{model::controller::DataController, model::model::DataModel},
+    scrutiny_utils::usage::UsageBuilder,
     serde_json::{self, value::Value},
     std::sync::Arc,
 };
@@ -26,6 +27,17 @@ impl DataController for BootfsPathsController {
     fn description(&self) -> String {
         "Returns all the files in bootfs.".to_string()
     }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("zbi.bootfs - Lists all the BootFS files found in the ZBI.")
+            .summary("zbi.bootfs")
+            .description(
+                "Lists all the BootFS ZBI files found in the ZBI.\"
+            More specifically it is looking at the ZBI found in the \
+            fuchsia-pkg://fuchsia.com/update package.",
+            )
+            .build()
+    }
 }
 
 #[derive(Default)]
@@ -41,6 +53,17 @@ impl DataController for ZbiCmdlineController {
     }
     fn description(&self) -> String {
         "Returns the zbi cmdline section as a string.".to_string()
+    }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("zbi.cmdline - Lists the command line params set in the ZBI.")
+            .summary("zbi.cmdline")
+            .description(
+                "Lists all the command line parameters set in the ZBI. \
+            More specifically it is looking at the ZBI found in the \
+            fuchsia-pkg://fuchsia.com/update package.",
+            )
+            .build()
     }
 }
 
@@ -62,6 +85,17 @@ impl DataController for ZbiSectionsController {
     }
     fn description(&self) -> String {
         "Returns all the typed sections found in the zbi.".to_string()
+    }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("zbi.sections - Lists the section types set in the ZBI.")
+            .summary("zbi.sections")
+            .description(
+                "Lists all the unique section types set in the ZBI. \
+            More specifically it is looking at the ZBI found in the \
+            fuchsia-pkg://fuchsia.com/update package.",
+            )
+            .build()
     }
 }
 

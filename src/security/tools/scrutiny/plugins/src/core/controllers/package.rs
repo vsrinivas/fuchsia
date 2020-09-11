@@ -5,6 +5,7 @@
 use {
     anyhow::Result,
     scrutiny::{model::controller::DataController, model::model::DataModel},
+    scrutiny_utils::usage::UsageBuilder,
     serde_json::{self, value::Value},
     std::sync::Arc,
 };
@@ -20,6 +21,17 @@ impl DataController for PackagesGraphController {
     }
     fn description(&self) -> String {
         "Returns all Fuchsia packages and their file index.".to_string()
+    }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("packages - Dumps all of the package data in the model")
+            .summary("packages")
+            .description(
+                "Dumps all of the metadata for every package in the \
+            Data Model. This includes all the files in the package and the \
+            package url for every package indexed.",
+            )
+            .build()
     }
 }
 

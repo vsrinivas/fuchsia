@@ -8,6 +8,7 @@ use {
         model::controller::{DataController, HintDataType},
         model::model::{DataModel, ManifestData},
     },
+    scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},
@@ -25,6 +26,18 @@ impl DataController for ComponentsGraphController {
     }
     fn description(&self) -> String {
         "Returns every component indexed by the data model.".to_string()
+    }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("components - Dumps every component indexed in the Data Model.")
+            .summary("components")
+            .description(
+                "Dumps every component indexed by the Data Model. Note that \
+            a single Fuchsia package can contain multiple components (cmx or cm) \
+            manifests. This is intended for raw data analysis by piping this data \
+            into a file.",
+            )
+            .build()
     }
 }
 
@@ -51,8 +64,21 @@ impl DataController for ComponentIdGraphController {
             format!("Could not find a component with component_id {}.", req.component_id),
         )));
     }
+
     fn description(&self) -> String {
         "Returns a specific component given its internal id.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("components.id")
+            .summary("components.id --component_id 123")
+            .description(
+                "Returns all the information on a specific component \
+            given its component_id. See component.from_uri for how to retrieve the \
+            internal component_id.",
+            )
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
@@ -93,6 +119,17 @@ impl DataController for ComponentFromUriGraphController {
 
     fn description(&self) -> String {
         "Returns the internal component id of a component from its url.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("components.from_uri")
+            .summary("components.from_uri --uri fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx")
+            .description(
+                "Returns the internal component_id from the component URI. \
+            Component Ids are not stable between model syncs",
+            )
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
@@ -152,6 +189,17 @@ impl DataController for RawManifestGraphController {
 
     fn description(&self) -> String {
         "Returns the raw manifest of a given component_id.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("components.raw_manifest")
+            .summary("components.raw_manifest --component-id 123")
+            .description(
+                "Returns a component manifest given its unique id. See \
+            component.from_uri on how to retrieve the component_id.",
+            )
+            .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {

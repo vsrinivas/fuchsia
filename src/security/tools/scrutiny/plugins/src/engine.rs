@@ -17,6 +17,7 @@ use {
         model::controller::DataController,
         model::model::DataModel,
     },
+    scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::sync::{Arc, Mutex, RwLock},
@@ -81,6 +82,17 @@ impl DataController for HealthController {
     fn description(&self) -> String {
         "Health endpoint that always returns ok.".to_string()
     }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.health.status - Health endpoint")
+            .summary("engine.health.status")
+            .description(
+                "Health endpoint that always returns ok. \
+            This is used mostly by remote endpoints to determine if the \
+            connection and the api is available",
+            )
+            .build()
+    }
 }
 
 /// Lists all the registered plugins and their states.
@@ -114,6 +126,13 @@ impl DataController for PluginListController {
     }
     fn description(&self) -> String {
         "Returns a list of all plugins and their state.".to_string()
+    }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.plugin.list - Lists all the plugins")
+            .summary("engine.plugin.list")
+            .description("Lists all of the available plugins and their state")
+            .build()
     }
 }
 
@@ -156,6 +175,16 @@ impl DataController for ModelStatsController {
     fn description(&self) -> String {
         "Returns aggregated model statistics.".to_string()
     }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.model.stats - Lists important model statistics")
+            .summary("engine.model.stats")
+            .description(
+                "Lists the number of: components, packages, manifests, \
+            routes, zbi sections and bootfs files currently loaded in the model.",
+            )
+            .build()
+    }
 }
 
 /// Displays a list of all the collectors.
@@ -189,6 +218,17 @@ impl DataController for CollectorListController {
     fn description(&self) -> String {
         "Returns a list of all loaded data collectors.".to_string()
     }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.controller.list - Lists all of the data controllers")
+            .summary("engine.controller.list")
+            .description(
+                "Lists all of the controllers that are currently loaded \
+            in Scrutiny. This command provides internal inspection of the Scrutiny \
+            engine and is helpful for debugging plugin issues.",
+            )
+            .build()
+    }
 }
 
 /// Runs all of the collectors when called.
@@ -213,6 +253,18 @@ impl DataController for CollectorSchedulerController {
     fn description(&self) -> String {
         "Schedules all data collectors to run.".to_string()
     }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.collector.schedule - Runs all of the DataCollectors")
+            .summary("engine.collector.schedule")
+            .description(
+                "Schedules all the loaded data collectors to run. This \
+            repopulates the DataModel with all of the data provided by the collectors. \
+            This is useful if you want to force the model to be refreshed with the \
+            latest system data.",
+            )
+            .build()
+    }
 }
 
 /// Lists all of the controllers.
@@ -232,6 +284,16 @@ impl DataController for ControllerListController {
     }
     fn description(&self) -> String {
         "Lists all loaded data collectors.".to_string()
+    }
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.collector.list- List all of the DataCollectors")
+            .summary("engine.collector.list")
+            .description(
+                "Lists all of the loaded Data Collectors. This can be\
+            useful for debugging plugins.",
+            )
+            .build()
     }
 }
 
