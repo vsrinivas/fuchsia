@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 driver_module("usb-bus") {
   configs += [
@@ -70,4 +71,9 @@ test("usb-device") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/utf_conversion",
   ]
+}
+
+bootfs_test("usb-device-bootfs-test") {
+  name = "usb-device"
+  deps = [ ":usb-device" ]
 }

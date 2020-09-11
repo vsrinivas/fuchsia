@@ -27,6 +27,7 @@ group("tests") {
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//src/devices/tests/devfs:devfs-bootfs-test",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",  # HW-required.
+    "//src/devices/usb/drivers/usb-bus:usb-device-bootfs-test",
     "//src/devices/usb/tests/usb:usb-package",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # HW-required.
@@ -241,7 +242,7 @@ group("tests") {
   ]
 
   # Tests without metadata.
-  deps += [ "//src/devices/usb/drivers/usb-bus:usb-device" ]
+  deps += []
 
   # The following targets contribute tests to the zbi.
   deps += [ "//build/unification/future/images:legacy_tests" ] +
