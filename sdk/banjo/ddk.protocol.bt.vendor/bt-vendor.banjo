@@ -1,0 +1,54 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.bt.vendor;
+
+/// Bitmask of features supported by the vendor.
+enum BtVendorFeatures : uint32 {
+    SET_ACL_PRIORITY_COMMAND = 0x1;
+    // Bits 1-31 reserved.
+};
+
+enum BtVendorAclPriority : uint8 {
+    NORMAL = 0;
+    HIGH = 1;
+};
+
+enum BtVendorAclDirection : uint8 {
+    SOURCE = 0;
+    SINK = 1;
+};
+
+struct BtVendorSetAclPriorityParams {
+    uint16 connection_handle;
+    BtVendorAclPriority priority;
+    /// The direction data should be prioritized in. May not be supported by all
+    /// vendors. Ignored when priority is normal.
+    BtVendorAclDirection direction;
+};
+
+union BtVendorParams {
+   BtVendorSetAclPriorityParams set_acl_priority;
+};
+
+enum BtVendorCommand {
+    /// Marks a connection as normal or high priority.
+    /// Parameters: `BtVendorSetAclPriorityParams`
+    SET_ACL_PRIORITY = 0;
+};
+
+/// The BtVendor protocol may be implemented by vendor drivers to support feature interrogation
+/// and vendor command encoding.
+[Layout = "ddk-protocol"]
+protocol BtVendor {
+    /// Returns bitmask of the features the vendor supports.
+    GetFeatures() -> (BtVendorFeatures features);
+
+    /// Encodes the vendor HCI command `command` using `params` and returns the encoded command as
+    /// a buffer. `params` must contain the parameter struct for the specified command, as
+    /// documented in `BtVendorCommand`.
+    /// Returns an error status if the command is not supported or the paramaters are invalid.
+    EncodeCommand(BtVendorCommand command, BtVendorParams params)
+        -> (zx.status status, vector<voidptr> encoded);
+};
