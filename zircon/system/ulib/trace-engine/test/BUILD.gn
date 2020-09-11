@@ -43,6 +43,6 @@ test("hash-table-test") {
 }
 
 bootfs_test("hash-table-bootfs-test") {
-  name = "hash-table-test"
+  name = "trace-engine-hash-table-test"
   deps = [ ":hash-table-test" ]
 }

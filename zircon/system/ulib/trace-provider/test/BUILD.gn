@@ -55,6 +55,6 @@ test("provider-test") {
 }
 
 bootfs_test("trace-provider-bootfs-test") {
-  name = "provider-test"
+  name = "trace-provider-test"
   deps = [ ":provider-test" ]
 }
