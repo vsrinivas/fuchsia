@@ -1,11 +1,22 @@
 {
     program: {
         binary: "bin/console",
+        args: [
+            "--allow-log-tag",
+            "driver_manager.cm",
+            "--allow-log-tag",
+            "driver",
+            "--allow-log-tag",
+            "device",
+            "--deny-log-tag",
+            "klog",
+        ],
     },
     use: [
         { runner: "elf" },
         { protocol: "/svc/fuchsia.boot.RootResource" },
         { protocol: "/svc/fuchsia.boot.WriteOnlyLog" },
+        { protocol: "/svc/fuchsia.logger.Log" },
     ],
     expose: [
         {

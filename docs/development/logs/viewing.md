@@ -30,6 +30,9 @@ log. This includes those [forwarded from the klog].
 [`log_listener`] receives logs through the [`fuchsia.logger.Log`] and
 [`fuchsia.logger.LogListenerSafe`] protocols.
 
+Additionally, some logs from syslog are printed to the serial console. By default, this includes the
+driver and `driver_manager` logs.
+
 #### Format
 
 [`log_listener`] emits lines in this format by default:

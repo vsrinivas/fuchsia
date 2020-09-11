@@ -208,6 +208,13 @@
             dependency: "weak_for_migration",
         },
 
+        // Offer the log services to the console
+        {
+            protocol: [ "/svc/fuchsia.logger.Log" ],
+            from: "parent",
+            to: [ "#console" ],
+        },
+
         // Offer power_manager's config data to it, so it can read its config
         {
             directory: "/config/data",

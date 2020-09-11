@@ -4,12 +4,10 @@
 
 #include "console.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fidl/llcpp/coding.h>
-#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/channel.h>
+#include <lib/syslog/logger.h>
 
+#include <fbl/string_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -32,12 +30,10 @@ TEST(ConsoleTestCase, Read) {
     write_count--;
     return ZX_OK;
   };
-
   Console::TxSink tx_sink = [](const uint8_t* buffer, size_t length) { return ZX_OK; };
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<Console> console;
-  ASSERT_OK(Console::Create(loop.dispatcher(), std::move(rx_source), std::move(tx_sink), &console));
+  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
   ASSERT_OK(sync_completion_wait_deadline(&rx_source_done, ZX_TIME_INFINITE));
 
   uint8_t data[kReadSize] = {};
@@ -53,6 +49,7 @@ TEST(ConsoleTestCase, Read) {
 TEST(ConsoleTestCase, Write) {
   uint8_t kExpectedBuffer[] = u8"Hello World";
   size_t kExpectedLength = sizeof(kExpectedBuffer) - 1;
+
   // Cause the RX thread to exit
   Console::RxSource rx_source = [](uint8_t* byte) { return ZX_ERR_NOT_SUPPORTED; };
   Console::TxSink tx_sink = [kExpectedLength, &kExpectedBuffer](const uint8_t* buffer,
@@ -62,14 +59,70 @@ TEST(ConsoleTestCase, Write) {
     return ZX_OK;
   };
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<Console> console;
-  ASSERT_OK(Console::Create(loop.dispatcher(), std::move(rx_source), std::move(tx_sink), &console));
+  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
 
   size_t actual;
   ASSERT_OK(
       console->Write(reinterpret_cast<const void*>(kExpectedBuffer), kExpectedLength, &actual));
   ASSERT_EQ(actual, kExpectedLength);
+}
+
+// Verify that calling Log() writes data to the TxSink
+TEST(ConsoleTestCase, Log) {
+  const char kExpectedBuffer[] = "[00004.321] 00001:00002> [tag] INFO: Hello World\n";
+  size_t kExpectedLength = sizeof(kExpectedBuffer) - 1;
+  fbl::StringBuffer<Console::kMaxWriteSize> actual;
+
+  // Cause the RX thread to exit
+  Console::RxSource rx_source = [](uint8_t* byte) { return ZX_ERR_NOT_SUPPORTED; };
+  Console::TxSink tx_sink = [&actual](const uint8_t* buffer, size_t length) {
+    actual.Append(reinterpret_cast<const char*>(buffer), length);
+    return ZX_OK;
+  };
+
+  fbl::RefPtr<Console> console;
+  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
+
+  fidl::StringView tag = "tag";
+  llcpp::fuchsia::logger::LogMessage log{
+      .pid = 1,
+      .tid = 2,
+      .time = 4321000000,
+      .severity = FX_LOG_INFO,
+      .tags = {fidl::unowned_ptr(&tag), 1},
+      .msg = {"Hello World"},
+  };
+  ASSERT_OK(console->Log(std::move(log)));
+
+  EXPECT_EQ(actual.size(), kExpectedLength);
+  EXPECT_STR_EQ(actual.c_str(), kExpectedBuffer);
+}
+
+// Verify that calling Log() does not write data to the TxSink if the tag is denied
+TEST(ConsoleTestCase, LogDenyTag) {
+  fbl::StringBuffer<Console::kMaxWriteSize> actual;
+
+  // Cause the RX thread to exit
+  Console::RxSource rx_source = [](uint8_t* byte) { return ZX_ERR_NOT_SUPPORTED; };
+  Console::TxSink tx_sink = [](const uint8_t* buffer, size_t length) {
+    ADD_FAILURE("Unexpected write");
+    return ZX_OK;
+  };
+
+  fbl::RefPtr<Console> console;
+  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {"deny-tag"}, &console));
+
+  fidl::StringView tag = "deny-tag";
+  llcpp::fuchsia::logger::LogMessage log{
+      .pid = 1,
+      .tid = 2,
+      .time = 4321000000,
+      .severity = FX_LOG_INFO,
+      .tags = {fidl::unowned_ptr(&tag), 1},
+      .msg = {"Goodbye World"},
+  };
+  ASSERT_OK(console->Log(std::move(log)));
 }
 
 }  // namespace

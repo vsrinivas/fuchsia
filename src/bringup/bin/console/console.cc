@@ -7,6 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/syslog/logger.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,8 +20,10 @@
 #include <thread>
 
 #include <fbl/algorithm.h>
+#include <fbl/string_buffer.h>
 
-zx_status_t Console::Create(async_dispatcher_t* dispatcher, RxSource rx_source, TxSink tx_sink,
+zx_status_t Console::Create(RxSource rx_source, TxSink tx_sink,
+                            std::vector<std::string> denied_log_tags,
                             fbl::RefPtr<Console>* console) {
   zx::eventpair event1, event2;
   zx_status_t status = zx::eventpair::create(0, &event1, &event2);
@@ -28,18 +31,19 @@ zx_status_t Console::Create(async_dispatcher_t* dispatcher, RxSource rx_source, 
     return status;
   }
 
-  *console = fbl::MakeRefCounted<Console>(dispatcher, std::move(event1), std::move(event2),
-                                          std::move(rx_source), std::move(tx_sink));
+  *console =
+      fbl::MakeRefCounted<Console>(std::move(event1), std::move(event2), std::move(rx_source),
+                                   std::move(tx_sink), std::move(denied_log_tags));
   return ZX_OK;
 }
 
-Console::Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::eventpair event2,
-                 RxSource rx_source, TxSink tx_sink)
-    : dispatcher_(dispatcher),
-      rx_fifo_(std::move(event1)),
+Console::Console(zx::eventpair event1, zx::eventpair event2, RxSource rx_source, TxSink tx_sink,
+                 std::vector<std::string> denied_log_tags)
+    : rx_fifo_(std::move(event1)),
       rx_event_(std::move(event2)),
       rx_source_(std::move(rx_source)),
       tx_sink_(std::move(tx_sink)),
+      denied_log_tags_(std::move(denied_log_tags)),
       rx_thread_(std::thread([this]() { DebugReaderThread(); })) {}
 
 Console::~Console() { rx_thread_.join(); }
@@ -87,3 +91,77 @@ void Console::DebugReaderThread() {
     rx_fifo_.Write(&ch, 1, &actual);
   }
 }
+
+zx_status_t Console::Log(llcpp::fuchsia::logger::LogMessage log) {
+  fbl::StringBuffer<kMaxWriteSize> prefix;
+  auto time = zx::nsec(log.time);
+  prefix.AppendPrintf("[%05ld.%03ld] %05lu:%05lu> [", time.to_secs(), time.to_msecs() % 1000,
+                      log.pid, log.tid);
+  auto count = log.tags.count();
+  for (auto& tag : log.tags) {
+    for (auto& denied_log_tag : denied_log_tags_) {
+      if (strncmp(denied_log_tag.data(), tag.data(), tag.size()) == 0) {
+        return ZX_OK;
+      }
+    }
+    prefix.AppendPrintf("%.*s", static_cast<int>(tag.size()), tag.data());
+    if (--count > 0) {
+      prefix.Append(", ");
+    }
+  }
+  switch (log.severity) {
+    case FX_LOG_TRACE:
+      prefix.Append("] TRACE: ");
+      break;
+    case FX_LOG_DEBUG:
+      prefix.Append("] DEBUG: ");
+      break;
+    case FX_LOG_INFO:
+      prefix.Append("] INFO: ");
+      break;
+    case FX_LOG_WARNING:
+      prefix.Append("] WARNING: ");
+      break;
+    case FX_LOG_ERROR:
+      prefix.Append("] ERROR: ");
+      break;
+    case FX_LOG_FATAL:
+      prefix.Append("] FATAL: ");
+      break;
+    default:
+      prefix.AppendPrintf("] VLOG(%d): ", FX_LOG_INFO - log.severity);
+  }
+
+  zx_status_t status = tx_sink_(reinterpret_cast<const uint8_t*>(prefix.data()), prefix.size());
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = tx_sink_(reinterpret_cast<const uint8_t*>(log.msg.data()), log.msg.size());
+  if (status != ZX_OK) {
+    return status;
+  }
+  return tx_sink_(reinterpret_cast<const uint8_t*>("\n"), 1);
+}
+
+void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync completer) {
+  zx_status_t status = Log(std::move(log));
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+  completer.Reply();
+}
+
+void Console::LogMany(fidl::VectorView<llcpp::fuchsia::logger::LogMessage> logs,
+                      LogManyCompleter::Sync completer) {
+  for (auto& log : logs) {
+    zx_status_t status = Log(std::move(log));
+    if (status != ZX_OK) {
+      completer.Close(status);
+      return;
+    }
+  }
+  completer.Reply();
+}
+
+void Console::Done(DoneCompleter::Sync completer) {}
