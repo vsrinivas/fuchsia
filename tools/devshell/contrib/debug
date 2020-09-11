@@ -28,7 +28,7 @@
 ##    --target-core     Look on the target for a minidump file taken by
 ##                      crashpad, download it and load it into zxdb.
 ##    --unwind          Choose the unwinder to use. Options are "ng" for "ngunwind" (Fuchsia's
-##                      fork of libunwind), or "aosp" (Android's unwinder). Defaults to "ng".
+##                      fork of libunwind), or "aosp" (Android's unwinder). Defaults to "aosp".
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
 ##
