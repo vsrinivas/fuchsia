@@ -25,6 +25,7 @@ import (
 
 	"fidl/conformance"
 
+	"syscall/zx"
 	"syscall/zx/fidl"
 )
 
@@ -36,11 +37,25 @@ var _ = reflect.Copy
 func TestAllEncodeSuccessCases(t *testing.T) {
 {{ range .EncodeSuccessCases }}
 	{
+	{{- if .HandleDefs }}
+		handleTypes := {{ .HandleDefs }}
+		handles := createHandles(handleTypes)
+	{{- end }}
 		encodeSuccessCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
 			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
+	{{- if .HandleDefs }}
+			handleInfos: []zx.HandleInfo{
+		{{- range .Handles }}
+				{
+					Handle: handles[{{ . }}],
+					Type: handleTypes[{{ . }}],
+				},
+		{{- end }}
+			},
+	{{- end }}
 		}.check(t)
 	}
 {{ end }}
@@ -51,11 +66,25 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 func TestAllDecodeSuccessCases(t *testing.T) {
 {{ range .DecodeSuccessCases }}
 	{
+	{{- if .HandleDefs }}
+		handleTypes := {{ .HandleDefs }}
+		handles := createHandles(handleTypes)
+	{{- end }}
 		decodeSuccessCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
 			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
+	{{- if .HandleDefs }}
+			handleInfos: []zx.HandleInfo{
+		{{- range .Handles }}
+				{
+					Handle: handles[{{ . }}],
+					Type: handleTypes[{{ . }}],
+				},
+		{{- end }}
+			},
+	{{- end }}
 		}.check(t)
 	}
 {{ end }}
@@ -66,11 +95,17 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 func TestAllEncodeFailureCases(t *testing.T) {
 {{ range .EncodeFailureCases }}
 	{
+	{{- if .HandleDefs }}
+		handles := createHandles({{ .HandleDefs }})
+	{{- end }}
 		encodeFailureCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
 			input: &{{ .Value }},
 			code: {{ .ErrorCode }},
+	{{- if .HandleDefs }}
+			handles: handles,
+	{{- end }}
 		}.check(t)
 	}
 {{ end }}
@@ -81,12 +116,26 @@ func TestAllEncodeFailureCases(t *testing.T) {
 func TestAllDecodeFailureCases(t *testing.T) {
 {{ range .DecodeFailureCases }}
 	{
+	{{- if .HandleDefs }}
+		handleTypes := {{ .HandleDefs }}
+		handles := createHandles(handleTypes)
+	{{- end }}
 		decodeFailureCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
 			valTyp: reflect.TypeOf((*{{ .ValueType }})(nil)),
 			bytes: {{ .Bytes }},
 			code: {{ .ErrorCode }},
+	{{- if .HandleDefs }}
+			handleInfos: []zx.HandleInfo{
+		{{- range .Handles }}
+				{
+					Handle: handles[{{ . }}],
+					Type: handleTypes[{{ . }}],
+				},
+		{{- end }}
+			},
+	{{- end }}
 		}.check(t)
 	}
 {{ end }}
@@ -102,19 +151,22 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, Context, Value, Bytes string
+	Name, Context, Value, Bytes, HandleDefs string
+	Handles                                 []gidlir.Handle
 }
 
 type decodeSuccessCase struct {
-	Name, Context, Value, Bytes string
+	Name, Context, Value, Bytes, HandleDefs string
+	Handles                                 []gidlir.Handle
 }
 
 type encodeFailureCase struct {
-	Name, Context, Value, ErrorCode string
+	Name, Context, Value, ErrorCode, HandleDefs string
 }
 
 type decodeFailureCase struct {
-	Name, Context, ValueType, Bytes, ErrorCode string
+	Name, Context, ValueType, Bytes, ErrorCode, HandleDefs string
+	Handles                                                []gidlir.Handle
 }
 
 // GenerateConformanceTests generates Go tests.
@@ -169,10 +221,12 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:    testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				Context: marshalerContext(encoding.WireFormat),
-				Value:   value,
-				Bytes:   bytesBuilder(encoding.Bytes),
+				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				Context:    marshalerContext(encoding.WireFormat),
+				Value:      value,
+				Bytes:      buildBytes(encoding.Bytes),
+				HandleDefs: buildHandleDefs(encodeSuccess.HandleDefs),
+				Handles:    encoding.Handles,
 			})
 		}
 	}
@@ -192,10 +246,12 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:    testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Context: marshalerContext(encoding.WireFormat),
-				Value:   value,
-				Bytes:   bytesBuilder(encoding.Bytes),
+				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Context:    marshalerContext(encoding.WireFormat),
+				Value:      value,
+				Bytes:      buildBytes(encoding.Bytes),
+				HandleDefs: buildHandleDefs(decodeSuccess.HandleDefs),
+				Handles:    encoding.Handles,
 			})
 		}
 	}
@@ -219,10 +275,11 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:      testCaseName(encodeFailure.Name, wireFormat),
-				Context:   marshalerContext(wireFormat),
-				Value:     value,
-				ErrorCode: code,
+				Name:       testCaseName(encodeFailure.Name, wireFormat),
+				Context:    marshalerContext(wireFormat),
+				Value:      value,
+				ErrorCode:  code,
+				HandleDefs: buildHandleDefs(encodeFailure.HandleDefs),
 			})
 		}
 	}
@@ -246,11 +303,13 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
-				Context:   marshalerContext(encoding.WireFormat),
-				ValueType: valueType,
-				Bytes:     bytesBuilder(encoding.Bytes),
-				ErrorCode: code,
+				Name:       testCaseName(decodeFailure.Name, encoding.WireFormat),
+				Context:    marshalerContext(encoding.WireFormat),
+				ValueType:  valueType,
+				Bytes:      buildBytes(encoding.Bytes),
+				ErrorCode:  code,
+				HandleDefs: buildHandleDefs(decodeFailure.HandleDefs),
+				Handles:    encoding.Handles,
 			})
 		}
 	}

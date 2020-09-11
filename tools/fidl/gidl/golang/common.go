@@ -14,6 +14,7 @@ import (
 	"text/template"
 
 	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
@@ -37,7 +38,7 @@ func (w withGoFmt) Execute(wr io.Writer, data interface{}) error {
 	return err
 }
 
-func bytesBuilder(bytes []byte) string {
+func buildBytes(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("[]byte{\n")
 	for i, b := range bytes {
@@ -45,6 +46,28 @@ func bytesBuilder(bytes []byte) string {
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func buildHandleDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("[]zx.ObjectType{\n")
+	for i, d := range defs {
+		switch d.Subtype {
+		case fidlir.Channel:
+			builder.WriteString("zx.ObjectTypeChannel,")
+		case fidlir.Event:
+			builder.WriteString("zx.ObjectTypeEvent,")
+		default:
+			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
+		}
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
 	}
 	builder.WriteString("}")
 	return builder.String()
@@ -66,6 +89,19 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("&[]string{%q}[0]", value)
 		}
 		return strconv.Quote(value)
+	case gidlir.Handle:
+		rawHandle := fmt.Sprintf("handles[%d]", value)
+		handleDecl := decl.(*gidlmixer.HandleDecl)
+		switch handleDecl.Subtype() {
+		case fidlir.Handle:
+			return rawHandle
+		case fidlir.Channel:
+			return fmt.Sprintf("zx.Channel(%s)", rawHandle)
+		case fidlir.Event:
+			return fmt.Sprintf("zx.Event(%s)", rawHandle)
+		default:
+			panic(fmt.Sprintf("Handle subtype not supported %s", handleDecl.Subtype()))
+		}
 	case gidlir.Record:
 		if decl, ok := decl.(gidlmixer.RecordDeclaration); ok {
 			return onRecord(value, decl)
@@ -77,6 +113,10 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case nil:
 		if !decl.IsNullable() {
 			panic(fmt.Sprintf("got nil for non-nullable type: %T", decl))
+		}
+		_, ok := decl.(*gidlmixer.HandleDecl)
+		if ok {
+			return "zx.HandleInvalid"
 		}
 		return "nil"
 	}
@@ -108,7 +148,7 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			}
 			unknownData := field.Value.(gidlir.UnknownData)
 			fields = append(fields,
-				fmt.Sprintf("I_unknownData: %s", bytesBuilder(unknownData.Bytes)))
+				fmt.Sprintf("I_unknownData: %s", buildBytes(unknownData.Bytes)))
 			continue
 		}
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
@@ -166,8 +206,19 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 		return fmt.Sprintf("[%d]%s", decl.Size(), typeName(decl.Elem()))
 	case *gidlmixer.VectorDecl:
 		return fmt.Sprintf("%s[]%s", pointerPrefix, typeName(decl.Elem()))
+	case *gidlmixer.HandleDecl:
+		switch decl.Subtype() {
+		case fidlir.Handle:
+			return "zx.Handle"
+		case fidlir.Channel:
+			return "zx.Channel"
+		case fidlir.Event:
+			return "zx.Event"
+		default:
+			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
+		}
 	default:
-		panic("unhandled case")
+		panic(fmt.Sprintf("unhandled case %T", decl))
 	}
 }
 
@@ -200,6 +251,8 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:    "ErrInvalidXUnionTag",
 	gidlir.InvalidPaddingByte:         "ErrNonZeroPadding",
 	gidlir.StrictEnumUnknownValue:     "ErrInvalidEnumValue",
+	gidlir.ExtraHandles:               "ErrTooManyHandles",
+	gidlir.TooFewHandles:              "ErrNotEnoughHandles",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {
