@@ -8,7 +8,9 @@ and parses their reports into
 ## USAGE
 
 This program cannot be run directly. It exists in the system
-as a library used by the Input Stack.
+as a library used by [`RootPresenter`](/src/ui/bin/root_presenter/README.md).
+
+This library should not be used in new programs, as [fuchsia.ui.input:InputReports](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl) is deprecated.
 
 ### TEST
 
