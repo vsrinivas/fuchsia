@@ -68,6 +68,14 @@ func fifoWritesTransformer(in *fifo.FifoStats) []uint64 {
 	return writes
 }
 
+func uint64Sum(stats []uint64) uint64 {
+	var t uint64
+	for _, v := range stats {
+		t += v
+	}
+	return t
+}
+
 func cycleTX(txFifo zx.Handle, size uint32, iob eth.IOBuffer, fn func([]byte)) error {
 	b := make([]eth_gen.FifoEntry, size)
 	for toRead := size; toRead != 0; {
@@ -170,10 +178,12 @@ func TestEndpoint(t *testing.T) {
 					t.Run(fmt.Sprintf("excess=%d", excess), func(t *testing.T) {
 						// Grab baseline stats to avoid assumptions about ops done to this point.
 						wantRxReads := fifoReadsTransformer(&client.RxStats().FifoStats)
+						wantRxWrites := fifoWritesTransformer(&client.RxStats().FifoStats)
+						wantTxReads := fifoReadsTransformer(&client.TxStats().FifoStats)
 						wantTxWrites := fifoWritesTransformer(&client.TxStats().FifoStats)
 
 						// Compute expectations.
-						for _, want := range [][]uint64{wantRxReads, wantTxWrites} {
+						for _, want := range [][]uint64{wantRxReads, wantRxWrites, wantTxReads, wantTxWrites} {
 							for _, write := range []uint32{depth, excess} {
 								if write == 0 {
 									continue
@@ -225,9 +235,24 @@ func TestEndpoint(t *testing.T) {
 							}
 						}
 
-						// NB: only assert on the reads, since RX writes are unsynchronized wrt this test.
 						if diff := cmp.Diff(wantRxReads, fifoReadsTransformer(&client.RxStats().FifoStats)); diff != "" {
 							t.Errorf("Stats.Rx.Reads mismatch (-want +got):\n%s", diff)
+						}
+						// RX write stats must be polled since we're unsynchronized on RX
+						// reads; the client will only update the stats after returning the
+						// buffers on the FIFO. We poll based on total counts and later
+						// assert on the correct per-batch values.
+						wantRxWritesTotal := uint64Sum(wantRxWrites)
+						for {
+							gotRxWrites := fifoWritesTransformer(&client.RxStats().FifoStats)
+							if uint64Sum(gotRxWrites) < wantRxWritesTotal {
+								runtime.Gosched()
+								continue
+							}
+							if diff := cmp.Diff(wantRxWrites, gotRxWrites); diff != "" {
+								t.Errorf("Stats.Rx.Reads mismatch (-want +got):\n%s", diff)
+							}
+							break
 						}
 
 						// Use WritePackets to get deterministic batch sizes.
@@ -253,17 +278,28 @@ func TestEndpoint(t *testing.T) {
 							t.Fatal(err)
 						}
 
-						// NB: only assert on the writes, since TX read FIFO stats are
-						// unsynchronized wrt this test. Even though we poll for drop stats,
-						// we can't make guarantees for the FIFO stats.
 						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(&client.TxStats().FifoStats)); diff != "" {
 							t.Errorf("Stats.Tx.Writes mismatch (-want +got):\n%s", diff)
 						}
+						// TX read stats must be polled since we're unsynchronized on TX
+						// reads, which is when the stats are updated. We poll based on
+						// total counts and later assert on the correct per-batch values.
+						wantTxReadsTotal := uint64Sum(wantTxReads)
+						for {
+							gotTxReads := fifoReadsTransformer(&client.TxStats().FifoStats)
+							if uint64Sum(gotTxReads) < wantTxReadsTotal {
+								runtime.Gosched()
+								continue
+							}
+							if diff := cmp.Diff(wantTxReads, gotTxReads); diff != "" {
+								t.Errorf("Stats.Tx.Reads mismatch (-want +got):\n%s", diff)
+							}
+							break
+						}
 
 						// Since we're not setting the TX_OK flag in this test, all these
-						// packets will be considered to have dropped. We need to poll until
-						// the stats match expectations since we're unsynchronized on TX
-						// reads, which is when the value increments.
+						// packets will be considered to have dropped. We similarly need to
+						// poll the dropped stats since they're unsynchronized.
 						for {
 							dropsAfter := client.TxStats().Drops.Value() - dropsBefore
 							if dropsAfter < uint64(writeSize) {
