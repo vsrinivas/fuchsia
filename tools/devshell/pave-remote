@@ -98,7 +98,7 @@ save_remote_info "$host" "$dir"
 fetch_remote_build_archive "${host}" "${dir}"
 
 if "${pave}"; then
-  cd out/fetched
+  cd "${FUCHSIA_DIR}/out/fetched"
 
   if [[ $(uname) = "Darwin" ]]; then
     # HACK!
