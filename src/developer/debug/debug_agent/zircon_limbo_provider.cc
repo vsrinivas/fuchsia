@@ -19,10 +19,9 @@ namespace debug_agent {
 namespace {
 
 LimboProvider::Record MetadataToRecord(ProcessExceptionMetadata metadata) {
-  ZirconLimboProvider::Record record;
-  record.process = std::make_unique<ZirconProcessHandle>(std::move(*metadata.mutable_process()));
-  record.thread = std::make_unique<ZirconThreadHandle>(std::move(*metadata.mutable_thread()));
-  return record;
+  return ZirconLimboProvider::Record{
+      .process = std::make_unique<ZirconProcessHandle>(std::move(*metadata.mutable_process())),
+      .thread = std::make_unique<ZirconThreadHandle>(std::move(*metadata.mutable_thread()))};
 }
 
 }  // namespace
@@ -31,25 +30,20 @@ ZirconLimboProvider::ZirconLimboProvider(std::shared_ptr<sys::ServiceDirectory> 
     : services_(std::move(services)) {
   // Get the initial state of the hanging gets.
   ProcessLimboSyncPtr process_limbo;
-  zx_status_t status = services_->Connect(process_limbo.NewRequest());
-  if (status != ZX_OK)
+  if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
     return;
 
   // Check if the limbo is active.
   bool is_limbo_active = false;
-  status = process_limbo->WatchActive(&is_limbo_active);
-  if (status != ZX_OK)
+  if (zx_status_t status = process_limbo->WatchActive(&is_limbo_active); status != ZX_OK)
     return;
 
   is_limbo_active_ = is_limbo_active;
   if (is_limbo_active_) {
     // Get the current set of process in exceptions.
     ProcessLimbo_WatchProcessesWaitingOnException_Result result;
-    status = process_limbo->WatchProcessesWaitingOnException(&result);
-    if (status != ZX_OK)
-      return;
-
-    if (result.is_err())
+    if (zx_status_t status = process_limbo->WatchProcessesWaitingOnException(&result);
+        status != ZX_OK || result.is_err())
       return;
 
     // Add all the current exceptions.
@@ -88,33 +82,32 @@ void ZirconLimboProvider::WatchActive() {
 
 void ZirconLimboProvider::WatchLimbo() {
   connection_->WatchProcessesWaitingOnException(
-      // |this| owns the connection, so it's guaranteed to outlive it.
+      // |this| owns the connection, so we're guaranteed to outlive it.
       [this](ProcessLimbo_WatchProcessesWaitingOnException_Result result) {
-        if (result.is_err()) {
-          FX_LOGS(ERROR) << "Got error waiting for limbo: " << zx_status_get_string(result.err());
-        } else {
-          // The callback provides the full current list every time.
-          RecordMap new_limbo;
-          std::vector<zx_koid_t> new_exceptions;
-          for (ProcessExceptionMetadata& exception : result.response().exception_list) {
-            zx_koid_t process_koid = exception.info().process_koid;
-            // Record if this is a new one we don't have yet.
-            if (auto it = limbo_.find(process_koid); it == limbo_.end())
-              new_exceptions.push_back(process_koid);
+        if (result.is_err())
+          return;  // Limbo likely not enabled, give up.
 
-            new_limbo.insert({process_koid, MetadataToRecord(std::move(exception))});
-          }
+        // The callback provides the full current list every time.
+        RecordMap new_limbo;
+        std::vector<zx_koid_t> new_exceptions;
+        for (ProcessExceptionMetadata& exception : result.response().exception_list) {
+          zx_koid_t process_koid = exception.info().process_koid;
+          // Record if this is a new one we don't have yet.
+          if (auto it = limbo_.find(process_koid); it == limbo_.end())
+            new_exceptions.push_back(process_koid);
 
-          limbo_ = std::move(new_limbo);
+          new_limbo.insert({process_koid, MetadataToRecord(std::move(exception))});
+        }
 
-          if (on_enter_limbo_) {
-            // Notify for the new exceptions.
-            for (zx_koid_t process_koid : new_exceptions) {
-              // Even though we added the exception above and expect it to be in limbo_, re-check
-              // that we found it in case the callee consumed the exception out from under us.
-              if (auto found = limbo_.find(process_koid); found != limbo_.end())
-                on_enter_limbo_(found->second);
-            }
+        limbo_ = std::move(new_limbo);
+
+        if (on_enter_limbo_) {
+          // Notify for the new exceptions.
+          for (zx_koid_t process_koid : new_exceptions) {
+            // Even though we added the exception above and expect it to be in limbo_, re-check
+            // that we found it in case the callee consumed the exception out from under us.
+            if (auto found = limbo_.find(process_koid); found != limbo_.end())
+              on_enter_limbo_(found->second);
           }
         }
 
@@ -168,11 +161,9 @@ zx_status_t ZirconLimboProvider::ReleaseProcess(zx_koid_t process_koid) {
     return status;
 
   ProcessLimbo_ReleaseProcess_Result result;
-  if (zx_status_t status = process_limbo->ReleaseProcess(process_koid, &result); status != ZX_OK)
+  if (zx_status_t status = process_limbo->ReleaseProcess(process_koid, &result);
+      status != ZX_OK || result.is_err())
     return status;
-
-  if (result.is_err())
-    return result.err();
 
   limbo_.erase(process_koid);
   return ZX_OK;
