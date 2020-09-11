@@ -19,12 +19,8 @@ void threads_test_wait_fn(void* arg);
 void threads_test_wait_detach_fn(void* arg);
 
 // The arg is an event which will be waited on for signal 0 (to synchronize the beginning), then
-// it will issue a debug break instruction (causing a SW_BREAKPOINT exception), then it will sleep
-// infinitely.
-void threads_test_wait_break_infinite_sleep_fn(void* arg);
-
-// This thread function sleeps forever. The arg is ignored.
-void threads_test_infinite_sleep_fn(void* arg);
+// it will issue a debug break instruction (causing a SW_BREAKPOINT exception), then it will exit.
+void threads_test_wait_break_fn(void* arg);
 
 // This thread issues an infinite wait on signal 0 of the event whose handle is passed in arg.
 void threads_test_infinite_wait_fn(void* arg);
@@ -50,8 +46,13 @@ struct channel_call_suspend_test_arg {
 // |thread-functions.cc| can't use standard library functions.
 void atomic_store(volatile int* addr, int value);
 int atomic_load(volatile int* addr);
+int atomic_exchange(volatile int* addr, int value);
 
-// The arg is a |volatile int*|. The function loops storing 1 there.
+constexpr int kTestAtomicSetValue = 1;
+constexpr int kTestAtomicExitValue = 2;
+
+// The arg is a |volatile int*|. The function loops storing |kTestAtomicSetValue| there
+// until it sees |kTestAtomicExitValue| then exits.
 void threads_test_atomic_store(void* arg);
 
 // The arg is an event. It will first send a signal 0 to indicate begin running then wiat for a

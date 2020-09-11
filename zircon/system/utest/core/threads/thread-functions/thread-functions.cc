@@ -57,12 +57,13 @@ void threads_test_wait_detach_fn(void* arg) {
   zx_thread_exit();
 }
 
-void threads_test_wait_break_infinite_sleep_fn(void* arg) {
+void threads_test_wait_break_fn(void* arg) {
   zx_handle_t event = *(zx_handle_t*)arg;
   zx_object_wait_one(event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
 
   // Don't use builtin_trap since the compiler might assume everything after that call can't
-  // execute and will remove the zx_nanosleep below.
+  // execute and might remove the function epilog. The test harness will catch the exception
+  // and step over it.
 #if defined(__aarch64__)
   __asm__ volatile("brk 0");
 #elif defined(__x86_64__)
@@ -70,13 +71,7 @@ void threads_test_wait_break_infinite_sleep_fn(void* arg) {
 #else
 #error Not supported on this platform.
 #endif
-
-  zx_nanosleep(ZX_TIME_INFINITE);
-}
-
-void threads_test_infinite_sleep_fn(void* arg) {
-  zx_nanosleep(ZX_TIME_INFINITE);
-  __builtin_trap();
+  zx_thread_exit();
 }
 
 void threads_test_infinite_wait_fn(void* arg) {
@@ -131,12 +126,14 @@ void atomic_store(volatile int* addr, int value) {
 
 int atomic_load(volatile int* addr) { return __atomic_load_n(addr, __ATOMIC_SEQ_CST); }
 
+int atomic_exchange(volatile int* addr, int value) {
+  return __atomic_exchange_n(addr, value, __ATOMIC_SEQ_CST);
+}
+
 void threads_test_atomic_store(void* arg) {
   auto* p = static_cast<volatile int*>(arg);
-  while (true) {
-    atomic_store(p, 1);
+  while (atomic_exchange(p, kTestAtomicSetValue) != kTestAtomicExitValue) {
   }
-  __builtin_trap();
 }
 
 void threads_test_run_fn(void* arg) {

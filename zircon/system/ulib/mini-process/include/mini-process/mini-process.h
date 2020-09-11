@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINI_PROCESS_PROCESS_H_
+#define ZIRCON_SYSTEM_ULIB_MINI_PROCESS_PROCESS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
-
-#include <zircon/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -60,6 +60,9 @@ __BEGIN_CDECLS
 // The process will perform an async_wait on the |transferred_handle| and then
 // port cancel on it in an infinite loop.
 #define MINIP_CMD_WAIT_ASYNC_CANCEL (1 << 16)
+// The process just calls zx_thread_exit() immediately without replying.
+// The return value upon success is ZX_ERR_PEER_CLOSED.
+#define MINIP_CMD_THREAD_EXIT (1 << 17)
 #define MINIP_THREAD_POINTER_CHECK_VALUE (0xdeadbeeffeedfaceUL)
 
 // Create and run a minimal process with one thread that blocks forever.
@@ -112,3 +115,5 @@ zx_status_t mini_process_cmd_send(zx_handle_t cntrl_channel, uint32_t what);
 zx_status_t mini_process_cmd_read_reply(zx_handle_t cntrl_channel, zx_handle_t* handle);
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINI_PROCESS_PROCESS_H_

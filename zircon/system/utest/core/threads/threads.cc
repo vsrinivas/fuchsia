@@ -318,8 +318,6 @@ TEST(Threads, NonstartedThread) {
   zx_handle_t thread;
 
   ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
-  ASSERT_EQ(zx_task_kill(thread), ZX_OK);
-  ASSERT_EQ(zx_task_kill(thread), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread), ZX_OK);
 }
 
@@ -672,7 +670,8 @@ TEST(Threads, SuspendStopsThread) {
   }
 
   // Clean up.
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+  atomic_store(&value, kTestAtomicExitValue);
+
   // Wait for the thread termination to complete.  We should do this so
   // that any later tests which handle process debug exceptions do not
   // receive an ZX_EXCP_THREAD_EXITING event.
@@ -686,7 +685,7 @@ TEST(Threads, SuspendMultiple) {
   zx_handle_t thread_h;
 
   ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
-  ASSERT_TRUE(start_thread(threads_test_wait_break_infinite_sleep_fn, &event, &thread, &thread_h));
+  ASSERT_TRUE(start_thread(threads_test_wait_break_fn, &event, &thread, &thread_h));
 
   // The thread will now be blocked on the event. Wake it up and catch the trap (undefined
   // exception).
@@ -735,16 +734,14 @@ TEST(Threads, SuspendMultiple) {
   ASSERT_TRUE(get_thread_info(thread_h, &info));
   ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
 
-  // 2nd resume, should be running or sleeping after this.
-  resume_thread_synchronous(thread_h, suspend_token2);
-  ASSERT_TRUE(get_thread_info(thread_h, &info));
-  ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING ||
-              info.state == ZX_THREAD_STATE_BLOCKED_SLEEPING);
+  // 2nd resume, should be running and then exit.
+  ASSERT_EQ(zx_handle_close(suspend_token2), ZX_OK);
+  //
+  // We have to close the exception channel because it will keep the thread in DYING state.
+  ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
 
   // Clean up.
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
   EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
-  ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
@@ -756,58 +753,16 @@ TEST(Threads, SuspendSelf) {
 TEST(Threads, SuspendAfterDeath) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(threads_test_infinite_sleep_fn, nullptr, &thread, &thread_h));
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+  ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)zx_deadline_after(ZX_MSEC(100)), &thread,
+                           &thread_h));
+  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   EXPECT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_ERR_BAD_STATE);
   EXPECT_EQ(suspend_token, ZX_HANDLE_INVALID);
   EXPECT_EQ(zx_handle_close(suspend_token), ZX_OK);
 
-  EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   EXPECT_EQ(zx_handle_close(thread_h), ZX_OK);
-}
-
-// This tests for a bug in which killing a suspended thread causes the
-// thread to be resumed and execute more instructions in userland.
-TEST(Threads, KillSuspendedThread) {
-  std::atomic<int> value = 0;
-  zxr_thread_t thread;
-  zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(threads_test_atomic_store, &value, &thread, &thread_h));
-
-  // Wait until the thread has started and has modified value.
-  while (value != 1) {
-    zx_nanosleep(0);
-  }
-
-  zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-  suspend_thread_synchronous(thread_h, &suspend_token);
-
-  // Attach to debugger channel so we can see ZX_EXCP_THREAD_EXITING.
-  zx_handle_t exception_channel;
-  ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_CHANNEL_DEBUGGER,
-                                             &exception_channel),
-            ZX_OK);
-
-  // Reset the test memory location.
-  value = 100;
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
-  // Wait for the thread termination to complete.
-  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-  // Check for the bug.  The thread should not have resumed execution and
-  // so should not have modified value.
-  EXPECT_EQ(value.load(), 100);
-
-  // Check that the thread is reported as exiting and not as resumed.
-  zx_handle_t exception;
-  wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_THREAD_EXITING, 0, &exception);
-
-  // Clean up.
-  ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
-  ASSERT_EQ(zx_handle_close(exception), ZX_OK);
-  ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
-  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
 // Suspend a thread before starting and make sure it starts into suspended state.
@@ -833,12 +788,12 @@ TEST(Threads, StartSuspendedThread) {
   // Make sure the thread still resumes properly.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
-  while (value != 1) {
+  while (value != kTestAtomicSetValue) {
     zx_nanosleep(0);
   }
 
   // Clean up.
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+  value.store(kTestAtomicExitValue);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
@@ -864,7 +819,7 @@ TEST(Threads, StartSuspendedAndResumedThread) {
   }
 
   // Clean up.
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+  value.store(kTestAtomicExitValue);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
@@ -967,13 +922,7 @@ class RegisterReadSetup {
   using ThreadFunc = void (*)(RegisterStruct*);
 
   RegisterReadSetup() = default;
-  ~RegisterReadSetup() {
-    zx_handle_close(suspend_token_);
-    zx_task_kill(thread_handle_);
-    // Wait for the thread termination to complete.
-    zx_object_wait_one(thread_handle_, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL);
-    zx_handle_close(thread_handle_);
-  }
+  ~RegisterReadSetup() { ExitThread(); }
 
   zx_handle_t thread_handle() const { return thread_handle_; }
 
@@ -999,6 +948,35 @@ class RegisterReadSetup {
   void Resume() { resume_thread_synchronous(thread_handle_, suspend_token_); }
 
   void Suspend() { suspend_thread_synchronous(thread_handle_, &suspend_token_); }
+
+  void ExitThread() {
+    zx_info_thread_t info;
+    ASSERT_TRUE(get_thread_info(thread_handle_, &info));
+    if (info.state != ZX_THREAD_STATE_SUSPENDED) {
+      Suspend();
+    }
+
+    zx_thread_state_general_regs_t regs;
+    ASSERT_EQ(
+        zx_thread_read_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
+        ZX_OK);
+
+#if defined(__aarch64__)
+    regs.pc = reinterpret_cast<uintptr_t>(zx_thread_exit);
+#elif defined(__x86_64__)
+    regs.rip = reinterpret_cast<uintptr_t>(zx_thread_exit);
+#else
+#error "what machine?"
+#endif
+
+    ASSERT_EQ(
+        zx_thread_write_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
+        ZX_OK);
+    ASSERT_EQ(zx_handle_close(suspend_token_), ZX_OK);
+    // Wait for the thread termination to complete.
+    zx_object_wait_one(thread_handle_, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL);
+    zx_handle_close(thread_handle_);
+  }
 
  private:
   zxr_thread_t thread_;
@@ -1525,13 +1503,13 @@ TEST(Threads, WritingArmFlagsRegister) {
   // zx_thread_write_state() set the interrupt disable flags, then if the
   // thread gets scheduled, it will never get interrupted and we will not
   // be able to kill and join the thread.
-  value = 0;
+  value.store(0);
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   // Wait until the thread has actually resumed execution.
-  while (value != 1) {
+  while (value.load() != kTestAtomicSetValue) {
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_USEC(1))), ZX_OK);
   }
-  ASSERT_EQ(zx_task_kill(thread_handle), ZX_OK);
+  value.store(kTestAtomicExitValue);
   ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
 
 // Clean up.
