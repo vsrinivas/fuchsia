@@ -50,6 +50,7 @@ rustc_binary("bin") {
   ]
   test_deps = [
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/lib/version",
     "//src/sys/pkg/testing/mock-paver",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pretty_assertions",

@@ -23,7 +23,7 @@ pub use crate::{
     name::VerifyNameError,
     packages::ParsePackageError,
     update_mode::{ParseUpdateModeError, UpdateMode},
-    version::ReadVersionError,
+    version::{ReadVersionError, SystemVersion},
 };
 
 use {fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, fuchsia_url::pkg_url::PkgUrl};
@@ -86,7 +86,7 @@ impl UpdatePackage {
     }
 
     /// Returns the version of this update package.
-    pub async fn version(&self) -> Result<String, ReadVersionError> {
+    pub async fn version(&self) -> Result<SystemVersion, ReadVersionError> {
         version::read_version(&self.proxy).await
     }
 }

@@ -11,12 +11,12 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     mundane::hash::{Hasher as _, Sha256},
     serde::{Deserialize, Serialize},
-    std::convert::TryInto as _,
-    update_package::UpdatePackage,
+    std::{convert::TryInto as _, str::FromStr},
+    update_package::{SystemVersion, UpdatePackage},
 };
 
 /// The version of the OS.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Version {
     /// The hash of the update package.
     pub update_hash: String,
@@ -27,7 +27,19 @@ pub struct Version {
     pub vbmeta_hash: String,
     pub zbi_hash: String,
     /// The version in build-info.
-    pub build_version: String,
+    pub build_version: SystemVersion,
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Version {
+            update_hash: Default::default(),
+            system_image_hash: Default::default(),
+            vbmeta_hash: Default::default(),
+            zbi_hash: Default::default(),
+            build_version: SystemVersion::Opaque("".to_string()),
+        }
+    }
 }
 
 impl Version {
@@ -78,7 +90,7 @@ impl Version {
         };
         let build_version = update_package.version().await.unwrap_or_else(|e| {
             fx_log_err!("Failed to read build version: {:#}", anyhow!(e));
-            "".to_string()
+            SystemVersion::Opaque("".to_string())
         });
         Self { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version }
     }
@@ -114,12 +126,14 @@ impl Version {
                 "".to_string()
             }
         };
+
+        let build_version = SystemVersion::from_str(&build_version).unwrap();
         let update_hash = match last_target_version {
             Some(version) => {
                 if vbmeta_hash == version.vbmeta_hash
                     && (system_image_hash == "" || system_image_hash == version.system_image_hash)
                     && (zbi_hash == "" || zbi_hash == version.zbi_hash)
-                    && (build_version == "" || build_version == version.build_version)
+                    && (build_version.is_empty() || build_version == version.build_version)
                 {
                     version.update_hash.clone()
                 } else {
@@ -139,7 +153,7 @@ impl Version {
         node.record_string("system_image_hash", system_image_hash);
         node.record_string("vbmeta_hash", vbmeta_hash);
         node.record_string("zbi_hash", zbi_hash);
-        node.record_string("build_version", build_version);
+        node.record_string("build_version", build_version.to_string());
     }
 }
 
@@ -226,6 +240,7 @@ mod tests {
     use {
         super::*,
         crate::update::environment::NamespaceBuildInfo,
+        ::version::Version as SemanticVersion,
         fidl_fuchsia_paver::Configuration,
         fuchsia_pkg_testing::TestUpdatePackage,
         fuchsia_zircon::Vmo,
@@ -251,7 +266,7 @@ mod tests {
             .await
             .add_file("zbi", "zbi")
             .await
-            .add_file("version", "version")
+            .add_file("version", "1.2.3.4")
             .await;
         assert_eq!(
             Version::for_update_package(&update_pkg).await,
@@ -266,7 +281,7 @@ mod tests {
                 // See comment in sha256_hash_removed_trailing_zeros test.
                 zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8"
                     .to_string(),
-                build_version: "version".to_string(),
+                build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
             }
         );
     }
@@ -305,7 +320,7 @@ mod tests {
             // Should be "a7124150e065aa234710ab3875230f17deb36a9249938e11f2f3656954412ab8"
             // See comment in sha256_hash_removed_trailing_zeros test.
             zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8".to_string(),
-            build_version: "".to_string(),
+            build_version: SystemVersion::Opaque("".to_string()),
         };
         assert_eq!(
             Version::current(

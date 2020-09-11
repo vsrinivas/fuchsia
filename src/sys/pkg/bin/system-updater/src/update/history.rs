@@ -17,7 +17,7 @@ use {
 };
 
 mod version;
-pub use version::Version;
+pub use self::version::Version;
 
 const UPDATE_HISTORY_PATH: &str = "/data/update_history.json";
 const MAX_UPDATE_ATTEMPTS: usize = 5;
