@@ -4777,8 +4777,16 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
 
     wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
     return ZX_OK;
-  } else
-    return brcmf_indicate_client_disconnect(ifp, e, data);
+  } else {
+    // Sometimes FW sends E_DEAUTH when a unicast packet is received before association
+    // is complete. Ignore it.
+    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state) &&
+        e->reason == BRCMF_E_REASON_UCAST_FROM_UNASSOC_STA) {
+      BRCMF_DBG(EVENT, "E_DEAUTH because data rcvd before assoc...ignore");
+      return ZX_OK;
+    }
+  }
+  return brcmf_indicate_client_disconnect(ifp, e, data);
 }
 
 static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,

@@ -53,7 +53,7 @@ constexpr zx::duration kAssocEventDelay = zx::msec(10);
 // Delay between events E_LINK and E_SSID.
 constexpr zx::duration kSsidEventDelay = zx::msec(100);
 // Delay in sending E_LINK event during assoc & disassoc.
-constexpr zx::duration kLinkEventDelay = zx::msec(1);
+constexpr zx::duration kLinkEventDelay = zx::msec(5);
 // Delay in sending E_DISASSOC event during disassoc.
 constexpr zx::duration kDisassocEventDelay = zx::msec(1);
 
@@ -131,7 +131,7 @@ class SimFirmware {
   };
 
   struct AssocState {
-    enum {
+    enum AssocStateName {
       NOT_ASSOCIATED,
       SCANNING,
       ASSOCIATING,
@@ -329,6 +329,7 @@ class SimFirmware {
   void AssocScanDone();
   void AuthStart();  // Scan complete, start authentication process
   void AssocStart();
+  void SetAssocState(AssocState::AssocStateName state);
   void AssocClearContext();
   void AuthClearContext();
   void AssocHandleFailure();

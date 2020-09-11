@@ -156,13 +156,14 @@ enum brcmf_fweh_event_code {
 #define BRCMF_E_STATUS_FWSUP_PREP_G2  11
 
 /* reason field values in struct brcmf_event_msg */
-#define BRCMF_E_REASON_INITIAL_ASSOC 0
-#define BRCMF_E_REASON_LOW_RSSI      1
-#define BRCMF_E_REASON_DEAUTH        2
-#define BRCMF_E_REASON_DISASSOC      3
-#define BRCMF_E_REASON_BCNS_LOST     4
-#define BRCMF_E_REASON_MINTXRATE     9
-#define BRCMF_E_REASON_TXFAIL       10
+#define BRCMF_E_REASON_INITIAL_ASSOC              0
+#define BRCMF_E_REASON_LOW_RSSI                   1
+#define BRCMF_E_REASON_DEAUTH                     2
+#define BRCMF_E_REASON_DISASSOC                   3
+#define BRCMF_E_REASON_BCNS_LOST                  4
+#define BRCMF_E_REASON_UCAST_FROM_UNASSOC_STA     7
+#define BRCMF_E_REASON_MINTXRATE                  9
+#define BRCMF_E_REASON_TXFAIL                    10
 
 #define BRCMF_E_REASON_LINK_DISASSOC    2
 #define BRCMF_E_REASON_LINK_BSSCFG_DIS  4

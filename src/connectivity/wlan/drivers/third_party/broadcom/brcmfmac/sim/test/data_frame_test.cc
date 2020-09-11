@@ -77,10 +77,6 @@ class DataFrameTest : public SimTest {
   void TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
                       const std::vector<uint8_t>& eapol);
 
-  // Have test auth with ap
-  void ClientAuth();
-  // Have test assoc with ap
-  void ClientAssoc();
   // Send a data frame to the ap
   void ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr, std::vector<uint8_t>& ethFrame,
                 size_t num_pkts);
@@ -380,19 +376,6 @@ void DataFrameTest::EnableRssiErrInj() {
   sim->sim_fw->err_inj_.SetSignalErrInj(true);
 }
 
-void DataFrameTest::ClientAuth() {
-  BRCMF_DBG(SIM, "ClientAuth: @ %lu\n", env_->GetTime().get());
-  simulation::SimAuthFrame auth_req_frame(kClientMacAddress, kApBssid, 1,
-                                          simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_SUCCESS);
-  env_->Tx(auth_req_frame, kDefaultTxInfo, this);
-}
-
-void DataFrameTest::ClientAssoc() {
-  BRCMF_DBG(SIM, "ClientAssoc: @ %lu\n", env_->GetTime().get());
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddress, kApBssid, kApSsid);
-  env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
-}
-
 void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
                              std::vector<uint8_t>& ethFrame, size_t num_pkts) {
   BRCMF_DBG(SIM, "ClientTx: @ %lu\n", env_->GetTime().get());
@@ -527,6 +510,7 @@ TEST_F(DataFrameTest, RxDataFrame) {
   // Create our device instance
   Init();
 
+  zx::duration delay = zx::msec(1);
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
   ap.EnableBeacon(zx::msec(100));
@@ -534,19 +518,18 @@ TEST_F(DataFrameTest, RxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
-
-  // Want test to associate with fake AP
-  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
-  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
+  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(
       CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
-  SCHEDULE_CALL(zx::msec(100), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+  // Ensure the data packet is sent after the client has associated
+  delay += kSsidEventDelay + zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
                 data_context_.expected_received_data.back(), 1);
 
-  SCHEDULE_CALL(zx::msec(500), &DataFrameTest::SendStatsQuery, this);
+  delay += kSsidEventDelay + zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::SendStatsQuery, this);
   // Run
   env_->Run();
 
@@ -569,24 +552,26 @@ TEST_F(DataFrameTest, CheckRssiInStatsQueryResp) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
+  zx::duration delay = zx::msec(1);
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
-
-  // Want test to associate with fake AP
-  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
-  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
+  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
 
   // Want to send some packets from test to driver
   data_context_.expected_received_data.push_back(
       CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
-  SCHEDULE_CALL(zx::msec(100), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+  // Ensure the data packet is sent after the client has associated
+  delay += kSsidEventDelay + zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
                 data_context_.expected_received_data.back(), 10);
 
-  SCHEDULE_CALL(zx::msec(300), &DataFrameTest::EnableRssiErrInj, this);
-  SCHEDULE_CALL(zx::msec(400), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+  delay += zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::EnableRssiErrInj, this);
+  delay += zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
                 data_context_.expected_received_data.back(), 10);
-  SCHEDULE_CALL(zx::msec(1000), &DataFrameTest::SendStatsQuery, this);
+  delay += zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::SendStatsQuery, this);
   // Run
   env_->Run();
 
@@ -610,10 +595,6 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
-
-  // Want test to associate with fake AP
-  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
-  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
 
   // ethernet frame too small to hold ethernet header
   std::vector<uint8_t> ethFrame = {0x00, 0x45};
@@ -644,10 +625,6 @@ TEST_F(DataFrameTest, RxEapolFrame) {
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
 
-  // Want test to associate with fake AP
-  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
-  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
-
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
   auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_PAE), kSampleEapol);
@@ -668,7 +645,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
   // Create our device instance
   Init();
 
-  zx::duration delay = zx::msec(10);
+  zx::duration delay = zx::msec(1);
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
@@ -678,12 +655,6 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
-
-  // Want test to associate with fake AP
-  delay = delay + zx::msec(10);
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientAuth, this);
-  delay = delay + zx::msec(10);
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientAssoc, this);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
@@ -699,6 +670,38 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
   // Confirm that the driver received that packet
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
   EXPECT_EQ(eapol_ind_count, 1U);
+}
+
+// Send a ucast packet to client before association is complete. Resulting E_DEAUTH from SIM FW
+// should be ignored by the driver and association should complete.
+TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
+  // Create our device instance
+  Init();
+
+  zx::duration delay = zx::msec(1);
+
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  // Assoc driver with fake AP
+  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
+
+  // Want to send packet from test to driver
+  data_context_.expected_received_data.push_back(kSampleEthBody);
+  auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody);
+
+  // Send the packet before the Link event is sent by SIM FW.
+  delay = delay + kLinkEventDelay / 2;
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame, 1);
+  // Run
+  env_->Run();
+
+  // Confirm that the driver did not receive the packet
+  EXPECT_EQ(non_eapol_data_count, 0U);
+  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
 }
 
 }  // namespace wlan::brcmfmac

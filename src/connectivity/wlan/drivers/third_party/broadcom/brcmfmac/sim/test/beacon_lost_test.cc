@@ -16,6 +16,7 @@ constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
+const common::MacAddr kSecondBssid({0x12, 0x34, 0x56, 0x78, 0x9b, 0xbd});
 const common::MacAddr kMadeupClient({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
 
 struct ClientIfc : public SimInterface {
@@ -151,7 +152,7 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   ASSERT_NE(kDefaultSsid.len, kWrongSsid.len);
   env_->MoveStation(&ap1, -50, 0);
   aps_.push_back(&ap1);
-  simulation::FakeAp ap2(env_.get(), kDefaultBssid, kWrongSsid, kDefaultChannel);
+  simulation::FakeAp ap2(env_.get(), kSecondBssid, kWrongSsid, kDefaultChannel);
   ap2.EnableBeacon(zx::msec(100));
   env_->MoveStation(&ap2, 50, 0);
   aps_.push_back(&ap2);

@@ -296,7 +296,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       } else {
         // Triggered by link down event in driver (no data)
         if (assoc_state_.state == AssocState::ASSOCIATED) {
-          assoc_state_.state = AssocState::NOT_ASSOCIATED;
+          SetAssocState(AssocState::NOT_ASSOCIATED);
         }
         status = ZX_OK;
       }
@@ -427,6 +427,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
 
           AssocInit(std::move(assoc_opts), channel);
+          BRCMF_DBG(SIM, "Auth start from C_SET_SSID");
           AuthStart();
         }
       }
@@ -748,7 +749,7 @@ void SimFirmware::HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFr
 }
 
 void SimFirmware::AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_t& channel) {
-  assoc_state_.state = AssocState::ASSOCIATING;
+  SetAssocState(AssocState::ASSOCIATING);
   assoc_state_.opts = std::move(assoc_opts);
   assoc_state_.num_attempts = 0;
 
@@ -784,7 +785,7 @@ void SimFirmware::AssocScanDone() {
   // Operation fails if we don't have at least one scan result
   if (assoc_state_.scan_results.size() == 0) {
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_NO_NETWORKS, kClientIfidx);
-    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    SetAssocState(AssocState::NOT_ASSOCIATED);
     return;
   }
 
@@ -801,11 +802,12 @@ void SimFirmware::AssocScanDone() {
   // Send an event of the first scan result to driver when assoc scan is done.
   EscanResultSeen(ap);
 
+  BRCMF_DBG(SIM, "Auth start after assoc scan");
   AuthStart();
 }
 
 void SimFirmware::AssocClearContext() {
-  assoc_state_.state = AssocState::NOT_ASSOCIATED;
+  SetAssocState(AssocState::NOT_ASSOCIATED);
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
@@ -822,16 +824,19 @@ void SimFirmware::AuthClearContext() {
 
 void SimFirmware::AssocHandleFailure() {
   if (assoc_state_.num_attempts >= assoc_max_retries_) {
+    BRCMF_DBG(SIM, "Assoc failed. Send E_SET_SSID with failure");
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, kClientIfidx);
     AssocClearContext();
   } else {
     assoc_state_.num_attempts++;
     auth_state_.state = AuthState::NOT_AUTHENTICATED;
+    BRCMF_DBG(SIM, "Assoc failed. Try again..attempt: %d", assoc_state_.num_attempts);
     AuthStart();
   }
 }
 
 void SimFirmware::AuthStart() {
+  BRCMF_DBG(SIM, "Auth Start");
   common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
@@ -944,12 +949,14 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
     ZX_ASSERT(auth_state_.state == AuthState::EXPECTING_SECOND);
     ZX_ASSERT(frame->seq_num_ == 2);
     if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+      BRCMF_DBG(SIM, "Auth refused, Handle failure");
       AssocHandleFailure();
       return;
     }
     auth_state_.state = AuthState::AUTHENTICATED;
     // Remember the last auth'd bssid
     auth_state_.bssid = assoc_state_.opts->bssid;
+    BRCMF_DBG(SIM, "Assoc Start after auth");
     AssocStart();
   } else {
     // When iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_AUTO
@@ -958,6 +965,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
         auth_state_.state = AuthState::NOT_AUTHENTICATED;
         iface_tbl_[kClientIfidx].auth_type = BRCMF_AUTH_MODE_OPEN;
+        BRCMF_DBG(SIM, "Auth shared refused...try with OPEN");
         AuthStart();
         return;
       }
@@ -981,6 +989,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       auth_state_.state = AuthState::AUTHENTICATED;
       // Remember the last auth'd bssid
       auth_state_.bssid = assoc_state_.opts->bssid;
+      BRCMF_DBG(SIM, "Assoc Start after 4way handshake");
       AssocStart();
     }
   }
@@ -1073,6 +1082,7 @@ void SimFirmware::RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> 
 }
 
 void SimFirmware::AssocStart() {
+  BRCMF_DBG(SIM, "Assoc Start");
   common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
 
   auto callback = std::make_unique<std::function<void()>>();
@@ -1152,9 +1162,6 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
   // Response received, cancel timer
   hw_.CancelCallback(assoc_state_.assoc_timer_id);
   if (frame->status_ == WLAN_ASSOC_RESULT_SUCCESS) {
-    // Notify the driver that association succeeded
-    assoc_state_.state = AssocState::ASSOCIATED;
-
     // IEEE Std 802.11-2016, 9.4.1.4 to determine bss type
     bool capIbss = frame->capability_info_.ibss();
     bool capEss = frame->capability_info_.ess();
@@ -1178,6 +1185,7 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     memcpy(assoc_resp_ies_, frame->raw_ies_.data(), frame->raw_ies_.size());
     assoc_resp_ies_len_ = frame->raw_ies_.size();
 
+    BRCMF_DBG(SIM, "Assoc success, send events with a delay");
     // Send the ASSOC event with a delay
     SendEventToDriver(0, nullptr, BRCMF_E_ASSOC, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
                       0, assoc_state_.opts->bssid, kAssocEventDelay);
@@ -1187,10 +1195,17 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     // Send the SSID event after a delay
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr,
                       0, 0, assoc_state_.opts->bssid, kSsidEventDelay);
+    // Set the Assoc state only after E_ASSOC is sent to the driver.
+    auto callback = std::make_unique<std::function<void()>>();
+    *callback = std::bind(&SimFirmware::SetAssocState, this, AssocState::ASSOCIATED);
+    hw_.RequestCallback(std::move(callback), kAssocEventDelay);
   } else {
+    BRCMF_DBG(SIM, "Assoc refused, Handle failure");
     AssocHandleFailure();
   }
 }
+
+void SimFirmware::SetAssocState(AssocState::AssocStateName state) { assoc_state_.state = state; }
 
 // Disassociate the Local Client (request coming in from the driver)
 void SimFirmware::DisassocLocalClient(uint32_t reason) {
@@ -1371,13 +1386,13 @@ zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len) 
   scan_opts->on_done_fn = std::bind(&SimFirmware::AssocScanDone, this);
 
   // Reset assoc state
-  assoc_state_.state = AssocState::SCANNING;
+  SetAssocState(AssocState::SCANNING);
   assoc_state_.scan_results.clear();
 
   zx_status_t status = ScanStart(std::move(scan_opts));
   if (status != ZX_OK) {
     BRCMF_DBG(SIM, "Failed to start scan: %s", zx_status_get_string(status));
-    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    SetAssocState(AssocState::NOT_ASSOCIATED);
   }
   return status;
 }
@@ -2203,6 +2218,14 @@ void SimFirmware::RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> da
       continue;
     if (OffloadArpFrame(idx, data_frame))
       continue;
+    if (idx == kClientIfidx && assoc_state_.state != AssocState::ASSOCIATED) {
+      // Receiving a unicast packet before client is associated. Send a deauth event
+      // to driver (in the real world we would have sent a deauth frame to the sender
+      BRCMF_DBG(SIM, "Sending E_DEAUTH to driver");
+      SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, idx, nullptr, 0,
+                        BRCMF_E_REASON_UCAST_FROM_UNASSOC_STA);
+      continue;
+    }
     SendFrameToDriver(idx, data_frame->payload_.size(), data_frame->payload_, info);
   }
 }
@@ -2482,6 +2505,7 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
     hw_.RequestCallback(std::move(callback), delay.value());
     return;
   } else {
+    BRCMF_DBG(SIM, "Sending Event: %d", event_type);
     brcmf_sim_rx_event(simdev_, std::move(buf));
   }
 }
@@ -2493,6 +2517,7 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
   size_t signal_size_bytes = 0;
   size_t signal_filler_bytes = 0;
 
+  BRCMF_DBG(SIM, "Send Frame to driver, ifidx: %u size: %zu", ifidx, payload_size);
   // If signalling is enabled (for now only RSSI) ensure space is reserved for it
   if (iface_tbl_[ifidx].tlv & BRCMF_FWS_FLAGS_RSSI_SIGNALS) {
     signal_size_bytes = FWS_TLV_TYPE_SIZE + FWS_TLV_LEN_SIZE + FWS_RSSI_DATA_LEN;
