@@ -119,7 +119,7 @@ class StubOnfi : public Onfi {
 class FakeAmlRawNand : public AmlRawNand {
  public:
   // Factory method so we can indicate failure by returning nullptr.
-  static std::unique_ptr<FakeAmlRawNand> Create() {
+  static std::unique_ptr<FakeAmlRawNand> Create(const uint32_t page0_valid_copy = 0) {
     // Zircon objects required by AmlRawNand.
     zx::bti bti;
     EXPECT_OK(fake_bti_create(bti.reset_and_get_address()));
@@ -153,7 +153,7 @@ class FakeAmlRawNand : public AmlRawNand {
     nand->stub_onfi_ = stub_onfi_raw;
 
     // Initialize the AmlRawNand with some parameters taken from a real device.
-    nand->PrepareForInit();
+    nand->PrepareForInit(page0_valid_copy);
     zx_status_t status = nand->Init();
     EXPECT_OK(status);
     if (status != ZX_OK) {
@@ -272,7 +272,7 @@ class FakeAmlRawNand : public AmlRawNand {
 
   // Sets up the necessary fake page and byte reads to successfully initialize
   // the AmlRawNand object.
-  void PrepareForInit() {
+  void PrepareForInit(uint32_t page0_valid_copy) {
     // First we read the first 2 ID bytes.
     QueueFakeNandByteRead(kTestNandManufacturerId);
     QueueFakeNandByteRead(kTestNandDeviceId);
@@ -288,8 +288,12 @@ class FakeAmlRawNand : public AmlRawNand {
     QueueFakeNandByteRead(0x00);
     QueueFakeNandByteRead(0x00);
 
-    // Next we read the page0 metadata.
-    SetFakePage(0, NandPage0());
+    // Set a valid page0 to the specified copy and dummy pages to others.
+    // This is to make sure that test does not panic when AmlRawNand is iterating through
+    // the 8 copies.
+    for (uint32_t i = 0; i < 8; i++) {
+      SetFakePage(i * 128, i == page0_valid_copy ? NandPage0() : NandPage());
+    }
   }
 
   zx_status_t PerformFakeRead(uint32_t page_index) {
@@ -376,6 +380,11 @@ class FakeAmlRawNand : public AmlRawNand {
 
 TEST(AmlRawnand, FakeNandCreate) {
   auto nand = FakeAmlRawNand::Create();
+  ASSERT_NOT_NULL(nand);
+}
+
+TEST(AmlRawnand, FakeNandCreateWithPage0AtADifferentCopy) {
+  auto nand = FakeAmlRawNand::Create(7);
   ASSERT_NOT_NULL(nand);
 }
 

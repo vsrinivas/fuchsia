@@ -782,7 +782,7 @@ zx_status_t AmlRawNand::AmlNandInitFromPage0() {
   char* data = buffer.get();
   // There are 8 copies of page0 spaced apart by 128 pages
   // starting at Page 0. Read the first we can.
-  for (uint32_t i = 0; i < 7; i++) {
+  for (uint32_t i = 0; i < 8; i++) {
     status = AmlReadPage0(data, writesize_, nullptr, 0, i * 128, &ecc_correct, 3);
     if (status == ZX_OK)
       break;
