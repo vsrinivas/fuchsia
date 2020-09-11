@@ -17,8 +17,15 @@ config("asan") {
 }
 
 sanitizer_default_options("asan_default_options") {
-  # asan options take precedence but ubsan options are used too.
-  deps = [ ":ubsan_default_options" ]
+  # The asan runtime includes the lsan and ubsan runtimes, which parse their
+  # own options.
+  deps = [
+    ":lsan_default_options",
+    ":ubsan_default_options",
+  ]
+}
+
+sanitizer_default_options("lsan_default_options") {
 }
 
 # TODO(45047): Temporary while leaks are plugged.
@@ -34,7 +41,9 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   visibility = [
     "*",  # TODO(45047): constrain this and give each a TODO(nnnnn) comment
   ]
+
   args = [ "detect_leaks=0" ]
+  output_name = "lsan_default_options"
   tags = [ "lsan" ]
 }
 
@@ -53,6 +62,7 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   ]
 
   args = [ "detect_stack_use_after_return=0" ]
+  output_name = "asan_default_options"
   tags = [ "asan" ]
 }
 

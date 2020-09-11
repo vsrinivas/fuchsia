@@ -27,11 +27,7 @@
 // for each option in this order is the one that should be used.  Individual
 // sanitizer_extra_options() targets depend on the sanitizer_default_options()
 // target for the variant so their settings will take precedence over those in
-// any GN build argument.  When one sanitizer runtime subsumes another, such as
-// in asan-ubsan where ubsan options are parsed from `__asan_default_options`,
-// then `asan_default_options` depends on `ubsan_default_options` so that
-// settings an option's value in `asan_default_options` takes precedence but
-// non-conflicting options in `ubsan_default_options` will also be used.
+// any GN build argument.
 //
 // Unfortunately, this link-time order is the reverse of the order the final
 // single string of options needs to be in.  The sanitizer runtime parses the

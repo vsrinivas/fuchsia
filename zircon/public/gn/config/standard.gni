@@ -232,10 +232,6 @@ standard_sanitizer_variants = [
         "$zx/public/gn/config/instrumentation:asan",
       ]
       toolchain_vars = {
-        # This enables sanitizer_extra_options() targets.
-        sanitizer_default_options =
-            "$zx/public/gn/config/instrumentation:asan_default_options"
-
         # This is the key for toolchain_runtime_deps() to find the right
         # shared library dependencies for the instrumentation.  Note that
         # the asan runtime includes ubsan but not vice versa, so this set
@@ -249,7 +245,7 @@ standard_sanitizer_variants = [
             "host_tool",
             "test",
           ]
-          add = [ toolchain_vars.sanitizer_default_options ]
+          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
         },
       ]
       tags = [
@@ -266,10 +262,6 @@ standard_sanitizer_variants = [
       name = "ubsan"
       configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
       toolchain_vars = {
-        # This enables sanitizer_extra_options() targets.
-        sanitizer_default_options =
-            "$zx/public/gn/config/instrumentation:ubsan_default_options"
-
         # This is the key for toolchain_runtime_deps() to find the right
         # shared library dependencies for the instrumentation.  Note that
         # the asan runtime includes ubsan but not vice versa, so this set
@@ -283,7 +275,7 @@ standard_sanitizer_variants = [
             "host_tool",
             "test",
           ]
-          add = [ toolchain_vars.sanitizer_default_options ]
+          add = [ "$zx/public/gn/config/instrumentation:ubsan_default_options" ]
 
           # The asan runtime trumps the standalone ubsan runtime and the
           # `__ubsan_default_options()` would go unused.
@@ -348,10 +340,6 @@ standard_variants += [
         "$zx/public/gn/config/instrumentation:asan",
       ]
       toolchain_vars = {
-        # This enables sanitizer_extra_options() targets.
-        sanitizer_default_options =
-            "$zx/public/gn/config/instrumentation:asan_default_options"
-
         # This is the key for toolchain_runtime_deps() to find the right
         # shared library dependencies for the instrumentation.  Note that
         # the asan runtime includes ubsan but not vice versa, so this set
@@ -365,7 +353,7 @@ standard_variants += [
             "host_tool",
             "test",
           ]
-          add = [ toolchain_vars.sanitizer_default_options ]
+          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
         },
       ]
       tags = [

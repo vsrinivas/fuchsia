@@ -15,6 +15,18 @@ declare_args() {
   # injected that way can override that option's setting in this list.
   asan_default_options = []
 
+  # Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
+  # options (before the `LSAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "lsan"
+  # variants in $variants (which see), or overridden in $toolchain_args in
+  # one of those variants.  This can be a list of strings or a single string.
+  #
+  # Note that even if this is empty, programs in this build **cannot** define
+  # their own `__lsan_default_options` C function.  Instead, they can use a
+  # sanitizer_extra_options() target in their `deps` and then any options
+  # injected that way can override that option's setting in this list.
+  lsan_default_options = []
+
   # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
   # options (before the `UBSAN_OPTIONS` environment variable is read at
   # runtime).  This can be set as a build argument to affect most "ubsan"
@@ -35,38 +47,26 @@ declare_args() {
 # sanitizer_default_options() targets must have one of these names.
 sanitizer_default_options_args = [
   "asan_default_options",
+  "lsan_default_options",
   "ubsan_default_options",
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.
 if ("$zx/" == "//") {
   _hidden_config = "$zx/public/gn/config:visibility_hidden"
+  _no_sanitizers_config = "$zx/public/gn/config:no_sanitizers"
   _is_kernel = is_kernel
 
   _tags = toolchain.tags
-
-  if (defined(toolchain.sanitizer_default_options)) {
-    _sanitizer_default_options = toolchain.sanitizer_default_options
-  }
 } else {
   _hidden_config = "//build/config:symbol_visibility_hidden"
+  _no_sanitizers_config = "//build/config:no_sanitizers"
   _is_kernel = false
 
   if (defined(toolchain_variant.tags)) {
     _tags = toolchain_variant.tags
   } else {
     _tags = []
-  }
-
-  if (_tags + [ "asan" ] - [ "asan" ] != _tags) {
-    _sanitizer_default_options =
-        "//build/config/sanitizers:asan_default_options"
-  } else if (_tags + [ "ubsan" ] - [ "ubsan" ] != _tags) {
-    _sanitizer_default_options =
-        "//build/config/sanitizers:ubsan_default_options"
-  } else if (_tags + [ "lsan" ] - [ "lsan" ] != _tags) {
-    _sanitizer_default_options =
-        "//build/config/sanitizers:lsan_default_options"
   }
 }
 
@@ -103,6 +103,10 @@ template("_sanitizer_default_options_target") {
       # the __asan_default_options symbol exported.  In situations where the
       # runtime is statically linked, it doesn't matter either way.
       configs -= [ _hidden_config ]
+
+      # On non-Fuchsia systems, the flag parsing calls this function so early
+      # in startup that instrumented code cannot reliably run at all yet.
+      configs += [ _no_sanitizers_config ]
 
       # This is the default on Fuchsia but not on all host platforms.
       # It's necessary to link into Rust binaries, which are PIE even
@@ -184,6 +188,16 @@ template("sanitizer_default_options") {
       "sanitizer_default_options() target name must be listed in " +
           "`sanitizer_default_options_args`: $sanitizer_default_options_args")
   _sanitizer_default_options_target(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    default = true
+    output_name = target_name
+
     # Fetch the build argument's value.  The invoker scope inherited it from
     # the global scope after the declare_args() block defined it there, making
     # it accessible programmatically here.
@@ -192,27 +206,6 @@ template("sanitizer_default_options") {
     # Handle a single-string argument for flexible build argument input.
     if (args == "$args") {
       args = [ args ]
-    }
-
-    # This always adds $args to the single default-options function that this
-    # toolchain actually uses.  If that's not the one named by this target,
-    # then this acts like a sanitizer_extra_options() to just add more
-    # options into the default set rather than defining the function itself.
-    if (defined(_sanitizer_default_options)) {
-      output_name = get_label_info(_sanitizer_default_options, "name")
-      default = get_label_info(":$target_name", "label_no_toolchain") ==
-                _sanitizer_default_options
-    } else {
-      # This will be an empty target in an unaffected toolchain.
-      args = []
-      output_name = ""
-      default = false
-    }
-
-    if (default) {
-      forward_variables_from(invoker, [ "deps" ])
-    } else {
-      not_needed(invoker, [ "deps" ])
     }
   }
 }
@@ -232,6 +225,11 @@ template("sanitizer_default_options") {
 #     - Required: List of "option=value" strings for the sanitizer runtime.
 #     - Type: list(string)
 #
+#
+#   * output_name
+#     - Required: Name of the GN build argument to affect.
+#     - Type: string (one of the `sanitizer_default_options_args` list).
+#
 #   * tags
 #     - Required: The target defined is a no-op target in toolchains where
 #       $tags are not found in ${toolchain.tags}.  This makes it convenient
@@ -250,17 +248,21 @@ template("sanitizer_extra_options") {
                                "visibility",
                                "testonly",
                              ])
-      not_needed(invoker, [ "args" ])
+      not_needed(invoker,
+                 [
+                   "args",
+                   "output_name",
+                 ])
     }
   } else {
     _sanitizer_default_options_target(target_name) {
       forward_variables_from(invoker,
                              [
                                "args",
+                               "output_name",
                                "visibility",
                                "testonly",
                              ])
-      output_name = get_label_info(_sanitizer_default_options, "name")
       default = false
     }
   }
