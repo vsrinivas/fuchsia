@@ -27,7 +27,7 @@ _max_severity_allowed_val = [
 #   target (required)
 #     [label]: The test target.
 #
-#   command (optional)
+#   command (optional, not allowed for host tests)
 #     [list of strings]: Command to invoke to run the test. If unset, path is
 #     required and will be invoked upon execution.
 #
@@ -85,6 +85,8 @@ template("test_spec") {
     if (!defined(environments)) {
       environments = [ host_env ]
     }
+    assert(!defined(command),
+           "host tests may not set command, use host_test template instead")
   } else if (current_os == "unknown" && current_cpu == "wasm32") {
     environments = []
   } else {
