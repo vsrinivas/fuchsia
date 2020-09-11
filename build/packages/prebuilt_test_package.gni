@@ -21,13 +21,16 @@ import("//build/testing/test_spec.gni")
 #   runner (required)
 #     [string] The runner used to execute the test(run|run_test_component).
 #
+#   deps (optional)
+#     [list of labels]: List of labels that the test depends on.
+#
 #   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
 #     [list of scopes] Device environments in which the test should run.
 #
 #     Environment scope is defined in //build/testing/test_spec.gni
 #
-#   deps (optional)
-#     [list of labels]: List of labels that the test depends on.
+#   log_settings (optional)
+#      [scope] passed through to test_spec. See //build/testing/test_spec.gni.
 #
 template("prebuilt_test_package") {
   assert(defined(invoker.archive), "archive must be defined.")
@@ -62,6 +65,7 @@ template("prebuilt_test_package") {
                            [
                              "deps",
                              "environments",
+                             "log_settings",
                            ])
   }
   package_deps += [ ":$spec_target_name" ]
