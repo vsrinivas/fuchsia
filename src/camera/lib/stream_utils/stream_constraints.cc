@@ -75,27 +75,28 @@ fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
   fuchsia::sysmem::PixelFormat pixel_format = {.type = format, .has_format_modifier = false};
   fuchsia_sysmem_PixelFormat pixel_format_c = ConvertPixelFormatToC(pixel_format);
   uint32_t bytes_per_row = ImageFormatStrideBytesPerWidthPixel(&pixel_format_c) * width;
+
+  // All four dimensions must be non-zero to generate a valid aspect ratio.
+  bool has_pixel_aspect_ratio = width && height && original_width && original_height;
+  uint64_t pixel_aspect_ratio_width = 1;
+  uint64_t pixel_aspect_ratio_height = 1;
   if (width == 0 || height == 0) {
     width = 1;
     height = 1;
   }
-  if (original_width == 0) {
-    original_width = width;
-  }
-  if (original_height == 0) {
-    original_height = height;
-  }
-  // Calculate the reduced fraction for the rational value (original_ratio / format_ratio).
-  // Equivalent to (original_width / original_height) / (width / height)
-  //             = (original_width * height) / (original_height * width)
-  auto pixel_aspect_ratio_width = static_cast<uint64_t>(original_width) * height;
-  auto pixel_aspect_ratio_height = static_cast<uint64_t>(original_height) * width;
-  affine::Ratio::Reduce(&pixel_aspect_ratio_width, &pixel_aspect_ratio_height);
-  // Round and truncate values that are still too large to fit in the format struct.
-  while (pixel_aspect_ratio_width > std::numeric_limits<uint32_t>::max() ||
-         pixel_aspect_ratio_height > std::numeric_limits<uint32_t>::max()) {
-    pixel_aspect_ratio_width = (pixel_aspect_ratio_width + (1u << 31)) >> 1;
-    pixel_aspect_ratio_height = (pixel_aspect_ratio_height + (1u << 31)) >> 1;
+  if (has_pixel_aspect_ratio) {
+    // Calculate the reduced fraction for the rational value (original_ratio / format_ratio).
+    // Equivalent to (original_width / original_height) / (width / height)
+    //             = (original_width * height) / (original_height * width)
+    pixel_aspect_ratio_width = static_cast<uint64_t>(original_width) * height;
+    pixel_aspect_ratio_height = static_cast<uint64_t>(original_height) * width;
+    affine::Ratio::Reduce(&pixel_aspect_ratio_width, &pixel_aspect_ratio_height);
+    // Round and truncate values that are still too large to fit in the format struct.
+    while (pixel_aspect_ratio_width > std::numeric_limits<uint32_t>::max() ||
+           pixel_aspect_ratio_height > std::numeric_limits<uint32_t>::max()) {
+      pixel_aspect_ratio_width = (pixel_aspect_ratio_width + (1u << 31)) >> 1;
+      pixel_aspect_ratio_height = (pixel_aspect_ratio_height + (1u << 31)) >> 1;
+    }
   }
   return {
       .pixel_format = {.type = format, .has_format_modifier = false},
@@ -106,6 +107,7 @@ fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
       .display_height = height,
       .layers = 1,
       .color_space = {.type = fuchsia::sysmem::ColorSpaceType::REC601_PAL},
+      .has_pixel_aspect_ratio = has_pixel_aspect_ratio,
       .pixel_aspect_ratio_width = static_cast<uint32_t>(pixel_aspect_ratio_width),
       .pixel_aspect_ratio_height = static_cast<uint32_t>(pixel_aspect_ratio_height),
   };
