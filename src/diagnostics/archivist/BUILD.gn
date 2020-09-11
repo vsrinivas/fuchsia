@@ -93,6 +93,7 @@ rustc_library("lib") {
     "src/lib.rs",
     "src/lifecycle.rs",
     "src/logs/buffer.rs",
+    "src/logs/buffer/arc_list.rs",
     "src/logs/debuglog.rs",
     "src/logs/error.rs",
     "src/logs/interest.rs",

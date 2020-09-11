@@ -5,7 +5,7 @@ use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostic_streams::{Severity as StreamSeverity, Value};
-use diagnostics_data::Timestamp;
+use diagnostics_data::{LogError, Timestamp};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fuchsia_inspect_node_hierarchy::NodeHierarchy;
 use fuchsia_zircon as zx;
@@ -59,13 +59,26 @@ impl Message {
         payload.sort();
         Self(LogsData::for_logs(
             moniker,
-            // we pass payload in Some unconditionally here so we can unwrap with impunity
             Some(payload),
             timestamp,
             component_url,
             severity,
             size_bytes,
             vec![],
+        ))
+    }
+
+    /// Returns a new Message which encodes a count of dropped messages in its metadata.
+    // TODO(fxbug.dev/47661) require moniker and URL here
+    pub fn for_dropped(count: u64) -> Self {
+        Self(LogsData::for_logs(
+            PLACEHOLDER_MONIKER,
+            None, // payload
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+            PLACEHOLDER_URL,
+            Severity::Warn,
+            0, // size_bytes
+            vec![LogError::DroppedLogs { count }],
         ))
     }
 

@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use crate::{
-    constants::MAXIMUM_FORMATTED_LOGS_CONTENT_SIZE, diagnostics::DiagnosticsServerStats,
-    formatter::ChunkedJsonArraySerializer, logs::LogManager, server::DiagnosticsServer,
+    constants::MAXIMUM_FORMATTED_LOGS_CONTENT_SIZE,
+    diagnostics::DiagnosticsServerStats,
+    formatter::ChunkedJsonArraySerializer,
+    logs::{buffer::LazyItem, LogManager, Message},
+    server::DiagnosticsServer,
 };
 use anyhow::{ensure, Error};
 use fidl_fuchsia_diagnostics::{BatchIteratorRequest, BatchIteratorRequestStream, Format};
@@ -39,21 +42,27 @@ impl DiagnosticsServer for LogServer {
     }
 
     async fn snapshot(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error> {
-        let mut messages = self.logs.inner.lock().await.log_msg_buffer.collect().await;
-        messages.sort_by_key(|m| m.metadata.timestamp);
         let mut serialized = ChunkedJsonArraySerializer::new(
             self.stats.clone(),
             MAXIMUM_FORMATTED_LOGS_CONTENT_SIZE,
-            messages.iter().map(|m| &**m),
+            self.logs.snapshot().await.map(dropped_messages_to_errors),
         );
 
         while let Some(res) = stream.next().await {
             let BatchIteratorRequest::GetNext { responder } = res?;
             self.stats().add_request();
-            let mut result = Ok(serialized.next_batch()?);
+            let batch = serialized.next_batch().await?;
+            let mut result = Ok(batch);
             self.stats().add_response();
             responder.send(&mut result)?;
         }
         Ok(())
+    }
+}
+
+fn dropped_messages_to_errors(item: LazyItem<Message>) -> Arc<Message> {
+    match item {
+        LazyItem::Next(m) => m,
+        LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
     }
 }

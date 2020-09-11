@@ -29,11 +29,6 @@ impl Default for DataSource {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Eq)]
-pub struct Error {
-    pub message: String,
-}
-
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum LifecycleType {
     Started,
@@ -154,7 +149,7 @@ pub struct InspectMetadata {
 pub struct LogsMetadata {
     // TODO(fxbug.dev/58369) figure out exact spelling of pid/tid context and severity
     /// Optional vector of errors encountered by platform.
-    pub errors: Option<Vec<Error>>,
+    pub errors: Option<Vec<LogError>>,
 
     /// The url with which the component was launched.
     pub component_url: String,
@@ -301,7 +296,7 @@ impl Data<LogsField, LogsMetadata> {
         component_url: impl Into<String>,
         severity: impl Into<Severity>,
         size_bytes: usize,
-        errors: Vec<Error>,
+        errors: Vec<LogError>,
     ) -> Self {
         let errors = if errors.is_empty() { None } else { Some(errors) };
 
@@ -398,6 +393,17 @@ impl FromStr for LogsField {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::from(s))
     }
+}
+
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize)]
+pub enum LogError {
+    DroppedLogs { count: u64 },
+    Other(Error),
+}
+
+#[derive(Debug, PartialEq, Clone, Eq)]
+pub struct Error {
+    pub message: String,
 }
 
 impl fmt::Display for Error {

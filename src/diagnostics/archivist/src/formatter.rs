@@ -6,8 +6,9 @@ use {
     anyhow::{ensure, Context as _, Error},
     fidl_fuchsia_diagnostics::{FormattedContent, MAXIMUM_ENTRIES_PER_BATCH},
     fuchsia_zircon as zx,
+    futures::prelude::*,
     serde::Serialize,
-    std::sync::Arc,
+    std::{ops::Deref, sync::Arc},
 };
 
 /// Serialize the `contents` to JSON in a VMO, returned as a `FormattedContent`.
@@ -36,9 +37,10 @@ pub struct ChunkedJsonArraySerializer<I> {
     overflow: Option<String>,
 }
 
-impl<I, S> ChunkedJsonArraySerializer<I>
+impl<I, P, S> ChunkedJsonArraySerializer<I>
 where
-    I: Iterator<Item = S>,
+    I: Stream<Item = P> + Unpin,
+    P: Deref<Target = S>,
     S: Serialize,
 {
     /// Construct a new chunked JSON serializer.
@@ -53,11 +55,11 @@ where
     }
 
     /// Produce the next batch of `FormattedContent`s.
-    pub fn next_batch(&mut self) -> Result<Vec<FormattedContent>, Error> {
+    pub async fn next_batch(&mut self) -> Result<Vec<FormattedContent>, Error> {
         let mut batch = Vec::new();
 
         while batch.len() < MAXIMUM_ENTRIES_PER_BATCH as _ {
-            match self.pack_items() {
+            match self.pack_items().await {
                 Ok(Some(item)) => {
                     batch.push(make_json_formatted_content(&item)?);
                 }
@@ -74,7 +76,7 @@ where
 
     /// Serialize log messages in a JSON array up to the maximum size provided. Returns Ok(None)
     /// when there are no more messages to serialize.
-    fn pack_items(&mut self) -> Result<Option<String>, Error> {
+    async fn pack_items(&mut self) -> Result<Option<String>, Error> {
         let mut batch = String::from("[");
 
         if let Some(item) = self.overflow.take() {
@@ -82,8 +84,8 @@ where
             self.stats.add_result();
         }
 
-        for item in &mut self.items {
-            let item = serde_json::to_string_pretty(&item)?;
+        while let Some(item) = self.items.next().await {
+            let item = serde_json::to_string_pretty(&*item)?;
             ensure!(
                 item.len() < self.max_packet_size - 1,
                 "serialized messages must fit within maximum packet size"
@@ -124,42 +126,40 @@ where
     }
 }
 
-impl<I, S> Iterator for ChunkedJsonArraySerializer<I>
-where
-    I: Iterator<Item = S>,
-    S: Serialize,
-{
-    type Item = Result<String, Error>;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.pack_items().transpose()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::diagnostics::ArchiveAccessorStats;
+    use futures::stream::{iter, unfold};
 
-    #[test]
-    fn two_items_joined_and_split() {
-        let inputs = &["FFFFFFFFFF", "GGGGGGGGGG"];
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn two_items_joined_and_split() {
+        let inputs = &[&"FFFFFFFFFF", &"GGGGGGGGGG"];
         let joined = &[r#"["FFFFFFFFFF","GGGGGGGGGG"]"#];
         let split = &[r#"["FFFFFFFFFF"]"#, r#"["GGGGGGGGGG"]"#];
         let smallest_possible_joined_len = joined[0].len();
 
-        let make_packets = |max| {
+        let make_packets = |max| async move {
             let node = fuchsia_inspect::Node::default();
             let accessor_stats = Arc::new(ArchiveAccessorStats::new(node));
             let test_stats = Arc::new(DiagnosticsServerStats::for_logs(accessor_stats));
-            ChunkedJsonArraySerializer::new(test_stats, max, inputs.iter())
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap()
+            unfold(
+                ChunkedJsonArraySerializer::new(test_stats, max, iter(inputs.iter())),
+                |mut serializer| async move {
+                    serializer.pack_items().await.transpose().map(|items| (items, serializer))
+                },
+            )
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
         };
 
-        let actual_joined = make_packets(smallest_possible_joined_len);
+        let actual_joined = make_packets(smallest_possible_joined_len).await;
         assert_eq!(&actual_joined[..], joined);
 
-        let actual_split = make_packets(smallest_possible_joined_len - 1);
+        let actual_split = make_packets(smallest_possible_joined_len - 1).await;
         assert_eq!(&actual_split[..], split);
     }
 }

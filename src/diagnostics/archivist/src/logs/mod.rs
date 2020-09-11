@@ -33,10 +33,12 @@ mod stats;
 #[cfg(test)]
 pub mod testing;
 
+pub use buffer::Cursor;
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
+pub use message::Message;
+
 use interest::InterestDispatcher;
 use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
-use message::Message;
 use socket::{Encoding, Forwarder, LegacyEncoding, LogMessageSocket, StructuredEncoding};
 use stats::LogSource;
 
@@ -401,6 +403,10 @@ impl LogManager {
         Ok(())
     }
 
+    pub async fn snapshot(&self) -> Cursor<Message> {
+        self.inner.lock().await.log_msg_buffer.snapshot()
+    }
+
     /// Handle a new listener, sending it all cached messages and either calling
     /// `Done` if `dump_logs` is true or adding it to the pool of ongoing
     /// listeners if not.
@@ -415,7 +421,7 @@ impl LogManager {
 
         let mut inner = self.inner.lock().await;
 
-        let cached = inner.log_msg_buffer.collect().await;
+        let cached = inner.log_msg_buffer.collect();
         listener.backfill(cached).await;
 
         if !listener.is_healthy() {
@@ -443,7 +449,7 @@ impl LogManager {
         // messages in tests.
         inner.stats.record_log(&log_msg, source);
         inner.listeners.send(&log_msg).await;
-        inner.log_msg_buffer.push(log_msg).await;
+        inner.log_msg_buffer.push(log_msg);
     }
 
     /// Initializes internal log forwarders.
