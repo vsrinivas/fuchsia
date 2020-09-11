@@ -77,7 +77,7 @@ declare_args() {
   zircon_tracelog = ""
 
   # Compilation database filter. Gets passed to --export-compile-commands=<filter>.
-  zircon_compdb_filter = "legacy-$target_cpu"
+  zircon_compdb_filter = "default"
 
   # Whether to allow testonly=true targets in base/cache pacakges. Default to
   # true to allow testonly=true targets. It is preferrable to set to false for
