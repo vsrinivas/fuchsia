@@ -234,6 +234,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
       "backlight/ti-lp8556",
       "display/amlogic-display/display-controller",
+      "sys/platform/00:00:1e/dw-dsi",
       "sys/platform/05:00:10/aml-canvas",
       "tee/optee",
       "aml-video",

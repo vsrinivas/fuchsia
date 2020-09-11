@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BOARD_DRIVERS_SHERLOCK_SHERLOCK_H_
 
 #include <threads.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -73,7 +74,8 @@ using SherlockType = ddk::Device<Sherlock>;
 // This is the main class for the platform bus driver.
 class Sherlock : public SherlockType {
  public:
-  explicit Sherlock(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu, uint32_t pid)
+  explicit Sherlock(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu,
+                    uint32_t pid)
       : SherlockType(parent), pbus_(pbus), iommu_(iommu), pid_(pid) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -123,6 +125,7 @@ class Sherlock : public SherlockType {
   zx_status_t ThermistorInit();
   zx_status_t PowerInit();
   zx_status_t LuisPowerInit();
+  zx_status_t DsiInit();
   int Thread();
 
   zx_status_t EnableWifi32K(void);

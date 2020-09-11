@@ -125,6 +125,7 @@ class Astro : public AstroType {
   zx_status_t TouchInit();
   zx_status_t UsbInit();
   zx_status_t VideoInit();
+  zx_status_t DsiInit();
   int Thread();
 
   uint32_t GetBoardRev(void);

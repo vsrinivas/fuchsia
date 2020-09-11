@@ -817,23 +817,7 @@ zx_status_t DsiDw::Bind() {
 
   dsi_mmio_ = ddk::MmioBuffer(mmio);
 
-  // Obtain display metadata needed to load the proper display driver
-  display_driver_t display_info;
-  size_t actual;
-  status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_DEVICE, &display_info,
-                               sizeof(display_driver_t), &actual);
-  if (status != ZX_OK || actual != sizeof(display_driver_t)) {
-    DSI_ERROR("Could not get display driver metadata %d\n", status);
-    return status;
-  }
-
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, display_info.vid},
-      {BIND_PLATFORM_DEV_PID, 0, display_info.pid},
-      {BIND_PLATFORM_DEV_DID, 0, display_info.did},
-  };
-
-  status = DdkAdd(ddk::DeviceAddArgs("dw-dsi").set_props(props));
+  status = DdkAdd("dw-dsi");
   if (status != ZX_OK) {
     DSI_ERROR("could not add device %d\n", status);
   }

@@ -122,8 +122,12 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "ThermalInit() failed");
   }
 
+  if (DsiInit() != ZX_OK) {
+    zxlogf(ERROR, "DsiInit() failed");
+  }
+
   if (DisplayInit() != ZX_OK) {
-    zxlogf(ERROR, "DisplayInit()failed");
+    zxlogf(ERROR, "DisplayInit() failed");
   }
 
   // Then the platform device drivers.

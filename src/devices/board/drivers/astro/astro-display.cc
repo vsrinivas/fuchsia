@@ -68,22 +68,6 @@ static const pbus_irq_t display_irqs[] = {
 
 };
 
-constexpr display_driver_t display_driver_info[] = {
-    {
-        .vid = PDEV_VID_AMLOGIC,
-        .pid = PDEV_PID_AMLOGIC_S905D2,
-        .did = PDEV_DID_AMLOGIC_DISPLAY,
-    },
-};
-
-constexpr pbus_metadata_t display_metadata[] = {
-    {
-        .type = DEVICE_METADATA_DISPLAY_DEVICE,
-        .data_buffer = &display_driver_info,
-        .data_size = sizeof(display_driver_t),
-    },
-};
-
 pbus_metadata_t display_panel_metadata[] = {
     {
         .type = DEVICE_METADATA_DISPLAY_CONFIG,
@@ -96,14 +80,6 @@ static const pbus_bti_t display_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_DISPLAY,
-    },
-};
-
-constexpr pbus_mmio_t dsi_mmios[] = {
-    {
-        // DSI Host Controller
-        .base = S905D2_MIPI_DSI_BASE,
-        .length = S905D2_MIPI_DSI_LENGTH,
     },
 };
 
@@ -124,29 +100,13 @@ static pbus_dev_t display_dev = []() {
   return dev;
 }();
 
-static pbus_dev_t dsi_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "dw-dsi";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_DW_DSI;
-  dev.metadata_list = display_metadata;
-  dev.metadata_count = countof(display_metadata);
-  dev.mmio_list = dsi_mmios;
-  dev.mmio_count = countof(dsi_mmios);
-  return dev;
-}();
-
 // Composite binding rules for display driver.
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 
 static const zx_bind_inst_t dsi_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DSI_IMPL),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DISPLAY),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_DSI_IMPL),
 };
 
 static const zx_bind_inst_t lcd_gpio_match[] = {
@@ -190,12 +150,6 @@ static const device_fragment_t fragments[] = {
 };
 
 zx_status_t Astro::DisplayInit() {
-  zx_status_t status = pbus_.DeviceAdd(&dsi_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd dsi failed: %d", __func__, status);
-    return status;
-  }
-
   display_panel_t display_panel_info[] = {
       {
           .width = 600,
@@ -214,7 +168,9 @@ zx_status_t Astro::DisplayInit() {
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = &display_panel_info;
 
-  status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
+  // TODO(payamm): Change from 1 to UINT32_MAX to separate DSI and Display into two different
+  // devhosts once support for it lands.
+  auto status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

@@ -23,6 +23,7 @@ driver_module("astro") {
     "astro-clk.cc",
     "astro-cpu.cc",
     "astro-display.cc",
+    "astro-dsi.cc",
     "astro-gpio.cc",
     "astro-i2c.cc",
     "astro-light.cc",
