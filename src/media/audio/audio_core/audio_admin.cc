@@ -312,17 +312,17 @@ void AudioAdmin::UpdatePolicy() {
   }
 }
 
-void AudioAdmin::UpdateActivity() {
-  TRACE_DURATION("audio", "AudioAdmin::UpdateActivity");
+void AudioAdmin::UpdateRenderActivity() {
+  TRACE_DURATION("audio", "AudioAdmin::UpdateRenderActivity");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
 
-  std::bitset<fuchsia::media::RENDER_USAGE_COUNT> activity;
+  std::bitset<fuchsia::media::RENDER_USAGE_COUNT> render_activity;
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     if (IsActive(static_cast<fuchsia::media::AudioRenderUsage>(i))) {
-      activity.set(i);
+      render_activity.set(i);
     }
   }
-  activity_dispatcher_.OnActivityChanged(activity);
+  activity_dispatcher_.OnRenderActivityChanged(render_activity);
 }
 
 void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
@@ -339,7 +339,7 @@ void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, boo
     }
 
     UpdatePolicy();
-    UpdateActivity();
+    UpdateRenderActivity();
   });
 }
 

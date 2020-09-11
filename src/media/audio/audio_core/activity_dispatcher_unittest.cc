@@ -11,12 +11,13 @@
 
 namespace media::audio {
 
-using Activity = ActivityDispatcherImpl::Activity;
-using UsageVector = std::vector<fuchsia::media::AudioRenderUsage>;
+using RenderActivity = ActivityDispatcherImpl::RenderActivity;
+using RenderUsageVector = std::vector<fuchsia::media::AudioRenderUsage>;
 
 namespace {
-Activity UsageVectorToActivity(const std::vector<fuchsia::media::AudioRenderUsage>& usage_vector) {
-  Activity activity;
+RenderActivity UsageVectorToActivity(
+    const std::vector<fuchsia::media::AudioRenderUsage>& usage_vector) {
+  RenderActivity activity;
   for (const auto& usage : usage_vector) {
     activity.set(static_cast<int>(usage));
   }
@@ -34,8 +35,8 @@ class ActivityDispatcherTest : public gtest::TestLoopFixture {
   }
 
   // Simulates a new set of usages being active.
-  void UpdateActivity(const UsageVector& usage_vector) {
-    activity_dispatcher_.OnActivityChanged(UsageVectorToActivity(usage_vector));
+  void UpdateActivity(const RenderUsageVector& usage_vector) {
+    activity_dispatcher_.OnRenderActivityChanged(UsageVectorToActivity(usage_vector));
   }
 
  private:
@@ -46,7 +47,7 @@ TEST_F(ActivityDispatcherTest, FirstWatchReturnsImmediately) {
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { called = true; });
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& activity) { called = true; });
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -56,14 +57,15 @@ TEST_F(ActivityDispatcherTest, SecondWatchHangsWithoutUpdate) {
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool first_called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { first_called = true; });
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& activity) { first_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_called);
 
   // Check that the Watch does not return without an update in the activity.
   bool second_called = false;
   activity_reporter->WatchRenderActivity(
-      [&](const UsageVector& activity) { second_called = true; });
+      [&](const RenderUsageVector& activity) { second_called = true; });
   RunLoopUntilIdle();
   EXPECT_FALSE(second_called);
 }
@@ -72,20 +74,21 @@ TEST_F(ActivityDispatcherTest, SecondWatchReturnsWithUpdate) {
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool first_called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { first_called = true; });
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& activity) { first_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_called);
 
   bool second_called = false;
-  UsageVector actual_usages;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& usages) {
+  RenderUsageVector actual_usages;
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& usages) {
     second_called = true;
     actual_usages = usages;
   });
   RunLoopUntilIdle();
   EXPECT_FALSE(second_called);
 
-  UsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
+  RenderUsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
   UpdateActivity(expected_usages);
 
   // Check that the Watch does return with an update in the activity.
@@ -95,15 +98,15 @@ TEST_F(ActivityDispatcherTest, SecondWatchReturnsWithUpdate) {
 }
 
 TEST_F(ActivityDispatcherTest, WatchReturnsCachedValue) {
-  UsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
+  RenderUsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
   UpdateActivity(expected_usages);
   RunLoopUntilIdle();
 
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool called = false;
-  UsageVector actual_usages;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& usages) {
+  RenderUsageVector actual_usages;
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& usages) {
     called = true;
     actual_usages = usages;
   });
@@ -117,23 +120,24 @@ TEST_F(ActivityDispatcherTest, WatchSkipsTransientValue) {
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool first_called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { first_called = true; });
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& activity) { first_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_called);
 
-  UsageVector transient_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
+  RenderUsageVector transient_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
   UpdateActivity(transient_usages);
   RunLoopUntilIdle();
 
-  UsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND,
-                                 fuchsia::media::AudioRenderUsage::SYSTEM_AGENT};
+  RenderUsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND,
+                                       fuchsia::media::AudioRenderUsage::SYSTEM_AGENT};
   UpdateActivity(expected_usages);
   RunLoopUntilIdle();
 
   // Check that the Watch returns the latest value and not the transient one.
   bool second_called = false;
-  UsageVector actual_usages;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& usages) {
+  RenderUsageVector actual_usages;
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& usages) {
     second_called = true;
     actual_usages = usages;
   });
@@ -146,21 +150,23 @@ TEST_F(ActivityDispatcherTest, WatchHangsAfterFlap) {
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool first_called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { first_called = true; });
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& activity) { first_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_called);
 
-  UsageVector transient_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
+  RenderUsageVector transient_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
   UpdateActivity(transient_usages);
   RunLoopUntilIdle();
 
-  UsageVector original_usages = {};
+  RenderUsageVector original_usages = {};
   UpdateActivity(original_usages);
   RunLoopUntilIdle();
 
   // Check that the Watch does not return if original activity is restored before next Watch.
   bool second_called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& usages) { second_called = true; });
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& usages) { second_called = true; });
   RunLoopUntilIdle();
   EXPECT_FALSE(second_called);
 }
@@ -169,18 +175,20 @@ TEST_F(ActivityDispatcherTest, WatchHangsOnRedundantChange) {
   fuchsia::media::ActivityReporterPtr activity_reporter = GetClient();
 
   bool first_called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { first_called = true; });
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& activity) { first_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_called);
 
-  UsageVector redundant_usages = {};
+  RenderUsageVector redundant_usages = {};
   UpdateActivity(redundant_usages);
   RunLoopUntilIdle();
 
   // Check that redundant changes are not dispatched.
   bool second_called = false;
-  UsageVector actual_usages;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& usages) { second_called = true; });
+  RenderUsageVector actual_usages;
+  activity_reporter->WatchRenderActivity(
+      [&](const RenderUsageVector& usages) { second_called = true; });
   RunLoopUntilIdle();
   EXPECT_FALSE(second_called);
 }
@@ -190,18 +198,18 @@ TEST_F(ActivityDispatcherTest, MultipleClients) {
 
   // First client gets first activity.
   bool first_called = false;
-  client->WatchRenderActivity([&](const UsageVector& activity) { first_called = true; });
+  client->WatchRenderActivity([&](const RenderUsageVector& activity) { first_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_called);
 
-  UsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
+  RenderUsageVector expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND};
   UpdateActivity(expected_usages);
   RunLoopUntilIdle();
 
   // First client gets second activity.
   bool second_called = false;
-  UsageVector actual_usages;
-  client->WatchRenderActivity([&](const UsageVector& usages) {
+  RenderUsageVector actual_usages;
+  client->WatchRenderActivity([&](const RenderUsageVector& usages) {
     second_called = true;
     actual_usages = usages;
   });
@@ -213,8 +221,8 @@ TEST_F(ActivityDispatcherTest, MultipleClients) {
 
   // Second client gets second activty.
   bool third_called = false;
-  UsageVector other_actual_usages;
-  other_client->WatchRenderActivity([&](const UsageVector& usages) {
+  RenderUsageVector other_actual_usages;
+  other_client->WatchRenderActivity([&](const RenderUsageVector& usages) {
     third_called = true;
     other_actual_usages = usages;
   });
@@ -225,20 +233,20 @@ TEST_F(ActivityDispatcherTest, MultipleClients) {
   // Both client get the activity update.
   bool first_client_called = false;
   bool second_client_called = false;
-  UsageVector first_client_new_actual_usages;
-  UsageVector second_client_new_actual_usages;
-  client->WatchRenderActivity([&](const UsageVector& usages) {
+  RenderUsageVector first_client_new_actual_usages;
+  RenderUsageVector second_client_new_actual_usages;
+  client->WatchRenderActivity([&](const RenderUsageVector& usages) {
     first_client_called = true;
     first_client_new_actual_usages = usages;
   });
-  other_client->WatchRenderActivity([&](const UsageVector& usages) {
+  other_client->WatchRenderActivity([&](const RenderUsageVector& usages) {
     second_client_called = true;
     second_client_new_actual_usages = usages;
   });
   RunLoopUntilIdle();
 
-  UsageVector new_expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND,
-                                     fuchsia::media::AudioRenderUsage::SYSTEM_AGENT};
+  RenderUsageVector new_expected_usages = {fuchsia::media::AudioRenderUsage::BACKGROUND,
+                                           fuchsia::media::AudioRenderUsage::SYSTEM_AGENT};
   UpdateActivity(new_expected_usages);
   RunLoopUntilIdle();
 
@@ -259,13 +267,13 @@ TEST_F(ActivityDispatcherTest, TwoHangingGetsTriggerError) {
   });
 
   bool called = false;
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) { called = true; });
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& activity) { called = true; });
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
 
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) {});
-  activity_reporter->WatchRenderActivity([&](const UsageVector& activity) {});
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& activity) {});
+  activity_reporter->WatchRenderActivity([&](const RenderUsageVector& activity) {});
   RunLoopUntilIdle();
 
   ASSERT_TRUE(client_error_handler_invoked);

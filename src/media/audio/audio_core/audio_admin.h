@@ -45,8 +45,9 @@ class AudioAdmin {
    public:
     virtual ~ActivityDispatcher() {}
 
-    using Activity = std::bitset<fuchsia::media::RENDER_USAGE_COUNT>;
-    virtual void OnActivityChanged(std::bitset<fuchsia::media::RENDER_USAGE_COUNT> activity) = 0;
+    using RenderActivity = std::bitset<fuchsia::media::RENDER_USAGE_COUNT>;
+    virtual void OnRenderActivityChanged(
+        std::bitset<fuchsia::media::RENDER_USAGE_COUNT> activity) = 0;
   };
 
   // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.
@@ -98,7 +99,7 @@ class AudioAdmin {
   async_dispatcher_t* fidl_dispatcher_;
 
   void UpdatePolicy();
-  void UpdateActivity();
+  void UpdateRenderActivity();
 
   // Helpers to make the control of streams cleaner.
   void SetUsageNone(fuchsia::media::AudioRenderUsage usage);

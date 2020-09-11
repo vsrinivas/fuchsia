@@ -26,7 +26,7 @@ class ActivityDispatcherImpl : public AudioAdmin::ActivityDispatcher {
   fidl::InterfaceRequestHandler<fuchsia::media::ActivityReporter> GetFidlRequestHandler();
 
   // Notifies all of the connected clients that the activity has changed.
-  void OnActivityChanged(Activity activity) override;
+  void OnRenderActivityChanged(RenderActivity activity) override;
 
  private:
   // fuchsia::media::ActivityReporter implementation, associated with a single client.
@@ -36,7 +36,7 @@ class ActivityDispatcherImpl : public AudioAdmin::ActivityDispatcher {
   void Bind(fidl::InterfaceRequest<fuchsia::media::ActivityReporter> request);
 
   // Last activity observerd by the dispatcher.
-  Activity last_known_activity_;
+  RenderActivity last_known_render_activity_;
 
   fidl::BindingSet<fuchsia::media::ActivityReporter, std::unique_ptr<ActivityReporterImpl>>
       bindings_;
