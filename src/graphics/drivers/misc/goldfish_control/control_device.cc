@@ -11,6 +11,8 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
@@ -18,17 +20,10 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/heap.h"
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
-#include <ddk/platform-defs.h> // nogncheck
-#include <ddk/protocol/composite.h> // nogncheck
-#endif
-
 namespace goldfish {
 namespace {
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
 enum { FRAGMENT_GOLDFISH_PIPE, FRAGMENT_GOLDFISH_ADDRESS_SPACE, FRAGMENT_COUNT };
-#endif
 
 const char* kTag = "goldfish-control";
 
@@ -146,7 +141,6 @@ Control::~Control() {
 }
 
 zx_status_t Control::Init() {
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
   composite_protocol_t composite;
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
@@ -176,17 +170,6 @@ zx_status_t Control::Init() {
   }
 
   return ZX_OK;
-
-#else
-  pipe_ = ddk::GoldfishPipeProtocolClient(parent());
-  if (!pipe_.is_valid()) {
-    zxlogf(ERROR, "%s: goldfish pipe protocol is invalid", kTag);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  return ZX_OK;
-
-#endif
 }
 
 zx_status_t Control::InitPipeDeviceLocked() {
@@ -272,8 +255,6 @@ zx_status_t Control::InitPipeDeviceLocked() {
   return ZX_OK;
 }
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
-
 zx_status_t Control::InitAddressSpaceDeviceLocked() {
   if (!address_space_.is_valid()) {
     zxlogf(ERROR, "%s: no address space protocol", kTag);
@@ -303,8 +284,6 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   return ZX_OK;
 }
 
-#endif
-
 zx_status_t Control::Bind() {
   fbl::AutoLock lock(&lock_);
 
@@ -314,13 +293,11 @@ zx_status_t Control::Bind() {
     return status;
   }
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
   status = InitAddressSpaceDeviceLocked();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: InitAddressSpaceDeviceLocked() failed: %d", kTag, status);
     return status;
   }
-#endif
 
   // We are now ready to serve goldfish heap allocations. Create a channel
   // and register client-end with sysmem.
@@ -759,16 +736,10 @@ static constexpr zx_driver_ops_t goldfish_control_driver_ops = []() -> zx_driver
 }();
 
 // clang-format off
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
 ZIRCON_DRIVER_BEGIN(goldfish_control_composite, goldfish_control_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GOLDFISH),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GOLDFISH_CONTROL),
 ZIRCON_DRIVER_END(goldfish_control_composite)
-#else
-ZIRCON_DRIVER_BEGIN(goldfish_control, goldfish_control_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
-ZIRCON_DRIVER_END(goldfish_control)
-#endif
     // clang-format on

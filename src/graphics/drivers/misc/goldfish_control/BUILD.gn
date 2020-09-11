@@ -20,6 +20,8 @@ driver_module("control_driver") {
   ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
     "//sdk/banjo/ddk.protocol.goldfish.control",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
@@ -37,12 +39,6 @@ driver_module("control_driver") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-
-  if (goldfish_control_use_composite_device) {
-    defines = [ "GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE" ]
-
-    deps += [ "//sdk/banjo/ddk.protocol.goldfish.addressspace" ]
-  }
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [

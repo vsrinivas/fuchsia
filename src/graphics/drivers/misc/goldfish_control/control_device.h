@@ -14,6 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/goldfish/addressspace.h>
 #include <ddktl/protocol/goldfish/control.h>
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
@@ -22,15 +23,10 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/heap.h"
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
-#include <ddktl/protocol/goldfish/addressspace.h> // nogncheck
-#endif
-
 namespace goldfish {
 
 class Control;
-using ControlType =
-    ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk::GetProtocolable>;
+using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk::GetProtocolable>;
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
@@ -70,10 +66,7 @@ class Control : public ControlType,
  private:
   zx_status_t Init();
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
   zx_status_t InitAddressSpaceDeviceLocked() TA_REQ(lock_);
-#endif
-
   zx_status_t InitPipeDeviceLocked() TA_REQ(lock_);
 
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
@@ -95,9 +88,7 @@ class Control : public ControlType,
   fbl::Mutex lock_;
   ddk::GoldfishPipeProtocolClient pipe_;
   ddk::GoldfishControlProtocolClient control_;
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
   ddk::GoldfishAddressSpaceProtocolClient address_space_;
-#endif
   int32_t id_ = 0;
   zx::bti bti_ TA_GUARDED(lock_);
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
@@ -107,10 +98,8 @@ class Control : public ControlType,
 
   zx::event pipe_event_;
 
-#ifdef GOLDFISH_CONTROL_USE_COMPOSITE_DEVICE
   std::unique_ptr<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient>
       address_space_child_;
-#endif
 
   // TODO(TC-383): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
