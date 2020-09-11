@@ -15,6 +15,9 @@
 namespace mdns {
 
 enum class Media { kWired, kWireless, kBoth };
+const std::array<std::string, 3> MediaStrings = { "Wired", "Wireless", "Both" };
+
+std::ostream& operator<<(std::ostream& os, const Media& value);
 
 // SocketAddress with interface address.
 class ReplyAddress {

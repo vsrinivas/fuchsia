@@ -337,22 +337,25 @@ TEST_F(InstanceResponderTest, WirelessOnly) {
   under_test.Start(kHostFullName, addresses());
   ExpectAnnouncements(Media::kWireless);
 
-  // Media is irrelevant here.
-  ReplyAddress sender_address(
+  ReplyAddress wired_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kBoth);
+      inet::IpAddress(192, 168, 1, 100), Media::kWired);
+
+  ReplyAddress wireless_sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless);
 
   // Question from wired should be ingored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply_wired_only(), sender_address);
+                             addresses().multicast_reply_wired_only(), wired_sender_address);
   ExpectNoGetPublicationCall();
   ExpectNoOther();
 
   // Question from wireless should be answered.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply_wireless_only(), sender_address);
+                             addresses().multicast_reply_wireless_only(), wireless_sender_address);
   ExpectGetPublicationCall(true, "",
-                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+                           {wireless_sender_address.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication(Media::kWireless);
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
@@ -368,22 +371,25 @@ TEST_F(InstanceResponderTest, WiredOnly) {
   under_test.Start(kHostFullName, addresses());
   ExpectAnnouncements(Media::kWired);
 
-  // Media is irrelevant here.
-  ReplyAddress sender_address(
+  ReplyAddress wireless_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kBoth);
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless);
 
   // Question from wireless should be ingored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply_wireless_only(), sender_address);
+                             addresses().multicast_reply_wireless_only(), wireless_sender_address);
   ExpectNoGetPublicationCall();
   ExpectNoOther();
 
+  ReplyAddress wired_sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), Media::kWired);
+
   // Question from wired should be answered.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply_wired_only(), sender_address);
+                             addresses().multicast_reply_wired_only(), wired_sender_address);
   ExpectGetPublicationCall(true, "",
-                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+                           {wired_sender_address.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication(Media::kWired);
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();

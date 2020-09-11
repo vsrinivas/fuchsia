@@ -40,7 +40,7 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
   std::string name = question.name_.dotted_string_;
   std::string subtype;
 
-  if (media_ != Media::kBoth && reply_address.media() != media_) {
+  if (media_ != Media::kBoth && sender_address.media() != media_) {
     // Question received on unsupported medium. Ignore.
     return;
   }
