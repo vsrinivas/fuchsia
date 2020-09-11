@@ -329,7 +329,8 @@ void RegisterTests() {
     perftest::RegisterTest(
         fxl::StringPrintf("Inspect/LinearDoubleHistogram/Insert/%d", size).c_str(),
         TestHistogramInsert<inspect::LinearDoubleHistogram>, size, linear_midpoint);
-
+  }
+  for (auto size : {4, 16, 32}) {
     const auto exponential_midpoint =
         (kExponentialFloor +
          kExponentialInitialStep * std::pow(kExponentialStepMultiplier, size / 2));
