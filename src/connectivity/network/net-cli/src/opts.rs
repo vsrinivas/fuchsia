@@ -94,7 +94,6 @@ pub struct FilterIsEnabled {}
 /// sets nat rules (see the netfilter::parser library for the NAT rules format)
 pub struct FilterSetNatRules {
     #[argh(positional)]
-    /// nat rules
     pub rules: String,
 }
 
@@ -103,7 +102,6 @@ pub struct FilterSetNatRules {
 /// sets rdr rules (see the netfilter::parser library for the RDR rules format)
 pub struct FilterSetRdrRules {
     #[argh(positional)]
-    /// rdr rules
     pub rules: String,
 }
 
@@ -112,7 +110,6 @@ pub struct FilterSetRdrRules {
 /// sets filter rules (see the netfilter::parser library for the rules format)
 pub struct FilterSetRules {
     #[argh(positional)]
-    /// rules
     pub rules: String,
 }
 
@@ -138,13 +135,10 @@ pub enum FwdEnum {
 /// adds a forwarding table entry to route to a device
 pub struct FwdAddDevice {
     #[argh(positional)]
-    /// id of the network interface to route to
     pub id: u64,
     #[argh(positional)]
-    /// address portion of the subnet for this forwarding rule
     pub addr: String,
     #[argh(positional)]
-    /// routing prefix for this forwarding rule
     pub prefix: u8,
 }
 
@@ -153,13 +147,10 @@ pub struct FwdAddDevice {
 /// adds a forwarding table entry to route to a IP address
 pub struct FwdAddHop {
     #[argh(positional)]
-    /// ip address of the next hop to route to
     pub next_hop: String,
     #[argh(positional)]
-    /// address portion of the subnet for this forwarding rule
     pub addr: String,
     #[argh(positional)]
-    /// routing prefix for this forwarding rule
     pub prefix: u8,
 }
 
@@ -168,10 +159,8 @@ pub struct FwdAddHop {
 /// deletes a forwarding table entry
 pub struct FwdDel {
     #[argh(positional)]
-    /// address portion of the subnet for this forwarding rule
     pub addr: String,
     #[argh(positional)]
-    /// routing prefix for this forwarding rule
     pub prefix: u8,
 }
 
@@ -208,7 +197,6 @@ pub struct IfAdd {
     // The path must yield a handle to a fuchsia.hardware.ethernet.Device interface.
     // Currently this means paths under /dev/class/ethernet.
     #[argh(positional)]
-    /// path to the device to add
     pub path: String,
 }
 
@@ -232,13 +220,10 @@ pub enum IfAddrEnum {
 /// adds an address to the network interface
 pub struct IfAddrAdd {
     #[argh(positional)]
-    /// id of the network interface
     pub id: u64,
     #[argh(positional)]
-    /// addr of the network interface
     pub addr: String,
     #[argh(positional)]
-    /// prefix of the network interface
     pub prefix: u8,
 }
 
@@ -247,13 +232,10 @@ pub struct IfAddrAdd {
 /// deletes an address from the network interface
 pub struct IfAddrDel {
     #[argh(positional)]
-    /// id of the network interface
     pub id: u64,
     #[argh(positional)]
-    /// addr of the network interface
     pub addr: String,
     #[argh(positional)]
-    /// optional address subnet prefix (defaults to 32 for v4, 128 for v6)
     pub prefix: Option<u8>,
 }
 
@@ -262,7 +244,6 @@ pub struct IfAddrDel {
 /// creates a bridge between network interfaces
 pub struct IfBridge {
     #[argh(positional)]
-    /// ids of the network interfaces to be bridged
     pub ids: Vec<u32>,
 }
 
@@ -271,7 +252,6 @@ pub struct IfBridge {
 /// removes a network interface
 pub struct IfDel {
     #[argh(positional)]
-    /// id of the network interface to remove
     pub id: u64,
 }
 
@@ -280,7 +260,6 @@ pub struct IfDel {
 /// disables a network interface
 pub struct IfDisable {
     #[argh(positional)]
-    /// id of the network interface to disable
     pub id: u64,
 }
 
@@ -289,7 +268,6 @@ pub struct IfDisable {
 /// enables a network interface
 pub struct IfEnable {
     #[argh(positional)]
-    /// id of the network interface to enable
     pub id: u64,
 }
 
@@ -298,7 +276,6 @@ pub struct IfEnable {
 /// queries a network interface
 pub struct IfGet {
     #[argh(positional)]
-    /// id of the network interface to query
     pub id: u64,
 }
 
@@ -307,7 +284,6 @@ pub struct IfGet {
 /// lists network interfaces
 pub struct IfList {
     #[argh(positional)]
-    /// name substring to be matched
     pub name_pattern: Option<String>,
 }
 
@@ -331,7 +307,6 @@ pub enum LogEnum {
 /// syslog severity level / loglevel
 pub struct LogSetLevel {
     #[argh(positional, from_str_fn(parse_log_level_str))]
-    /// log level
     pub log_level: logger::LogLevelFilter,
 }
 
@@ -339,8 +314,7 @@ pub struct LogSetLevel {
 #[argh(subcommand, name = "set-packets")]
 /// log packets to stdout
 pub struct LogSetPackets {
-    #[argh(switch)]
-    /// log level
+    #[argh(positional)]
     pub enabled: bool,
 }
 
@@ -453,12 +427,10 @@ pub enum MetricEnum {
 /// assigns a route metric to the network interface
 pub struct MetricSet {
     #[argh(positional)]
-    /// id of the network interface to assign the route metric to
     // NOTE: id is a u32 because fuchsia.netstack interfaces take u32 interface ids.
     // TODO: change id to u64 once fuchsia.netstack is no longer in use.
     pub id: u32,
     #[argh(positional)]
-    /// route metric to be assigned
     pub metric: u32,
 }
 
@@ -482,7 +454,6 @@ pub enum DhcpEnum {
 /// starts a dhcp client on the interface
 pub struct DhcpStart {
     #[argh(positional)]
-    /// id of the network interface for which a dhcp client will be started
     pub id: u32,
 }
 
@@ -491,6 +462,5 @@ pub struct DhcpStart {
 /// stops the dhcp client on the interface
 pub struct DhcpStop {
     #[argh(positional)]
-    /// id of the network interface for which the dhcp client will be stopped
     pub id: u32,
 }
