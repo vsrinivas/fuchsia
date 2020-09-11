@@ -489,28 +489,35 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     *if_out = NULL;
   }
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d", bsscfgidx, ifidx);
-
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d, name=%s", bsscfgidx, ifidx, name);
   ifp = drvr->iflist[bsscfgidx];
+
+  /*
+   * Never touch ifidx 0. This is the primary network interface and should never be
+   * modified by this function after its first call.
+   */
+  if (ifp && ifidx == 0) {
+    BRCMF_DBG(INFO,
+              "netdev:%s ignoring IF event requesting to modify the primary network interface",
+              ifp->ndev->name);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   /*
    * Delete the existing interface before overwriting it
    * in case we missed the BRCMF_E_IF_DEL event.
    */
   if (ifp) {
-    if (ifidx) {
-      BRCMF_ERR("ERROR: netdev:%s already exists", ifp->ndev->name);
-      netif_stop_queue(ifp->ndev);
-      brcmf_net_detach(ifp->ndev, false);
-      drvr->iflist[bsscfgidx] = NULL;
-    } else {
-      BRCMF_DBG(INFO, "netdev:%s ignore IF event", ifp->ndev->name);
-      return ZX_ERR_INVALID_ARGS;
-    }
+    BRCMF_ERR("Iface at ifidx %d already exists. Replacing the existing netdev:%s with netdev:%s.",
+              ifidx, ifp->ndev->name, name);
+    netif_stop_queue(ifp->ndev);
+    brcmf_net_detach(ifp->ndev, false);
+    drvr->iflist[bsscfgidx] = NULL;
   }
 
   /* Allocate netdev, including space for private structure */
   ndev = brcmf_allocate_net_device(sizeof(*ifp), name);
-  if (!ndev) {
+  if (ndev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -530,10 +537,14 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   ifp->pend_8021x_wait = {};
   // spin_lock_init(&ifp->netif_stop_lock);
 
-  if (mac_addr != NULL) {
+  if (mac_addr != nullptr) {
     memcpy(ifp->mac_addr, mac_addr, ETH_ALEN);
   }
-  BRCMF_DBG(TRACE, " ==== if:%s (%pM) created ===", name, ifp->mac_addr);
+  BRCMF_DBG(WLANIF,
+            " ==== netdev:%s : bsscfgidx: %d, ifidx: %d, mac: %02x:%02x:%02x:%02x:%02x:%02x"
+            "created ===",
+            ndev->name, bsscfgidx, ifidx, ifp->mac_addr[0], ifp->mac_addr[1], ifp->mac_addr[2],
+            ifp->mac_addr[3], ifp->mac_addr[4], ifp->mac_addr[5]);
   if (if_out) {
     *if_out = ifp;
   }

@@ -185,7 +185,9 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
   ifp = drvr->iflist[ifevent->bsscfgidx];
 
   if (ifevent->action == BRCMF_E_IF_ADD) {
-    BRCMF_DBG(EVENT, "adding %s (%pM)", emsg->ifname, emsg->addr);
+    BRCMF_DBG(EVENT, "adding ifname '%s' with mac %02x:%02x:%02x:%02x:%02x:%02x", emsg->ifname,
+              emsg->addr[0], emsg->addr[1], emsg->addr[2], emsg->addr[3], emsg->addr[4],
+              emsg->addr[5]);
     err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, emsg->ifname, emsg->addr, &ifp);
     if (err != ZX_OK) {
       return;
