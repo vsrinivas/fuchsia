@@ -29,6 +29,8 @@ llcpp::fuchsia::sysmem2::HeapProperties BuildHeapProperties(bool is_cpu_accessib
 
   return HeapProperties::Builder(std::make_unique<HeapProperties::Frame>())
       .set_coherency_domain_support(std::move(coherency_domain_support))
+      // Contiguous non-protected VMOs need to be cleared.
+      .set_need_clear(std::make_unique<bool>(is_cpu_accessible))
       .build();
 }
 

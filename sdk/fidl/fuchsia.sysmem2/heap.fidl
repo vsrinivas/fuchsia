@@ -24,6 +24,8 @@ table CoherencyDomainSupport {
 table HeapProperties {
     /// Status of support for coherency domains.
     1: CoherencyDomainSupport coherency_domain_support;
+    /// Indicates whether sysmem needs to clear VMOs allocated by the Heap.
+    2: bool need_clear;
 };
 
 /// Manages resources on a specific sysmem heap.

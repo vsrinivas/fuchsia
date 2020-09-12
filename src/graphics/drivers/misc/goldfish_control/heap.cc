@@ -40,6 +40,7 @@ llcpp::fuchsia::sysmem2::HeapProperties GetDeviceLocalHeapProperties() {
   return llcpp::fuchsia::sysmem2::HeapProperties::Builder(
              std::make_unique<llcpp::fuchsia::sysmem2::HeapProperties::Frame>())
       .set_coherency_domain_support(std::move(coherency_domain_support))
+      .set_need_clear(std::make_unique<bool>(false))
       .build();
 }
 

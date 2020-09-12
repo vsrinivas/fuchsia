@@ -1038,6 +1038,9 @@ llcpp::fuchsia::sysmem2::HeapProperties::Builder V2CloneHeapProperties(
         allocator,
         V2CloneCoherencyDomainSuppoort(allocator, src.coherency_domain_support()).build()));
   }
+  if (src.has_need_clear()) {
+    builder.set_need_clear(sysmem::MakeTracking(allocator, src.need_clear()));
+  }
   return builder;
 }
 

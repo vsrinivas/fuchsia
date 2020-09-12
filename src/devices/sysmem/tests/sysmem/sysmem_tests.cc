@@ -2812,8 +2812,35 @@ bool BasicAllocationSucceeds(
   if (status != ZX_OK || allocation_status != ZX_OK) {
     printf("WaitForBuffersAllocated failed - status: %d allocation_status: %d\n", status,
            allocation_status);
+    return false;
   }
-  return status == ZX_OK && allocation_status == ZX_OK;
+
+  // Check if the contents in allocated VMOs are already filled with zero.
+  // If the allocated VMO is readable, then we would expect it could be cleared by sysmem;
+  // otherwise we just skip this check.
+
+  zx::vmo allocated_vmo(buffer_collection_info->buffers[0].vmo);
+  size_t vmo_size;
+  status = allocated_vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    printf("ERROR: Cannot get size of allocated_vmo: %d\n", status);
+    return false;
+  }
+
+  size_t size_bytes = std::min(
+      vmo_size, static_cast<size_t>(buffer_collection_info->settings.buffer_settings.size_bytes));
+  std::vector<uint8_t> bytes(size_bytes, 0xff);
+
+  status = allocated_vmo.read(bytes.data(), 0u, size_bytes);
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    // If the allocated VMO is not readable, then we just skip value check,
+    // since we do not expect it being cleared by write syscalls.
+    printf("INFO: allocated_vmo doesn't support zx_vmo_read, skip value check\n");
+    return true;
+  }
+
+  // Check if all the contents we read from the VMO are filled with zero.
+  return *std::max_element(bytes.begin(), bytes.end()) == 0u;
 }
 
 TEST(Sysmem, BasicAllocationSucceeds) {

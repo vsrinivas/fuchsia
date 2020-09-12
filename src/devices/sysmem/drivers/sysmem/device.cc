@@ -38,7 +38,7 @@ namespace {
 
 // Helper function to build owned HeapProperties table with coherency doman support.
 llcpp::fuchsia::sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
-    bool cpu_supported, bool ram_supported, bool inaccessible_supported) {
+    bool cpu_supported, bool ram_supported, bool inaccessible_supported, bool need_clear) {
   using llcpp::fuchsia::sysmem2::CoherencyDomainSupport;
   using llcpp::fuchsia::sysmem2::HeapProperties;
 
@@ -52,14 +52,18 @@ llcpp::fuchsia::sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSu
 
   return HeapProperties::Builder(std::make_unique<HeapProperties::Frame>())
       .set_coherency_domain_support(std::move(coherency_domain_support))
+      .set_need_clear(std::make_unique<bool>(need_clear))
       .build();
 }
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
   SystemRamMemoryAllocator()
-      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(true /*cpu*/, true /*ram*/,
-                                                                      true /*inaccessible*/)) {}
+      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
+            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+            // Zircon guarantees created VMO are filled with 0; sysmem doesn't
+            // need to clear it once again.
+            false /*need_clear*/)) {}
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
@@ -87,8 +91,11 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
  public:
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
-      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(true /*cpu*/, true /*ram*/,
-                                                                      true /*inaccessible*/)),
+      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
+            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+            // Zircon guarantees contagious VMO created are filled with 0;
+            // sysmem doesn't need to clear it once again.
+            false /*need_clear*/)),
         parent_device_(parent_device) {}
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,

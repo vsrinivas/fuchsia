@@ -677,12 +677,15 @@ TEST(SysmemVersion, HeapProperties) {
     bool cpu_supported;
     bool ram_supported;
     bool inaccessible_supported;
+    bool need_clear;
     random(&cpu_supported);
     random(&ram_supported);
     random(&inaccessible_supported);
+    random(&need_clear);
 
     v2::HeapProperties v2_1 =
         allocator.make_table_builder<v2::HeapProperties>()
+            .set_need_clear(allocator.make<bool>(need_clear))
             .set_coherency_domain_support(allocator.make<v2::CoherencyDomainSupport>(
                 allocator.make_table_builder<v2::CoherencyDomainSupport>()
                     .set_cpu_supported(allocator.make<bool>(cpu_supported))
@@ -696,6 +699,7 @@ TEST(SysmemVersion, HeapProperties) {
     EXPECT_TRUE(v2_2.coherency_domain_support().has_cpu_supported());
     EXPECT_TRUE(v2_2.coherency_domain_support().has_ram_supported());
     EXPECT_TRUE(v2_2.coherency_domain_support().has_inaccessible_supported());
+    EXPECT_TRUE(v2_2.has_need_clear());
 
     EXPECT_EQ(v2_2.coherency_domain_support().cpu_supported(),
               v2_1.coherency_domain_support().cpu_supported());
@@ -703,5 +707,6 @@ TEST(SysmemVersion, HeapProperties) {
               v2_1.coherency_domain_support().ram_supported());
     EXPECT_EQ(v2_2.coherency_domain_support().inaccessible_supported(),
               v2_1.coherency_domain_support().inaccessible_supported());
+    EXPECT_EQ(v2_2.need_clear(), v2_1.need_clear());
   }
 }

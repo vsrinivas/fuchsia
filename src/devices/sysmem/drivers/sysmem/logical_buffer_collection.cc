@@ -1963,14 +1963,14 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   // deallocations to be done before failing an new allocation.
   //
   // TODO(ZX-4817): Zero secure/protected VMOs.
-  // TODO(fxbug.dev/57182): Add a flag to skip the clear process if Heap does the clearing itself.
   const auto& heap_properties = allocator->heap_properties();
   ZX_DEBUG_ASSERT(heap_properties.has_coherency_domain_support());
-  if (heap_properties.coherency_domain_support().cpu_supported() ||
-      heap_properties.coherency_domain_support().ram_supported()) {
+  ZX_DEBUG_ASSERT(heap_properties.has_need_clear());
+  if (heap_properties.need_clear()) {
     uint64_t offset = 0;
     while (offset < info.size_bytes) {
       uint64_t bytes_to_write = std::min(sizeof(kZeroes), info.size_bytes - offset);
+      // TODO(59796): Use ZX_VMO_OP_ZERO instead.
       status = raw_parent_vmo.write(kZeroes, offset, bytes_to_write);
       if (status != ZX_OK) {
         LogError("raw_parent_vmo.write() failed - status: %d", status);
