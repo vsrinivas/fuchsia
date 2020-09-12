@@ -8,10 +8,10 @@
 #include <stdio.h>
 
 #include <fidl/examples/routing/echo/cpp/fidl.h>
+#include <gtest/gtest.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 TEST(EchoTest, TestEcho) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
