@@ -21,7 +21,7 @@ static_library("console") {
     "//src/developer/shell/josh/lib",
     "//third_party/quickjs:qjs-lib",
     "//third_party/quickjs:repl",
-    "//zircon/public/lib/cmdline",
+    "//zircon/system/ulib/cmdline",
   ]
 }
 

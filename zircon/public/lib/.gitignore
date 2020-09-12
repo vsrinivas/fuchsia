@@ -9,7 +9,6 @@ async-cpp/
 bitmap/
 boringssl/
 cksum/
-cmdline/
 cmpctmalloc/
 coresight/
 counters/

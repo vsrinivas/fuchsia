@@ -22,8 +22,8 @@ if (is_host) {
       "//src/lib/fxl",
       "//third_party/protobuf:protobuf_full",
       "//tools/fidlcat/lib:host_lib",
-      "//zircon/public/lib/cmdline",
       "//zircon/public/lib/fidl_base",
+      "//zircon/system/ulib/cmdline",
 
       # TODO(57392): Move it back to //third_party once unification completes.
       "//zircon/third_party/rapidjson",
@@ -44,7 +44,7 @@ if (is_host) {
     deps = [
       "//src/lib/fidl_codec",
       "//src/lib/fxl",
-      "//zircon/public/lib/cmdline",
+      "//zircon/system/ulib/cmdline",
     ]
 
     # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -68,7 +68,7 @@ if (is_host) {
       ":lib",
       "//src/lib/fxl",
       "//third_party/googletest:gtest",
-      "//zircon/public/lib/cmdline",
+      "//zircon/system/ulib/cmdline",
     ]
 
     # TODO(fxb/58162): delete the below and fix compiler warnings

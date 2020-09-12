@@ -14,7 +14,7 @@ executable("shell_mirror") {
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/common",
-    "//zircon/public/lib/cmdline",
+    "//zircon/system/ulib/cmdline",
   ]
 }
 
@@ -34,7 +34,7 @@ static_library("server_lib") {
     "//src/developer/debug/shared",
     "//src/lib/fxl",
     "//third_party/boringssl",
-    "//zircon/public/lib/cmdline",
+    "//zircon/system/ulib/cmdline",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -88,11 +88,11 @@ executable("shell_mirror_tests_bin") {
     "//src/developer/debug/ipc:client",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/memfs",
   ]
 

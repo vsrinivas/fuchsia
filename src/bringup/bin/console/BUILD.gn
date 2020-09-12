@@ -39,13 +39,13 @@ source_set("common") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
-    "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/syslog:syslog-headers",
   ]

@@ -144,7 +144,7 @@ executable("bin") {
     ":lib",
     "//sdk/fidl/fuchsia.debugger",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/cmdline",
+    "//zircon/system/ulib/cmdline",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

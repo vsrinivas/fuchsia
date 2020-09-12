@@ -198,8 +198,8 @@ static_library("console") {
     "//src/lib/analytics/cpp/google_analytics",
     "//src/lib/fxl",
     "//src/lib/line_input",
-    "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fit",
+    "//zircon/system/ulib/cmdline",
   ]
 
   if (current_toolchain != host_toolchain) {

@@ -18,11 +18,11 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/cmdline",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

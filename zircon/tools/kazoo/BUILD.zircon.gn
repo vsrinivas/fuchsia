@@ -78,12 +78,10 @@ if (defined(zx)) {
 
     sources = [ "main.cc" ]
 
-    deps = [ ":kazoo_lib" ]
-    if (zx == "/") {
-      deps += [ "$zx/system/ulib/cmdline" ]
-    } else {
-      deps += [ "$zx/public/lib/cmdline" ]
-    }
+    deps = [
+      ":kazoo_lib",
+      "$zx/system/ulib/cmdline",
+    ]
   }
 
   group("tests") {

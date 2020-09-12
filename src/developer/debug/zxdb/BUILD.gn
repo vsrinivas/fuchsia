@@ -96,7 +96,7 @@ if (is_host) {
       "//src/developer/debug/zxdb/common:perf_test",
       "//src/developer/debug/zxdb/symbols:perf_tests",
       "//third_party/googletest:gtest",
-      "//zircon/public/lib/cmdline",
+      "//zircon/system/ulib/cmdline",
     ]
   }
 }

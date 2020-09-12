@@ -12,9 +12,9 @@ source_set("src") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fdio-caller",
   ]
   visibility = [ ":*" ]

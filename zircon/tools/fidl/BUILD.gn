@@ -42,9 +42,9 @@ source_set("compiler") {
   if (is_host) {
     public_deps = [
       "//third_party/boringssl",
-      "//zircon/public/lib/cmdline",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/safemath",
+      "//zircon/system/ulib/cmdline",
     ]
   }
   configs += [

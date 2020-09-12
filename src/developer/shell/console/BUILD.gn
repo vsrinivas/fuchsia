@@ -30,7 +30,7 @@ source_set("lib") {
     "//src/lib/fsl",
     "//src/lib/line_input",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/cmdline",
+    "//zircon/system/ulib/cmdline",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
