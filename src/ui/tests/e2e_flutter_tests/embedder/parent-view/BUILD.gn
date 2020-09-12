@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+
+flutter_app("parent-view") {
+  main_dart = "parent_view.dart"
+  manifest = "pubspec.yaml"
+  meta = [
+    {
+      path = rebase_path("meta/parent-view.cmx")
+      dest = "parent-view.cmx"
+    },
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/args",
+    "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/zircon",
+  ]
+}
