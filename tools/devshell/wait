@@ -13,10 +13,6 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-device_addr=""
-until [[ -n "${device_addr}" ]]; do
-  device_addr="$(get-fuchsia-device-addr 2>/dev/null)"
-done
-until fx-command-run ssh "${device_addr}" exit 2>/dev/null; do
+until fx-command-run shell exit 2>/dev/null; do
   echo -n
 done
