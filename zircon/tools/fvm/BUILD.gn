@@ -27,7 +27,7 @@ executable("fvm") {
   ]
 
   if (!is_fuchsia) {
-    deps += [ "//zircon/public/lib/zx-panic-libc" ]
+    deps += [ "//zircon/system/ulib/zx-panic-libc" ]
   }
 
   if (current_os == "linux") {

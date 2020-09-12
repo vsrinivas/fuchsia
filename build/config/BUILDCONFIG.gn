@@ -1626,7 +1626,7 @@ template("executable") {
     # TODO(ZX-4798): This will likely no longer be needed at some point.  See
     # the bug for more info/discussion.
     if (is_host) {
-      deps += [ "//zircon/public/lib/zx-panic-libc" ]
+      deps += [ "//zircon/system/ulib/zx-panic-libc" ]
     }
 
     add_distribution_metadata = is_fuchsia

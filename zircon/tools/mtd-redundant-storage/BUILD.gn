@@ -15,8 +15,8 @@ executable("mtd-redundant-storage") {
   }
   deps = [
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/zx-panic-libc",
     "//zircon/system/ulib/nand-redundant-storage",
+    "//zircon/system/ulib/zx-panic-libc",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

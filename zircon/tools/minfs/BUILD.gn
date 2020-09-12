@@ -23,7 +23,7 @@ executable("minfs") {
   ]
 
   if (!is_fuchsia) {
-    deps += [ "//zircon/public/lib/zx-panic-libc" ]
+    deps += [ "//zircon/system/ulib/zx-panic-libc" ]
   }
   configs += [
     # TODO(fxb/58162): delete the below and fix compiler warnings

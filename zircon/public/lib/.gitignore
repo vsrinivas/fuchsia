@@ -58,5 +58,4 @@ zircon-internal/
 zstd/
 zx/
 zxc/
-zx-panic-libc/
 zxtest/

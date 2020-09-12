@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("zx-panic-libc") {
   sdk = "source"
 
@@ -9,6 +11,7 @@ zx_library("zx-panic-libc") {
   static = true
 
   sdk_headers = []
+  sdk_migrated = true
 
   sources = [ "zx_panic_libc.cc" ]
 }

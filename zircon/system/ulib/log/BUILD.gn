@@ -29,7 +29,7 @@ target(default_library_type, "log") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx-panic-libc",
+    "//zircon/system/ulib/zx-panic-libc",
   ]
 
   if (is_fuchsia) {

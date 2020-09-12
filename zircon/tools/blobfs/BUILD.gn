@@ -21,7 +21,7 @@ executable("blobfs") {
   ]
 
   if (!is_fuchsia) {
-    deps += [ "//zircon/public/lib/zx-panic-libc" ]
+    deps += [ "//zircon/system/ulib/zx-panic-libc" ]
 
     exclude_toolchain_tags = [
       # TODO(53356): blobfs performs poorly when built with asan

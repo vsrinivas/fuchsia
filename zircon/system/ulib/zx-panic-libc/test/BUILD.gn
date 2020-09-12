@@ -27,8 +27,8 @@ test("zx-panic-libc-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zx-panic-libc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zx-panic-libc",
   ]
 }
 
