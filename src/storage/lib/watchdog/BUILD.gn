@@ -36,6 +36,9 @@ test("watchdog_unittest") {
   ]
 
   include_dirs = [ ".." ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 bootfs_test("watchdog-unit-bootfs-test") {

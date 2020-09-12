@@ -44,6 +44,9 @@ source_set("lib") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/trace-vthread",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 metrics_registry("memory_metrics_registry") {
@@ -69,6 +72,9 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("monitor") {

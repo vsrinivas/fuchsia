@@ -198,6 +198,9 @@ source_set("audio_core_lib") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-proto-utils",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("audio_core_bin") {
@@ -286,6 +289,9 @@ executable("unittest_bin") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("audio_core_unittests") {

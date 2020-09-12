@@ -36,6 +36,9 @@ source_set("cobalt") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 ###############################################################################

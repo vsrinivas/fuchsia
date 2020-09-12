@@ -35,6 +35,9 @@ source_set("main") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils/component",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("main_service") {
@@ -108,6 +111,9 @@ source_set("reboot_watcher") {
     "//src/lib/files",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("reporter") {

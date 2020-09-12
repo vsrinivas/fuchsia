@@ -37,6 +37,9 @@ executable("memory_monitor_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/memfs",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("memory_monitor_tests") {

@@ -39,6 +39,9 @@ executable("bin") {
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("guest") {

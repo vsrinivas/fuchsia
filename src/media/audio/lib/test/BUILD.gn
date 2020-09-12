@@ -87,6 +87,9 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Main entry point for tests that use hermetic_golden_test.h.

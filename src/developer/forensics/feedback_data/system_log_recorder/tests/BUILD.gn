@@ -55,6 +55,9 @@ executable("lz4_encoding_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("reader_unittest_exe") {

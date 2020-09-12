@@ -52,6 +52,9 @@ source_set("frame_scheduler") {
     "//third_party/cobalt/src/registry:buckets_config",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("vsync_timing") {
