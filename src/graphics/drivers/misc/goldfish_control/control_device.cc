@@ -18,7 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "src/graphics/drivers/misc/goldfish_control/heap.h"
+#include "src/graphics/drivers/misc/goldfish_control/device_local_heap.h"
 
 namespace goldfish {
 namespace {
@@ -299,8 +299,8 @@ zx_status_t Control::Bind() {
     return status;
   }
 
-  // We are now ready to serve goldfish heap allocations. Create a channel
-  // and register client-end with sysmem.
+  // Serve goldfish device-local heap allocations.
+  // Create a channel and register client-end with sysmem.
   zx::channel heap_request, heap_connection;
   status = zx::channel::create(0, &heap_request, &heap_connection);
   if (status != ZX_OK) {
@@ -315,8 +315,8 @@ zx_status_t Control::Bind() {
     return status;
   }
 
-  std::unique_ptr<Heap> heap = Heap::Create(this);
-  Heap* heap_ptr = heap.get();
+  std::unique_ptr<DeviceLocalHeap> heap = DeviceLocalHeap::Create(this);
+  DeviceLocalHeap* heap_ptr = heap.get();
   heaps_.push_back(std::move(heap));
   heap_ptr->Bind(std::move(heap_request));
 
