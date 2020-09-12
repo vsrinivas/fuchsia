@@ -53,13 +53,24 @@ import("//build/unification/global_variables.gni")
 #    surprises during unification.
 #
 
-assert(zircon_toolchain != false,
-       "The configs here must only be used by the Zircon toolchains!")
-
 config("compiler") {
   compiler_flags = []
   defines = []
   ldflags = []
+
+  # NOTE: This config should only be used with Zircon-specific toolchains
+  # but this BUILD.gn file is also included from non-Zircon ones. To
+  # avoid un-necessary GN errors, define a fake local zircon_toolchain
+  # scope to ensure this config() definitions executes properly even if
+  # it is never used.
+  if (zircon_toolchain == false) {
+    zircon_toolchain = {
+      target_tuple = ""
+      version_string = ""
+      include_dirs = []
+      lib_dirs = []
+    }
+  }
 
   # For GCC, the compiler command implies the target.
   # For Clang, there's a single compiler command that takes `--target`.
