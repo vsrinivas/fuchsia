@@ -29,4 +29,8 @@ export MSAN_SYMBOLIZER_PATH="$symbolizer"
 export UBSAN_SYMBOLIZER_PATH="$symbolizer"
 export TSAN_OPTIONS="$TSAN_OPTIONS external_symbolizer_path=$symbolizer"
 
+# This tells it to look for ./.build-id/xx/xxx.debug files.
+# It can thus find the unstripped binary for the stripped binary being run.
+export LLVM_SYMBOLIZER_OPTS=--debug-file-directory=.
+
 exec "$binary" ${1+"$@"}
