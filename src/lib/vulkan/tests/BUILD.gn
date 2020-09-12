@@ -7,6 +7,11 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":image-pipe-swapchain-tests" ]
+}
+
 test_package("image-pipe-swapchain-tests") {
   deps = [ ":test_image_pipe_swapchain" ]
 
