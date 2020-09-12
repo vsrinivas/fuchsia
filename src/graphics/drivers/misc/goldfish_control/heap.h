@@ -57,6 +57,8 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
 
   Control* control() const { return control_; }
 
+  async::Loop* loop() { return &loop_; }
+
  private:
   void OnClose(fidl::UnbindInfo info, zx::channel channel);
 

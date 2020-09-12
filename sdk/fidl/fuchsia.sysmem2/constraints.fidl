@@ -168,6 +168,9 @@ enum HeapType : uint64 {
 
     /// Heap used by goldfish vulkan for device-local memory.
     GOLDFISH_DEVICE_LOCAL = 0x1000000000020000;
+
+    /// Heap used by goldfish vulkan for host-visible memory.
+    GOLDFISH_HOST_VISIBLE = 0x1000000000020001;
 };
 
 table BufferMemoryConstraints {

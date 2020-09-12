@@ -19,6 +19,7 @@
 #include <fbl/auto_lock.h>
 
 #include "src/graphics/drivers/misc/goldfish_control/device_local_heap.h"
+#include "src/graphics/drivers/misc/goldfish_control/host_visible_heap.h"
 
 namespace goldfish {
 namespace {
@@ -284,6 +285,22 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   return ZX_OK;
 }
 
+zx_status_t Control::RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType heap_type, Heap* heap) {
+  zx::channel heap_request, heap_connection;
+  zx_status_t status = zx::channel::create(0, &heap_request, &heap_connection);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx::channel:create() failed: %d", kTag, status);
+    return status;
+  }
+  status = pipe_.RegisterSysmemHeap(static_cast<uint64_t>(heap_type), std::move(heap_connection));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to register heap: %d", kTag, status);
+    return status;
+  }
+  heap->Bind(std::move(heap_request));
+  return ZX_OK;
+}
+
 zx_status_t Control::Bind() {
   fbl::AutoLock lock(&lock_);
 
@@ -300,25 +317,18 @@ zx_status_t Control::Bind() {
   }
 
   // Serve goldfish device-local heap allocations.
-  // Create a channel and register client-end with sysmem.
-  zx::channel heap_request, heap_connection;
-  status = zx::channel::create(0, &heap_request, &heap_connection);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx::channel:create() failed: %d", kTag, status);
-    return status;
-  }
-  status = pipe_.RegisterSysmemHeap(
-      static_cast<uint64_t>(llcpp::fuchsia::sysmem2::HeapType::GOLDFISH_DEVICE_LOCAL),
-      std::move(heap_connection));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to register heap: %d", kTag, status);
-    return status;
-  }
+  std::unique_ptr<DeviceLocalHeap> device_local_heap = DeviceLocalHeap::Create(this);
+  DeviceLocalHeap* device_local_heap_ptr = device_local_heap.get();
+  heaps_.push_back(std::move(device_local_heap));
+  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType::GOLDFISH_DEVICE_LOCAL,
+                      device_local_heap_ptr);
 
-  std::unique_ptr<DeviceLocalHeap> heap = DeviceLocalHeap::Create(this);
-  DeviceLocalHeap* heap_ptr = heap.get();
-  heaps_.push_back(std::move(heap));
-  heap_ptr->Bind(std::move(heap_request));
+  // Serve goldfish host-visible heap allocations.
+  std::unique_ptr<HostVisibleHeap> host_visible_heap = HostVisibleHeap::Create(this);
+  HostVisibleHeap* host_visible_heap_ptr = host_visible_heap.get();
+  heaps_.push_back(std::move(host_visible_heap));
+  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType::GOLDFISH_HOST_VISIBLE,
+                      host_visible_heap_ptr);
 
   return DdkAdd(ddk::DeviceAddArgs("goldfish-control").set_proto_id(ZX_PROTOCOL_GOLDFISH_CONTROL));
 }
@@ -350,25 +360,24 @@ void Control::FreeBufferHandle(uint64_t id) {
   buffer_handles_.erase(it);
 }
 
-void Control::CreateColorBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
-    CreateColorBuffer2Completer::Sync completer) {
+Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params) {
+  using llcpp::fuchsia::hardware::goldfish::ControlDevice;
+
   // Check argument validity.
   if (!create_params.has_width() || !create_params.has_height() || !create_params.has_format() ||
       !create_params.has_memory_property()) {
     zxlogf(ERROR, "%s: invalid arguments: width? %d height? %d format? %d memory property? %d\n",
            kTag, create_params.has_width(), create_params.has_height(), create_params.has_format(),
            create_params.has_memory_property());
-    completer.Reply(ZX_ERR_INVALID_ARGS, -1);
-    return;
+    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
   }
   if ((create_params.memory_property() &
        llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
-    completer.Reply(ZX_ERR_INVALID_ARGS, -1);
-    return;
+    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
   }
 
   TRACE_DURATION("gfx", "Control::CreateColorBuffer2", "width", create_params.width(), "height",
@@ -377,21 +386,18 @@ void Control::CreateColorBuffer2(
 
   zx_koid_t koid = GetKoidForVmo(vmo);
   if (koid == ZX_KOID_INVALID) {
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
+    return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   fbl::AutoLock lock(&lock_);
 
   auto it = buffer_handles_.find(koid);
   if (it == buffer_handles_.end()) {
-    completer.Reply(ZX_ERR_INVALID_ARGS, -1);
-    return;
+    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
   }
 
   if (it->second != kInvalidColorBuffer) {
-    completer.Reply(ZX_ERR_ALREADY_EXISTS, -1);
-    return;
+    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_ALREADY_EXISTS, -1));
   }
 
   uint32_t id;
@@ -399,8 +405,7 @@ void Control::CreateColorBuffer2(
                                                static_cast<uint32_t>(create_params.format()), &id);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to create color buffer: %d", kTag, status);
-    completer.Close(status);
-    return;
+    return fit::error(status);
   }
 
   auto close_color_buffer =
@@ -411,8 +416,7 @@ void Control::CreateColorBuffer2(
       SetColorBufferVulkanMode2Locked(id, VULKAN_ONLY, create_params.memory_property(), &result);
   if (status != ZX_OK || result) {
     zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
-    completer.Close(status);
-    return;
+    return fit::error(status);
   }
 
   int32_t hw_address_page_offset = -1;
@@ -422,8 +426,7 @@ void Control::CreateColorBuffer2(
     status = MapGpaToBufferHandleLocked(id, create_params.physical_address(), &map_result);
     if (status != ZX_OK || map_result < 0) {
       zxlogf(ERROR, "%s: failed to map gpa to color buffer: %d %d", kTag, status, map_result);
-      completer.Close(status);
-      return;
+      return fit::error(status);
     }
 
     hw_address_page_offset = map_result;
@@ -433,7 +436,18 @@ void Control::CreateColorBuffer2(
   it->second = id;
   buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER;
 
-  completer.Reply(ZX_OK, hw_address_page_offset);
+  return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_OK, hw_address_page_offset));
+}
+
+void Control::CreateColorBuffer2(
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
+    CreateColorBuffer2Completer::Sync completer) {
+  auto result = CreateColorBuffer2(std::move(vmo), std::move(create_params));
+  if (result.is_ok()) {
+    completer.Reply(result.value().res, result.value().hw_address_page_offset);
+  } else {
+    completer.Close(result.error());
+  }
 }
 
 void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) {

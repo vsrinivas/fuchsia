@@ -19,6 +19,8 @@ driver_module("control_driver") {
     "device_local_heap.h",
     "heap.cc",
     "heap.h",
+    "host_visible_heap.cc",
+    "host_visible_heap.h",
   ]
 
   deps = [
@@ -31,6 +33,7 @@ driver_module("control_driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/fsl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/fit",

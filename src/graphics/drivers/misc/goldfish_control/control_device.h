@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <lib/fit/result.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -42,6 +43,13 @@ class Control : public ControlType,
   uint64_t RegisterBufferHandle(const zx::vmo& vmo);
   void FreeBufferHandle(uint64_t id);
 
+  using CreateColorBuffer2Result =
+      fit::result<llcpp::fuchsia::hardware::goldfish::ControlDevice::CreateColorBuffer2Response,
+                  zx_status_t>;
+
+  CreateColorBuffer2Result CreateColorBuffer2(
+      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params);
+
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateColorBuffer2(
       zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
@@ -63,11 +71,21 @@ class Control : public ControlType,
   // Used by heaps. Removes a specific heap from the linked list.
   void RemoveHeap(Heap* heap);
 
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient* address_space_child()
+      const {
+    return address_space_child_.get();
+  }
+
  private:
   zx_status_t Init();
 
   zx_status_t InitAddressSpaceDeviceLocked() TA_REQ(lock_);
   zx_status_t InitPipeDeviceLocked() TA_REQ(lock_);
+
+  // Create a pair of channel and register a sysmem Heap of |heap_type| using
+  // the channel pair. The client-side channel is sent to sysmem, and the
+  // server-side channel is bound to |heap|.
+  zx_status_t RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType heap_type, Heap* heap);
 
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
