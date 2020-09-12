@@ -594,13 +594,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/90344b24ed1cb8de7a4b2fde17071a7d88eab5bd/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a98ee20e578f6febb828f5606c6ed1c02dc4e879/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/90344b24ed1cb8de7a4b2fde17071a7d88eab5bd/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a98ee20e578f6febb828f5606c6ed1c02dc4e879/util/net/tls.gni#22)
 
 ### current_cpu
 
