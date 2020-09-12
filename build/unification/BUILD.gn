@@ -6,7 +6,6 @@ group("unification") {
   testonly = true
 
   deps = [
-    "fuzzing",
     "images",
     "tests:host-metadata",
     "tools",

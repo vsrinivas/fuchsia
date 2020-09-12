@@ -374,12 +374,6 @@ if (current_toolchain == default_toolchain) {
       walk_keys = [ "legacy_barrier" ]
       deps = [ ":all-ulib-$cpu" ]
     }
-
-    build_api_module("legacy_fuzzers-$cpu") {
-      testonly = true
-      data_keys = [ "fuzzer" ]
-      deps = [ ":legacy-tests-$cpu" ]
-    }
   }
 
   foreach(host, standard_build_hosts) {
