@@ -6,10 +6,14 @@
 
 library fuchsia.media;
 
-/// A protocol for monitoring the usage activity of the AudioRenderers.
+/// A protocol for monitoring the usage activity of the AudioRenderers and AudioCapturers.
 [Discoverable]
 protocol ActivityReporter {
     /// Notifies the client whenever there is a change in the set of active AudioRenderUsages.
     /// It returns immediately the first time that it is called.
     WatchRenderActivity() -> (vector<AudioRenderUsage>:RENDER_USAGE_COUNT active_usages);
+
+    /// Notifies the client whenever there is a change in the set of active AudioCaptureUsages.
+    /// It returns immediately the first time that it is called.
+    WatchCaptureActivity() -> (vector<AudioCaptureUsage>:CAPTURE_USAGE_COUNT active_usages);
 };

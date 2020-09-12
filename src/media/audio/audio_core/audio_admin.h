@@ -48,6 +48,10 @@ class AudioAdmin {
     using RenderActivity = std::bitset<fuchsia::media::RENDER_USAGE_COUNT>;
     virtual void OnRenderActivityChanged(
         std::bitset<fuchsia::media::RENDER_USAGE_COUNT> activity) = 0;
+
+    using CaptureActivity = std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>;
+    virtual void OnCaptureActivityChanged(
+        std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) = 0;
   };
 
   // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.
@@ -100,6 +104,7 @@ class AudioAdmin {
 
   void UpdatePolicy();
   void UpdateRenderActivity();
+  void UpdateCaptureActivity();
 
   // Helpers to make the control of streams cleaner.
   void SetUsageNone(fuchsia::media::AudioRenderUsage usage);

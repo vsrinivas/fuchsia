@@ -325,6 +325,19 @@ void AudioAdmin::UpdateRenderActivity() {
   activity_dispatcher_.OnRenderActivityChanged(render_activity);
 }
 
+void AudioAdmin::UpdateCaptureActivity() {
+  TRACE_DURATION("audio", "AudioAdmin::UpdateCaptureActivity");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+
+  std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> capture_activity;
+  for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+    if (IsActive(static_cast<fuchsia::media::AudioCaptureUsage>(i))) {
+      capture_activity.set(i);
+    }
+  }
+  activity_dispatcher_.OnCaptureActivityChanged(capture_activity);
+}
+
 void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
                                      fuchsia::media::AudioRenderer* renderer) {
   async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, renderer = renderer] {
@@ -357,6 +370,7 @@ void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bo
     }
 
     UpdatePolicy();
+    UpdateCaptureActivity();
   });
 }
 

@@ -8,6 +8,7 @@
 
 namespace media::audio {
 namespace {
+using fuchsia::media::AudioCaptureUsage;
 using fuchsia::media::AudioRenderUsage;
 
 std::vector<AudioRenderUsage> ActivityToUsageVector(
@@ -22,17 +23,32 @@ std::vector<AudioRenderUsage> ActivityToUsageVector(
   }
   return usage_vector;
 }
+
+std::vector<AudioCaptureUsage> ActivityToUsageVector(
+    const ActivityDispatcherImpl::CaptureActivity& activity) {
+  std::vector<AudioCaptureUsage> usage_vector;
+  usage_vector.reserve(activity.count());
+
+  for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+    if (activity[i]) {
+      usage_vector.push_back(static_cast<AudioCaptureUsage>(i));
+    }
+  }
+  return usage_vector;
+}
 }  // namespace
 
 class ActivityDispatcherImpl::ActivityReporterImpl : public fuchsia::media::ActivityReporter {
  public:
   // The activity must outlive the ActivityReporterImpl.
   explicit ActivityReporterImpl(const RenderActivity& last_known_render_activity,
+                                const CaptureActivity& last_known_capture_activity,
                                 fit::callback<void(ActivityReporterImpl*)> on_client_error);
   ~ActivityReporterImpl() override;
 
   // Signal that the activity changed.
   void OnRenderActivityChanged();
+  void OnCaptureActivityChanged();
 
   // Handle unresponsive client.
   void OnClientError();
@@ -40,6 +56,7 @@ class ActivityDispatcherImpl::ActivityReporterImpl : public fuchsia::media::Acti
  private:
   // fuchsia::media::ActivityReporter.
   void WatchRenderActivity(WatchRenderActivityCallback callback) override;
+  void WatchCaptureActivity(WatchCaptureActivityCallback callback) override;
 
   // Class to manage sending Activity updates to clients.
   // An instance of Reporter can be specified to report on RenderActivity.
@@ -65,6 +82,7 @@ class ActivityDispatcherImpl::ActivityReporterImpl : public fuchsia::media::Acti
   };
 
   Reporter<RenderActivity, WatchRenderActivityCallback> render_reporter_;
+  Reporter<CaptureActivity, WatchCaptureActivityCallback> capture_reporter_;
   // Called when the client has more than one hanging gets in flight.
   fit::callback<void(ActivityReporterImpl*)> on_client_error_;
 };
@@ -74,8 +92,10 @@ ActivityDispatcherImpl::~ActivityDispatcherImpl() = default;
 
 ActivityDispatcherImpl::ActivityReporterImpl::ActivityReporterImpl(
     const RenderActivity& last_known_render_activity,
+    const CaptureActivity& last_known_capture_activity,
     fit::callback<void(ActivityReporterImpl*)> on_client_error)
     : render_reporter_(*this, last_known_render_activity),
+      capture_reporter_(*this, last_known_capture_activity),
       on_client_error_(std::move(on_client_error)) {}
 
 ActivityDispatcherImpl::ActivityReporterImpl::~ActivityReporterImpl() = default;
@@ -84,11 +104,20 @@ void ActivityDispatcherImpl::ActivityReporterImpl::OnRenderActivityChanged() {
   render_reporter_.MaybeSendActivity();
 }
 
+void ActivityDispatcherImpl::ActivityReporterImpl::OnCaptureActivityChanged() {
+  capture_reporter_.MaybeSendActivity();
+}
+
 void ActivityDispatcherImpl::ActivityReporterImpl::OnClientError() { on_client_error_(this); }
 
 void ActivityDispatcherImpl::ActivityReporterImpl::WatchRenderActivity(
     WatchRenderActivityCallback callback) {
   render_reporter_.WatchActivity(std::move(callback));
+}
+
+void ActivityDispatcherImpl::ActivityReporterImpl::WatchCaptureActivity(
+    WatchCaptureActivityCallback callback) {
+  capture_reporter_.WatchActivity(std::move(callback));
 }
 
 template <typename Activity, typename Callback>
@@ -132,7 +161,7 @@ void ActivityDispatcherImpl::Bind(
   constexpr auto kEpitaphValue = ZX_ERR_PEER_CLOSED;
   bindings_.AddBinding(
       std::make_unique<ActivityReporterImpl>(
-          last_known_render_activity_,
+          last_known_render_activity_, last_known_capture_activity_,
           [this](ActivityReporterImpl* impl) { bindings_.CloseBinding(impl, kEpitaphValue); }),
       std::move(request));
 }
@@ -141,6 +170,13 @@ void ActivityDispatcherImpl::OnRenderActivityChanged(RenderActivity activity) {
   last_known_render_activity_ = activity;
   for (const auto& listener : bindings_.bindings()) {
     listener->impl()->OnRenderActivityChanged();
+  }
+}
+
+void ActivityDispatcherImpl::OnCaptureActivityChanged(CaptureActivity activity) {
+  last_known_capture_activity_ = activity;
+  for (const auto& listener : bindings_.bindings()) {
+    listener->impl()->OnCaptureActivityChanged();
   }
 }
 }  // namespace media::audio
