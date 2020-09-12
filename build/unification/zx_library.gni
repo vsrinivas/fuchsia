@@ -131,15 +131,17 @@ template("zx_library") {
   # `sdk_migrated` is only used by the Zircon build system.
   not_needed(invoker, [ "sdk_migrated" ])
 
-  if (is_kernel) {
+  if (zircon_toolchain != false) {
     _library_name = target_name
 
     assert(
-        defined(invoker.kernel) && invoker.kernel,
+        !is_kernel || (defined(invoker.kernel) && invoker.kernel),
         "This zx_library() cannot be built with a Zircon-specific toolchain! " +
-        "Consider adding `kernel = true` to its declaration.")
+            "Consider adding `kernel = true` to its declaration.")
 
-    if (toolchain.environment == "kernel") {
+    if (defined(invoker.shared) && invoker.shared) {
+      kernel_library_target_type = "shared_library"
+    } else if (toolchain.environment == "kernel") {
       # In the kernel proper, zx_library() is always a source_set().
       # Everything goes into the kernel and anything unused gets linker GC.
       kernel_library_target_type = "source_set"
@@ -158,14 +160,19 @@ template("zx_library") {
       public_deps += [ ":headers" ]
     }
 
-    # Simplifying assumption that prevents us from reproducing the extra logic
-    # in the original Zircon build library() template definition.
-    assert(
-        get_label_info(":$_library_name", "name") ==
-            get_path_info(get_label_info(":$_library_name", "dir"), "file"),
-        "A zx_library() with 'kernel = true' should have the same name as its directory.")
+    # If the library has the same name as its directory, just create
+    # :headers and :headers.config sub-targets. Otherwise, create
+    # :foo.headers and :foo.headers.config
+    if (get_label_info(":$_library_name", "name") ==
+        get_path_info(get_label_info(":$_library_name", "dir"), "file")) {
+      _headers_target = "headers"
+      _headers_config_target = "headers.config"
+    } else {
+      _headers_target = "$_library_name.headers"
+      _headers_config_target = "$_library_name.headers.config"
+    }
 
-    group("headers") {
+    group(_headers_target) {
       # Used to represent header dependencies.
       # Direct us of public_configs should be rare but is sometimes needed.
       forward_variables_from(invoker,
@@ -178,10 +185,10 @@ template("zx_library") {
       if (!defined(public_configs)) {
         public_configs = []
       }
-      public_configs += [ ":headers.config" ]
+      public_configs += [ ":${_headers_config_target}" ]
     }
 
-    config("headers.config") {
+    config(_headers_config_target) {
       include_dirs = [ "include" ]
     }
   } else {
@@ -195,8 +202,9 @@ template("zx_library") {
                  "shared",
                ])
 
-    assert(defined(invoker.sdk),
-           "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain")
+    assert(
+        defined(invoker.sdk),
+        "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain")
     shape = invoker.sdk
 
     sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
@@ -325,6 +333,10 @@ template("zx_library") {
       }
     }
 
+    if (!is_fuchsia) {
+      lib_public_deps += [ "//zircon/system/public" ]
+    }
+
     target(target_type, main_target_name) {
       forward_variables_from(invoker,
                              "*",
@@ -351,6 +363,11 @@ template("zx_library") {
         public_configs = []
       }
       public_configs += [ ":$config_target_name" ]
+
+      if (!defined(defines)) {
+        defines = []
+      }
+      defines += [ "_ALL_SOURCE" ]
     }
   }
 }
