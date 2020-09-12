@@ -20,6 +20,10 @@ import (
 
 var testDataFlag = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
 
+// This ordering is not perfect but good enough for these tests, since we always
+// have unique Rule names in edges.
+var orderEdgesByRule = cmpopts.SortSlices(func(x, y *Edge) bool { return x.Rule < y.Rule })
+
 func TestFromDOT(t *testing.T) {
 	for _, tc := range []struct {
 		desc string
@@ -246,9 +250,6 @@ func TestFromDOT(t *testing.T) {
 			if err != nil {
 				t.Errorf("FromDOT(%s) failed: %s", tc.dot, err)
 			}
-			// This ordering is not perfect but good enough for this test, since we
-			// always have unique Rule names in edges.
-			orderEdgesByRule := cmpopts.SortSlices(func(x, y *Edge) bool { return x.Rule < y.Rule })
 			if diff := cmp.Diff(tc.want, got, cmpopts.EquateEmpty(), cmpopts.IgnoreUnexported(Node{}), orderEdgesByRule); diff != "" {
 				t.Errorf("FromDOT(%s) got diff (-want +got):\n%s", tc.dot, diff)
 			}
@@ -280,7 +281,7 @@ func TestFromDOTErrors(t *testing.T) {
 	}
 }
 
-func TestFromDOTLargeFile(t *testing.T) {
+func TestParsingFileFromRealBuild(t *testing.T) {
 	dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
 	dotFile, err := os.Open(dotFilePath)
 	if err != nil {
@@ -288,33 +289,33 @@ func TestFromDOTLargeFile(t *testing.T) {
 	}
 	defer dotFile.Close()
 
+	wantCXXEdge := Edge{
+		Inputs:  []int64{0x17471d0},
+		Outputs: []int64{0x1747150},
+		Rule:    "cxx",
+	}
+	wantLinkEdge := Edge{
+		Inputs:  []int64{0x1747150, 0x1719e30, 0x1745bc0},
+		Outputs: []int64{0x1747530},
+		Rule:    "link",
+	}
+	want := Graph{
+		Nodes: map[int64]*Node{
+			0x1747530: {ID: 0x1747530, Path: "gn", In: &wantLinkEdge},
+			0x1747150: {ID: 0x1747150, Path: "src/gn/gn_main.o", In: &wantCXXEdge, Outs: []*Edge{&wantLinkEdge}},
+			0x17471d0: {ID: 0x17471d0, Path: "../src/gn/gn_main.cc", Outs: []*Edge{&wantCXXEdge}},
+			0x1719e30: {ID: 0x1719e30, Path: "base.a", Outs: []*Edge{&wantLinkEdge}},
+			0x1745bc0: {ID: 0x1745bc0, Path: "gn_lib.a", Outs: []*Edge{&wantLinkEdge}},
+		},
+		Edges: []*Edge{&wantCXXEdge, &wantLinkEdge},
+	}
+
 	got, err := FromDOT(dotFile)
 	if err != nil {
-		t.Fatalf("FromDOT('a large ninja graph') failed: %s", err)
+		t.Fatalf("FromDOT failed: %s", err)
 	}
-	// Since the graph is large, it is not feasible to spell out the expected
-	// content of the parsed `Graph` in code, so we only check number of nodes and
-	// edges.
-	if gotNodes, wantNodes := len(got.Nodes), 381; gotNodes != wantNodes {
-		t.Errorf("FromDOT('a large ninja graph') got number of nodes: %d, want: %d", gotNodes, wantNodes)
-	}
-	if gotEdges, wantEdges := len(got.Edges), 192; gotEdges != wantEdges {
-		t.Errorf("FromDOT('a large ninja graph') got number of edges: %d, want: %d", gotEdges, wantEdges)
-	}
-}
-
-func BenchmarkFromDOT(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
-		dotFile, err := os.Open(dotFilePath)
-		if err != nil {
-			b.Fatalf("Failed to open file %q: %s", dotFilePath, err)
-		}
-		_, err = FromDOT(dotFile)
-		dotFile.Close()
-		if err != nil {
-			b.Fatalf("FromDOT('a large ninja graph') failed: %s", err)
-		}
+	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(Node{}), orderEdgesByRule); diff != "" {
+		t.Errorf("FromDOT(small gn build graph) =\n%#v\nwant:\n%#v\ndiff(-want +got):\n%s", got, want, diff)
 	}
 }
 
