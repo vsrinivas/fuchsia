@@ -594,13 +594,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3e065b11d0cad1742f4cc4cf8acb8fa075f364ca/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/90344b24ed1cb8de7a4b2fde17071a7d88eab5bd/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3e065b11d0cad1742f4cc4cf8acb8fa075f364ca/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/90344b24ed1cb8de7a4b2fde17071a7d88eab5bd/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1502,6 +1502,22 @@ From //src/developer/fuchsia-criterion/BUILD.gn:14
 
 From //garnet/bin/log_listener/BUILD.gn:15
 
+### lsan_default_options
+Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
+options (before the `LSAN_OPTIONS` environment variable is read at
+runtime).  This can be set as a build argument to affect most "lsan"
+variants in $variants (which see), or overridden in $toolchain_args in
+one of those variants.  This can be a list of strings or a single string.
+
+Note that even if this is empty, programs in this build **cannot** define
+their own `__lsan_default_options` C function.  Instead, they can use a
+sanitizer_extra_options() target in their `deps` and then any options
+injected that way can override that option's setting in this list.
+
+**Current value (from the default):** `[]`
+
+From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:28
+
 ### magma_build_root
 
 **Current value (from the default):** `"//src/graphics/lib/magma"`
@@ -2380,7 +2396,7 @@ injected that way can override that option's setting in this list.
 
 **Current value (from the default):** `["print_stacktrace=1", "halt_on_error=1"]`
 
-From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:28
+From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 
 ### universal_variants
 
