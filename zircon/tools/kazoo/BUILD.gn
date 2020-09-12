@@ -71,15 +71,6 @@ if (defined(zx)) {
   zx_host_tool("kazoo") {
     configs += [ ":kazoo_config" ]
 
-    if (zx != "/") {
-      # The Fuchsia infra scripts will error if there are two host tools
-      # with the same name, even if they are generated in different directories.
-      # Note that this requires any compiled_action() instance to use
-      # "//zircon/tools/kazoo" for the 'tool' argument, and
-      # "kazoo-gn" for the 'tool_output_name' argument.
-      output_name = "kazoo-gn"
-    }
-
     sources = [ "main.cc" ]
 
     deps = [

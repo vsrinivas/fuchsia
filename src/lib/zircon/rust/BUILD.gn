@@ -59,7 +59,6 @@ if (is_fuchsia) {
 # The source is still the .json file generated during the ZN build.
 compiled_action("generate-rust-zircon-syscalls-definitions") {
   tool = "//zircon/tools/kazoo"
-  tool_output_name = "kazoo-gn"
   sources = [ "$zircon_root_build_dir/gen/vdso/zx.json/fidl.json" ]
   outputs = [ "$root_gen_dir/zircon/rust/syscalls/definitions.rs" ]
   args = [
