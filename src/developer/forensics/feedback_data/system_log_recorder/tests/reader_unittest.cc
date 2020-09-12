@@ -53,6 +53,43 @@ std::vector<const std::string> MakeLogFilePaths(files::ScopedTempDir& temp_dir, 
   return file_paths;
 }
 
+TEST(ReaderTest, MergeRepeatedMessages) {
+  // Merge repeated consecutive message together.
+  // Test:
+  // Input = msg_0 x123 x1, msg_1 x5 x2.
+  // Output = msg_0 x124, msg_1 x7.
+  //
+  // Note: x123 = Last message repeated 123 times.
+
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/1);
+
+  // Write input: msg_0 x123 x1, msg_1 x5 x2.
+  EXPECT_TRUE(files::WriteFile(file_paths.front(), R"([00001.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 123 MORE TIMES !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00001.000][07559][07687][] INFO: line 1
+!!! MESSAGE REPEATED 5 MORE TIMES !!!
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)"));
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  float compression_ratio;
+  IdentityDecoder decoder;
+
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+
+  std::string contents;
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+
+  // Verify output, expect: msg_0 x124 msg_1 x7.
+  EXPECT_EQ(contents, R"([00001.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 124 MORE TIMES !!!
+[00001.000][07559][07687][] INFO: line 1
+!!! MESSAGE REPEATED 7 MORE TIMES !!!
+)");
+}
+
 TEST(ReaderTest, SortsMessagesNoTimeTagOnly) {
   // Output messages even if no time tag is found. This can happen if the file could not be
   // decoded.

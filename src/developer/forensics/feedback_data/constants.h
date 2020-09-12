@@ -110,6 +110,11 @@ const std::vector<const std::string> kCurrentLogsFilePaths({
 // At most 16KB of logs will be persisted each second.
 constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
 
+// Repeated messge format
+constexpr char kRepeatedStrPrefix[] = "!!! MESSAGE REPEATED ";
+constexpr char kRepeatedOnceFormatStr[] = "!!! MESSAGE REPEATED 1 MORE TIME !!!\n";
+constexpr char kRepeatedFormatStr[] = "!!! MESSAGE REPEATED %lu MORE TIMES !!!\n";
+
 }  // namespace feedback_data
 }  // namespace forensics
 

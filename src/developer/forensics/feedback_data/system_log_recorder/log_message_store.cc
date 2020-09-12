@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -17,14 +18,12 @@ namespace system_log_recorder {
 namespace {
 
 const std::string kDroppedFormatStr = "!!! DROPPED %lu MESSAGES !!!\n";
-const std::string kRepeatedOnceFormatStr = "!!! MESSAGE REPEATED 1 MORE TIME !!!\n";
-const std::string kRepeatedFormatStr = "!!! MESSAGE REPEATED %lu MORE TIMES !!!\n";
 
 std::string MakeRepeatedWarning(const size_t message_count) {
   if (message_count == 2) {
     return kRepeatedOnceFormatStr;
   } else {
-    return fxl::StringPrintf(kRepeatedFormatStr.c_str(), message_count - 1);
+    return fxl::StringPrintf(kRepeatedFormatStr, message_count - 1);
   }
 }
 

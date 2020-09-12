@@ -7,15 +7,17 @@
 #include <assert.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <stdio.h>
 
 #include <cmath>
-#include <fstream>
 #include <regex>
 #include <sstream>
 #include <string>
 
+#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -34,12 +36,48 @@ bool MatchesLogMessage(std::string_view line) {
   return std::regex_search(line.cbegin(), line.cend(), line_start);
 }
 
-std::string SortLog(const std::string& log) {
-  // Sort the log by:
+std::string MakeRepeatedWarning(const size_t repeat_count) {
+  if (repeat_count == 1) {
+    return kRepeatedOnceFormatStr;
+  } else {
+    return fxl::StringPrintf(kRepeatedFormatStr, repeat_count);
+  }
+}
+
+std::string AggregateRepeatedMessages(const std::string_view message) {
+  // Combine consecutive repeated log lines into a single warning message.
+
+  // SplitString() adds an empty element at the end.
+  std::vector<std::string_view> lines = fxl::SplitString(
+      message, "\n", fxl::WhiteSpaceHandling::kKeepWhitespace, fxl::SplitResult::kSplitWantAll);
+
+  std::string output;
+  size_t repeat_count = 0;
+  for (auto line : lines) {
+    if (line.rfind(kRepeatedStrPrefix, 0) == 0) {
+      int count;
+      // Extract the number of times from the line.
+      FX_CHECK(sscanf(line.data(), "!!! MESSAGE REPEATED %d", &count) == 1);
+      repeat_count += count;
+    } else if (!line.empty()) {
+      output += line;
+      output += "\n";
+    }
+  }
+
+  if (repeat_count != 0) {
+    output += MakeRepeatedWarning(repeat_count);
+  }
+
+  return output;
+}
+
+std::string PostProcess(const std::string& log) {
+  // Sort the log and aggregate repeated messages by:
   //   1) Splitting it into lines.
   //   2) Merging multiline messages into a single message.
   //   3) Stable sorting the messages by timestamp.
-  //   4) Combining the messages into a sorted log.
+  //   4) Combining consecutive repeated messages together and create the final log.
 
   // All the operations are on std::string_view because it has shown to be expensive otherwise in
   // practice.
@@ -100,7 +138,7 @@ std::string SortLog(const std::string& log) {
   sorted_log.reserve(header.size() + log.size());
   sorted_log.append(header);
   for (const auto& message : messages) {
-    sorted_log.append(message);
+    sorted_log.append(AggregateRepeatedMessages(message));
   }
 
   return sorted_log;
@@ -144,8 +182,8 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
     return false;
   }
 
-  // Sort logs.
-  uncompressed_log = SortLog(uncompressed_log);
+  // Sort logs and combine messages for repeated logs.
+  uncompressed_log = PostProcess(uncompressed_log);
 
   if (uncompressed_log.empty()) {
     FX_LOGS(WARNING) << "The post-processed previous boot log is empty";
