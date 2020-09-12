@@ -146,7 +146,7 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
   zx_time_t time = zx_clock_get_monotonic();
   constexpr char kEllipsis[] = "...";
   constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
-  constexpr size_t kMaxMessageSize = 2043;
+  constexpr size_t kMaxMessageSize = FX_LOG_MAX_DATAGRAM_LEN;
 
   fbl::StringBuffer<kMaxMessageSize + kEllipsisSize + 1 /*\n*/> buf;
   buf.AppendPrintf("[%05ld.%06ld]", time / 1000000000UL, (time / 1000UL) % 1000000UL);

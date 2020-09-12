@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/logger/llcpp/fidl.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/socket.h>
 #include <poll.h>
@@ -179,11 +180,12 @@ TEST(SyslogTestsEdgeCases, test_global_tag_limit) {
 }
 
 TEST(SyslogTestsEdgeCases, test_msg_length_limit) {
+  constexpr size_t kMessageSize = llcpp::fuchsia::logger::MAX_DATAGRAM_LEN_BYTES + 5;
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
-  char msg[2048] = {0};
-  char buf[2048] = {0};
+  char msg[kMessageSize] = {0};
+  char buf[kMessageSize] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   FX_LOGF(INFO, NULL, "%s", msg);
   size_t n = read(pipefd[1], buf, sizeof(buf));

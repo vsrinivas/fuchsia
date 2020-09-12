@@ -33,6 +33,7 @@ test("syslog") {
     "syslog_tests.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
@@ -49,6 +50,7 @@ test("syslog-static") {
     "syslog_tests.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
