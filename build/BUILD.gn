@@ -618,7 +618,7 @@ group("deprecated_package_underscore") {
     "//src/tests/fidl/compatibility:fidl_compatibility_test_server_llcpp",
     "//src/tests/fidl/compatibility:fidl_compatibility_test_server_rust",
     "//src/tests/fidl/compatibility/golang:fidl_compatibility_test_server_go",
-    "//src/tests/fidl_go_conformance:fidl_go_conformance",
+    "//src/tests/fidl/fidl_go_conformance:fidl_go_conformance",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_unittestmode",
     "//src/ui/a11y/bin/a11y_manager:a11y_manager",
