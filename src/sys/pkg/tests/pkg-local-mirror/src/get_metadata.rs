@@ -6,18 +6,13 @@
 use {
     super::*,
     fidl::endpoints::{create_proxy, create_request_stream},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest, FileEvent::OnOpen_},
+    fidl_fuchsia_io::FileEvent::OnOpen_,
     fidl_fuchsia_pkg::{GetMetadataError, RepositoryUrl},
-    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
     futures::channel::oneshot,
     matches::assert_matches,
     vfs::file::pcb::read_only_static,
 };
-
-fn repo_url() -> RepoUrl {
-    "fuchsia-pkg://fuchsia.com".parse().unwrap()
-}
 
 async fn verify_get_metadata_with_read_success(env: &TestEnv, path: &str, file_contents: &str) {
     let (file_proxy, server_end) = create_proxy().unwrap();
@@ -36,11 +31,12 @@ async fn verify_get_metadata_with_read_success(env: &TestEnv, path: &str, file_c
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn get_metadata_success() {
+async fn success() {
     let env = TestEnv::builder()
         .usb_dir(spawn_vfs(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
+                    "blobs" => pseudo_directory! {},
                     "repository_metadata" => pseudo_directory! {
                         repo_url().host() => pseudo_directory! {
                             "1.root.json" => read_only_static("beep"),
@@ -57,11 +53,12 @@ async fn get_metadata_success() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn get_metadata_success_multiple_path_segments() {
+async fn success_multiple_path_segments() {
     let env = TestEnv::builder()
         .usb_dir(spawn_vfs(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
+                    "blobs" => pseudo_directory! {},
                     "repository_metadata" => pseudo_directory! {
                         repo_url().host() => pseudo_directory! {
                             "foo" => pseudo_directory! {
@@ -104,18 +101,19 @@ async fn verify_get_metadata_with_on_open_failure_status(
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn get_metadata_missing_repo_url_directory() {
+async fn missing_repo_url_directory() {
     let env = TestEnv::builder().build();
 
     verify_get_metadata_with_on_open_failure_status(&env, "1.root.json", Status::NOT_FOUND).await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn get_metadata_missing_metadata_file() {
+async fn missing_metadata_file() {
     let env = TestEnv::builder()
         .usb_dir(spawn_vfs(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
+                    "blobs" => pseudo_directory! {},
                     "repository_metadata" => pseudo_directory! {
                         repo_url().host() => pseudo_directory! {
                             "2.root.json" => read_only_static("boop"),
@@ -130,28 +128,18 @@ async fn get_metadata_missing_metadata_file() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn get_metadata_error_opening_metadata() {
-    let (unblocker_sender, unblocker_recv) = oneshot::channel();
-    let (client_end, mut stream) = create_request_stream::<DirectoryMarker>().unwrap();
-    fasync::Task::spawn(async move {
-        if let Some(req) = stream.next().await {
-            match req.unwrap() {
-                DirectoryRequest::Open { object, .. } => {
-                    drop(object);
-                    let () = unblocker_sender.send(()).unwrap();
-                }
-                other => panic!("unhandled request type: {:?}", other),
-            }
-        }
-    })
-    .detach();
+async fn error_opening_metadata() {
+    let (client_end, stream) = create_request_stream().unwrap();
     let env = TestEnv::builder().usb_dir(client_end).build();
+
+    let (channels_closed_sender, channels_closed_recv) = oneshot::channel();
+    fasync::Task::spawn(close_channels_then_notify(stream, channels_closed_sender)).detach();
+
+    // Wait for the channel connecting the pkg-local-mirror to the metadata dir to close.
+    // This ensures that GetMetadata calls will fail with the expected fidl error.
+    let () = channels_closed_recv.await.unwrap();
+
     let (file_proxy, server_end) = create_proxy().unwrap();
-
-    // This prevents flakes by enforcing the channel to the metadata
-    // dir is closed before the local mirror client calls get metadata.
-    let () = unblocker_recv.await.unwrap();
-
     let res = env
         .local_mirror_proxy()
         .get_metadata(&mut RepositoryUrl { url: repo_url().to_string() }, "1.root.json", server_end)

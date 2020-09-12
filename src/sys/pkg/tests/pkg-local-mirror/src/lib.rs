@@ -9,18 +9,23 @@
 
 use {
     fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeInfo,
+    },
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    futures::prelude::*,
+    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_zircon::Status,
+    futures::{channel::oneshot, prelude::*},
     std::sync::Arc,
     vfs::{directory::entry::DirectoryEntry, pseudo_directory},
 };
 
+mod get_blob;
 mod get_metadata;
 
 const PKG_LOCAL_MIRROR_CMX: &str =
@@ -48,8 +53,8 @@ impl TestEnvBuilder {
                     .unwrap_or(spawn_vfs(pseudo_directory! {
                         "0" => pseudo_directory! {
                             "fuchsia_pkg" => pseudo_directory! {
-                                "repository_metadata" => pseudo_directory! {
-                                },
+                                "blobs" => pseudo_directory! {},
+                                "repository_metadata" => pseudo_directory! {},
                             },
                         },
                     }))
@@ -98,4 +103,51 @@ fn spawn_vfs(dir: Arc<vfs::directory::immutable::simple::Simple>) -> ClientEnd<D
         ServerEnd::new(server_end.into_channel()),
     );
     client_end
+}
+
+fn repo_url() -> RepoUrl {
+    "fuchsia-pkg://fuchsia.com".parse().unwrap()
+}
+
+/// The purpose of this function is to guarantee that channels to usb subdirectories
+/// /usb/0/fuchsia_pkg/[repository_metadata|blobs] are closed before pkg-local-mirror makes open
+/// calls on them, so that the open calls fail with fidl errors. In practice, this will prevent
+/// flakes in the tests.
+async fn close_channels_then_notify(
+    mut stream: DirectoryRequestStream,
+    channels_closed_sender: oneshot::Sender<()>,
+) {
+    // Handle the initial open.
+    match stream.next().await.unwrap().unwrap() {
+        DirectoryRequest::Open { object, path, .. } => {
+            assert_eq!(path, "0/fuchsia_pkg");
+            let mut usb_dir_stream =
+                ServerEnd::<DirectoryMarker>::new(object.into_channel()).into_stream().unwrap();
+
+            // Handle opens to the subdirectories.
+            for _ in 0..2 {
+                if let Some(Ok(req)) = usb_dir_stream.next().await {
+                    match req {
+                        DirectoryRequest::Open { path, object, flags, .. } => {
+                            assert!(&path == "blobs" || &path == "repository_metadata");
+                            assert!(flags & fidl_fuchsia_io::OPEN_FLAG_DESCRIBE != 0);
+                            let (_, ch) = object.into_stream_and_control_handle().unwrap();
+
+                            // Need to send OnOpen because of the Describe flag.
+                            ch.send_on_open_(
+                                Status::OK.into_raw(),
+                                Some(&mut NodeInfo::Directory(DirectoryObject)),
+                            )
+                            .unwrap();
+                        }
+                        other => panic!("unhandled inner request type: {:?}", other),
+                    }
+                }
+            }
+        }
+        other => panic!("unhandled outer request type: {:?}", other),
+    }
+
+    // At this point, we guarantee the channels connecting us to subdirectories are closed.
+    let () = channels_closed_sender.send(()).unwrap();
 }

@@ -61,8 +61,9 @@ impl FidlServer {
                 let () =
                     responder.send(&mut response).context("while sending GetMetadata response")?;
             }
-            LocalMirrorRequest::GetBlob { .. } => {
-                todo!("fxbug.dev/59192: Implement me!");
+            LocalMirrorRequest::GetBlob { blob_id, blob, responder } => {
+                let mut response = self.manager.get_blob(blob_id.into(), blob).await;
+                let () = responder.send(&mut response).context("while sending GetBlob response")?;
             }
         }
         Ok(())

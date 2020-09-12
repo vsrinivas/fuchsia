@@ -30,8 +30,10 @@ protocol LocalMirror {
     /// Obtains and returns a blob from an attached storage device.
     ///
     /// + request `blob_id` the id of the blob to return.
-    /// + request `blob` a server end for a blob file to be opened with
-    ///    `OPEN_RIGHT_READABLE`.
+    /// + request `blob` a server end for a blob file to be opened
+    ///     with `OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE`. If the blobs
+    ///     directory exists but the requested file does not, the client end
+    ///     will receive an OnOpen with `Status::NOT_FOUND`.
     /// * error a `GetBlobError` value
     GetBlob(
         BlobId blob_id,
@@ -41,16 +43,14 @@ protocol LocalMirror {
 
 /// Error type for [`fuchsia.pkg/LocalMirror.GetMetadata`].
 enum GetMetadataError {
-    /// An error occured when opening requested metadata file. This may (though
+    /// An error occurred when opening the requested metadata file. This may (though
     /// does not necessarily) indicate the metadata directory does not exist.
     ERROR_OPENING_METADATA = 1;
 };
 
 /// Error type for [`fuchsia.pkg/LocalMirror.GetBlob`].
 enum GetBlobError {
-    /// Attached storage does not have the requested blob.
-    MISSING_BLOB = 1;
-
-    /// The requested blob was found, but an error occured while opening it.
-    ERROR_OPENING_BLOB = 2;
+    /// An error occurred when opening the requested blob. This may (though
+    /// does not necessarily) indicate the blobs directory does not exist.
+    ERROR_OPENING_BLOB = 1;
 };
