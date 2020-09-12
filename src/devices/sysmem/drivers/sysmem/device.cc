@@ -12,6 +12,7 @@
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
+#include <lib/sysmem-version/sysmem-version.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
@@ -398,48 +399,49 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
   }
   auto heap = static_cast<llcpp::fuchsia::sysmem2::HeapType>(heap_param);
 
-  return async::PostTask(
-      loop_.dispatcher(), [this, heap, heap_connection = std::move(heap_connection)]() mutable {
-        // Clean up heap allocator after peer closed channel.
-        auto wait_for_close = std::make_unique<async::Wait>(
-            heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
-            async::Wait::Handler(
-                [this, heap](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
-                             const zx_packet_signal_t* signal) { allocators_.erase(heap); }));
-        // It is safe to call Begin() here before adding entry to the map as
-        // handler will run on current thread.
-        zx_status_t status = wait_for_close->Begin(dispatcher());
-        if (status != ZX_OK) {
-          DRIVER_ERROR("Device::RegisterHeap() failed wait_for_close->Begin()");
-          return;
-        }
+  return async::PostTask(loop_.dispatcher(), [this, heap,
+                                              heap_connection =
+                                                  std::move(heap_connection)]() mutable {
+    // Clean up heap allocator after peer closed channel.
+    auto wait_for_close = std::make_unique<async::Wait>(
+        heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
+        async::Wait::Handler(
+            [this, heap](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal) { allocators_.erase(heap); }));
+    // It is safe to call Begin() here before adding entry to the map as
+    // handler will run on current thread.
+    zx_status_t status = wait_for_close->Begin(dispatcher());
+    if (status != ZX_OK) {
+      DRIVER_ERROR("Device::RegisterHeap() failed wait_for_close->Begin()");
+      return;
+    }
 
-        auto heap_client = std::make_unique<fidl::Client<llcpp::fuchsia::sysmem2::Heap>>();
-        auto heap_client_ptr = heap_client.get();
-        status = heap_client_ptr->Bind(
-            std::move(heap_connection), loop_.dispatcher(),
-            [this, heap](fidl::UnbindInfo info, zx::channel channel) {
-              if (info.reason != fidl::UnbindInfo::Reason::kPeerClosed &&
-                  info.reason != fidl::UnbindInfo::Reason::kClose) {
-                DRIVER_ERROR("Heap failed: reason %d status %d\n", static_cast<int>(info.reason),
-                             info.status);
-                allocators_.erase(heap);
-              }
-            },
-            {.on_register = [this, heap, wait_for_close = std::move(wait_for_close),
-                             heap_client = std::move(heap_client)](
-                                llcpp::fuchsia::sysmem2::Heap::OnRegisterResponse* message) mutable {
-              // A heap should not be registered twice.
-              ZX_DEBUG_ASSERT(heap_client);
-              // This replaces any previously registered allocator for heap (also cancels the old
-              // wait). This behavior is preferred as it avoids a potential race-condition during
-              // heap restart.
-              allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(
-                  std::move(*heap_client), std::move(wait_for_close),
-                  std::move(message->properties));
-            }});
-        ZX_ASSERT(status == ZX_OK);
-      });
+    auto heap_client = std::make_unique<fidl::Client<llcpp::fuchsia::sysmem2::Heap>>();
+    auto heap_client_ptr = heap_client.get();
+    status = heap_client_ptr->Bind(
+        std::move(heap_connection), loop_.dispatcher(),
+        [this, heap](fidl::UnbindInfo info, zx::channel channel) {
+          if (info.reason != fidl::UnbindInfo::Reason::kPeerClosed &&
+              info.reason != fidl::UnbindInfo::Reason::kClose) {
+            DRIVER_ERROR("Heap failed: reason %d status %d\n", static_cast<int>(info.reason),
+                         info.status);
+            allocators_.erase(heap);
+          }
+        },
+        {.on_register = [this, heap, wait_for_close = std::move(wait_for_close),
+                         heap_client = std::move(heap_client)](
+                            llcpp::fuchsia::sysmem2::Heap::OnRegisterResponse* message) mutable {
+          // A heap should not be registered twice.
+          ZX_DEBUG_ASSERT(heap_client);
+          // This replaces any previously registered allocator for heap (also cancels the old
+          // wait). This behavior is preferred as it avoids a potential race-condition during
+          // heap restart.
+          allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(
+              std::move(*heap_client), std::move(wait_for_close),
+              sysmem::V2CloneHeapProperties(&fidl_allocator_, message->properties).build());
+        }});
+    ZX_ASSERT(status == ZX_OK);
+  });
 }
 
 zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {

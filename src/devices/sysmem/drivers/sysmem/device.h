@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/closure-queue/closure_queue.h>
+#include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
@@ -161,6 +162,9 @@ class Device final : public DdkDeviceType,
   // This map allows us to look up the BufferCollectionToken by the koid of
   // the server end of a BufferCollectionToken channel.
   std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
+
+  // Used to allocate memory to store FIDL tables for MemoryAllocator.
+  fidl::HeapAllocator fidl_allocator_;
 
   // This map contains all registered memory allocators.
   std::map<llcpp::fuchsia::sysmem2::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;

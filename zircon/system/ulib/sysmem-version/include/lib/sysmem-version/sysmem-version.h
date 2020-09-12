@@ -162,7 +162,11 @@ V2CloneVmoBuffer(fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::VmoB
 V2CloneBufferCollectionInfo(fidl::Allocator* allocator,
                             const llcpp::fuchsia::sysmem2::BufferCollectionInfo& src,
                             uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask);
-
+[[nodiscard]] llcpp::fuchsia::sysmem2::CoherencyDomainSupport::Builder
+V2CloneCoherencyDomainSuppoort(fidl::Allocator* allocator,
+                               const llcpp::fuchsia::sysmem2::CoherencyDomainSupport& src);
+[[nodiscard]] llcpp::fuchsia::sysmem2::HeapProperties::Builder V2CloneHeapProperties(
+    fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::HeapProperties& src);
 }  // namespace sysmem
 
 #endif  // LIB_SYSMEM_VERSION_SYSMEM_VERSION_H_

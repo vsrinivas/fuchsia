@@ -1014,4 +1014,31 @@ V2CloneBufferCollectionInfo(fidl::Allocator* allocator,
   return fit::ok(std::move(builder));
 }
 
+llcpp::fuchsia::sysmem2::CoherencyDomainSupport::Builder V2CloneCoherencyDomainSuppoort(
+    fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::CoherencyDomainSupport& src) {
+  auto builder = allocator->make_table_builder<llcpp::fuchsia::sysmem2::CoherencyDomainSupport>();
+  if (src.has_cpu_supported()) {
+    builder.set_cpu_supported(sysmem::MakeTracking(allocator, src.cpu_supported()));
+  }
+  if (src.has_ram_supported()) {
+    builder.set_ram_supported(sysmem::MakeTracking(allocator, src.ram_supported()));
+  }
+  if (src.has_inaccessible_supported()) {
+    builder.set_inaccessible_supported(
+        sysmem::MakeTracking(allocator, src.inaccessible_supported()));
+  }
+  return builder;
+}
+
+llcpp::fuchsia::sysmem2::HeapProperties::Builder V2CloneHeapProperties(
+    fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::HeapProperties& src) {
+  auto builder = allocator->make_table_builder<llcpp::fuchsia::sysmem2::HeapProperties>();
+  if (src.has_coherency_domain_support()) {
+    builder.set_coherency_domain_support(sysmem::MakeTracking(
+        allocator,
+        V2CloneCoherencyDomainSuppoort(allocator, src.coherency_domain_support()).build()));
+  }
+  return builder;
+}
+
 }  // namespace sysmem

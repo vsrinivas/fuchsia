@@ -643,3 +643,65 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
     }
   }
 }
+
+TEST(SysmemVersion, CoherencyDomainSupport) {
+  for (uint32_t run = 0; run < kRunCount; ++run) {
+    bool cpu_supported;
+    bool ram_supported;
+    bool inaccessible_supported;
+    random(&cpu_supported);
+    random(&ram_supported);
+    random(&inaccessible_supported);
+
+    v2::CoherencyDomainSupport v2_1 =
+        allocator.make_table_builder<v2::CoherencyDomainSupport>()
+            .set_cpu_supported(allocator.make<bool>(cpu_supported))
+            .set_ram_supported(allocator.make<bool>(ram_supported))
+            .set_inaccessible_supported(allocator.make<bool>(inaccessible_supported))
+            .build();
+
+    v2::CoherencyDomainSupport::Builder v2_2 =
+        sysmem::V2CloneCoherencyDomainSuppoort(&allocator, v2_1);
+    EXPECT_TRUE(v2_2.has_cpu_supported());
+    EXPECT_TRUE(v2_2.has_ram_supported());
+    EXPECT_TRUE(v2_2.has_inaccessible_supported());
+
+    EXPECT_EQ(v2_2.cpu_supported(), v2_1.cpu_supported());
+    EXPECT_EQ(v2_2.ram_supported(), v2_1.ram_supported());
+    EXPECT_EQ(v2_2.inaccessible_supported(), v2_1.inaccessible_supported());
+  }
+}
+
+TEST(SysmemVersion, HeapProperties) {
+  for (uint32_t run = 0; run < kRunCount; ++run) {
+    bool cpu_supported;
+    bool ram_supported;
+    bool inaccessible_supported;
+    random(&cpu_supported);
+    random(&ram_supported);
+    random(&inaccessible_supported);
+
+    v2::HeapProperties v2_1 =
+        allocator.make_table_builder<v2::HeapProperties>()
+            .set_coherency_domain_support(allocator.make<v2::CoherencyDomainSupport>(
+                allocator.make_table_builder<v2::CoherencyDomainSupport>()
+                    .set_cpu_supported(allocator.make<bool>(cpu_supported))
+                    .set_ram_supported(allocator.make<bool>(ram_supported))
+                    .set_inaccessible_supported(allocator.make<bool>(inaccessible_supported))
+                    .build()))
+            .build();
+
+    v2::HeapProperties::Builder v2_2 = sysmem::V2CloneHeapProperties(&allocator, v2_1);
+    EXPECT_TRUE(v2_2.has_coherency_domain_support());
+    EXPECT_TRUE(v2_2.coherency_domain_support().has_cpu_supported());
+    EXPECT_TRUE(v2_2.coherency_domain_support().has_ram_supported());
+    EXPECT_TRUE(v2_2.coherency_domain_support().has_inaccessible_supported());
+
+    EXPECT_EQ(v2_2.coherency_domain_support().cpu_supported(),
+              v2_1.coherency_domain_support().cpu_supported());
+    EXPECT_EQ(v2_2.coherency_domain_support().ram_supported(),
+              v2_1.coherency_domain_support().ram_supported());
+    EXPECT_EQ(v2_2.coherency_domain_support().inaccessible_supported(),
+              v2_1.coherency_domain_support().inaccessible_supported());
+  }
+}
