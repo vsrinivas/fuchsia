@@ -141,6 +141,9 @@ template("gidl_single_file_source_set") {
                              "fidl",
                              "deps",
                            ])
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    cflags = [ "-Wno-conversion" ]
   }
 }
 
@@ -318,6 +321,9 @@ template("gidl_multiple_file_source_set") {
                              "fidl",
                              "deps",
                            ])
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    cflags = [ "-Wno-conversion" ]
   }
 }
 
