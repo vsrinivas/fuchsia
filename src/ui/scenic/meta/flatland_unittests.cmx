@@ -1,10 +1,21 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
     "program": {
         "binary": "test/flatland_unittests"
     },
     "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
         "services": [
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

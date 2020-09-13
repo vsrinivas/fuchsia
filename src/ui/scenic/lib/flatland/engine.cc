@@ -26,6 +26,57 @@ struct DisplayFrameData {
 
 constexpr fuchsia::sysmem::BufferUsage kNoneUsage = {.none = fuchsia::sysmem::noneUsage};
 
+// TODO(fxbug.dev/59646) : Move this somewhere else maybe.
+void SetClientConstraintsAndWaitForAllocated(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count, uint32_t width,
+    uint32_t height, fuchsia::sysmem::BufferUsage usage,
+    std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints) {
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  zx_status_t status =
+      sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  if (memory_constraints) {
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints = std::move(*memory_constraints);
+  } else {
+    constraints.has_buffer_memory_constraints = false;
+  }
+  constraints.usage = usage;
+  constraints.min_buffer_count = image_count;
+
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+
+  image_constraints.required_min_coded_width = width;
+  image_constraints.required_min_coded_height = height;
+  image_constraints.required_max_coded_width = width;
+  image_constraints.required_max_coded_height = height;
+  image_constraints.max_coded_width = width * 4 /*num channels*/;
+  image_constraints.max_coded_height = height;
+  image_constraints.max_bytes_per_row = 0xffffffff;
+
+  status = buffer_collection->SetConstraints(true, constraints);
+  FX_DCHECK(status == ZX_OK);
+
+  // Have the client wait for allocation.
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  FX_DCHECK(status == ZX_OK);
+  FX_DCHECK(allocation_status == ZX_OK);
+
+  status = buffer_collection->Close();
+  FX_DCHECK(status == ZX_OK);
+}
+
 uint64_t InitializeDisplayLayer(fuchsia::hardware::display::ControllerSyncPtr& display_controller) {
   uint64_t layer_id;
   zx_status_t create_layer_status;
@@ -97,11 +148,16 @@ DisplayFrameData RectangleDataToDisplayFrames(escher::Rectangle2D rectangle, Ima
 
 Engine::Engine(
     const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& display_controller,
-    const std::shared_ptr<LinkSystem>& link_system,
+    const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
     const std::shared_ptr<UberStructSystem>& uber_struct_system)
     : display_controller_(display_controller),
+      renderer_(renderer),
       link_system_(link_system),
-      uber_struct_system_(uber_struct_system) {}
+      uber_struct_system_(uber_struct_system) {
+  FX_DCHECK(renderer_);
+  FX_DCHECK(link_system_);
+  FX_DCHECK(uber_struct_system_);
+}
 
 std::vector<Engine::RenderData> Engine::ComputeRenderData() {
   const auto snapshot = uber_struct_system_->Snapshot();
@@ -199,10 +255,67 @@ void Engine::RenderFrame() {
   }
 }
 
-// Register a new display to the engine.
 void Engine::AddDisplay(uint64_t display_id, TransformHandle transform, glm::uvec2 pixel_scale) {
   display_map_[display_id] = {.transform = std::move(transform),
                               .pixel_scale = std::move(pixel_scale)};
+}
+
+Engine::BufferCollectionIdPair Engine::RegisterTargetCollection(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator, uint64_t display_id, uint32_t num_vmos) {
+  FX_DCHECK(sysmem_allocator);
+  auto iter = display_map_.find(display_id);
+  if (iter == display_map_.end() || num_vmos == 0) {
+    return {.global_id = Renderer::kInvalidId, .display_id = 0};
+  }
+
+  auto display_info = iter->second;
+
+  const uint32_t width = display_info.pixel_scale.x;
+  const uint32_t height = display_info.pixel_scale.y;
+
+  // Create an image config from the display resolution info.
+  fuchsia::hardware::display::ImageConfig image_config = {
+      .width = width,
+      .height = height,
+      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+  };
+
+  // Create the buffer collection token to be used for frame buffers.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr engine_token;
+  auto status = sysmem_allocator->AllocateSharedCollection(engine_token.NewRequest());
+  FX_DCHECK(status == ZX_OK) << status;
+
+  // Create a dup token for the display.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
+  status =
+      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+  status = engine_token->Sync();
+  FX_DCHECK(status == ZX_OK);
+
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
+  status =
+      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
+  status = engine_token->Sync();
+  FX_DCHECK(status == ZX_OK);
+
+  // Register the buffer collection with the renderer.
+  auto renderer_collection_id =
+      renderer_->RegisterRenderTargetCollection(sysmem_allocator, std::move(renderer_token));
+  FX_DCHECK(renderer_collection_id != Renderer::kInvalidId);
+
+  // Register the buffer collection with the display controller.
+  auto display_collection_id = scenic_impl::ImportBufferCollection(
+      *display_controller_.get(), std::move(display_token), image_config);
+  FX_DCHECK(display_collection_id != 0);
+
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(engine_token), num_vmos,
+                                          width, height, kNoneUsage, std::nullopt);
+
+  BufferCollectionIdPair id_pair = {.global_id = renderer_collection_id,
+                                    .display_id = display_collection_id};
+  framebuffer_id_map_[display_id] = id_pair;
+  return id_pair;
 }
 
 }  // namespace flatland

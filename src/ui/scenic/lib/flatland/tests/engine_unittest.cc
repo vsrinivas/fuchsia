@@ -6,6 +6,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-testing/test_loop.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 
@@ -14,8 +18,9 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
@@ -53,16 +58,40 @@ using fuchsia::ui::scenic::internal::LinkProperties;
 
 namespace {
 
-class EngineTest : public gtest::TestLoopFixture {
+class EngineTest : public gtest::RealLoopFixture {
  public:
   EngineTest()
       : uber_struct_system_(std::make_shared<UberStructSystem>()),
         link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())),
+        renderer_(std::make_shared<flatland::NullRenderer>()),
         display_controller_objs_(scenic_impl::display::test::CreateMockDisplayController()) {}
 
-  void SetUp() override {}
+  void SetUp() override {
+    gtest::RealLoopFixture::SetUp();
 
-  void TearDown() override {}
+    // Create the SysmemAllocator.
+    zx_status_t status = fdio_service_connect(
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
+
+    async_set_default_dispatcher(dispatcher());
+    display_manager_ = std::make_unique<scenic_impl::display::DisplayManager>();
+
+    // TODO(fxbug.dev/59646): We want all of the flatland tests to be "headless" and not make use
+    // of the real display controller. This isn't fully possible at the moment since we need the
+    // real DC's functionality to register buffer collections. Once the new hardware independent
+    // display controller driver is ready, we can hook that up to the fidl interface pointer instead
+    // and keep the tests hardware agnostic.
+    display_manager_->WaitForDefaultDisplayController([] {});
+    zx::duration timeout = zx::sec(5);
+    RunLoopWithTimeoutOrUntil([this] { return display_manager_->default_display() != nullptr; },
+                              timeout);
+  }
+
+  void TearDown() override {
+    display_manager_.reset();
+    sysmem_allocator_ = nullptr;
+    gtest::RealLoopFixture::TearDown();
+  }
 
   class FakeFlatlandSession {
    public:
@@ -195,13 +224,93 @@ class EngineTest : public gtest::TestLoopFixture {
   // Systems that are populated with data from Flatland instances.
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
+  std::shared_ptr<flatland::NullRenderer> renderer_;
   const scenic_impl::display::test::DisplayControllerObjects display_controller_objs_;
+  std::unique_ptr<scenic_impl::display::DisplayManager> display_manager_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 }  // namespace
 
 namespace flatland {
 namespace test {
+
+// Test bad input to the engine |RegisterTargetCollectionFunction|.
+TEST_F(EngineTest, BadBufferRegistration) {
+  auto display_controller = display_manager_->default_display_controller();
+  if (!display_controller) {
+    return;
+  }
+
+  auto display = display_manager_->default_display();
+  if (!display) {
+    return;
+  }
+
+  Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
+
+  const uint32_t kDisplayId = display->display_id();
+  const uint32_t kWidth = display->width_in_px();
+  const uint32_t kHeight = display->height_in_px();
+  const uint32_t kNumVmos = 2;
+
+  // Try to register a buffer collection without first adding a display.
+  auto [renderer_id, display_id] =
+      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
+  EXPECT_EQ(renderer_id, Renderer::kInvalidId);
+  EXPECT_EQ(display_id, 0u);
+
+  // Now add the display.
+  engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
+
+  // Try again with 0 vmos. This should also fail.
+  auto [renderer_id_2, display_id_2] =
+      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, /*num_vmos*/ 0);
+  EXPECT_EQ(renderer_id_2, Renderer::kInvalidId);
+  EXPECT_EQ(display_id_2, 0u);
+
+  // Now use a positive vmo number, this should work.
+  auto [renderer_id_3, display_id_3] =
+      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
+  EXPECT_NE(renderer_id_3, Renderer::kInvalidId);
+  EXPECT_NE(display_id_3, 0u);
+}
+
+// Test to make sure we can register framebuffers to the renderer and display
+// via the engine. Requires the use of the real display controller.
+TEST_F(EngineTest, BufferRegistrationTest) {
+  auto display_controller = display_manager_->default_display_controller();
+  if (!display_controller) {
+    return;
+  }
+
+  auto display = display_manager_->default_display();
+  ASSERT_TRUE(display_controller);
+  if (!display) {
+    return;
+  }
+
+  const uint32_t kDisplayId = display->display_id();
+  const uint32_t kWidth = display->width_in_px();
+  const uint32_t kHeight = display->height_in_px();
+  const uint32_t kNumVmos = 2;
+
+  Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
+  engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
+  auto [renderer_id, display_id] =
+      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
+  EXPECT_NE(renderer_id, Renderer::kInvalidId);
+  EXPECT_NE(display_id, 0u);
+
+  // We can check the result of buffer registration by the engine through the renderer.
+  // We should see the same number of vmos we told the engine to create, as well as each
+  // vmo being the same width and height in pixels as the display.
+  auto result = renderer_->Validate(renderer_id);
+  EXPECT_TRUE(result.has_value());
+  EXPECT_EQ(result->vmo_count, kNumVmos);
+  EXPECT_EQ(result->image_constraints.required_min_coded_width, kWidth);
+  EXPECT_EQ(result->image_constraints.required_min_coded_height, kHeight);
+}
 
 // When compositing directly to a hardware display layer, the display controller
 // takes in source and destination Frame object types, which mirrors flatland usage.
@@ -312,7 +421,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   });
 
   // Create an engine.
-  Engine engine(display_controller, link_system_, uber_struct_system_);
+  Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
 
   engine.AddDisplay(display_id, parent_root_handle, resolution);
   engine.RenderFrame();
