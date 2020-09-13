@@ -10,6 +10,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "adaptation/tests:tests",
+    "tests",
     "weavestack/tests:tests",
   ]
 }

@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  edition = "2018"
+  name = "weave_ip_forward"
+  sources = [ "src/main.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_netstack_ext",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:prettytable-rs",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+fuchsia_component("weave-ip-forward") {
+  testonly = true
+  manifest = "meta/weave_ip_forward.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("weave-ip-fwd-test-wpan-subnet-6") {
+  testonly = true
+  manifest = "meta/weave_ip_fwd_test_wpan_subnet_6.cmx"
+  deps = [ ":weave-ip-forward" ]
+}
+
+fuchsia_component("weave-ip-fwd-test-wpan-non-subnet-6") {
+  testonly = true
+  manifest = "meta/weave_ip_fwd_test_wpan_non_subnet_6.cmx"
+  deps = [ ":weave-ip-forward" ]
+}
+
+fuchsia_test_package("weave-ip-fwd-tests") {
+  test_components = [
+    ":weave-ip-fwd-test-wpan-subnet-6",
+    ":weave-ip-fwd-test-wpan-non-subnet-6",
+  ]
+  deps = [
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug",
+  ]
+}

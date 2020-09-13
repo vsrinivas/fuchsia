@@ -1,0 +1,190 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/weave-ip-forward.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "name": "wlan-node",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "wlan-n-ep",
+                                    "-i",
+                                    "fdce:da10:7616:1:6616:6600:4734:1234/64",
+                                    "-g",
+                                    "fdce:da10:7616:1::abcd"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "wlan-node",
+                                    "[fdce:da10:7616:6:6616:6600:4734:b051]:8080",
+                                    "[fdce:da10:7616:7:6616:6600:4734:b052]:8081",
+                                    "[fdd3:b786:54dc:0:a171:31d6:eb7b:1234]:8002"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "wpan-node",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "wpan-n-ep",
+                                    "-i",
+                                    "fdd3:b786:54dc:0:a171:31d6:eb7b:1234/64",
+                                    "-g",
+                                    "fdd3:b786:54dc::abcd"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "wpan-node",
+                                    "[fdce:da10:7616:6:6616:6600:4734:b051]:8080",
+                                    "[fdce:da10:7616:7:6616:6600:4734:b052]:8081",
+                                    "[fdd3:b786:54dc:0:a171:31d6:eb7b:1234]:8002"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "fuchsia-node",
+                        "services": {
+                            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx"
+                        },
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "weave-f-ep",
+                                    "-i",
+                                    "fdce:da10:7616:6::abcd"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                            },
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "wlan-f-ep",
+                                    "-i",
+                                    "fdce:da10:7616:1::abcd"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                            },
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "wpan-f-ep",
+                                    "-i",
+                                    "fdd3:b786:54dc::abcd"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "fuchsia-node"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name": "weave-node",
+                "services": {
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "weave-if-ep",
+                            "-i",
+                            "fdce:da10:7616:6:6616:6600:4734:b051/48",
+                            "-g",
+                            "fdce:da10:7616:6::abcd"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                    },
+                    {
+                        "arguments": [
+                            "-e",
+                            "weave-if-ep2",
+                            "-i",
+                            "fdce:da10:7616:7:6616:6600:4734:b052/48",
+                            "-g",
+                            "fdce:da10:7616:6::abcd"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {
+                        "arguments": [
+                            "weave-node",
+                            "[fdce:da10:7616:6:6616:6600:4734:b051]:8080",
+                            "[fdce:da10:7616:7:6616:6600:4734:b052]:8081"
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "weave-f-ep"
+                        },
+                        {
+                            "name": "weave-if-ep"
+                        },
+                        {
+                            "name": "weave-if-ep2"
+                        }
+                    ],
+                    "name": "weave-net"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "wlan-f-ep"
+                        },
+                        {
+                            "name": "wlan-n-ep"
+                        }
+                    ],
+                    "name": "wlan-net"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "wpan-f-ep"
+                        },
+                        {
+                            "name": "wpan-n-ep"
+                        }
+                    ],
+                    "name": "wpan-net"
+                }
+            ],
+            "timeout": 120
+        }
+    },
+    "program": {
+        "binary": "test/weave-ip-forward_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

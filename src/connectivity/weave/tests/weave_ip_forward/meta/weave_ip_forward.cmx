@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/weave_ip_forward"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}
