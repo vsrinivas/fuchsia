@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test_data.gni")
+
+host_test_data("testdata") {
+  sources = [
+    # Copied from src/debug/dwarf/testdata/cycle.elf distributed with go v1.15.
+    "cycle.elf",
+    "libc.elf.section-only",
+    "libc.elf.stripped",
+
+    #"pe-aa64.efi" TODO: Go's debug/pe doesn't support it yet.
+    "pe-x64.efi",
+  ]
+  outputs = [ "$root_out_dir/testdata/elflib/{{source_file_part}}" ]
+}

@@ -11,7 +11,7 @@ go_library("elflib") {
 
 _testdata_path = "$target_gen_dir/testdata"
 
-go_test("tools_debug_elflib_tests") {
+go_test("elflib_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/elflib" ]
   args = [
     "--test_data_dir",

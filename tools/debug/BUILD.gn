@@ -20,7 +20,7 @@ group("tests") {
     "//tools/debug/bloaty:bloaty_tests",
     "//tools/debug/breakpad:breakpad_tests",
     "//tools/debug/covargs:covargs_tests",
-    "//tools/debug/elflib:tools_debug_elflib_tests",
+    "//tools/debug/elflib:elflib_tests",
     "//tools/debug/symbolize:symbolize_tests",
   ]
 }
