@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/build_id.gni")
+import("//build/config/clang/clang.gni")
 import("//build/config/clang/crash_diagnostics.gni")
 import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
@@ -644,7 +645,10 @@ config("static-libc++") {
     # the toolchain, because -lc++ would look for the shared library.
     ldflags = [
       "-nostdlib++",
-      rebase_path("${toolchain.tool_dir}/../lib/libc++.a", root_build_dir),
+      # NOTE: the path below was relative to toolchain.tool_dir in the Zircon build
+      # but the Fuchsia one doesn't support GCC-based host builds at all, so this
+      # is assuming Clang is always used instead.
+      rebase_path("${clang_prefix}/../lib/libc++.a", root_build_dir),
     ]
   } else {
     ldflags = [ "-static-libstdc++" ]
