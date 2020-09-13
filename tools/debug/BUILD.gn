@@ -8,6 +8,7 @@ group("tools") {
   public_deps = [
     "//tools/debug/bloatalyzer",
     "//tools/debug/covargs",
+    "//tools/debug/sourcerer",
     "//tools/debug/symbolize",
     "//tools/debug/unpack_debug_symbols",
   ]
