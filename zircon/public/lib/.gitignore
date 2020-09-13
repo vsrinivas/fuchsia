@@ -45,7 +45,6 @@ safemath/
 smbios/
 sync/
 syscalls-headers/
-tftp/
 uart/
 uart-mock/
 usbhost-static/

@@ -43,8 +43,8 @@ test("tftp-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/tftp",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/tftp",
   ]
   include_dirs = [ ".." ]
 
@@ -57,7 +57,7 @@ fuzzer("tftp-fuzzer") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/tftp",
+    "//zircon/system/ulib/tftp",
   ]
   include_dirs = [ ".." ]
 }
