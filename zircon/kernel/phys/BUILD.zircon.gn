@@ -6,10 +6,10 @@
 
 # TODO(54160): Keep in sync with BUILD.gn
 
-import("$zx/public/gn/config/levels.gni")
-import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/environment.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx_build_config/levels.gni")
+import("$zx_build_config/standard.gni")
 
 if (current_toolchain == default_toolchain) {
   # Default toolchain (current_cpu == "") just defines the phys environment.
@@ -38,7 +38,7 @@ if (current_toolchain == default_toolchain) {
         # All physmem code is inherently sensitive and in a position for
         # any bug to be unusually dangerous.  So compile with minimal
         # undefined behavior checking in all builds, regardless of variant.
-        "$zx/public/gn/config/instrumentation:ubsan-trap",
+        "$zx_build_config/instrumentation:ubsan-trap",
       ]
 
       # Always enable frame pointers.
@@ -121,6 +121,9 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/libc",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "$zx_build_config:Wno-conversion" ]
   }
 
   # This is used implicitly by zbi_executable() targets.

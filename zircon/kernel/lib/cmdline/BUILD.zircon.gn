@@ -19,4 +19,7 @@ zx_library("cmdline") {
   static = true
   sources = [ "cmdline.cc" ]
   deps = [ "$zx/system/ulib/fbl" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

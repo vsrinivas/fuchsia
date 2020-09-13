@@ -48,4 +48,7 @@ zx_library("pcie") {
 
   # TODO(mcgrathr): Say why this is needed.
   cflags_cc = [ "-Wno-invalid-offsetof" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

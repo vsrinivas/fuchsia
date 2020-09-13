@@ -15,6 +15,9 @@ zx_library("cmpctmalloc") {
   ]
   include_dirs = [ "include/lib" ]
 
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
+
   if (is_host) {
     # TODO: revist the following three specifications after the zircon-to-fuchsia
     # build migration. They seem currently required in order to export the host

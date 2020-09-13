@@ -28,6 +28,9 @@ zx_library("hwreg") {
     sources += [ "asm.cc" ]
     deps = [ "$zx/system/ulib/fit" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 zx_library("hwreg-mock") {

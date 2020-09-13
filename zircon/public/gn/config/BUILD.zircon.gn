@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/clang.gni")
 import("$zx/public/gn/toolchain/goma.gni")
 import("$zx/public/gn/toolchain/rustc.gni")
 import("$zx/public/gn/toolchain/toolchain_runtime_deps.gni")
+import("$zx_build_config/standard.gni")
 import("levels.gni")
 
 declare_args() {
@@ -593,6 +593,43 @@ config("default_warnings") {
 
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
+}
+
+# TODO(fxb/58162): clean up usages of this config
+config("Wno-conversion") {
+  cflags_cc = [ "-Wno-conversion" ]
+  visibility = [
+    "$zx/kernel/arch/x86/*",
+    "$zx/kernel/arch/x86/cpuid/*",
+    "$zx/kernel/debugcommands/*",
+    "$zx/kernel/dev/iommu/dummy/*",
+    "$zx/kernel/dev/pcie/*",
+    "$zx/kernel/lib/cmdline/*",
+    "$zx/kernel/lib/heap/cmpctmalloc/*",
+    "$zx/kernel/object/*",
+    "$zx/kernel/phys/*",
+    "$zx/kernel/platform/*",
+    "$zx/kernel/tests/*",
+    "$zx/kernel/vm/*",
+    "$zx/system/ulib/cmdline/*",
+    "$zx/system/ulib/elf-psabi/*",
+    "$zx/system/ulib/elfload/*",
+    "$zx/system/ulib/fidl/*",
+    "$zx/system/ulib/fit/*",
+    "$zx/system/ulib/gfx/*",
+    "$zx/system/ulib/hwreg/*",
+    "$zx/system/ulib/pretty/*",
+    "$zx/system/ulib/tftp/*",
+    "$zx/system/ulib/zbi/*",
+    "$zx/system/ulib/zxtest/*",
+    "$zx/third_party/*",
+    "$zx/third_party/lz4/*",
+    "$zx/third_party/ulib/cksum/*",
+    "$zx/third_party/ulib/usbhost/*",
+    "$zx/tools/fidl/*",
+    "$zx/tools/kazoo/*",
+    "$zx/tools/zbi/*",
+  ]
 }
 
 config("warn-implicit-fallthrough") {

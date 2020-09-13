@@ -43,4 +43,7 @@ zx_library("fit") {
     "sequencer.cc",
     "single_threaded_executor.cc",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

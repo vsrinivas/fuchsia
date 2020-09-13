@@ -20,4 +20,7 @@ zx_library("zbi") {
       "$zx/system/ulib/zx",
     ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

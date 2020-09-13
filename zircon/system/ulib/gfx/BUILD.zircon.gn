@@ -9,4 +9,7 @@ zx_library("gfx") {
   sdk_headers = [ "gfx/gfx.h" ]
   sources = [ "gfx.c" ]
   deps = [ "$zx/system/ulib/zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

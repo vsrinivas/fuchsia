@@ -24,4 +24,7 @@ source_set("scudo") {
   # Don't instrument it to avoid getting noise in code coverage.
   # TODO(25073): Once a cleaner solution is found, remove this.
   configs += [ "$zx_build_config:no_fuzzer" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

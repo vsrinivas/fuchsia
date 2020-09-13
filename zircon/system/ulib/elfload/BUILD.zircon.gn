@@ -7,4 +7,7 @@ zx_library("elfload") {
   sdk_headers = [ "elfload/elfload.h" ]
   sources = [ "elf-load.c" ]
   deps = [ "$zx/system/ulib/zircon" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

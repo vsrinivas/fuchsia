@@ -63,6 +63,9 @@ zx_library("pc") {
       "$zx/system/ulib/affine",
     ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 source_set("tests") {

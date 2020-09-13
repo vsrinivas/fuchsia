@@ -392,6 +392,11 @@ config("werror") {
   }
 }
 
+# TODO(fxb/58162): clean up usages of this config
+config("Wno-conversion") {
+  cflags_cc = [ "-Wno-conversion" ]
+}
+
 config("default_warnings") {
   cflags = [
     "-Wall",

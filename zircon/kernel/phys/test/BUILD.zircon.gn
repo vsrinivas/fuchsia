@@ -192,6 +192,9 @@ source_set("phys-unittests") {
     "$zx/kernel/lib/unittest",
     "$zx/kernel/tests",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 group("test") {

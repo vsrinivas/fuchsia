@@ -11,4 +11,7 @@ source_set("debugcommands") {
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/unittest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

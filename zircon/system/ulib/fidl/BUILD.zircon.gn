@@ -140,6 +140,9 @@ if (is_fuchsia) {
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "$zx_build_config:Wno-conversion" ]
   }
 } else {
   zx_library("fidl-llcpp") {
@@ -172,5 +175,8 @@ if (is_fuchsia) {
       "$zx/system/ulib/fit",
       "$zx/system/ulib/zircon",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "$zx_build_config:Wno-conversion" ]
   }
 }
