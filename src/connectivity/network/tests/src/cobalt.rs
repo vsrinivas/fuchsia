@@ -17,7 +17,13 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
             .context("failed to connect to netstack")?;
     let interfaces = netstack.list_interfaces().await?;
-    assert_eq!(interfaces.len(), 1);
+    assert_eq!(
+        &interfaces
+            .into_iter()
+            .map(|fidl_fuchsia_net_stack::InterfaceInfo { id, .. }| id)
+            .collect::<Vec<_>>(),
+        &[1],
+    );
 
     let logger_querier = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_cobalt_test::LoggerQuerierMarker,
@@ -74,19 +80,22 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     })
     .await?;
 
-    let socket_count_max_events =
-        events_with_id(&events_post_bind, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID);
-    assert_eq!(socket_count_max_events.len(), 1);
-    assert_eq!(socket_count_max_events[0].count, 1);
+    matches::assert_matches!(
+        events_with_id(&events_post_bind, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
+            .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 1, period_duration_micros: _ }]
+    );
 
-    let sockets_created_events =
-        events_with_id(&events_post_bind, networking_metrics::SOCKETS_CREATED_METRIC_ID);
-    assert_eq!(sockets_created_events.len(), 1);
-    assert_eq!(sockets_created_events[0].count, 1);
-    let sockets_destroyed_events =
-        events_with_id(&events_post_bind, networking_metrics::SOCKETS_DESTROYED_METRIC_ID);
-    assert_eq!(sockets_destroyed_events.len(), 1);
-    assert_eq!(sockets_destroyed_events[0].count, 0);
+    matches::assert_matches!(
+        events_with_id(&events_post_bind, networking_metrics::SOCKETS_CREATED_METRIC_ID).as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 1, period_duration_micros: _ }]
+    );
+
+    matches::assert_matches!(
+        events_with_id(&events_post_bind, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+            .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 0, period_duration_micros: _ }]
+    );
 
     assert_eq!(
         // We think this i64 suffix is necessary because rustc assigns this constant a type before unifying
@@ -104,12 +113,14 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     // The stack sees both the client and server side of the TCP connection.
     // Hence we see the TCP stats below accounting for both sides.
-    let tcp_connections_established_events = events_with_id(
-        &events_post_accept,
-        networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
+    matches::assert_matches!(
+        events_with_id(
+            &events_post_accept,
+            networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
+        )
+        .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 2, period_duration_micros: _ }]
     );
-    assert_eq!(tcp_connections_established_events.len(), 1);
-    assert_eq!(tcp_connections_established_events[0].count, 2);
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
@@ -203,20 +214,17 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         display_events(&events_post_final_drop)
     );
 
-    let tcp_connections_established_events = events_with_id(
-        &events_post_final_drop,
-        networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
-    );
-    assert_eq!(tcp_connections_established_events.len(), 1);
     // TODO(gvisor.dev/issue/1579) Check against the new counter that tracks
     // all connected TCP connections.
-    assert_eq!(tcp_connections_established_events[0].count, 0);
-
-    let tcp_connections_closed_events = events_with_id(
-        &events_post_final_drop,
-        networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID,
+    matches::assert_matches!(
+        events_with_id(
+            &events_post_final_drop,
+            networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
+        )
+        .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 0, period_duration_micros: _ }]
     );
-    assert_eq!(tcp_connections_closed_events.len(), 1);
+
     // TODO(gvisor.dev/issue/1400) There is currently no way the client can
     // avoid getting into time-wait on close. This means that there is no
     // reliable way to ensure that the connections are indeed closed at this
@@ -241,24 +249,34 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // timeout to zero, which would reset the connection instead of getting into
     // time-wait or fin-wait2. Then, the asserts below can be updated to account
     // for all closed connections with an equality check of 2.
-    assert!(
-        tcp_connections_closed_events[0].count >= 0 && tcp_connections_closed_events[0].count <= 2
+    matches::assert_matches!(
+        events_with_id(
+            &events_post_final_drop,
+            networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID,
+        )
+        .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 0..=2, period_duration_micros: _ }]
     );
 
-    let tcp_connections_reset_events = events_with_id(
-        &events_post_final_drop,
-        networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID,
-    );
     // TODO(gvisor.dev/issue/1400) restore to equality check based on how the
     // reset of client and server connections are accounted for in gvisor.dev/issue/1400.
-    assert!(
-        tcp_connections_reset_events[0].count == 0 || tcp_connections_reset_events[0].count == 1
+    matches::assert_matches!(
+        events_with_id(
+            &events_post_final_drop,
+            networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID,
+        )
+        .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 0..=1, period_duration_micros: _ }]
     );
-    let tcp_connections_timed_out_events = events_with_id(
-        &events_post_final_drop,
-        networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID,
+
+    matches::assert_matches!(
+        events_with_id(
+            &events_post_final_drop,
+            networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID,
+        )
+        .as_slice(),
+        &[fidl_fuchsia_cobalt::CountEvent { count: 0, period_duration_micros: _ }]
     );
-    assert_eq!(tcp_connections_timed_out_events[0].count, 0);
 
     Ok(())
 }
