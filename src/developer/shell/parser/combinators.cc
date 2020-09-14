@@ -71,35 +71,29 @@ fit::function<ParseResult(ParseResult)> Not(fit::function<ParseResult(ParseResul
 
 fit::function<ParseResult(ParseResult)> Multi(size_t min, size_t max,
                                               fit::function<ParseResult(ParseResult)> child) {
-  if (min == 1 && max == 1) {
-    return child;
-  } else if (min > 0) {
-    if (max != std::numeric_limits<size_t>::max()) {
-      // TODO: If we can find a way to make the structure of Multi combinators constant-size, we
-      // could just treat the max limit like a regular limit and not a sentinel value, which would
-      // mean killing this conditional.
-      max -= 1;
-    }
+  return [child = std::move(child), min, max](ParseResult prefix) {
+    size_t score_floor = prefix.error_score();
+    size_t count = 0;
+    ParseResult result = prefix;
 
-    // We have to parse at least one instance of the child, so parse it here, then recurse to parse
-    // the rest of the pattern.
-    return Seq(child.share(), Multi(min - 1, max, std::move(child)));
-  } else if (max == std::numeric_limits<size_t>::max()) {
-    // This is the same principle as the finite version in the last conditional, but we have to
-    // construct the next combinator in a closure otherwise this combinator recurses infinitely.
-    return Maybe([child = std::move(child)](ParseResult prefix) mutable {
-      auto child_result = child(prefix);
+    for (ParseResult next = ParseResult::kEnd; result && count < max; ++count) {
+      next = child(result);
 
-      if (child_result && child_result.error_score() == prefix.error_score()) {
-        return Multi(0, std::numeric_limits<size_t>::max(), child.share())(std::move(child_result));
+      if ((!next || next.error_score() > score_floor) && count >= min) {
+        return result;
       }
 
-      return child_result;
-    });
-  } else {
-    // Min = 0, max = <something finite>.
-    return Maybe(Multi(1, max, std::move(child)));
-  }
+      // If result becomes a null parse result at this point, it means two things:
+      //   1) We've had a hard parse failure. That means parsing failed *and error recovery failed*.
+      //   2) We didn't reach the minimum number of repetitions before that hard failure.
+      //
+      // The next thing that will happen is the loop will end and we will propagate that hard
+      // failure by returning the null parse result.
+      result = next;
+    }
+
+    return result;
+  };
 }
 
 fit::function<ParseResult(ParseResult)> Multi(size_t count,
