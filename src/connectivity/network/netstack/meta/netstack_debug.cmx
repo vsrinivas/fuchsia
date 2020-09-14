@@ -3,7 +3,6 @@
         "args": [
             "netstack",
             "--log-packets",
-            "--syslog",
             "--verbosity=debug"
         ],
         "binary": "bin/grand_unified_binary"

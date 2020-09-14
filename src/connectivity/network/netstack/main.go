@@ -174,30 +174,23 @@ func Main() {
 
 	logLevel := syslog.InfoLevel
 
-	var syslogOutput bool
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	flags.Var((*atomicBool)(&sniffer.LogPackets), "log-packets", "Enable packet logging")
 	flags.Var(&logLevel, "verbosity", "Set the logging verbosity")
-	flags.BoolVar(&syslogOutput, "syslog", false, "Write logs to syslog instead of stderr")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
 
 	appCtx := component.NewContextFromStartupInfo()
 
-	var logSocket zx.Socket
-	if syslogOutput {
-		s, err := syslog.ConnectToLogger(appCtx.Connector())
-		if err != nil {
-			panic(fmt.Sprintf("failed to connect to syslog: %s", err))
-		}
-		logSocket = s
+	s, err := syslog.ConnectToLogger(appCtx.Connector())
+	if err != nil {
+		panic(fmt.Sprintf("failed to connect to syslog: %s", err))
 	}
-
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      logLevel,
 		MinSeverityForFileAndLineInfo: logLevel,
-		Socket:                        logSocket,
+		Socket:                        s,
 		Tags:                          []string{"netstack"},
 	})
 	if err != nil {
