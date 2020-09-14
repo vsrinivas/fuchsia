@@ -11,7 +11,8 @@ namespace flatland {
 // |UberStructSystem| implementations.
 
 TransformHandle::InstanceId UberStructSystem::GetNextInstanceId() {
-  return scheduling::GetNextSessionId();
+  latest_instance_id_ = scheduling::GetNextSessionId();
+  return latest_instance_id_;
 }
 
 std::shared_ptr<UberStructSystem::UberStructQueue> UberStructSystem::AllocateQueueForSession(
@@ -77,6 +78,10 @@ void UberStructSystem::ForceUpdateAllSessions(size_t max_updates_per_queue) {
 UberStruct::InstanceMap UberStructSystem::Snapshot() { return uber_struct_map_; }
 
 size_t UberStructSystem::GetSessionCount() { return pending_structs_queues_.size(); }
+
+TransformHandle::InstanceId UberStructSystem::GetLatestInstanceId() const {
+  return latest_instance_id_;
+}
 
 // |UberStructSystem::Queue| implementations.
 

@@ -78,6 +78,11 @@ class MockFlatlandPresenter : public FlatlandPresenter {
     return present_ids;
   }
 
+  // Returns true if |session_id| currently has a session update pending.
+  bool HasSessionUpdate(scheduling::SessionId session_id) const {
+    return pending_session_updates_.count(session_id);
+  }
+
  private:
   UberStructSystem* uber_struct_system_;
   std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> pending_release_fences_;

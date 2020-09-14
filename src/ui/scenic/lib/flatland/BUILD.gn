@@ -14,6 +14,8 @@ source_set("flatland") {
     "engine.h",
     "flatland.cc",
     "flatland.h",
+    "flatland_manager.cc",
+    "flatland_manager.h",
     "flatland_presenter.h",
     "global_image_data.cc",
     "global_image_data.h",

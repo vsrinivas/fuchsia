@@ -84,6 +84,9 @@ class UberStructSystem {
   // For validating cleanup logic in tests.
   size_t GetSessionCount();
 
+  // For getting Flatland InstanceIds in tests.
+  TransformHandle::InstanceId GetLatestInstanceId() const;
+
  private:
   // The queue of UberStructs pending for each active session. Flatland instances push UberStructs
   // onto these queues using |UberStructQueue::Push()|. This UberStructSystem removes entries using
@@ -94,6 +97,9 @@ class UberStructSystem {
 
   // The current UberStruct for each Flatland instance.
   UberStruct::InstanceMap uber_struct_map_;
+
+  // The InstanceId most recently returned from GetNextInstanceId().
+  TransformHandle::InstanceId latest_instance_id_;
 };
 
 }  // namespace flatland
