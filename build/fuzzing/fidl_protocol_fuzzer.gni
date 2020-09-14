@@ -1,0 +1,7 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+# Currently this is just a redirect to fuzzer.gni. Once all consumers are using this file, the
+# template can be moved.
