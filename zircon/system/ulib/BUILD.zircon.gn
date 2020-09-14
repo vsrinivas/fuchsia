@@ -39,8 +39,6 @@ group("ulib") {
     "fidl:fidl-llcpp",
     "fidl:fidl_base",
     "fit",
-    "gfx",
-    "gfx-font-data",
     "hwreg",
     "hwreg:hwreg-mock",
     "lazy_init",

@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("gfx-font-data") {
   kernel = true
   static = true
 
   sdk = "static"
   sdk_headers = [ "lib/gfx-font-data/gfx-font-data.h" ]
+  sdk_migrated = true
 
   public_deps = [ "$zx/system/ulib/gfx:headers" ]
   sources = [

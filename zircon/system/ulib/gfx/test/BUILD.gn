@@ -16,7 +16,7 @@ import("//build/fuzzing/fuzzer.gni")
 
 fuzzer("gfx-fuzzer") {
   sources = [ "gfx_fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/gfx" ]
+  deps = [ "//zircon/system/ulib/gfx" ]
 }
 
 group("test") {

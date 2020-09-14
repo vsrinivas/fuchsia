@@ -23,8 +23,6 @@ fidl/
 fidl_base/
 fidl-llcpp/
 fit/
-gfx/
-gfx-font-data/
 host/
 hwreg/
 hwreg-mock/
