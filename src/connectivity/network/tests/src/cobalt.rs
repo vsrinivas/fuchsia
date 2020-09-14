@@ -39,14 +39,13 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
         );
         let res = func()?;
-        let (events, more) = watch
-            .await
-            .context("failed to call watch_logs")?
-            // fidl_fuchsia_cobalt_test::QueryError doesn't implement thiserror::Error and
-            // anyhow::context::ext::StdError.
-            .map_err(|e: fidl_fuchsia_cobalt_test::QueryError| {
-                anyhow::format_err!("queryerror: {:?}", e)
-            })?;
+        let (events, more) = watch.await.context("failed to call watch_logs")?.map_err(
+            |query_error: fidl_fuchsia_cobalt_test::QueryError| {
+                // anyhow::Error::new requires std::error::Error
+                // anyhow::Error::msg requires std::fmt::Display
+                anyhow::anyhow!("{:?}", query_error)
+            },
+        )?;
         assert!(!more);
         Ok((res, events))
     }
@@ -98,17 +97,13 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     );
 
     assert_eq!(
-        // We think this i64 suffix is necessary because rustc assigns this constant a type before unifying
-        // it with the type of the events_with_id expression below; this may be fixed when
-        // https://github.com/rust-lang/rust/issues/57009 is fixed and should be reevaluated then.
-        3i64,
         events_with_id(&events_post_accept, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .max()
-            .expect("expect at least one socket count max event"),
-        "events:\n{}\n",
-        display_events(&events_post_accept),
+            .max(),
+        Some(3),
+        "events: {:?}",
+        MultilineSlice(&events_post_accept),
     );
 
     // The stack sees both the client and server side of the TCP connection.
@@ -123,12 +118,13 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     );
 
     assert_eq!(
-        // https://github.com/rust-lang/rust/issues/57009
-        2i64,
         events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .sum()
+            .sum::<i64>(),
+        2,
+        "events: {:?}",
+        MultilineSlice(&events_post_first_drop),
     );
 
     // TODO(43242): This is currently FIN-ACK, ACK but should be FIN-ACK, FIN-ACK.
@@ -141,77 +137,70 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     const EXPECTED_RECEIVED_PACKET_SIZE: i64 = 52;
 
     assert_eq!(
-        EXPECTED_PACKET_COUNT,
         events_with_id(&events_post_first_drop, networking_metrics::PACKETS_SENT_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .max()
-            .expect("expected at least one event with PACKETS_SENT_METRIC_ID"),
-        "packets sent. events:\n{}\n",
-        display_events(&events_post_first_drop),
+            .max(),
+        Some(EXPECTED_PACKET_COUNT),
+        "packets sent. events: {:?}",
+        MultilineSlice(&events_post_first_drop),
     );
     assert_eq!(
-        EXPECTED_PACKET_COUNT,
         events_with_id(&events_post_first_drop, networking_metrics::PACKETS_RECEIVED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .max()
-            .expect("expected at least one event with PACKETS_RECEIVED_METRIC_ID"),
-        "packets received. events:\n{}\n",
-        display_events(&events_post_first_drop),
+            .max(),
+        Some(EXPECTED_PACKET_COUNT),
+        "packets received. events: {:?}",
+        MultilineSlice(&events_post_first_drop),
     );
     assert_eq!(
-        EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE,
         events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .max()
-            .expect("expected at least one event with BYTES_SENT_METRIC_ID"),
-        "bytes sent. events:\n{}\n",
-        display_events(&events_post_first_drop),
+            .max(),
+        Some(EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE),
+        "bytes sent. events: {:?}",
+        MultilineSlice(&events_post_first_drop),
     );
     assert_eq!(
-        EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE,
         events_with_id(&events_post_first_drop, networking_metrics::BYTES_RECEIVED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .max()
-            .expect("expected at least one event with BYTES_RECEIVED_METRIC_ID"),
-        "bytes received. events:\n{}\n",
-        display_events(&events_post_first_drop),
+            .max(),
+        Some(EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE),
+        "bytes received. events: {:?}",
+        MultilineSlice(&events_post_first_drop),
     );
 
     assert_eq!(
-        // https://github.com/rust-lang/rust/issues/57009
-        2i64,
         events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .sum(),
-        "sockets destroyed. events:\n{}\n",
-        display_events(&events_post_first_drop),
+            .sum::<i64>(),
+        2,
+        "sockets destroyed. events: {:?}",
+        MultilineSlice(&events_post_first_drop),
     );
 
     assert_eq!(
-        // https://github.com/rust-lang/rust/issues/57009
-        0i64,
         events_with_id(&events_post_final_drop, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .sum(),
-        "socket count max. events:\n{}\n",
-        display_events(&events_post_final_drop),
+            .sum::<i64>(),
+        0,
+        "socket count max. events: {:?}",
+        MultilineSlice(&events_post_final_drop),
     );
 
     assert_eq!(
-        // https://github.com/rust-lang/rust/issues/57009
-        1i64,
         events_with_id(&events_post_final_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .sum(),
-        "sockets destroyed. events:\n{}\n",
-        display_events(&events_post_final_drop)
+            .sum::<i64>(),
+        1,
+        "sockets destroyed. events: {:?}",
+        MultilineSlice(&events_post_final_drop)
     );
 
     // TODO(gvisor.dev/issue/1579) Check against the new counter that tracks
@@ -281,11 +270,18 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn display_events<'a, I>(events: I) -> String
-where
-    I: IntoIterator<Item = &'a fidl_fuchsia_cobalt::CobaltEvent>,
-{
-    itertools::join(events.into_iter().map(|ev| format!("{:?}", ev)), "\n")
+struct MultilineSlice<'a, T>(&'a [T]);
+
+impl<'a, T: std::fmt::Debug> std::fmt::Debug for MultilineSlice<'a, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self(slice) = self;
+        let () = writeln!(f, "[")?;
+        for item in slice.into_iter() {
+            let () = writeln!(f, "{:?},", item)?;
+        }
+        let () = writeln!(f, "]")?;
+        Ok(())
+    }
 }
 
 // Returns the internal CountEvents of `events` that have the given `id`.
@@ -295,12 +291,15 @@ where
 {
     events
         .into_iter()
-        .filter_map(move |e| match e {
-            fidl_fuchsia_cobalt::CobaltEvent {
-                payload: fidl_fuchsia_cobalt::EventPayload::EventCount(count_event),
-                ..
-            } if e.metric_id == id => Some(count_event),
-            _other_payload => None,
+        .filter_map(move |fidl_fuchsia_cobalt::CobaltEvent { metric_id, payload, .. }| {
+            if *metric_id == id {
+                match payload {
+                    fidl_fuchsia_cobalt::EventPayload::EventCount(count_event) => Some(count_event),
+                    _ => None,
+                }
+            } else {
+                None
+            }
         })
         .collect()
 }

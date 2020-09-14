@@ -129,7 +129,6 @@ rustc_test("netstack_cobalt_integration_test_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:matches",
   ]
 
