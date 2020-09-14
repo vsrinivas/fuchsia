@@ -36,7 +36,10 @@ func createTestOutputs(producer *tap.Producer, outDir string) (*testOutputs, err
 
 // Record writes the test result to initialized outputs.
 func (o *testOutputs) record(result testrunner.TestResult) error {
-	outputRelPath := filepath.Join(result.Name, strconv.Itoa(result.RunIndex), runtests.TestOutputFilename)
+	// Sponge doesn't seem to like the path if we just put Name in there.
+	nameForPath := strings.ReplaceAll(result.Name, ":", "")
+	nameForPath = strings.ReplaceAll(nameForPath, "#", string(filepath.Separator))
+	outputRelPath := filepath.Join(nameForPath, strconv.Itoa(result.RunIndex), runtests.TestOutputFilename)
 	// Strip any leading //.
 	outputRelPath = strings.TrimLeft(outputRelPath, "//")
 

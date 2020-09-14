@@ -24,7 +24,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	start := time.Unix(0, 0)
 	results := []testrunner.TestResult{
 		{
-			Name:      "test_a",
+			Name:      "fuchsia-pkg://foo#test_a",
 			GNLabel:   "//a/b/c:test_a(//toolchain)",
 			Result:    runtests.TestFailure,
 			StartTime: start,
@@ -77,11 +77,11 @@ func TestRecordingOfOutputs(t *testing.T) {
 	}
 	defer o.Close()
 
-	outputFileA := filepath.Join("test_a", "0", "stdout-and-stderr.txt")
+	outputFileA := filepath.Join("fuchsia-pkg/foo/test_a", "0", "stdout-and-stderr.txt")
 	outputFileB := filepath.Join("test_b", "0", "stdout-and-stderr.txt")
 	expectedSummary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{{
-			Name:           "test_a",
+			Name:           "fuchsia-pkg://foo#test_a",
 			GNLabel:        "//a/b/c:test_a(//toolchain)",
 			OutputFile:     outputFileA,
 			Result:         runtests.TestFailure,
@@ -164,7 +164,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	expectedTAPOutput := strings.TrimSpace(`
 TAP version 13
 1..2
-not ok 1 test_a (5ms)
+not ok 1 fuchsia-pkg://foo#test_a (5ms)
 ok 2 test_b (10ms)
 `)
 	actualTAPOutput := strings.TrimSpace(buf.String())
