@@ -121,11 +121,11 @@ void DebuggedProcess::DetachFromProcess() {
 }
 
 zx_status_t DebuggedProcess::Init() {
-  RegisterDebugState();
-
   // Watch for process events.
   if (zx_status_t status = process_handle_->Attach(this); status != ZX_OK)
     return status;
+
+  RegisterDebugState();
 
   // Binding stdout/stderr.
   // We bind |this| into the callbacks. This is OK because the DebuggedProcess
