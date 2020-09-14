@@ -26,8 +26,8 @@ const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
 };
 
 /// URI used to obtain time samples.
-// TODO(satsukiu): Decide on correct endpoint and move to config data.
-const REQUEST_URI: &str = "https://www.google.com/generate_204";
+// TODO(56875): Decide on correct endpoint and move to config data.
+const REQUEST_URI: &str = "https://clients1.google.com/generate_204";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
