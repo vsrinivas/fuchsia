@@ -77,7 +77,6 @@ group("ulib-host") {
     "$zx/kernel/lib/devicetree",
     "$zx/kernel/lib/heap/cmpctmalloc",
     "$zx/third_party/ulib/boringssl",
-    "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/safemath",
     "$zx/third_party/ulib/zstd",

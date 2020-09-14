@@ -36,9 +36,9 @@ zx_library("journal") {
     "initializer.cc",
   ]
   deps = [
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/third_party/ulib/cksum",
   ]
   static = true
 

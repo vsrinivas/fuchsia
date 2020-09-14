@@ -1,0 +1,5 @@
+# //public/lib/cksum is still referenced from //vendor/ so provide
+# a redirection group until they are updated.
+group("cksum") {
+  public_deps = [ "//zircon/third_party/ulib/cksum" ]
+}

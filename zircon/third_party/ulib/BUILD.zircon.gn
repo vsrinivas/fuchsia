@@ -6,7 +6,6 @@ group("ulib") {
   # Only the things //:all-ulib needs to reach for //:legacy-$cpu need to be
   # listed here.  That is, library() targets with `sdk` set.
   deps = [
-    "cksum",
     "lz4",
     "ngunwind",
     "safemath",

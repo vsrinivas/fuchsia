@@ -80,7 +80,6 @@ zx_library("minfs") {
   ]
   deps = [
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
@@ -92,6 +91,7 @@ zx_library("minfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/third_party/ulib/cksum",
   ]
   if (is_fuchsia) {
     public_deps += [

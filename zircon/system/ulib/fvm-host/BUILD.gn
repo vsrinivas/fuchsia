@@ -54,7 +54,6 @@ zx_library("fvm-host") {
   deps = [
     "//src/storage/blobfs",
     "//third_party/boringssl",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
@@ -64,6 +63,7 @@ zx_library("fvm-host") {
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
+    "//zircon/third_party/ulib/cksum",
   ]
 }
 

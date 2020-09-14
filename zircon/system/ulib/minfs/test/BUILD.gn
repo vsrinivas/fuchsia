@@ -62,7 +62,6 @@ test("minfs-unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -75,6 +74,7 @@ test("minfs-unit") {
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
+    "//zircon/third_party/ulib/cksum",
   ]
   include_dirs = [ "//zircon/system/ulib/minfs" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

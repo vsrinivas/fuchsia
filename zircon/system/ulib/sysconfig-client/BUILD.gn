@@ -44,11 +44,11 @@ zx_library("sysconfig-sync-client") {
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

@@ -14,9 +14,9 @@ executable("mtd-redundant-storage") {
     sources = [ "mtd-rs-tool.cc" ]
   }
   deps = [
-    "//zircon/public/lib/cksum",
     "//zircon/system/ulib/nand-redundant-storage",
     "//zircon/system/ulib/zx-panic-libc",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

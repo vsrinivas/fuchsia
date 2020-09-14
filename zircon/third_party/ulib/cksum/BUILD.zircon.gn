@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("cksum") {
   kernel = true
   static = true
@@ -9,6 +11,7 @@ zx_library("cksum") {
 
   sdk = "source"
   sdk_headers = [ "lib/cksum.h" ]
+  sdk_migrated = true
 
   sources = [
     "adler32.c",
@@ -18,7 +21,7 @@ zx_library("cksum") {
 
   cflags = [ "-Wno-strict-prototypes" ]
 
-  if (is_kernel && !is_efi) {
+  if (is_kernel && toolchain.environment != "efi") {
     # TODO(55514): Excluding kernel libc for efi bootloader until standard library dependency
     # of bootloader is sorted out.
     deps = [ "$zx/kernel/lib/libc" ]

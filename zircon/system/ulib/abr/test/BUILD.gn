@@ -27,9 +27,9 @@ test("libabr-test") {
   sources = [ "libabr_test.cc" ]
   output_name = "libabr-test"
   deps = [
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/abr",
+    "//zircon/third_party/ulib/cksum",
   ]
   include_dirs = [ "//zircon/system/ulib/abr" ]
 }

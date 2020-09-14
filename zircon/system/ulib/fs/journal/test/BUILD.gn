@@ -52,12 +52,12 @@ test("journal-unit") {
     "superblock_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/journal",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   include_dirs = [ ".." ]
@@ -66,10 +66,10 @@ test("journal-unit") {
 source_set("fuzz-utils") {
   sources = [ "fuzzer_utils.cc" ]
   public_deps = [
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fs/journal",
+    "//zircon/third_party/ulib/cksum",
   ]
 }
 

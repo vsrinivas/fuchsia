@@ -36,7 +36,6 @@ test("fvm") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -62,6 +61,7 @@ test("fvm") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/third_party/ulib/cksum",
   ]
 }
 
