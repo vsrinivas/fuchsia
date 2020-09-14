@@ -12,6 +12,7 @@ use wlan_common::ie::{rsn::rsne, wpa, Id};
 #[derive(Debug, PartialEq)]
 pub enum Element {
     Gtk(kde::Header, kde::Gtk),
+    Igtk(kde::Header, kde::Igtk),
     Rsne(rsne::Rsne),
     LegacyWpa1(wpa::WpaIe),
     Padding,

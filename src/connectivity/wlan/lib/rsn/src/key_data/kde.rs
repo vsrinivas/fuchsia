@@ -6,7 +6,7 @@ use super::Element;
 use crate::ProtectionInfo;
 use bitfield::bitfield;
 use nom::error::ErrorKind;
-use nom::number::streaming::le_u8;
+use nom::number::streaming::{le_u16, le_u8};
 use nom::{call, do_parse, eof, map, named, named_args, take, try_parse, IResult};
 use wlan_common::{
     appendable::{Appendable, BufferTooSmall},
@@ -21,10 +21,16 @@ const HDR_LEN: usize = 6;
 /// Octets taken by OUI and data type.
 const HDR_OUI_TYPE_LEN: usize = 4;
 
+// IEEE Std 802.11-2016 Table 12.6
 const GTK_DATA_TYPE: u8 = 1;
+const IGTK_DATA_TYPE: u8 = 9;
+
 /// A GTK KDE's fixed length.
 /// Note: The KDE consists of a fixed and variable length (the GTK).
 const GTK_FIXED_LEN: usize = 2;
+
+const IGTK_IPN_LEN: usize = 6;
+const IGTK_FIXED_LEN: usize = 2 + IGTK_IPN_LEN;
 
 // IEEE Std 802.11-2016, 12.7.2, Figure 12-34
 #[derive(Default, Debug, PartialEq)]
@@ -100,6 +106,28 @@ impl Gtk {
     }
 }
 
+/// IGTK KDE:
+/// IEEE Std 802.11-2016, 12.7.2, Figure 12-42
+#[derive(Debug, PartialEq)]
+pub struct Igtk {
+    pub id: u16,
+    // IGTK Packet Number
+    pub ipn: [u8; IGTK_IPN_LEN],
+    pub igtk: Vec<u8>,
+}
+
+impl Igtk {
+    pub fn new(id: u16, ipn: &[u8], igtk: &[u8]) -> Self {
+        let mut ipn_buf = [0u8; IGTK_IPN_LEN];
+        ipn_buf.copy_from_slice(ipn);
+        Self { id, ipn: ipn_buf, igtk: igtk.to_vec() }
+    }
+
+    pub fn len(&self) -> usize {
+        IGTK_FIXED_LEN + self.igtk.len()
+    }
+}
+
 pub fn parse(i0: &[u8]) -> IResult<&[u8], Element> {
     // Check whether parsing is finished.
     if i0.len() <= 1 {
@@ -120,6 +148,10 @@ pub fn parse(i0: &[u8]) -> IResult<&[u8], Element> {
             GTK_DATA_TYPE => {
                 let (_, gtk) = try_parse!(bytes, call!(parse_gtk, hdr.data_len()));
                 Ok((i2, Element::Gtk(hdr, gtk)))
+            }
+            IGTK_DATA_TYPE => {
+                let (_, gtk) = try_parse!(bytes, call!(parse_igtk, hdr.data_len()));
+                Ok((i2, Element::Igtk(hdr, gtk)))
             }
             _ => Ok((i2, Element::UnsupportedKde(hdr))),
         },
@@ -163,6 +195,16 @@ named_args!(parse_gtk(data_len: usize) <Gtk>,
                 info: info,
                 gtk: gtk.to_vec(),
            })
+    )
+);
+
+named_args!(parse_igtk(data_len: usize) <Igtk>,
+       do_parse!(
+            id: le_u16 >>
+            ipn: take!(IGTK_IPN_LEN) >>
+            igtk: take!(data_len - IGTK_FIXED_LEN) >>
+            eof!() >>
+            (Igtk::new(id, ipn, igtk))
     )
 );
 
@@ -210,6 +252,23 @@ impl<A: Appendable> Writer<A> {
         self.buf.append_byte(gtk_kde.info.value())?;
         self.buf.append_byte(0)?;
         self.buf.append_bytes(&gtk_kde.gtk[..])?;
+        Ok(())
+    }
+
+    // We will not use this fn until our authenticator supports MFP.
+    #[allow(unused)]
+    pub fn write_igtk(&mut self, igtk_kde: &Igtk) -> Result<(), BufferTooSmall> {
+        if !self.buf.can_append(HDR_LEN + igtk_kde.len()) {
+            return Err(BufferTooSmall);
+        }
+        // KDE Header
+        let hdr = Header::new_dot11(IGTK_DATA_TYPE, igtk_kde.len());
+        self.write_kde_hdr(hdr)?;
+
+        // IGTK KDE
+        self.buf.append_bytes(&igtk_kde.id.to_le_bytes()[..])?;
+        self.buf.append_bytes(&igtk_kde.ipn[..])?;
+        self.buf.append_bytes(&igtk_kde.igtk[..])?;
         Ok(())
     }
 
@@ -329,6 +388,32 @@ mod tests {
             assert_eq!(kde, Gtk { info: GtkInfo(6), gtk: vec![24; 5] });
         });
         assert_variant!(elements.remove(0), Element::Padding);
+    }
+
+    #[test]
+    fn test_write_read_igtk() {
+        let igtk = Igtk::new(10, &[11; 6], &[22; 2]);
+        // Write KDE:
+        let mut w = Writer::new(vec![]);
+        w.write_igtk(&igtk).expect("failure writing IGTK KDE");
+        let buf = w.finalize_for_encryption().expect("failure finializing key data");
+        #[rustfmt::skip]
+        assert_eq!(buf, vec![
+            TYPE, 14, 0x00, 0x0F, 0xAC, IGTK_DATA_TYPE, 10, 0, 11,11,11,11,11,11,22,22,
+        ]);
+
+        // Read KDE:
+        let result = extract_elements(&buf[..]);
+        assert!(result.is_ok(), "Error: {:?}", result);
+        let mut elements = result.unwrap();
+        assert_eq!(elements.len(), 1);
+
+        assert_variant!(elements.remove(0), Element::Igtk(hdr, kde) => {
+            assert_eq!(hdr, Header {
+                type_: 0xDD, len: 14, oui: Oui::DOT11, data_type: IGTK_DATA_TYPE
+            });
+            assert_eq!(kde, igtk);
+        });
     }
 
     #[test]
