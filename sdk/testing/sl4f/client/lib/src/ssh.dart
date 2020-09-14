@@ -37,8 +37,8 @@ class Ssh {
   /// SSH port to connect to the device under test, or null for default port
   final int sshPort;
 
-  /// Path to an SSH key file. For in-tree Fuchsia development, this can be
-  /// the resolved path of `//.ssh/pkey`.
+  /// Path to an SSH key file. By default, this can be
+  /// the resolved path of `~/.ssh/fuchsia_ed25519`.
   final String sshKeyPath;
 
   /// Builds an SSH object that uses the credentials from a file.
