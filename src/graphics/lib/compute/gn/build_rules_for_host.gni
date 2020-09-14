@@ -63,7 +63,6 @@ template("graphics_compute_test_rule") {
     test_spec(_test_spec_target_name) {
       target = ":${invoker.target_name}"
       path = "${root_out_dir}/${invoker.target_name}"
-      command = [ rebase_path(path, root_build_dir) ]
     }
 
     _deps += [ ":${_test_spec_target_name}" ]
