@@ -20,7 +20,7 @@ pub struct FastbootDevice {
 }
 
 fn is_fastboot_match(info: &InterfaceInfo) -> bool {
-    (info.dev_vendor == 0x18d1) && ((info.dev_product == 0xaf00) || (info.dev_product == 0x0d02))
+    (info.dev_vendor == 0x18d1) && ((info.dev_product == 0x4ee0) || (info.dev_product == 0x0d02))
 }
 
 fn extract_serial_number(info: &InterfaceInfo) -> String {
