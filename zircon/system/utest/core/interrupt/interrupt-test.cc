@@ -200,9 +200,9 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   // Resume the thread, wait till it is back to being in blocked state
   suspend_token.reset();
   ASSERT_TRUE(WaitThread(thread, ZX_THREAD_STATE_BLOCKED_INTERRUPT));
-  thread.kill();
 
-  // Wait for termination to reduce interference with subsequent tests.
+  // Signal the interrupt and wait for the thread to exit.
+  interrupt.trigger(0, zx::time());
   zx_signals_t observed;
   ASSERT_OK(thread.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &observed));
 }

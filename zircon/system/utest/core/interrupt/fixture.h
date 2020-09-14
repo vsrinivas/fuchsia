@@ -56,30 +56,36 @@ bool WaitThread(const zx::thread& thread, uint32_t reason) {
 // compiler-generated code's assumptions about the proper ABI setup,
 // instrumentation, etc.
 extern "C" void ThreadEntry(uintptr_t arg1, uintptr_t arg2);
-// while (zx_interrupt_wait(static_cast<zx_handle_t>(arg1), nullptr) == ZX_OK);
-// __builtin_trap();
+// if (zx_interrupt_wait(static_cast<zx_handle_t>(arg1), nullptr) == ZX_OK) {
+//   zx_thread_exit();
+// }
+// ASSERT(false);
 __asm__(
     ".pushsection .text.ThreadEntry,\"ax\",%progbits\n"
     ".balign 4\n"
     ".type ThreadEntry,%function\n"
     "ThreadEntry:\n"
 #ifdef __aarch64__
-    "  mov w20, w0\n"  // Save handle in callee-saves register.
-    "0:\n"
+    "  mov w20, w0\n"           // Save handle in callee-saves register.
     "  mov w0, w20\n"           // Load saved handle into argument register.
     "  mov x1, xzr\n"           // Load nullptr into argument register.
     "  bl zx_interrupt_wait\n"  // Call.
-    "  cbz w0, 0b\n"            // Loop if returned ZX_OK.
+    "  cbz w0, exit\n"          // Exit if returned ZX_OK.
     "  brk #0\n"                // Else crash.
+    "exit:\n"
+    "  bl zx_thread_exit\n"
+    "  brk #0\n"  // Crash if we didn't exit.
 #elif defined(__x86_64__)
-    "  mov %edi, %ebx\n"  // Save handle in callee-saves register.
-    "0:\n"
+    "  mov %edi, %ebx\n"          // Save handle in callee-saves register.
     "  mov %ebx, %edi\n"          // Load saved handle into argument register.
     "  xor %edx, %edx\n"          // Load nullptr into argument register.
     "  call zx_interrupt_wait\n"  // Call.
     "  testl %eax, %eax\n"        // If returned ZX_OK...
-    "  jz 0b\n"                   // ...loop.
+    "  jz exit\n"                 // ...exit.
     "  ud2\n"                     // Else crash.
+    "exit:\n"
+    "  call zx_thread_exit\n"
+    "  ud2\n"  // Crash if we didn't exit.
 #else
 #error "what machine?"
 #endif
