@@ -119,11 +119,12 @@ namespace thermal {
 // Temperature Sensor
 class FakeAmlTSensor : public AmlTSensor {
  public:
-  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio,
-                                                ddk::MmioBuffer hiu_mmio, bool less) {
+  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer sensor_base_mmio,
+                                                ddk::MmioBuffer trim_mmio, ddk::MmioBuffer hiu_mmio,
+                                                bool less) {
     fbl::AllocChecker ac;
 
-    auto test = fbl::make_unique_checked<FakeAmlTSensor>(&ac, std::move(pll_mmio),
+    auto test = fbl::make_unique_checked<FakeAmlTSensor>(&ac, std::move(sensor_base_mmio),
                                                          std::move(trim_mmio), std::move(hiu_mmio));
     if (!ac.check()) {
       return nullptr;
@@ -139,9 +140,9 @@ class FakeAmlTSensor : public AmlTSensor {
     return test;
   }
 
-  explicit FakeAmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio,
+  explicit FakeAmlTSensor(ddk::MmioBuffer sensor_base_mmio, ddk::MmioBuffer trim_mmio,
                           ddk::MmioBuffer hiu_mmio)
-      : AmlTSensor(std::move(pll_mmio), std::move(trim_mmio), std::move(hiu_mmio)) {}
+      : AmlTSensor(std::move(sensor_base_mmio), std::move(trim_mmio), std::move(hiu_mmio)) {}
 };
 
 class AmlTSensorTest : public zxtest::Test {
@@ -154,10 +155,10 @@ class AmlTSensorTest : public zxtest::Test {
       zxlogf(ERROR, "AmlTSensorTest::SetUp: pll_regs_ alloc failed");
       return;
     }
-    mock_pll_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
+    mock_sensor_base_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, pll_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_pll_mmio_ alloc failed");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_sensor_base_mmio_ alloc failed");
       return;
     }
 
@@ -185,66 +186,66 @@ class AmlTSensorTest : public zxtest::Test {
       return;
     }
 
-    (*mock_trim_mmio_)[0].ExpectRead(0x00000000);                             // trim_info_
-    (*mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);                       // set clock
-    (*mock_pll_mmio_)[(0x1 << 2)].ExpectRead(0x00000000).ExpectWrite(0x63B);  // sensor ctl
+    (*mock_trim_mmio_)[0].ExpectRead(0x00000000);                                     // trim_info_
+    (*mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);                               // set clock
+    (*mock_sensor_base_mmio_)[(0x1 << 2)].ExpectRead(0x00000000).ExpectWrite(0x63B);  // sensor ctl
   }
 
   void Create(bool less) {
     // InitTripPoints
     if (!less) {
-      (*mock_pll_mmio_)[(0x5 << 2)]
+      (*mock_sensor_base_mmio_)[(0x5 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 4, rise
           .ExpectWrite(0x00027E);
-      (*mock_pll_mmio_)[(0x7 << 2)]
+      (*mock_sensor_base_mmio_)[(0x7 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 4, fall
           .ExpectWrite(0x000272);
-      (*mock_pll_mmio_)[(0x5 << 2)]
+      (*mock_sensor_base_mmio_)[(0x5 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 3, rise
           .ExpectWrite(0x272000);
-      (*mock_pll_mmio_)[(0x7 << 2)]
+      (*mock_sensor_base_mmio_)[(0x7 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 3, fall
           .ExpectWrite(0x268000);
-      (*mock_pll_mmio_)[(0x4 << 2)]
+      (*mock_sensor_base_mmio_)[(0x4 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 2, rise
           .ExpectWrite(0x00025A);
-      (*mock_pll_mmio_)[(0x6 << 2)]
+      (*mock_sensor_base_mmio_)[(0x6 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 2, fall
           .ExpectWrite(0x000251);
     }
-    (*mock_pll_mmio_)[(0x4 << 2)]
+    (*mock_sensor_base_mmio_)[(0x4 << 2)]
         .ExpectRead(0x00000000)  // set thresholds 1, rise
         .ExpectWrite(0x250000);
-    (*mock_pll_mmio_)[(0x6 << 2)]
+    (*mock_sensor_base_mmio_)[(0x6 << 2)]
         .ExpectRead(0x00000000)  // set thresholds 1, fall
         .ExpectWrite(0x245000);
-    (*mock_pll_mmio_)[(0x1 << 2)]
+    (*mock_sensor_base_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00FF0000);
-    (*mock_pll_mmio_)[(0x1 << 2)]
+    (*mock_sensor_base_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00000000);
     if (!less) {
-      (*mock_pll_mmio_)[(0x1 << 2)]
+      (*mock_sensor_base_mmio_)[(0x1 << 2)]
           .ExpectRead(0x00000000)  // enable IRQs
           .ExpectWrite(0x0F008000);
     } else {
-      (*mock_pll_mmio_)[(0x1 << 2)]
+      (*mock_sensor_base_mmio_)[(0x1 << 2)]
           .ExpectRead(0x00000000)  // enable IRQs
           .ExpectWrite(0x01008000);
     }
 
-    ddk::MmioBuffer pll_mmio(mock_pll_mmio_->GetMmioBuffer());
+    ddk::MmioBuffer sensor_base_mmio(mock_sensor_base_mmio_->GetMmioBuffer());
     ddk::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
     ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
-    tsensor_ = FakeAmlTSensor::Create(std::move(pll_mmio), std::move(trim_mmio),
+    tsensor_ = FakeAmlTSensor::Create(std::move(sensor_base_mmio), std::move(trim_mmio),
                                       std::move(hiu_mmio), less);
     ASSERT_TRUE(tsensor_ != nullptr);
   }
 
   void TearDown() override {
     // Verify
-    mock_pll_mmio_->VerifyAll();
+    mock_sensor_base_mmio_->VerifyAll();
     mock_trim_mmio_->VerifyAll();
     mock_hiu_mmio_->VerifyAll();
   }
@@ -256,7 +257,7 @@ class AmlTSensorTest : public zxtest::Test {
   fbl::Array<ddk_mock::MockMmioReg> pll_regs_;
   fbl::Array<ddk_mock::MockMmioReg> trim_regs_;
   fbl::Array<ddk_mock::MockMmioReg> hiu_regs_;
-  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pll_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_sensor_base_mmio_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_trim_mmio_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_hiu_mmio_;
 };
@@ -264,7 +265,7 @@ class AmlTSensorTest : public zxtest::Test {
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
   Create(false);
   for (int j = 0; j < 0x10; j++) {
-    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x0000);
+    (*mock_sensor_base_mmio_)[(0x10 << 2)].ExpectRead(0x0000);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -274,7 +275,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest1) {
   Create(false);
   for (int j = 0; j < 0x10; j++) {
-    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x18A9);
+    (*mock_sensor_base_mmio_)[(0x10 << 2)].ExpectRead(0x18A9);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -284,7 +285,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest1) {
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest2) {
   Create(false);
   for (int j = 0; j < 0x10; j++) {
-    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x32A7);
+    (*mock_sensor_base_mmio_)[(0x10 << 2)].ExpectRead(0x32A7);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -293,10 +294,10 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest2) {
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest3) {
   Create(false);
-  (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x18A9);
-  (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x18AA);
+  (*mock_sensor_base_mmio_)[(0x10 << 2)].ExpectRead(0x18A9);
+  (*mock_sensor_base_mmio_)[(0x10 << 2)].ExpectRead(0x18AA);
   for (int j = 0; j < 0xE; j++) {
-    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x0000);
+    (*mock_sensor_base_mmio_)[(0x10 << 2)].ExpectRead(0x0000);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();

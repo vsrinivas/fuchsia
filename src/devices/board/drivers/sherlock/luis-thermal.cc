@@ -15,14 +15,13 @@
 
 namespace sherlock {
 
-namespace {
-static const pbus_mmio_t thermal_mmios[] = {
+static const pbus_mmio_t thermal_mmios_pll[] = {
     {
-        .base = T931_TEMP_SENSOR_BASE,
-        .length = T931_TEMP_SENSOR_LENGTH,
+        .base = T931_TEMP_SENSOR_PLL_BASE,
+        .length = T931_TEMP_SENSOR_PLL_LENGTH,
     },
     {
-        .base = T931_TEMP_SENSOR_TRIM,
+        .base = T931_TEMP_SENSOR_PLL_TRIM,
         .length = T931_TEMP_SENSOR_TRIM_LENGTH,
     },
     {
@@ -31,9 +30,31 @@ static const pbus_mmio_t thermal_mmios[] = {
     },
 };
 
-static const pbus_irq_t thermal_irqs[] = {
+static const pbus_mmio_t thermal_mmios_ddr[] = {
+    {
+        .base = T931_TEMP_SENSOR_DDR_BASE,
+        .length = T931_TEMP_SENSOR_DDR_LENGTH,
+    },
+    {
+        .base = T931_TEMP_SENSOR_DDR_TRIM,
+        .length = T931_TEMP_SENSOR_TRIM_LENGTH,
+    },
+    {
+        .base = T931_HIU_BASE,
+        .length = T931_HIU_LENGTH,
+    },
+};
+
+static const pbus_irq_t thermal_irqs_pll[] = {
     {
         .irq = T931_TS_PLL_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_irq_t thermal_irqs_ddr[] = {
+    {
+        .irq = T931_TS_DDR_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -75,29 +96,51 @@ static const pbus_metadata_t thermal_metadata[] = {
     },
 };
 
-static pbus_dev_t thermal_dev = []() {
+static pbus_dev_t thermal_dev_pll = []() {
   pbus_dev_t dev = {};
-  dev.name = "aml-thermal";
+  dev.name = "aml-thermal-pll";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_THERMAL;
-  dev.mmio_list = thermal_mmios;
-  dev.mmio_count = countof(thermal_mmios);
-  dev.irq_list = thermal_irqs;
-  dev.irq_count = countof(thermal_irqs);
+  dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
+  dev.mmio_list = thermal_mmios_pll;
+  dev.mmio_count = countof(thermal_mmios_pll);
+  dev.irq_list = thermal_irqs_pll;
+  dev.irq_count = countof(thermal_irqs_pll);
   dev.metadata_list = thermal_metadata;
   dev.metadata_count = countof(thermal_metadata);
   return dev;
 }();
 
-}  // namespace
+static pbus_dev_t thermal_dev_ddr = []() {
+  pbus_dev_t dev = {};
+  dev.name = "aml-thermal-ddr";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_T931;
+  dev.did = PDEV_DID_AMLOGIC_THERMAL_DDR;
+  dev.mmio_list = thermal_mmios_ddr;
+  dev.mmio_count = countof(thermal_mmios_ddr);
+  dev.irq_list = thermal_irqs_ddr;
+  dev.irq_count = countof(thermal_irqs_ddr);
+  dev.metadata_list = thermal_metadata;
+  dev.metadata_count = countof(thermal_metadata);
+  return dev;
+}();
 
 zx_status_t Sherlock::LuisThermalInit() {
-  zx_status_t status = pbus_.DeviceAdd(&thermal_dev);
+  zx_status_t status;
+
+  status = pbus_.DeviceAdd(&thermal_dev_pll);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
+
+  status = pbus_.DeviceAdd(&thermal_dev_ddr);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
+    return status;
+  }
+
   return ZX_OK;
 }
 

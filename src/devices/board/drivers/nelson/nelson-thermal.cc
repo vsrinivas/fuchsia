@@ -232,10 +232,10 @@ static const pbus_metadata_t thermal_metadata[] = {
 
 static const pbus_dev_t thermal_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "aml-thermal";
+  dev.name = "aml-thermal-pll";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_S905D3;
-  dev.did = PDEV_DID_AMLOGIC_THERMAL;
+  dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
   dev.mmio_list = thermal_mmios;
   dev.mmio_count = countof(thermal_mmios);
   dev.irq_list = thermal_irqs;

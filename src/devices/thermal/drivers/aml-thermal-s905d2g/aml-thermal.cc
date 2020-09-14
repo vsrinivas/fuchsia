@@ -154,10 +154,17 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace thermal
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 8)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
+
+    // Check for supported board
+    BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2, 0),
+    BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931, 0),
+    BI_ABORT(),
+
+    // Check for supported device
+    BI_LABEL(0),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL_PLL),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL_DDR),
 ZIRCON_DRIVER_END(aml_thermal)

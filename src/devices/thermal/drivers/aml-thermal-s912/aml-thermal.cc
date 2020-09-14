@@ -57,16 +57,14 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   gpio_protocol_t fan0_gpio_proto;
-  status =
-      device_get_protocol(fragments[FRAGMENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO, &fan0_gpio_proto);
+  status = device_get_protocol(fragments[FRAGMENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO, &fan0_gpio_proto);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get fan0 gpio protocol: %d", status);
     return status;
   }
 
   gpio_protocol_t fan1_gpio_proto;
-  status =
-      device_get_protocol(fragments[FRAGMENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO, &fan1_gpio_proto);
+  status = device_get_protocol(fragments[FRAGMENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO, &fan1_gpio_proto);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get fan1 gpio protocol: %d", status);
     return status;
@@ -387,7 +385,9 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace thermal
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "zircon", "0.1", 3)
 BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL), ZIRCON_DRIVER_END(aml_thermal)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM2_THERMAL),
+ZIRCON_DRIVER_END(aml_thermal)

@@ -24,7 +24,7 @@ namespace thermal {
 namespace {
 
 // MMIO indexes.
-constexpr uint32_t kPllMmio = 0;
+constexpr uint32_t kSensorMmio = 0;
 constexpr uint32_t kTrimMmio = 1;
 constexpr uint32_t kHiuMmio = 2;
 
@@ -46,7 +46,7 @@ zx_status_t AmlTSensor::NotifyThermalDaemon() {
 
 void AmlTSensor::UpdateRiseThresholdIrq(uint32_t irq) {
   // Clear the IRQ.
-  auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);
   auto reg_value = sensor_ctl.reg_value();
 
   // Disable the IRQ
@@ -56,19 +56,19 @@ void AmlTSensor::UpdateRiseThresholdIrq(uint32_t irq) {
   // Clear Rise IRQ Stat.
   reg_value |= (1 << (IRQ_RISE_STAT_CLR_SHIFT + irq));
   sensor_ctl.set_reg_value(reg_value);
-  sensor_ctl.WriteTo(&*pll_mmio_);
+  sensor_ctl.WriteTo(&*sensor_base_mmio_);
 
   // Write 0 to CLR_STAT bit.
-  sensor_ctl = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  sensor_ctl = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);
   reg_value = sensor_ctl.reg_value();
   reg_value &= ~(1 << (IRQ_RISE_STAT_CLR_SHIFT + irq));
   sensor_ctl.set_reg_value(reg_value);
-  sensor_ctl.WriteTo(&*pll_mmio_);
+  sensor_ctl.WriteTo(&*sensor_base_mmio_);
 }
 
 void AmlTSensor::UpdateFallThresholdIrq(uint32_t irq) {
   // Clear the IRQ.
-  auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);
   auto reg_value = sensor_ctl.reg_value();
 
   // Disable the IRQ
@@ -78,14 +78,14 @@ void AmlTSensor::UpdateFallThresholdIrq(uint32_t irq) {
   // Clear Fall IRQ Stat.
   reg_value |= (1 << (IRQ_FALL_STAT_CLR_SHIFT + irq));
   sensor_ctl.set_reg_value(reg_value);
-  sensor_ctl.WriteTo(&*pll_mmio_);
+  sensor_ctl.WriteTo(&*sensor_base_mmio_);
 
   // Write 0 to CLR_STAT bit.
-  sensor_ctl = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  sensor_ctl = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);
   reg_value = sensor_ctl.reg_value();
   reg_value &= ~(1 << (IRQ_FALL_STAT_CLR_SHIFT + irq));
   sensor_ctl.set_reg_value(reg_value);
-  sensor_ctl.WriteTo(&*pll_mmio_);
+  sensor_ctl.WriteTo(&*sensor_base_mmio_);
 }
 
 int AmlTSensor::TripPointIrqHandler() {
@@ -105,7 +105,7 @@ int AmlTSensor::TripPointIrqHandler() {
       return status;
     }
 
-    auto irq_stat = TsStat1::Get().ReadFrom(&*pll_mmio_);
+    auto irq_stat = TsStat1::Get().ReadFrom(&*sensor_base_mmio_);
 
     if (irq_stat.reg_value() & AML_RISE_THRESHOLD_IRQ) {
       // Handle Rise threshold IRQs.
@@ -166,11 +166,19 @@ zx_status_t AmlTSensor::InitTripPoints() {
 
     // Program the 2 rise temperature thresholds.
     if (i % 2) {
-      rise_threshold.ReadFrom(&*pll_mmio_).set_rise_th0(rise_temperature).WriteTo(&*pll_mmio_);
-      fall_threshold.ReadFrom(&*pll_mmio_).set_fall_th0(fall_temperature).WriteTo(&*pll_mmio_);
+      rise_threshold.ReadFrom(&*sensor_base_mmio_)
+          .set_rise_th0(rise_temperature)
+          .WriteTo(&*sensor_base_mmio_);
+      fall_threshold.ReadFrom(&*sensor_base_mmio_)
+          .set_fall_th0(fall_temperature)
+          .WriteTo(&*sensor_base_mmio_);
     } else {
-      rise_threshold.ReadFrom(&*pll_mmio_).set_rise_th1(rise_temperature).WriteTo(&*pll_mmio_);
-      fall_threshold.ReadFrom(&*pll_mmio_).set_fall_th1(fall_temperature).WriteTo(&*pll_mmio_);
+      rise_threshold.ReadFrom(&*sensor_base_mmio_)
+          .set_rise_th1(rise_temperature)
+          .WriteTo(&*sensor_base_mmio_);
+      fall_threshold.ReadFrom(&*sensor_base_mmio_)
+          .set_fall_th1(fall_temperature)
+          .WriteTo(&*sensor_base_mmio_);
     }
   };
 
@@ -198,7 +206,7 @@ zx_status_t AmlTSensor::InitTripPoints() {
 
   // Clear all IRQ's status.
   TsCfgReg1::Get()
-      .ReadFrom(&*pll_mmio_)
+      .ReadFrom(&*sensor_base_mmio_)
       .set_fall_th3_irq_stat_clr(1)
       .set_fall_th2_irq_stat_clr(1)
       .set_fall_th1_irq_stat_clr(1)
@@ -207,10 +215,10 @@ zx_status_t AmlTSensor::InitTripPoints() {
       .set_rise_th2_irq_stat_clr(1)
       .set_rise_th1_irq_stat_clr(1)
       .set_rise_th0_irq_stat_clr(1)
-      .WriteTo(&*pll_mmio_);
+      .WriteTo(&*sensor_base_mmio_);
 
   TsCfgReg1::Get()
-      .ReadFrom(&*pll_mmio_)
+      .ReadFrom(&*sensor_base_mmio_)
       .set_fall_th3_irq_stat_clr(0)
       .set_fall_th2_irq_stat_clr(0)
       .set_fall_th1_irq_stat_clr(0)
@@ -219,10 +227,10 @@ zx_status_t AmlTSensor::InitTripPoints() {
       .set_rise_th2_irq_stat_clr(0)
       .set_rise_th1_irq_stat_clr(0)
       .set_rise_th0_irq_stat_clr(0)
-      .WriteTo(&*pll_mmio_);
+      .WriteTo(&*sensor_base_mmio_);
 
   // Enable all IRQs.
-  auto ts_cfg_reg1 = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  auto ts_cfg_reg1 = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);
   switch (thermal_config_.num_trip_points) {
     default:
     case 5:
@@ -241,7 +249,7 @@ zx_status_t AmlTSensor::InitTripPoints() {
     case 0:
       break;
   }
-  ts_cfg_reg1.set_enable_irq(1).WriteTo(&*pll_mmio_);
+  ts_cfg_reg1.set_enable_irq(1).WriteTo(&*sensor_base_mmio_);
 
   // Start thermal notification thread.
   auto start_thread = [](void* arg) -> int {
@@ -314,7 +322,7 @@ float AmlTSensor::ReadTemperatureCelsius() {
   // Referred to u-boot code.
   // Yay magic numbers.
   for (int j = 0; j < AML_TS_VALUE_CONT; j++) {
-    auto ts_stat0 = TsStat0::Get().ReadFrom(&*pll_mmio_);
+    auto ts_stat0 = TsStat0::Get().ReadFrom(&*sensor_base_mmio_);
     auto tvalue = ts_stat0.temperature();
 
     if ((tvalue >= 0x18a9) && (tvalue <= 0x32a6)) {
@@ -331,13 +339,13 @@ float AmlTSensor::ReadTemperatureCelsius() {
 
 void AmlTSensor::SetRebootTemperatureCelsius(uint32_t temp_c) {
   uint32_t reboot_val = TempCelsiusToCode(kRebootTempCelsius, true);
-  auto reboot_config = TsCfgReg2::Get().ReadFrom(&*pll_mmio_);
+  auto reboot_config = TsCfgReg2::Get().ReadFrom(&*sensor_base_mmio_);
 
   reboot_config.set_hi_temp_enable(1)
       .set_reset_en(1)
       .set_high_temp_times(AML_TS_REBOOT_TIME)
       .set_high_temp_threshold(reboot_val << 4)
-      .WriteTo(&*pll_mmio_);
+      .WriteTo(&*sensor_base_mmio_);
 }
 
 zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
@@ -354,12 +362,12 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
 
   // Map amlogic temperature sensor peripheral control registers.
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kSensorMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  pll_mmio_ = ddk::MmioBuffer(mmio);
+  sensor_base_mmio_ = ddk::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, kTrimMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
@@ -396,14 +404,14 @@ zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo th
   hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE, AML_HHI_TS_CLK_CNTL);
 
   // Not setting IRQ's here.
-  auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);
   sensor_ctl.set_filter_en(1)
       .set_ts_ana_en_vcm(1)
       .set_ts_ana_en_vbg(1)
       .set_bipolar_bias_current_input(AML_TS_CH_SEL)
       .set_ts_ena_en_iptat(1)
       .set_ts_dem_en(1)
-      .WriteTo(&*pll_mmio_);
+      .WriteTo(&*sensor_base_mmio_);
 
   // Create a port to send messages to thermal daemon.
   zx_status_t status = zx_port_create(0, &port_);

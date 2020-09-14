@@ -342,7 +342,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:05:22/clocks",
-      "aml-thermal/thermal",
+      "aml-thermal-pll/thermal",
       "class/thermal/000",
       // "sys/platform/05:03:1e/cpu",
       "aml-secure-mem/aml-securemem",
@@ -423,7 +423,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:10/aml-canvas",
-      "aml-thermal/thermal",
+      "aml-thermal-pll/thermal",
       "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller",
       "sys/platform/05:00:18/aml-usb-phy-v2",
@@ -495,8 +495,12 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
 
       // Thermal devices
       "sys/platform/05:04:a/thermal",
+      "sys/platform/05:04:28/thermal",
 
       // Thermistor and ADC devices
+      "sys/platform/03:0c:27/thermistor-device/therm-mic",
+      "sys/platform/03:0c:27/thermistor-device/therm-amp",
+      "sys/platform/03:0c:27/thermistor-device/therm-ambient",
       "class/adc/000",
       "class/adc/001",
       "class/adc/002",

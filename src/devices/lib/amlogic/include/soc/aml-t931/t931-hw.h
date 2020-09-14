@@ -123,12 +123,16 @@
 #define T931_MALI_BASE 0xffe40000
 #define T931_MALI_LENGTH 0x40000
 
-#define T931_TEMP_SENSOR_BASE 0xff634800
-#define T931_TEMP_SENSOR_LENGTH 0x80
+#define T931_TEMP_SENSOR_PLL_BASE 0xff634800
+#define T931_TEMP_SENSOR_PLL_LENGTH 0x80
+
+#define T931_TEMP_SENSOR_DDR_BASE 0xff634c00
+#define T931_TEMP_SENSOR_DDR_LENGTH 0x80
 
 // These registers are used to derive calibration data for the temperature sensors. The registers
 // are not documented in the datasheet - they were copied over from u-boot/Cast code.
-#define T931_TEMP_SENSOR_TRIM 0xff800268
+#define T931_TEMP_SENSOR_PLL_TRIM 0xff800268
+#define T931_TEMP_SENSOR_DDR_TRIM 0xff800230
 #define T931_TEMP_SENSOR_TRIM_LENGTH 0x4
 
 // MIPI CSI & Adapter
@@ -232,6 +236,7 @@
 #define T931_USB1_IRQ 63
 #define T931_PARSER_IRQ 64
 #define T931_TS_PLL_IRQ 67
+#define T931_TS_DDR_IRQ 68
 #define T931_I2C3_IRQ 71
 #define T931_DOS_MBOX_0_IRQ 75
 #define T931_DOS_MBOX_1_IRQ 76

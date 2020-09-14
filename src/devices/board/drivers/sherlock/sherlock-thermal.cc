@@ -28,11 +28,11 @@ constexpr uint32_t kPwmDFn = 3;
 
 const pbus_mmio_t thermal_mmios[] = {
     {
-        .base = T931_TEMP_SENSOR_BASE,
-        .length = T931_TEMP_SENSOR_LENGTH,
+        .base = T931_TEMP_SENSOR_PLL_BASE,
+        .length = T931_TEMP_SENSOR_PLL_LENGTH,
     },
     {
-        .base = T931_TEMP_SENSOR_TRIM,
+        .base = T931_TEMP_SENSOR_PLL_TRIM,
         .length = T931_TEMP_SENSOR_TRIM_LENGTH,
     },
     {
@@ -196,10 +196,10 @@ const pbus_metadata_t thermal_metadata[] = {
 
 constexpr pbus_dev_t thermal_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "aml-thermal";
+  dev.name = "aml-thermal-pll";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_THERMAL;
+  dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
   dev.mmio_list = thermal_mmios;
   dev.mmio_count = countof(thermal_mmios);
   dev.irq_list = thermal_irqs;
