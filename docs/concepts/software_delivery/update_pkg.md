@@ -1,6 +1,6 @@
 # The update package
 
-The update pacakge is a package containing files and rules for how to update the
+The update package is a package containing files and rules for how to update the
 system.
 
 ## System update
