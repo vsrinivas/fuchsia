@@ -21,7 +21,6 @@ group("test") {
   testonly = true
   deps = [
     ":affine",
-    ":affine-fuzzer",
   ]
 }
 

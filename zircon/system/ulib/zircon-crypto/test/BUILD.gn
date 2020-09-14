@@ -19,7 +19,6 @@ import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
-    ":hmac-fuzzer",
     ":zircon-crypto",
   ]
 }

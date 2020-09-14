@@ -8,7 +8,6 @@ group("test") {
   deps = [
     ":fs-connection",
     ":fs-vnode",
-    ":vmo_file-fuzzer",
   ]
 }
 

@@ -22,7 +22,6 @@ import("//build/unification/zbi/resource.gni")
 group("test") {
   testonly = true
   deps = [
-    ":zbi-bootfs-fuzzer",
     ":zbi-bootfs-test",
   ]
 }

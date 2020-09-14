@@ -20,7 +20,6 @@ import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
-    ":tftp-fuzzer",
     ":tftp-test",
   ]
 }

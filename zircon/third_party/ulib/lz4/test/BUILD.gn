@@ -14,14 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 
-group("test") {
-  testonly = true
-  deps = [
-    ":lz4-decompress-fuzzer",
-    ":lz4-roundtrip-fuzzer",
-  ]
-}
-
 fuzzer("lz4-decompress-fuzzer") {
   sources = [ "lz4-decompress-fuzzer.cc" ]
   deps = [ "//zircon/public/lib/lz4" ]

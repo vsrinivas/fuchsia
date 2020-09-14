@@ -14,11 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 
-group("test") {
-  testonly = true
-  deps = [ ":elfload-fuzzer" ]
-}
-
 fuzzer("elfload-fuzzer") {
   sources = [ "elfload-fuzzer.cc" ]
   deps = [

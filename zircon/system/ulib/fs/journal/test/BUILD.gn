@@ -20,9 +20,6 @@ import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
-    ":journal-entry-fuzzer",
-    ":journal-fuzzer",
-    ":journal-replay-fuzzer",
     ":journal-unit",
   ]
 }

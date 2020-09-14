@@ -14,11 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 
-group("test") {
-  testonly = true
-  deps = [ ":ldmsg-fuzzer" ]
-}
-
 fuzzer("ldmsg-fuzzer") {
   sources = [ "ldmsg-fuzzer.cc" ]
   deps = [ "//zircon/public/lib/ldmsg" ]

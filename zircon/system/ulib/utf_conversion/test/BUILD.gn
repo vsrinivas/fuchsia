@@ -19,7 +19,6 @@ import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
-    ":utf_conversion-fuzzer",
     ":utf_conversion-test",
   ]
 }
