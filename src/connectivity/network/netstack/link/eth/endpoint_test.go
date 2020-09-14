@@ -173,6 +173,11 @@ func TestEndpoint(t *testing.T) {
 				device.rxEntries = append(device.rxEntries, b[:count]...)
 			}
 
+			// Wait until the initial batch of Rx writes is accounted for.
+			for uint64Sum(fifoWritesTransformer(&client.RxStats().FifoStats)) == 0 {
+				runtime.Gosched()
+			}
+
 			t.Run("Stats", func(t *testing.T) {
 				for excess := depth; ; excess >>= 1 {
 					t.Run(fmt.Sprintf("excess=%d", excess), func(t *testing.T) {
@@ -250,7 +255,7 @@ func TestEndpoint(t *testing.T) {
 								continue
 							}
 							if diff := cmp.Diff(wantRxWrites, gotRxWrites); diff != "" {
-								t.Errorf("Stats.Rx.Reads mismatch (-want +got):\n%s", diff)
+								t.Errorf("Stats.Rx.Writes mismatch (-want +got):\n%s", diff)
 							}
 							break
 						}
@@ -307,7 +312,7 @@ func TestEndpoint(t *testing.T) {
 								continue
 							}
 							if dropsAfter != uint64(writeSize) {
-								t.Errorf("got client.TxStates.Drops.Value() = %d, want %d", dropsAfter, writeSize)
+								t.Errorf("got client.TxStats.Drops.Value() = %d, want %d", dropsAfter, writeSize)
 							}
 							break
 						}
