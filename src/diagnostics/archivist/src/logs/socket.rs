@@ -164,6 +164,7 @@ mod tests {
             zx::Time::from_nanos(packet.metadata.time),
             Severity::Info,
             METADATA_SIZE + 6 /* tag */+ 6, /* msg */
+            packet.metadata.dropped_logs as u64,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(
@@ -171,7 +172,6 @@ mod tests {
                 vec![
                     LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                     LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                     LogsProperty::String(LogsField::Tag, "AAAAA".to_string()),
                     LogsProperty::String(LogsField::Msg, "BBBBB".to_string()),
                 ],
@@ -210,6 +210,7 @@ mod tests {
             timestamp,
             Severity::Fatal,
             encoded.len(),
+            0, // dropped logs
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(

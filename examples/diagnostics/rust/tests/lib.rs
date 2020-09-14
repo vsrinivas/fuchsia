@@ -29,7 +29,6 @@ async fn launch_example_and_read_hello_world() {
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "tag": "rust_logs_example",
         "message": "should print ",
-        "num_dropped": 0u64,
     });
 
     let (next, new_next) = (logs.next().unwrap(), new_logs.next().unwrap());
@@ -44,7 +43,6 @@ async fn launch_example_and_read_hello_world() {
         "tag": "rust_logs_example",
         // note that the frontend is still stringifying the structured fields, will tackle soon
         "message": "hello, world! foo=1 bar=\"baz\" ",
-        "num_dropped": 0u64,
     });
 
     let (next, new_next) = (logs.next().unwrap(), new_logs.next().unwrap());
@@ -58,6 +56,5 @@ async fn launch_example_and_read_hello_world() {
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "tag": "rust_logs_example",
         "message": "warning: using old api",
-        "num_dropped": 0u64,
     });
 }

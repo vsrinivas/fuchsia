@@ -14,7 +14,6 @@ use serde::Serialize;
 use std::{
     convert::TryFrom,
     fmt::Write,
-    iter::FromIterator,
     mem,
     ops::{Deref, DerefMut},
     str,
@@ -52,11 +51,16 @@ impl Message {
         timestamp: impl Into<Timestamp>,
         severity: impl Into<Severity>,
         size_bytes: usize,
+        dropped_before: u64,
         moniker: impl Into<String>,
         component_url: impl Into<String>,
         mut payload: NodeHierarchy<LogsField>,
     ) -> Self {
         payload.sort();
+        let mut errors = vec![];
+        if dropped_before > 0 {
+            errors.push(LogError::DroppedLogs { count: dropped_before });
+        }
         Self(LogsData::for_logs(
             moniker,
             Some(payload),
@@ -64,7 +68,7 @@ impl Message {
             component_url,
             severity,
             size_bytes,
-            vec![],
+            errors,
         ))
     }
 
@@ -105,7 +109,7 @@ impl Message {
         let raw_severity = LittleEndian::read_i32(&bytes[24..28]);
         let severity = LegacySeverity::try_from(raw_severity)?;
 
-        let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]) as usize;
+        let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]) as u64;
 
         // start reading tags after the header
         let mut cursor = METADATA_SIZE;
@@ -144,7 +148,6 @@ impl Message {
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, pid),
                         LogsProperty::Uint(LogsField::ThreadId, tid),
-                        LogsProperty::Uint(LogsField::Dropped, dropped_logs as u64),
                         LogsProperty::String(LogsField::Msg, message),
                     ],
                     vec![],
@@ -158,6 +161,7 @@ impl Message {
                     time,
                     severity,
                     cursor + message_len + 1,
+                    dropped_logs,
                     PLACEHOLDER_MONIKER,
                     PLACEHOLDER_URL,
                     contents,
@@ -181,21 +185,41 @@ impl Message {
     /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
     pub fn from_structured(bytes: &[u8]) -> Result<Self, StreamError> {
         let (record, _) = diagnostic_streams::parse::parse_record(bytes)?;
-        let properties = Result::from_iter(record.arguments.into_iter().map(|a| {
+
+        let mut properties = vec![];
+        let mut dropped_logs = 0;
+        for a in record.arguments {
             let label = LogsField::from(a.name);
 
-            match a.value {
-                Value::SignedInt(v) => Ok(LogsProperty::Int(label, v)),
-                Value::UnsignedInt(v) => Ok(LogsProperty::Uint(label, v)),
-                Value::Floating(v) => Ok(LogsProperty::Double(label, v)),
-                Value::Text(v) => Ok(LogsProperty::String(label, v)),
-                Value::__UnknownVariant { .. } => Err(StreamError::UnrecognizedValue),
+            if matches!(label, LogsField::Dropped) {
+                match a.value {
+                    Value::SignedInt(v) => Ok(dropped_logs = v as u64),
+                    Value::UnsignedInt(v) => Ok(dropped_logs = v),
+                    Value::Floating(f) => Err(StreamError::ExpectedInteger {
+                        value: format!("{:?}", f),
+                        found: "float",
+                    }),
+                    Value::Text(t) => Err(StreamError::ExpectedInteger { value: t, found: "text" }),
+                    Value::__UnknownVariant { .. } => {
+                        Err(StreamError::ExpectedInteger { value: "".into(), found: "unknown" })
+                    }
+                }?
+            } else {
+                properties.push(match a.value {
+                    Value::SignedInt(v) => LogsProperty::Int(label, v),
+                    Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
+                    Value::Floating(v) => LogsProperty::Double(label, v),
+                    Value::Text(v) => LogsProperty::String(label, v),
+                    Value::__UnknownVariant { .. } => return Err(StreamError::UnrecognizedValue),
+                })
             }
-        }))?;
+        }
+
         Ok(Message::new(
             record.timestamp,
             record.severity,
             bytes.len(),
+            dropped_logs,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new("root", properties, vec![]),
@@ -301,14 +325,16 @@ impl Message {
 
     /// Returns number of dropped logs if reported in the message.
     pub fn dropped_logs(&self) -> Option<u64> {
-        self.payload()
-            .properties
-            .iter()
-            .filter_map(|property| match property {
-                LogsProperty::Uint(LogsField::Dropped, dropped) => Some(*dropped),
-                _ => None,
+        self.metadata
+            .errors
+            .as_ref()
+            .map(|errors| {
+                errors.iter().find_map(|e| match e {
+                    LogError::DroppedLogs { count } => Some(*count),
+                    _ => None,
+                })
             })
-            .next()
+            .flatten()
     }
 
     fn non_legacy_contents(&self) -> impl Iterator<Item = &LogsProperty> {
@@ -631,6 +657,7 @@ mod tests {
             packet.metadata.time,
             Severity::Debug,
             METADATA_SIZE + data_size,
+            packet.metadata.dropped_logs as _,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(
@@ -638,7 +665,6 @@ mod tests {
                 vec![
                     LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                     LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                     LogsProperty::String(LogsField::Tag, "AAAAAAAAAAA".into()),
                     LogsProperty::String(LogsField::Msg, "BBBBB".into()),
                 ],
@@ -702,6 +728,7 @@ mod tests {
             packet.metadata.time,
             Severity::Debug,
             METADATA_SIZE + data_size,
+            packet.metadata.dropped_logs as u64,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(
@@ -709,7 +736,6 @@ mod tests {
                 vec![
                     LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                     LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                     LogsProperty::String(LogsField::Tag, "AAAAAAAAAAA".to_string()),
                     LogsProperty::String(LogsField::Tag, "BBBBB".to_string()),
                     LogsProperty::String(LogsField::Msg, "CCCCC".to_string()),
@@ -752,7 +778,6 @@ mod tests {
         let mut expected_properties = vec![
             LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
             LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-            LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
             LogsProperty::String(
                 LogsField::Msg,
                 String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
@@ -776,6 +801,7 @@ mod tests {
             packet.metadata.time,
             Severity::Debug,
             METADATA_SIZE + msg_end,
+            packet.metadata.dropped_logs as u64,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             expected_contents,
@@ -817,7 +843,6 @@ mod tests {
             vec![
                 LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                 LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                 LogsProperty::String(LogsField::Msg, "".to_string()),
             ],
             vec![],
@@ -839,6 +864,7 @@ mod tests {
                 packet.metadata.time,
                 Severity::Debug,
                 METADATA_SIZE + msg_start,
+                packet.metadata.dropped_logs as u64,
                 PLACEHOLDER_MONIKER,
                 PLACEHOLDER_URL,
                 expected_contents,
@@ -863,6 +889,7 @@ mod tests {
                 packet.metadata.time,
                 Severity::Debug,
                 METADATA_SIZE + 3,
+                packet.metadata.dropped_logs as u64,
                 PLACEHOLDER_MONIKER,
                 PLACEHOLDER_URL,
                 LogsHierarchy::new(
@@ -870,7 +897,6 @@ mod tests {
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                         LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                        LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                         LogsProperty::String(LogsField::Msg, "AA".to_string())
                     ],
                     vec![],
@@ -892,6 +918,7 @@ mod tests {
             packet.metadata.time,
             Severity::Info,
             METADATA_SIZE + 1,
+            packet.metadata.dropped_logs as u64,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(
@@ -899,7 +926,6 @@ mod tests {
                 vec![
                     LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                     LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                     LogsProperty::String(LogsField::Msg, "".to_string()),
                 ],
                 vec![],
@@ -951,6 +977,7 @@ mod tests {
             zx::Time::from_nanos(packet.metadata.time),
             Severity::Debug,
             METADATA_SIZE + 1,
+            packet.metadata.dropped_logs as u64,
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(
@@ -958,7 +985,6 @@ mod tests {
                 vec![
                     LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                     LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
                     LogsProperty::String(LogsField::Msg, "".to_string()),
                 ],
                 vec![],
@@ -1029,6 +1055,7 @@ mod tests {
                 zx::Time::from_nanos(72),
                 Severity::Error,
                 encoded.len(),
+                2, // dropped
                 PLACEHOLDER_MONIKER,
                 PLACEHOLDER_URL,
                 LogsHierarchy::new(
@@ -1037,7 +1064,6 @@ mod tests {
                         LogsProperty::Int(LogsField::Other("arg1".to_string()), -23),
                         LogsProperty::Uint(LogsField::ProcessId, 43),
                         LogsProperty::Uint(LogsField::ThreadId, 912),
-                        LogsProperty::Uint(LogsField::Dropped, 2),
                         LogsProperty::String(LogsField::Tag, "tag".to_string()),
                         LogsProperty::String(LogsField::Msg, "msg".to_string()),
                     ],
@@ -1079,6 +1105,7 @@ mod tests {
                 zx::Time::from_nanos(72),
                 Severity::Error,
                 encoded.len(),
+                0, // dropped
                 PLACEHOLDER_MONIKER,
                 PLACEHOLDER_URL,
                 LogsHierarchy::new(
@@ -1106,6 +1133,7 @@ mod tests {
                 zx::Time::from_nanos(72),
                 Severity::Error,
                 encoded.len(),
+                0, // dropped
                 PLACEHOLDER_MONIKER,
                 PLACEHOLDER_URL,
                 LogsHierarchy::new("root", vec![], vec![],)
@@ -1123,8 +1151,15 @@ mod tests {
         ($raw:expr, $expected:expr) => {
             let legacy = LegacySeverity::try_from($raw).unwrap();
             let (severity, verbosity) = legacy.for_structured();
-            let mut msg =
-                Message::new(0i64, severity, 1, "", "", LogsHierarchy::new("root", vec![], vec![]));
+            let mut msg = Message::new(
+                0i64, // timestamp
+                severity,
+                1,  // size
+                0,  // dropped logs
+                "", // moniker
+                "", // url
+                LogsHierarchy::new("root", vec![], vec![]),
+            );
             if let Some(v) = verbosity {
                 msg.set_legacy_verbosity(v);
             }

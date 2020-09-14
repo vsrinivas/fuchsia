@@ -29,6 +29,9 @@ pub enum StreamError {
     #[error("unrecognized value type encountered")]
     UnrecognizedValue,
 
+    #[error("wrong value type encountered, expected integer, found {found} {value}")]
+    ExpectedInteger { value: String, found: &'static str },
+
     #[error("couldn't parse message: {parse_error:?}")]
     ParseError {
         #[from]

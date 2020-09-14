@@ -102,7 +102,8 @@ mod tests {
         Message::new(
             fuchsia_zircon::Time::from_nanos(1),
             Severity::Info,
-            1,
+            1, // size
+            0, // dropped logs
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new("root", vec![], vec![]),

@@ -154,6 +154,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         time,
         severity,
         size,
+        0, // TODO(fxbug.dev/48548) dropped_logs
         "klog",
         KERNEL_URL,
         LogsHierarchy::new(
@@ -186,6 +187,7 @@ mod tests {
                 klog.timestamp,
                 Severity::Info,
                 METADATA_SIZE + 6 + "test log".len(),
+                0, // dropped logs
                 "klog",
                 KERNEL_URL,
                 LogsHierarchy::new(
@@ -210,6 +212,7 @@ mod tests {
                 klog.timestamp,
                 Severity::Info,
                 METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
+                0, // dropped logs
                 "klog",
                 KERNEL_URL,
                 LogsHierarchy::new(
@@ -238,6 +241,7 @@ mod tests {
                 klog.timestamp,
                 Severity::Info,
                 METADATA_SIZE + 6,
+                0, // dropped logs
                 "klog",
                 KERNEL_URL,
                 LogsHierarchy::new(
@@ -280,6 +284,7 @@ mod tests {
                 klog.timestamp,
                 Severity::Info,
                 METADATA_SIZE + 6 + "test log".len(),
+                0, // dropped logs
                 "klog",
                 KERNEL_URL,
                 LogsHierarchy::new(

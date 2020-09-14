@@ -705,6 +705,7 @@ mod tests {
             zx::Time::from_nanos(1),
             severity,
             METADATA_SIZE + 1 + msg.len(),
+            0, // dropped
             PLACEHOLDER_MONIKER,
             PLACEHOLDER_URL,
             LogsHierarchy::new(
