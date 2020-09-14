@@ -4,6 +4,8 @@
 
 #include <assert.h>
 #include <cpuid.h>
+#include <lib/test-exceptions/exception-catcher.h>
+#include <lib/test-exceptions/exception-handling.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -121,6 +123,7 @@ void test_instruction(Instruction isn) {
 
   zx::thread thread;
   zx::channel exception_channel;
+  test_exceptions::ExceptionCatcher catcher;
   {
     std::lock_guard<std::mutex> guard(arg.mutex);
 
@@ -131,25 +134,23 @@ void test_instruction(Instruction isn) {
               ZX_OK);
     thrd_detach(thread_obj);
 
-    ASSERT_EQ(thread.create_exception_channel(0, &exception_channel), ZX_OK);
-
+    ASSERT_EQ(catcher.Start(thread), ZX_OK);
     // Release the lock, so that the thread can run.
   }
 
   // Wait for crash or thread completion.
-  zx_signals_t signals = 0;
-  ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                       zx::time::infinite(), &signals),
-            ZX_OK);
-  if (signals & ZX_CHANNEL_READABLE) {
+  zx::status<zx::exception> result = catcher.ExpectException();
+  if (result.is_ok()) {
     zx_exception_report_t report = {};
     ASSERT_EQ(thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), NULL, NULL),
               ZX_OK);
-    ASSERT_EQ(thread.kill(), ZX_OK);
     EXPECT_TRUE(isn_should_crash(isn));
     // These instructions should cause a GPF
     EXPECT_EQ(report.header.type, ZX_EXCP_GENERAL);
+    // Exit the thread.
+    test_exceptions::ExitExceptionCThread(std::move(result.value()));
   } else {
+    ASSERT_EQ(result.status_value(), ZX_ERR_PEER_CLOSED);
     // Thread terminated normally so the instruction did not crash
     ASSERT_FALSE(isn_should_crash(isn));
   }

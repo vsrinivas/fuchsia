@@ -11,5 +11,6 @@ test("x86-umip") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/test-exceptions",
   ]
 }
