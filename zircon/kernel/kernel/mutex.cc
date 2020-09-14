@@ -122,6 +122,7 @@ Mutex::~Mutex() {
 void Mutex::Acquire(zx_duration_t spin_max_duration) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
 
   Thread* const current_thread = Thread::Current::Get();
   const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
