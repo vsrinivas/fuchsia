@@ -985,7 +985,7 @@ impl Runtime {
                     .await
                     {
                         if let Ok(realm) = realm.upgrade() {
-                            let _ = realm.stop_instance(false).await;
+                            let _ = ActionSet::register(realm, Action::Stop).await.await;
                         }
                     }
                 },

@@ -116,7 +116,7 @@ pub mod tests {
             .lock_actions()
             .await
             .rep
-            .insert(Action::Shutdown, Arc::new(ActionStatus::new()));
+            .insert(Action::Shutdown, Arc::new(ActionStatus::new(false)));
 
         model.start().await;
     }

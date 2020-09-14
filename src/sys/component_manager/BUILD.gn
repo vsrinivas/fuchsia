@@ -103,6 +103,7 @@ template("component_manager") {
     "src/model/actions/mod.rs",
     "src/model/actions/shutdown.rs",
     "src/model/actions/start.rs",
+    "src/model/actions/stop.rs",
     "src/model/addable_directory.rs",
     "src/model/binding.rs",
     "src/model/dir_tree.rs",
