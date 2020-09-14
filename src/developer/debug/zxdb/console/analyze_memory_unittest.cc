@@ -47,8 +47,8 @@ TEST_F(AnalyzeMemoryTest, Basic) {
         debug_ipc::MessageLoop::Current()->QuitNow();
       });
 
-  // Setup address space. Make one region inside another. The innermost one
-  // should be the one reported.
+  // Setup address space. Make one region inside another. The innermost one should be the one
+  // reported.
   std::vector<debug_ipc::AddressRegion> aspace;
   aspace.resize(2);
   aspace[0].name = "root";
@@ -69,23 +69,28 @@ TEST_F(AnalyzeMemoryTest, Basic) {
                                        Register(RegisterID::kX64_rcx, kAway),
                                        Register(RegisterID::kX64_rsp, kStack0SP)};
 
-  // Frame 1 duplicates rax (should not have both in the output), but rcx is
-  // different and this should be called out in the dump.
+  // Frame 1 duplicates rax (should not have both in the output), but rcx is different and this
+  // should be called out in the dump.
   std::vector<Register> frame1_regs = {Register(RegisterID::kX64_rax, kBegin),
                                        Register(RegisterID::kX64_rcx, kBegin + 16),
                                        Register(RegisterID::kX64_rsp, kStack1SP)};
 
-  // Setup frames.
+  // Setup frames. This creates a top frame, an intermediate inline frame, and a bottom frame.
   std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
                                                Location(Location::State::kSymbolized, 0x1234),
                                                kStack0SP, 0, frame0_regs, kStack0SP));
-  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
-                                               Location(Location::State::kSymbolized, 0x1234),
-                                               kStack1SP, 0, frame1_regs, kStack1SP));
+  auto bottom_frame =
+      std::make_unique<MockFrame>(nullptr, nullptr, Location(Location::State::kSymbolized, 0x1200),
+                                  kStack1SP, 0, frame1_regs, kStack1SP);
+  // Inline frame (needs to reference the bottom frame below it).
+  frames.push_back(
+      std::make_unique<MockFrame>(nullptr, nullptr, Location(Location::State::kSymbolized, 0x1210),
+                                  kStack1SP, 0, frame1_regs, kStack1SP, bottom_frame.get()));
+  frames.push_back(std::move(bottom_frame));
 
-  // Stack to hold our mock frames. This stack doesn't need to do anything
-  // other than return the frames again, so the delegate can be null.
+  // Stack to hold our mock frames. This stack doesn't need to do anything other than return the
+  // frames again, so the delegate can be null.
   Stack temp_stack(nullptr);
   temp_stack.SetFramesForTest(std::move(frames), true);
   analysis->SetStack(temp_stack);
@@ -106,8 +111,11 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   analysis->Schedule(opts);
   debug_ipc::MessageLoop::Current()->Run();
 
-  // The pointer to "inner" aspace entry should be annotated. The "outer"
-  // aspace entry is too large and so will be omitted.
+  // The pointer to "inner" aspace entry should be annotated. The "outer" aspace entry is too large
+  // and so will be omitted.
+  //
+  // The "frame 2" registers should be omitted because they were covered by the inline "frame 1"
+  // registers above it.
   EXPECT_EQ(
       "Address               Data \n"
       " 0x1000 0x0000000000001000 ◁ rax, rsp, frame 0 base. ▷ inside map "

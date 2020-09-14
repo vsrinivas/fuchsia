@@ -31,14 +31,12 @@ namespace zxdb {
 
 namespace {
 
-// Rounds the beginning and size to sizeof(uint64_t) which we assume all
-// pointers are on the debugged platform. This may need to be configurable in
-// the future.
+// Rounds the beginning and size to sizeof(uint64_t) which we assume all pointers are on the
+// debugged platform. This may need to be configurable in the future.
 constexpr uint64_t kAlign = sizeof(uint64_t);
 
-// Aspace entries this size or larger will be ignored for annotation purposes.
-// These large regions generally represent the process's available address
-// space rather than actually used memory.
+// Aspace entries this size or larger will be ignored for annotation purposes. These large regions
+// generally represent the process's available address space rather than actually used memory.
 constexpr uint64_t kMaxAspaceRegion = 128000000000;  // 128GB
 
 }  // namespace
@@ -49,8 +47,8 @@ MemoryAnalysis::MemoryAnalysis(const AnalyzeMemoryOptions& opts, Callback cb)
     : callback_(std::move(cb)) {
   process_ = opts.process->GetWeakPtr();
 
-  // This doesn't store the Thread because it may go out-of-scope during the
-  // asynchronous requests. We'd need a weak pointer but its better avoided.
+  // This doesn't store the Thread because it may go out-of-scope during the asynchronous requests.
+  // We'd need a weak pointer but its better avoided.
   begin_address_ = opts.begin_address / kAlign * kAlign;
 
   uint64_t end = opts.begin_address + opts.bytes_to_read;
@@ -60,8 +58,7 @@ MemoryAnalysis::MemoryAnalysis(const AnalyzeMemoryOptions& opts, Callback cb)
 }
 
 void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
-  // Copies are passed to the callbacks to keep this object in scope until
-  // all are complete.
+  // Copies are passed to the callbacks to keep this object in scope until all are complete.
   fxl::RefPtr<MemoryAnalysis> this_ref(this);
 
   if (opts.thread) {
@@ -72,8 +69,8 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
       } else {
         opts.thread->GetStack().SyncFrames(
             [this_ref, weak_thread = opts.thread->GetWeakPtr()](const Err&) {
-              // Can ignore the error, the frames will be re-queried from the
-              // thread and we'll check the weak pointer in case its destroyed.
+              // Can ignore the error, the frames will be re-queried from the thread and we'll check
+              // the weak pointer in case its destroyed.
               this_ref->OnFrames(weak_thread);
             });
       }
@@ -116,11 +113,10 @@ void MemoryAnalysis::SetStack(const Stack& stack) {
   have_frames_ = true;
 
   for (size_t i = 0; i < stack.size(); i++) {
-    // Only add the registers once per inline function call sequence. It makes
-    // the most sense for the frames to reference the topmost frame of an
-    // inline call sequence so this skips everything with an inline frame
-    // immediately above it.
-    if (i + 1 < stack.size() && stack[i + 1]->IsInline())
+    // Only add the registers once per inline function call sequence. It makes the most sense for
+    // the frames to reference the topmost frame of an inline call sequence so this skips everything
+    // with an inline frame immediately above it.
+    if (i > 0 && stack[i - 1]->IsInline())
       continue;
 
     const std::vector<debug_ipc::Register>* regs =
@@ -184,8 +180,7 @@ void MemoryAnalysis::OnAspace(const Err& err, std::vector<debug_ipc::AddressRegi
   if (aborted_)
     return;
 
-  // This function can continue without address space annotations so ignore
-  // errors.
+  // This function can continue without address space annotations so ignore errors.
   SetAspace(std::move(aspace));
 
   if (HasEverything())
@@ -210,8 +205,7 @@ void MemoryAnalysis::OnFrames(fxl::WeakPtr<Thread> thread) {
   if (aborted_)
     return;
 
-  // This function can continue even if the thread is gone, it just won't get
-  // the frame annotations.
+  // This function can continue even if the thread is gone, it just won't get the frame annotations.
   if (thread)
     SetStack(thread->GetStack());
   else
@@ -232,10 +226,9 @@ void MemoryAnalysis::IssueError(const Err& err) {
 }
 
 void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug_ipc::Register>& regs) {
-  // Frames can have saved registers. Sometimes these will be the same as frame
-  // 0 (the current CPU state). We want to make them say, e.g. "rax" if the
-  // value matches the top frame, but if the current frame's register value is
-  // different, we want e.g. "frame 5's rax".
+  // Frames can have saved registers. Sometimes these will be the same as frame 0 (the current CPU
+  // state). We want to make them say, e.g. "rax" if the value matches the top frame, but if the
+  // current frame's register value is different, we want e.g. "frame 5's rax".
   for (const auto& r : regs) {
     if (r.data.size() > sizeof(uint64_t))
       continue;  // Weird register, don't bother.
@@ -248,8 +241,8 @@ void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug_ipc::Reg
       reg_desc = RegisterIDToString(r.id);
       frame_0_regs_[r.id] = value;
     } else {
-      // Later frames get an annotation and only get added if they're
-      // different than frame 0.
+      // Later frames get an annotation and only get added if they're different than frame 0.
+      // Duplicates for inline frames should have been filtered out by the caller.
       auto found_frame_0 = frame_0_regs_.find(r.id);
       if (found_frame_0 != frame_0_regs_.end() && found_frame_0->second == value)
         continue;  // Matches frame 0, don't add a record.
@@ -272,10 +265,9 @@ void MemoryAnalysis::AddAnnotation(uint64_t address, const std::string& str) {
 }
 
 bool MemoryAnalysis::GetData(uint64_t address, uint64_t* out_value) const {
-  // Need to handle invalid memory. The easiest thing is to read a byte at a
-  // time. This doesn't handle invalid regions spanning a pointer; that
-  // shouldn't happen because valid memory regions should always be aligned
-  // more coarsely than the size of a pointer.
+  // Need to handle invalid memory. The easiest thing is to read a byte at a time. This doesn't
+  // handle invalid regions spanning a pointer; that shouldn't happen because valid memory regions
+  // should always be aligned more coarsely than the size of a pointer.
   uint64_t data = 0;
   for (uint64_t i = 0; i < kAlign; i++) {
     uint8_t byte;
@@ -319,8 +311,8 @@ OutputBuffer MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   FX_DCHECK(locations.size() == 1);
 
   if (!locations[0].symbol()) {
-    // Check if this points into any relevant aspace entries. Want the deepest
-    // one smaller than the max size threshold.
+    // Check if this points into any relevant aspace entries. Want the deepest one smaller than the
+    // max size threshold.
     int max_depth = -1;
     size_t found_entry = aspace_.size();  // Indicates not found.
     for (size_t i = 0; i < aspace_.size(); i++) {
