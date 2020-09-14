@@ -109,11 +109,10 @@ impl OpenRequestHandler for OpenFailOrTempFs {
         mode: u32,
         path: String,
         object: ServerEnd<NodeMarker>,
-        control_handle: DirectoryControlHandle,
+        _control_handle: DirectoryControlHandle,
     ) {
         if self.should_fail() {
             self.fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            control_handle.send_on_open_(Status::NO_MEMORY.into_raw(), None).expect("send on open");
         } else {
             let (tempdir_proxy, server_end) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
@@ -238,7 +237,7 @@ impl FailingWriteFileStreamHandler {
         writes_should_fail: Arc<AtomicBool>,
         write_fail_count: Arc<AtomicU64>,
     ) -> Self {
-        Self { backing_file, writes_should_fail: writes_should_fail, write_fail_count, path }
+        Self { backing_file, writes_should_fail, write_fail_count, path }
     }
 
     fn writes_should_fail(self: &Arc<Self>) -> bool {
