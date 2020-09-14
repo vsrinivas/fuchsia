@@ -5,11 +5,11 @@
 use {
     anyhow::{anyhow, Result},
     ffx_config::{
-        env_file, environment::Environment, get, print_config, raw, remove, set, ConfigLevel,
+        add, env_file, environment::Environment, get, print_config, raw, remove, set, ConfigLevel,
     },
     ffx_config_plugin_args::{
-        ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
-        SetCommand, SubCommand,
+        AddCommand, ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
+        ProcessMode, RemoveCommand, SetCommand, SubCommand,
     },
     ffx_core::{ffx_bail, ffx_plugin},
     serde_json::Value,
@@ -25,19 +25,41 @@ pub async fn exec_config(config: ConfigCommand) -> Result<()> {
         SubCommand::Get(get_cmd) => exec_get(get_cmd, writer).await,
         SubCommand::Set(set_cmd) => exec_set(set_cmd).await,
         SubCommand::Remove(remove_cmd) => exec_remove(remove_cmd).await,
+        SubCommand::Add(add_cmd) => exec_add(add_cmd).await,
     }
 }
 
 async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, mut writer: W) -> Result<()> {
     match get_cmd.name.as_ref() {
-        Some(name) => {
-            let value: Option<Value> =
-                if get_cmd.substitute { get(name).await? } else { raw(name).await? };
-            match value {
-                Some(v) => writeln!(writer, "{}: {}", name, v)?,
-                None => writeln!(writer, "{}: none", name)?,
+        Some(name) => match get_cmd.process {
+            ProcessMode::Raw => {
+                let value: Option<Value> = raw(name).await?;
+                match value {
+                    Some(v) => writeln!(writer, "{}: {}", name, v)?,
+                    None => writeln!(writer, "{}: none", name)?,
+                }
             }
-        }
+            ProcessMode::Substitute => {
+                let value: std::result::Result<Vec<Value>, _> = get(name).await;
+                match value {
+                    Ok(v) => {
+                        if v.len() == 1 {
+                            writeln!(writer, "{}: {}", name, v[0])?
+                        } else {
+                            writeln!(writer, "{}: {}", name, Value::Array(v))?
+                        }
+                    }
+                    Err(_) => writeln!(writer, "{}: none", name)?,
+                }
+            }
+            ProcessMode::SubstituteAndFlatten => {
+                let value: Option<Value> = get(name).await?;
+                match value {
+                    Some(v) => writeln!(writer, "{}: {}", name, v)?,
+                    None => writeln!(writer, "{}: none", name)?,
+                }
+            }
+        },
         None => {
             print_config(writer, &get_cmd.build_dir).await?;
         }
@@ -55,6 +77,14 @@ async fn exec_set(set_cmd: &SetCommand) -> Result<()> {
 
 async fn exec_remove(remove_cmd: &RemoveCommand) -> Result<()> {
     remove((&remove_cmd.name, &remove_cmd.level, &remove_cmd.build_dir)).await
+}
+
+async fn exec_add(add_cmd: &AddCommand) -> Result<()> {
+    add(
+        (&add_cmd.name, &add_cmd.level, &add_cmd.build_dir),
+        Value::String(format!("{}", add_cmd.value)),
+    )
+    .await
 }
 
 fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Result<()> {

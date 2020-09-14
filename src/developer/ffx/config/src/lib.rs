@@ -259,6 +259,14 @@ impl HandleArrays for Value {
     }
 }
 
+impl TryFrom<ConfigValue> for Value {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value.0.ok_or(anyhow!("no value").into())
+    }
+}
+
 impl HandleArrays for Option<Value> {
     fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
         next: &'a T,
@@ -409,13 +417,7 @@ impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
                         None
                     }
                 }
-                None => {
-                    if val.is_object() {
-                        None
-                    } else {
-                        ConfigValue(Some(val)).try_into().map(|x| vec![x]).ok()
-                    }
-                }
+                None => ConfigValue(Some(val)).try_into().map(|x| vec![x]).ok(),
             })
             .ok_or(anyhow!("no configuration value found").into())
     }
@@ -493,6 +495,36 @@ pub async fn remove<'a, U: Into<ConfigQuery<'a>>>(query: U) -> Result<()> {
     let config = load_config(&config_query.build_dir.map(String::from)).await?;
     let mut write_guard = config.write().await;
     (*write_guard).remove(&config_query)?;
+    save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
+}
+
+pub async fn add<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
+    let config_query: ConfigQuery<'a> = query.into();
+    let level = if let Some(l) = config_query.level {
+        l
+    } else {
+        bail!("level of configuration is required to add a value");
+    };
+    check_config_files(&level, &config_query.build_dir.map(String::from))?;
+    let config = load_config(&config_query.build_dir.map(String::from)).await?;
+    let mut write_guard = config.write().await;
+    if let Some(mut current) = (*write_guard).get(&config_query, &identity) {
+        if current.is_object() {
+            bail!("cannot add a value to a subtree");
+        } else {
+            match current.as_array_mut() {
+                Some(v) => {
+                    v.push(value);
+                    (*write_guard).set(&config_query, Value::Array(v.to_vec()))?;
+                }
+                None => {
+                    (*write_guard).set(&config_query, Value::Array(vec![current, value]))?;
+                }
+            }
+        }
+    } else {
+        (*write_guard).set(&config_query, value)?;
+    }
     save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
 }
 

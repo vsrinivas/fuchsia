@@ -23,6 +23,7 @@ pub enum SubCommand {
     Get(GetCommand),
     Set(SetCommand),
     Remove(RemoveCommand),
+    Add(AddCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -38,7 +39,7 @@ pub struct SetCommand {
 
     #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
-    pub level: ffx_config::ConfigLevel,
+    pub level: ConfigLevel,
 
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
@@ -48,16 +49,24 @@ pub struct SetCommand {
     pub build_dir: Option<String>,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum ProcessMode {
+    Raw,
+    Substitute,
+    SubstituteAndFlatten,
+}
+
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "get", description = "list config for a given level")]
+#[argh(subcommand, name = "get", description = "display config values")]
 pub struct GetCommand {
     #[argh(positional)]
     /// name of the config property
     pub name: Option<String>,
 
-    #[argh(switch)]
-    /// subsitute in environment variables from the system
-    pub substitute: bool,
+    #[argh(option, from_str_fn(parse_process_mode), default = "ProcessMode::Raw")]
+    /// how to process results. Possible values are "raw", "sub", and "sub_flat".  Defaults
+    /// to "raw". Currently only supported if a name is given.
+    pub process: ProcessMode,
 
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
@@ -68,11 +77,51 @@ pub struct GetCommand {
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "remove", description = "remove config for a given level")]
+#[argh(
+    subcommand,
+    name = "remove",
+    description = "remove config for a given level",
+    note = "This will remove the entire value for the given name.  If the value is a subtree or \
+       array, the entire subtree or array will be removed.  If you want to remove a specific value \
+       from an array, consider editing the configuration file directly.  Configuration file \
+       locations can be found by running `ffx config env get` command."
+)]
 pub struct RemoveCommand {
     #[argh(positional)]
     /// name of the config property
     pub name: String,
+
+    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
+    /// config level. Possible values are "user", "build", "global". Defaults to "user".
+    pub level: ConfigLevel,
+
+    // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
+    // from which ffx is called? This will probably go away.
+    #[argh(option)]
+    /// an optional build directory to associate the build config provided - use used for "build"
+    /// configs
+    pub build_dir: Option<String>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "add",
+    description = "add config value the end of an array",
+    note = "This will always add to the end of an array.  Adding to a subtree is not supported. \
+        If the current value is not an array, it will convert the value to an array.  If you want \
+        to insert a value in a different position, consider editing the configuration file \
+        directly.  Configuration file locations can be found by running `ffx config env get` \
+        command."
+)]
+pub struct AddCommand {
+    #[argh(positional)]
+    /// name of the property to set
+    pub name: String,
+
+    #[argh(positional)]
+    /// value to add to name
+    pub value: String,
 
     #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
@@ -132,6 +181,17 @@ fn parse_level(value: &str) -> Result<ConfigLevel, String> {
         "global" => Ok(ConfigLevel::Global),
         _ => Err(String::from(
             "Unrecognized value. Possible values are \"user\",\"build\",\"global\".",
+        )),
+    }
+}
+
+fn parse_process_mode(value: &str) -> Result<ProcessMode, String> {
+    match value {
+        "raw" => Ok(ProcessMode::Raw),
+        "sub" => Ok(ProcessMode::Substitute),
+        "sub_and_flat" => Ok(ProcessMode::SubstituteAndFlatten),
+        _ => Err(String::from(
+            "Unrecognized value. Possible values are \"raw\",\"sub\",\"sub_and_flat\".",
         )),
     }
 }
@@ -214,7 +274,7 @@ mod tests {
                 ConfigCommand::from_args(CMD_NAME, args),
                 Ok(ConfigCommand {
                     sub: SubCommand::Get(GetCommand {
-                        substitute: false,
+                        process: ProcessMode::Raw,
                         name: Some(expected_key.to_string()),
                         build_dir: expected_build_dir,
                     })
