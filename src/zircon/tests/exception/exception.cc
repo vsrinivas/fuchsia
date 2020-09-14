@@ -1082,7 +1082,7 @@ TEST(ExceptionTest, SkipClosedExceptionChannel) {
   // The exception should continue up to the job handler as normal.
   zx::exception exception = ReadException(job_channel, ZX_EXCP_FATAL_PAGE_FAULT);
 
-  ASSERT_OK(loop.aux_thread().kill());
+  ASSERT_OK(loop.process().kill());
 }
 
 // Killing the task should mark its exception channels with PEER_CLOSED.
@@ -1096,10 +1096,6 @@ void TaskDeathClosesExceptionChannel(uint32_t create_flags) {
 
   ASSERT_OK(task.kill());
   EXPECT_OK(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
-}
-
-TEST(ExceptionTest, TaskDeathClosesThreadExceptionChannel) {
-  TaskDeathClosesExceptionChannel<&TestLoop::aux_thread>(0);
 }
 
 TEST(ExceptionTest, TaskDeathClosesProcessExceptionChannel) {
@@ -1116,50 +1112,6 @@ TEST(ExceptionTest, TaskDeathClosesJobExceptionChannel) {
 
 TEST(ExceptionTest, TaskDeathClosesJobDebugExceptionChannel) {
   TaskDeathClosesExceptionChannel<&TestLoop::job>(ZX_EXCEPTION_CHANNEL_DEBUGGER);
-}
-
-TEST(ExceptionTest, ThreadDeathWithExceptionInChannel) {
-  TestLoop loop;
-  zx::channel exception_channel;
-  ASSERT_OK(loop.aux_thread().create_exception_channel(0u, &exception_channel));
-
-  // Crash the thread and wait for the exception to be in the channel.
-  loop.CrashAuxThread();
-  ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
-
-  // Killing the thread doesn't remove the exception from the channel, but
-  // it does signal PEER_CLOSED.
-  zx_signals_t observed;
-  ASSERT_OK(loop.aux_thread().kill());
-  EXPECT_OK(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
-  EXPECT_TRUE(observed & ZX_CHANNEL_READABLE);
-
-  // Receiving and closing the exception has no effect. Operations on the
-  // exception should still succeed.
-  zx::exception exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
-  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-  EXPECT_OK(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
-  EXPECT_OK(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
-}
-
-// Similar to the above test, but pull the exception out of the channel before
-// killing the thread and make sure behavior is consistent.
-TEST(ExceptionTest, ThreadDeathWithExceptionReceived) {
-  TestLoop loop;
-  zx::channel exception_channel;
-  ASSERT_OK(loop.aux_thread().create_exception_channel(0u, &exception_channel));
-
-  loop.CrashAuxThread();
-  zx::exception exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
-
-  zx_signals_t observed;
-  ASSERT_OK(loop.aux_thread().kill());
-  ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
-  EXPECT_FALSE(observed & ZX_CHANNEL_READABLE);
-
-  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-  EXPECT_OK(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
-  EXPECT_OK(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
 }
 
 TEST(ExceptionTest, ExceptionChannelOrder) {
@@ -1521,7 +1473,7 @@ void ReadWriteThreadState(uint32_t create_flags) {
   EXPECT_OK(loop.aux_thread().read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
   EXPECT_OK(loop.aux_thread().write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
 
-  EXPECT_OK(loop.aux_thread().kill());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ReadWriteThreadStateFromThreadChannel) {
@@ -1596,41 +1548,6 @@ TEST(ExceptionTest, SyntheticExceptionReadWriteRegs) {
   // likely that the thread is already dead so we can't check reg access.
   loop.Step5ShutdownMainThread();
   ReadException(process_channel, ZX_EXCP_THREAD_EXITING);
-}
-
-void CrashThreadFunc(uintptr_t, uintptr_t) {
-  crash_me();
-  zx_thread_exit();
-}
-
-// Test killing a thread then immediately closing the exception never
-// propagates the exception (ZX-4105).
-//
-// This isn't possible to test deterministically so we just try to run it
-// for a little bit, if this looks like it's becoming flaky it probably
-// indicates a real underlying bug. Failures would manifest as the unittest
-// crash handler seeing an unregistered crash.
-constexpr zx::duration kRaceTestDuration = zx::sec(1);
-
-TEST(ExceptionTest, KillThreadAndCloseExceptionRace) {
-  zx::time end_time = zx::deadline_after(kRaceTestDuration);
-  while (zx::clock::get_monotonic() < end_time) {
-    zx::thread thread;
-    ASSERT_OK(zx::thread::create(*zx::process::self(), "crasher", strlen("crasher"), 0u, &thread));
-
-    zx::channel channel;
-    ASSERT_OK(thread.create_exception_channel(0, &channel));
-
-    alignas(16) static uint8_t thread_stack[128];
-    thread.start(&CrashThreadFunc, thread_stack + sizeof(thread_stack), 0, 0);
-
-    zx::exception exception = ReadException(channel, ZX_EXCP_FATAL_PAGE_FAULT);
-    ASSERT_TRUE(exception.is_valid());
-
-    ASSERT_OK(thread.kill());
-    exception.reset();
-    ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
-  }
 }
 
 static const char* check_trigger(int argc, char** argv) {
