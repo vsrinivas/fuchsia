@@ -6,7 +6,7 @@ This tutorial expects that you have completed the [Getting Started][getting-star
 guide and are able to build and run Fuchsia (whether using `fx qemu` or on actual
 hardware). You should be familiar with running components on Fuchsia using
 `fx serve` and `fx shell run`, which are covered in [Run an example component][component].
-This tutorial is the first of the sequence of FIDL tutorials listed in the [overview][overview]
+This tutorial is the first of the sequence of FIDL tutorials listed in the [overview][overview].
 
 ## Overview
 
@@ -14,7 +14,7 @@ In this tutorial, we will define a FIDL library `fuchsia.examples`. Defining the
 FIDL library lets us compile the `.fidl` files using `fx build` and check for any errors.
 It also creates targets that can be included to depend on the bindings for the
 new library. The bindings tutorials, as well as the prerequisites for this tutorial are
-listed in the [FIDL tutorials overview].
+listed in the [FIDL tutorials overview][overview].
 
 ## Define the FIDL library
 
@@ -23,7 +23,7 @@ The example code for this tutorial is in
 
 We've chosen the directory name to match the library name, which is the
 convention taken by the libraries defined in the Fuchsia IDK in
-[`//sdk/fidl][sdk].
+[`//sdk/fidl`][sdk].
 
 We can define some examples of the various FIDL language features in
 `examples/fidl/fuchsia.examples/types.test.fidl`:
