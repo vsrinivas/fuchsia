@@ -25,7 +25,6 @@ group("service") {
     ":mdns_fuzzers",
     ":mdns_test",
     ":mdns_tests",
-    ":packet_reader_fuzzer",
     ":source_set",
   ]
 }
