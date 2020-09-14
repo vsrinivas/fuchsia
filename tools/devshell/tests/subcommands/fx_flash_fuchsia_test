@@ -1,0 +1,71 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx flash
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/flash"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-flash.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/image_build_vars.sh"
+  "tools/devshell/lib/platform.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+declare fx
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+
+  btf::make_mock "${BT_TEMP_DIR}/out/default/flash.sh"
+  btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
+  btf::make_mock "${BT_TEMP_DIR}/out/default/host-tools/device-finder"
+
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
+  # Fake the fastboot tool by inserting a fastboot() function to override it.
+  btf::make_mock "${PATH_DIR_FOR_TEST}/fake-fastboot"
+  {
+    echo "function fastboot() {
+      fake-fastboot \"\$@\"
+}
+    ";
+    cat "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh";
+  } >"${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh.tmp"
+  mv "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh.tmp" \
+     "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh"
+}
+
+TEST_fx_flash_ssh() {
+  cat >"${PATH_DIR_FOR_TEST}/fake-fastboot.mock_side_effects" <<INPUT
+if [[ "\$1" == "devices" ]]; then
+  echo "97300YCABZZ5AA	fastboot"
+fi
+INPUT
+  BT_EXPECT ${fx} flash
+  source "${BT_TEMP_DIR}/out/default/flash.sh.mock_state"
+  BT_EXPECT [[ "${BT_MOCK_ARGS[1]}" == "--ssh-key="*".ssh/fuchsia_authorized_keys" ]]
+}
+
+TEST_fx_flash_ssh_falls_back_to_recovery_if_not_exist() {
+  # Remove the ssh key file
+  rm "${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
+  cat >"${PATH_DIR_FOR_TEST}/fake-fastboot.mock_side_effects" <<INPUT
+if [[ "\$1" == "devices" ]]; then
+  echo "97300YCABZZ5AA	fastboot"
+fi
+INPUT
+  BT_EXPECT ${fx} flash
+  flash_script="${BT_TEMP_DIR}/out/default/flash.sh"
+  source "${flash_script}.mock_state"
+  btf::expect-mock-args "${flash_script}" --recovery
+}
+
+BT_RUN_TESTS "$@"

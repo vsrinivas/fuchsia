@@ -15,6 +15,9 @@
 # since this will normally be a Zedboot image which does not use an FVM and
 # allows the user to then pave the full OS.
 #
+# The script supports a "--ssh-key" arg which specifies the ssh key file to
+# provision to the device.
+#
 # The script also supports a "--recovery" arg which always flashes recovery
 # images whether the FVM is available or not.
 
@@ -133,6 +136,7 @@ ZIRCON_VBMETA=${ZIRCON_VBMETA}
 RECOVERY_IMAGE=${RECOVERY_IMAGE}
 RECOVERY_VBMETA=${RECOVERY_VBMETA}
 RECOVERY=
+SSH_KEY=
 
 for i in "\$@"
 do
@@ -141,6 +145,10 @@ case \$i in
     RECOVERY=true
     ZIRCON_IMAGE=${RECOVERY_IMAGE}
     ZIRCON_VBMETA=${RECOVERY_VBMETA}
+    shift
+    ;;
+    --ssh-key=*)
+    SSH_KEY="\${i#*=}"
     shift
     ;;
     *)
@@ -170,6 +178,14 @@ for firmware in "${FIRMWARE[@]}"; do
   erase_raw_flash "${fw_part}"
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${fw_part}" \"\${DIR}/${fw_path}\" "${extra_args[@]}" >> "${OUTPUT}"
 done
+
+# Reboot into bootloader so that the new firmware image takes effect.
+if [[ ! -z "${FIRMWARE[@]}" ]]; then
+  echo "${FASTBOOT_PATH} reboot bootloader" >> "${OUTPUT}"
+  # Wait for 1 seconds so that the reboot process can be recognized by the script.
+  echo "sleep 1" >> "${OUTPUT}"
+fi
+
 if [[ ! -z "${ZIRCON_A_PARTITION}" ]]; then
   erase_raw_flash ${ZIRCON_A_PARTITION}
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_A_PARTITION}" \"\${DIR}/\${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
@@ -199,12 +215,19 @@ if [[ ! -z "${FVM_PARTITION}" ]]; then
   # it's worth skipping if we're only flashing recovery and don't need it.
   echo "if [[ -z \"\${RECOVERY}\" ]]; then" >> "${OUTPUT}"
   erase_raw_flash ${FVM_PARTITION}
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${FVM_PARTITION}" \"\${DIR}/${FVM_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
+  echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${FVM_PARTITION}" \"\${DIR}/${FVM_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
   echo "fi" >> "${OUTPUT}"
 fi
+
+# Provision ssh key from fastboot. The key file is specified via --ssh-key arg.
+echo "if [[ ! -z \"\${SSH_KEY}\" ]]; then" >> "${OUTPUT}"
+echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\"" >> "${OUTPUT}"
+echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
+echo "fi" >> "${OUTPUT}"
+
 if [[ ! -z "${ACTIVE_PARTITION}" ]]; then
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" set_active "${ACTIVE_PARTITION}" >> "${OUTPUT}"
 fi
-echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" reboot >> "${OUTPUT}"
+echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" continue >> "${OUTPUT}"
 
 chmod +x "${OUTPUT}"
