@@ -15,18 +15,27 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.update.usb:fuchsia.update.usb-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/lib/update-package",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/sys/pkg/lib/version",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   sources = [
     "src/main.rs",
@@ -46,6 +55,6 @@ fuchsia_package("usb-system-update-checker") {
 }
 
 fuchsia_unittest_package("usb-system-update-checker-tests") {
-  executable_path = "bin/usb_system_update_checker_bin_test"
+  manifest = "meta/usb-system-update-checker-tests.cmx"
   deps = [ ":bin_test" ]
 }

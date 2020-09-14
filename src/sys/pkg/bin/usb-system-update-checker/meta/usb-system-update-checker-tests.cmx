@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/usb_system_update_checker_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
