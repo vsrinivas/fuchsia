@@ -144,16 +144,28 @@ workstation.
 #### `fx emu-remote` Command
 
 These instructions work for local machines with macOS or Linux, and require SSH
-access to a Linux workstation that is already able to run FEMU.
+access to a Linux workstation capable of building Fuchsia.
 
-On the terminal of your local machine, type the following to start the emulator
-with networking on remote workstation and have the output forwarded using WebRTC
-to a Chrome tab on local machine:
+On the terminal of your local machine, type the following to build, fetch the
+artifacts and start the emulator with networking:
 
 ```posix-terminal
 cd $FUCHSIA_DIR
 
-fx emu-remote <remote-hostname> -- -N
+fx emu-remote {{ '<var>REMOTE-WORKSTATION-NAME</var>' }}  -- -N
+```
+
+Alternatively, start the emulator on remote workstation, and open an WebRTC
+connection to it using local browser.
+
+On the terminal of your local machine, type the following to start the emulator
+with networking on {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} and have the
+output forwarded using WebRTC to a Chrome tab on local machine:
+
+```posix-terminal
+cd $FUCHSIA_DIR
+
+fx emu-remote --stream {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} -- -N
 ```
 
 This by default uses software rendering and GPU acceleration is supported by
@@ -162,7 +174,7 @@ using an existing X server on the remote machine with access to GPU hardware:
 ```posix-terminal
 cd $FUCHSIA_DIR
 
-fx emu-remote --display :0 <remote-hostname> -- -N
+fx emu-remote --stream --display :0 {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} -- -N
 ```
 
 Any arguments after “--” will be passed to the fx emu invocation on the remote
