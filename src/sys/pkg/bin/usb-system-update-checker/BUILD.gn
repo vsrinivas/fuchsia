@@ -26,6 +26,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/update-package",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -34,6 +35,7 @@ rustc_binary("bin") {
   test_deps = [
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/sys/pkg/lib/version",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
   ]
 

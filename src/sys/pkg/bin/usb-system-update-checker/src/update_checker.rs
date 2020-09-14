@@ -6,11 +6,16 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy, UpdatePolicy},
+    fidl_fuchsia_update_installer::{
+        Initiator, InstallerMarker, InstallerProxy, MonitorMarker, MonitorRequest, Options,
+        RebootControllerMarker, State,
+    },
     fidl_fuchsia_update_usb::{
-        CheckError, CheckSuccess, CheckerRequest, CheckerRequestStream, MonitorMarker,
+        CheckError, CheckSuccess, CheckerRequest, CheckerRequestStream,
+        MonitorMarker as UsbMonitorMarker,
     },
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::fx_log_warn,
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -49,7 +54,7 @@ impl UsbUpdateChecker<'_> {
         &self,
         unpinned_update_url: &str,
         _logs_dir: Option<fidl::endpoints::ClientEnd<DirectoryMarker>>,
-        _monitor: Option<fidl::endpoints::ClientEnd<MonitorMarker>>,
+        monitor: Option<fidl::endpoints::ClientEnd<UsbMonitorMarker>>,
     ) -> Result<CheckSuccess, CheckError> {
         let unpinned_update_url = PkgUrl::parse(unpinned_update_url)
             .map_err(|e| {
@@ -62,7 +67,7 @@ impl UsbUpdateChecker<'_> {
             })
             .and_then(|url| self.validate_url(url))?;
 
-        let (package, _pinned_update_url) =
+        let (package, pinned_update_url) =
             self.open_update_package(unpinned_update_url).await.map_err(|e| {
                 fx_log_warn!("Failed to open update package: {:#}", anyhow!(e));
                 CheckError::UpdateFailed
@@ -77,7 +82,93 @@ impl UsbUpdateChecker<'_> {
             return Ok(CheckSuccess::UpdateNotNeeded);
         }
 
-        todo!();
+        if let Some(client_end) = monitor {
+            self.send_on_update_started(client_end).map_err(|e| {
+                fx_log_warn!("Failed to send on update start: {:#}", anyhow!(e));
+                CheckError::UpdateFailed
+            })?;
+        }
+
+        let proxy = connect_to_service::<InstallerMarker>().map_err(|e| {
+            fx_log_warn!("Failed to connect to update installer: {:#}", anyhow!(e));
+            CheckError::UpdateFailed
+        })?;
+
+        self.install_update(pinned_update_url, proxy).await.map_err(|e| {
+            fx_log_warn!("Failed to install update: {:#}", anyhow!(e));
+            CheckError::UpdateFailed
+        })?;
+
+        Ok(CheckSuccess::UpdatePerformed)
+    }
+
+    async fn install_update(
+        &self,
+        update_url: PkgUrl,
+        installer: InstallerProxy,
+    ) -> Result<(), Error> {
+        let mut url = fidl_fuchsia_pkg::PackageUrl { url: update_url.to_string() };
+        let options = Options {
+            initiator: Some(Initiator::User),
+            allow_attach_to_existing_attempt: Some(false),
+            should_write_recovery: Some(true),
+        };
+
+        let (controller, controller_remote) =
+            fidl::endpoints::create_proxy::<RebootControllerMarker>()
+                .context("Creating reboot controller")?;
+
+        let (monitor_client, mut monitor) =
+            fidl::endpoints::create_request_stream::<MonitorMarker>()
+                .context("Creating update monitor")?;
+
+        installer
+            .start_update(&mut url, options, monitor_client, Some(controller_remote))
+            .await
+            .context("Sending start update request")?
+            .map_err(|e| anyhow!("Failed starting update: {:?}", e))?;
+        controller.detach().context("Detaching the reboot controller")?;
+
+        while let Some(request) = monitor.try_next().await.context("Getting monitor event")? {
+            match request {
+                MonitorRequest::OnState { state, responder } => {
+                    responder.send().context("Sending monitor ack")?;
+                    match state {
+                        State::Complete(_) | State::DeferReboot(_) => {
+                            fx_log_info!("Update complete!");
+                            return Ok(());
+                        }
+                        State::Reboot(_) => {
+                            fx_log_err!(
+                                "The system updater is rebooting, even though we asked it not to!"
+                            );
+                            return Ok(());
+                        }
+                        State::FailPrepare(_) | State::FailFetch(_) | State::FailStage(_) => {
+                            fx_log_warn!("The update installation failed.");
+                            return Err(anyhow!("Failed to install update"));
+                        }
+                        State::Prepare(_)
+                        | State::Fetch(_)
+                        | State::Stage(_)
+                        | State::WaitToReboot(_) => {}
+                    }
+                }
+            }
+        }
+
+        // Fail closed, so that we don't reboot mid-update.
+        fx_log_warn!("System updater closed monitor connection before the update finished.");
+        return Err(anyhow!("Update monitor stopped receiving events"));
+    }
+
+    fn send_on_update_started(
+        &self,
+        client: fidl::endpoints::ClientEnd<UsbMonitorMarker>,
+    ) -> Result<(), Error> {
+        let proxy = client.into_proxy().context("Creating monitor proxy")?;
+        proxy.on_update_started().context("Sending update start")?;
+        Ok(())
     }
 
     async fn is_update_required(&self, new_version: SystemVersion) -> Result<bool, CheckError> {
@@ -165,8 +256,14 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_pkg::PackageUrl,
+        fidl_fuchsia_update_installer::{
+            DeferRebootData, FailPrepareData, FetchData, InstallerRequest, InstallerRequestStream,
+            MonitorProxy, PrepareData, RebootControllerRequest, RebootControllerRequestStream,
+            StageData, WaitToRebootData,
+        },
         fidl_fuchsia_update_usb::{CheckerMarker, CheckerProxy},
         fuchsia_async as fasync,
+        matches::assert_matches,
         std::io::Write,
         version::Version as SemanticVersion,
     };
@@ -269,5 +366,85 @@ mod tests {
 
         let version = SystemVersion::Semantic(SemanticVersion::from([99999, 99999, 99999, 99999]));
         assert_eq!(env.checker.is_update_required(version).await, Err(CheckError::UpdateFailed));
+    }
+
+    const FAKE_ATTEMPT_ID: &str = "01234567-89ab-cdef-0123-456789abcdef";
+    async fn handle_installer(
+        mut stream: InstallerRequestStream,
+    ) -> (MonitorProxy, RebootControllerRequestStream) {
+        while let Some(request) = stream.try_next().await.expect("Getting request succeeds") {
+            match request {
+                InstallerRequest::StartUpdate {
+                    url: _,
+                    options: _,
+                    monitor,
+                    reboot_controller,
+                    responder,
+                } => {
+                    responder.send(&mut Ok(FAKE_ATTEMPT_ID.to_string())).expect("Send succeeds");
+                    let monitor = monitor.into_proxy().expect("Monitor into proxy succeeds");
+                    let reboot_controller = reboot_controller
+                        .unwrap()
+                        .into_stream()
+                        .expect("Reboot controller into stream succeeds");
+
+                    return (monitor, reboot_controller);
+                }
+                req => panic!("Unexpected request: {:?}", req),
+            }
+        }
+        unreachable!("Should have panicked or returned");
+    }
+
+    async fn run_update(mut states: Vec<State>) -> Result<(), Error> {
+        let checker = UsbUpdateChecker::new();
+        let (proxy, installer_stream) =
+            fidl::endpoints::create_proxy_and_stream::<InstallerMarker>()
+                .expect("create proxy and stream succeeds");
+
+        // Start installing the update.
+        let checker_task = fasync::Task::spawn(async move {
+            checker
+                .install_update(
+                    PkgUrl::from_str("fuchsia-pkg://fuchsia.com/my-cool-update").unwrap(),
+                    proxy,
+                )
+                .await
+        });
+        // Wait for the 'install' request once we've spawned the update task.
+        let (monitor, mut controller) = handle_installer(installer_stream).await;
+
+        // Make sure the update detaches.
+        assert_matches!(controller.next().await, Some(Ok(RebootControllerRequest::Detach { .. })));
+
+        // Send the fake states to the monitor one by one.
+        for mut state in states.iter_mut() {
+            monitor
+                .on_state(&mut state)
+                .await
+                .expect(&format!("on_state succeeds for {:?}", state));
+        }
+
+        checker_task.await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_install_update_succeeds() {
+        let states = vec![
+            State::Prepare(PrepareData {}),
+            State::Fetch(FetchData { info: None, progress: None }),
+            State::Stage(StageData { info: None, progress: None }),
+            State::WaitToReboot(WaitToRebootData { info: None, progress: None }),
+            State::DeferReboot(DeferRebootData { info: None, progress: None }),
+        ];
+
+        run_update(states).await.expect("Update succeeds");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_install_update_fails() {
+        let states = vec![State::Prepare(PrepareData {}), State::FailPrepare(FailPrepareData {})];
+
+        run_update(states).await.expect_err("Update should fail");
     }
 }
