@@ -12,6 +12,7 @@ fs::Environment* fs::g_environment;
 
 int main(int argc, char** argv) {
   fs::Environment::TestConfig config = {};
+  config.is_packaged = false;
   config.mount_path = "/tmp/foo";
   config.format_type = DISK_FORMAT_BLOBFS;
   config.ramdisk_block_count = 1 << 16;  // 32 MB.

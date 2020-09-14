@@ -15,7 +15,7 @@ int main(int argc, const char* argv[]) {
   // We might not need this test at all in the future, when we have paging enabled by default on all
   // platforms. The tests will then have the pager enabled by default as well.
 
-  std::vector<const char*> args = {"/boot/test/blobfs-integration-test", "--pager"};
+  std::vector<const char*> args = {"/pkg/test/blobfs-integration-test", "--pager"};
   for (int i = 1; i < argc; ++i) {
     args.push_back(argv[i]);
   }

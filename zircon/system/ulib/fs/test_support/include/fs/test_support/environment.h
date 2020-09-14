@@ -50,6 +50,10 @@ class Environment : public zxtest::Environment {
   // a real block device (physical_device_path) or a ram-disk device of a given
   // size (ramdisk_block_count, when the path is null).
   struct TestConfig {
+    // Indicates that this test is running in a packaged environment which affects the paths of
+    // different things.
+    bool is_packaged = true;
+
     uint64_t ramdisk_block_count;
     const char* physical_device_path;  // Path to an existing device.
 

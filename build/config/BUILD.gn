@@ -1077,6 +1077,8 @@ config("icf") {
   }
 }
 
+# "_ALL_SOURCE" is used by some system headers to expose more features (say in fcntl.h) beyond those
+# strictly defined in standard.
 config("all_source") {
   defines = [ "_ALL_SOURCE" ]
 }

@@ -2,49 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
-import("//src/storage/blobfs/test/blobfs_large_integration_test.gni")
 import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":blobfs-unittest" ]
+  deps = [
+    ":blobfs-integration-package",
+    ":blobfs-unittest",
+  ]
 }
 
 group("host_tests") {
   testonly = true
   deps = [ ":blobfs-host" ]
-}
-
-# TODO(fxb/52911): Remove once all targets migrated to test packages.
-group("bootfs-tests") {
-  testonly = true
-  deps = [
-    ":blobfs-integration-bootfs-test",
-    ":blobfs-integration-paged-bootfs-test",
-    ":blobfs-large-integration-fragmentation-bootfs-test",
-    ":blobfs-large-integration-fragmentation-paged-bootfs-test",
-    ":blobfs-large-integration-max-reservation-bootfs-test",
-    ":blobfs-large-integration-max-reservation-paged-bootfs-test",
-    ":blobfs-large-integration-no-space-bootfs-test",
-    ":blobfs-large-integration-no-space-paged-bootfs-test",
-    ":blobfs-large-integration-short-bootfs-test",
-    ":blobfs-large-integration-short-paged-bootfs-test",
-    ":blobfs-large-integration-use-second-bitmap-bootfs-test",
-    ":blobfs-large-integration-use-second-bitmap-paged-bootfs-test",
-  ]
 }
 
 executable("test_binary") {
@@ -204,12 +177,9 @@ source_set("integration-fixtures") {
 test("blobfs-integration") {
   output_name = "blobfs-integration-test"
 
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-  if (configs + fdio_config - fdio_config != configs) {
-    configs -= fdio_config
-  }
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
   configs += [ "//build/config:all_source" ]
+
   sources = [
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",
@@ -226,8 +196,8 @@ test("blobfs-integration") {
     ":integration-fixtures",
     ":test-utils-zxtest",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
     "//src/devices/block/bin/ftl_proxy:ftl-util",
@@ -251,9 +221,166 @@ test("blobfs-integration") {
   public_deps = [ "//zircon/system/ulib/fidl-utils" ]
 }
 
-bootfs_test("blobfs-integration-bootfs-test") {
-  name = "blobfs-integration-test"
-  deps = [ ":blobfs-integration" ]
+isolated_devmgr_unittest_component("blobfs-integration-component") {
+  executable_path = "test/blobfs-integration-test"
+  component_name = "blobfs-integration"
+
+  # This is required for the Vmex resource to get executable blobs.
+  services = [ "fuchsia.security.resource.Vmex" ]
+
+  deps = [
+    ":blobfs-integration",
+    "//src/devices/block/bin/blktest",
+    "//src/devices/block/bin/iochk",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ftl",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/nand/drivers/nand",
+    "//src/devices/nand/drivers/ram-nand",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+test("blobfs-integration-paged-test") {
+  sources = [
+    "integration/blobfs_integration_paged_main.cc",
+    "integration/launch.cc",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
+  public_deps = [ ":test-utils-zxtest" ]
+}
+
+isolated_devmgr_unittest_component("blobfs-integration-paged-component") {
+  executable_path = "test/blobfs-integration-paged-test"
+  component_name = "blobfs-integration-paged"
+  services = [ "fuchsia.security.resource.Vmex" ]
+  deps = [ ":blobfs-integration-paged-test" ]
+}
+
+# Creates two components, one regular one that runs the test named with the name
+# "<target_name>", and on paged one named "<target_name>-paged". The target names will have
+# "-component" appended to them.
+template("blobfs_large_integration_test") {
+  test_name = target_name
+  component_name = "${target_name}-component"
+
+  test(test_name) {
+    output_name = invoker.target_name
+
+    sources = invoker.sources + [ "integration/large/main.cc" ]
+
+    include_dirs = [ "integration" ]
+
+    deps = [
+      ":integration-fixtures",
+      ":load-generator",
+      ":test-utils-zxtest",
+      "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+      "//sdk/lib/fdio",
+      "//src/storage/blobfs",
+      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fdio-caller",
+      "//zircon/system/ulib/fs-test-utils",
+      "//zircon/system/ulib/fs/test_support",
+      "//zircon/system/ulib/fvm",
+      "//zircon/system/ulib/memfs",
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+
+  paged_test_name = "${target_name}-paged"
+  paged_component_name = "${paged_test_name}-component"
+
+  test(paged_test_name) {
+    sources = [
+      "integration/large/paged_main.cc",
+      "integration/launch.cc",
+    ]
+
+    defines = [ "BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE=\"$test_name\"" ]
+    include_dirs = [ "integration" ]
+
+    deps = [
+      "//sdk/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
+  }
+
+  isolated_devmgr_unittest_component(component_name) {
+    executable_path = "test/$test_name"
+    component_name = test_name
+
+    # TODO(bug 59859) "SysInfo" service should no longer be needed when the board querying code is
+    # removed and this line can be deleted.
+    services = [ "fuchsia.sysinfo.SysInfo" ]
+    deps = [ ":$test_name" ]
+  }
+
+  isolated_devmgr_unittest_component(paged_component_name) {
+    executable_path = "test/$paged_test_name"
+    component_name = paged_test_name
+
+    # TODO(bug 59859) "SysInfo" service should no longer be needed when the board querying code is
+    # removed and this line can be deleted.
+    services = [ "fuchsia.sysinfo.SysInfo" ]
+    deps = [ ":$paged_test_name" ]
+  }
+}
+
+# :blobfs-fragmentation-component       -> blobfs-fragmentation.cmx
+# :blobfs-fragmentation-paged-component -> blobfs-fragmentation-paged.cmx
+blobfs_large_integration_test("blobfs-fragmentation") {
+  sources = [ "integration/large/fragmentation.cc" ]
+}
+
+# :blobfs-max-reservation-component       -> blobfs-max-reservation.cmx
+# :blobfs-max-reservation-paged-component -> blobfs-max-reservation-paged.cmx
+blobfs_large_integration_test("blobfs-max-reservation") {
+  sources = [ "integration/large/max-reservation.cc" ]
+}
+
+# :blobfs-no-space-component       -> blobfs-no-space.cmx
+# :blobfs-no-space-paged-component -> blobfs-no-space-paged.cmx
+blobfs_large_integration_test("blobfs-no-space") {
+  sources = [ "integration/large/no-space.cc" ]
+}
+
+# :blobfs-use-second-bitmap-component       -> blobfs-use-second-bitmap.cmx
+# :blobfs-use-second-bitmap-paged-component -> blobfs-use-second-bitmap-paged.cmx
+blobfs_large_integration_test("blobfs-use-second-bitmap") {
+  sources = [ "integration/large/use-second-bitmap.cc" ]
+}
+
+fuchsia_test_package("blobfs-integration-package") {
+  package_name = "blobs-integration"
+  test_components = [
+    ":blobfs-fragmentation-component",
+    ":blobfs-fragmentation-paged-component",
+    ":blobfs-integration-component",
+    ":blobfs-integration-paged-component",
+    ":blobfs-max-reservation-component",
+    ":blobfs-max-reservation-paged-component",
+    ":blobfs-no-space-component",
+    ":blobfs-no-space-paged-component",
+    ":blobfs-use-second-bitmap-component",
+    ":blobfs-use-second-bitmap-paged-component",
+  ]
 }
 
 source_set("load-generator") {
@@ -267,50 +394,6 @@ source_set("load-generator") {
     "//zircon/system/ulib/fs-test-utils",
   ]
   public_deps = [ ":test-utils-zxtest" ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-blobfs_large_integration_test("fragmentation") {
-  sources = [ "integration/large/fragmentation.cc" ]
-}
-
-blobfs_large_integration_test("max-reservation") {
-  sources = [ "integration/large/max-reservation.cc" ]
-}
-
-blobfs_large_integration_test("no-space") {
-  sources = [ "integration/large/no-space.cc" ]
-}
-
-blobfs_large_integration_test("short") {
-  sources = [ "integration/large/short.cc" ]
-}
-
-blobfs_large_integration_test("use-second-bitmap") {
-  sources = [ "integration/large/use-second-bitmap.cc" ]
-}
-
-test("blobfs-integration-paged-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-  if (configs + fdio_config - fdio_config != configs) {
-    configs -= fdio_config
-  }
-  sources = [
-    "integration/blobfs_integration_paged_main.cc",
-    "integration/launch.cc",
-  ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-bootfs_test("blobfs-integration-paged-bootfs-test") {
-  name = "blobfs-integration-paged-test"
-  deps = [ ":blobfs-integration-paged-test" ]
 }
 
 fuzzer("zstd-fuzzer") {

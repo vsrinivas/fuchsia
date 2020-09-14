@@ -1,3 +1,5 @@
+fuchsia-pkg://fuchsia.com/blobs-integration#meta/blobfs-integration.cmx
+fuchsia-pkg://fuchsia.com/blobs-integration#meta/blobfs-integration-paged.cmx
 fuchsia-pkg://fuchsia.com/bootsvc-tests#meta/bootfs-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-host-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/fshost-tests#meta/fshost-loader-service-test.cmx

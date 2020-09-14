@@ -122,6 +122,7 @@ test("minfs-integration") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/tests/sysdev",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

@@ -21,6 +21,7 @@ TEST(EnvironmentTest, OptionsPassThrough) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_TRUE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_FALSE(config.show_help);
 }
@@ -30,6 +31,7 @@ TEST(EnvironmentTest, ShortOptionsPassThrough) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_TRUE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_TRUE(config.show_help);
 }
@@ -46,6 +48,7 @@ TEST(EnvironmentTest, OptionalArgsPassThrough) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_TRUE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_FALSE(config.show_help);
 }
@@ -55,6 +58,7 @@ TEST(EnvironmentTest, Help) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_TRUE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_TRUE(config.show_help);
   EXPECT_NOT_NULL(config.HelpMessage());
@@ -65,6 +69,7 @@ TEST(EnvironmentTest, RejectsUnknownOption) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_FALSE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_FALSE(config.show_help);
 }
@@ -75,6 +80,7 @@ TEST(EnvironmentTest, ValidOptions) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_TRUE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_STR_EQ("path", config.physical_device_path);
   EXPECT_FALSE(config.use_journal);
@@ -85,6 +91,7 @@ TEST(EnvironmentTest, RejectsMissingDevice) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_FALSE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_NULL(config.physical_device_path);
 }
@@ -95,6 +102,7 @@ TEST(EnvironmentTest, ValidPowerOptions) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_TRUE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_EQ(10, config.power_stride);
   EXPECT_EQ(20, config.power_start);
@@ -106,6 +114,7 @@ TEST(EnvironmentTest, InvalidPowerStride) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_FALSE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_EQ(1, config.power_stride);
 }
@@ -115,6 +124,7 @@ TEST(EnvironmentTest, InvalidPowerStart) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_FALSE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_EQ(1, config.power_start);
 }
@@ -124,6 +134,7 @@ TEST(EnvironmentTest, InvalidPowerCycles) {
   optind = 1;
 
   Environment::TestConfig config = {};
+  config.is_packaged = false;
   EXPECT_FALSE(config.GetOptions(std::size(options) - 1, const_cast<char**>(options)));
   EXPECT_EQ(5, config.power_cycles);
 }

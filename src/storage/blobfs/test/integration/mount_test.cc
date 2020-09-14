@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/security/resource/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -48,25 +48,21 @@ class OutgoingMountTest : public blobfs::FdioTest {
   OutgoingMountTest() { set_layout(blobfs::ServeLayout::kExportDirectory); }
 };
 
-class ExecutableMountTest : public DataMountTest {
+class ExecutableMountTest : public blobfs::FdioTest {
  public:
-  ExecutableMountTest() : DataMountTest() {
+  ExecutableMountTest() : blobfs::FdioTest() {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
     ASSERT_OK(status);
 
-    // It would be more appropriate to use fuchsia.security.resource.Vmex here, but that would
-    // require adding that service to svchost since this is still a non-packaged Zircon test.
-    // fuchsia.boot.RootResource is already available so we just use that instead of expanding
-    // svchost further.
-    status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote.release());
-    ASSERT_OK(status, "Failed to connect to fuchsia.boot.RootResource: %d\n", status);
+    status = fdio_service_connect("/svc/fuchsia.security.resource.Vmex", remote.release());
+    ASSERT_OK(status, "Failed to connect to fuchsia.security.resource.Vmex: %d\n", status);
 
-    auto client = llcpp::fuchsia::boot::RootResource::SyncClient{std::move(local)};
+    auto client = llcpp::fuchsia::security::resource::Vmex::SyncClient{std::move(local)};
     auto result = client.Get();
-    ASSERT_TRUE(result.ok(), "fuchsia.boot.RootResource.Get() failed: %d\n", result.status());
+    ASSERT_TRUE(result.ok(), "fuchsia.security.resource.Vmex.Get() failed: %d\n", result.status());
 
-    set_vmex_resource(std::move(result.Unwrap()->resource));
+    set_vmex_resource(std::move(result.Unwrap()->vmex));
   }
 };
 

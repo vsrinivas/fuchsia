@@ -19,13 +19,15 @@
 namespace {
 
 // Filters out platforms where there's very little upside in running this test.
-// TODO(fxbug.dev/39752): This should be controlled with build options.
+// TODO(fxbug.dev/59898): This should be controlled with build options.
 bool RunInThisPlatform() {
   fbl::unique_fd sysinfo(open("/svc/fuchsia.sysinfo.SysInfo", O_RDONLY));
   fdio_cpp::FdioCaller caller(std::move(sysinfo));
   auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(caller.channel());
   if (result.status() != ZX_OK || result->status != ZX_OK) {
-    return false;
+    // Defaulting to running the test for query failures prevents us from skipping the test silently
+    // if some configuration goes bad.
+    return true;
   }
 
   if (strncmp(result->name.data(), "astro", result->name.size()) == 0) {
