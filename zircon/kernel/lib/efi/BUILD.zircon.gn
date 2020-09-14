@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("efi") {
   visibility = [
     "$zx/bootloader/*",
@@ -11,4 +13,28 @@ zx_library("efi") {
   ]
   kernel = true
   sources = []
+  static = true
+  sdk = "source"
+  sdk_headers = [
+    "efi/boot-services.h",
+    "runtime-services.h",
+    "system-table.h",
+    "types.h",
+    "protocol/block-io.h",
+    "protocol/device-path.h",
+    "protocol/device-path-to-text.h",
+    "protocol/disk-io.h",
+    "protocol/driver-binding.h",
+    "protocol/file.h",
+    "protocol/graphics-output.h",
+    "protocol/loaded-image.h",
+    "protocol/managed-network.h",
+    "protocol/pci-root-bridge-io.h",
+    "protocol/simple-file-system.h",
+    "protocol/simple-network.h",
+    "protocol/simple-text-input.h",
+    "protocol/simple-text-output.h",
+    "protocol/usb-io.h",
+  ]
+  sdk_migrated = true
 }
