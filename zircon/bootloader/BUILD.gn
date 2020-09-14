@@ -44,11 +44,9 @@ if (current_toolchain == default_toolchain) {
   zircon_efi_toolchain("efi_arm64") {
     cpu = "arm64"
   }
-} else {
-  assert(
-      current_toolchain == "//zircon/bootloader:efi_${current_cpu}",
-      "current_toolchain is ${current_toolchain} and should be efi_${current_cpu}")
+}
 
+if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
   # This is the top config for all code in the efi_toolchain.
   config("efi_config") {
     configs = [
@@ -69,5 +67,32 @@ if (current_toolchain == default_toolchain) {
   group("efi_config_deps") {
   }
 
-  # TODO(digit): bootloader executable
+  # TODO(digit): Rename to 'bootloader' after migration completes.
+  executable("bootloader-gn") {
+    output_dir = root_out_dir
+    if (current_cpu == "arm64") {
+      output_name = "bootaa64"
+    } else {
+      output_name = "boot${current_cpu}"
+    }
+    output_extension = "efi"
+
+    deps = [
+      "lib",
+      "src",
+    ]
+
+    ldflags = [
+      "-Wl,/subsystem:efi_application",
+      "-Wl,/entry:efi_main",
+
+      # These only really affect instrumented builds but are always harmless.
+      "-noprofilelib",
+      "-Wl,/nodefaultlib",
+    ]
+  }
+} else {
+  group("bootloader-gn") {
+    public_deps = [ ":bootloader-gn(//zircon/bootloader:efi_${current_cpu})" ]
+  }
 }
