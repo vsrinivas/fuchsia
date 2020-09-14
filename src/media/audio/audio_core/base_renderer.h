@@ -140,7 +140,7 @@ class BaseRenderer : public AudioObject,
   Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
-  std::unique_ptr<Reporter::Renderer> reporter_;
+  Reporter::Container<Reporter::Renderer>::Ptr reporter_;
 
   zx::clock raw_clock_;
   bool client_allows_clock_adjustment_ = true;

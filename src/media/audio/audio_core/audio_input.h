@@ -74,7 +74,7 @@ class AudioInput : public AudioDevice {
 
   zx::channel initial_stream_channel_;
   State state_ = State::Uninitialized;
-  std::unique_ptr<Reporter::InputDevice> reporter_;
+  Reporter::Container<Reporter::InputDevice>::Ptr reporter_;
 };
 
 }  // namespace media::audio

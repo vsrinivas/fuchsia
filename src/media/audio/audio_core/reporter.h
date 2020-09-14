@@ -10,6 +10,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/inspect/cpp/component.h>
 
+#include <mutex>
+#include <queue>
+#include <set>
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
@@ -60,6 +63,8 @@ class Reporter {
    public:
     virtual ~Device() = default;
 
+    virtual void Destroy() = 0;
+
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
@@ -79,6 +84,8 @@ class Reporter {
   class Renderer {
    public:
     virtual ~Renderer() = default;
+
+    virtual void Destroy() = 0;
 
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
@@ -103,6 +110,8 @@ class Reporter {
    public:
     virtual ~Capturer() = default;
 
+    virtual void Destroy() = 0;
+
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
@@ -119,13 +128,68 @@ class Reporter {
     virtual void Overflow(zx::time start_time, zx::time end_time) = 0;
   };
 
+  // This class is an implementation detail.
+  // Container::Ptr is a smart pointer that calls T::Destroy() when the Ptr is destructed.
+  // The underlying object may be cached for some time afterwards.
+  template <typename T>
+  class Container {
+   public:
+    class Ptr {
+     public:
+      Ptr(Container<T>* c, std::shared_ptr<T> p) : container_(c), ptr_(p) {}
+      Ptr(const Ptr&) = delete;
+      Ptr(Ptr&&) = default;
+      ~Ptr() { Drop(); }
+
+      T& operator*() const { return *ptr_; }
+      T* operator->() const { return ptr_.get(); }
+
+      void Drop() {
+        if (ptr_) {
+          ptr_->Destroy();
+          container_->Kill(ptr_);
+          ptr_.reset(static_cast<T*>(nullptr));
+        }
+      }
+
+     private:
+      Container<T>* container_;
+      std::shared_ptr<T> ptr_;
+    };
+
+   private:
+    static constexpr size_t kObjectsToCache = 4;
+    friend class Reporter;
+    friend class Ptr;
+
+    Ptr New(T* object) {
+      std::shared_ptr<T> ptr(object);
+      std::lock_guard<std::mutex> lock(mutex_);
+      alive_.insert(ptr);
+      return Ptr(this, ptr);
+    }
+
+    void Kill(const std::shared_ptr<T>& ptr) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      alive_.erase(ptr);
+      while (dead_.size() >= kObjectsToCache) {
+        dead_.pop();
+      }
+      dead_.push(ptr);
+    }
+
+    std::mutex mutex_;
+    std::set<std::shared_ptr<T>> alive_ FXL_GUARDED_BY(mutex_);
+    std::queue<std::shared_ptr<T>> dead_ FXL_GUARDED_BY(mutex_);
+  };
+
   Reporter() {}
   Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model);
 
-  std::unique_ptr<OutputDevice> CreateOutputDevice(const std::string& name);
-  std::unique_ptr<InputDevice> CreateInputDevice(const std::string& name);
-  std::unique_ptr<Renderer> CreateRenderer();
-  std::unique_ptr<Capturer> CreateCapturer();
+  Container<OutputDevice>::Ptr CreateOutputDevice(const std::string& name);
+  Container<InputDevice>::Ptr CreateInputDevice(const std::string& name);
+  Container<Renderer>::Ptr CreateRenderer();
+  Container<Capturer>::Ptr CreateCapturer();
 
   // Device creation failures.
   void FailedToOpenDevice(const std::string& name, bool is_input, int err);
@@ -179,8 +243,8 @@ class Reporter {
     uint64_t next_renderer_name FXL_GUARDED_BY(mutex) = 0;
     uint64_t next_capturer_name FXL_GUARDED_BY(mutex) = 0;
 
-    Impl(sys::ComponentContext& cc, ThreadingModel& tm)
-        : component_context(cc), threading_model(tm) {}
+    Impl(sys::ComponentContext& cc, ThreadingModel& tm);
+    ~Impl();
 
     std::string NextRendererName() {
       std::lock_guard<std::mutex> lock(mutex);
@@ -194,6 +258,12 @@ class Reporter {
 
   std::mutex mutex_;
   std::unique_ptr<Impl> impl_ FXL_GUARDED_BY(mutex_);
+
+  // Caches of allocated objects so they can live beyond destruction.
+  Container<OutputDevice> outputs_;
+  Container<InputDevice> inputs_;
+  Container<Renderer> renderers_;
+  Container<Capturer> capturers_;
 };
 
 }  // namespace media::audio
