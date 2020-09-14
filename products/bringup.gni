@@ -6,6 +6,7 @@ bootfs_only = true
 
 kernel_cmdline_args = [
   "blobfs.userpager=true",
+  "blobfs.cache-eviction-policy=NEVER_EVICT",
   "console.shell=true",
   "devmgr.log-to-debuglog=true",
   "kernel.enable-debugging-syscalls=true",
