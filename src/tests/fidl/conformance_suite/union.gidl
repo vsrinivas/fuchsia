@@ -91,42 +91,6 @@ success("FlexibleUnionUnknownValue") {
     },
 }
 
-encode_failure("FlexibleUnionUnknownValue") {
-    // bindings that do not allow re-encoding unknown variants
-    bindings_allowlist = [go,],
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion{
-            1234: {
-                // padding must be included in the raw bytes
-                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
-            },
-        },
-    },
-    err = STRICT_UNION_UNKNOWN_FIELD,
-}
-
-decode_success("FlexibleUnionUnknownValue") {
-    // Bindings that do not allow re-encoding unknown variants. If a binding
-    // DOES allow re-encoding, it should be added to the general success test
-    // for FlexibleUnionUnknownValue
-    bindings_allowlist = [go,],
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion{
-            1234: {
-                // padding must be included in the raw bytes
-                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
-            },
-        },
-    },
-    bytes = {
-        v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8): 4, num(0): 4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
-        ],
-    },
-}
-
 decode_failure("StrictUnionUnknownValue") {
     type = TestStrictXUnionInStruct,
     bytes = {

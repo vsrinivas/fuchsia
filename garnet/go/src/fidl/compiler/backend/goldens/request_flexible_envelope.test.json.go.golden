@@ -3,6 +3,7 @@
 package json
 
 import (
+	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -61,6 +62,7 @@ const (
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData    []byte
+	I_unknownHandles []_zx.HandleInfo
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
 }

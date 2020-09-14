@@ -4,6 +4,7 @@ package example
 
 import (
 	exampleusing "fidl/exampleusing"
+	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -120,6 +121,7 @@ const (
 type ExampleXUnion struct {
 	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData      []byte
+	I_unknownHandles   []_zx.HandleInfo
 	Variant            uint32 `fidl_ordinal:"1"`
 }
 

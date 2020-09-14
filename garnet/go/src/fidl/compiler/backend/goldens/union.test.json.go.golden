@@ -3,6 +3,7 @@
 package json
 
 import (
+	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -179,6 +180,7 @@ const (
 type FlexiblePizzaOrPasta struct {
 	I_flexiblePizzaOrPastaTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData             []byte
+	I_unknownHandles          []_zx.HandleInfo
 	Pizza                     Pizza `fidl_ordinal:"1"`
 	Pasta                     Pasta `fidl_ordinal:"2"`
 }
@@ -331,6 +333,7 @@ const (
 type FlexibleUnion struct {
 	I_flexibleUnionTag               `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData                    []byte
+	I_unknownHandles                 []_zx.HandleInfo
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
@@ -569,6 +572,7 @@ const (
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData    []byte
+	I_unknownHandles []_zx.HandleInfo
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
 }
@@ -664,6 +668,7 @@ const (
 type ExplicitFoo struct {
 	I_explicitFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData    []byte
+	I_unknownHandles []_zx.HandleInfo
 	S                string `fidl_bounds:"" fidl_ordinal:"2"`
 	I                int32  `fidl_ordinal:"1"`
 }
@@ -759,6 +764,7 @@ const (
 type OlderSimpleUnion struct {
 	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData         []byte
+	I_unknownHandles      []_zx.HandleInfo
 	I                     int64   `fidl_ordinal:"1"`
 	F                     float32 `fidl_ordinal:"2"`
 }
@@ -812,6 +818,7 @@ const (
 type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData         []byte
+	I_unknownHandles      []_zx.HandleInfo
 	I                     int64    `fidl_ordinal:"1"`
 	S                     string   `fidl_bounds:"" fidl_ordinal:"2"`
 	V                     []string `fidl_bounds:"" fidl_ordinal:"3"`
@@ -933,6 +940,7 @@ const (
 type XUnionContainingEmptyStruct struct {
 	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData                    []byte
+	I_unknownHandles                 []_zx.HandleInfo
 	Empty                            Empty `fidl_ordinal:"1"`
 }
 
@@ -1001,6 +1009,7 @@ const (
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData       []byte
+	I_unknownHandles    []_zx.HandleInfo
 	I                   int64   `fidl_ordinal:"1"`
 	F                   float32 `fidl_ordinal:"4"`
 }

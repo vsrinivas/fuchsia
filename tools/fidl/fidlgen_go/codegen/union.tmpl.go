@@ -23,6 +23,7 @@ type {{ .Name }} struct {
 	{{ .TagName }} ` + "`{{.Tags}}`" + `
 	{{- if .IsFlexible }}
 	I_unknownData []byte
+	I_unknownHandles []_zx.HandleInfo
 	{{- end }}
 	{{- range .Members }}
 	{{- range .DocComments}}

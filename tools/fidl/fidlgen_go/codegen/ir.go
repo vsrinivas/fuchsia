@@ -836,6 +836,10 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
+	// flexible types require zx since they store handles
+	if val.Strictness == types.IsFlexible {
+		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
+	}
 	var members []UnionMember
 	for _, member := range val.Members {
 		if member.Reserved {
