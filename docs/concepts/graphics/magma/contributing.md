@@ -102,7 +102,7 @@ For some changes, it's appropriate to run benchmarks to validate performance met
 
 For details on the Vulkan conformance test suite, see
 
-* [../third_party/vulkan-cts](/third_party/vulkan-cts/README.md)
+* [third_party/vulkan-cts](https://fuchsia.googlesource.com/third_party/vulkan-cts/+/master/README.md)
 
 ### See Also
 * [Test Strategy](test_strategy.md)
