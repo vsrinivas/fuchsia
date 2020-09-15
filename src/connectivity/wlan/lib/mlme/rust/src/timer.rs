@@ -50,7 +50,6 @@ impl<E> Timer<E> {
     }
 
     pub fn schedule_event(&mut self, deadline: zx::Time, event: E) -> EventId {
-        println!("Scheduling event...");
         let event_id = (self.scheduler.schedule)(self.scheduler.cookie, deadline.into_nanos());
         self.events.insert(event_id, event);
         event_id
