@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,13 +8,13 @@ import sys
 
 
 def usage():
-    print 'Usage:'
-    print '  virtio_magma_generic.h.gen.py INPUT OUTPUT'
-    print '    INPUT    json file containing the magma interface definition'
-    print '    OUTPUT   destination path for the header file to generate'
-    print '  Example: virtio_magma_generic.h.gen.py magma.json virtio_magma_generic.h'
-    print '  Generates a generic "glue" class that directly translates between'
-    print '  virtmagma structs and magma commands, that may be overridden.'
+    print('Usage:')
+    print('  virtio_magma_generic.h.gen.py INPUT OUTPUT')
+    print('    INPUT    json file containing the magma interface definition')
+    print('    OUTPUT   destination path for the header file to generate')
+    print('  Example: virtio_magma_generic.h.gen.py magma.json virtio_magma_generic.h')
+    print('  Generates a generic "glue" class that directly translates between')
+    print('  virtmagma structs and magma commands, that may be overridden.')
 
 
 # License string for the top of the file.
