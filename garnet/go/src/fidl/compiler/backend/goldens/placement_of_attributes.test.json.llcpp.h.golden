@@ -165,6 +165,8 @@ class ExampleXUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -241,6 +243,8 @@ class ExampleUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -297,6 +301,8 @@ class ExampleTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;
@@ -655,6 +661,7 @@ struct ExampleStruct {
   static constexpr bool IsResource = false;
 
   uint32_t member = {};
+  void _CloseHandles();
 };
 
 constexpr uint32_t EXAMPLE_CONST = 0u;

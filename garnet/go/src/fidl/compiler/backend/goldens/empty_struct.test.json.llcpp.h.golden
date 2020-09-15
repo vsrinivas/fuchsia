@@ -52,6 +52,7 @@ struct Empty {
   static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendRequestTable;

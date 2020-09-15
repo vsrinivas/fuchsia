@@ -86,6 +86,8 @@ class SimpleTable final {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
   class Builder;
   class UnownedBuilder;
 
@@ -305,6 +307,8 @@ class ReverseOrdinalTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;
@@ -540,6 +544,8 @@ class OlderSimpleTable final {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
   class Builder;
   class UnownedBuilder;
 
@@ -717,6 +723,8 @@ class NewerSimpleTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 120;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;
@@ -941,6 +949,8 @@ class EmptyTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;

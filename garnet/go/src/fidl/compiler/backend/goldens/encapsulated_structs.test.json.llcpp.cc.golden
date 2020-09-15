@@ -8,7 +8,21 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace encapsulatedstructs {}  // namespace encapsulatedstructs
+namespace encapsulatedstructs {
+
+void NonInlineStructTestStruct::_CloseHandles() { h.reset(); }
+
+void Int8Int32::_CloseHandles() {}
+
+void Int16Int8::_CloseHandles() {}
+
+void ArrayInt16Int8::_CloseHandles() {}
+
+void StructPaddingTestStruct::_CloseHandles() {}
+
+void TopLevelStruct::_CloseHandles() { b._CloseHandles(); }
+
+}  // namespace encapsulatedstructs
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

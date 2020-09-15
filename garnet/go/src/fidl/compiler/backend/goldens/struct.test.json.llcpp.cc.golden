@@ -8,7 +8,13 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace json {
+
+void Simple::_CloseHandles() {}
+
+void BasicStruct::_CloseHandles() {}
+
+}  // namespace json
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

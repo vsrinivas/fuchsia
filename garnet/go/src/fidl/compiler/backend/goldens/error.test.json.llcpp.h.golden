@@ -122,6 +122,8 @@ class Example_foo_Result {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -168,6 +170,7 @@ struct Example_foo_Response {
   static constexpr bool IsResource = false;
 
   int64_t y = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;

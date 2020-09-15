@@ -53,6 +53,7 @@ struct ExampleUseOfVectors {
   ::fidl::VectorView<uint8_t> vector_of_uint8 = {};
 
   ::fidl::VectorView<::fidl::VectorView<bool>> vector_of_vector_of_bool = {};
+  void _CloseHandles();
 };
 
 }  // namespace json

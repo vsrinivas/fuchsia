@@ -9,6 +9,21 @@ const fragmentUnionTmpl = `
 class {{ .Name }};
 {{- end }}
 
+{{- define "UnionMemberCloseHandles" }}
+  {{- if .Type.IsResource }}
+    case Ordinal::{{ .TagName }}: {
+      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false true }}
+      break;
+    }
+  {{- else if .Type.ExternalDeclaration }}
+    case Ordinal::{{ .TagName }}:
+      if constexpr ({{ .Type.LLClass }}::IsResource) {
+        {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false true }}
+      }
+      break;
+  {{- end }}
+{{- end }}
+
 {{- define "UnionDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
@@ -85,6 +100,8 @@ class {{ .Name }} {
   static constexpr bool HasPointer = {{ .HasPointer }};
   static constexpr bool IsResource = {{ .IsResource }};
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -138,6 +155,18 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_t));
   static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
+void {{ .Name }}::_CloseHandles() {
+  {{- if .IsResource }}
+  switch (ordinal_) {
+  {{- range .Members }}
+    {{- template "UnionMemberCloseHandles" . }}
+  {{- end }}
+  default:
+    break;
+  }
+  {{- end }}
 }
 {{- end }}
 

@@ -187,6 +187,10 @@ class {{ .Name }} final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    {{- if .ResponseIsResource }}
+    void _CloseHandles();
+    {{- end }}
+
    private:
     void _InitHeader();
   };
@@ -279,7 +283,7 @@ class {{ .Name }} final {
       {{- if and .HasResponse .ResponseIsResource }}
       ~{{ .Name }}() {
         if (ok()) {
-          fidl_close_handles({{ .Name }}Response::Type, {{- template "ResponseReceivedByteAccess" . }}, nullptr);
+          Unwrap()->_CloseHandles();
         }
       }
       {{- else }}
@@ -344,7 +348,7 @@ class {{ .Name }} final {
       {{- if and .HasResponse .ResponseIsResource }}
       ~{{ .Name }}() {
         if (ok()) {
-          fidl_close_handles({{ .Name }}Response::Type, bytes_, nullptr);
+          Unwrap()->_CloseHandles();
         }
       }
       {{- else }}
@@ -878,6 +882,14 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
     void {{ .LLProps.ProtocolName }}::{{ .Name }}Response::_InitHeader() {
       fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
     }
+      {{- if .ResponseIsResource }}
+
+    void {{ .LLProps.ProtocolName }}::{{ .Name }}Response::_CloseHandles() {
+      {{- range .Response }}
+        {{- template "StructMemberCloseHandles" . }}
+      {{- end }}
+    }
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

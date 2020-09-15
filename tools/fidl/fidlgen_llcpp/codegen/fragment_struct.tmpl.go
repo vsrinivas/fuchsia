@@ -9,6 +9,16 @@ const fragmentStructTmpl = `
 struct {{ .Name }};
 {{- end }}
 
+{{- define "StructMemberCloseHandles" }}
+  {{- if .Type.IsResource }}
+    {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false false }}
+  {{- else if .Type.ExternalDeclaration }}
+  if constexpr ({{ .Type.LLClass }}::IsResource) {
+    {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false false }}
+  }
+  {{- end }}
+{{- end }}
+
 {{- define "StructDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
@@ -31,10 +41,17 @@ struct {{ .Name }} {
   {{- end }}
   {{ .Type.LLDecl }} {{ .Name }} = {};
   {{- end }}
+  void _CloseHandles();
 };
 {{- end }}
 
 {{- define "StructDefinition" }}
+
+void {{ .Name }}::_CloseHandles() {
+  {{- range .Members }}
+    {{- template "StructMemberCloseHandles" . }}
+  {{- end }}
+}
 {{- end }}
 
 {{- define "StructTraits" }}

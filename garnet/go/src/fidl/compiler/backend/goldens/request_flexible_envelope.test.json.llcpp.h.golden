@@ -115,6 +115,8 @@ class StrictFoo {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -218,6 +220,8 @@ class FlexibleFoo {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

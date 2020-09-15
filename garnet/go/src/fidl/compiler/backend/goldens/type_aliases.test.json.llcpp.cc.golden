@@ -6,5 +6,24 @@
 
 namespace llcpp {
 
-namespace example {}  // namespace example
+namespace example {
+
+void ExampleOfUseOfAliases::_CloseHandles() {
+  if constexpr (::llcpp::someotherlibrary::ReferenceMe::IsResource) {
+    {
+      ::llcpp::someotherlibrary::ReferenceMe*
+          field_of_vec_at_most_5_of_reference_me_element =
+              field_of_vec_at_most_5_of_reference_me.mutable_data();
+      for (uint64_t i = 0; i < field_of_vec_at_most_5_of_reference_me.count();
+           ++i, ++field_of_vec_at_most_5_of_reference_me_element) {
+        field_of_vec_at_most_5_of_reference_me_element->_CloseHandles();
+      }
+    }
+  }
+  field_of_channel.reset();
+  field_of_client_end.reset();
+  field_of_nullable_client_end.reset();
+}
+
+}  // namespace example
 }  // namespace llcpp

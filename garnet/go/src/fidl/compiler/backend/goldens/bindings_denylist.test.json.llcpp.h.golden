@@ -88,6 +88,8 @@ class OnlyLlcpp {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,

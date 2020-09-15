@@ -99,6 +99,8 @@ class UnionSize8Alignment4 {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -177,6 +179,8 @@ class UnionSize36Alignment4 {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -254,6 +258,8 @@ class UnionSize12Alignment4 {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -342,6 +348,8 @@ class UnionSize24Alignment8 {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -387,6 +395,7 @@ struct SandwichUnionSize8Alignment4 {
   ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4 union_ = {};
 
   uint32_t after = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -406,6 +415,7 @@ struct SandwichUnionSize36Alignment4 {
   ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4 union_ = {};
 
   uint32_t after = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -425,6 +435,7 @@ struct SandwichUnionSize12Alignment4 {
   ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4 union_ = {};
 
   int32_t after = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -442,6 +453,7 @@ struct StructSize16Alignment8 {
   uint64_t f1 = {};
 
   uint64_t f2 = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -461,6 +473,7 @@ struct SandwichUnionSize24Alignment8 {
   ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8 union_ = {};
 
   uint32_t after = {};
+  void _CloseHandles();
 };
 
 }  // namespace unionsandwich

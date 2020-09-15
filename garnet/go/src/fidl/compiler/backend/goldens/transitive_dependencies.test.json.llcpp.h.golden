@@ -49,6 +49,7 @@ struct Baz {
   static constexpr bool IsResource = false;
 
   ::llcpp::middle::Bar g = {};
+  void _CloseHandles();
 };
 
 }  // namespace top

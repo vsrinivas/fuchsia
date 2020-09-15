@@ -6,5 +6,9 @@
 
 namespace llcpp {
 
-namespace example {}  // namespace example
+namespace example {
+
+void ByteAndBytes::_CloseHandles() {}
+
+}  // namespace example
 }  // namespace llcpp

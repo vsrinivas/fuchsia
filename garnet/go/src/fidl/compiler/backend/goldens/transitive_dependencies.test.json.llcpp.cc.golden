@@ -6,5 +6,13 @@
 
 namespace llcpp {
 
-namespace top {}  // namespace top
+namespace top {
+
+void Baz::_CloseHandles() {
+  if constexpr (::llcpp::middle::Bar::IsResource) {
+    g._CloseHandles();
+  }
+}
+
+}  // namespace top
 }  // namespace llcpp

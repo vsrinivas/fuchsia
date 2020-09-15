@@ -9,6 +9,8 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+void WithErrorSyntax_ResponseAsStruct_Response::_CloseHandles() {}
+
 void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ResponseAsStruct_Result) ==
@@ -19,6 +21,10 @@ void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::
                 offsetof(fidl_xunion_t, envelope));
 }
 
+void WithErrorSyntax_ResponseAsStruct_Result::_CloseHandles() {}
+
+void WithErrorSyntax_ErrorAsPrimitive_Response::_CloseHandles() {}
+
 void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) ==
@@ -28,6 +34,10 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::
   static_assert(offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void WithErrorSyntax_ErrorAsPrimitive_Result::_CloseHandles() {}
+
+void WithErrorSyntax_ErrorAsEnum_Response::_CloseHandles() {}
 
 namespace {
 
@@ -569,7 +579,7 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
     void OnReply(MutateSocketResponse* message) override {
       cb_(std::move(message->b));
 
-      fidl_close_handles(type(), message, nullptr);
+      message->_CloseHandles();
 
       delete this;
     }
@@ -824,6 +834,8 @@ void ChannelProtocol::MutateSocketRequest::_InitHeader(zx_txid_t _txid) {
 void ChannelProtocol::MutateSocketResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
 }
+
+void ChannelProtocol::MutateSocketResponse::_CloseHandles() { b.reset(); }
 
 namespace {
 
@@ -1685,6 +1697,8 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::
   static_assert(offsetof(WithErrorSyntax_ErrorAsEnum_Result, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void WithErrorSyntax_ErrorAsEnum_Result::_CloseHandles() {}
 
 namespace {
 

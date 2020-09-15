@@ -9,6 +9,20 @@ const fragmentTableTmpl = `
 class {{ .Name }};
 {{- end }}
 
+{{- define "TableMemberCloseHandles" }}
+  {{- if .Type.IsResource }}
+    if (has_{{ .Name }}()) {
+      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer true false }}
+    }
+  {{- else if .Type.ExternalDeclaration }}
+    if constexpr ({{ .Type.LLClass }}::IsResource) {
+      if (has_{{ .Name }}()) {
+        {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer true false }}
+      }
+    }
+  {{- end }}
+{{- end }}
+
 {{- define "TableDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
@@ -50,6 +64,8 @@ public:
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
   static constexpr bool IsResource = {{ .IsResource }};
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;
@@ -129,22 +145,22 @@ class {{ .Name }}::Builder final {
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
-  {{- if .Type.IsTable }}
+  {{- if eq .Type.Kind TableKind }}
   {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
-  {{- if .Type.IsArray }}
-  {{- if .Type.ElementType.IsTable }}
+  {{- if eq .Type.Kind ArrayKind }}
+  {{- if eq .Type.ElementType.Kind TableKind }}
   ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
-  {{- if .Type.IsVector }}
-  {{- if .Type.ElementType.IsTable }}
+  {{- if eq .Type.Kind VectorKind }}
+  {{- if eq .Type.ElementType.Kind TableKind }}
   ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
@@ -199,22 +215,22 @@ public:
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
   }
-  {{- if .Type.IsTable }}
+  {{- if eq .Type.Kind TableKind }}
   {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
-  {{- if .Type.IsArray }}
-  {{- if .Type.ElementType.IsTable }}
+  {{- if eq .Type.Kind ArrayKind }}
+  {{- if eq .Type.ElementType.Kind TableKind }}
   ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
-  {{- if .Type.IsVector }}
-  {{- if .Type.ElementType.IsTable }}
+  {{- if eq .Type.Kind VectorKind }}
+  {{- if eq .Type.ElementType.Kind TableKind }}
   ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_.{{ .Name }}_.data);
@@ -241,6 +257,12 @@ private:
 {{- end }}
 
 {{- define "TableDefinition" }}
+
+void {{ .Name }}::_CloseHandles() {
+  {{- range .Members }}
+    {{- template "TableMemberCloseHandles" . }}
+  {{- end }}
+}
 {{- end }}
 
 {{- define "TableTraits" }}

@@ -16,6 +16,12 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
+void Union::_CloseHandles() {}
+
+void Table::_CloseHandles() {}
+
+void Struct::_CloseHandles() {}
+
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =

@@ -16,6 +16,8 @@ void ::llcpp::fidl::test::json::StrictFoo::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(StrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void StrictFoo::_CloseHandles() {}
 auto ::llcpp::fidl::test::json::FlexibleFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -34,6 +36,8 @@ void ::llcpp::fidl::test::json::FlexibleFoo::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(FlexibleFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void FlexibleFoo::_CloseHandles() {}
 
 namespace {
 

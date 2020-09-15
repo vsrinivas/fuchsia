@@ -10,6 +10,20 @@ namespace fidl {
 namespace test {
 namespace nullable {
 
+void StructWithNullableVector::_CloseHandles() {}
+
+void StructWithNullableUnion::_CloseHandles() {}
+
+void StructWithNullableStruct::_CloseHandles() {}
+
+void StructWithNullableString::_CloseHandles() {}
+
+void StructWithNullableRequest::_CloseHandles() { val.reset(); }
+
+void StructWithNullableProtocol::_CloseHandles() { val.reset(); }
+
+void StructWithNullableHandle::_CloseHandles() { val.reset(); }
+
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
@@ -185,6 +199,10 @@ void ::llcpp::fidl::test::nullable::SimpleUnion::
   static_assert(offsetof(SimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void SimpleUnion::_CloseHandles() {}
+
+void Int32Wrapper::_CloseHandles() {}
 
 }  // namespace nullable
 }  // namespace test

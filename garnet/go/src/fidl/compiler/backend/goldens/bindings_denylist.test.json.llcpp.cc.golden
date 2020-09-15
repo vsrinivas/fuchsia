@@ -16,6 +16,8 @@ void ::llcpp::test::name::OnlyLlcpp::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
+void OnlyLlcpp::_CloseHandles() {}
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

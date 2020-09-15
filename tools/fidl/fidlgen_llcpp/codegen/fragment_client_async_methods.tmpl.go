@@ -54,7 +54,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
     void OnReply({{ .Name }}Response* message) override {
       cb_({{ template "AsyncEventHandlerMoveParams" .Response }});
       {{ if and .HasResponse .ResponseIsResource }}
-      fidl_close_handles(type(), message, nullptr);
+      message->_CloseHandles();
       {{ end }}
       delete this;
     }

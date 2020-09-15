@@ -175,6 +175,7 @@ struct Handles {
   ::zx::channel some_protocol = {};
 
   ::zx::channel request_some_protocol = {};
+  void _CloseHandles();
 };
 
 class SomeProtocol final {

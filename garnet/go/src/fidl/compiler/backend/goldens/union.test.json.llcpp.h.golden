@@ -173,6 +173,8 @@ class Union {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -322,6 +324,8 @@ class StrictUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -461,6 +465,8 @@ class StrictSimpleXUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -573,6 +579,8 @@ class StrictFoo {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -657,6 +665,8 @@ class StrictBoundedXUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -757,6 +767,8 @@ class ReverseOrdinalUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -873,6 +885,8 @@ class StrictPizzaOrPasta {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -987,6 +1001,8 @@ class PizzaOrPasta {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1099,6 +1115,8 @@ class FlexiblePizzaOrPasta {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1215,6 +1233,8 @@ class ExplicitPizzaOrPasta {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1319,6 +1339,8 @@ class OlderSimpleUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1451,6 +1473,8 @@ class NewerSimpleUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1599,6 +1623,8 @@ class FlexibleUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1711,6 +1737,8 @@ class FlexibleFoo {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1797,6 +1825,8 @@ class FieldCollision {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1895,6 +1925,8 @@ class ExplicitXUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2005,6 +2037,8 @@ class ExplicitUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2113,6 +2147,8 @@ class ExplicitStrictFoo {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2217,6 +2253,8 @@ class ExplicitFoo {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2304,6 +2342,8 @@ class XUnionContainingEmptyStruct {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2342,6 +2382,7 @@ struct StructWithNullableXUnion {
   static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::json::OlderSimpleUnion x1 = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_json_PizzaTable;
@@ -2355,6 +2396,7 @@ struct Pizza {
   static constexpr bool IsResource = false;
 
   ::fidl::VectorView<::fidl::StringView> toppings = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_json_PastaTable;
@@ -2368,6 +2410,7 @@ struct Pasta {
   static constexpr bool IsResource = false;
 
   ::fidl::StringView sauce = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -3195,6 +3238,7 @@ struct NullableUnionStruct {
   static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::json::Union the_union = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_json_EmptyTable;
@@ -3208,6 +3252,7 @@ struct Empty {
   static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
+  void _CloseHandles();
 };
 
 }  // namespace json

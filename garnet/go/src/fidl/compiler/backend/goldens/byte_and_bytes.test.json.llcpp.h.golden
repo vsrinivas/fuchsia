@@ -54,6 +54,7 @@ struct ByteAndBytes {
   ::fidl::VectorView<uint8_t> only_one_k_bytes = {};
 
   ::fidl::VectorView<uint8_t> opt_only_one_k_bytes = {};
+  void _CloseHandles();
 };
 
 }  // namespace example

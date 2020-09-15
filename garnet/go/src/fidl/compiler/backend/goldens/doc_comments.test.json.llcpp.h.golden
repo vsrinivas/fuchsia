@@ -180,6 +180,8 @@ class Union {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -242,6 +244,8 @@ class Table final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;
@@ -384,6 +388,7 @@ struct Struct {
   //
   // struct member comment #3
   int32_t Field = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;

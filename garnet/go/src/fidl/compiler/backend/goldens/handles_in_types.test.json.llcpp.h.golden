@@ -94,6 +94,8 @@ class UnionWithHandle {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = true;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -150,6 +152,8 @@ class TableWithHandle final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = true;
+
+  void _CloseHandles();
 
   class Builder;
   class UnownedBuilder;
@@ -294,6 +298,7 @@ struct HandlesInTypes {
   ::llcpp::test::name::TableWithHandle table_with_handle = {};
 
   ::llcpp::test::name::UnionWithHandle union_with_handle = {};
+  void _CloseHandles();
 };
 
 }  // namespace name

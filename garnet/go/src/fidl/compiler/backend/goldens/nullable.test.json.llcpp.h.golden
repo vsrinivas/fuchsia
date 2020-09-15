@@ -125,6 +125,8 @@ class SimpleUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -169,6 +171,7 @@ struct StructWithNullableVector {
   static constexpr bool IsResource = false;
 
   ::fidl::VectorView<int32_t> val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
@@ -183,6 +186,7 @@ struct StructWithNullableUnion {
   static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::nullable::SimpleUnion val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
@@ -197,6 +201,7 @@ struct StructWithNullableStruct {
   static constexpr bool IsResource = false;
 
   ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::Int32Wrapper> val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
@@ -211,6 +216,7 @@ struct StructWithNullableString {
   static constexpr bool IsResource = false;
 
   ::fidl::StringView val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
@@ -225,6 +231,7 @@ struct StructWithNullableRequest {
   static constexpr bool IsResource = true;
 
   ::zx::channel val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
@@ -239,6 +246,7 @@ struct StructWithNullableProtocol {
   static constexpr bool IsResource = true;
 
   ::zx::channel val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
@@ -253,6 +261,7 @@ struct StructWithNullableHandle {
   static constexpr bool IsResource = true;
 
   ::zx::vmo val = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
@@ -626,6 +635,7 @@ struct Int32Wrapper {
   static constexpr bool IsResource = false;
 
   int32_t val = {};
+  void _CloseHandles();
 };
 
 }  // namespace nullable

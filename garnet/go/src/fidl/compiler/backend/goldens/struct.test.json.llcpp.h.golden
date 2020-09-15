@@ -53,6 +53,7 @@ struct Simple {
   uint8_t f1 = {};
 
   bool f2 = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
@@ -68,6 +69,7 @@ struct BasicStruct {
   uint32_t x = {};
 
   ::fidl::StringView y = {};
+  void _CloseHandles();
 };
 
 }  // namespace json

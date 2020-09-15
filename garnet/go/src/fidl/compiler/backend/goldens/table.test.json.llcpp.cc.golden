@@ -8,7 +8,19 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace json {
+
+void SimpleTable::_CloseHandles() {}
+
+void ReverseOrdinalTable::_CloseHandles() {}
+
+void OlderSimpleTable::_CloseHandles() {}
+
+void NewerSimpleTable::_CloseHandles() {}
+
+void EmptyTable::_CloseHandles() {}
+
+}  // namespace json
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

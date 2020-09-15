@@ -26,6 +26,58 @@ void ::llcpp::test::name::UnionWithHandle::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
+void UnionWithHandle::_CloseHandles() {
+  switch (ordinal_) {
+    case Ordinal::kH: {
+      mutable_h().reset();
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void TableWithHandle::_CloseHandles() {
+  if (has_h()) {
+    h().reset();
+  }
+}
+
+void HandlesInTypes::_CloseHandles() {
+  normal_handle.reset();
+  {
+    ::zx::vmo* handle_in_vec_element = handle_in_vec.mutable_data();
+    for (uint64_t i = 0; i < handle_in_vec.count();
+         ++i, ++handle_in_vec_element) {
+      handle_in_vec_element->reset();
+    }
+  }
+  {
+    ::zx::vmo* handle_in_array_element = handle_in_array.data();
+    for (size_t i = 0; i < handle_in_array.size();
+         ++i, ++handle_in_array_element) {
+      handle_in_array_element->reset();
+    }
+  }
+  {
+    ::fidl::Array<::zx::vmo, 5>* handle_in_mixed_vec_array_element =
+        handle_in_mixed_vec_array.mutable_data();
+    for (uint64_t i = 0; i < handle_in_mixed_vec_array.count();
+         ++i, ++handle_in_mixed_vec_array_element) {
+      {
+        ::zx::vmo* handle_in_mixed_vec_array_element_element =
+            (*handle_in_mixed_vec_array_element).data();
+        for (size_t i = 0; i < (*handle_in_mixed_vec_array_element).size();
+             ++i, ++handle_in_mixed_vec_array_element_element) {
+          handle_in_mixed_vec_array_element_element->reset();
+        }
+      }
+    }
+  }
+  table_with_handle._CloseHandles();
+  union_with_handle._CloseHandles();
+}
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

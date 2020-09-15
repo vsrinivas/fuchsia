@@ -39,7 +39,10 @@ var Kinds = struct {
 	Union    unionKind
 }{}
 
-type Decl interface{}
+type Decl interface {
+	isResource() bool
+	compileProperties(c compiler)
+}
 
 type FamilyKind string
 
@@ -57,15 +60,35 @@ const (
 	Vector FamilyKind = "Vector"
 )
 
+type TypeKind string
+
+const (
+	ArrayKind     TypeKind = "Array"
+	VectorKind    TypeKind = "Vector"
+	StringKind    TypeKind = "String"
+	HandleKind    TypeKind = "Handle"
+	RequestKind   TypeKind = "Request"
+	PrimitiveKind TypeKind = "Primitive"
+	BitsKind      TypeKind = "Bits"
+	EnumKind      TypeKind = "Enum"
+	ConstKind     TypeKind = "Const"
+	StructKind    TypeKind = "Struct"
+	TableKind     TypeKind = "Table"
+	UnionKind     TypeKind = "Union"
+	ProtocolKind  TypeKind = "Protocol"
+)
+
 type Type struct {
 	// Use Type.Decl when you want to _declare_ a class/struct, e.g. "class Foo { … }". If you need
 	// to reference a class by its name (e.g. "new Foo"), use the Type.Identifier() method instead.
 	// Identifier() will add a type qualifier to the class name so that the compiler will resolve
 	// the class, even if any locally non-type declarations are present (e.g. "enum Foo"). Google
 	// for "C++ elaborated type specifier" for more details.
-	Decl     string
-	FullDecl string // Decl but with full type name
-	LLDecl   string
+	Decl      string
+	FullDecl  string // Decl but with full type name
+	LLDecl    string
+	LLClass   string
+	LLPointer bool
 
 	// Defines what operation we should use to pass a value without a move (LLCPP). It also
 	// defines the way we should initialize a field.
@@ -75,17 +98,21 @@ type Type struct {
 	// or not.
 	NeedsDtor bool
 
-	DeclType types.DeclType
+	Kind TypeKind
 
-	IsPrimitive bool
-	IsArray     bool
-	IsVector    bool
-	IsTable     bool
+	IsResource          bool
+	ExternalDeclaration bool
+
+	DeclarationName types.EncodedCompoundIdentifier
 
 	// Set iff IsArray || IsVector
 	ElementType *Type
 	// Valid iff IsArray
 	ElementCount int
+}
+
+func (t Type) IsPrimitiveType() bool {
+	return t.Kind == PrimitiveKind || t.Kind == BitsKind || t.Kind == EnumKind
 }
 
 func (t Type) Identifier() string {
@@ -95,11 +122,40 @@ func (t Type) Identifier() string {
 
 	// Don't prepend type qualifiers to fully-qualified class names, which will begin with "::"
 	// (e.g. "::fidl::namespace:ClassName"): they can't be hidden by local declarations.
-	if t.IsPrimitive || strings.HasPrefix(t.Decl, "::") {
+	if t.IsPrimitiveType() || strings.HasPrefix(t.Decl, "::") {
 		return t.Decl
 	}
 
 	return "class " + t.Decl
+}
+
+func (t *Type) compileProperties(c compiler) {
+	if t.DeclarationName != "" {
+		declaration, ok := c.declarations[t.DeclarationName]
+		if !ok {
+			// The declaration comes from another library.
+			t.ExternalDeclaration = true
+		} else {
+			t.IsResource = declaration.isResource()
+		}
+	} else {
+		switch t.Kind {
+		case ArrayKind:
+			fallthrough
+		case VectorKind:
+			t.ElementType.compileProperties(c)
+			t.IsResource = t.ElementType.IsResource
+			t.ExternalDeclaration = t.ElementType.ExternalDeclaration
+			t.LLClass = t.ElementType.LLClass
+			t.LLPointer = t.ElementType.LLPointer
+		case HandleKind:
+			fallthrough
+		case RequestKind:
+			fallthrough
+		case ProtocolKind:
+			t.IsResource = true
+		}
+	}
 }
 
 type Const struct {
@@ -112,6 +168,13 @@ type Const struct {
 	Kind      constKind
 }
 
+func (c Const) isResource() bool {
+	return false
+}
+
+func (co *Const) compileProperties(c compiler) {
+}
+
 type Bits struct {
 	types.Attributes
 	Namespace string
@@ -121,6 +184,13 @@ type Bits struct {
 	MaskName  string
 	Members   []BitsMember
 	Kind      bitsKind
+}
+
+func (b Bits) isResource() bool {
+	return false
+}
+
+func (b *Bits) compileProperties(c compiler) {
 }
 
 type BitsMember struct {
@@ -136,6 +206,13 @@ type Enum struct {
 	Name      string
 	Members   []EnumMember
 	Kind      enumKind
+}
+
+func (e Enum) isResource() bool {
+	return false
+}
+
+func (e *Enum) compileProperties(c compiler) {
 }
 
 type EnumMember struct {
@@ -158,6 +235,16 @@ type Union struct {
 	IsResource   bool
 	Kind         unionKind
 	types.Strictness
+}
+
+func (u Union) isResource() bool {
+	return u.IsResource
+}
+
+func (u *Union) compileProperties(c compiler) {
+	for i := 0; i < len(u.Members); i++ {
+		u.Members[i].Type.compileProperties(c)
+	}
 }
 
 type UnionMember struct {
@@ -194,6 +281,16 @@ type Table struct {
 	Kind           tableKind
 	// Types of the members in ordinal order, "void" for reserved.
 	FrameItems []TableFrameItem
+}
+
+func (t Table) isResource() bool {
+	return t.IsResource
+}
+
+func (t *Table) compileProperties(c compiler) {
+	for i := 0; i < len(t.Members); i++ {
+		t.Members[i].Type.compileProperties(c)
+	}
 }
 
 type TableMember struct {
@@ -233,6 +330,16 @@ type Struct struct {
 	FullDeclMemcpyCompatibleDeps []string
 }
 
+func (s Struct) isResource() bool {
+	return s.IsResource
+}
+
+func (s *Struct) compileProperties(c compiler) {
+	for i := 0; i < len(s.Members); i++ {
+		s.Members[i].Type.compileProperties(c)
+	}
+}
+
 type StructMember struct {
 	types.Attributes
 	Type         Type
@@ -261,6 +368,16 @@ type Protocol struct {
 	Kind                protocolKind
 }
 
+func (p Protocol) isResource() bool {
+	return false
+}
+
+func (p *Protocol) compileProperties(c compiler) {
+	for i := 0; i < len(p.Methods); i++ {
+		p.Methods[i].compileProperties(c)
+	}
+}
+
 type Service struct {
 	types.Attributes
 	Namespace   string
@@ -268,6 +385,13 @@ type Service struct {
 	ServiceName string
 	Members     []ServiceMember
 	Kind        serviceKind
+}
+
+func (s Service) isResource() bool {
+	return false
+}
+
+func (s *Service) compileProperties(c compiler) {
 }
 
 type ServiceMember struct {
@@ -314,6 +438,15 @@ type Method struct {
 	Transitional            bool
 	Result                  *Result
 	LLProps                 LLProps
+}
+
+func (m *Method) compileProperties(c compiler) {
+	for i := 0; i < len(m.Request); i++ {
+		m.Request[i].Type.compileProperties(c)
+	}
+	for i := 0; i < len(m.Response); i++ {
+		m.Response[i].Type.compileProperties(c)
+	}
 }
 
 // LLContextProps contain context-dependent properties of a method specific to llcpp.
@@ -694,6 +827,7 @@ type compiler struct {
 	namespace          string
 	symbolPrefix       string
 	decls              types.DeclMap
+	declarations       map[types.EncodedCompoundIdentifier]Decl
 	library            types.LibraryIdentifier
 	handleTypes        map[types.HandleSubtype]struct{}
 	namespaceFormatter func(types.LibraryIdentifier, string) string
@@ -806,7 +940,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.LLFamily = Reference
 		r.NeedsDtor = true
-		r.IsArray = true
+		r.Kind = ArrayKind
 		r.ElementType = &t
 		r.ElementCount = *val.ElementCount
 	case types.VectorType:
@@ -821,7 +955,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.FullDecl = fmt.Sprintf("::std::vector<%s>", t.FullDecl)
 		}
 		r.NeedsDtor = true
-		r.IsVector = true
+		r.Kind = VectorKind
 		r.ElementType = &t
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
@@ -833,6 +967,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		}
 		r.FullDecl = r.Decl
 		r.NeedsDtor = true
+		r.Kind = StringKind
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
@@ -840,6 +975,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDecl = r.Decl
 		r.LLFamily = Reference
 		r.NeedsDtor = true
+		r.Kind = HandleKind
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
@@ -848,12 +984,13 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDecl = "::zx::channel"
 		r.LLFamily = Reference
 		r.NeedsDtor = true
+		r.Kind = RequestKind
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
 		r.LLFamily = TrivialCopy
-		r.IsPrimitive = true
+		r.Kind = PrimitiveKind
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
 		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
@@ -861,23 +998,43 @@ func (c *compiler) compileType(val types.Type) Type {
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
-		switch declType {
-		case types.BitsDeclType:
-			fallthrough
-		case types.EnumDeclType:
-			fallthrough
-		case types.ConstDeclType:
-			fallthrough
-		case types.StructDeclType:
-			fallthrough
-		case types.TableDeclType:
-			fallthrough
-		case types.UnionDeclType:
-			if declType.IsPrimitive() {
-				r.IsPrimitive = true
-			}
-			if declType == types.TableDeclType {
-				r.IsTable = true
+		if declType == types.ProtocolDeclType {
+			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
+			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
+			r.LLDecl = "::zx::channel"
+			r.LLFamily = Reference
+			r.NeedsDtor = true
+			r.Kind = ProtocolKind
+		} else {
+			switch declType {
+			case types.BitsDeclType:
+				r.Kind = BitsKind
+				r.LLFamily = TrivialCopy
+			case types.EnumDeclType:
+				r.Kind = EnumKind
+				r.LLFamily = TrivialCopy
+			case types.ConstDeclType:
+				r.Kind = ConstKind
+				r.LLFamily = Reference
+			case types.StructDeclType:
+				r.Kind = StructKind
+				r.DeclarationName = val.Identifier
+				r.LLFamily = Reference
+				r.LLClass = ft
+				r.LLPointer = val.Nullable
+			case types.TableDeclType:
+				r.Kind = TableKind
+				r.DeclarationName = val.Identifier
+				r.LLFamily = Reference
+				r.LLClass = ft
+				r.LLPointer = val.Nullable
+			case types.UnionDeclType:
+				r.Kind = UnionKind
+				r.DeclarationName = val.Identifier
+				r.LLFamily = Reference
+				r.LLClass = ft
+			default:
+				log.Fatal("Unknown declaration type: ", declType)
 			}
 
 			if val.Nullable {
@@ -895,21 +1052,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.LLDecl = ft
 				r.NeedsDtor = true
 			}
-			if declType.IsPrimitive() {
-				r.LLFamily = TrivialCopy
-			} else {
-				r.LLFamily = Reference
-			}
-		case types.ProtocolDeclType:
-			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
-			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
-			r.LLDecl = "::zx::channel"
-			r.LLFamily = Reference
-			r.NeedsDtor = true
-		default:
-			log.Fatal("Unknown declaration type: ", declType)
 		}
-		r.DeclType = declType
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)
 	}
@@ -1381,6 +1524,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		namespaceFormatter(library, ""),
 		formatLibraryPrefix(raw_library),
 		r.DeclsWithDependencies(),
+		map[types.EncodedCompoundIdentifier]Decl{},
 		types.ParseLibraryName(r.Name),
 		make(map[types.HandleSubtype]struct{}),
 		namespaceFormatter,
@@ -1398,26 +1542,25 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	}
 	root.LibraryReversed = libraryReversed
 
-	decls := map[types.EncodedCompoundIdentifier]Decl{}
 	for _, v := range r.Bits {
 		d := c.compileBits(v, "")
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
 	}
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v, "")
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
 	}
 
 	for _, v := range r.Enums {
 		d := c.compileEnum(v, "")
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
 	}
 
 	// Note: for Result calculation unions must be compiled before structs.
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
-		decls[v.Name] = d
+		c.declarations[v.Name] = &d
 	}
 
 	for _, v := range r.Structs {
@@ -1426,28 +1569,32 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 			continue
 		}
 		d := c.compileStruct(v, "")
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
 	}
 
 	for _, v := range r.Tables {
 		d := c.compileTable(v, "")
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
 	}
 
 	for _, v := range r.Protocols {
 		d := c.compileProtocol(v)
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
 	}
 
 	for _, v := range r.Services {
 		d := c.compileService(v)
-		decls[v.Name] = &d
+		c.declarations[v.Name] = &d
+	}
+
+	for _, v := range c.declarations {
+		v.compileProperties(c)
 	}
 
 	for _, v := range r.DeclOrder {
 		// We process only a subset of declarations mentioned in the declaration
 		// order, ignore those we do not support.
-		if d, known := decls[v]; known {
+		if d, known := c.declarations[v]; known {
 			root.Decls = append(root.Decls, d)
 		}
 	}

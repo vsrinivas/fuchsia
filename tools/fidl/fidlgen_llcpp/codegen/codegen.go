@@ -17,6 +17,16 @@ type Generator struct {
 	tmpls *template.Template
 }
 
+type TypedArgument struct {
+	ArgumentName  string
+	ArgumentValue string
+	ArgumentType  cpp.Type
+	Pointer       bool
+	Nullable      bool
+	Access        bool
+	MutableAccess bool
+}
+
 func NewGenerator() *Generator {
 	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
 		"Kinds": func() interface{} { return cpp.Kinds },
@@ -79,6 +89,69 @@ func NewGenerator() *Generator {
 		"Vector": func() cpp.FamilyKind {
 			return cpp.Vector
 		},
+		"ArrayKind": func() cpp.TypeKind {
+			return cpp.ArrayKind
+		},
+		"VectorKind": func() cpp.TypeKind {
+			return cpp.VectorKind
+		},
+		"StringKind": func() cpp.TypeKind {
+			return cpp.StringKind
+		},
+		"HandleKind": func() cpp.TypeKind {
+			return cpp.HandleKind
+		},
+		"RequestKind": func() cpp.TypeKind {
+			return cpp.RequestKind
+		},
+		"PrimitiveKind": func() cpp.TypeKind {
+			return cpp.PrimitiveKind
+		},
+		"BitsKind": func() cpp.TypeKind {
+			return cpp.BitsKind
+		},
+		"EnumKind": func() cpp.TypeKind {
+			return cpp.EnumKind
+		},
+		"ConstKind": func() cpp.TypeKind {
+			return cpp.ConstKind
+		},
+		"StructKind": func() cpp.TypeKind {
+			return cpp.StructKind
+		},
+		"TableKind": func() cpp.TypeKind {
+			return cpp.TableKind
+		},
+		"UnionKind": func() cpp.TypeKind {
+			return cpp.UnionKind
+		},
+		"ProtocolKind": func() cpp.TypeKind {
+			return cpp.ProtocolKind
+		},
+		"NewTypedArgument": func(argument_name string,
+			argument_type cpp.Type,
+			pointer bool,
+			access bool,
+			mutable_access bool) TypedArgument {
+			return TypedArgument{
+				ArgumentName:  argument_name,
+				ArgumentValue: argument_name,
+				ArgumentType:  argument_type,
+				Pointer:       pointer,
+				Nullable:      pointer,
+				Access:        access,
+				MutableAccess: mutable_access}
+		},
+		"NewTypedArgumentElement": func(argument_name string, argument_type cpp.Type) TypedArgument {
+			return TypedArgument{
+				ArgumentName:  argument_name + "_element",
+				ArgumentValue: "(*" + argument_name + "_element)",
+				ArgumentType:  argument_type,
+				Pointer:       true,
+				Nullable:      false,
+				Access:        false,
+				MutableAccess: false}
+		},
 	})
 	templates := []string{
 		fragmentBitsTmpl,
@@ -100,6 +173,7 @@ func NewGenerator() *Generator {
 		fragmentSyncRequestCallerAllocateTmpl,
 		fragmentSyncServerTmpl,
 		fragmentTableTmpl,
+		fragmentTypeTmpl,
 		fragmentUnionTmpl,
 		fileHeaderTmpl,
 		fileSourceTmpl,

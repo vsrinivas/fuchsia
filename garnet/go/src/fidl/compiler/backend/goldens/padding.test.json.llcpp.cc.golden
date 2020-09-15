@@ -8,7 +8,41 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace padding {}  // namespace padding
+namespace padding {
+
+void Padding7ByteMiddle::_CloseHandles() {}
+
+void Padding7ByteEnd::_CloseHandles() {}
+
+void Padding6ByteMiddle::_CloseHandles() {}
+
+void Padding6ByteEnd::_CloseHandles() {}
+
+void Padding5ByteMiddle::_CloseHandles() {}
+
+void Padding5ByteEnd::_CloseHandles() {}
+
+void Padding4ByteMiddle::_CloseHandles() {}
+
+void Padding4ByteEnd::_CloseHandles() {}
+
+void Padding4ByteAlignmentLength12::_CloseHandles() {}
+
+void Padding3ByteMiddle::_CloseHandles() {}
+
+void Padding3ByteEnd::_CloseHandles() {}
+
+void Padding2ByteMiddle::_CloseHandles() {}
+
+void Padding2ByteEnd::_CloseHandles() {}
+
+void Padding2ByteAlignmentLength6::_CloseHandles() {}
+
+void Padding1ByteMiddle::_CloseHandles() {}
+
+void Padding1ByteEnd::_CloseHandles() {}
+
+}  // namespace padding
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

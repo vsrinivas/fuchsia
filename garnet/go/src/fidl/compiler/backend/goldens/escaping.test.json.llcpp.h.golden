@@ -50,6 +50,7 @@ struct DocCommentWithQuotes {
   static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
+  void _CloseHandles();
 };
 
 }  // namespace escapeme

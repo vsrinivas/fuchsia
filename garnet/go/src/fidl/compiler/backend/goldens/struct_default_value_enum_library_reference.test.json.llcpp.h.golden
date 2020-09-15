@@ -49,6 +49,7 @@ struct Foo {
   static constexpr bool IsResource = false;
 
   ::llcpp::dependent::MyEnum field = {};
+  void _CloseHandles();
 };
 
 }  // namespace example

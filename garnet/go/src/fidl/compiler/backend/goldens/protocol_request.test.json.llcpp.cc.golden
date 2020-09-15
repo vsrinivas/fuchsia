@@ -142,7 +142,7 @@ void Parent::GetChildResponseContext::OnReply(uint8_t* reply) {
     void OnReply(GetChildResponse* message) override {
       cb_(std::move(message->c));
 
-      fidl_close_handles(type(), message, nullptr);
+      message->_CloseHandles();
 
       delete this;
     }
@@ -203,7 +203,7 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
     void OnReply(GetChildRequestResponse* message) override {
       cb_(std::move(message->r));
 
-      fidl_close_handles(type(), message, nullptr);
+      message->_CloseHandles();
 
       delete this;
     }
@@ -377,6 +377,8 @@ void Parent::GetChildResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kParent_GetChild_Ordinal);
 }
 
+void Parent::GetChildResponse::_CloseHandles() { c.reset(); }
+
 void Parent::GetChildRequestRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_GetChildRequest_Ordinal);
 }
@@ -384,6 +386,8 @@ void Parent::GetChildRequestRequest::_InitHeader(zx_txid_t _txid) {
 void Parent::GetChildRequestResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kParent_GetChildRequest_Ordinal);
 }
+
+void Parent::GetChildRequestResponse::_CloseHandles() { r.reset(); }
 
 void Parent::TakeChildRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_TakeChild_Ordinal);

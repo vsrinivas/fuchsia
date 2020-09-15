@@ -83,6 +83,11 @@ fidl("llcpptest.protocol.test") {
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
+fidl("llcpptest.handles.test") {
+  sources = [ "handles.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
 fidl("llcpptest.transitional.test") {
   sources = [ "transitional.test.fidl" ]
 }
@@ -95,6 +100,7 @@ executable("fidl_llcpp_types_test_bin") {
   sources = [
     "bits_test.cc",
     "flexible_test.cc",
+    "handle_test.cc",
     "linearized_and_encoded_test.cc",
     "protocol_test.cc",
     "table_test.cc",
@@ -108,6 +114,7 @@ executable("fidl_llcpp_types_test_bin") {
     ":fidl.llcpp.linearized.test_llcpp",
     ":fidl.llcpp.types.test_llcpp",
     ":llcpptest.flexible.test_llcpp",
+    ":llcpptest.handles.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
     ":llcpptest.transitional.test_llcpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

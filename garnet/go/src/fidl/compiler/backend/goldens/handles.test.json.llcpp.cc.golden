@@ -10,6 +10,42 @@ namespace fidl {
 namespace test {
 namespace handles {
 
+void Handles::_CloseHandles() {
+  plain_handle.reset();
+  bti_handle.reset();
+  channel_handle.reset();
+  clock_handle.reset();
+  debuglog_handle.reset();
+  event_handle.reset();
+  eventpair_handle.reset();
+  exception_handle.reset();
+  fifo_handle.reset();
+  guest_handle.reset();
+  interrupt_handle.reset();
+  iommu_handle.reset();
+  job_handle.reset();
+  pager_handle.reset();
+  pcidevice_handle.reset();
+  pmt_handle.reset();
+  port_handle.reset();
+  process_handle.reset();
+  profile_handle.reset();
+  resource_handle.reset();
+  socket_handle.reset();
+  suspendtoken_handle.reset();
+  thread_handle.reset();
+  timer_handle.reset();
+  vcpu_handle.reset();
+  vmar_handle.reset();
+  vmo_handle.reset();
+  rights_handle.reset();
+  aliased_plain_handle_field.reset();
+  aliased_subtype_handle_field.reset();
+  aliased_rights_handle_field.reset();
+  some_protocol.reset();
+  request_some_protocol.reset();
+}
+
 namespace {}  // namespace
 
 std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::DispatchEvent(

@@ -6,5 +6,9 @@
 
 namespace llcpp {
 
-namespace escapeme {}  // namespace escapeme
+namespace escapeme {
+
+void DocCommentWithQuotes::_CloseHandles() {}
+
+}  // namespace escapeme
 }  // namespace llcpp

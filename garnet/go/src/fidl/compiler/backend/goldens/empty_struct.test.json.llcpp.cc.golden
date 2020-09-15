@@ -10,6 +10,8 @@ namespace fidl {
 namespace test {
 namespace json {
 
+void Empty::_CloseHandles() {}
+
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_Ordinal =

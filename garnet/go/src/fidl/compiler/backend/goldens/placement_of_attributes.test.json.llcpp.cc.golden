@@ -127,6 +127,8 @@ void ::llcpp::example::ExampleXUnion::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
+void ExampleXUnion::_CloseHandles() {}
+
 void ::llcpp::example::ExampleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExampleUnion, ordinal_) ==
@@ -134,6 +136,12 @@ void ::llcpp::example::ExampleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(ExampleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void ExampleUnion::_CloseHandles() {}
+
+void ExampleTable::_CloseHandles() {}
+
+void ExampleStruct::_CloseHandles() {}
 
 }  // namespace example
 }  // namespace llcpp

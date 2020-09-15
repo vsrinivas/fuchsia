@@ -150,6 +150,8 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -277,6 +279,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -401,6 +405,8 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
+  void _CloseHandles();
+
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -453,6 +459,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
   int64_t b = {};
 
   int64_t c = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -468,6 +475,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
   static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t
@@ -483,6 +491,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
+  void _CloseHandles();
 };
 
 extern "C" const fidl_type_t test_name_TransitionalRequestRequestTable;
@@ -1229,6 +1238,7 @@ class ChannelProtocol final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+    void _CloseHandles();
 
    private:
     void _InitHeader();
@@ -1330,7 +1340,7 @@ class ChannelProtocol final {
       MutateSocket* operator=(const MutateSocket&) = delete;
       ~MutateSocket() {
         if (ok()) {
-          fidl_close_handles(MutateSocketResponse::Type, bytes_, nullptr);
+          Unwrap()->_CloseHandles();
         }
       }
 
@@ -1424,7 +1434,7 @@ class ChannelProtocol final {
       MutateSocket* operator=(const MutateSocket&) = delete;
       ~MutateSocket() {
         if (ok()) {
-          fidl_close_handles(MutateSocketResponse::Type, bytes_, nullptr);
+          Unwrap()->_CloseHandles();
         }
       }
 

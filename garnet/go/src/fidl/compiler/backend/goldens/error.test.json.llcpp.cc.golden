@@ -10,6 +10,8 @@ namespace fidl {
 namespace test {
 namespace json {
 
+void Example_foo_Response::_CloseHandles() {}
+
 void ::llcpp::fidl::test::json::Example_foo_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Example_foo_Result) == sizeof(fidl_xunion_t));
@@ -18,6 +20,8 @@ void ::llcpp::fidl::test::json::Example_foo_Result::
   static_assert(offsetof(Example_foo_Result, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+void Example_foo_Result::_CloseHandles() {}
 
 namespace {
 
