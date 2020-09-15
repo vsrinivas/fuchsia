@@ -93,19 +93,15 @@ func newSubprocessTester(dir string, env []string, perTestTimeout time.Duration)
 }
 
 func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
-	command := test.Command
-	if len(test.Command) == 0 {
-		if test.Path == "" {
-			return nil, fmt.Errorf("test %q has no `command` or `path` set", test.Name)
-		}
-		command = []string{test.Path}
+	if test.Path == "" {
+		return nil, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
 	if t.perTestTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout)
 		defer cancel()
 	}
-	err := t.r.Run(ctx, command, stdout, stderr)
+	err := t.r.Run(ctx, []string{test.Path}, stdout, stderr)
 	if err == context.DeadlineExceeded {
 		return nil, &timeoutError{t.perTestTimeout}
 	}
@@ -175,9 +171,7 @@ func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
 }
 
 func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
-	if t.perTestTimeout <= 0 || (
-	// We only know how to interpret the exit codes of these test runners.
-	test.Command[0] != runTestComponentName && test.Command[0] != runTestSuiteName) {
+	if t.perTestTimeout <= 0 {
 		return false
 	}
 	if exitErr, ok := err.(*ssh.ExitError); ok {
@@ -188,11 +182,14 @@ func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool
 
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
-	setCommand(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
+	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
+	if err != nil {
+		return nil, err
+	}
 	var testErr error
 	const maxReconnectAttempts = 3
 	retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
-		testErr = t.client.Run(ctx, test.Command, stdout, stderr)
+		testErr = t.client.Run(ctx, command, stdout, stderr)
 		if sshutil.IsConnectionError(testErr) {
 			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %v", testErr)
 			if err := t.reconnect(ctx); err != nil {
@@ -304,8 +301,11 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 }
 
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer) (runtests.DataSinkReference, error) {
-	setCommand(&test, true, dataOutputDir, t.perTestTimeout)
-	cmd := strings.Join(test.Command, " ")
+	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
+	if err != nil {
+		return nil, err
+	}
+	cmd := strings.Join(command, " ")
 	logger.Debugf(ctx, "starting: %s\n", cmd)
 	// The UART kernel driver expects a command to be followed by \r\n.
 	if _, err := io.WriteString(t.socket, cmd+"\r\n"); err != nil {
@@ -336,53 +336,44 @@ func (t *fuchsiaSerialTester) Close() error {
 	return t.socket.Close()
 }
 
-func setCommand(test *testsharder.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) {
-	if len(test.Command) > 0 {
-		return
-	}
-
+func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) ([]string, error) {
+	command := []string{}
 	if useRuntests {
-		test.Command = []string{runtestsName}
+		command = []string{runtestsName}
 		if remoteOutputDir != "" {
-			test.Command = append(test.Command, "--output", remoteOutputDir)
+			command = append(command, "--output", remoteOutputDir)
 		}
 		if timeout > 0 {
-			test.Command = append(test.Command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
+			command = append(command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
 		}
 		if test.PackageURL != "" {
-			test.Command = append(test.Command, test.PackageURL)
+			command = append(command, test.PackageURL)
 		} else {
-			test.Command = append(test.Command, test.Path)
+			command = append(command, test.Path)
 		}
 	} else if test.PackageURL != "" {
 		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
-			test.Command = []string{runTestSuiteName}
+			command = []string{runTestSuiteName}
 			if test.Parallel != 0 {
-				test.Command = append(test.Command, "--parallel", fmt.Sprintf("%d", test.Parallel))
+				command = append(command, "--parallel", fmt.Sprintf("%d", test.Parallel))
 			}
-			// TODO(fxbug.dev/49262): Once fixed, combine
-			// timeout flag setting for v1 and v2.
+			// TODO(fxbug.dev/49262): Once fixed, combine timeout flag setting for v1 and v2.
 			if timeout > 0 {
-				test.Command = append(test.Command, "--timeout", fmt.Sprintf("%d", int64(timeout.Seconds())))
+				command = append(command, "--timeout", fmt.Sprintf("%d", int64(timeout.Seconds())))
 			}
 		} else {
-			test.Command = []string{runTestComponentName}
+			command = []string{runTestComponentName}
 			if test.LogSettings.MaxSeverity != "" {
-				test.Command = append(test.Command, fmt.Sprintf("--max-log-severity=%s", test.LogSettings.MaxSeverity))
+				command = append(command, fmt.Sprintf("--max-log-severity=%s", test.LogSettings.MaxSeverity))
 			}
 
 			if timeout > 0 {
-				test.Command = append(test.Command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
+				command = append(command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
 			}
 		}
-		test.Command = append(test.Command, test.PackageURL)
+		command = append(command, test.PackageURL)
 	} else {
-		test.Command = []string{test.Path}
-		if timeout > 0 {
-			logger.Warningf(
-				context.Background(),
-				"timeout specified but will not be enforced because the test is being run directly (not by a runner such as %s)",
-				runTestComponentName)
-		}
+		return nil, fmt.Errorf("PackageURL is not set and useRuntests is false for %q", test.Name)
 	}
+	return command, nil
 }

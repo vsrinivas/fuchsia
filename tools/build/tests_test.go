@@ -60,7 +60,6 @@ func TestUnmarshalTest(t *testing.T) {
 				Path:            "",
 				Label:           "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
 				OS:              "fuchsia",
-				Command:         nil,
 				LogSettings:     LogSettings{MaxSeverity: "ERROR"},
 				RuntimeDepsFile: "",
 				Parallel:        2,
@@ -74,7 +73,6 @@ func TestUnmarshalTest(t *testing.T) {
 				Path:            "",
 				Label:           "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
 				OS:              "fuchsia",
-				Command:         nil,
 				LogSettings:     LogSettings{},
 				RuntimeDepsFile: "",
 				Parallel:        0,
@@ -88,7 +86,6 @@ func TestUnmarshalTest(t *testing.T) {
 				Path:            "",
 				Label:           "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
 				OS:              "fuchsia",
-				Command:         nil,
 				LogSettings:     LogSettings{},
 				RuntimeDepsFile: "",
 				Parallel:        0,
@@ -96,11 +93,11 @@ func TestUnmarshalTest(t *testing.T) {
 			Envs: []Environment{},
 		},
 	}
-	var test_specs []TestSpec
-	if err := json.Unmarshal([]byte(manifest), &test_specs); err != nil {
+	var testSpecs []TestSpec
+	if err := json.Unmarshal([]byte(manifest), &testSpecs); err != nil {
 		t.Fatalf("error un-marshalling test specs: %v", err)
 	}
-	if !reflect.DeepEqual(test_specs, expected) {
-		t.Fatalf("got test spec: %#v\n\nexpected: %#v", test_specs, expected)
+	if !reflect.DeepEqual(testSpecs, expected) {
+		t.Fatalf("got test spec: %#v\n\nexpected: %#v", testSpecs, expected)
 	}
 }

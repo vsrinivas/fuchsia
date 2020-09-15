@@ -79,12 +79,12 @@ func TestSubprocessTester(t *testing.T) {
 		wantCmd []string
 	}{
 		{
-			name:    "no command no path",
+			name:    "no path",
 			test:    build.Test{},
 			wantErr: true,
 		},
 		{
-			name: "no command yes path",
+			name: "yes path",
 			test: build.Test{
 				Path: "/foo/bar",
 			},
@@ -92,21 +92,11 @@ func TestSubprocessTester(t *testing.T) {
 			wantCmd: []string{"/foo/bar"},
 		},
 		{
-			name: "command succeeds",
-			test: build.Test{
-				Command: []string{"foo", "bar"},
-			},
-			wantErr: false,
-			wantCmd: []string{"foo", "bar"},
-		},
-		{
-			name: "command fails",
-			test: build.Test{
-				Command: []string{"foo", "bar"},
-			},
+			name:    "test fails",
+			test:    build.Test{Path: "/fail"},
 			runErrs: []error{fmt.Errorf("test failed")},
 			wantErr: true,
-			wantCmd: []string{"foo", "bar"},
+			wantCmd: []string{"/fail"},
 		},
 	}
 	for _, c := range cases {
@@ -217,7 +207,12 @@ func TestSSHTester(t *testing.T) {
 			}()
 			wantReconnCalls := len(c.reconErrs)
 			wantRunCalls := len(c.runErrs)
-			_, err := tester.Test(context.Background(), testsharder.Test{}, ioutil.Discard, ioutil.Discard)
+			test := testsharder.Test{
+				Test:         build.Test{PackageURL: "fuchsia-pkg://foo"},
+				Runs:         1,
+				RunAlgorithm: testsharder.StopOnSuccess,
+			}
+			_, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard)
 			if err == nil {
 				if c.wantErr {
 					t.Errorf("tester.Test got nil error, want non-nil error")
@@ -339,24 +334,15 @@ func TestSerialTester(t *testing.T) {
 
 }
 
-func TestSetCommand(t *testing.T) {
+func TestCommandForTest(t *testing.T) {
 	cases := []struct {
 		name        string
 		test        testsharder.Test
 		useRuntests bool
 		timeout     time.Duration
 		expected    []string
+		wantErr     bool
 	}{
-		{
-			name:        "specified command is respected",
-			useRuntests: false,
-			test: testsharder.Test{
-				Test: build.Test{
-					Path:    "/path/to/test",
-					Command: []string{"a", "b", "c"},
-				}},
-			expected: []string{"a", "b", "c"},
-		},
 		{
 			name:        "use runtests URL",
 			useRuntests: true,
@@ -393,7 +379,7 @@ func TestSetCommand(t *testing.T) {
 				Test: build.Test{
 					Path: "/path/to/test",
 				}},
-			expected: []string{"/path/to/test"},
+			wantErr: true,
 		},
 		{
 			name:        "components v1",
@@ -474,9 +460,16 @@ func TestSetCommand(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			setCommand(&c.test, c.useRuntests, "REMOTE_DIR", c.timeout)
-			if !reflect.DeepEqual(c.test.Command, c.expected) {
-				t.Errorf("unexpected command:\nexpected: %q\nactual: %q\n", c.expected, c.test.Command)
+			command, err := commandForTest(&c.test, c.useRuntests, "REMOTE_DIR", c.timeout)
+			if err == nil {
+				if c.wantErr {
+					t.Errorf("commandForTest returned nil error, want non-nil error")
+				}
+			} else if !c.wantErr {
+				t.Errorf("commandForTest returned error: %v, want nil", err)
+			}
+			if !reflect.DeepEqual(command, c.expected) {
+				t.Errorf("unexpected command:\nexpected: %q\nactual: %q\n", c.expected, command)
 			}
 		})
 

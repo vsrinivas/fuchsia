@@ -39,9 +39,6 @@ type Test struct {
 	// OS is the operating system in which this test must be executed.
 	OS string `json:"os"`
 
-	// Command is the command line to run to execute this test.
-	Command []string `json:"command,omitempty"`
-
 	// Settings of log produced by this test
 	LogSettings LogSettings `json:"log_settings,omitempty"`
 
