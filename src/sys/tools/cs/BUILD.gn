@@ -26,6 +26,7 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/freq.rs",
     "src/lib.rs",
     "src/log_stats.rs",
     "src/v1.rs",

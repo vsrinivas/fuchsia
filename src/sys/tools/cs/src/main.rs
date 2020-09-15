@@ -9,6 +9,7 @@
 use {
     anyhow::Error,
     cs::{
+        freq::BlobFrequencies,
         log_stats::{LogSeverity, LogStats},
         v2::V2Component,
     },
@@ -41,6 +42,10 @@ enum Opt {
         #[structopt(long = "min-severity", default_value = "info")]
         min_severity: LogSeverity,
     },
+
+    /// Print out page-in frequencies for all blobs in CSV format
+    #[structopt(name = "freq")]
+    PageInFrequencies,
 }
 
 #[fasync::run_singlethreaded]
@@ -68,6 +73,10 @@ async fn main() -> Result<(), Error> {
             let lines = component.generate_tree();
             let output = lines.join("\n");
             println!("{}", output);
+        }
+        Opt::PageInFrequencies => {
+            let frequencies = BlobFrequencies::collect().await;
+            println!("{}", frequencies);
         }
     }
     Ok(())
