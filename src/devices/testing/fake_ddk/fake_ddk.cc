@@ -186,6 +186,8 @@ zx_status_t Bind::DeviceRemove(zx_device_t* device) {
   return ZX_OK;
 }
 
+void Bind::DeviceUnbindReply(zx_device_t* device) { DeviceRemove(device); }
+
 void Bind::DeviceAsyncRemove(zx_device_t* device) {
   if (device != kFakeDevice) {
     bad_device_ = true;
@@ -344,7 +346,7 @@ void device_unbind_reply(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return;
   }
-  fake_ddk::Bind::Instance()->DeviceRemove(device);
+  fake_ddk::Bind::Instance()->DeviceUnbindReply(device);
 }
 
 __EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t out_state) {

@@ -118,6 +118,7 @@ class Bind {
                                 zx_device_t** out);
   virtual void DeviceInitReply(zx_device_t* device, zx_status_t status,
                                const device_init_reply_args_t* args);
+  virtual void DeviceUnbindReply(zx_device_t* device);
   virtual zx_status_t DeviceRemove(zx_device_t* device);
   virtual void DeviceAsyncRemove(zx_device_t* device);
   virtual zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
