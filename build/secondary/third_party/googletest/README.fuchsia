@@ -1,0 +1,7 @@
+Name: Google Test
+License: BSD
+License File: LICENSE
+Upstream Git: https://github.com/google/googletest
+Description:
+
+Google's C++ test framework.
