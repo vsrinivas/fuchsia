@@ -157,18 +157,6 @@ impl ScanResultUpdate for LocationSensorUpdater {
     }
 }
 
-fn clone_sme_bss_info(bss: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
-    fidl_sme::BssInfo {
-        bssid: bss.bssid.clone(),
-        ssid: bss.ssid.clone(),
-        rx_dbm: bss.rx_dbm,
-        snr_db: bss.snr_db,
-        channel: bss.channel,
-        protection: bss.protection,
-        compatible: bss.compatible,
-    }
-}
-
 /// Converts array of fidl_sme::BssInfo to array of internal ScanResult.
 /// There is one BssInfo per BSSID. In contrast, there is one ScanResult per
 /// SSID, with information for multiple BSSs contained within it.
@@ -180,7 +168,7 @@ fn convert_scan_info(scanned_networks: &[fidl_sme::BssInfo]) -> Vec<types::ScanR
             bss_by_network
                 .entry(fidl_policy::NetworkIdentifier { ssid: bss.ssid.to_vec(), type_: security })
                 .or_insert(vec![])
-                .push(clone_sme_bss_info(&bss));
+                .push(bss.clone());
         } else {
             // TODO(mnck): log a metric here
             debug!("Unknown security type present in scan results: {:?}", bss.protection);

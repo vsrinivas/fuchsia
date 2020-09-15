@@ -5,7 +5,7 @@
 use {
     crate::{
         client::{scan::ScanResultUpdate, types},
-        config_management::{Credential, SavedNetworksManager},
+        config_management::{self, Credential, SavedNetworksManager},
     },
     async_trait::async_trait,
     fuchsia_cobalt::CobaltSender,
@@ -54,7 +54,7 @@ impl NetworkSelector {
     /// Insert all saved networks into a hashmap with this module's internal data representation
     async fn load_saved_networks(&self) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
         let mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData> = HashMap::new();
-        for saved_network in self.saved_network_manager.get_networks().await.iter() {
+        for saved_network in self.saved_network_manager.get_networks().await.into_iter() {
             let recent_failure_count = saved_network
                 .perf_stats
                 .failure_list
@@ -70,13 +70,29 @@ impl NetworkSelector {
                 "Adding saved network to hashmap{}",
                 if recent_failure_count > 0 { " with some failures" } else { "" }
             );
+            // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
+            if let Some(security_type) = upgrade_security(&saved_network.security_type) {
+                networks.insert(
+                    types::NetworkIdentifier {
+                        ssid: saved_network.ssid.clone(),
+                        type_: security_type,
+                    },
+                    InternalNetworkData {
+                        credential: saved_network.credential.clone(),
+                        has_ever_connected: saved_network.has_ever_connected,
+                        recent_failure_count: recent_failure_count,
+                        rssi: None,
+                        compatible: false,
+                    },
+                );
+            };
             networks.insert(
                 types::NetworkIdentifier {
-                    ssid: saved_network.ssid.clone(),
+                    ssid: saved_network.ssid,
                     type_: saved_network.security_type.into(),
                 },
                 InternalNetworkData {
-                    credential: saved_network.credential.clone(),
+                    credential: saved_network.credential,
                     has_ever_connected: saved_network.has_ever_connected,
                     recent_failure_count: recent_failure_count,
                     rssi: None,
@@ -125,6 +141,14 @@ impl NetworkSelector {
     ) -> Option<(types::NetworkIdentifier, Credential)> {
         let networks = self.augment_networks_with_scan_data(self.load_saved_networks().await).await;
         find_best_network(&networks, ignore_list)
+    }
+}
+
+fn upgrade_security(security: &config_management::SecurityType) -> Option<types::SecurityType> {
+    match security {
+        config_management::SecurityType::Wpa => Some(types::SecurityType::Wpa2),
+        config_management::SecurityType::Wpa2 => Some(types::SecurityType::Wpa3),
+        _ => None,
     }
 }
 
@@ -275,10 +299,9 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
-        };
+        let ssid_2 = "bar".as_bytes().to_vec();
+        let test_id_2 =
+            types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
         // insert some new saved networks
@@ -317,9 +340,9 @@ mod tests {
         // check these networks were loaded
         let mut expected_hashmap = HashMap::new();
         expected_hashmap.insert(
-            test_id_1.clone(),
+            test_id_1,
             InternalNetworkData {
-                credential: credential_1.clone(),
+                credential: credential_1,
                 has_ever_connected: true,
                 rssi: None,
                 compatible: false,
@@ -327,9 +350,20 @@ mod tests {
             },
         );
         expected_hashmap.insert(
-            test_id_2.clone(),
+            test_id_2,
             InternalNetworkData {
                 credential: credential_2.clone(),
+                has_ever_connected: false,
+                rssi: None,
+                compatible: false,
+                recent_failure_count: 1,
+            },
+        );
+        // Networks saved as WPA can be used to auto connect to WPA2 networks
+        expected_hashmap.insert(
+            types::NetworkIdentifier { ssid: ssid_2, type_: types::SecurityType::Wpa2 },
+            InternalNetworkData {
+                credential: credential_2,
                 has_ever_connected: false,
                 rssi: None,
                 compatible: false,
@@ -913,6 +947,56 @@ mod tests {
             network_selector.get_best_network(&vec![test_id_1.clone()]).await.unwrap(),
             (test_id_2.clone(), credential_2.clone())
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn get_best_network_wpa_wpa2() {
+        // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
+        // could choose the WPA credential but not the WPA3 credential. In other words we can
+        // upgrade saved networks to higher security but not downgrade.
+        let test_values = test_setup().await;
+        let network_selector = test_values.network_selector;
+
+        // Save networks with WPA and WPA3 security, same SSIDs, and different passwords.
+        let ssid = "foo".as_bytes().to_vec();
+        let wpa_network_id =
+            types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa };
+        let credential = Credential::Password("foo_password".as_bytes().to_vec());
+        test_values
+            .saved_network_manager
+            .store(wpa_network_id.clone().into(), credential.clone())
+            .await
+            .expect("Failed to save network");
+        let wpa3_network_id =
+            types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa3 };
+        let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
+        test_values
+            .saved_network_manager
+            .store(wpa3_network_id.into(), wpa3_credential)
+            .await
+            .expect("Failed to save network");
+
+        // Feed scans with WPA2 and WPA3 results to network selector, as we should get if a
+        // WPA2/WPA3 network was seen.
+        let id = types::NetworkIdentifier { ssid: ssid, type_: types::SecurityType::Wpa2 };
+        let mixed_scan_results = vec![types::ScanResult {
+            id: id.clone(),
+            entries: vec![types::Bss {
+                bssid: [10, 9, 8, 7, 6, 5],
+                rssi: -70,
+                frequency: 2400,
+                timestamp_nanos: 0,
+            }],
+            compatibility: types::Compatibility::Supported,
+        }];
+        network_selector.update_scan_results(&mixed_scan_results).await;
+
+        // Check that we choose the config saved as WPA2
+        assert_eq!(
+            network_selector.get_best_network(&vec![]).await,
+            Some((id.clone(), credential))
+        );
+        assert_eq!(network_selector.get_best_network(&vec![id]).await, None);
     }
 
     fn generate_random_scan_result() -> types::ScanResult {

@@ -12,10 +12,8 @@ pub fn security_from_sme_protection(
     use fidl_policy::SecurityType;
     use fidl_sme::Protection::*;
     match protection {
-        Wpa3Enterprise | Wpa3Personal => Some(SecurityType::Wpa3),
-        Wpa2Enterprise | Wpa2Personal | Wpa2Wpa3Personal | Wpa1Wpa2Personal => {
-            Some(SecurityType::Wpa2)
-        }
+        Wpa3Enterprise | Wpa3Personal | Wpa2Wpa3Personal => Some(SecurityType::Wpa3),
+        Wpa2Enterprise | Wpa2Personal | Wpa1Wpa2Personal => Some(SecurityType::Wpa2),
         Wpa1 => Some(SecurityType::Wpa),
         Wep => Some(SecurityType::Wep),
         Open => Some(SecurityType::None),
@@ -33,9 +31,9 @@ mod tests {
         let test_pairs = vec![
             (Protection::Wpa3Enterprise, Some(SecurityType::Wpa3)),
             (Protection::Wpa3Personal, Some(SecurityType::Wpa3)),
+            (Protection::Wpa2Wpa3Personal, Some(SecurityType::Wpa3)),
             (Protection::Wpa2Enterprise, Some(SecurityType::Wpa2)),
             (Protection::Wpa2Personal, Some(SecurityType::Wpa2)),
-            (Protection::Wpa2Wpa3Personal, Some(SecurityType::Wpa2)),
             (Protection::Wpa1Wpa2Personal, Some(SecurityType::Wpa2)),
             (Protection::Wpa1, Some(SecurityType::Wpa)),
             (Protection::Wep, Some(SecurityType::Wep)),
