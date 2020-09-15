@@ -9,16 +9,16 @@ use async_trait::async_trait;
 use serde_json::{to_value, Value};
 use std::convert::TryFrom;
 
-fn get_index(args: Value) -> Result<u32, Error> {
+fn get_state(args: Value) -> Result<u32, Error> {
     // Serde json does not support as_u32 so you need to take care of the cast.
-    let index = match args.get("index") {
+    let state = match args.get("state") {
         Some(value) => match value.as_u64() {
             Some(v) => v as u32,
-            None => bail!("Expected u64 type for index."),
+            None => bail!("Expected u64 type for state."),
         },
-        None => bail!("Expected a serde_json Value index."),
+        None => bail!("Expected a serde_json Value state."),
     };
-    Ok(index)
+    Ok(state)
 }
 
 #[async_trait(?Send)]
@@ -28,8 +28,8 @@ impl Facade for CpuCtrlFacade {
             CpuCtrlMethod::GetPerformanceStateInfo(GetPerformanceStateInfoRequest {
                 device_number,
             }) => {
-                let index = get_index(args)?;
-                Ok(to_value(self.get_performance_state_info(device_number, index).await?)?)
+                let state = get_state(args)?;
+                Ok(to_value(self.get_performance_state_info(device_number, state).await?)?)
             }
 
             CpuCtrlMethod::GetNumLogicalCores(GetNumLogicalCoresRequest { device_number }) => {

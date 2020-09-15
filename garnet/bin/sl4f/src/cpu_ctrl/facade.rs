@@ -41,7 +41,7 @@ impl CpuCtrlFacade {
                     format_err!("Failed to get cpu-ctrl proxy {:?}", e)
                 ),
             };
-            let mut path = String::from("/dev/diagnostics/class/cpu-ctrl/");
+            let mut path = String::from("/dev/class/cpu-ctrl/");
             path.push_str(&device_number);
             let found_path = glob(&path)?.filter_map(|entry| entry.ok()).next();
             match found_path {
