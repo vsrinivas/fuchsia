@@ -78,8 +78,6 @@ type cobaltClient struct {
 
 type cobaltEventProducer interface {
 	events() []cobalt.CobaltEvent
-	// setHasEvents supplies this cobaltEventProducer with a `hasEvents` callback.
-	setHasEvents(hasEvents func())
 }
 
 func NewCobaltClient() *cobaltClient {
@@ -133,6 +131,8 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 		}
 	}
 }
+
+var _ cobaltEventProducer = (*statsObserver)(nil)
 
 type statsObserver struct {
 	mu struct {
@@ -239,7 +239,7 @@ func (o *statsObserver) run(ctx context.Context, interval time.Duration, stats *
 			hasEvents := o.mu.hasEvents
 			o.mu.Unlock()
 			if hasEvents == nil {
-				panic("statsObserver: hasEvents callback unspecified (ensure setHasEvents has been called)")
+				panic("statsObserver: hasEvents callback unspecified (ensure init has been called)")
 			}
 			hasEvents()
 			lastCreated = created
@@ -251,7 +251,7 @@ func (o *statsObserver) run(ctx context.Context, interval time.Duration, stats *
 	}
 }
 
-func (o *statsObserver) setHasEvents(hasEvents func()) {
+func (o *statsObserver) init(hasEvents func()) {
 	o.mu.Lock()
 	o.mu.hasEvents = hasEvents
 	o.mu.Unlock()
@@ -305,6 +305,13 @@ func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
 	})
 }
 
+// nicRemovedHandler is an interface implemented by types that are interested
+// in NICs that have been removed.
+type nicRemovedHandler interface {
+	// removedNIC informs the receiver that the specified NIC has been removed.
+	removedNIC(tcpip.NICID)
+}
+
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
 	dnsConfig    dns.ServersConfig
@@ -333,6 +340,8 @@ type Netstack struct {
 	filter *filter.Filter
 
 	endpoints endpointsMap
+
+	nicRemovedHandler nicRemovedHandler
 }
 
 // Each ifState tracks the state of a network interface.
@@ -751,6 +760,8 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 		if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil && err != tcpip.ErrUnknownNICID {
 			syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
 		}
+
+		ifs.ns.nicRemovedHandler.removedNIC(ifs.nicid)
 	} else {
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
 			syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)

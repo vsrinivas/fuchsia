@@ -157,11 +157,21 @@ func TestStackNICEnableDisable(t *testing.T) {
 	}
 }
 
+var _ nicRemovedHandler = (*testNicRemovedHandler)(nil)
+
+type testNicRemovedHandler struct {
+	removedNICID tcpip.NICID
+}
+
+func (h *testNicRemovedHandler) removedNIC(nicID tcpip.NICID) {
+	h.removedNICID = nicID
+}
+
 // TestStackNICRemove tests that the NIC in stack.Stack is removed when the
 // underlying link is closed.
 func TestStackNICRemove(t *testing.T) {
-	ns := newNetstack(t)
-
+	nicRemovedHandler := testNicRemovedHandler{}
+	ns := newNetstackWithNicRemovedHandler(t, &nicRemovedHandler)
 	var obs noopObserver
 
 	ifs, err := ns.addEndpoint(
@@ -202,6 +212,9 @@ func TestStackNICRemove(t *testing.T) {
 	}
 	if addr, err := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); err != tcpip.ErrUnknownNICID {
 		t.Errorf("got GetMainNICAddress(%d, %d) = (%s, %v), want = (_, %s)", ifs.nicid, header.IPv6ProtocolNumber, addr, err, tcpip.ErrUnknownNICID)
+	}
+	if nicRemovedHandler.removedNICID != ifs.nicid {
+		t.Errorf("got nicRemovedHandler.removedNICID = %d, want = %d", nicRemovedHandler.removedNICID, ifs.nicid)
 	}
 
 	// Wait for the controller to stop and free up its resources.
@@ -754,9 +767,20 @@ func TestStaticIPConfiguration(t *testing.T) {
 	}
 }
 
+var _ nicRemovedHandler = (*noopNicRemovedHandler)(nil)
+
+type noopNicRemovedHandler struct{}
+
+func (*noopNicRemovedHandler) removedNIC(tcpip.NICID) {}
+
 func newNetstack(t *testing.T) *Netstack {
 	t.Helper()
 	return newNetstackWithNDPDispatcher(t, nil)
+}
+
+func newNetstackWithNicRemovedHandler(t *testing.T, h nicRemovedHandler) *Netstack {
+	t.Helper()
+	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, nil, h)
 }
 
 func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstack {
@@ -786,6 +810,11 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 
 func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispatcher) *Netstack {
 	t.Helper()
+	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, ndpDisp, &noopNicRemovedHandler{})
+}
+
+func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp tcpipstack.NDPDispatcher, h nicRemovedHandler) *Netstack {
+	t.Helper()
 
 	// TODO(57075): Use a fake clock
 	stk := tcpipstack.New(tcpipstack.Options{
@@ -804,7 +833,8 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
 		// DNS configuration.
-		dnsConfig: dns.MakeServersConfig(stk.Clock()),
+		dnsConfig:         dns.MakeServersConfig(stk.Clock()),
+		nicRemovedHandler: h,
 	}
 	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)

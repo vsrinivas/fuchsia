@@ -281,9 +281,10 @@ func Main() {
 	appCtx.ConnectToEnvService(req)
 
 	ns := &Netstack{
-		dnsConfig:    dns.MakeServersConfig(stk.Clock()),
-		nameProvider: np,
-		stack:        stk,
+		dnsConfig:         dns.MakeServersConfig(stk.Clock()),
+		nameProvider:      np,
+		stack:             stk,
+		nicRemovedHandler: &ndpDisp.dynamicAddressSourceObs,
 	}
 
 	ns.netstackService.mu.proxies = make(map[*netstack.NetstackEventProxy]struct{})
@@ -292,8 +293,11 @@ func Main() {
 
 	cobaltClient := NewCobaltClient()
 	ndpDisp.ns = ns
-	ndpDisp.obs.setHasEvents(func() {
-		cobaltClient.Register(&ndpDisp.obs)
+	ndpDisp.dhcpv6Obs.init(func() {
+		cobaltClient.Register(&ndpDisp.dhcpv6Obs)
+	})
+	ndpDisp.dynamicAddressSourceObs.init(func() {
+		cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
 	})
 	ndpDisp.start(ctx)
 
@@ -309,7 +313,7 @@ func Main() {
 		Stats: stk.Stats(),
 	}
 	statsObserver := statsObserver{}
-	statsObserver.setHasEvents(func() {
+	statsObserver.init(func() {
 		cobaltClient.Register(&statsObserver)
 	})
 	go statsObserver.run(context.Background(), time.Minute, &ns.stats, ns.stack)

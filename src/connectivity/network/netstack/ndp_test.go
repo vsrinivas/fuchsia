@@ -75,9 +75,16 @@ func newSubnet(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Subnet {
 
 // newNDPDispatcherForTest returns a new ndpDispatcher with a channel used to
 // notify tests when its event queue is emptied.
+//
+// The dispatcher's cobalt observers are initialized such that no cobalt client
+// will receive events.
 func newNDPDispatcherForTest() *ndpDispatcher {
 	n := newNDPDispatcher()
 	n.testNotifyCh = make(chan struct{}, 1)
+	// Must be called or tests may panic as the ndpDispatchere may attempt to call
+	// into n.dynamicAddressSourceObs
+	n.dynamicAddressSourceObs.initWithoutTimer(func() {})
+	n.dhcpv6Obs.init(func() {})
 	return n
 }
 
@@ -114,6 +121,7 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 		{
 			name: "On SLAAC address invalidated event",
 			ndpEventFn: func(id tcpip.NICID, ndpDisp *ndpDispatcher) {
+				ndpDisp.OnAutoGenAddress(id, testProtocolAddr1.AddressWithPrefix)
 				ndpDisp.OnAutoGenAddressInvalidated(id, testProtocolAddr1.AddressWithPrefix)
 			},
 		},
@@ -823,23 +831,55 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 }
 
 func TestObservationsFromDHCPv6Configuration(t *testing.T) {
-	ndpDisp := newNDPDispatcherForTest()
+	const (
+		nicID1 = 1
+		nicID2 = 2
+	)
+
+	linkLocalAddr := tcpip.AddressWithPrefix{
+		Address:   util.Parse("fe80::1"),
+		PrefixLen: 64,
+	}
+
 	// ndpDispatcher registers novel observations by calling cobaltClient.Register.
 	// When the observations are pulled, we ensure that all novelty since the
 	// last pull is included and duplicate observations are coalesced.
 	type step struct {
-		run  func()
+		run  func(ndpDisp *ndpDispatcher)
 		want []cobalt.CobaltEvent
 	}
+
+	defaultInit := func(ndpDisp *ndpDispatcher, cobaltClient *cobaltClient) {
+		ndpDisp.dhcpv6Obs.init(func() {
+			cobaltClient.Register(&ndpDisp.dhcpv6Obs)
+		})
+
+		ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {
+			cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
+		})
+	}
+
+	availableDynamicAddressConfigsInit := func(ndpDisp *ndpDispatcher, cobaltClient *cobaltClient) {
+		// We pass a noop for dhcpv6Obs' event's registration callback since we
+		// only care about the available dynamic address configurations metric.
+		ndpDisp.dhcpv6Obs.init(func() {})
+
+		ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {
+			cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
+		})
+	}
+
 	tests := []struct {
 		name  string
+		init  func(*ndpDispatcher, *cobaltClient)
 		steps []step
 	}{
 		{
 			name: "one_configuration",
+			init: defaultInit,
 			steps: []step{
 				{
-					run: func() {
+					run: func(ndpDisp *ndpDispatcher) {
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
@@ -854,9 +894,10 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 		},
 		{
 			name: "multiple_configurations",
+			init: defaultInit,
 			steps: []step{
 				{
-					run: func() {
+					run: func(ndpDisp *ndpDispatcher) {
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6ManagedAddress)
 					},
@@ -877,9 +918,10 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 		},
 		{
 			name: "pull_between_configurations",
+			init: defaultInit,
 			steps: []step{
 				{
-					run: func() {
+					run: func(ndpDisp *ndpDispatcher) {
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
@@ -891,7 +933,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 					},
 				},
 				{
-					run: func() {
+					run: func(ndpDisp *ndpDispatcher) {
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
@@ -906,9 +948,10 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 		},
 		{
 			name: "duplicated_configurations",
+			init: defaultInit,
 			steps: []step{
 				{
-					run: func() {
+					run: func(ndpDisp *ndpDispatcher) {
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
@@ -927,17 +970,237 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 			},
 		},
-	}
 
-	cobaltClient := NewCobaltClient()
-	ndpDisp.obs.setHasEvents(func() {
-		cobaltClient.Register(&ndpDisp.obs)
-	})
+		{
+			name: "dynamic address config with no config",
+			init: availableDynamicAddressConfigsInit,
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: nil,
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						// Link local addresses should not increment global SLAAC address
+						// count.
+						ndpDisp.OnAutoGenAddress(nicID1, linkLocalAddr)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: nil,
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6NoConfiguration)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6OtherConfigurations)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr1.AddressWithPrefix)
+						ndpDisp.OnAutoGenAddressInvalidated(nicID1, testProtocolAddr1.AddressWithPrefix)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dynamic address config with slaac only",
+			init: availableDynamicAddressConfigsInit,
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr1.AddressWithPrefix)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						// Link local addresses should not decrement global SLAAC address
+						// count.
+						ndpDisp.OnAutoGenAddressInvalidated(nicID1, linkLocalAddr)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr2.AddressWithPrefix)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnAutoGenAddressInvalidated(nicID1, testProtocolAddr2.AddressWithPrefix)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dynamic address config with dhcpv6 only",
+			init: availableDynamicAddressConfigsInit,
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.Dhcpv6ManagedAddressOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				// Only the last configuration should be used.
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.Dhcpv6ManagedAddressOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dynamic address config with dhcpv6 and slaac",
+			init: availableDynamicAddressConfigsInit,
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr2.AddressWithPrefix)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacAndDhcpv6ManagedAddress), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dynamic address config with dhcpv6 and slaac on different NICs",
+			init: availableDynamicAddressConfigsInit,
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnAutoGenAddress(nicID2, testProtocolAddr2.AddressWithPrefix)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.Dhcpv6ManagedAddressOnly), nicID1},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID2},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.dynamicAddressSourceObs.removedNIC(nicID1)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID2},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+						},
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.dynamicAddressSourceObs.removedNIC(nicID2)
+						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					},
+					want: nil,
+				},
+			},
+		},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			for _, step := range test.steps {
-				step.run()
+			cobaltClient := NewCobaltClient()
+			ndpDisp := newNDPDispatcher()
+			test.init(ndpDisp, cobaltClient)
+
+			for i, step := range test.steps {
+				step.run(ndpDisp)
 				got := cobaltClient.Collect()
 				if diff := cmp.Diff(step.want, got,
 					// There's exactly one event code per event.
@@ -945,9 +1208,41 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						return a.EventCodes[0] > b.EventCodes[0]
 					}),
 					cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-					t.Fatalf("observations mismatch (-want +got):\n%s", diff)
+					t.Errorf("%d-th step: observations mismatch (-want +got):\n%s", i, diff)
 				}
 			}
 		})
+	}
+}
+
+func TestAvailableDynamicIPv6AddressConfigEventsRegistration(t *testing.T) {
+	savedInitialTimeout := availableDynamicIPv6AddressConfigDelayInitialEvents
+	savedDelayBetweenEvents := availableDynamicIPv6AddressConfigDelayBetweenEvents
+	availableDynamicIPv6AddressConfigDelayInitialEvents = time.Second
+	availableDynamicIPv6AddressConfigDelayBetweenEvents = 2 * time.Second
+	defer func() {
+		availableDynamicIPv6AddressConfigDelayInitialEvents = savedInitialTimeout
+		availableDynamicIPv6AddressConfigDelayBetweenEvents = savedDelayBetweenEvents
+	}()
+
+	const extraTimeout = 10 * time.Second
+
+	ch := make(chan struct{}, 1)
+
+	ndpDisp := newNDPDispatcher()
+	ndpDisp.dynamicAddressSourceObs.init(func() {
+		ch <- struct{}{}
+	})
+
+	select {
+	case <-ch:
+	case <-time.After(availableDynamicIPv6AddressConfigDelayInitialEvents + extraTimeout):
+		t.Fatalf("timed out waiting for first event's registration")
+	}
+
+	select {
+	case <-ch:
+	case <-time.After(availableDynamicIPv6AddressConfigDelayBetweenEvents + extraTimeout):
+		t.Fatalf("timed out waiting for next event's registration")
 	}
 }

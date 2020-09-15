@@ -146,8 +146,12 @@ type ndpDispatcher struct {
 	// testNotifyCh should only be set by tests.
 	testNotifyCh chan struct{}
 
-	// obs tracks unique observations since the last Cobalt pull.
-	obs dhcpV6Observation
+	// dhcpv6Obs tracks unique DHCPv6 configurations since the last Cobalt pull.
+	dhcpv6Obs dhcpV6Observation
+
+	// dynamicAddressSourceObs tracks the most recent dynamic address
+	// configuration options available for an interface.
+	dynamicAddressSourceObs availableDynamicIPv6AddressConfigObservation
 
 	mu struct {
 		sync.Mutex
@@ -214,6 +218,13 @@ func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpi
 func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) bool {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpGeneratedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
+
+	// Metrics only care about dynamic global address configuration options so
+	// only increase the counter if we generated a global SLAAC address.
+	if !header.IsV6LinkLocalAddress(addrWithPrefix.Address) {
+		n.dynamicAddressSourceObs.incGlobalSLAAC(nicID)
+	}
+
 	return true
 }
 
@@ -229,6 +240,12 @@ func (*ndpDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithP
 func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpInvalidatedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
+
+	// Metrics only care about dynamic global address configuration options so
+	// only decrease the counter if we invalidated a global SLAAC address.
+	if !header.IsV6LinkLocalAddress(addrWithPrefix.Address) {
+		n.dynamicAddressSourceObs.decGlobalSLAAC(nicID)
+	}
 }
 
 // OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
@@ -242,6 +259,148 @@ func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []s
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
 
+var _ nicRemovedHandler = (*availableDynamicIPv6AddressConfigObservation)(nil)
+var _ cobaltEventProducer = (*availableDynamicIPv6AddressConfigObservation)(nil)
+
+// Using a var so that it can be overriden for tests.
+//
+// TODO(57075): Use a fake clock in tests so we can make these constants.
+var (
+	// availableDynamicIPv6AddressConfigDelayInitialEvents is the initial delay
+	// before registering with the cobalt client that events are ready.
+	//
+	// The delay should be large enough to let the network configurations
+	// stabilize.
+	availableDynamicIPv6AddressConfigDelayInitialEvents = 10 * time.Minute
+
+	// availableDynamicIPv6AddressConfigDelayBetweenEvents is the delay between
+	// registering with the cobalt client that events are ready after the initial
+	// registration.
+	availableDynamicIPv6AddressConfigDelayBetweenEvents = time.Hour
+)
+
+type byNICAvailableDynamicIPv6AddressConfig map[tcpip.NICID]struct {
+	globalSLAAC uint32
+	lastDHCPv6  stack.DHCPv6ConfigurationFromNDPRA
+}
+
+type availableDynamicIPv6AddressConfigObservation struct {
+	hasEvents func()
+
+	mu struct {
+		sync.Mutex
+		obs byNICAvailableDynamicIPv6AddressConfig
+	}
+}
+
+func (o *availableDynamicIPv6AddressConfigObservation) initWithoutTimer(hasEvents func()) {
+	o.hasEvents = hasEvents
+
+	o.mu.Lock()
+	o.mu.obs = make(byNICAvailableDynamicIPv6AddressConfig)
+	o.mu.Unlock()
+}
+
+// init sets the events registration callback and starts the timer to register
+// events.
+func (o *availableDynamicIPv6AddressConfigObservation) init(hasEvents func()) {
+	o.initWithoutTimer(hasEvents)
+
+	var mu sync.Mutex
+	var t *time.Timer
+	mu.Lock()
+	defer mu.Unlock()
+	t = time.AfterFunc(availableDynamicIPv6AddressConfigDelayInitialEvents, func() {
+		o.hasEvents()
+
+		mu.Lock()
+		defer mu.Unlock()
+		t.Reset(availableDynamicIPv6AddressConfigDelayBetweenEvents)
+	})
+}
+
+func (o *availableDynamicIPv6AddressConfigObservation) removedNIC(nicID tcpip.NICID) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	delete(o.mu.obs, nicID)
+}
+
+func (o *availableDynamicIPv6AddressConfigObservation) incGlobalSLAAC(nicID tcpip.NICID) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	nic := o.mu.obs[nicID]
+	nic.globalSLAAC++
+	o.mu.obs[nicID] = nic
+}
+
+func (o *availableDynamicIPv6AddressConfigObservation) decGlobalSLAAC(nicID tcpip.NICID) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	nic := o.mu.obs[nicID]
+	if nic.globalSLAAC == 0 {
+		panic(fmt.Sprintf("cannot have a negative globalSLAAC count for nicID = %d", nicID))
+	}
+
+	nic.globalSLAAC--
+	o.mu.obs[nicID] = nic
+}
+
+func (o *availableDynamicIPv6AddressConfigObservation) setLastDHCPv6(nicID tcpip.NICID, v stack.DHCPv6ConfigurationFromNDPRA) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	nic := o.mu.obs[nicID]
+	nic.lastDHCPv6 = v
+	o.mu.obs[nicID] = nic
+}
+
+func (o *availableDynamicIPv6AddressConfigObservation) events() []cobalt.CobaltEvent {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	events := make([]cobalt.CobaltEvent, 0, len(o.mu.obs))
+	for nicID, nic := range o.mu.obs {
+		var v uint8
+
+		if nic.globalSLAAC != 0 {
+			v |= 1
+		}
+
+		if nic.lastDHCPv6 == stack.DHCPv6ManagedAddress {
+			v |= 2
+		}
+
+		var code networking_metrics.NetworkingMetricDimensionDynamicIpv6AddressSource
+		switch v {
+		case 0:
+			code = networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress
+		case 1:
+			code = networking_metrics.GlobalSlaacOnly
+		case 2:
+			code = networking_metrics.Dhcpv6ManagedAddressOnly
+		case 3:
+			code = networking_metrics.GlobalSlaacAndDhcpv6ManagedAddress
+		default:
+			panic(fmt.Sprintf("unrecognized v = %d", v))
+		}
+
+		events = append(events, cobalt.CobaltEvent{
+			MetricId: networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
+			EventCodes: networking_metrics.AvailableDynamicIpv6AddressConfigEventCodes{
+				DynamicIpv6AddressSource: code,
+				InterfaceId:              networking_metrics.AvailableDynamicIpv6AddressConfigMetricDimensionInterfaceId(nicID),
+			}.ToArray(),
+			Payload: cobalt.EventPayloadWithEventCount(cobalt.CountEvent{
+				Count: 1,
+			}),
+		})
+	}
+
+	return events
+}
+
+var _ cobaltEventProducer = (*dhcpV6Observation)(nil)
+
 type dhcpV6Observation struct {
 	mu struct {
 		sync.Mutex
@@ -250,7 +409,7 @@ type dhcpV6Observation struct {
 	}
 }
 
-func (o *dhcpV6Observation) setHasEvents(hasEvents func()) {
+func (o *dhcpV6Observation) init(hasEvents func()) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.mu.hasEvents = hasEvents
@@ -259,7 +418,8 @@ func (o *dhcpV6Observation) setHasEvents(hasEvents func()) {
 func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	res := make([]cobalt.CobaltEvent, 0, len(o.mu.seen))
+
+	var res []cobalt.CobaltEvent
 	for c, count := range o.mu.seen {
 		var code networking_metrics.NetworkingMetricDimensionConfigurationFromNdpra
 		switch c {
@@ -288,17 +448,19 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration stack.DHCPv6ConfigurationFromNDPRA) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDHCPv6Configuration(%d, %s)", nicID, configuration)
 
-	n.obs.mu.Lock()
-	if n.obs.mu.seen == nil {
-		n.obs.mu.seen = make(map[stack.DHCPv6ConfigurationFromNDPRA]int)
+	n.dhcpv6Obs.mu.Lock()
+	if n.dhcpv6Obs.mu.seen == nil {
+		n.dhcpv6Obs.mu.seen = make(map[stack.DHCPv6ConfigurationFromNDPRA]int)
 	}
-	n.obs.mu.seen[configuration] += 1
-	hasEvents := n.obs.mu.hasEvents
-	n.obs.mu.Unlock()
+	n.dhcpv6Obs.mu.seen[configuration] += 1
+	hasEvents := n.dhcpv6Obs.mu.hasEvents
+	n.dhcpv6Obs.mu.Unlock()
 	if hasEvents == nil {
-		panic("ndp dispatcher: dhcpV6Observation: hasEvents callback unspecified (ensure setHasEvents has been called)")
+		panic("ndp dispatcher: dhcpV6Observation: hasEvents callback unspecified (ensure init has been called)")
 	}
 	hasEvents()
+
+	n.dynamicAddressSourceObs.setLastDHCPv6(nicID, configuration)
 }
 
 // addEvent adds an event to be handled by the ndpDispatcher goroutine.
