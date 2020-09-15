@@ -196,7 +196,7 @@ documentation.
 [glossary-storage]: /docs/glossary.md#storage-capability
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer
-[realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [runners]: ./runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
 [use]: ./component_manifests.md#use
