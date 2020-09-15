@@ -1,5 +1,6 @@
-# SL4F
+# SL4F test
 
-Verifies the interaction between sl4f_client and sl4f.
+`sl4f_test` verifies the interaction between `sl4f_client` on the test host and
+the services in `sl4f` running on the device under test.
 
 This test is currently only enabled in the terminal product.
