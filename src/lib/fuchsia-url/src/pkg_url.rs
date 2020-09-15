@@ -124,13 +124,8 @@ impl PkgUrl {
         hash: Option<Hash>,
     ) -> Result<PkgUrl, ParseError> {
         let repo = RepoUrl::new(host)?;
-        let (name, variant) = parse_path(path.as_str())?;
+        let (name, _variant) = parse_path(path.as_str())?;
         let name = name.to_string();
-        if hash.is_some() {
-            if variant.is_none() {
-                return Err(ParseError::InvalidVariant);
-            }
-        }
         Ok(PkgUrl { repo, path, hash, resource: None, name })
     }
 
@@ -776,17 +771,25 @@ mod tests {
             PkgUrl::new_package("fuchsia.com".to_string(), "/fonts/$".to_string(), None),
             Err(ParseError::InvalidVariant)
         );
-        assert_matches!(
-            PkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/fonts".to_string(),
-                Some(
-                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"
-                        .parse()
-                        .unwrap()
-                )
+        let url = PkgUrl::new_package(
+            "fuchsia.com".to_string(),
+            "/fonts".to_string(),
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
             ),
-            Err(ParseError::InvalidVariant)
+        )
+        .unwrap();
+
+        assert_eq!("fuchsia.com", url.host());
+        assert_eq!("/fonts", url.path());
+        assert_eq!("fonts", url.name());
+        assert_eq!(None, url.variant());
+        assert_eq!(
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap()
+            )
+            .as_ref(),
+            url.package_hash()
         );
     }
 
@@ -838,19 +841,27 @@ mod tests {
             ),
             Err(ParseError::InvalidVariant)
         );
-        assert_eq!(
-            PkgUrl::new_resource(
-                "fuchsia.com".to_string(),
-                "/fonts".to_string(),
-                Some(
-                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"
-                        .parse()
-                        .unwrap()
-                ),
-                "foo/bar".to_string()
+        let url = PkgUrl::new_resource(
+            "fuchsia.com".to_string(),
+            "/fonts".to_string(),
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
             ),
-            Err(ParseError::InvalidVariant)
+            "foo/bar".to_string(),
+        )
+        .unwrap();
+        assert_eq!("fuchsia.com", url.host());
+        assert_eq!("/fonts", url.path());
+        assert_eq!("fonts", url.name());
+        assert_eq!(None, url.variant());
+        assert_eq!(
+            Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a")
+                .map(|s| s.parse::<Hash>().unwrap())
+                .as_ref(),
+            url.package_hash(),
         );
+        assert_eq!(Some("foo/bar"), url.resource());
+
         assert_eq!(
             PkgUrl::new_resource(
                 "fuchsia.com".to_string(),
