@@ -36,7 +36,8 @@ zx_status_t zx_channel_read(zx_handle_t handle, uint32_t options, void* bytes, z
       .header =
           {
               .event_code = HCI_EVT_COMMAND_COMPLETE,
-              .parameter_total_size = sizeof(hci_read_test_command_complete_t) - sizeof(hci_event_header_t),
+              .parameter_total_size =
+                  sizeof(hci_read_test_command_complete_t) - sizeof(hci_event_header_t),
           },
       .num_hci_command_packets = 0,
       .command_opcode = 0,
@@ -83,5 +84,82 @@ TEST(BtHciBroadcomTest, LoadFirmwareErrorSuccess) {
   load_firmware_result = ZX_OK;
   zx_status_t status = bcm_load_firmware(dev);
   EXPECT_EQ(load_firmware_result, status, "Failed to load firmware error.");
+  teardown();
+}
+
+TEST(BtHciBroadcomTest, GetFeatures) {
+  setup();
+  bt_vendor_protocol_t vendor_proto = {};
+  zx_status_t status = bcm_hci_get_protocol(dev, ZX_PROTOCOL_BT_VENDOR, &vendor_proto);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NE(vendor_proto.ops, NULL);
+  // Don't expect exact features to avoid test fragility.
+  EXPECT_NE(vendor_proto.ops->get_features(dev), 0u);
+  teardown();
+}
+
+TEST(BtHciBroadcomTest, EncodeSetAclPrioritySuccess) {
+  setup();
+  bt_vendor_protocol_t vendor_proto = {};
+  zx_status_t status = bcm_hci_get_protocol(dev, ZX_PROTOCOL_BT_VENDOR, &vendor_proto);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NE(vendor_proto.ops, NULL);
+
+  uint8_t buffer[sizeof(bcm_set_acl_priority_cmd_t)];
+  size_t actual_size = 0;
+  bt_vendor_params_t params = {.set_acl_priority = {
+                                   .connection_handle = 0xFF00,
+                                   .priority = BT_VENDOR_ACL_PRIORITY_HIGH,
+                                   .direction = BT_VENDOR_ACL_DIRECTION_SINK,
+                               }};
+  ASSERT_EQ(ZX_OK, vendor_proto.ops->encode_command(dev, BT_VENDOR_COMMAND_SET_ACL_PRIORITY,
+                                                    &params, buffer, sizeof(buffer), &actual_size));
+  ASSERT_EQ(sizeof(buffer), actual_size);
+  uint8_t kExpectedBuffer[sizeof(buffer)] = {
+      0x1A, 0xFD,  // OpCode
+      0x04,        // size
+      0x00, 0xFF,  // handle
+      0x01,        // priority
+      0x01,        // direction
+  };
+  EXPECT_EQ(0, memcmp(buffer, kExpectedBuffer, sizeof(buffer)));
+  teardown();
+}
+
+TEST(BtHciBroadcomTest, EncodeSetAclPriorityBufferTooSmall) {
+  setup();
+  bt_vendor_protocol_t vendor_proto = {};
+  zx_status_t status = bcm_hci_get_protocol(dev, ZX_PROTOCOL_BT_VENDOR, &vendor_proto);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NE(vendor_proto.ops, NULL);
+
+  uint8_t buffer[sizeof(bcm_set_acl_priority_cmd_t) - 1];
+  size_t actual_size = 0;
+  bt_vendor_params_t params = {.set_acl_priority = {
+                                   .connection_handle = 0xFF00,
+                                   .priority = BT_VENDOR_ACL_PRIORITY_HIGH,
+                                   .direction = BT_VENDOR_ACL_DIRECTION_SINK,
+                               }};
+  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
+            vendor_proto.ops->encode_command(dev, BT_VENDOR_COMMAND_SET_ACL_PRIORITY, &params,
+                                             buffer, sizeof(buffer), &actual_size));
+  ASSERT_EQ(0, actual_size);
+  teardown();
+}
+
+TEST(BtHciBroadcomTest, EncodeUnsupportedCommand) {
+  setup();
+  bt_vendor_protocol_t vendor_proto = {};
+  zx_status_t status = bcm_hci_get_protocol(dev, ZX_PROTOCOL_BT_VENDOR, &vendor_proto);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NE(vendor_proto.ops, NULL);
+
+  uint8_t buffer[20];
+  size_t actual_size = 0;
+  bt_vendor_params_t params;
+  const bt_vendor_command_t kUnsuportedCommand = 0xFF;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            vendor_proto.ops->encode_command(dev, kUnsuportedCommand, &params, buffer,
+                                             sizeof(buffer), &actual_size));
   teardown();
 }
