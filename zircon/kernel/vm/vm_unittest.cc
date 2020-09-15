@@ -3135,6 +3135,38 @@ static bool vmpl_merge_overlap_test() {
   return true;
 }
 
+static bool vmpl_merge_marker_test() {
+  BEGIN_TEST;
+
+  VmPageList list1;
+  VmPageList list2;
+
+  // Put markers in our from list and one of marker, page and nothing in our destination list.
+  // In all circumstances when doing a MergeFrom we should not have either our release or migrate
+  // callbacks invoked, as they only get invoked for actual pages.
+  EXPECT_TRUE(AddMarker(&list1, 0));
+  EXPECT_TRUE(AddMarker(&list1, PAGE_SIZE));
+  EXPECT_TRUE(AddMarker(&list1, PAGE_SIZE * 2));
+  EXPECT_TRUE(AddMarker(&list2, PAGE_SIZE));
+  vm_page_t test_page = {};
+  EXPECT_TRUE(AddPage(&list2, &test_page, PAGE_SIZE * 2));
+
+  int release_calls = 0;
+  int migrate_calls = 0;
+  list2.MergeFrom(
+      list1, 0, PAGE_SIZE * 3,
+      [&release_calls](vm_page_t* page, uint64_t offset) { release_calls++; },
+      [&migrate_calls](VmPageOrMarker* page, uint64_t offset) { migrate_calls++; });
+
+  EXPECT_EQ(0, release_calls);
+  EXPECT_EQ(0, migrate_calls);
+
+  // Remove the page from our list as its not a real page.
+  EXPECT_EQ(list2.RemovePage(PAGE_SIZE * 2).ReleasePage(), &test_page);
+
+  END_TEST;
+}
+
 static bool vmpl_for_every_page_test() {
   BEGIN_TEST;
 
@@ -3799,6 +3831,7 @@ VM_UNITTEST(vmpl_merge_offset_test)
 VM_UNITTEST(vmpl_merge_overlap_test)
 VM_UNITTEST(vmpl_for_every_page_test)
 VM_UNITTEST(vmpl_merge_onto_test)
+VM_UNITTEST(vmpl_merge_marker_test)
 UNITTEST_END_TESTCASE(vm_page_list_tests, "vmpl", "VmPageList tests")
 
 UNITTEST_START_TESTCASE(page_queues_tests)
