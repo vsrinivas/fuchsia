@@ -15,19 +15,15 @@
 
 zedboot_deps = []
 
-# Core things needed for booting (local and netboot).
-zedboot_deps += [
-  "//bundles:zedboot",
-  "//bundles/drivers:bootstrap",
-]
-
-# Migrated from //build/images/bootfs_manifest_additions.gni.
+# The elements in this section have been vetted and will later be migrated to
+# the build file that declares the zedboot zbi.
 zedboot_deps += [
   "//build/info:bootfs",
-  "//src/devices/bin/driver_host",
-  "//src/devices/bin/driver_manager:bootfs",
-  "//src/sys/bootstrap:root_manifests",
-  "//src/sys/component_manager:bootfs",
+  "//bundles:bootstrap-zedboot",
+  "//bundles/drivers:bootstrap",
+  "//bundles/drivers:usb-host-stack",
+  "//bundles/drivers:usb-peripheral-stack",
+  "//bundles/drivers:utils",
 ]
 
 # Needed for installer runs.
@@ -40,11 +36,6 @@ zedboot_deps += [
 # For debugging.
 zedboot_deps += [
   "//src/connectivity/network/bin/ping",
-  "//src/devices/bin/driverctl",
-  "//src/devices/bin/lsdev",
-  "//src/devices/bin/unbind",
-  "//src/devices/block/bin/gpt",
-  "//src/devices/block/bin/lsblk",
   "//src/devices/nand/bin/nand-util",
   "//src/security/bin/syscall-check",
   "//src/storage/bin/dd",
@@ -60,18 +51,11 @@ zedboot_deps += [
 
 # Finally, everything which used to come from the Zircon build as a monolith.
 zedboot_deps += [
-  "//bundles/drivers:usb-host-stack",
-  "//bundles/drivers:usb-peripheral-stack",
   "//src/bringup/bin/virtcon:virtual-console",
-  "//src/devices/bin/driver_manager",
   "//src/devices/nand/drivers/broker:nand-broker",
   "//src/devices/nand/drivers/ram-nand",
-  "//src/devices/sysmem/drivers/sysmem",
-  "//src/devices/tests/sysdev",
   "//src/diagnostics/dlog",
   "//src/media/audio/drivers/alc5663",
-  "//src/power/shutdown-shim",
-  "//src/sys/component_manager:bin",
   "//src/sys/installer:bin",
   "//src/ui/input/drivers/hid-input-report",
 ]

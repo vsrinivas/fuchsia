@@ -6,7 +6,7 @@ group("bootstrap") {
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/network/drivers/network-device",
-    "//src/devices/bundles:bootstrap",
+    "//src/devices/bundles:bootstrap-dev",
     "//src/graphics/display/drivers/display",
     "//src/ui/input/drivers/hid",
     "//src/ui/input/drivers/hid-buttons",

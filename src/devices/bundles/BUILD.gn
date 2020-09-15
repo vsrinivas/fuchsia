@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This target contains elements that are present on the boot partition of all
+# This target contains drivers that are present on the boot partition of all
 # products.
-group("bootstrap") {
+group("bootstrap-dev") {
   deps = [
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/fvm",
@@ -26,6 +26,16 @@ group("bootstrap") {
     "//src/devices/serial/drivers/serial",
     "//src/devices/serial/drivers/serial-async",
     "//src/devices/spi/drivers/spi",
+    "//src/devices/sysmem/drivers/sysmem",
+  ]
+}
+
+# This target contains executables that are present on the boot partition of all
+# products.
+group("bootstrap-bin") {
+  deps = [
+    "//src/devices/bin/driver_host",
+    "//src/devices/bin/driver_manager:bootfs",
   ]
 }
 
@@ -53,6 +63,11 @@ group("usb-peripheral-stack") {
 
 group("utils") {
   deps = [
+    "//src/devices/bin/driverctl",
+    "//src/devices/bin/lsdev",
+    "//src/devices/bin/unbind",
+    "//src/devices/block/bin/gpt",
+    "//src/devices/block/bin/lsblk",
     "//src/devices/clock/bin/clock",
     "//src/devices/clock/bin/clock:clkctl",
     "//src/devices/cpu/bin/cpuctl",

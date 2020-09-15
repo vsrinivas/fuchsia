@@ -120,16 +120,20 @@ group("amlogic_hw_dependent_tests") {
 group("bootstrap") {
   deps = [
     "//src/bringup/bundles:bootstrap",
+    "//src/devices/bundles:bootstrap-bin",
     "//src/power/bundles:bootstrap",
     "//src/storage/bundles:bootstrap",
+    "//src/sys/bundles:bootstrap",
   ]
 }
 
 # Binaries that form the base of every single zedboot image.
-group("zedboot") {
+group("bootstrap-zedboot") {
   deps = [
     "//src/bringup/bundles:zedboot",
+    "//src/devices/bundles:bootstrap-bin",
     "//src/power/bundles:bootstrap",
     "//src/storage/bundles:bootstrap",
+    "//src/sys/bundles:bootstrap",
   ]
 }
