@@ -6,15 +6,17 @@
 #### CATEGORY=Run, inspect and debug
 ### run zircon core-tests
 
-## usage: core-tests [-...`fx run-zbi-test` switches...] [gtest-filter]
+## usage: core-tests [-...`fx run-zbi-test` switches...] [--gtest-filter=<FILTER>]
+##        [--gtest_repeat=<REPEAT>]
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 ARGS=()
 for arg in "$@"; do
   case "$arg" in
+  --gtest_repeat*) ARGS+=(--cmdline="$arg") ;;
+  --gtest_filter*) ARGS+=(--cmdline="$arg") ;;
   -*) ARGS+=("$arg") ;;
-  *) ARGS+=(--cmdline="--gtest_filter=$arg") ;;
   esac
 done
 

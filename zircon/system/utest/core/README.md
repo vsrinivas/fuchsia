@@ -12,14 +12,18 @@ etc.
 ```
 fx set core.x64   # any of {bringup,core}.{x64,arm64} are fine too.
 fx build
-fx core-tests [gtest-filter]
+fx core-tests [--gtest_filter=FILTER] [--gtest_repeat=REPEAT]
 ```
 
 The helper fx command runs AEMU providing the specially-built core-tests.zbi as
 a `-z` argument.
 
-`gtest-filter` can be optionally specified to run only the given gtest suite,
-e.g. `fx core-tests 'FutexTest.*'`.
+Only a subset of tests can be specified by `gtest_filter`, e.g.
+`--gtest_filter="FutexTest.*"`
+
+Tests can be rerun with `gtest_repeat`, e.g.
+`--gtest_repeat=100` to run all tests 100 times or
+`--gtest_repeat=-1` to run all tests until a test fails.
 
 ## Notes
 

@@ -4,19 +4,31 @@
 
 #include <zxtest/zxtest.h>
 
-extern char **environ;
+extern char** environ;
 
-// This is the same as zxtest's default main() except that it allows filtering
-// based on an argument passed in from the kernel command line, as there's no
-// way for the user to pass a "normal" argc/argv.
+// This is the same as zxtest's default main() except that it checks the kernel
+// command line for gtest arguments and passes them through to the test.
+// Since this is run directly from boot there's no way for the user to pass
+// a "normal" argc/argv.
 int main() {
   int argc = 1;
-  const char* argv[3] = {"core-tests", NULL, NULL};
+  const char* argv[4] = {"core-tests", NULL, NULL, NULL};
+
+  bool has_filter = false;
+  static const char kFilterPrefix[] = "--gtest_filter=";
+
+  bool has_repeat = false;
+  static const char kRepeatPrefix[] = "--gtest_repeat=";
+
   for (char** p = environ; *p; ++p) {
-    static const char kPrefix[] = "--gtest_filter=";
-    if (strncmp(*p, kPrefix, sizeof(kPrefix) - 1) == 0) {
+    if (!has_filter && strncmp(*p, kFilterPrefix, sizeof(kFilterPrefix) - 1) == 0) {
       argv[argc++] = *p;
-      break;
+      has_filter = true;
+    }
+
+    if (!has_repeat && strncmp(*p, kRepeatPrefix, sizeof(kRepeatPrefix) - 1) == 0) {
+      argv[argc++] = *p;
+      has_repeat = true;
     }
   }
   return RUN_ALL_TESTS(argc, (char**)argv);
