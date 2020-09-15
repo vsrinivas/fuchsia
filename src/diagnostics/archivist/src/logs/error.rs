@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use diagnostic_streams::parse::ParseError;
+use diagnostics_stream::parse::ParseError;
 use thiserror::Error;
 
 use super::message::{fx_log_severity_t, MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};

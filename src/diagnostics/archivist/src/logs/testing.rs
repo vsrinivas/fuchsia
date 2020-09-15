@@ -2,7 +2,7 @@ use super::*;
 use crate::logs::message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostic_streams::{encode::Encoder, Record};
+use diagnostics_stream::{encode::Encoder, Record};
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,

@@ -141,7 +141,7 @@ mod tests {
         PLACEHOLDER_MONIKER, PLACEHOLDER_URL,
     };
     use super::*;
-    use diagnostic_streams::{
+    use diagnostics_stream::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
     use std::io::Cursor;

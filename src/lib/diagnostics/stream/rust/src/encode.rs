@@ -58,9 +58,6 @@ where
 
         let mut header = Header(0);
 
-        // TODO(adamperry) if the arg type is boolean then we can skip it if false right?
-        // TODO(adamperry) we can also switch to a null arg in the tracing format for true values
-
         self.write_string(&argument.name)?;
         header.set_name_ref(StringRef::for_str(&argument.name).mask());
 

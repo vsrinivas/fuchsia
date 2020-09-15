@@ -13,13 +13,13 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":diagnostic-stream-fuzzers",
-    ":diagnostic_streams_tests",
+    ":diagnostics-stream-fuzzers",
+    ":diagnostics-stream-tests",
   ]
 }
 
-rustc_library("streams") {
-  name = "diagnostic_streams"
+rustc_library("rust") {
+  name = "diagnostics_stream"
   with_unit_tests = true
   edition = "2018"
 
@@ -40,19 +40,19 @@ rustc_library("streams") {
   ]
 }
 
-unittest_package("diagnostic_streams_tests") {
-  deps = [ ":streams_test" ]
+unittest_package("diagnostics-stream-tests") {
+  deps = [ ":rust_test" ]
 
   tests = [
     {
-      name = "diagnostic_streams_lib_test"
+      name = "diagnostics_stream_lib_test"
     },
   ]
 }
 
 rustc_fuzzer("parse_record_fuzzer") {
   deps = [
-    ":streams",
+    ":rust",
     "//src/lib/fuzzing/rust:fuzz",
   ]
   source_root = "src/fuzzer.rs"
@@ -60,6 +60,6 @@ rustc_fuzzer("parse_record_fuzzer") {
   sources = [ "src/fuzzer.rs" ]
 }
 
-fuzzers_package("diagnostic-stream-fuzzers") {
+fuzzers_package("diagnostics-stream-fuzzers") {
   rust_fuzzers = [ ":parse_record_fuzzer" ]
 }

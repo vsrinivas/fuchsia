@@ -25,7 +25,6 @@ group("tests") {
     "iquery:tests",
     "lib:tests",
     "log-validator:tests",
-    "streams:tests",
     "tool:host_tests",
     "triage:tests",
     "wasm:tests",

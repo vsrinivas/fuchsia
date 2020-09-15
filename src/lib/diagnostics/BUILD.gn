@@ -5,6 +5,7 @@ group("diagnostics") {
   deps = [
     "//src/lib/diagnostics/data",
     "//src/lib/diagnostics/reader",
+    "//src/lib/diagnostics/stream",
     "//src/lib/diagnostics/testing",
   ]
 }
@@ -15,6 +16,7 @@ group("tests") {
     "//src/lib/diagnostics/data:tests",
     "//src/lib/diagnostics/inspect:tests",
     "//src/lib/diagnostics/reader:tests",
+    "//src/lib/diagnostics/stream:tests",
     "//src/lib/diagnostics/testing:tests",
   ]
 }

@@ -4,8 +4,8 @@
 use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostic_streams::{Severity as StreamSeverity, Value};
 use diagnostics_data::{LogError, Timestamp};
+use diagnostics_stream::{Severity as StreamSeverity, Value};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fuchsia_inspect_node_hierarchy::NodeHierarchy;
 use fuchsia_zircon as zx;
@@ -184,7 +184,7 @@ impl Message {
     ///
     /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
     pub fn from_structured(bytes: &[u8]) -> Result<Self, StreamError> {
-        let (record, _) = diagnostic_streams::parse::parse_record(bytes)?;
+        let (record, _) = diagnostics_stream::parse::parse_record(bytes)?;
 
         let mut properties = vec![];
         let mut dropped_logs = 0;
@@ -552,8 +552,8 @@ impl fx_log_packet_t {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use diagnostic_streams::{encode::Encoder, Argument, Record};
     use diagnostics_data::*;
+    use diagnostics_stream::{encode::Encoder, Argument, Record};
     use fuchsia_syslog::levels::{DEBUG, ERROR, INFO, TRACE, WARN};
     use std::io::Cursor;
 
