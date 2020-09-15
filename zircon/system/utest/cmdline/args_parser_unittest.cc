@@ -325,10 +325,8 @@ TEST(ArgsParser, OptionalTypes) {
   parser.AddSwitch("present_char", 0, "", &MyOptions::present_char);
   parser.AddSwitch("missing_char", 0, "", &MyOptions::missing_char);
 
-  const char* args[] = {"program", "--present_string=foo",
-    "--present_int=3",
-    "--present_double=1.5",
-    "--present_char=x"};
+  const char* args[] = {"program", "--present_string=foo", "--present_int=3",
+                        "--present_double=1.5", "--present_char=x"};
 
   MyOptions options;
   std::vector<std::string> params;
@@ -361,8 +359,7 @@ TEST(ArgsParser, OptionalTypeWithDefault) {
   parser.AddSwitch("present_int", 0, "", &MyOptions::present_int);
   parser.AddSwitch("missing_int", 0, "", &MyOptions::missing_int);
 
-  const char* args[] = {"program", "--present_string=foo",
-    "--present_int=3"};
+  const char* args[] = {"program", "--present_string=foo", "--present_int=3"};
 
   MyOptions options;
   std::vector<std::string> params;
@@ -374,6 +371,54 @@ TEST(ArgsParser, OptionalTypeWithDefault) {
 
   EXPECT_STRING_EQ(options.missing_string.value(), "y");
   EXPECT_EQ(options.missing_int.value(), 2);
+}
+
+TEST(ArgsParser, VectorTypes) {
+  struct MyOptions {
+    std::vector<std::string> string_vector;
+
+    std::vector<int> int_vector;
+
+    std::vector<double> double_vector;
+
+    std::vector<char> char_vector;
+  };
+
+  auto int_validator = [](const std::string& input) -> Status {
+    // Check that the string is only digits.
+    if (std::find_if(input.begin(), input.end(),
+                     [](unsigned char c) { return !std::isdigit(c); }) != input.end()) {
+      return Status::Error("Expected only digits, found: " + input);
+    }
+    return Status::Ok();
+  };
+
+  ArgsParser<MyOptions> parser;
+  parser.AddSwitch("string_vector", 0, "", &MyOptions::string_vector, nullptr, ',');
+  parser.AddSwitch("int_vector", 0, "", &MyOptions::int_vector, int_validator);
+  parser.AddSwitch("double_vector", 'd', "", &MyOptions::double_vector);
+  parser.AddSwitch("char_vector", 'c', "", &MyOptions::char_vector);
+
+  const char* args[] = {
+      "program", "--string_vector=foo,bar,baz", "--int_vector=3", "--int_vector=7",
+      "-d", "1.5", "-d", "2.7", "--char_vector=x", "-c", "y", "--char_vector=z"
+  };
+
+  MyOptions options;
+  std::vector<std::string> params;
+  Status status = parser.Parse(12, args, &options, &params);
+  ASSERT_FALSE(status.has_error(), "%s", status.error_message().c_str());
+
+  EXPECT_EQ(options.string_vector, std::vector<std::string>({"foo", "bar", "baz"}));
+  EXPECT_EQ(options.int_vector, std::vector<int>({3, 7}));
+  EXPECT_EQ(options.double_vector, std::vector<double>({1.5, 2.7}));
+  EXPECT_EQ(options.char_vector, std::vector<char>({'x', 'y', 'z'}));
+
+  // Invalid value.
+  const char* bad_args[] = {"program", "--int_vector=2.0"};
+  status = parser.Parse(2, bad_args, &options, &params);
+  EXPECT_TRUE(status.has_error());
+  EXPECT_STR_EQ("Expected only digits, found: 2.0", status.error_message());
 }
 
 }  // namespace

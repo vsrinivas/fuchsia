@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CMDLINE_ARGS_PARSER_H_
-#define CMDLINE_ARGS_PARSER_H_
+#ifndef LIB_CMDLINE_ARGS_PARSER_H_
+#define LIB_CMDLINE_ARGS_PARSER_H_
 
 #include <lib/cmdline/optional.h>
 #include <lib/cmdline/status.h>
@@ -101,6 +101,11 @@ class GeneralArgsParser {
   std::vector<Record> records_;
   std::string invalid_option_suggestion_ = "Try --help";
 };
+
+namespace internal {
+// Split a string into substrings by a delimiter.
+std::vector<std::string> SplitString(const std::string& input, char delimiter);
+}  // namespace internal
 
 // ArgsParser -----------------------------------------------------------
 //
@@ -233,8 +238,9 @@ class ArgsParser : public GeneralArgsParser {
                      });
   }
 
-  // Collects a list of all values passed with this flag. This allows multiple
-  // flag invocations. For examples "-f foo -f bar" would produce a vector
+  // Collects a list of any type streamable to an iostream (via operator ">>")
+  // with the value passed with this flag. This allows multiple flag
+  // invocations. For example "-f foo -f bar" would produce a vector
   // { "foo", "bar" }
   //
   // If the optional validator lambda is given, it will be called with the
@@ -242,24 +248,47 @@ class ArgsParser : public GeneralArgsParser {
   // returning a cmdline::Status::Error("Your message"); otherwise return
   // cmdline::Status::Ok().
   //
+  // If the optional delimiters are given, the list can be passed in as a single
+  // string split by delimiters. Whitespace will be trimmed from the ends of the values.
+  // For example with the delimiter "," the argument "-f foo,bar" would produce a vector
+  // { "foo", "bar" }
+  //
   // Example
   //   struct MyOptions {
-  //     std::vector<std::string> foo;
+  //     std::vector<std::string> foo;  // Note the type could be int, double, ...
   //   };
   //   ArgsParser<MyOptions> parser;
   //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
+  template <typename T>
   void AddSwitch(const char* long_name, const char short_name, const char* help,
-                 std::vector<std::string> ResultStruct::*value,
-                 StringCallback validator = nullptr) {
+                 std::vector<T> ResultStruct::*value, StringCallback validator = nullptr,
+                 char delimiter = '\0') {
     AddGeneralSwitch(long_name, short_name, help,
-                     [this, value, validator](const std::string& v) -> Status {
-                       if (validator != nullptr) {
-                         Status status = validator(v);
-                         if (status.has_error()) {
-                           return status;
+                     [this, long_name, value, validator = std::move(validator),
+                      delimiter](const std::string& input) -> Status {
+                       std::vector<std::string> vs = internal::SplitString(input, delimiter);
+                       for (const std::string& v : vs) {
+                         if (validator != nullptr) {
+                           Status status = validator(v);
+                           if (status.has_error()) {
+                             return status;
+                           }
                          }
+                         T tmp_val;
+                         std::stringstream ss(v);
+                         ss >> tmp_val;
+                         if (ss.fail()) {
+                           return Status::Error("'" + v + "' is invalid for --" + long_name);
+                         }
+                         std::string trailing;
+                         ss >> trailing;
+                         if (!trailing.empty()) {
+                           return Status::Error("Invalid trailing characters '" + trailing +
+                                                "' for --" + long_name);
+                         }
+                         (result_.*value).push_back(tmp_val);
                        }
-                       (result_.*value).push_back(v);
+
                        return Status::Ok();
                      });
   }
@@ -297,4 +326,4 @@ class ArgsParser : public GeneralArgsParser {
 
 }  // namespace cmdline
 
-#endif  // CMDLINE_ARGS_PARSER_H_
+#endif  // LIB_CMDLINE_ARGS_PARSER_H_

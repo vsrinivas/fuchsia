@@ -186,4 +186,44 @@ Status GeneralArgsParser::ParseGeneral(int argc, const char* const argv[],
 // static
 bool GeneralArgsParser::NeedsArg(const Record* record) { return !!record->string_callback; }
 
+namespace internal {
+
+std::vector<std::string> SplitString(const std::string& input, char delimiter) {
+  std::vector<std::string> output;
+
+  if (input.empty()) {
+    return output;
+  }
+
+  if (delimiter == '\0') {
+    output.push_back(input);
+    return output;
+  }
+
+  size_t start = 0;
+  while (start != std::string::npos) {
+    // Extract a substring.
+    size_t end = input.find_first_of(delimiter, start);
+    std::string str;
+    if (end == std::string::npos) {
+      str = input.substr(start);
+      start = std::string::npos;
+    } else {
+      str = input.substr(start, end - start);
+      start = end + 1;
+    }
+
+    // Ignore empty substring.
+    if (str.empty()) {
+      continue;
+    }
+
+    output.push_back(str);
+  }
+
+  return output;
+}
+
+}  // namespace internal
+
 }  // namespace cmdline
