@@ -63,6 +63,7 @@ group("tests") {
     "component:tests",
     "containers/cpp:tests",
     "cstr:tests",
+    "cutex:tests",
     "ddk:tests",
     "ddktl:tests",
     "diagnostics:tests",

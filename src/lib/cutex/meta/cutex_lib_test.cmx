@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/cutex_lib_test"
+    }
+}
