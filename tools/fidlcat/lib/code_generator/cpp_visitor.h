@@ -75,6 +75,14 @@ class CppVariable {
   const Type* const for_type_;
 };
 
+class CppVariableVector : public CppVariable {
+ public:
+  CppVariableVector(const std::string name, const Value* value, const Type* for_type)
+      : CppVariable(name, value, for_type) {}
+
+  void GenerateInitialization(PrettyPrinter& printer, const char* suffix = "") const override;
+};
+
 class CppVariableStruct : public CppVariable {
  public:
   CppVariableStruct(const std::string name, const Value* value, const Type* for_type)
@@ -91,6 +99,11 @@ class CppVisitor : public Visitor {
 
   void VisitValue(const Value* node, const Type* for_type) override {
     std::shared_ptr<CppVariable> value = std::make_shared<CppVariable>(name_, node, for_type);
+    result_ = std::move(value);
+  }
+
+  virtual void VisitVectorValue(const VectorValue* node, const Type* for_type) override {
+    std::shared_ptr<CppVariable> value = std::make_shared<CppVariableVector>(name_, node, for_type);
     result_ = std::move(value);
   }
 

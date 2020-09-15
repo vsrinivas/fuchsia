@@ -242,6 +242,49 @@ TEST_F(TestGeneratorTest, GenerateInitializationStruct) {
             "struct_recursive my_struct_var = { my_struct_var_input, my_struct_var_output };\n");
 }
 
+TEST_F(TestGeneratorTest, GenerateInitializationVector) {
+  fidl_codec::CppVisitor visitor("my_vector_var");
+
+  auto struct_input_type =
+      std::make_unique<fidl_codec::StructType>(*(struct_def_input_.get()), false);
+
+  auto my_vector_type = std::make_shared<fidl_codec::VectorType>(std::move(struct_input_type));
+
+  auto elem_0 = std::make_unique<fidl_codec::StructValue>(*struct_def_input_.get());
+  elem_0->AddField("base", std::make_unique<fidl_codec::IntegerValue>(int64_t(2)));
+  elem_0->AddField("exponent", std::make_unique<fidl_codec::IntegerValue>(int64_t(3)));
+
+  auto elem_1 = std::make_unique<fidl_codec::StructValue>(*struct_def_input_.get());
+  elem_1->AddField("base", std::make_unique<fidl_codec::IntegerValue>(int64_t(4)));
+  elem_1->AddField("exponent", std::make_unique<fidl_codec::IntegerValue>(int64_t(5)));
+
+  auto my_vector_value = std::make_shared<fidl_codec::VectorValue>();
+  my_vector_value->AddValue(std::move(elem_0));
+  my_vector_value->AddValue(std::move(elem_1));
+
+  my_vector_value->Visit(&visitor, my_vector_type.get());
+  std::shared_ptr<fidl_codec::CppVariable> cpp_var = visitor.result();
+
+  cpp_var->GenerateInitialization(printer_);
+
+  // TODO(nimaj):
+  // Aim to generate something like this:
+  // std::vector<StructInput> my_vector_var;
+  // my_vector_var.emplace_back({ .base = 2, .exponent = 3 });
+  // my_vector_var.emplace_back({ .base = 4, .exponent = 5 });
+  EXPECT_EQ(os_.str(),
+            "int64_t my_vector_var_elem_0_base = 2;\n"
+            "int64_t my_vector_var_elem_0_exponent = 3;\n"
+            "StructInput my_vector_var_elem_0 = { my_vector_var_elem_0_base, "
+            "my_vector_var_elem_0_exponent };\n"
+            "int64_t my_vector_var_elem_1_base = 4;\n"
+            "int64_t my_vector_var_elem_1_exponent = 5;\n"
+            "StructInput my_vector_var_elem_1 = { my_vector_var_elem_1_base, "
+            "my_vector_var_elem_1_exponent };\n"
+            "std::vector<StructInput> my_vector_var = { my_vector_var_elem_0, "
+            "my_vector_var_elem_1 };\n");
+}
+
 TEST_F(TestGeneratorTest, GenerateOutputDeclarations) {
   test_generator_.GenerateOutputDeclarations(printer_, call_read_1_.get());
   EXPECT_EQ(os_.str(),

@@ -6,6 +6,36 @@
 
 namespace fidl_codec {
 
+void CppVariableVector::GenerateInitialization(PrettyPrinter& printer, const char* suffix) const {
+  const Type* component_type = for_type()->GetComponentType();
+
+  std::string separator;
+  int i = 0;
+  std::vector<std::shared_ptr<CppVariable>> elems = {};
+  for (const auto& value : value()->AsVectorValue()->values()) {
+    CppVisitor visitor(name() + "_elem_" + std::to_string(i++));
+    value->Visit(&visitor, component_type);
+
+    auto elem = visitor.result();
+    elems.emplace_back(elem);
+
+    elem->GenerateInitialization(printer);
+  }
+
+  printer << separator;
+
+  GenerateTypeAndName(printer);
+  printer << " = { ";
+
+  separator = "";
+  for (const auto& elem : elems) {
+    printer << separator;
+    elem->GenerateName(printer);
+    separator = ", ";
+  }
+  printer << " };\n";
+}
+
 void CppVariableStruct::GenerateInitialization(PrettyPrinter& printer, const char* suffix) const {
   /*
    * Given the following FIDL definition:
