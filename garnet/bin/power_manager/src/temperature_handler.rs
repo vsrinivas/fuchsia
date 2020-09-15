@@ -177,7 +177,8 @@ struct InspectData {
 
 impl InspectData {
     /// Number of inspect samples to store in the `temperature_readings` BoundedListNode.
-    const NUM_INSPECT_TEMPERATURE_SAMPLES: usize = 10;
+    // Store the last 60 seconds of temperature readings (fxbug.dev/59774)
+    const NUM_INSPECT_TEMPERATURE_SAMPLES: usize = 60;
 
     fn new(parent: &inspect::Node, name: String) -> Self {
         // Create a local root node and properties
@@ -204,6 +205,7 @@ impl InspectData {
 pub mod tests {
     use super::*;
     use fuchsia_async as fasync;
+    use fuchsia_inspect::testing::TreeAssertion;
     use futures::TryStreamExt;
     use inspect::assert_inspect_tree;
 
@@ -301,22 +303,27 @@ pub mod tests {
         .build()
         .unwrap();
 
-        // The node will read the current temperature and log the sample into Inspect
-        node.handle_message(&Message::ReadTemperature).await.unwrap();
+        // The node will read the current temperature and log the sample into Inspect. Read enough
+        // samples to test that the correct number of samples are logged and older ones are dropped.
+        for _ in 0..InspectData::NUM_INSPECT_TEMPERATURE_SAMPLES + 10 {
+            node.handle_message(&Message::ReadTemperature).await.unwrap();
+        }
 
-        assert_inspect_tree!(
-            inspector,
-            root: {
-                "TemperatureHandler (Fake)": contains {
-                    temperature_readings: {
-                        "0": {
-                            temperature: temperature.0,
-                            "@time": inspect::testing::AnyProperty
-                        }
-                    }
-                }
-            }
-        );
+        let mut root = TreeAssertion::new("TemperatureHandler (Fake)", false);
+        let mut temperature_readings = TreeAssertion::new("temperature_readings", true);
+
+        // Since we read 10 more samples than our limit allows, the first 10 should be dropped. So
+        // test that the sample numbering starts at 10 and continues for the expected number of
+        // samples.
+        for i in 10..InspectData::NUM_INSPECT_TEMPERATURE_SAMPLES + 10 {
+            let mut sample_child = TreeAssertion::new(&i.to_string(), true);
+            sample_child.add_property_assertion("temperature", Box::new(temperature.0));
+            sample_child.add_property_assertion("@time", Box::new(inspect::testing::AnyProperty));
+            temperature_readings.add_child_assertion(sample_child);
+        }
+
+        root.add_child_assertion(temperature_readings);
+        assert_inspect_tree!(inspector, root: { root, });
     }
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
