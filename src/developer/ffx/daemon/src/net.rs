@@ -85,6 +85,13 @@ pub struct McastInterface {
     pub addrs: Vec<SocketAddr>,
 }
 
+impl McastInterface {
+    pub fn id(&self) -> Result<u32> {
+        nix::net::if_::if_nametoindex(self.name.as_str())
+            .context(format!("Interface id for {}", self.name))
+    }
+}
+
 fn is_local_multicast_addr(addr: &InterfaceAddress) -> bool {
     let inet_addr = match addr.address {
         Some(SockAddr::Inet(inet)) => inet,
@@ -141,6 +148,36 @@ mod tests {
 
     fn sockaddr(s: &str) -> SockAddr {
         SockAddr::new_inet(InetAddr::from_std(&SocketAddr::from_str(s).unwrap()))
+    }
+
+    #[test]
+    fn test_local_interfaces_and_ids() {
+        // This is an integration test. It may fail on a host system that has no
+        // interfaces.
+        let interfaces = get_mcast_interfaces().unwrap();
+        assert!(interfaces.len() >= 1);
+        for iface in &interfaces {
+            // Note: could race if the host system is reconfigured in the
+            // between the interface gathering above and this call, which is
+            // unlikely.
+            iface.id().unwrap();
+        }
+
+        // Assert that we find each interface and address from a raw getifaddrs call in the set of returned interfaces.
+        for exiface in getifaddrs().unwrap() {
+            if !is_local_multicast_addr(&exiface) {
+                continue;
+            }
+            assert!(interfaces.iter().find(|iface| iface.name == exiface.interface_name).is_some());
+            if let Some(SockAddr::Inet(exaddr)) = exiface.address {
+                assert!(interfaces
+                    .iter()
+                    .find(|iface| {
+                        iface.addrs.iter().find(|addr| **addr == exaddr.to_std()).is_some()
+                    })
+                    .is_some());
+            }
+        }
     }
 
     #[test]

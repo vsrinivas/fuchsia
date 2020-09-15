@@ -92,8 +92,11 @@ impl Daemon {
         Daemon::spawn_onet_discovery(queue.clone());
         Daemon::spawn_fastboot_discovery(queue.clone());
 
-        let config =
-            TargetFinderConfig { broadcast_interval: Duration::from_secs(120), mdns_ttl: 255 };
+        let config = TargetFinderConfig {
+            interface_discovery_interval: Duration::from_secs(1),
+            broadcast_interval: Duration::from_secs(120),
+            mdns_ttl: 255,
+        };
         let mut mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
         Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue })

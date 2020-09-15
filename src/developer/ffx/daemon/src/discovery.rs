@@ -15,6 +15,7 @@ pub trait TargetFinder: Sized {
 
 #[derive(Copy, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct TargetFinderConfig {
+    pub interface_discovery_interval: Duration,
     pub broadcast_interval: Duration,
     pub mdns_ttl: u32,
 }
