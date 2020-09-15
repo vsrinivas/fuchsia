@@ -349,6 +349,54 @@ void main(List<String> arguments) {
               .readAsStringSync()));
     });
 
+    test('Test --with=generate-tests (sync)', () async {
+      final String echoClientSyncProto = Platform.script
+          .resolve('runtime_deps/echo_client_sync.proto')
+          .toFilePath();
+
+      var systemTempDir = Directory.systemTemp;
+      var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
+
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent, [
+        '--with=generate-tests=${fidlcatTemp.path}',
+        '--from=$echoClientSyncProto'
+      ]);
+
+      expect(
+          instance.stdout,
+          equals('Writing tests on disk\n'
+              '  process name: echo_client_cpp_synchronous\n'
+              '  output directory: "${fidlcatTemp.path}"\n'
+              '1662590155 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_0.cc"\n'
+              '\n'
+              '1722359527 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_1.cc"\n'
+              '\n'
+              '1950948475 zx_channel_write fuchsia.sys/Launcher.CreateComponent\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_sys__launcher_0.cc"\n'
+              '\n'
+              '2009669511 zx_channel_call fidl.examples.echo/Echo.EchoString\n'
+              '... Writing to "${fidlcatTemp.path}/fidl_examples_echo__echo_0.cc"\n'
+              '\n'
+              '2085165403 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_2.cc"\n'
+              '\n'
+              ''),
+          reason: instance.additionalResult);
+
+      // Checks that the generated code is identical to the golden file
+      expect(
+          File('${fidlcatTemp.path}/fidl_examples_echo__echo_0.cc')
+              .readAsStringSync(),
+          equals(File(Platform.script
+                  .resolve(
+                      'runtime_deps/fidl_examples_echo__echo_sync.test.cc.golden')
+                  .toFilePath())
+              .readAsStringSync()));
+    });
+
     test('Test --with=generate-tests (server crashing)', () async {
       final String echoCrashProto = Platform.script
           .resolve('runtime_deps/echo_sync_crash.proto')

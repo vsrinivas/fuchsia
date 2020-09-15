@@ -42,12 +42,12 @@ class Proxy {
 };
 
 void Proxy::group_0() {
-  proxy_->EchoString([this]() {
-    loop_.Quit();
-  });
+  proxy_sync_->EchoString();
+
+  loop_.Quit();
 }
 
-TEST(echo_client_cpp, fidl_examples_echo__echo) {
+TEST(echo_client_cpp_synchronous, fidl_examples_echo__echo) {
   Proxy proxy;
   proxy.run();
 }

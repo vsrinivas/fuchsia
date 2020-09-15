@@ -7,6 +7,79 @@
 
 namespace fidlcat {
 
+void ProxyPrinter::GenerateProxyClass() {
+  printer_ << "class Proxy {\n";
+  {
+    printer_ << " public:\n";
+    {
+      fidl_codec::Indent indent(printer_);
+      GenerateProxyRun();
+      printer_ << '\n';
+    }
+    printer_ << " private:\n";
+    {
+      fidl_codec::Indent indent(printer_);
+      GenerateProxyGroupsDecl();
+      printer_ << "\n";
+      GenerateProxySetup();
+      printer_ << "\n";
+      GenerateProxyPrivateVars();
+      GenerateProxyBooleans();
+    }
+  }
+  printer_ << "};\n";
+}
+
+void ProxyPrinter::GenerateProxyRun() {
+  printer_ << "void run() {\n";
+  printer_ << "  setup_();\n";
+  printer_ << "  group_0();\n";
+  printer_ << "  loop_.Run();\n";
+  printer_ << "}\n";
+}
+
+void ProxyPrinter::GenerateProxyGroupsDecl() {
+  std::string separator;
+  for (size_t i = 0; i < groups_.size(); i++) {
+    printer_ << separator << "void group_" << i << "();\n";
+    separator = "\n";
+  }
+}
+
+void ProxyPrinter::GenerateProxyBooleans() {
+  for (size_t i = 0; i < groups_.size(); i++) {
+    for (size_t j = 0; j < groups_[i]->size() && groups_[i]->size() > 1; j++) {
+      printer_ << "bool received_" << i << "_" << j << "_ = false;\n";
+    }
+  }
+}
+
+void ProxyPrinter::GenerateProxyPrivateVars() {
+  printer_ << "async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);\n";
+  printer_ << "std::unique_ptr<sys::ComponentContext> context_ = "
+              "sys::ComponentContext::CreateAndServeOutgoingDirectory();\n";
+  printer_ << "fuchsia::sys::ComponentControllerPtr controller_;\n";
+  printer_ << "std::string server_url = \"" << path_ << "\";\n";
+  printer_ << method_name_ << "Ptr proxy_;\n";
+}
+
+void ProxyPrinter::GenerateProxySetup() {
+  printer_ << "void setup_() {\n";
+  {
+    fidl_codec::Indent indent(printer_);
+    printer_ << "fidl::InterfaceHandle<fuchsia::io::Directory> directory;\n";
+    printer_ << "fuchsia::sys::LaunchInfo launch_info;\n";
+    printer_ << "launch_info.url = server_url;\n";
+    printer_ << "launch_info.directory_request = directory.NewRequest().TakeChannel();\n";
+    printer_ << "fuchsia::sys::LauncherPtr launcher;\n";
+    printer_ << "context_->svc()->Connect(launcher.NewRequest());\n";
+    printer_ << "launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());\n";
+    printer_ << "sys::ServiceDirectory provider(std::move(directory));\n";
+    printer_ << "provider.Connect(proxy_.NewRequest());\n";
+  }
+  printer_ << "}\n";
+}
+
 void TestGenerator::GenerateTests() {
   if (dispatcher_->processes().size() != 1) {
     std::cout << "Error: Cannot generate tests for more than one process.\n";
@@ -28,12 +101,22 @@ void TestGenerator::GenerateTests() {
             << "  process name: " << dispatcher_->processes().begin()->second->name() << '\n'
             << "  output directory: " << output_directory_ << '\n';
 
+  // TODO(nimaj):
+  // Currently we generate one test file per handle.
+  // Once we implement request pipelining, we will bundle multiple handles in one file.
+  // Another alternative is to generate one file per process.
+  // We should make a decision on the granularity of the generated files.
   for (const auto& [handle_id, calls] : call_log()) {
-    std::string protocol_name;
+    std::string interface_name;
+    std::string method_name;
 
     for (const auto& call_info : calls) {
-      if (protocol_name.empty()) {
-        protocol_name = call_info->enclosing_interface_name();
+      if (interface_name.empty()) {
+        interface_name = call_info->enclosing_interface_name();
+      }
+
+      if (method_name.empty()) {
+        method_name = call_info->method_name();
       }
 
       std::cout << call_info->handle_id() << " ";
@@ -57,7 +140,10 @@ void TestGenerator::GenerateTests() {
                 << '\n';
     }
 
-    WriteTestToFile(protocol_name);
+    std::vector<FidlCallInfo*> calls_;
+    std::transform(calls.begin(), calls.end(), std::back_inserter(calls_),
+                   [](const std::unique_ptr<FidlCallInfo>& t) { return t.get(); });
+    WriteTestToFile(interface_name, method_name, handle_id, calls_);
     std::cout << '\n';
   }
 }
@@ -123,7 +209,9 @@ TestGenerator::SplitChannelCallsIntoGroups(const std::vector<FidlCallInfo*>& cal
   return groups;
 }
 
-void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
+void TestGenerator::WriteTestToFile(std::string_view interface_name, std::string_view method_name,
+                                    zx_handle_t handle_id,
+                                    const std::vector<FidlCallInfo*>& calls) {
   std::error_code err;
   std::filesystem::create_directories(output_directory_, err);
   if (err) {
@@ -133,8 +221,8 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
 
   std::filesystem::path file_name =
       output_directory_ /
-      std::filesystem::path(ToSnakeCase(protocol_name) + "_" +
-                            std::to_string(test_counter_[std::string(protocol_name)]++) + ".cc");
+      std::filesystem::path(ToSnakeCase(interface_name) + "_" +
+                            std::to_string(test_counter_[std::string(interface_name)]++) + ".cc");
   std::cout << "... Writing to " << file_name << '\n';
 
   std::ofstream target_file;
@@ -149,8 +237,26 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
 
   GenerateIncludes(printer);
 
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups =
+      SplitChannelCallsIntoGroups(calls);
+
+  fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
+      dispatcher_->inference().GetInferredHandleInfo(
+          /*pid=*/dispatcher_->processes().begin()->first, handle_id);
+
+  std::string unprocessed_path = inferred_handle_info->path();
+  auto proxy_printer =
+      ProxyPrinter(printer, unprocessed_path.substr(0, unprocessed_path.find_last_of('/')),
+                   interface_name, method_name, groups);
+  proxy_printer.GenerateProxyClass();
+
+  for (size_t i = 0; i < groups.size(); i++) {
+    GenerateGroup(printer, groups, i, true);
+  }
+
+  target_file << '\n';
   target_file << "TEST(" << ToSnakeCase(dispatcher_->processes().begin()->second->name()) << ", "
-              << ToSnakeCase(protocol_name) << ") {\n";
+              << ToSnakeCase(interface_name) << ") {\n";
   target_file << "  Proxy proxy;\n";
   target_file << "  proxy.run();\n";
   target_file << "}\n";

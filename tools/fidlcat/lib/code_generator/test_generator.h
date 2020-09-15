@@ -10,6 +10,39 @@
 
 namespace fidlcat {
 
+class ProxyPrinter {
+ public:
+  ProxyPrinter(
+      fidl_codec::PrettyPrinter& printer, std::string_view path, std::string_view interface_name,
+      std::string_view method_name,
+      const std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>&
+          groups)
+      : printer_(printer),
+        path_(path),
+        interface_name_(interface_name),
+        method_name_(method_name),
+        groups_(groups) {}
+
+  void GenerateProxyClass();
+
+  void GenerateProxyRun();
+
+  void GenerateProxyGroupsDecl();
+
+  void GenerateProxyBooleans();
+
+  void GenerateProxyPrivateVars();
+
+  void GenerateProxySetup();
+
+ private:
+  fidl_codec::PrettyPrinter& printer_;
+  std::string path_;
+  std::string interface_name_;
+  std::string method_name_;
+  const std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>& groups_;
+};
+
 class TestGenerator : public CodeGenerator {
  public:
   TestGenerator(SyscallDecoderDispatcher* dispatcher, const std::string& output_directory)
@@ -52,7 +85,8 @@ class TestGenerator : public CodeGenerator {
 
   void GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
 
-  void WriteTestToFile(std::string_view protocol_name);
+  void WriteTestToFile(std::string_view protocol_name, std::string_view method_name,
+                       zx_handle_t handle_id, const std::vector<FidlCallInfo*>& calls);
 
   std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>
   SplitChannelCallsIntoGroups(const std::vector<FidlCallInfo*>& calls);

@@ -395,6 +395,36 @@ TEST_F(TestGeneratorTest, SplitChannelCallsIntoGroupsTwoGroups) {
   EXPECT_EQ(groups[1]->at(0).second, call_read_2_.get());
 }
 
+TEST_F(TestGeneratorTest, GenerateProxy) {
+  auto pair1 = std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_1_.get(), call_read_1_.get());
+  auto pair2 = std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_2_.get(), call_read_2_.get());
+  auto group_0 = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+  group_0->push_back(pair1);
+  group_0->push_back(pair2);
+
+  auto pair3 = std::pair<FidlCallInfo*, FidlCallInfo*>(nullptr, call_event_.get());
+  auto group_1 = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+  group_1->push_back(pair3);
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups;
+  groups.emplace_back(std::move(group_0));
+  groups.emplace_back(std::move(group_1));
+
+  ProxyPrinter pp(printer_, "/path/to/pkg", "Echo", "EchoString", groups);
+  pp.GenerateProxyBooleans();
+
+  // "bool received_1_0_ = false;\n" is skipped because group_1 has only one member
+  EXPECT_EQ(os_.str(),
+            "bool received_0_0_ = false;\n"
+            "bool received_0_1_ = false;\n");
+
+  os_.str("");
+  pp.GenerateProxyGroupsDecl();
+  EXPECT_EQ(os_.str(),
+            "void group_0();\n\n"
+            "void group_1();\n");
+}
+
 TEST_F(TestGeneratorTest, SplitChannelCallsIntoGroupsEvents) {
   std::vector<FidlCallInfo*> calls;
   calls.push_back(call_write_1_.get());
