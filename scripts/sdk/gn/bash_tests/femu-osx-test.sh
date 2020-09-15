@@ -85,10 +85,12 @@ TEST_femu_osx_networking() {
     --unknown-arg2-to-qemu
 
   # Verify that the image first goes through a decompress process by fvm
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.1"
   gn-test-check-mock-args _ANY_ _ANY_ decompress --default _ANY_
 
   # Verify that the image will be extended to double the size
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.2"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 

@@ -200,6 +200,7 @@ if (( ENABLE_GRPCWEBPROXY )); then
   EMU_ARGS+=( "-X" "${PREBUILT_GRPCWEBPROXY_DIR}" )
 fi
 
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fx-image-common.sh"
 
 if (( "${#EMU_ARGS[@]}" )); then

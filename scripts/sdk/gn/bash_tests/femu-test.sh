@@ -41,11 +41,13 @@ TEST_femu_standalone() {
   # Run command.
   BT_EXPECT run_femu_wrapper
 
-  # Verify that the image first goes through a decompress process by fvm
+  # Verify that the image first goes through a decompress process by fvm.
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.1"
   gn-test-check-mock-args _ANY_ _ANY_ decompress --default _ANY_
 
-  # Verify that the image will be extended to double the size
+  # Verify that the image will be extended to double the size.
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.2"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 
@@ -91,11 +93,13 @@ TEST_femu_fallback_to_fvm_fastboot_if_raw_image_not_exist() {
   # Run command.
   BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
 
-  # Verify that the image first goes through a decompress process by fvm
+  # Verify that the image first goes through a decompress process by fvm.
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.1"
   gn-test-check-mock-args _ANY_ _ANY_ decompress --default "${dst}"
 
-  # Verify that the image will be extended to double the size
+  # Verify that the image will be extended to double the size.
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.2"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 }
@@ -173,11 +177,13 @@ INPUT
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" \
     --unknown-arg2-to-qemu
 
-  # Verify that the image first goes through a decompress process by fvm
+  # Verify that the image first goes through a decompress process by fvm.
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.1"
   gn-test-check-mock-args _ANY_ _ANY_ decompress --default _ANY_
 
-  # Verify that the image will be extended to double the size
+  # Verify that the image will be extended to double the size.
+  # shellcheck disable=SC1090
   source "${MOCKED_FVM}.mock_state.2"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 

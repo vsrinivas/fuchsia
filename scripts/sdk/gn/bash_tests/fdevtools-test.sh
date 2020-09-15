@@ -90,11 +90,12 @@ TEST_fdevtools_noargs_fuchsia_devtools_binary() {
   gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
 
   # Verify that the executable is called, no arguments are passed
-  # shellcheck disable=SC1090
   if is-mac; then
+    # shellcheck disable=SC1090
     source "${PATH_DIR_FOR_TEST}/open.mock_state"
     gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/open" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app" "--args"
   else
+    # shellcheck disable=SC1090
     source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/fuchsia_devtools.mock_state"
     gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/fuchsia_devtools"
   fi
@@ -137,7 +138,7 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  test-home/.fuchsia/fuchsia_devtools-"${DEVTOOLS_LABEL}"/fuchsia_devtools/macos-extracted/"Fuchsia DevTools.app"
+  "test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
   scripts/sdk/gn/base/bin/cipd
   _isolated_path_for/open
 )
@@ -145,7 +146,7 @@ BT_MOCKED_TOOLS=(
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
