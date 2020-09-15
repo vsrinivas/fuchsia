@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.bluetooth.snoop.Snoop",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]
