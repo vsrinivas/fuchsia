@@ -38,9 +38,10 @@ impl LocalMirrorManager {
     }
 
     /// Connects the file in the USB metadata directory to the passed-in handle.
-    /// Note we don't need to validate the path because the Open handler will
-    /// reject invalid path segments, which will surface in OnOpen info. For context:
-    /// https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces?hl=en#client_interpreted_path_expressions.
+    /// Note we don't need to validate the path because the open calls are forwarded
+    /// to a directory that only contains metadata, and Fuchsia filesystems prevent
+    /// accessing data that is outside the directory.
+    /// https://fuchsia.dev/fuchsia-src/concepts/filesystems/dotdot?hl=en
     pub async fn get_metadata(
         &self,
         repo_url: RepositoryUrl,
