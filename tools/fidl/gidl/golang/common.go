@@ -73,6 +73,19 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	return builder.String()
 }
 
+func buildHandleInfos(handles []gidlir.Handle) string {
+	if len(handles) == 0 {
+		return "nil"
+	}
+	var builder strings.Builder
+	builder.WriteString("[]zx.HandleInfo{\n")
+	for _, handle := range handles {
+		builder.WriteString(fmt.Sprintf("{Handle: handles[%d], Type: handleTypes[%d]},\n", handle, handle))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool, int64, uint64, float64:
@@ -149,6 +162,8 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			unknownData := field.Value.(gidlir.UnknownData)
 			fields = append(fields,
 				fmt.Sprintf("I_unknownData: %s", buildBytes(unknownData.Bytes)))
+			fields = append(fields,
+				fmt.Sprintf("I_unknownHandles: %s", buildHandleInfos(unknownData.Handles)))
 			continue
 		}
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)

@@ -47,14 +47,7 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
 	{{- if .HandleDefs }}
-			handleInfos: []zx.HandleInfo{
-		{{- range .Handles }}
-				{
-					Handle: handles[{{ . }}],
-					Type: handleTypes[{{ . }}],
-				},
-		{{- end }}
-			},
+			handleInfos: {{ .Handles }},
 	{{- end }}
 		}.check(t)
 	}
@@ -76,14 +69,7 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
 	{{- if .HandleDefs }}
-			handleInfos: []zx.HandleInfo{
-		{{- range .Handles }}
-				{
-					Handle: handles[{{ . }}],
-					Type: handleTypes[{{ . }}],
-				},
-		{{- end }}
-			},
+			handleInfos: {{ .Handles }},
 	{{- end }}
 		}.check(t)
 	}
@@ -127,14 +113,7 @@ func TestAllDecodeFailureCases(t *testing.T) {
 			bytes: {{ .Bytes }},
 			code: {{ .ErrorCode }},
 	{{- if .HandleDefs }}
-			handleInfos: []zx.HandleInfo{
-		{{- range .Handles }}
-				{
-					Handle: handles[{{ . }}],
-					Type: handleTypes[{{ . }}],
-				},
-		{{- end }}
-			},
+			handleInfos: {{ .Handles }},
 	{{- end }}
 		}.check(t)
 	}
@@ -151,13 +130,11 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, Context, Value, Bytes, HandleDefs string
-	Handles                                 []gidlir.Handle
+	Name, Context, Value, Bytes, HandleDefs, Handles string
 }
 
 type decodeSuccessCase struct {
-	Name, Context, Value, Bytes, HandleDefs string
-	Handles                                 []gidlir.Handle
+	Name, Context, Value, Bytes, HandleDefs, Handles string
 }
 
 type encodeFailureCase struct {
@@ -165,8 +142,7 @@ type encodeFailureCase struct {
 }
 
 type decodeFailureCase struct {
-	Name, Context, ValueType, Bytes, ErrorCode, HandleDefs string
-	Handles                                                []gidlir.Handle
+	Name, Context, ValueType, Bytes, ErrorCode, HandleDefs, Handles string
 }
 
 // GenerateConformanceTests generates Go tests.
@@ -226,7 +202,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Value:      value,
 				Bytes:      buildBytes(encoding.Bytes),
 				HandleDefs: buildHandleDefs(encodeSuccess.HandleDefs),
-				Handles:    encoding.Handles,
+				Handles:    buildHandleInfos(encoding.Handles),
 			})
 		}
 	}
@@ -251,7 +227,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				Value:      value,
 				Bytes:      buildBytes(encoding.Bytes),
 				HandleDefs: buildHandleDefs(decodeSuccess.HandleDefs),
-				Handles:    encoding.Handles,
+				Handles:    buildHandleInfos(encoding.Handles),
 			})
 		}
 	}
@@ -309,7 +285,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				Bytes:      buildBytes(encoding.Bytes),
 				ErrorCode:  code,
 				HandleDefs: buildHandleDefs(decodeFailure.HandleDefs),
-				Handles:    encoding.Handles,
+				Handles:    buildHandleInfos(encoding.Handles),
 			})
 		}
 	}

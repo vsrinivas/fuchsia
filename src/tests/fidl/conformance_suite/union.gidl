@@ -73,7 +73,9 @@ success("ReverseOrdinalUnion") {
 // ======================== UNKNOWN VARIANT TESTS ==========================
 
 success("FlexibleUnionUnknownValue") {
-    bindings_allowlist = [cpp,rust,dart],
+    // llcpp is tested by hand since it cannot construct unknown unions (and
+    // they do not store bytes & handles), see fxr/423117
+    bindings_denylist = [llcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion{
             1234: {
@@ -85,10 +87,41 @@ success("FlexibleUnionUnknownValue") {
     bytes = {
         v1 = [
             num(1234):8,  // invalid ordinal
-            num(8): 4, num(0): 4, repeat(0xff):8, // envelope
+            num(8):4, num(0):4, repeat(0xff):8, // envelope
             0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
         ],
     },
+}
+
+success("FlexibleUnionUnknownValueWithHandles") {
+    bindings_allowlist = [go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = channel(),
+        #3 = channel(),
+    },
+    value = TestFlexibleXUnionInStruct {
+        xu: SampleXUnion {
+            1234: {
+                // padding must be included in the raw bytes
+                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
+                handles = [#0, #1, #2, #3],
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1234):8,  // invalid ordinal
+            num(8):4, num(4):4, repeat(0xff):8, // envelope
+            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2, #3,
+        ]
+    }
 }
 
 decode_failure("StrictUnionUnknownValue") {
@@ -99,6 +132,30 @@ decode_failure("StrictUnionUnknownValue") {
             num(8):4, num(0):4, repeat(0xff):8, // envelope
             0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
         ],
+    },
+    err = STRICT_UNION_UNKNOWN_FIELD,
+}
+
+decode_failure("StrictUnionUnknownValueWithHandles") {
+    bindings_allowlist = [go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = channel(),
+        #3 = channel(),
+    },
+    type = TestStrictXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(1234):8,  // invalid ordinal
+            num(8):4, num(4):4, repeat(0xff):8, // envelope
+            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2, #3,
+        ]
     },
     err = STRICT_UNION_UNKNOWN_FIELD,
 }
