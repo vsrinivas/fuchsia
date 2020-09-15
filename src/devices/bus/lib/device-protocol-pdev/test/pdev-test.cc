@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/device-protocol/pdev.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>

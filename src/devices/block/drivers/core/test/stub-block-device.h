@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_TEST_FAKE_BLOCK_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_TEST_FAKE_BLOCK_DEVICE_H_
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <cstdint>
 #include <cstdlib>
 #include <zircon/device/block.h>
