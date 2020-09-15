@@ -9,7 +9,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerMarker, FileDescriptor, LaunchInfo,
-        TerminationReason::*,
+        LauncherProxy, TerminationReason::*,
     },
     futures::StreamExt,
     signal_hook,
@@ -20,11 +20,8 @@ use {
 // rather than redefining it here.
 const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 
-#[ffx_plugin(fidl_fuchsia_sys::LauncherProxy = "core/appmgr:out:fuchsia.sys.Launcher")]
-pub async fn run_component(
-    launcher_proxy: fidl_fuchsia_sys::LauncherProxy,
-    run: RunComponentCommand,
-) -> Result<()> {
+#[ffx_plugin(LauncherProxy = "core/appmgr:out:fuchsia.sys.Launcher")]
+pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentCommand) -> Result<()> {
     let (control_proxy, control_server_end) = create_proxy::<ComponentControllerMarker>()?;
     let (sout, cout) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -135,7 +132,7 @@ pub async fn run_component(
 mod test {
     use {super::*, fidl_fuchsia_sys::LauncherRequest};
 
-    fn setup_fake_launcher_service() -> fidl_fuchsia_sys::LauncherProxy {
+    fn setup_fake_launcher_service() -> LauncherProxy {
         setup_oneshot_fake_launcher_proxy(|req| {
             match req {
                 LauncherRequest::CreateComponent {

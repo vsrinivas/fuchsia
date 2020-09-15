@@ -22,30 +22,14 @@ ffx_plugin("ffx_example") {
 ```
 
 This makes the FIDL proxy bindings available for import in the
-plugin. In this case you can now import `fidl_fuchsia_device`.
-Start by importing the type.  It is easiest if you include
-`fidl_fuchsia_device` either directly or as an alias.
+plugin. In this case you can now import `NameProviderProxy`.
 
 ```rust
 use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_example_args::ExampleCommand,
-    fidl_fuchsia_device as fdevice,
-};
-
-```
-
-If you would like to include `NameProviderProxy` directly, you will
-also need to include `NameProviderMarker` (even if your code does not
-use `NameProviderMarker`):
-
-```rust
-use {
-    anyhow::Error,
-    ffx_core::ffx_plugin,
-    ffx_example_args::ExampleCommand,
-    fidl_fuchsia_device::{NameProviderProxy, NameProviderMarker},
+    fidl_fuchsia_device::NameProviderProxy,
 };
 
 ```
@@ -55,10 +39,10 @@ function. FFX plugins can accept proxies in the parameter list:
 
 ```rust
 #[ffx_plugin(
-    fdevice::NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
+    NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
 )]
 pub async fn example(
-    name_proxy: fdevice::NameProviderProxy,
+    name_proxy: NameProviderProxy,
     _cmd: ExampleCommand,
 ) -> Result<(), Error> {
     if let Ok(name) = name_proxy.get_device_name().await? {

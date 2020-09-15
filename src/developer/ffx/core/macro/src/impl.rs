@@ -31,19 +31,6 @@ pub fn ffx_command(input: ItemStruct) -> TokenStream {
     }
 }
 
-fn qualified(path: &syn::Path, name: String) -> Punctuated<Ident, Token!(::)> {
-    let mut result: Punctuated<Ident, Token!(::)> = Punctuated::new();
-    path.segments.pairs().for_each(|pair| {
-        if let Some(_) = pair.punct() {
-            result.push(pair.value().ident.clone());
-        } else {
-            // last ident won't have a punctuation
-            result.push(Ident::new(&name, Span::call_site()));
-        }
-    });
-    result
-}
-
 fn qualified_name(path: &syn::Path) -> String {
     path.segments
         .pairs()
@@ -58,18 +45,9 @@ fn qualified_name(path: &syn::Path) -> String {
         .fold(String::new(), |accum, elem| format!("{}{}", accum, elem))
 }
 
-fn replace_proxy(path: &syn::Path, name: String, replace: &str) -> Punctuated<Ident, Token!(::)> {
-    let mut result = format!("{}", name);
-    let _ = result.split_off(result.len() - 5);
-    result.push_str(replace);
-    qualified(path, result)
-}
-
 fn generate_fake_test_proxy_method(
     proxy_name: Ident,
     qualified_proxy_type: &syn::Path,
-    qualified_proxy_marker_type: Punctuated<Ident, Token!(::)>,
-    qualified_proxy_request_type: Punctuated<Ident, Token!(::)>,
 ) -> TokenStream {
     let method_name = Ident::new(&format!("setup_fake_{}", proxy_name), Span::call_site());
     // Oneshot method is needed only for the 'component run' unit tests that leaks memory
@@ -79,11 +57,11 @@ fn generate_fake_test_proxy_method(
     quote! {
         #[cfg(test)]
         fn #method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
-            where R: FnOnce(#qualified_proxy_request_type) + std::marker::Send + Copy
+            where R: FnOnce(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
-                fidl::endpoints::create_proxy_and_stream::<#qualified_proxy_marker_type>().unwrap();
+                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>().unwrap();
             fuchsia_async::Task::spawn(async move {
                 while let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
@@ -95,11 +73,11 @@ fn generate_fake_test_proxy_method(
 
         #[cfg(test)]
         fn #oneshot_method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
-            where R: FnOnce(#qualified_proxy_request_type) + std::marker::Send + Copy
+            where R: FnOnce(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
-                fidl::endpoints::create_proxy_and_stream::<#qualified_proxy_marker_type>().unwrap();
+                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>().unwrap();
             fuchsia_async::Task::spawn(async move {
                 if let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
@@ -146,8 +124,6 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                         generate_fake_test_proxy_method(
                                             pat_ident.ident.clone(),
                                             path,
-                                            replace_proxy(path, t.ident.to_string(), "Marker"),
-                                            replace_proxy(path, t.ident.to_string(), "Request"),
                                         ),
                                     );
                                 }
@@ -159,8 +135,6 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                         generate_fake_test_proxy_method(
                                             pat_ident.ident.clone(),
                                             path,
-                                            replace_proxy(path, t.ident.to_string(), "Marker"),
-                                            replace_proxy(path, t.ident.to_string(), "Request"),
                                         ),
                                     );
                                 }
@@ -170,8 +144,6 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                 match proxies.map.get(&qualified_proxy_name) {
                                     Some(mapping) => {
                                         uses_map = true;
-                                        let qualified_marker =
-                                            replace_proxy(path, t.ident.to_string(), "Marker");
                                         let mapping_lit = LitStr::new(mapping, Span::call_site());
                                         if let Pat::Ident(pat_ident) = pat.as_ref() {
                                             let output = pat_ident.ident.clone();
@@ -189,7 +161,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                             );
                                             proxies_to_generate.push(quote!{
                                                 let (#output, #server_end) =
-                                                    fidl::endpoints::create_proxy::<#qualified_marker>()?;
+                                                    fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Service>()?;
                                                 let #selector =
                                                     selectors::parse_selector(#mapping_lit)?;
                                                 let #output_fut = remote_proxy
@@ -201,16 +173,6 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                                 generate_fake_test_proxy_method(
                                                     pat_ident.ident.clone(),
                                                     path,
-                                                    replace_proxy(
-                                                        path,
-                                                        t.ident.to_string(),
-                                                        "Marker",
-                                                    ),
-                                                    replace_proxy(
-                                                        path,
-                                                        t.ident.to_string(),
-                                                        "Request",
-                                                    ),
                                                 ),
                                             );
                                         }
@@ -562,11 +524,11 @@ mod test {
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -579,11 +541,11 @@ mod test {
         let oneshot_fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_oneshot_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     if let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -638,11 +600,11 @@ mod test {
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: FnOnce(RemoteControlRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -698,11 +660,11 @@ mod test {
         let fake_daemon_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -715,11 +677,11 @@ mod test {
         let fake_remote_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: FnOnce(RemoteControlRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -777,11 +739,11 @@ mod test {
         let fake_daemon_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -794,11 +756,11 @@ mod test {
         let fake_remote_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: FnOnce(RemoteControlRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -851,7 +813,7 @@ mod test {
             {
                 let remote_proxy = remote_factory().await?;
                 let (test, test_server_end) =
-                    fidl::endpoints::create_proxy::<TestMarker>()?;
+                    fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
                 let test_selector = selectors::parse_selector("test")?;
                 let test_fut = remote_proxy
                     .connect(test_selector, test_server_end.into_channel());
@@ -869,11 +831,11 @@ mod test {
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
-                where R: FnOnce(TestRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<TestMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<TestProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -927,12 +889,12 @@ mod test {
             {
                 let remote_proxy = remote_factory().await?;
                 let (foo, foo_server_end) =
-                    fidl::endpoints::create_proxy::<FooMarker>()?;
+                    fidl::endpoints::create_proxy::<<FooProxy as fidl::endpoints::Proxy>::Service>()?;
                 let foo_selector = selectors::parse_selector("foo")?;
                 let foo_fut = remote_proxy
                     .connect(foo_selector, foo_server_end.into_channel());
                 let (test, test_server_end) =
-                    fidl::endpoints::create_proxy::<TestMarker>()?;
+                    fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
                 let test_selector = selectors::parse_selector("test")?;
                 let test_fut = remote_proxy
                     .connect(test_selector, test_server_end.into_channel());
@@ -950,11 +912,11 @@ mod test {
         let fake_foo_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_foo<R:'static>(handle_request: R) -> FooProxy
-                where R: FnOnce(FooRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<FooProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<FooMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<FooProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -967,11 +929,11 @@ mod test {
         let fake_test_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
-                where R: FnOnce(TestRequest) + std::marker::Send + Copy
+                where R: FnOnce(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<TestMarker>().unwrap();
+                    fidl::endpoints::create_proxy_and_stream::<<TestProxy as fidl::endpoints::Proxy>::Service>().unwrap();
                 fuchsia_async::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
                         handle_request(req);
@@ -1029,12 +991,12 @@ mod test {
                 if is_experiment("foo_key").await {
                     let remote_proxy = remote_factory().await?;
                     let (foo, foo_server_end) =
-                        fidl::endpoints::create_proxy::<FooMarker>()?;
+                        fidl::endpoints::create_proxy::<<FooProxy as fidl::endpoints::Proxy>::Service>()?;
                     let foo_selector = selectors::parse_selector("foo")?;
                     let foo_fut = remote_proxy
                         .connect(foo_selector, foo_server_end.into_channel());
                     let (test, test_server_end) =
-                        fidl::endpoints::create_proxy::<TestMarker>()?;
+                        fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
                     let test_selector = selectors::parse_selector("test")?;
                     let test_fut = remote_proxy
                         .connect(test_selector, test_server_end.into_channel());
