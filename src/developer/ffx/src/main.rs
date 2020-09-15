@@ -11,11 +11,24 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    lazy_static::lazy_static,
+    std::sync::{Arc, Mutex},
 };
 
+lazy_static! {
+    // Using a mutex to guard the spawning of the daemon - the value it contains is not used.
+    static ref SPAWN_GUARD: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+}
+
+// This could get called multiple times by the plugin system via multiple threads - so make sure
+// the spawning only happens one thread at a time.
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
     if !is_daemon_running().await {
-        spawn_daemon().await?;
+        let _guard = SPAWN_GUARD.lock().unwrap();
+        // check again now that we have the guard.
+        if !is_daemon_running().await {
+            spawn_daemon().await?;
+        }
     }
     find_and_connect().await
 }
