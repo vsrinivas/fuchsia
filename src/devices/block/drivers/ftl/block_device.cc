@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
+#include <zircon/threads.h>
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
@@ -126,6 +127,32 @@ zx_status_t BlockDevice::Init() {
     return ZX_ERR_NO_RESOURCES;
   }
   thread_created_ = true;
+
+  // Set a scheduling deadline profile for the ftl_worker thread.
+  // This is required in order to service the blobfs-pager-thread, which is on a deadline profile.
+  // This will no longer be needed once we have the ability to propagate deadlines. Until then, we
+  // need to set deadline profiles for all threads that the blobfs-pager-thread interacts with in
+  // order to service page requests.
+  //
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  const zx_duration_t capacity = ZX_USEC(400);
+  const zx_duration_t deadline = ZX_MSEC(2);
+  const zx_duration_t period = deadline;
+
+  zx_handle_t profile = ZX_HANDLE_INVALID;
+  zx_status_t status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
+                                                   "driver_host:pdev:05:00:f:ftl_worker", &profile);
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "FTL: Failed to get deadline profile: %d\n", status);
+  } else {
+    const zx_handle_t thread_handle = thrd_get_zx_handle(worker_);
+    status = zx_object_set_profile(thread_handle, profile, 0);
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "FTL: Failed to set deadline profile: %d\n", status);
+    }
+    zx_handle_close(profile);
+  }
 
   if (!InitFtl()) {
     return ZX_ERR_NO_RESOURCES;

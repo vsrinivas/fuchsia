@@ -5,6 +5,7 @@
 #include "manager.h"
 
 #include <assert.h>
+#include <zircon/threads.h>
 
 #include <utility>
 
@@ -54,6 +55,41 @@ zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* o
     FreeServer();
     return ZX_ERR_NO_MEMORY;
   }
+
+  // Set a scheduling deadline profile for the block_server thread.
+  // This is required in order to service the blobfs-pager-thread, which is on a deadline profile.
+  // This will no longer be needed once we have the ability to propagate deadlines. Until then, we
+  // need to set deadline profiles for all threads that the blobfs-pager-thread interacts with in
+  // order to service page requests.
+  //
+  // Also note that this will apply to block_server threads spawned to service each block client
+  // (in the typical case, we have two - blobfs and minfs). The capacity of 1ms is chosen so as to
+  // accommodate most cases without throttling the thread. The desired capacity was 50us, but some
+  // tests that use a large ramdisk require a larger capacity. In the average case though on a real
+  // device, the block_server thread runs for less than 50us. 1ms provides us with a generous
+  // leeway, without hurting performance in the typical case - a thread is not penalized for not
+  // using its full capacity.
+  //
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  const zx_duration_t capacity = ZX_MSEC(1);
+  const zx_duration_t deadline = ZX_MSEC(2);
+  const zx_duration_t period = deadline;
+
+  zx_handle_t profile = ZX_HANDLE_INVALID;
+  status = device_get_deadline_profile(nullptr, capacity, deadline, period,
+                                       "driver_host:pdev:05:00:f:block_server", &profile);
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "block: Failed to get deadline profile: %d\n", status);
+  } else {
+    const zx_handle_t thread_handle = thrd_get_zx_handle(thread_);
+    status = zx_object_set_profile(thread_handle, profile, 0);
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "block: Failed to set deadline profile: %d\n", status);
+    }
+    zx_handle_close(profile);
+  }
+
   *out_fifo = zx::fifo(fifo.release());
   return ZX_OK;
 }

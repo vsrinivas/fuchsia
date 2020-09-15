@@ -126,6 +126,10 @@ class UserPager {
  private:
   explicit UserPager(BlobfsMetrics* metrics);
 
+  // Helper function to apply a scheduling deadline profile to the pager |thread|. Called from
+  // |UserPager::Create| after starting the pager thread.
+  static void SetDeadlineProfile(thrd_t thread);
+
   struct ReadRange {
     uint64_t offset;
     uint64_t length;

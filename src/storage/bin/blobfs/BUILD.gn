@@ -9,6 +9,7 @@ executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//sdk/lib/fdio",
     "//src/storage/blobfs",

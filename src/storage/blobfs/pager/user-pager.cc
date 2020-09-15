@@ -4,10 +4,14 @@
 
 #include "user-pager.h"
 
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/thread.h>
 #include <limits.h>
 #include <zircon/status.h>
+#include <zircon/threads.h>
 
 #include <algorithm>
 #include <memory>
@@ -50,13 +54,68 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<Transfe
   }
 
   // Start the pager thread.
-  status = pager->pager_loop_.StartThread("blobfs-pager-thread");
+  thrd_t thread;
+  status = pager->pager_loop_.StartThread("blobfs-pager-thread", &thread);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Could not start pager thread\n");
     return zx::error(status);
   }
 
+  // Set a scheduling deadline profile for the blobfs-pager-thread. This is purely a performance
+  // optimization, and failure to do so is not fatal. So in the case of an error encountered
+  // in any of the steps within |SetDeadlineProfile|, we log a warning, and successfully return the
+  // UserPager instance.
+  SetDeadlineProfile(thread);
+
   return zx::ok(std::move(pager));
+}
+
+void UserPager::SetDeadlineProfile(thrd_t thread) {
+  zx::channel channel0, channel1;
+  zx_status_t status = zx::channel::create(0u, &channel0, &channel1);
+  if (status != ZX_OK) {
+    FS_TRACE_WARN("blobfs: Could not create channel pair: %s\n", zx_status_get_string(status));
+    return;
+  }
+
+  // Connect to the scheduler profile provider service.
+  status = fdio_service_connect(
+      (std::string("/svc_blobfs/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
+      channel0.release());
+  if (status != ZX_OK) {
+    FS_TRACE_WARN("blobfs: Could not connect to scheduler profile provider: %s\n",
+                  zx_status_get_string(status));
+    return;
+  }
+
+  fuchsia::scheduler::ProfileProvider_SyncProxy provider(std::move(channel1));
+
+  zx_status_t fidl_status = ZX_OK;
+  zx::profile profile;
+
+  // Deadline profile parameters for the pager thread.
+  // Details on the performance analysis to arrive at these numbers can be found in fxb/56291.
+  //
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  const zx_duration_t capacity = ZX_USEC(1300);
+  const zx_duration_t deadline = ZX_MSEC(2);
+  const zx_duration_t period = deadline;
+
+  status = provider.GetDeadlineProfile(
+      capacity, deadline, period, "/boot/bin/blobfs:blobfs-pager-thread", &fidl_status, &profile);
+
+  if (status != ZX_OK || fidl_status != ZX_OK) {
+    FS_TRACE_WARN("blobfs: Failed to get deadline profile: %s, %s\n", zx_status_get_string(status),
+                  zx_status_get_string(fidl_status));
+  } else {
+    auto pager_thread = zx::unowned_thread(thrd_get_zx_handle(thread));
+    // Set the deadline profile.
+    status = pager_thread->set_profile(profile, 0);
+    if (status != ZX_OK) {
+      FS_TRACE_WARN("blobfs: Failed to set deadline profile: %s\n", zx_status_get_string(status));
+    }
+  }
 }
 
 UserPager::ReadRange UserPager::GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset,
