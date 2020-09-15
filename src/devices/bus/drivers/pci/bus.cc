@@ -84,15 +84,8 @@ zx_status_t Bus::Initialize() {
   // Begin our bus scan starting at our root
   ScanDownstream();
   root_->ConfigureDownstreamDevices();
-  zxlogf(TRACE, "AllDevicesList:");
-  {
-    fbl::AutoLock devices_lock(&devices_lock_);
-    for (auto& dev : devices_) {
-      dev.Dump();
-    }
-  }
 
-  zxlogf(INFO, "%s init done.", info_.name);
+  zxlogf(DEBUG, "%s init done.", info_.name);
   return ZX_OK;
 }
 
@@ -115,7 +108,7 @@ zx_status_t Bus::MapEcam(void) {
     return status;
   }
 
-  zxlogf(INFO, "ecam for segment %u mapped at %p (size: %#zx)", info_.segment_group, ecam_->get(),
+  zxlogf(DEBUG, "ecam for segment %u mapped at %p (size: %#zx)", info_.segment_group, ecam_->get(),
          ecam_->get_size());
   return ZX_OK;
 }
