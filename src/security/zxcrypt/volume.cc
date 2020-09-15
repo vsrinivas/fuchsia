@@ -169,24 +169,33 @@ zx_status_t Volume::Init() {
       size_t blocks_per_slice = fvm_slice_size / blk.block_size;
       reserved_blocks_ = fbl::round_up(reserved_blocks_, blocks_per_slice);
       reserved_slices_ = reserved_blocks_ / blocks_per_slice;
-      size_t required = reserved_slices_ + 1;
-      size_t range = 1;
-      for (size_t i = 0; i < required; i += range) {
-        // Ask about the next contiguous range
+      size_t required_slices = reserved_slices_ + 1;
+      size_t contiguous_chunk_size = 0;
+
+      // We're going to go through the vslice address space, ensuring that all
+      // of the first `required_slices` slices are allocated.
+      for (size_t slice_off = 0; slice_off < required_slices; slice_off += contiguous_chunk_size) {
+        // Ask about the next contiguous range starting at `slice_off`.
         SliceRegion ranges[MAX_SLICE_REGIONS];
-        uint64_t slice_count;
-        if ((rc = DoBlockFvmVsliceQuery(i + 1, ranges, &slice_count)) != ZX_OK ||
-            slice_count == 0 || ((range = ranges[0].count) == 0)) {
+        uint64_t range_count;
+        if ((rc = DoBlockFvmVsliceQuery(slice_off, ranges, &range_count)) != ZX_OK ||
+            range_count == 0 || ((contiguous_chunk_size = ranges[0].count) == 0)) {
           xprintf("FVM Vslice Query failed: %s\n", zx_status_get_string(rc));
           return rc;
         }
-        // If already allocated, continue
+
+        // If it's already allocated, continue to the next range.  The for loop
+        // advances by `contiguous_chunk_size`
         if (ranges[0].allocated) {
           continue;
         };
-        // Otherwise, allocate it
-        uint64_t extend_start_slice = i + 1;
-        uint64_t extend_length = std::min(required - i, range);
+
+        // Otherwise, allocate it -- either up to the end of the contiguous
+        // unallocated chunk (if that still doesn't cover the number of slices
+        // we need, in which case we'll keep looping) or just as many slices as
+        // we require.
+        uint64_t extend_start_slice = slice_off;
+        uint64_t extend_length = std::min(required_slices - slice_off, contiguous_chunk_size);
 
         if ((rc = DoBlockFvmExtend(extend_start_slice, extend_length)) != ZX_OK) {
           xprintf("failed to extend FVM partition: %s\n", zx_status_get_string(rc));
