@@ -11,6 +11,7 @@ executable("shell_mirror") {
   sources = [ "main.cc" ]
   deps = [
     ":server_lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/common",
@@ -49,7 +50,6 @@ source_set("shared") {
   sources = [ "wire_format.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/shared",
   ]
 
@@ -85,6 +85,7 @@ executable("shell_mirror_tests_bin") {
     ":server_lib",
     ":shared",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/ipc:client",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

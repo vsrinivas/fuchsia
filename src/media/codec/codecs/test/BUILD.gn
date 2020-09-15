@@ -23,6 +23,7 @@ executable("codec_adapter_sw_test_bin") {
   sources = [ "codec_adapter_sw_test.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs/sw:codec_adapter_sw",
   ]
@@ -47,6 +48,7 @@ executable("timestamp_extrapolator_test_bin") {
   sources = [ "timestamp_extrapolator_tests.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:timestamp_extrapolator",
   ]
@@ -68,7 +70,6 @@ source_set("test_codec_packets") {
   public = [ "test_codec_packets.h" ]
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/lib/codec_impl",
     "//zircon/system/ulib/fzl",
   ]
@@ -83,6 +84,7 @@ executable("chunk_input_stream_test_bin") {
 
   deps = [
     ":test_codec_packets",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:chunk_input_stream",
   ]
@@ -111,6 +113,7 @@ executable("output_sink_test_bin") {
 
   deps = [
     ":test_codec_packets",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:output_sink",
   ]

@@ -19,6 +19,7 @@ driver_module("core") {
   output_name = "block.core"
   deps = [
     ":shared",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
   ]
 }
@@ -41,6 +42,7 @@ test("core-unittest") {
     ":shared",
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -80,7 +82,6 @@ source_set("shared") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/dev-operation",
     "//src/lib/ddk",
     "//src/lib/ddktl",

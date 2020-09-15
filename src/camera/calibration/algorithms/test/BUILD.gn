@@ -8,6 +8,7 @@ executable("test") {
   sources = [ "blc_test.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/calibration/algorithms",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/image_writer",

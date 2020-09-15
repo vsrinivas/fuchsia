@@ -16,6 +16,7 @@ test("test_magma_vsi_exec_bin") {
 
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zx",
@@ -33,6 +34,9 @@ test_package("test-magma-vsi-exec") {
       name = "test_magma_vsi_exec_bin"
       manifest = "meta/test_magma_vsi_exec.cmx"
       environments = [ sherlock_env ]
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }
@@ -45,6 +49,7 @@ test("msd_vsi_vip_integration_tests") {
 
   deps = [
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/drivers/msd-vsi-vip/include",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util/platform:buffer",
@@ -60,6 +65,9 @@ test_package("msd-vsi-vip-integration-tests") {
     {
       name = "msd_vsi_vip_integration_tests"
       environments = [ sherlock_env ]
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

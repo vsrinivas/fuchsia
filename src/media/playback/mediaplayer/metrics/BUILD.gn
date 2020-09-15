@@ -15,7 +15,6 @@ source_set("metrics") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/playback/mediaplayer/graph",
   ]
 

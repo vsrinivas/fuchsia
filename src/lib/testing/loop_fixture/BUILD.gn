@@ -50,6 +50,7 @@ executable("loop_fixture_unittests") {
 
   deps = [
     ":loop_fixture",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",

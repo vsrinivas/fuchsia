@@ -18,6 +18,7 @@ sandbox_test_package("has-misc-storage") {
   sources = [ "has_misc_storage.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -28,6 +29,7 @@ sandbox_test_package("no-misc-storage") {
   sources = [ "no_misc_storage.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -38,6 +40,7 @@ sandbox_test_package("restricted-misc-storage") {
   sources = [ "no_misc_storage.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]

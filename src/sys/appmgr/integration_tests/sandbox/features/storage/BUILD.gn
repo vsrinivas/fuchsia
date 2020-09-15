@@ -20,6 +20,7 @@ sandbox_test_package("no_persistent_storage") {
   sources = [ "no_persistent_storage.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -30,6 +31,7 @@ sandbox_test_package("has_isolated_persistent_storage") {
   sources = [ "has_persistent_storage.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -41,6 +43,7 @@ sandbox_test_package("has_isolated_cache_storage") {
 
   deps = [
     "//sdk/fidl/fuchsia.sys.test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
@@ -61,6 +64,7 @@ executable("isolated_persistent_storage_bin") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/util:data_file_reader_writer",
     "//src/sys/appmgr/integration_tests/util:data_file_reader_writer_util",

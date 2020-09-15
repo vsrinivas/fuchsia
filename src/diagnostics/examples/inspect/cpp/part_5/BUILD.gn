@@ -24,6 +24,7 @@ test("reverser_unittests_part_5") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
   ]

@@ -14,7 +14,6 @@ source_set("analysis") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 
   deps = [
@@ -40,6 +39,7 @@ executable("unittest-bin") {
 
   deps = [
     ":analysis",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",

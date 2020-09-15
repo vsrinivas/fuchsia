@@ -261,6 +261,7 @@ executable("fidl_hlcpp_conformance_test") {
     ":conformance_test_sources",
     ":test_support",
     "//sdk/lib/fidl/cpp/test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
@@ -286,6 +287,7 @@ executable("fidl_hlcpp_unit_tests") {
     ":test_sources",
     ":test_support",
     "//sdk/lib/fidl/cpp/test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
@@ -311,6 +313,7 @@ if (is_linux || is_mac) {
   test("fidl_cpp_host_unittests") {
     deps = [
       ":host_test_sources",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
     ]
@@ -321,6 +324,7 @@ if (is_linux || is_mac) {
   test("fidl_cpp_host_conformance_test") {
     deps = [
       ":conformance_test_sources",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
     ]

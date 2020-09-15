@@ -25,6 +25,7 @@ test("yuv_unittests") {
 
   deps = [
     ":yuv",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

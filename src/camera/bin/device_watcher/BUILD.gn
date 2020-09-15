@@ -25,7 +25,6 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//zircon/public/lib/fbl",
@@ -42,7 +41,10 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   defines = [ camera_debug_define ]
 }

@@ -109,6 +109,7 @@ executable("driver_manager") {
 
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/sys/lib/stdout-to-debuglog/cpp",
   ]
 
@@ -136,6 +137,7 @@ test("driver_manager_test") {
   deps = [
     ":lib",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",
@@ -163,6 +165,7 @@ test("driver_host_loader_service_test") {
   sources = [ "driver_host_loader_service_test.cc" ]
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/loader_service:loader_service_test_fixture",
   ]
 }

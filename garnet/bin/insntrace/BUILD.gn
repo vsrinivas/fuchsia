@@ -27,6 +27,7 @@ executable("bin") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
 
     #"//src/lib/files",
     #"//src/lib/fsl",

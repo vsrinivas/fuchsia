@@ -45,6 +45,7 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
+  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
   public_deps = [
     ":lib",
     "//sdk/lib/fidl/cpp",
@@ -131,6 +132,7 @@ test("factory_reset_unittests") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",

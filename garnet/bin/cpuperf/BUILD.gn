@@ -59,6 +59,7 @@ executable("bin") {
     ":session_spec",
     "//garnet/lib/debugger_utils",
     "//garnet/lib/perfmon",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
 

@@ -33,7 +33,6 @@ source_set("cobalt") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
 

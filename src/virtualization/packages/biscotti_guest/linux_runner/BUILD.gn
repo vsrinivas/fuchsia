@@ -132,7 +132,10 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 package("linux_runner") {
@@ -175,6 +178,7 @@ executable("linux_runner_unittests") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/memfs",

@@ -35,6 +35,7 @@ executable("trace_manager_tests_bin") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

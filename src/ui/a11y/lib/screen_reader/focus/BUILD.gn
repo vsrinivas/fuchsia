@@ -18,7 +18,6 @@ source_set("focus") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/focus_chain",

@@ -9,6 +9,7 @@ test("dlfcn") {
   sources = [ "dlfcn.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/loader_service",
     "//zircon/public/lib/async",
     "//zircon/public/lib/elfload",

@@ -97,7 +97,6 @@ source_set("pixel_test") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
   ]
 }
@@ -183,6 +182,7 @@ executable("unittests") {
   deps = [
     ":gfx_tests_main",
     ":testing_deps",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fsl",
     "//src/ui/lib/glm_workaround",
@@ -204,6 +204,7 @@ executable("swapchain_tests") {
   ]
   deps = [
     ":testing_deps",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
@@ -215,6 +216,7 @@ executable("delegating_frame_scheduler_integration_tests") {
   sources = [ "delegating_frame_scheduler_integration_test.cc" ]
   deps = [
     ":testing_deps",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
@@ -228,6 +230,7 @@ executable("apptests") {
   deps = [
     ":gfx_tests_main",
     ":testing_deps",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -238,6 +241,7 @@ executable("pixeltests") {
   deps = [
     ":magnification_pixeltests",
     ":scenic_pixeltests",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -257,6 +261,7 @@ executable("viewstate_apptests") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",

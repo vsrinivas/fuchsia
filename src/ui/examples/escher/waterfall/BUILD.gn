@@ -17,6 +17,7 @@ if (is_mac) {
 
     deps = [
       ":waterfall_demo",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/vulkan",
       "//src/ui/examples/escher/common",
     ]

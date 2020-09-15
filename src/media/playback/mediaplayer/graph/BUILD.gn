@@ -63,7 +63,6 @@ source_set("graph") {
   deps = [
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/util",
@@ -85,6 +84,7 @@ test("tests") {
   deps = [
     ":graph",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
   ]

@@ -15,6 +15,7 @@ if (is_host) {
     sources = [ "main.cc" ]
     deps = [
       ":lib",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
@@ -55,6 +56,7 @@ if (is_host) {
     deps = [
       ":host_tests",
       ":lib",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
       "//tools/fidlcat/interception_tests:host_tests",
       "//tools/fidlcat/lib:host_tests",

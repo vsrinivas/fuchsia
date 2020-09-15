@@ -12,6 +12,7 @@
 executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",

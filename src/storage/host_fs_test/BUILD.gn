@@ -22,6 +22,7 @@ if (is_host) {
     ]
 
     deps = [
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
       "//zircon/public/lib/fbl",

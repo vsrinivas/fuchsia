@@ -157,6 +157,7 @@ test("block-verity-test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",

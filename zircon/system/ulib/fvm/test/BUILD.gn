@@ -45,6 +45,7 @@ test("fvm-unit") {
     sources += [ "client-test.cc" ]
     deps += [
       "//sdk/lib/fdio",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fdio-caller",

@@ -27,6 +27,7 @@ test("device-enumeration") {
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",

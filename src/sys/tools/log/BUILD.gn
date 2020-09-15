@@ -62,6 +62,7 @@ executable("tools_log_test") {
     ":lib",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/syslog",

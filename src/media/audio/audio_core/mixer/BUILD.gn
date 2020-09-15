@@ -46,7 +46,6 @@ source_set("mixer") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl:fxl",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/timeline",
@@ -103,6 +102,7 @@ executable("unittest_bin") {
 
   deps = [
     ":mixer",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/format",
     "//third_party/googletest:gmock",

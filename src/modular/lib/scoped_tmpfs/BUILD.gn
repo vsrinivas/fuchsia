@@ -21,7 +21,6 @@ source_set("scoped_tmpfs") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 

@@ -253,6 +253,7 @@ test("netstack_bsdsocket_c_api_test") {
   }
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -266,14 +267,20 @@ test("netstack_if_nameindex_test") {
     sources = [ "if_nameindex_test.cc" ]
   }
 
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl/test:gtest_main",
+  ]
 }
 
 test("netstack_external_network_test_client") {
   if (is_linux || is_fuchsia) {
     sources = [ "external_network_test_client.cc" ]
   }
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl/test:gtest_main",
+  ]
 }
 
 test("netstack_fuchsia_c_api_test") {
@@ -286,6 +293,7 @@ test("netstack_fuchsia_c_api_test") {
   deps = [
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//zircon/public/lib/fbl",
@@ -299,7 +307,10 @@ test("netstack_fuchsia_c_api_test") {
 test("netstack_no_network_test") {
   sources = [ "no_network_test.cc" ]
 
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl/test:gtest_main",
+  ]
 }
 
 test("name_provider_no_network_test") {
@@ -309,6 +320,7 @@ test("name_provider_no_network_test") {
     ":device_name_provider",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -319,6 +331,7 @@ test("name_provider_service_not_present_test") {
   deps = [
     ":device_name_provider",
     "//sdk/fidl/fuchsia.device",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

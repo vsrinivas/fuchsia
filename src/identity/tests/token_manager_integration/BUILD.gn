@@ -26,6 +26,7 @@ executable("bin") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",

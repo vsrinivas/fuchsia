@@ -50,6 +50,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.tracing.kernel",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -90,6 +91,7 @@ executable("importer_test_app") {
 
   deps = [
     ":importer",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

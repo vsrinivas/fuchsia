@@ -54,6 +54,7 @@ executable("vkcopy") {
   sources = [ "test_vkcopy.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/tests/common",
     "//src/lib/vulkan",
   ]

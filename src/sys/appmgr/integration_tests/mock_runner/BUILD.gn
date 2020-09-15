@@ -26,6 +26,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/sys/appmgr/integration_tests/fidl:test.component.mockrunner",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

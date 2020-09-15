@@ -81,6 +81,7 @@ test("vfs_cpp_unittests") {
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 

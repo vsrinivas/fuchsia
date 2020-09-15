@@ -57,7 +57,6 @@ source_set("system_metrics_daemon_lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/cobalt/bin/utils:clock",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
@@ -82,6 +81,7 @@ executable("system-metrics") {
   deps = [
     ":system_metrics_daemon_lib",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -126,6 +126,7 @@ executable("cobalt_system_metrics_unittests") {
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/cobalt/bin/testing:fake_clock_lib",
     "//src/cobalt/bin/testing:fake_logger_lib",
     "//src/cobalt/bin/utils:clock",

@@ -52,7 +52,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/cmx",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
@@ -132,6 +131,7 @@ executable("test_bin") {
 
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

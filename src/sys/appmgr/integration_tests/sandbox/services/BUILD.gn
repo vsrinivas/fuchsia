@@ -21,6 +21,7 @@ sandbox_test_package("some_services") {
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
@@ -37,6 +38,7 @@ sandbox_test_package("no_services") {
 
   deps = [
     "//sdk/fidl/fuchsia.debugdata",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
@@ -54,6 +56,7 @@ sandbox_test_package("multiple_components") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",

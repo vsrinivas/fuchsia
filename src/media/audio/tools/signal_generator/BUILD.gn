@@ -27,6 +27,7 @@ executable("sig_gen_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock:utils",

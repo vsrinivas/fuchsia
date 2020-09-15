@@ -63,6 +63,7 @@ executable("bin") {
     ":categories",
     "//garnet/lib/perfmon",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -103,6 +104,7 @@ executable("cpuperf_provider_tests_bin") {
 
   deps = [
     ":categories",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -116,6 +118,7 @@ if (current_cpu == "x64") {
 
     deps = [
       "//garnet/lib/perfmon",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/tracing/lib/test_utils",
       "//src/lib/fxl",
       "//src/lib/fxl/test:test_settings",

@@ -45,6 +45,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -203,7 +204,6 @@ source_set("color_transform") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
   ]
 }

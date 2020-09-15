@@ -18,7 +18,6 @@ source_set("app") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//zircon/public/lib/fbl",
@@ -58,7 +57,10 @@ source_set("app") {
 executable("bin") {
   output_name = "ot-stack"
 
-  deps = [ ":app" ]
+  deps = [
+    ":app",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 group("ot-stack") {

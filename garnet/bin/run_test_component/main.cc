@@ -18,7 +18,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/syslog/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
@@ -146,22 +146,22 @@ std::string join_tags(std::vector<std::string> tags) {
 
 std::string log_level(int32_t severity) {
   switch (severity) {
-    case FX_LOG_TRACE:
+    case syslog::LOG_TRACE:
       return "TRACE";
-    case FX_LOG_DEBUG:
+    case syslog::LOG_DEBUG:
       return "DEBUG";
-    case FX_LOG_INFO:
+    case syslog::LOG_INFO:
       return "INFO";
-    case FX_LOG_WARNING:
+    case syslog::LOG_WARNING:
       return "WARNING";
-    case FX_LOG_ERROR:
+    case syslog::LOG_ERROR:
       return "ERROR";
-    case FX_LOG_FATAL:
+    case syslog::LOG_FATAL:
       return "FATAL";
   }
-  if (severity > FX_LOG_DEBUG && severity < FX_LOG_INFO) {
+  if (severity > syslog::LOG_DEBUG && severity < syslog::LOG_INFO) {
     std::ostringstream stream;
-    stream << "VLOG(" << -(FX_LOG_INFO - severity) << ")";
+    stream << "VLOG(" << -(syslog::LOG_INFO - severity) << ")";
     return stream.str();
   }
   return "INVALID";
@@ -279,14 +279,14 @@ int main(int argc, const char** argv) {
 
   std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
   auto max_severity_allowed = parse_result.max_log_severity;
-  bool restrict_logs = max_severity_allowed != FX_LOG_NONE;
+  bool restrict_logs = max_severity_allowed != syslog::LOG_FATAL;
   if (restrict_logs) {
     std::string simplified_url = run::GetSimplifiedUrl(program_name);
     auto it = max_severity_config.config().find(simplified_url);
     if (it != max_severity_config.config().end()) {
       // Default in BUILD.gn is WARNING. If the user overrides it give a warning that config is
       // preferred over BUILD.gn configuration.
-      if (max_severity_allowed != FX_LOG_WARNING) {
+      if (max_severity_allowed != syslog::LOG_WARNING) {
         printf(
             "\nWARNING: Test '%s' overrides max log severity in BUILD.gn as well as config file. "
             "Using the value from config file. If you want the test to pickup value from BUILD.gn, "

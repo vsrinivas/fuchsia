@@ -10,6 +10,7 @@ executable("test") {
   sources = [ "test.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/bin/camera-gym:lib",
     "//src/lib/fxl/test:gtest_main",
   ]

@@ -17,6 +17,7 @@ if (is_mac) {
 
     deps = [
       ":rainfall_demo",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/ui/examples/escher/common",
     ]
 

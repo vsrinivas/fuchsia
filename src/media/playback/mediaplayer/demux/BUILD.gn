@@ -26,7 +26,6 @@ source_set("demux") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/util",
@@ -47,6 +46,7 @@ test("tests") {
 
   deps = [
     ":demux",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 

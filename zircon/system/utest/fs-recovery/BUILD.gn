@@ -29,6 +29,7 @@ test("fs-recovery") {
   sources = [ "recovery.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

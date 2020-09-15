@@ -84,6 +84,7 @@ executable("mcs_rate_lookup_test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

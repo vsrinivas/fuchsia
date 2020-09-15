@@ -21,6 +21,7 @@ test("component_cpp_unittests") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
   ]
@@ -41,6 +42,7 @@ test("component_cpp_testing_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
   ]
@@ -58,6 +60,7 @@ test("component_cpp_testing_tests") {
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
   ]
@@ -75,6 +78,7 @@ executable("helper_proc") {
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -91,6 +95,7 @@ executable("constructor_helper_proc") {
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",

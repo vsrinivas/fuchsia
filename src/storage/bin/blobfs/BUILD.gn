@@ -11,6 +11,7 @@ executable("blobfs") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//third_party/boringssl",
     "//zircon/public/lib/bitmap",

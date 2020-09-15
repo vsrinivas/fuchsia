@@ -12,6 +12,7 @@ executable("run_integration_tests") {
     "//garnet/public/lib/test_runner/cpp",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

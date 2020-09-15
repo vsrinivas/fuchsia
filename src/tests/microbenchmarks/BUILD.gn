@@ -51,6 +51,7 @@ executable("bin") {
   deps = [
     ":fidl_interface",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",

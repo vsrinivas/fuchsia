@@ -184,7 +184,10 @@ source_set("tests") {
 
 fuzzer("expr_parser_fuzzer") {
   sources = [ "expr_parser_fuzzer.cc" ]
-  deps = [ ":expr" ]
+  deps = [
+    ":expr",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 fuzzers_package("expr_fuzzers") {

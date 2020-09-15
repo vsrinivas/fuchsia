@@ -27,6 +27,7 @@ isolated_devmgr_component("fs-management-devmgr") {
 test("fs-management-test") {
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",

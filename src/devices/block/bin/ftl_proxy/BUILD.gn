@@ -43,6 +43,7 @@ executable("ftl-proxy-bin") {
     ":local_storage_metrics",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fidl",
@@ -56,6 +57,7 @@ test("ftl-proxy-bin-test") {
   deps = [
     ":ftl-util",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",

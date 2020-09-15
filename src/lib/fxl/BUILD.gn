@@ -37,7 +37,6 @@ source_set("memory") {
   public_deps = [
     ":common",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
   configs += [
     # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -76,7 +75,6 @@ source_set("strings") {
   public_deps = [
     ":common",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
   configs += [
     # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -96,7 +94,6 @@ source_set("functional") {
     ":common",
     ":memory",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -117,7 +114,6 @@ static_library("fxl") {
     ":memory",
     ":strings",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//zircon/public/lib/fit",
   ]

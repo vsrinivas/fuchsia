@@ -119,6 +119,7 @@ test("blobfs_unittest") {
     ":test-utils",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
@@ -155,6 +156,7 @@ fuchsia_unittest_package("blobfs-unittest") {
 test("blobfs-host") {
   sources = [ "host/host-test.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//zircon/public/lib/zxtest",
   ]
@@ -200,6 +202,7 @@ test("blobfs-integration") {
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/block/bin/ftl_proxy:ftl-util",
     "//src/storage/blobfs",
     "//zircon/public/lib/zx",
@@ -399,6 +402,7 @@ source_set("load-generator") {
 fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//src/storage/blobfs:private_headers",
 
@@ -410,6 +414,7 @@ fuzzer("zstd-fuzzer") {
 fuzzer("lz4-fuzzer") {
   sources = [ "lz4-fuzzer.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//src/storage/blobfs:private_headers",
     "//zircon/public/lib/lz4",
@@ -419,6 +424,7 @@ fuzzer("lz4-fuzzer") {
 fuzzer("zstd-seekable-symmetric-fuzzer") {
   sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//src/storage/blobfs:private_headers",
 
@@ -430,6 +436,7 @@ fuzzer("zstd-seekable-symmetric-fuzzer") {
 fuzzer("zstd-seekable-fuzzer") {
   sources = [ "zstd-seekable-fuzzer.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//src/storage/blobfs:private_headers",
 
@@ -444,6 +451,7 @@ executable("blobfs-load-generator") {
   deps = [
     ":load-generator",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",

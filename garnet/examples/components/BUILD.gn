@@ -61,7 +61,10 @@ package("component_hello_world") {
 executable("hello_world_test") {
   testonly = true
   sources = [ "hello_world_test.cc" ]
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl/test:gtest_main",
+  ]
 }
 
 test_package("component_hello_world_tests") {

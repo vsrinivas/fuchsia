@@ -16,7 +16,6 @@ source_set("image_writer") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",
   ]
@@ -41,7 +40,6 @@ source_set("hsv_color_source") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
@@ -61,7 +59,6 @@ source_set("image_format_rgba") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",

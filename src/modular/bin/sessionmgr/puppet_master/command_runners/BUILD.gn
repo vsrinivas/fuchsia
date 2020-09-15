@@ -34,7 +34,6 @@ source_set("add_mod_command_runner") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
   ]
 
@@ -53,6 +52,7 @@ executable("add_mod_command_runner_unittest") {
     ":add_mod_command_runner",
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:test_with_session_storage",
@@ -65,10 +65,7 @@ source_set("remove_mod_command_runner") {
     "remove_mod_command_runner.h",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
   public_deps = [
     ":command_runner",
@@ -84,6 +81,7 @@ executable("remove_mod_command_runner_unittest") {
   deps = [
     ":remove_mod_command_runner",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:test_with_session_storage",
   ]

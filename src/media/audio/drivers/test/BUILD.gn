@@ -43,6 +43,7 @@ executable("audio_driver_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/testing/loop_fixture",

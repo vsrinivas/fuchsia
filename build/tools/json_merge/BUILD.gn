@@ -26,6 +26,7 @@ test("json_merge_test") {
 
   deps = [
     ":srcs",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

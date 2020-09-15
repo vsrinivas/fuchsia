@@ -13,6 +13,7 @@ if (is_host) {
     ]
 
     deps = [
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/system_monitor/bin/dockyard_host:lib",
       "//src/developer/system_monitor/lib:lib",
       "//src/developer/system_monitor/lib/dockyard:headers",

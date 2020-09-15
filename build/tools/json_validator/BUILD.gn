@@ -8,6 +8,7 @@ executable("json_validator") {
   sources = [ "main.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
 
     # TODO(57392): Move it back to //third_party once unification completes.

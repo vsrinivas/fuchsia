@@ -17,6 +17,7 @@ executable("fake_echo_app") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -35,6 +36,7 @@ executable("test_with_environment_example_test_bin") {
     "//garnet/examples/fidl/services:echo",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

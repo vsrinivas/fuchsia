@@ -27,6 +27,7 @@ executable("screen_reader_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/annotation/tests/mocks",

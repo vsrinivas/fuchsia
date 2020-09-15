@@ -15,6 +15,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/bin/factory:fuchsia.factory.camera",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

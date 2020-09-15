@@ -20,7 +20,6 @@ source_set("unit_test_fixture") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing/stubs:cobalt",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/testing/loop_fixture",
@@ -56,7 +55,6 @@ source_set("gpretty_printers") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:errors",
@@ -73,7 +71,6 @@ source_set("gtest_with_syslog_main") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]

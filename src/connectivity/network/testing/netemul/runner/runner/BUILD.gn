@@ -24,6 +24,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/cmx",
     "//src/lib/fsl",
     "//src/lib/fxl",

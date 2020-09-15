@@ -28,6 +28,7 @@ executable("unittests") {
   deps = [
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/gfx/tests/mocks:util",

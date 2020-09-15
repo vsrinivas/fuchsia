@@ -30,7 +30,6 @@ source_set("pseudo_dir_server") {
   public_deps = [
     "//sdk/lib/fdio:fdio_sdk",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/vfs/cpp",
     "//src/lib/files",
     "//src/lib/fsl",

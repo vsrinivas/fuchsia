@@ -41,7 +41,10 @@ test("fs-transaction") {
       "device_transaction_handler_test.cc",
       "writeback_test.cc",
     ]
-    deps += [ "//zircon/system/ulib/block-client:fake-device" ]
+    deps += [
+      "//sdk/lib/syslog/cpp:backend_legacy",
+      "//zircon/system/ulib/block-client:fake-device",
+    ]
   }
 }
 

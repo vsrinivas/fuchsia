@@ -102,6 +102,7 @@ static_library("lib") {
     "//garnet/lib/process",
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.exception",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
@@ -144,6 +145,7 @@ executable("bin") {
     ":lib",
     "//sdk/fidl/fuchsia.debugger",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/cmdline",
   ]
 
@@ -246,6 +248,7 @@ executable("unit_tests") {
   deps = [
     ":test_lib",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/ipc:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

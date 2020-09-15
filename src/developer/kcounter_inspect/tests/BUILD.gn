@@ -52,6 +52,7 @@ executable("kcounter_inspect_integration_test") {
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

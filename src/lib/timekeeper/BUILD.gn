@@ -55,6 +55,7 @@ executable("timekeeper_unittests") {
   deps = [
     ":system",
     ":testing",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",

@@ -166,7 +166,6 @@ source_set("audio_core_lib") {
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/lib/clock",
     "//zircon/public/lib/ffl",
     "//zircon/system/ulib/fzl",
@@ -211,6 +210,7 @@ executable("audio_core_bin") {
   deps = [
     ":audio_core_lib",
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/media/audio/lib/logging",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
@@ -278,6 +278,7 @@ executable("unittest_bin") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/clock/testing",
@@ -316,7 +317,10 @@ test_package("audio_core_unittests") {
 
 fuzzer("audio_core_fuzzer") {
   sources = [ "policy_loader_fuzzer.cc" ]
-  deps = [ ":audio_core_lib" ]
+  deps = [
+    ":audio_core_lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 group("tests") {

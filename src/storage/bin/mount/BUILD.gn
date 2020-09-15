@@ -11,6 +11,7 @@ executable("mount") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/fs-management",
   ]
 }

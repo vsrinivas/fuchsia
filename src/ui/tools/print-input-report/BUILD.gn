@@ -17,6 +17,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/lib/files",
     "//src/lib/fxl",
@@ -50,6 +51,7 @@ test("print-input-report-test-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/input/lib/hid-input-report",

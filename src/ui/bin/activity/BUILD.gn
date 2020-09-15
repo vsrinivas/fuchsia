@@ -47,6 +47,7 @@ executable("activity_bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -82,6 +83,7 @@ executable("activity_test_bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 

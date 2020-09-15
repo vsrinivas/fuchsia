@@ -15,6 +15,7 @@ executable("component_context_provider_example_bin") {
     "//garnet/examples/fidl/echo_client_cpp:lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

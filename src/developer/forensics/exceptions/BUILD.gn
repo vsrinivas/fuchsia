@@ -29,7 +29,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
     "//src/lib/fsl",
     "//src/lib/fxl",

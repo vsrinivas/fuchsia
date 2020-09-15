@@ -27,6 +27,7 @@ executable("unittests") {
 
   deps = [
     "//garnet/public/lib/gtest:gtest",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/display/tests:mocks",

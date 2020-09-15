@@ -59,6 +59,7 @@ executable("puppet_master_impl_unittest") {
     ":puppet_master_impl",
     ":story_command_executor",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
@@ -88,6 +89,7 @@ executable("story_command_executor_unittest") {
   deps = [
     ":story_command_executor",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -102,7 +104,6 @@ source_set("dispatch_story_command_executor") {
     ":story_command_executor",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:command_runner",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/async/cpp:operation",
@@ -117,6 +118,7 @@ executable("dispatch_story_command_executor_unittest") {
   deps = [
     ":dispatch_story_command_executor",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/public",

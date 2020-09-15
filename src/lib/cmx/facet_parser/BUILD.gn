@@ -38,6 +38,7 @@ executable("cmx_facet_parser_unittest") {
     ":cmx_facet_parser",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/googletest:gmock",

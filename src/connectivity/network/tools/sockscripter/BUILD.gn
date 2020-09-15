@@ -29,7 +29,11 @@ source_set("src") {
 executable("bin") {
   output_name = "sockscripter"
   sources = [ "main.cc" ]
-  deps = [ ":src" ]
+
+  deps = [
+    ":src",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 executable("sockscripter_test") {
@@ -40,6 +44,7 @@ executable("sockscripter_test") {
   ]
   deps = [
     ":src",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

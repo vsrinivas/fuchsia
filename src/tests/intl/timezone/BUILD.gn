@@ -28,6 +28,7 @@ rustc_test("timezone_bin_test") {
     "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

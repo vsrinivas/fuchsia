@@ -22,7 +22,6 @@ source_set("lib") {
     ":common",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/shell/common:lib",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/developer/shell/interpreter:shell_server_lib",
@@ -75,6 +74,7 @@ executable("console_unittests_bin") {
 
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",

@@ -18,6 +18,7 @@ executable("gesture_recognizers_tests") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/gesture_manager/arena",

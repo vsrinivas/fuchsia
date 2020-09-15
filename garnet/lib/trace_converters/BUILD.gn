@@ -39,6 +39,7 @@ test("chromium_unittests") {
 
   deps = [
     ":chromium",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

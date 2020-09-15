@@ -99,6 +99,7 @@ executable_package("dev_session_shell") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:single_service_app",
@@ -166,7 +167,6 @@ source_set("startup_agent_launcher") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/connect",
   ]
@@ -202,6 +202,7 @@ executable("annotations_unittest") {
 
   deps = [
     ":annotations",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//third_party/googletest:gmock",

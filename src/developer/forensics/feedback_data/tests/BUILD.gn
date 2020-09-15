@@ -15,6 +15,7 @@ executable("board_info_provider_unittest_exe") {
   sources = [ "board_info_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:board_info_provider",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -62,6 +63,7 @@ executable("config_unittest_exe") {
   sources = [ "config_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:config",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
@@ -81,6 +83,7 @@ executable("data_provider_unittest_exe") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:device_id_provider",
@@ -113,6 +116,7 @@ executable("data_register_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:data_register",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -130,6 +134,7 @@ executable("datastore_unittest_exe") {
   deps = [
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:datastore",
     "//src/developer/forensics/feedback_data:device_id_provider",
@@ -169,6 +174,7 @@ executable("device_id_provider_unittest_exe") {
   sources = [ "device_id_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:device_id_provider",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -248,6 +254,7 @@ executable("inspect_exe") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -264,6 +271,7 @@ executable("inspect_ptr_unittest_exe") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -306,6 +314,7 @@ executable("kernel_log_ptr_integration_test_exe") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:errors",
@@ -326,6 +335,7 @@ executable("last_reboot_info_provider_unittest_exe") {
   sources = [ "last_reboot_info_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:last_reboot_info_provider",
     "//src/developer/forensics/feedback_data/annotations:types",
@@ -347,6 +357,7 @@ executable("product_info_provider_unittest_exe") {
   sources = [ "product_info_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:product_info_provider",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -369,6 +380,7 @@ executable("screenshot_ptr_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -388,6 +400,7 @@ executable("system_log_ptr_unittest_exe") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gmatchers",
@@ -415,7 +428,6 @@ source_set("zx_object_util") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 }

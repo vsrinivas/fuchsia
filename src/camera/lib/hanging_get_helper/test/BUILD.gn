@@ -11,6 +11,7 @@ executable("test") {
 
   deps = [
     "..",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -65,6 +65,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
@@ -90,6 +91,7 @@ executable("cmd_unittests") {
   deps = [
     ":lib",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",

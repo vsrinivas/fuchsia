@@ -18,6 +18,7 @@ executable("simplest_embedder") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
     "//zircon/public/lib/zx",

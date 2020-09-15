@@ -19,6 +19,7 @@ executable("i18n_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/intl/lookup/cpp:lib",
     "//src/ui/a11y/lib/screen_reader/i18n:i18n",

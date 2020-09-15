@@ -24,6 +24,7 @@ executable("bin") {
   deps = [
     ":base_deps",
     "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/ui/scenic/lib/annotation:annotation_registry",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",

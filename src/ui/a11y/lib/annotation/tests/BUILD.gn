@@ -14,6 +14,7 @@ executable("annotation_tests") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

@@ -26,7 +26,6 @@ source_set("base_view") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -44,6 +43,7 @@ executable("base_view_unittest") {
   deps = [
     ":base_view",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
@@ -57,6 +57,7 @@ executable("math_unittest") {
 
   deps = [
     ":base_view",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

@@ -34,6 +34,7 @@ test("fidl_cpp_fuzzing_unittests") {
   sources = [ "traits_unittest.cc" ]
   deps = [
     ":fuzzing",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

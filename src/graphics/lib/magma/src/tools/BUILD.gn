@@ -16,6 +16,7 @@ executable("magma_info") {
     "$zircon_build_root/system/ulib/ddk",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/fxl",
   ]

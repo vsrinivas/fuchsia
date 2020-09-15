@@ -27,6 +27,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/lib/vsh:util",

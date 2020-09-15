@@ -25,6 +25,7 @@ executable("msd_intel_gen_integration_tests") {
     "$magma_build_root/tests/helper:test_device_helper",
     "../../include",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/lib/fxl/test:gtest_main",
   ]

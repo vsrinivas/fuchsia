@@ -45,6 +45,7 @@ test("nand-volume-driver") {
 
   deps = [
     ":common",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ftl-mtd",
     "//zircon/system/ulib/mtd",
@@ -64,6 +65,7 @@ test("ftl-volume-wrapper") {
   sources = [ "ftl-volume-wrapper-tests.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ftl-mtd",
     "//zircon/system/ulib/fvm-host",

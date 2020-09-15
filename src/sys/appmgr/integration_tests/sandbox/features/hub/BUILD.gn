@@ -17,6 +17,7 @@ sandbox_test_package("has_hub") {
   sources = [ "has_hub.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -27,6 +28,7 @@ sandbox_test_package("no_hub") {
   sources = [ "no_hub.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]

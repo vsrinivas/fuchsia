@@ -22,7 +22,6 @@ source_set("source") {
     "//sdk/banjo/ddk.protocol.mipicsi",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//zircon/system/ulib/fzl",
   ]
@@ -48,6 +47,7 @@ driver_module("driver") {
   deps = [
     ":source",
     "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

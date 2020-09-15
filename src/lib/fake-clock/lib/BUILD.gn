@@ -26,6 +26,7 @@ executable("test_bin") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fake-clock/fidl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

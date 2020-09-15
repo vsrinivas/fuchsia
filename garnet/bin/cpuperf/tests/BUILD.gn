@@ -21,6 +21,7 @@ executable("cpuperf_tests_bin") {
 
   deps = [
     "//garnet/bin/cpuperf:unittests",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 
@@ -67,6 +68,7 @@ executable("cpuperf_integration_tests") {
     "//garnet/bin/cpuperf:session_spec",
     "//garnet/lib/perfmon",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

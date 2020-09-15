@@ -10,6 +10,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/sys/lib/chrealm",
   ]

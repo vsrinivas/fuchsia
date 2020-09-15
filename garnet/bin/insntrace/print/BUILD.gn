@@ -27,6 +27,7 @@ executable("insntrace_print") {
     "third_party/simple-pt:printer",
     "//garnet/lib/debugger_utils",
     "//garnet/lib/intel_pt_decode",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

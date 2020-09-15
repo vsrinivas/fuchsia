@@ -31,7 +31,6 @@ source_set("encode_module_path") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/modular/lib/string_escape",
   ]
@@ -49,6 +48,7 @@ executable("encode_module_path_unittest") {
 
   deps = [
     ":encode_module_path",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -83,6 +83,7 @@ executable("session_storage_unittest") {
 
   deps = [
     ":session_storage",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
@@ -129,6 +130,7 @@ executable("story_storage_unittest") {
 
   deps = [
     ":story_storage",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

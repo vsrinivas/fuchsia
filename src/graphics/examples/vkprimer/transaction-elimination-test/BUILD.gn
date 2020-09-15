@@ -53,6 +53,7 @@ executable("bin") {
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",

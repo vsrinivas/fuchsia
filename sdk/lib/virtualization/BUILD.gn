@@ -30,6 +30,7 @@ executable("virtualization_lib_unittests") {
     ":virtualization",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

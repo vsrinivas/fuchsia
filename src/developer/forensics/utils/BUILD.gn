@@ -20,7 +20,6 @@ source_set("archive") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -34,10 +33,7 @@ source_set("archive") {
 source_set("errors") {
   sources = [ "errors.h" ]
 
-  public_deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  public_deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("inspect_node_manager") {
@@ -74,7 +70,6 @@ source_set("logs") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
@@ -120,6 +115,5 @@ source_set("utc_time_provider") {
   deps = [
     ":time",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }

@@ -31,6 +31,7 @@ executable("memory_monitor_unittests") {
     "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/cobalt/bin/testing:fake_logger_lib",
     "//src/developer/memory/metrics/tests:utils",
     "//src/developer/memory/monitor:lib",
@@ -60,6 +61,7 @@ executable("bin-monitor") {
 
   deps = [
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -78,6 +80,7 @@ executable("test-inspect") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

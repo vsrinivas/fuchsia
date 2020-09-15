@@ -21,7 +21,6 @@ source_set("configuration") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/gfx",
   ]

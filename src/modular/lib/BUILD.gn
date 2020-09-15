@@ -35,6 +35,7 @@ executable("modular_lib_unittests") {
   testonly = true
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/async/cpp:unittests",
     "//src/modular/lib/base64url:unittests",

@@ -37,6 +37,7 @@ test("block-client-unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -75,7 +75,6 @@ source_set("fake_timekeeper_lib") {
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 

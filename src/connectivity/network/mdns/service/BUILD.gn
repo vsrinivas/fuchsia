@@ -36,6 +36,7 @@ executable("bin") {
 
   deps = [
     ":source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -105,7 +106,6 @@ source_set("source_set") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/inet",
     "//src/lib/json_parser",
@@ -138,6 +138,7 @@ test("mdns_test") {
 
   deps = [
     ":source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -325,6 +326,7 @@ executable("mdns_netemul_multi_network_test_agent") {
     ":source_set",
     "//sdk/fidl/fuchsia.net",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

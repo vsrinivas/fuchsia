@@ -16,6 +16,7 @@ test("ramdisk") {
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",

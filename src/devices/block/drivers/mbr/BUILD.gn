@@ -30,6 +30,7 @@ driver_module("mbr") {
   deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -53,6 +54,7 @@ test("mbr-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",

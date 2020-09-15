@@ -45,7 +45,6 @@ source_set("screen_reader") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/screen_reader/util",
     "//src/ui/a11y/lib/semantics",

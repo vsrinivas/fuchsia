@@ -14,6 +14,7 @@ sandbox_test_package("no_system_temp") {
   sources = [ "no_system_temp.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]

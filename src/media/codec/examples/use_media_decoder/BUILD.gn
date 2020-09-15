@@ -48,6 +48,7 @@ source_set("use_media_decoder_source_set") {
     "//src/media/lib/test:one_shot_event",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/tee-client-api",
   ]
 }
@@ -61,6 +62,7 @@ executable("use_media_decoder") {
 
   deps = [
     ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/lib/test:frame_sink",
     "//src/media/lib/test:one_shot_event",
   ]
@@ -76,6 +78,7 @@ executable("use_aac_decoder_test") {
 
   deps = [
     ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -89,7 +92,10 @@ test("use_h264_decoder_test") {
 
   sources = [ "test/use_h264_decoder_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_multi_decoder_test") {
@@ -99,7 +105,10 @@ test("use_h264_multi_decoder_test") {
 
   sources = [ "test/use_h264_multi_decoder_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_multi_decoder_flake_repro_test") {
@@ -109,7 +118,10 @@ test("use_h264_multi_decoder_flake_repro_test") {
 
   sources = [ "test/use_h264_multi_decoder_flake_repro_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_decoder_stream_switching_test") {
@@ -119,7 +131,10 @@ test("use_h264_decoder_stream_switching_test") {
 
   sources = [ "test/use_h264_decoder_stream_switching_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_multi_decoder_stream_switching_test") {
@@ -129,7 +144,10 @@ test("use_h264_multi_decoder_stream_switching_test") {
 
   sources = [ "test/use_h264_multi_decoder_stream_switching_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_multi_decoder_concurrent_stream_switching_test") {
@@ -140,7 +158,10 @@ test("use_h264_multi_decoder_concurrent_stream_switching_test") {
   sources =
       [ "test/use_h264_multi_decoder_concurrent_stream_switching_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_decoder_secure_output_test") {
@@ -150,7 +171,10 @@ test("use_h264_decoder_secure_output_test") {
 
   sources = [ "test/use_h264_decoder_secure_output_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_multi_decoder_secure_output_test") {
@@ -160,7 +184,10 @@ test("use_h264_multi_decoder_secure_output_test") {
 
   sources = [ "test/use_h264_multi_decoder_secure_output_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_h264_decoder_secure_input_output_test") {
@@ -170,7 +197,10 @@ test("use_h264_decoder_secure_input_output_test") {
 
   sources = [ "test/use_h264_decoder_secure_input_output_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_test") {
@@ -180,7 +210,10 @@ test("use_vp9_decoder_test") {
 
   sources = [ "test/use_vp9_decoder_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_1280x546_test") {
@@ -190,7 +223,10 @@ test("use_vp9_decoder_1280x546_test") {
 
   sources = [ "test/use_vp9_decoder_1280x546_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_stream_switching_test") {
@@ -200,7 +236,10 @@ test("use_vp9_decoder_stream_switching_test") {
 
   sources = [ "test/use_vp9_decoder_stream_switching_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_skip_first_frame_test") {
@@ -210,7 +249,10 @@ test("use_vp9_decoder_skip_first_frame_test") {
 
   sources = [ "test/use_vp9_decoder_skip_first_frame_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_24_output_frames_test") {
@@ -220,7 +262,10 @@ test("use_vp9_decoder_24_output_frames_test") {
 
   sources = [ "test/use_vp9_decoder_24_output_frames_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_secure_output_test") {
@@ -230,7 +275,10 @@ test("use_vp9_decoder_secure_output_test") {
 
   sources = [ "test/use_vp9_decoder_secure_output_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("use_vp9_decoder_secure_input_output_test") {
@@ -240,7 +288,10 @@ test("use_vp9_decoder_secure_input_output_test") {
 
   sources = [ "test/use_vp9_decoder_secure_input_output_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("vp9_decoder_conformance_test") {
@@ -250,7 +301,10 @@ test("vp9_decoder_conformance_test") {
 
   sources = [ "test/vp9_decoder_conformance_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("h264_decoder_conformance_test") {
@@ -260,7 +314,10 @@ test("h264_decoder_conformance_test") {
 
   sources = [ "test/h264_decoder_conformance_test.cc" ]
 
-  deps = [ ":use_media_decoder_source_set" ]
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 source_set("decoder_fuzzer") {
@@ -270,7 +327,7 @@ source_set("decoder_fuzzer") {
   public_deps = [
     ":use_media_decoder_source_set",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -281,7 +338,10 @@ test("h264_decoder_fuzzer_test") {
 
   sources = [ "test/h264_decoder_fuzzer_test.cc" ]
 
-  deps = [ ":decoder_fuzzer" ]
+  deps = [
+    ":decoder_fuzzer",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("h264_decoder_malformed_stream_test") {
@@ -305,7 +365,10 @@ test("h264_multi_decoder_fuzzer_test") {
 
   sources = [ "test/h264_multi_decoder_fuzzer_test.cc" ]
 
-  deps = [ ":decoder_fuzzer" ]
+  deps = [
+    ":decoder_fuzzer",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test("vp9_decoder_fuzzer_test") {
@@ -315,5 +378,8 @@ test("vp9_decoder_fuzzer_test") {
 
   sources = [ "test/vp9_decoder_fuzzer_test.cc" ]
 
-  deps = [ ":decoder_fuzzer" ]
+  deps = [
+    ":decoder_fuzzer",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }

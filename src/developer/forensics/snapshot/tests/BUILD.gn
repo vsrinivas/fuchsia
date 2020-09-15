@@ -14,6 +14,7 @@ executable("snapshotter_integration_test_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/snapshot:snapshotter",
     "//src/developer/forensics/utils:archive",
     "//src/lib/files",

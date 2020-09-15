@@ -23,10 +23,7 @@ source_set("board_info_provider") {
     "//sdk/fidl/fuchsia.hwinfo",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("channel_provider") {
@@ -63,7 +60,6 @@ source_set("cobalt") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
   ]
@@ -88,7 +84,6 @@ source_set("crash_reporter") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/fit",
   ]
@@ -112,7 +107,6 @@ source_set("data_provider") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/fit",
   ]
@@ -133,7 +127,6 @@ source_set("device_id_provider") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 }
@@ -166,7 +159,6 @@ source_set("inspect") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/fit",
   ]
@@ -185,10 +177,7 @@ source_set("last_reboot_info_provider") {
     "//sdk/fidl/fuchsia.feedback",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("logger") {
@@ -206,10 +195,7 @@ source_set("logger") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -228,10 +214,7 @@ source_set("product_info_provider") {
     "//sdk/fidl/fuchsia.hwinfo",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("network_reachability_provider") {
@@ -249,7 +232,6 @@ source_set("network_reachability_provider") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fit",
   ]
 }
@@ -284,7 +266,6 @@ source_set("scenic") {
   deps = [
     "//sdk/fidl/fuchsia.images",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 
@@ -308,7 +289,6 @@ source_set("utc_provider") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
   ]

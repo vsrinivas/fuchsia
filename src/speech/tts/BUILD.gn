@@ -25,6 +25,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.tts",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//third_party/flite",
     "//zircon/public/lib/zx",

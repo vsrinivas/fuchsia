@@ -90,6 +90,7 @@ executable("url_unittests") {
   deps = [
     ":url",
     ":url_unittests_main",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
     "//third_party/icu",
   ]

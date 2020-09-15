@@ -21,6 +21,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.media.audio",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
 }

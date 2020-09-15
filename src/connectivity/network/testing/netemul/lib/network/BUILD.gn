@@ -100,6 +100,7 @@ executable("network_test_bin") {
     ":netdump",
     ":network_service",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/lib/network-device/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/lib/fxl",

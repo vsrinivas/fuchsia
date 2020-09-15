@@ -9,6 +9,8 @@ executable("msd_arm_mali_nonhardware_tests") {
 
   sources = []
 
+  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
+
   public_deps = [
     ":tests_not_requiring_hardware",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",

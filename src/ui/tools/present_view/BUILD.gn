@@ -7,6 +7,7 @@ executable("present_view") {
 
   deps = [
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]

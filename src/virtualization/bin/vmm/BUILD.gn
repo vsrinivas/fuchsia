@@ -23,7 +23,6 @@ source_set("guest_config") {
   deps = [
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/virtualization/bin/vmm/device",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -148,6 +147,7 @@ executable("bin") {
   deps = [
     ":guest_config",
     ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
@@ -221,6 +221,7 @@ executable("vmm_unittests") {
     ":guest_config",
     ":lib",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

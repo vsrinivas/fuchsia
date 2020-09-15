@@ -33,7 +33,6 @@ source_set("core") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",

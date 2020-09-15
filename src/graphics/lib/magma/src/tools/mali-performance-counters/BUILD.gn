@@ -43,7 +43,10 @@ source_set("common_srcs") {
 executable("mali-performance-counters") {
   sources = [ "main.cc" ]
 
-  deps = [ ":common_srcs" ]
+  deps = [
+    ":common_srcs",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
@@ -56,6 +59,7 @@ executable("mali-performance-counters-test-executable") {
 
   deps = [
     ":common_srcs",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",

@@ -30,6 +30,7 @@ test("blobfs-bench") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//third_party/boringssl",
     "//zircon/public/lib/async",

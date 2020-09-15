@@ -18,6 +18,7 @@ test("zxcrypt") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//third_party/boringssl",

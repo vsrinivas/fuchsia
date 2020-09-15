@@ -57,7 +57,10 @@ vulkan_executable("bin") {
 
   include_dirs = [ "//src/graphics/examples/vkprimer/common" ]
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl",
+  ]
 
   if (is_fuchsia) {
     include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]

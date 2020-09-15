@@ -33,10 +33,7 @@ source_set("info") {
     "//src/lib/timekeeper",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("inspect_manager") {
@@ -61,7 +58,6 @@ source_set("inspect_manager") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/utils:inspect_protocol_stats",
     "//src/developer/forensics/utils:time",

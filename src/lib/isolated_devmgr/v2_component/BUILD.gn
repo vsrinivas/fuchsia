@@ -92,7 +92,6 @@ source_set("client") {
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fs-management",
   ]

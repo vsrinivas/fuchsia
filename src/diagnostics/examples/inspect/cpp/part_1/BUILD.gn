@@ -22,6 +22,7 @@ test("reverser_unittests_part_1") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

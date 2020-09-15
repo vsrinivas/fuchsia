@@ -60,10 +60,12 @@ source_set("codec_impl") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
 
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",
+
+    # Provides fx_log_get_logger
+    "//zircon/system/ulib/syslog",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

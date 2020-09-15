@@ -61,6 +61,7 @@ executable("basemgr_launcher_test") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/scenic:scenic",
     "//third_party/googletest:gtest",

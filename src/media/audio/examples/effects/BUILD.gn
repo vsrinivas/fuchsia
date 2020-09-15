@@ -59,6 +59,7 @@ executable("test_bin") {
   deps = [
     ":headers",
     "//sdk/lib/media/audio/effects",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/effects_loader",

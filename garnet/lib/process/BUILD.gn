@@ -33,6 +33,7 @@ executable("unittests") {
   deps = [
     ":process",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]

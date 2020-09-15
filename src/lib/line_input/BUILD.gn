@@ -41,6 +41,7 @@ if (is_host) {
 
     deps = [
       ":line_input",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
     ]
@@ -50,7 +51,10 @@ if (is_host) {
   executable("line_input_example") {
     sources = [ "line_input_example.cc" ]
 
-    deps = [ ":line_input" ]
+    deps = [
+      ":line_input",
+      "//sdk/lib/syslog/cpp:backend_legacy",
+    ]
     configs += [
       # TODO(fxb/58162): delete the below and fix compiler warnings
       "//build/config:Wno-conversion",
@@ -67,6 +71,7 @@ if (is_host) {
 
     deps = [
       ":line_input",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
     ]

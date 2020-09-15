@@ -12,6 +12,7 @@ test("fvm-driver-integration") {
   include_dirs = [ ".." ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/block/drivers/fvm:shared",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",

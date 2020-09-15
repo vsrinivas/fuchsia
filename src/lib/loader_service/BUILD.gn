@@ -36,6 +36,7 @@ source_set("loader_service_test_fixture") {
 
   public_deps = [
     ":loader_service",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/fbl",
@@ -53,6 +54,7 @@ executable("loader_service_test") {
 
   deps = [
     ":loader_service_test_fixture",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/ldmsg",
   ]
 }

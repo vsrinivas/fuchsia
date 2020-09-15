@@ -42,6 +42,7 @@ executable("flow_ring_handler_test") {
   deps = [
     ":fake_msgbuf_interfaces",
     ":test_utils",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
@@ -60,6 +61,7 @@ executable("flow_ring_test") {
   deps = [
     ":fake_msgbuf_interfaces",
     ":test_utils",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -77,6 +79,7 @@ executable("msgbuf_ring_handler_test") {
   deps = [
     ":fake_msgbuf_interfaces",
     ":test_utils",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",

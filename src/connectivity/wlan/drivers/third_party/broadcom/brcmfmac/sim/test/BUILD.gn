@@ -35,6 +35,7 @@ executable("arp_test") {
   sources = [ "arp_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -51,6 +52,7 @@ executable("assoc_test") {
   sources = [ "assoc_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -70,6 +72,7 @@ executable("channel_switch_test") {
   sources = [ "channel_switch_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -86,6 +89,7 @@ executable("timeout_test") {
   sources = [ "timeout_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -102,6 +106,7 @@ executable("create_softap_test") {
   sources = [ "create_softap_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -118,6 +123,7 @@ executable("auth_test") {
   sources = [ "auth_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -134,6 +140,7 @@ executable("dynamic_if_test") {
   sources = [ "dynamic_if_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -149,6 +156,7 @@ executable("phy_query_test") {
   sources = [ "phy_query_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -165,6 +173,7 @@ executable("firmware_config_test") {
   sources = [ "firmware_config_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -180,6 +189,7 @@ executable("iovar_test") {
   sources = [ "iovar_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
@@ -195,6 +205,7 @@ executable("lifecycle_test") {
   testonly = true
   sources = [ "lifecycle_test.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim:sim",
@@ -209,6 +220,7 @@ executable("scan_dwell_time_test") {
   sources = [ "scan_dwell_time_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -223,6 +235,7 @@ executable("passive_scan_test") {
   sources = [ "passive_scan_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -237,6 +250,7 @@ executable("active_scan_test") {
   sources = [ "active_scan_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -251,6 +265,7 @@ executable("cc_test") {
   sources = [ "cc_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -264,6 +279,7 @@ executable("beacon_lost_test") {
   sources = [ "beacon_lost_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -279,6 +295,7 @@ executable("data_frame_test") {
   sources = [ "data_frame_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -295,6 +312,7 @@ executable("set_keys_test") {
   sources = [ "set_keys_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -321,6 +339,7 @@ executable("bad_entropy_test") {
   sources = [ "bad_entropy_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -341,13 +360,13 @@ executable("call_after_del_iface_test") {
   ]
 }
 
-
 executable("disassoc_test") {
   output_name = "disassoc_test"
   testonly = true
   sources = [ "disassoc_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -361,6 +380,7 @@ executable("escan_params_test") {
   sources = [ "escan_params_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -374,6 +394,7 @@ executable("ifc_query_test") {
   sources = [ "ifc_query_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -406,6 +427,7 @@ executable("no_random_mac_test") {
   sources = [ "no_random_mac_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -419,6 +441,7 @@ executable("err_inject_test") {
   sources = [ "err_inject_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",

@@ -15,6 +15,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp:cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

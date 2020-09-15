@@ -148,6 +148,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
@@ -193,6 +194,7 @@ executable("unittest_bin") {
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

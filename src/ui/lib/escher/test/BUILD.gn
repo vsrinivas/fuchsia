@@ -21,6 +21,7 @@ if (is_mac) {
   test("escher_unittests") {
     deps = [
       ":no_op_mac_unittest",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
     ]
   }
@@ -28,6 +29,7 @@ if (is_mac) {
   test("escher_renderer_tests") {
     deps = [
       ":no_op_mac_unittest",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl/test:gtest_main",
     ]
   }
@@ -110,6 +112,7 @@ if (is_mac) {
       ":force_examples_to_build_on_host",
       ":force_paper_shader_compiler_to_build_on_host",
       "base:base_unittests",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl",
       "//src/ui/lib/escher/test/common:gtest_escher",
       "//src/ui/lib/escher/test/common:readback_fixtures",
@@ -168,6 +171,7 @@ if (is_mac) {
     ]
 
     deps = [
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/ui/lib/escher/test/common:gtest_escher",
       "//src/ui/lib/escher/test/common:readback_fixtures",
     ]

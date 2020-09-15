@@ -34,6 +34,7 @@ executable("test") {
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

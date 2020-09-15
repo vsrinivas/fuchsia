@@ -15,6 +15,7 @@ executable("vk_timer_query") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "../vkreadback:vkreadback_src",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/drivers/msd-arm-mali/include",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",

@@ -127,7 +127,10 @@ executable("optee_test_bin") {
 
   sources = [ "test/optee_test.cc" ]
 
-  deps = [ ":test_common" ]
+  deps = [
+    ":test_common",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 test_package("optee_smoke_test") {
@@ -155,6 +158,7 @@ executable("optee_smoke_test_bin") {
 
   deps = [
     ":test_common",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fit",
   ]
 

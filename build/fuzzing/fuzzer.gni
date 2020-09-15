@@ -187,6 +187,7 @@ template("fuzzer") {
     configs -= [ "//build/config/fuzzer:engine" ]
     deps += [
       ":$corpus_target",
+      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fuzzing/cpp:fuzzer_test",
     ]
   }

@@ -37,6 +37,7 @@ sandbox_test_package("has_pkg") {
   sources = [ "has_pkg.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -47,6 +48,7 @@ sandbox_test_package("path-traversal-escape") {
   sources = [ "path_traversal_escape.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]

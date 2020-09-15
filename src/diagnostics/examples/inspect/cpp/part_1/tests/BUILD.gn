@@ -15,6 +15,7 @@ test("integration_part_1") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect",
     "//src/lib/fxl/test:gtest_main",
   ]

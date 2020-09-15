@@ -35,7 +35,10 @@ source_set("lib") {
 executable("intl-lookup-cpp") {
   testonly = true
   sources = [ "main.cc" ]
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 executable("intl_lookup_cpp_unittests") {
@@ -44,6 +47,7 @@ executable("intl_lookup_cpp_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
