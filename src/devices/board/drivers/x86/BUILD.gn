@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
 assert(current_cpu == "x64")
@@ -190,6 +191,11 @@ test("x86-battery-test") {
   ]
 }
 
+bootfs_test("x86-battery-bootfs-test") {
+  name = "x86-battery-test"
+  deps = [ ":x86-battery-test" ]
+}
+
 test("x86-lid-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -221,6 +227,11 @@ test("x86-lid-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
   ]
+}
+
+bootfs_test("x86-lid-bootfs-test") {
+  name = "x86-lid-test"
+  deps = [ ":x86-lid-test" ]
 }
 
 test("x86-pwrsrc-test") {
@@ -256,6 +267,11 @@ test("x86-pwrsrc-test") {
   ]
 }
 
+bootfs_test("x86-pwrsrc-bootfs-test") {
+  name = "x86-pwrsrc-test"
+  deps = [ ":x86-pwrsrc-test" ]
+}
+
 test("x86-board-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -279,6 +295,11 @@ test("x86-board-test") {
     "//third_party/acpica",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+bootfs_test("x86-board-bootfs-test") {
+  name = "x86-board-test"
+  deps = [ ":x86-board-test" ]
 }
 
 test("x86-thermal-test") {
@@ -312,6 +333,11 @@ test("x86-thermal-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
   ]
+}
+
+bootfs_test("x86-thermal-bootfs-test") {
+  name = "x86-thermal-test"
+  deps = [ ":x86-thermal-test" ]
 }
 
 test("x86-cros-ec-test") {
@@ -350,4 +376,9 @@ test("x86-cros-ec-test") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
+}
+
+bootfs_test("x86-cros-ec-bootfs-test") {
+  name = "x86-cros-ec-test"
+  deps = [ ":x86-cros-ec-test" ]
 }

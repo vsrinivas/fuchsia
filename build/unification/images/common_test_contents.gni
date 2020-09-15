@@ -6,17 +6,3 @@
 # and inserted into bootfs or system images.
 # This list is mostly used by //bundles/bringup:tests.
 common_test_contents = []
-
-if (target_cpu == "x64") {
-  common_test_contents += [
-    "//src/devices/board/drivers/x86:x86-battery-test",
-    "//src/devices/board/drivers/x86:x86-board-test",
-    "//src/devices/board/drivers/x86:x86-cros-ec-test",
-    "//src/devices/board/drivers/x86:x86-lid-test",
-    "//src/devices/board/drivers/x86:x86-pwrsrc-test",
-    "//src/devices/board/drivers/x86:x86-thermal-test",
-    "//src/devices/board/drivers/x86/test:x86-board",
-    "//src/devices/bin/acpidump:test",
-    "//src/zircon/tests/x86-umip",
-  ]
-}

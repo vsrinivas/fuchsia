@@ -240,6 +240,20 @@ group("tests") {
     "//zircon/third_party/ulib/linenoise/test:linenoise-test-bootfs-test",
   ]
 
+  if (target_cpu == "x64") {
+    deps += [
+      "//src/devices/bin/acpidump:acpidump-test-bootfs-test",
+      "//src/devices/board/drivers/x86:x86-battery-bootfs-test",
+      "//src/devices/board/drivers/x86:x86-board-bootfs-test",
+      "//src/devices/board/drivers/x86:x86-cros-ec-bootfs-test",
+      "//src/devices/board/drivers/x86:x86-lid-bootfs-test",
+      "//src/devices/board/drivers/x86:x86-pwrsrc-bootfs-test",
+      "//src/devices/board/drivers/x86:x86-thermal-bootfs-test",
+      "//src/devices/board/drivers/x86/test:x86-board-bootfs-test",
+      "//src/zircon/tests/x86-umip:x86-umip-bootfs-test",
+    ]
+  }
+
   # Tests without metadata.
   deps += []
 

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("x86-board") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -14,4 +15,9 @@ test("x86-board") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fdio-caller",
   ]
+}
+
+bootfs_test("x86-board-bootfs-test") {
+  name = "x86-board"
+  deps = [ ":x86-board" ]
 }
