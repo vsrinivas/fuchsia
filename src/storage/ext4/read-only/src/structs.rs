@@ -646,8 +646,8 @@ pub trait ParseToStruct: FromBytes + Unaligned + Sized {
     /// `Self` is the ext4 struct that represents the given `data`.
     fn to_struct_arc(data: Box<[u8]>, error: ParsingError) -> Result<Arc<Self>, ParsingError> {
         Self::validate(&data, error)?;
-        let data = Box::into_raw(data);
-        unsafe { Ok(Arc::from_raw(data as *mut Self)) }
+        let ptr = Box::into_raw(data);
+        unsafe { Ok(Arc::from(Box::from_raw(ptr as *mut Self))) }
     }
 
     /// Casts the &[u8] data to &Self.
