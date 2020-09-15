@@ -16,6 +16,8 @@
 
 #include "workqueue.h"
 
+#include <zircon/assert.h>
+
 #include "debug.h"
 
 #define WORKQUEUE_SIGNAL ZX_USER_SIGNAL_0
@@ -115,7 +117,9 @@ void WorkQueue::StartWorkQueue() {
   work_ready_ = {};
   list_initialize(&list_);
   auto thread_func = [](void* arg) { return reinterpret_cast<WorkQueue*>(arg)->Runner(); };
-  thrd_create_with_name(&thread_, thread_func, this, name_);
+  int status = thrd_create_with_name(&thread_, thread_func, this, name_);
+  ZX_ASSERT_MSG(status == thrd_success, "Failed to create WorkQ thread name: %s status: %d", name_,
+                status);
 }
 
 WorkItem::WorkItem() : WorkItem(nullptr) {}

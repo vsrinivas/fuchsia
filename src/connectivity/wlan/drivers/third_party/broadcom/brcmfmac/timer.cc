@@ -49,6 +49,7 @@ void Timer::Start(zx_duration_t interval) {
     *handler = std::bind(fn, this);
 
     brcmf_bus_set_sim_timer(drvr_->bus_if, std::move(handler), interval, &event_id_);
+    scheduled_ = true;
   } else {
     lock_.lock();
 
@@ -72,6 +73,7 @@ void Timer::Start(zx_duration_t interval) {
 void Timer::Stop() {
   if (drvr_->bus_if && brcmf_bus_get_bus_type(drvr_->bus_if) == BRCMF_BUS_TYPE_SIM) {
     brcmf_bus_cancel_sim_timer(drvr_->bus_if, event_id_);
+    scheduled_ = false;
   } else {
     lock_.lock();
     interval_ = 0;
@@ -86,6 +88,9 @@ void Timer::Stop() {
       // timeout interval for the handler task to finish.
       sync_completion_wait(&finished_, interval_);
     }
+    lock_.lock();
+    scheduled_ = false;
+    lock_.unlock();
   }
 }
 

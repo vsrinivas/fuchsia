@@ -22,6 +22,7 @@
 
 #include "bus.h"
 #include "core.h"
+#include "debug.h"
 
 // This is the function that timer users write to receive callbacks.
 typedef void(brcmf_timer_callback_t)(void* data);
@@ -42,6 +43,7 @@ class Timer {
   // @interval: Interval of time before timer triggers. Same interval used for periodic timers.
   void Start(zx_duration_t interval);
   void Stop();
+  bool Stopped() { return !scheduled_; };
 
  private:
   static void TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
