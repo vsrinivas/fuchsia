@@ -251,7 +251,7 @@ and server components, review the
 ## Run tests
 
 To test Fuchsia on your device, see
-[Running tests as components](/docs/development/testing/running_tests_as_components.md).
+[Run tests as components](/docs/development/testing/run_tests_as_components.md).
 
 ## Launch a graphical component
 

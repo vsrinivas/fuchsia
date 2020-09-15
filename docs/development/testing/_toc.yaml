@@ -2,14 +2,16 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Running tests as components"
-  path: /docs/development/testing/running_tests_as_components.md
-- title: "Testing Scenic and Escher"
-  path: /docs/development/testing/scenic_testing.md
+- title: "Run tests as components"
+  path: /docs/development/testing/run_tests_as_components.md
 - title: "Run an end-to-end test"
   path: /docs/development/testing/run_an_end_to_end_test.md
 - title: "Create a new end-to-end test"
   path: /docs/development/testing/create_a_new_end_to_end_test.md
+- title: "Testing Scenic and Escher"
+  path: /docs/development/testing/scenic_testing.md
+- title: "Questions and answers"
+  path: /docs/development/testing/faq.md
 - title: "Zircon testing"
   section:
   - title: "Zircon testing overview"
@@ -21,5 +23,3 @@ toc:
 - title: "Fuzzing"
   section:
   - include: /docs/development/testing/fuzzing/_toc.yaml
-- title: "Questions and answers"
-  path: /docs/development/testing/faq.md

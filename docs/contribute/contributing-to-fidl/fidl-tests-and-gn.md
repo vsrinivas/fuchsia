@@ -381,7 +381,7 @@ tests. Using `fx test`, we can already
 
 *   [Source code layout][source_code_layout]
 *   [Building components][building_components]
-*   [Running tests as components][running_tests_as_components]
+*   [Run tests as components][run_tests_as_components]
 *   [Fuchsia component manifest][component_manifest]
 *   [Fuchsia package URLs][package_url]
 
@@ -389,7 +389,7 @@ tests. Using `fx test`, we can already
 [gn-targets]: https://gn.googlesource.com/gn/+/refs/heads/master/docs/language.md#Targets
 [package]: /docs/concepts/packages/package.md
 [components]: /docs/concepts/components/v2
-[running_tests_as_components]: /docs/development/testing/running_tests_as_components.md
+[run_tests_as_components]: /docs/development/testing/run_tests_as_components.md
 [component_manifest]: /docs/concepts/components/v1/component_manifests.md
 [package_url]: /docs/concepts/packages/package_url.md
 [package_names]: /docs/concepts/packages/package_url.md#package_identity

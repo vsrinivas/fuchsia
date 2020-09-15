@@ -86,7 +86,7 @@ fx test <executable-name>
 
 Note: To run a unit test, the deprecated `fx run-test` command used the `-t`
 flag. To learn more about the new `fx test` command, see
-[Running tests as components][running_tests_as_components].
+[Run tests as components][run_tests_as_components].
 
 You can automatically rebuild, install, and run your tests on every source file
 change with `fx -i`. For instance: `fx -i test scenic_tests`.
@@ -160,7 +160,7 @@ out the code that defines that test.
 ## Q: How do I run a bunch of tests automatically? How do I ensure all dependencies are tested?
 
 A: Unlike the `fx run-test` command, the primary feature of `fx test` is batch
-execution. See [Running tests as components][running_tests_as_components]
+execution. See [Run tests as components][run_tests_as_components]
 for examples on how to run multiple tests or test suites together.
 
 Additionally, you can always upload your patch to Gerrit and do a CQ dry run.
@@ -207,4 +207,4 @@ you should probably add the rule that generates the artifact to the `data_deps`
 array of the `test_package` rule.  But I have not tried it yet.  Update this
 section when you will try it :)
 
-[running_tests_as_components]: /docs/development/testing/running_tests_as_components.md#running_multiple_tests
+[run_tests_as_components]: /docs/development/testing/run_tests_as_components.md#running_multiple_tests

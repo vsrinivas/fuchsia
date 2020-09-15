@@ -340,7 +340,7 @@ components. On the target device, some programs also assist with test-specific
 concerns for component launching, such as `runtests` and
 `/bin/run-test-component`. The process can also conveniently be controlled
 from the development host by way of `fx test`. See
-[Running tests as components][executing-tests] for more details.
+[Run tests as components][executing-tests] for more details.
 
 Some users find that an effective high focus workflow is to have the system
 build, push and execute tests whenever they save their source code. This can
@@ -533,4 +533,4 @@ in `fx`, as well as documentation for `fx` global flags.
 To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspot.com/p/fuchsia).
 
 [build-overview]: /docs/concepts/build_system/fuchsia_build_system_overview.md
-[executing-tests]: /docs/development/testing/running_tests_as_components.md
+[executing-tests]: /docs/development/testing/run_tests_as_components.md

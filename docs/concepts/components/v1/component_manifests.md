@@ -113,8 +113,8 @@ The schema for `facets` is:
 ```
 
 As an example of a facet, the `fuchsia.test` field is used to convey what
-additional services should be [injected into testing
-environments][test-components].
+additional services should be
+[injected into testing environments][test-components].
 
 ## sandbox
 
@@ -255,4 +255,4 @@ The set of currently known features are as follows:
 See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
 
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
-[test-components]: /docs/development/testing/running_tests_as_components.md
+[test-components]: /docs/development/testing/run_tests_as_components.md

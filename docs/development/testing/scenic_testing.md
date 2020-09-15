@@ -139,7 +139,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
 
   Note: The previous way to target a single component involved the `-t` flag.
   To learn more about this new command, see
-  [Running tests as components][running_tests_as_components].
+  [Run tests as components][run_tests_as_components].
 
   From Fuchsia target device:
 
@@ -370,4 +370,4 @@ where there's no existing shell (e.g. in `terminal` or `core` products).
     fx shell tiles_ctl remove 1
     ```
 
-  [running_tests_as_components]: /docs/development/testing/running_tests_as_components.md
+  [run_tests_as_components]: /docs/development/testing/run_tests_as_components.md

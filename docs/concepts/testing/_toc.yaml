@@ -4,6 +4,12 @@
 toc:
 - title: "Testability rubrics"
   path: /docs/concepts/testing/testability_rubric.md
+- title: "Tests as components"
+  path: /docs/concepts/testing/tests_as_components.md
+- title: "Scripting Layer for Fuchsia (SL4F)"
+  path: /docs/concepts/testing/sl4f.md
+- title: "Fuzz testing"
+  path: /docs/concepts/testing/fuzz_testing.md
 - title: "Fuchsia testing framework"
   section:
   - title: "Introduction"
@@ -12,13 +18,9 @@ toc:
     path: /docs/concepts/testing/test_component.md
   - title: "Test environments"
     path: /docs/concepts/testing/environments.md
-- title: "Scripting Layer for Fuchsia (SL4F)"
-  path: /docs/concepts/testing/sl4f.md
 - title: "Fuchsia flaky test policy"
   path: /docs/concepts/testing/test_flake_policy.md
 - title: "Entropy quality tests"
   path:  /docs/concepts/testing/entropy_quality_tests.md
 - title: "Testing isolated cache storage"
   path: /docs/concepts/testing/testing_isolated_cache_storage.md
-- title: "Fuzz testing"
-  path: /docs/concepts/testing/fuzz_testing.md
