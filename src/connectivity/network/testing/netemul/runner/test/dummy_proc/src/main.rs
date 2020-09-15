@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
     futures::TryStreamExt,
     structopt::StructOpt,
@@ -102,10 +101,10 @@ async fn main() -> Result<(), Error> {
 
     if let Some(log) = opt.log {
         println!("Initing syslog...");
-        fuchsia_syslog::init_with_tags(&["dummy-proc"])?;
+        let () = fuchsia_syslog::init().context("cannot init logger")?;
 
         println!("Logging to syslog: {}", log);
-        fx_log_info!("{}", log);
+        log::info!("{}", log);
     }
 
     if let Some(svc) = opt.service {

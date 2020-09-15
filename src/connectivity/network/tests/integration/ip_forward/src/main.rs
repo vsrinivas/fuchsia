@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_async::{self as fasync},
     fuchsia_component::client,
-    fuchsia_syslog::fx_log_info,
     futures::TryStreamExt,
     std::io::{Read, Write},
     std::net::{TcpListener, TcpStream},
@@ -71,18 +70,18 @@ async fn run_router() -> Result<(), Error> {
     let () = stack.enable_ip_forwarding().await.context("failed to enable ip forwarding")?;
 
     let bus = BusConnection::new(ROUTER_NAME)?;
-    fx_log_info!("Waiting for server to finish...");
+    log::info!("Waiting for server to finish...");
     let () = bus.wait_for_event(SERVER_DONE).await?;
     Ok(())
 }
 
 async fn run_server(listen_addr: String) -> Result<(), Error> {
     let listener = TcpListener::bind(listen_addr).context("Can't bind to address")?;
-    fx_log_info!("Waiting for connections...");
+    log::info!("Waiting for connections...");
     let bus = BusConnection::new(SERVER_NAME)?;
 
     let (mut stream, remote) = listener.accept().context("Accept failed")?;
-    fx_log_info!("Accepted connection from {}", remote);
+    log::info!("Accepted connection from {}", remote);
     let mut buffer = [0; 512];
     let rd = stream.read(&mut buffer).context("read failed")?;
 
@@ -90,7 +89,7 @@ async fn run_server(listen_addr: String) -> Result<(), Error> {
     if req != HELLO_MSG_REQ {
         return Err(format_err!("Got unexpected request from client: {}", req));
     }
-    fx_log_info!("Got request {}", req);
+    log::info!("Got request {}", req);
     stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
     stream.flush().context("flush failed")?;
 
@@ -100,12 +99,12 @@ async fn run_server(listen_addr: String) -> Result<(), Error> {
 
 async fn run_client(connect_addr: String) -> Result<(), Error> {
     let mut bus = BusConnection::new(CLIENT_NAME)?;
-    fx_log_info!("Waiting for router to start...");
+    log::info!("Waiting for router to start...");
     let () = bus.wait_for_client(ROUTER_NAME).await?;
-    fx_log_info!("Waiting for server to start...");
+    log::info!("Waiting for server to start...");
     let () = bus.wait_for_client(SERVER_NAME).await?;
 
-    fx_log_info!("Connecting to server...");
+    log::info!("Connecting to server...");
     let mut stream = TcpStream::connect(connect_addr).context("Tcp connection failed")?;
     let request = HELLO_MSG_REQ.as_bytes();
     stream.write(request)?;
@@ -114,7 +113,7 @@ async fn run_client(connect_addr: String) -> Result<(), Error> {
     let mut buffer = [0; 512];
     let rd = stream.read(&mut buffer)?;
     let rsp = String::from_utf8(buffer[0..rd].to_vec()).context("not a valid utf8")?;
-    fx_log_info!("Got response {}", rsp);
+    log::info!("Got response {}", rsp);
     if rsp != HELLO_MSG_RSP {
         return Err(format_err!("Got unexpected echo from server: {}", rsp));
     }
@@ -132,8 +131,7 @@ enum Opt {
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["ip_forward"])?;
-    fx_log_info!("Started");
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;

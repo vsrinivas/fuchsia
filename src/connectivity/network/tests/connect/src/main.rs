@@ -82,7 +82,7 @@ async fn main() -> Result<(), anyhow::Error> {
     const SERVER_NAME: &str = "server";
     const PORT: u16 = 80;
 
-    fuchsia_syslog::init_with_tags(&[NAME])?;
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let sync_manager = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sync::SyncManagerMarker,

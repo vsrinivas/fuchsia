@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_net_http::{self as http, LoaderProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
     futures::io::{copy, AllowStdIo},
     serde::Serialize,
@@ -19,10 +18,10 @@ use {
 };
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["network-speed-test"]).expect("should not fail");
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let opt = Opt::from_args();
-    fx_log_info!("{:?}", opt);
+    log::info!("{:?}", opt);
 
     // create objects to hold test objects and results
     let mut test_results = TestResults::default();
@@ -136,7 +135,7 @@ async fn fetch_and_discard_url(
 
     let bits_received = (bytes_received * 8) as f64;
 
-    fx_log_info!("Received {} bytes in {:.3} seconds", bytes_received, time_seconds);
+    log::info!("Received {} bytes in {:.3} seconds", bytes_received, time_seconds);
 
     if bytes_received < 1 {
         return Err(format_err!(

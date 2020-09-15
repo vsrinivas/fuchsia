@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog::fx_log_info,
     futures::TryStreamExt,
     std::fs,
     std::path::Path,
@@ -135,7 +134,7 @@ async fn root_wait_for_children(mut bus: BusConnection) -> Result<(), Error> {
     // wait for three hits on the bus, representing each child test
     for i in 0..3 {
         let () = bus.wait_for_event(EVENT_CODE).await?;
-        fx_log_info!("Got ping from child {}", i);
+        log::info!("Got ping from child {}", i);
     }
 
     Ok(())
@@ -150,7 +149,7 @@ async fn child_publish_on_bus(mut bus: BusConnection) -> Result<(), Error> {
 }
 
 fn run_root(opt: &Opt) -> Result<(), Error> {
-    fx_log_info!("Running main test: {}", opt.name);
+    log::info!("Running main test: {}", opt.name);
     let () = check_netemul_environment()?;
     let () = check_path_present(&service_path("fuchsia.netstack.Netstack"))?;
     let () = check_path_present(&device_path("class/ethernet/ep0"))?;
@@ -174,7 +173,7 @@ fn run_root(opt: &Opt) -> Result<(), Error> {
 
 // environment 1 inherits from the root environment
 fn run_test_1(opt: &Opt) -> Result<(), Error> {
-    fx_log_info!("Running test 1: {}", opt.name);
+    log::info!("Running test 1: {}", opt.name);
     let () = check_netemul_environment()?;
     let () = check_path_present(&service_path("fuchsia.netstack.Netstack"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep0"))?;
@@ -187,7 +186,7 @@ fn run_test_1(opt: &Opt) -> Result<(), Error> {
 
 // environment 2 does NOT inherit from the root environment
 fn run_test_2(opt: &Opt) -> Result<(), Error> {
-    fx_log_info!("Running test 2: {}", opt.name);
+    log::info!("Running test 2: {}", opt.name);
     let () = check_netemul_environment()?;
     let () = check_path_absent(&service_path("fuchsia.netstack.Netstack"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep0"))?;
@@ -199,15 +198,14 @@ fn run_test_2(opt: &Opt) -> Result<(), Error> {
 }
 
 fn run_setup_test(opt: &Opt) -> Result<(), Error> {
-    fx_log_info!("Running setup test: {}", opt.name);
+    log::info!("Running setup test: {}", opt.name);
     // create a file in /data, that will be verified by root test
     let () = fs::write(SETUP_FILE, SETUP_FILE_DATA).context("setup can't write file")?;
     Ok(())
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["env-build"])?;
-    fx_log_info!("Started");
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let opt = Opt::from_args();
     match opt.test {

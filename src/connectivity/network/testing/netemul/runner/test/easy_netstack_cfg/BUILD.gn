@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
 

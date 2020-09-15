@@ -13,7 +13,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
     std::sync::Arc,
     std::sync::Mutex,
@@ -164,12 +163,12 @@ fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<Counte
             {
                 let mut d = data.lock().unwrap();
                 d.value += 1;
-                fx_log_info!("Incrementing counter to {}", d.value);
+                log::info!("Incrementing counter to {}", d.value);
                 responder.send(d.value).context("Error sending response")?;
             }
             Ok(())
         }
-        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| log::error!("{:?}", e)),
     )
     .detach()
 }
@@ -196,8 +195,7 @@ async fn run_server() -> Result<(), Error> {
 // inerited from the parent.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["inheritance"])?;
-    fx_log_info!("Started");
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let opt = Opt::from_args();
     match opt.mode {

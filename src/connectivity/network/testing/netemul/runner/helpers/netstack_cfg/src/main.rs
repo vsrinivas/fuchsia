@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog::fx_log_info,
     futures::TryStreamExt,
     structopt::StructOpt,
 };
@@ -38,7 +37,7 @@ struct Opt {
 const DEFAULT_METRIC: u32 = 100;
 
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
-    fx_log_info!("Configuring endpoint {}", opt.endpoint);
+    log::info!("Configuring endpoint {}", opt.endpoint);
 
     // get the network context service:
     let netctx = client::connect_to_service::<NetworkContextMarker>()?;
@@ -49,10 +48,10 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     // retrieve the created endpoint:
     let ep = epm.get_endpoint(&opt.endpoint).await?;
     let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
-    fx_log_info!("Got endpoint.");
+    log::info!("Got endpoint.");
     // and the device connection:
     let device_connection = ep.get_device().await?;
-    fx_log_info!("Got device connection.");
+    log::info!("Got device connection.");
 
     // connect to netstack:
     let netstack = client::connect_to_service::<NetstackMarker>()?;
@@ -76,7 +75,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     };
 
     let () = netstack.set_interface_status(nicid as u32, true)?;
-    fx_log_info!("Added ethernet to stack.");
+    log::info!("Added ethernet to stack.");
 
     let subnet: Option<fidl_fuchsia_net::Subnet> = opt.ip.as_ref().map(|ip| {
         ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("Can't parse provided ip").into()
@@ -105,7 +104,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .context("failed to start dhcp client")?;
     };
 
-    fx_log_info!("Configured nic address.");
+    log::info!("Configured nic address.");
 
     if let Some(gateway) = &opt.gateway {
         let gw_addr: fidl_fuchsia_net::IpAddress = fidl_fuchsia_net_ext::IpAddress(
@@ -132,17 +131,17 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .squash_result()
             .context("failed to add forwarding entry for gateway")?;
 
-        fx_log_info!("Configured the default route with gateway address.");
+        log::info!("Configured the default route with gateway address.");
     }
 
-    fx_log_info!("Waiting for interface up...");
+    log::info!("Waiting for interface up...");
     let (if_id, hwaddr) = netstack
         .take_event_stream()
         .try_filter_map(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
             if let Some(iface) = interfaces.iter().find(|iface| iface.name == opt.endpoint) {
                 if !opt.skip_up_check {
                     if !iface.flags.contains(fidl_fuchsia_netstack::Flags::Up) {
-                        fx_log_info!("Found interface, but it's down. waiting.");
+                        log::info!("Found interface, but it's down. waiting.");
                         return futures::future::ok(None);
                     }
 
@@ -151,7 +150,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                     if let Some(subnet) = subnet {
                         if let fidl_fuchsia_net::IpAddress::Ipv6(_) = subnet.addr {
                             if !iface.ipv6addrs.iter().any(|x| x.addr == subnet.addr)  {
-                                fx_log_info!("Found interface, but IPv6 address is not resolved. waiting.");
+                                log::info!("Found interface, but IPv6 address is not resolved. waiting.");
                                 return futures::future::ok(None);
                             }
                         }
@@ -168,14 +167,13 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         .context("wait for interfaces")?
         .ok_or_else(|| format_err!("interface added"))?;
 
-    fx_log_info!("Found ethernet with id {} {:?}", if_id, hwaddr);
+    log::info!("Found ethernet with id {} {:?}", if_id, hwaddr);
 
     Ok(())
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["helper-netcfg"])?;
-    fx_log_info!("Started");
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;

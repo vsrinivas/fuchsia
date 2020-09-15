@@ -9,7 +9,7 @@ mod client;
 mod provider;
 
 use {
-    anyhow::{Error, Result},
+    anyhow::{Context as _, Error, Result},
     fidl_fuchsia_net_dhcpv6::ClientProviderRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -22,13 +22,13 @@ enum IncomingService {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<()> {
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
+    let () = log::info!("starting");
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::ClientProvider);
     fs.take_and_serve_directory_handle()?;
 
-    fuchsia_syslog::init_with_tags(&["dhcpv6_client"])?;
-
-    let () = log::info!("starting DHCPv6 client provider");
     fs.then(future::ok::<_, Error>)
         .try_for_each_concurrent(None, |request| async {
             match request {

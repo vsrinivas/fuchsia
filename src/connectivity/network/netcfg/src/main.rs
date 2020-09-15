@@ -1367,7 +1367,7 @@ async fn main() {
     let f = || async {
         let opt: Opt = argh::from_env();
 
-        fsyslog::init_with_tags(&["netcfg"])?;
+        let () = fuchsia_syslog::init().context("cannot init logger")?;
         fsyslog::set_severity(opt.min_severity.into());
 
         info!("starting");

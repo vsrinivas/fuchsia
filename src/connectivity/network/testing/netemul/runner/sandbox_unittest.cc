@@ -845,6 +845,8 @@ TEST_F(SandboxTest, EnvironmentsWithSameNameFail) {
   RunSandbox(SandboxResult::Status::UNSPECIFIED);
 }
 
+constexpr char expected_tag[] = "dummy_proc";
+
 TEST_F(SandboxTest, SyslogWithNoKlog) {
   SetCmx(R"(
 {
@@ -862,12 +864,16 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
          false);
   EnableEventCollection();
   EnableLogCapture([this](const fuchsia::logger::LogMessage& msg) {
-    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") != msg.tags.end()) {
-      FX_LOGS(INFO) << "Got log tagged with 'dummy-proc'! Sending event...";
+    if (std::find(msg.tags.begin(), msg.tags.end(), expected_tag) != msg.tags.end()) {
+      FX_LOGS(INFO) << "Got log tagged with '" << expected_tag << "'! Sending event...";
       sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
       FX_LOGS(INFO) << "Published event!";
+    } else {
+      for (const auto& tag : msg.tags) {
+        FX_LOGS(INFO) << "Got non-matching tag " << tag << "; waiting...";
+      }
     }
   });
   RunSandboxSuccess();
@@ -892,10 +898,14 @@ TEST_F(SandboxTest, SyslogWithKlog) {
   int klog_count = 0;
   bool got_dummy_log = false;
   EnableLogCapture([this, &klog_count, &got_dummy_log](const fuchsia::logger::LogMessage& msg) {
-    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") != msg.tags.end()) {
+    if (std::find(msg.tags.begin(), msg.tags.end(), expected_tag) != msg.tags.end()) {
       got_dummy_log = true;
     } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") != msg.tags.end()) {
       klog_count++;
+    } else {
+      for (const auto& tag : msg.tags) {
+        FX_LOGS(INFO) << "Got non-matching tag " << tag << "; waiting...";
+      }
     }
     if (got_dummy_log && klog_count != 0) {
       sync::Event evt;

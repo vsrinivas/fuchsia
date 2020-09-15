@@ -53,7 +53,8 @@ pub struct Args {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["dhcpd"])?;
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
+    log::info!("starting");
 
     let Args { config } = argh::from_env();
     let stash = dhcp::stash::Stash::new(DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX)
