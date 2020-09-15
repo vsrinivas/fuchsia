@@ -8,12 +8,17 @@ board_name = "as370"
 
 _common_bootfs_deps = [
   "//src/devices/block/drivers/as370-sdhci",
+  "//src/devices/block/drivers/ftl",
   "//src/devices/board/drivers/as370",
   "//src/devices/clock/drivers/as370-clk",
   "//src/devices/gpio/drivers/as370-gpio",
   "//src/devices/i2c/drivers/dw-i2c",
   "//src/devices/nand/drivers/cadence-hpnfc",
+  "//src/devices/nand/drivers/nand",
+  "//src/devices/nand/drivers/nandpart",
+  "//src/devices/nand/drivers/skip-block",
   "//src/devices/power/drivers/as370-power",
+  "//src/devices/shareddma/drivers/syn-dma",
   "//src/devices/thermal/drivers/as370-thermal",
   "//src/devices/usb/drivers/as370-usb-phy",
   "//src/devices/usb/drivers/dwc2",
@@ -23,15 +28,13 @@ _common_bootfs_deps = [
   "//src/ui/input/drivers/cypress",
   "//src/ui/light/drivers/lp50xx-light",
 ]
+_common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
-board_bootfs_labels =
-    _common_bootfs_deps + [ "//src/security/policy/zxcrypt:null" ]
+board_bootfs_labels = _common_bootfs_deps
 
-board_zedboot_bootfs_labels =
-    _common_bootfs_deps + [ "//src/security/policy/zxcrypt:null" ]
+board_zedboot_bootfs_labels = _common_bootfs_deps
 
-board_recovery_bootfs_labels =
-    _common_bootfs_deps + [ "//src/security/policy/zxcrypt:null" ]
+board_recovery_bootfs_labels = _common_bootfs_deps
 
 board_package_labels = [
   "//garnet/bin/thermd",

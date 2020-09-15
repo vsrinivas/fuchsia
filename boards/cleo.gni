@@ -18,6 +18,7 @@ _common_bootfs_deps = [
   "//src/devices/clock/drivers/mtk-clk",
   "//src/devices/gpio/drivers/mt-8167",
   "//src/devices/i2c/drivers/mt8167-i2c",
+  "//src/devices/light-sensor/drivers/lite-on",
   "//src/devices/power/drivers/mtk-power",
   "//src/devices/spi/drivers/mtk-spi",
   "//src/devices/thermal/drivers/mtk-thermal",

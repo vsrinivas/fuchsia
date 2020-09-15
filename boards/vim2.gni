@@ -7,15 +7,21 @@ import("//boards/arm64.gni")
 board_name = "vim2"
 
 _common_bootfs_deps = [
+  "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
+  "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
   "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
   "//src/connectivity/ethernet/drivers/dwmac",
   "//src/connectivity/ethernet/drivers/realtek-8211f",
+  "//src/devices/block/drivers/aml-sd-emmc",
   "//src/devices/block/drivers/bootpart",
   "//src/devices/board/drivers/vim2",
+  "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/gpio/drivers/aml-gxl-gpio",
+  "//src/devices/i2c/drivers/aml-i2c",
   "//src/devices/rtc/drivers/nxp",
   "//src/devices/scpi/drivers/aml-scpi-s912:aml-scpi-s912.mailbox",
   "//src/devices/scpi/drivers/aml-scpi-s912:scpi",
+  "//src/devices/serial/drivers/aml-uart",
   "//src/devices/thermal/drivers/aml-thermal-s912",
   "//src/graphics/display/drivers/aml-canvas",
   "//src/graphics/display/drivers/vim-display",

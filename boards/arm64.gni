@@ -9,9 +9,11 @@ target_cpu = "arm64"
 board_name = "qemu-arm64"
 
 _common_bootfs_deps = [
+  "//src/devices/bus/drivers/pci:bus-pci",
+  "//src/devices/bus/drivers/pci:bus-pci.proxy",
   "//src/devices/usb/drivers/xhci-rewrite:xhci",
-  "//src/security/policy/zxcrypt:null",
 ]
+_common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
 board_bootfs_labels += _common_bootfs_deps
 

@@ -18,6 +18,8 @@ _common_bootfs_deps = [
   "//src/devices/block/drivers/pci-sdhci",
   "//src/devices/block/drivers/sdhci",
   "//src/devices/board/drivers/x86:platform-bus-x86",
+  "//src/devices/bus/drivers/pci:bus-pci",
+  "//src/devices/bus/drivers/pci:bus-pci.proxy",
   "//src/devices/i2c/drivers/intel-i2c",
   "//src/devices/pci/bin:bootfs",
   "//src/devices/rtc/drivers/intel-rtc",

@@ -20,6 +20,7 @@ _common_bootfs_deps = [
   "//src/devices/block/drivers/mtk-sdmmc",
   "//src/devices/board/drivers/c18",
   "//src/devices/gpio/drivers/mt-8167",
+  "//src/devices/rtc/drivers/fallback",
   "//src/devices/spi/drivers/mtk-spi",
 ]
 
