@@ -274,6 +274,117 @@ void TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(VolumeTest, TestShredThroughDriverLocked)
 
+constexpr uint64_t kFakeVolumeSize = 1 << 24;
+class TestVolume : public zxcrypt::Volume {
+ public:
+  zx_status_t DoInit() {
+    // Init is protected, so we make a public method here to reach it.
+    return Init();
+  }
+  zx_status_t GetBlockInfo(BlockInfo* out) override {
+    // Expect a large virtual address space.
+    out->block_count = kFakeVolumeSize;
+    out->block_size = 8192;
+    return ZX_OK;
+  }
+
+  zx_status_t GetFvmSliceSize(uint64_t* out) override {
+    // Just an example slice size from Astro.
+    *out = 1048576;
+    return ZX_OK;
+  }
+
+  virtual zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
+                                            SliceRegion ranges[MAX_SLICE_REGIONS],
+                                            uint64_t* slice_count) override = 0;
+
+  zx_status_t DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) override {
+    extend_calls_++;
+    last_extend_start_slice_ = start_slice;
+    last_extend_slice_count_ = slice_count;
+    return ZX_OK;
+  }
+
+  zx_status_t Read() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Write() override { return ZX_ERR_NOT_SUPPORTED; }
+
+  int extend_calls_ = 0;
+  uint64_t last_extend_start_slice_ = 0;
+  uint64_t last_extend_slice_count_ = 0;
+};
+
+
+TEST(VolumeTest, TestFvmUsageNewImage) {
+  // Verify that when we start out with a single FVM slice, we'll attempt to
+  // allocate a second one for the inner volume when we call Init().
+  class TestVolumeNewImage : public TestVolume {
+    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
+                                      SliceRegion ranges[MAX_SLICE_REGIONS],
+                                      uint64_t* slice_count) override {
+      if (vslice_start == 0) {
+        if (extend_calls_ > 0) {
+          ranges[0].allocated = true;
+          ranges[0].count = 2;
+          ranges[1].allocated = false;
+          ranges[1].count = kFakeVolumeSize - 2;
+          *slice_count = 2;
+          return ZX_OK;
+        } else {
+          ranges[0].allocated = true;
+          ranges[0].count = 1;
+          ranges[1].allocated = false;
+          ranges[1].count = kFakeVolumeSize - 1;
+          *slice_count = 2;
+          return ZX_OK;
+        }
+        return ZX_OK;
+      } else if (vslice_start == 1) {
+        if (extend_calls_ > 0) {
+          ranges[0].allocated = true;
+          ranges[0].count = 1;
+          ranges[1].allocated = true;
+          ranges[1].count = kFakeVolumeSize - 2;
+          *slice_count = 2;
+          return ZX_OK;
+        } else {
+          ranges[0].allocated = false;
+          ranges[0].count = kFakeVolumeSize - 1;
+          *slice_count = 1;
+          return ZX_OK;
+        }
+      }
+
+      // Should be unreachable.
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  };
+  TestVolumeNewImage volume;
+  EXPECT_OK(volume.DoInit());
+  EXPECT_EQ(volume.extend_calls_, 1);
+  EXPECT_EQ(volume.last_extend_start_slice_, 1);
+  EXPECT_EQ(volume.last_extend_slice_count_, 1);
+}
+
+TEST(VolumeTest, TestFvmUsageAlreadyAllocated) {
+  // Verify that when we start out with two FVM slices allocated, we don't
+  // attempt to allocate any more when calling Init().
+  class TestVolumeAllocatedImage : public TestVolume {
+    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
+                                      SliceRegion ranges[MAX_SLICE_REGIONS],
+                                      uint64_t* slice_count) override {
+      ranges[0].allocated = true;
+      ranges[0].count = 2;
+      ranges[1].allocated = false;
+      ranges[1].count = kFakeVolumeSize - 2;
+      *slice_count = 2;
+      return ZX_OK;
+    }
+  };
+  TestVolumeAllocatedImage volume;
+  EXPECT_OK(volume.DoInit());
+  EXPECT_EQ(volume.extend_calls_, 0);
+}
+
 void CheckOneCreatePolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
   fbl::Vector<KeySource> actual = ComputeEffectiveCreatePolicy(policy);
   ASSERT_EQ(actual.size(), expected.size());
