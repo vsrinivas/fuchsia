@@ -4,6 +4,7 @@
 
 #include "nand_driver.h"
 
+#include <lib/ftl/ndm-driver.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -32,6 +33,41 @@ uint32_t GetParameter(const char* key) {
   return static_cast<uint32_t>(strtoul(value, nullptr, 0));
 }
 
+__PRINTFLIKE(1, 2) void LogTrace(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  zxlogvf(TRACE, format, args);
+  va_end(args);
+}
+
+__PRINTFLIKE(1, 2) void LogDebug(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  zxlogvf(DEBUG, format, args);
+  va_end(args);
+}
+
+__PRINTFLIKE(1, 2) void LogInfo(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  zxlogvf(INFO, format, args);
+  va_end(args);
+}
+
+__PRINTFLIKE(1, 2) void LogWarning(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  zxlogvf(WARNING, format, args);
+  va_end(args);
+}
+
+__PRINTFLIKE(1, 2) void LogError(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  zxlogvf(ERROR, format, args);
+  va_end(args);
+}
+
 class NandDriverImpl final : public ftl::NandDriver {
  public:
   NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block)
@@ -48,7 +84,6 @@ class NandDriverImpl final : public ftl::NandDriver {
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final;
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
-
   const fuchsia_hardware_nand_Info& info() const final { return info_; }
 
  private:
@@ -101,8 +136,14 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
   } else if (BadBbtReservation()) {
     return "Unable to use bad block reservation";
   }
-
-  const char* error = CreateNdmVolume(ftl_volume, options);
+  ftl::LoggerProxy logger = {
+      .trace = &LogTrace,
+      .debug = &LogDebug,
+      .info = &LogInfo,
+      .warn = &LogWarning,
+      .error = &LogError,
+  };
+  const char* error = CreateNdmVolumeWithLogger(ftl_volume, options, true, logger);
   if (error) {
     // Retry allowing the volume to be fixed as needed.
     zxlogf(INFO, "FTL: About to retry volume creation");

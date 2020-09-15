@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FTL_FTL_H_
+#define ZIRCON_SYSTEM_ULIB_FTL_FTL_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -17,8 +18,8 @@
 //
 // Configuration.
 //
-#define INC_FTL_NDM_MLC FALSE   // TargetFTL-NDM on NDM MLC.
-#define INC_FTL_NDM_SLC TRUE    // TargetFTL-NDM on NDM SLC.
+#define INC_FTL_NDM_MLC FALSE  // TargetFTL-NDM on NDM MLC.
+#define INC_FTL_NDM_SLC TRUE   // TargetFTL-NDM on NDM SLC.
 
 #if INC_FTL_NDM_MLC && INC_FTL_NDM_SLC
 #error Set INC_FTL_NDM_MLC or INC_FTL_NDM_SLC to TRUE, not both
@@ -26,10 +27,10 @@
 #error Need INC_FTL_NDM_MLC or INC_FTL_NDM_SLC set to TRUE
 #endif
 
-#define CACHE_LINE_SIZE 32      // CPU data cache line size.
-#define NV_NDM_CTRL_STORE FALSE // Enables NvNdmCtrlPgRd() speedup.
+#define CACHE_LINE_SIZE 32       // CPU data cache line size.
+#define NV_NDM_CTRL_STORE FALSE  // Enables NvNdmCtrlPgRd() speedup.
 
-#define FS_DVR_TEST FALSE       // TRUE to run FS driver test.
+#define FS_DVR_TEST FALSE  // TRUE to run FS driver test.
 #undef FTL_RESUME_STRESS
 #define FTL_NAME_MAX 32
 
@@ -43,7 +44,7 @@
 // value is based on maximum lag. It's possible that we could make this
 // smaller; 190 seems like plenty of variation and making it smaller might not
 // adversely affect performance, whilst keeping the range of wear closer.
-#define FTL_LOW_WEAR_BOOST_LAG  190
+#define FTL_LOW_WEAR_BOOST_LAG 190
 
 // If there are more than this number of blocks free, allocate volume pages
 // from free blocks that have the lowest wear rather than the highest wear.
@@ -61,19 +62,19 @@
 // Symbol Definitions.
 //
 // Flag values for the file systems' driver flags field.
-#define FTLN_FATAL_ERR      (1u << 0)   // Fatal I/O error has occurred.
-#define FTLN_MOUNTED        (1u << 1)   // FTL is mounted flag.
-#define FSF_EXTRA_FREE      (1u << 2)
-#define FSF_TRANSFER_PAGE   (1u << 3)
-#define FSF_MULTI_ACCESS    (1u << 4)
-#define FSF_FREE_SPARE_ECC  (1u << 5)   // Spare decode has no overhead.
-#define FSF_NDM_INIT_WRITE  (1u << 6)   // Re-write NDM metadata on init.
-#define FSF_READ_WEAR_LIMIT (1u << 7)   // Driver specs read-wear limit.
-#define FSF_READ_ONLY_INIT  (1u << 8)   // Dev is read-only during init.
-#define FTLN_VERBOSE        (1u << 9)   // Turn debug messages on.
+#define FTLN_FATAL_ERR (1u << 0)  // Fatal I/O error has occurred.
+#define FTLN_MOUNTED (1u << 1)    // FTL is mounted flag.
+#define FSF_EXTRA_FREE (1u << 2)
+#define FSF_TRANSFER_PAGE (1u << 3)
+#define FSF_MULTI_ACCESS (1u << 4)
+#define FSF_FREE_SPARE_ECC (1u << 5)   // Spare decode has no overhead.
+#define FSF_NDM_INIT_WRITE (1u << 6)   // Re-write NDM metadata on init.
+#define FSF_READ_WEAR_LIMIT (1u << 7)  // Driver specs read-wear limit.
+#define FSF_READ_ONLY_INIT (1u << 8)   // Dev is read-only during init.
+#define FTLN_VERBOSE (1u << 9)         // Turn debug messages on.
 
-#define NDM_PART_NAME_LEN 15            // Partition name size in bytes.
-#define NDM_PART_USER 0                 // Number of uint32_t in partition for user.
+#define NDM_PART_NAME_LEN 15  // Partition name size in bytes.
+#define NDM_PART_USER 0       // Number of uint32_t in partition for user.
 
 // Various NAND device types.
 #define NDM_SLC (1 << 0)
@@ -97,23 +98,23 @@ enum FsErrorCode {
   NDM_OK = 0,  // No errors.
 
   // TargetNDM Symbols.
-  NDM_EIO = 1,              // Fatal I/O error.
-  NDM_CFG_ERR = 2,          // NDM config error.
-  NDM_ASSERT = 3,           // Inconsistent NDM internal values.
-  NDM_ENOMEM = 4,           // NDM memory allocation failure.
-  NDM_SEM_CRE_ERR = 5,      // NDM semCreate() failed.
-  NDM_NO_META_BLK = 6,      // No metadata block found.
-  NDM_NO_META_DATA = 7,     // Metadata page missing.
-  NDM_BAD_META_DATA = 8,    // Invalid metadata contents.
-  NDM_TOO_MANY_IBAD = 9,    // Too many initial bad blocks.
-  NDM_TOO_MANY_RBAD = 10,   // Too many running bad blocks.
-  NDM_NO_FREE_BLK = 11,     // No free block in NDM pool.
-  NDM_IMAGE_RBB_CNT = 12,   // Bad block count in NDM image.
-  NDM_RD_ECC_FAIL = 13,     // Read_page ECC decode failed.
-  NDM_NOT_FOUND = 14,       // ndmDelDev() unknown handle.
-  NDM_BAD_BLK_RECOV = 15,   // Running bad block recovery needed during RO-init.
-  NDM_META_WR_REQ = 16,     // Metadata write request during RO-init.
-  NDM_RBAD_LOCATION = 17,   // Running bad block replacement in virtual location.
+  NDM_EIO = 1,             // Fatal I/O error.
+  NDM_CFG_ERR = 2,         // NDM config error.
+  NDM_ASSERT = 3,          // Inconsistent NDM internal values.
+  NDM_ENOMEM = 4,          // NDM memory allocation failure.
+  NDM_SEM_CRE_ERR = 5,     // NDM semCreate() failed.
+  NDM_NO_META_BLK = 6,     // No metadata block found.
+  NDM_NO_META_DATA = 7,    // Metadata page missing.
+  NDM_BAD_META_DATA = 8,   // Invalid metadata contents.
+  NDM_TOO_MANY_IBAD = 9,   // Too many initial bad blocks.
+  NDM_TOO_MANY_RBAD = 10,  // Too many running bad blocks.
+  NDM_NO_FREE_BLK = 11,    // No free block in NDM pool.
+  NDM_IMAGE_RBB_CNT = 12,  // Bad block count in NDM image.
+  NDM_RD_ECC_FAIL = 13,    // Read_page ECC decode failed.
+  NDM_NOT_FOUND = 14,      // ndmDelDev() unknown handle.
+  NDM_BAD_BLK_RECOV = 15,  // Running bad block recovery needed during RO-init.
+  NDM_META_WR_REQ = 16,    // Metadata write request during RO-init.
+  NDM_RBAD_LOCATION = 17,  // Running bad block replacement in virtual location.
 
   // TargetFTL-NDM Symbols.
   FTL_CFG_ERR = 20,         // FTL config error.
@@ -128,11 +129,11 @@ enum FsErrorCode {
   FTL_RECYCLE_CNT = 29,     // Repeated recycles did not free blocks.
 
   // Following would result in block erase except for RO-init flag.
-  FTL_VOL_BLK_XFR = 40,     // Found interrupted volume block resume.
-  FTL_MAP_BLK_XFR = 41,     // Found interrupted map block resume.
-  FTL_UNUSED_MBLK = 42,     // Found unused map block during RO-init.
-  FTL_VBLK_RESUME = 43,     // Low free block count: would resume volume block.
-  FTL_MBLK_RESUME = 44,     // Low free block count: would resume map block.
+  FTL_VOL_BLK_XFR = 40,  // Found interrupted volume block resume.
+  FTL_MAP_BLK_XFR = 41,  // Found interrupted map block resume.
+  FTL_UNUSED_MBLK = 42,  // Found unused map block during RO-init.
+  FTL_VBLK_RESUME = 43,  // Low free block count: would resume volume block.
+  FTL_MBLK_RESUME = 44,  // Low free block count: would resume map block.
 };
 
 // FS Report Events.
@@ -155,13 +156,13 @@ typedef enum {
 
 // NDM Partition Information.
 typedef struct {
-  uint32_t first_block;     // First virtual block for partition.
-  uint32_t num_blocks;      // Number of virtual blocks in partition.
+  uint32_t first_block;  // First virtual block for partition.
+  uint32_t num_blocks;   // Number of virtual blocks in partition.
 #if NDM_PART_USER
-  uint32_t user[NDM_PART_USER]; // Reserved for the user.
+  uint32_t user[NDM_PART_USER];  // Reserved for the user.
 #endif
-  char name[NDM_PART_NAME_LEN]; // Partition name.
-  uint8_t type;             // Partition type - same as vstat().
+  char name[NDM_PART_NAME_LEN];  // Partition name.
+  uint8_t type;                  // Partition type - same as vstat().
 } NDMPartition;
 
 // Optional user data attached to a partition.
@@ -184,37 +185,51 @@ typedef const struct ndm* CNDM;
 
 // FTL NDM structure holding all driver information.
 typedef struct {
-  uint32_t block_size;          // Size of a block in bytes.
-  uint32_t num_blocks;          // Total number of blocks.
-  uint32_t page_size;           // Flash page data size in bytes.
-  uint32_t eb_size;             // Flash page spare size in bytes.
-  uint32_t start_page;          // Volume first page on flash.
-  uint32_t cached_map_pages;    // Number of map pages to be cached.
-  uint32_t extra_free;          // Volume percentage left unused.
-  uint32_t read_wear_limit;     // Device read-wear limit.
-  void* ndm;                    // Driver's NDM pointer.
-  uint32_t flags;               // Option flags.
+  uint32_t block_size;        // Size of a block in bytes.
+  uint32_t num_blocks;        // Total number of blocks.
+  uint32_t page_size;         // Flash page data size in bytes.
+  uint32_t eb_size;           // Flash page spare size in bytes.
+  uint32_t start_page;        // Volume first page on flash.
+  uint32_t cached_map_pages;  // Number of map pages to be cached.
+  uint32_t extra_free;        // Volume percentage left unused.
+  uint32_t read_wear_limit;   // Device read-wear limit.
+  void* ndm;                  // Driver's NDM pointer.
+  uint32_t flags;             // Option flags.
 } FtlNdmVol;
+
+typedef void (*LogFunction)(const char*, ...) __PRINTFLIKE(1, 2);
+
+typedef struct {
+  // Logger interface for different log levels.
+  LogFunction trace;
+  LogFunction debug;
+  LogFunction info;
+  LogFunction warning;
+  LogFunction error;
+  LogFunction fatal;
+} Logger;
 
 // TargetNDM Configuration Structure.
 typedef struct NDMDrvr {
-  uint32_t num_blocks;          // Total number of blocks on device.
-  uint32_t max_bad_blocks;      // Maximum number of bad blocks.
-  uint32_t block_size;          // Block size in bytes.
-  uint32_t page_size;           // Page data area in bytes.
-  uint32_t eb_size;             // Used spare area in bytes.
-  uint32_t flags;               // Option flags.
-  uint32_t type;                // Type of device.
-  uint32_t format_version_2;    // "Boolean" variable: FALSE for control header version 1.
-  void* dev;                    // Optional value set by driver.
+  uint32_t num_blocks;        // Total number of blocks on device.
+  uint32_t max_bad_blocks;    // Maximum number of bad blocks.
+  uint32_t block_size;        // Block size in bytes.
+  uint32_t page_size;         // Page data area in bytes.
+  uint32_t eb_size;           // Used spare area in bytes.
+  uint32_t flags;             // Option flags.
+  uint32_t type;              // Type of device.
+  uint32_t format_version_2;  // "Boolean" variable: FALSE for control header version 1.
+  void* dev;                  // Optional value set by driver.
 
   // Driver Functions.
-  int (*write_data_and_spare)(uint32_t pn, const uint8_t* data, uint8_t* spare, int action, void* dev);
-  int (*write_pages)(uint32_t pn, uint32_t count, const uint8_t* data, uint8_t* spare, int action, void* dev);
+  int (*write_data_and_spare)(uint32_t pn, const uint8_t* data, uint8_t* spare, int action,
+                              void* dev);
+  int (*write_pages)(uint32_t pn, uint32_t count, const uint8_t* data, uint8_t* spare, int action,
+                     void* dev);
   int (*read_decode_data)(uint32_t pn, uint8_t* data, uint8_t* spare, void* dev);
   int (*read_pages)(uint32_t pn, uint32_t count, uint8_t* data, uint8_t* spare, void* dev);
-  int (*transfer_page)(uint32_t old_pn, uint32_t new_pn, uint8_t* data, uint8_t* old_spare, uint8_t* new_spare,
-                       int encode_spare, void* dev);
+  int (*transfer_page)(uint32_t old_pn, uint32_t new_pn, uint8_t* data, uint8_t* old_spare,
+                       uint8_t* new_spare, int encode_spare, void* dev);
 #if INC_FTL_NDM_MLC
   uint32_t (*pair_offset)(uint32_t page_offset, void* dev);
 #endif
@@ -230,6 +245,7 @@ typedef struct NDMDrvr {
   int (*rd_raw_spare)(uint32_t p, uint8_t* spare, void* dev);
   int (*rd_raw_page)(uint32_t p, void* data, void* dev);
 #endif
+  Logger logger;
 } NDMDrvr;
 
 // Driver count statistics for TargetFTL-NDM volumes.
@@ -243,7 +259,7 @@ typedef struct {
   uint32_t erase_block;
   uint32_t ram_used;
   uint32_t wear_count;
-  uint32_t garbage_level; // Garbage level as percentage 0 to 100.
+  uint32_t garbage_level;  // Garbage level as percentage 0 to 100.
 } ftl_ndm_stats;
 
 typedef struct {
@@ -330,13 +346,13 @@ int ndmDelVols(CNDM ndm);
 int ndmDelVol(CNDM ndm, uint32_t part_num);
 
 // FTL Volume API.
-void *ndmAddVolFTL(NDM ndm, uint32_t part_no, FtlNdmVol* ftl, XfsVol* fs);
+void* ndmAddVolFTL(NDM ndm, uint32_t part_no, FtlNdmVol* ftl, XfsVol* fs);
 
 // Driver Test/Special Routines.
 int ndmExtractBBL(NDM ndm);
 int ndmInsertBBL(NDM ndm);
 int NdmDvrTestAdd(const NDMDrvr* dev);
-FtlWearData FtlnGetWearData(void *ftl);
+FtlWearData FtlnGetWearData(void* ftl);
 
 // TargetNDM NVRAM Control Page Storage.
 void NvNdmCtrlPgWr(uint32_t frst);
@@ -344,3 +360,4 @@ uint32_t NvNdmCtrlPgRd(void);
 
 __END_CDECLS
 
+#endif  // ZIRCON_SYSTEM_ULIB_FTL_FTL_H_

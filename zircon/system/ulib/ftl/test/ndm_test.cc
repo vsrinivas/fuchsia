@@ -4,6 +4,7 @@
 
 #include <lib/ftl/ndm-driver.h>
 
+#include <optional>
 #include <vector>
 
 #include <zxtest/zxtest.h>
@@ -34,7 +35,9 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   void format_using_v2(bool value) { format_using_v2_ = value; }
 
   // Goes through the normal logic to create a volume with user data info.
-  const char* CreateVolume() { return CreateNdmVolume(nullptr, options_, true); }
+  const char* CreateVolume(std::optional<ftl::LoggerProxy> logger = std::nullopt) {
+    return CreateNdmVolumeWithLogger(nullptr, options_, true, logger);
+  }
 
   // NdmDriver interface:
   const char* Init() final;
@@ -464,11 +467,27 @@ constexpr uint32_t kControlBlockBadBlocksV2[] = {
     0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
 
 TEST_F(NdmReadOnlyTest, BadBlocksV2) {
+  static bool logger_called = false;
+  logger_called = false;
+
+  class LoggerHelper {
+   public:
+    static void Log(const char* _, ...) __PRINTFLIKE(1, 2) { logger_called = true; }
+  };
+
+  ftl::LoggerProxy logger;
+  logger.trace = &LoggerHelper::Log;
+  logger.debug = &LoggerHelper::Log;
+  logger.info = &LoggerHelper::Log;
+  logger.warn = &LoggerHelper::Log;
+  logger.error = &LoggerHelper::Log;
+
   memcpy(buffer_.data(), kControlBlockBadBlocksV2, sizeof(kControlBlockBadBlocksV2));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
 
-  ASSERT_NULL(ndm_driver_->CreateVolume());
+  ASSERT_NULL(ndm_driver_->CreateVolume(logger));
   EXPECT_EQ(2, ndm_driver_->ndm()->num_bad_blks);
+  EXPECT_TRUE(logger_called);
 }
 
 }  // namespace

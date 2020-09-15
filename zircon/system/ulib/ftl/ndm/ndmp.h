@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FTL_NDM_NDMP_H_
+#define ZIRCON_SYSTEM_ULIB_FTL_NDM_NDMP_H_
 
+#include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <errno.h>
-
 #include <zircon/compiler.h>
 
 #include "ftl_private.h"
@@ -133,8 +133,8 @@ struct ndm {
   // format only to simplify testing (upgrade ability).
   // TODO(40208): Remove upgrading code after all devices in the field are using
   // the new format.
-  ui32 version_2;        // "Boolean" variable: FALSE for control header version 1.
-  ui32 format_with_v2;   // "Boolean" variable: FALSE to use control header version 1.
+  ui32 version_2;       // "Boolean" variable: FALSE for control header version 1.
+  ui32 format_with_v2;  // "Boolean" variable: FALSE to use control header version 1.
   ui32 num_partitions;
   NDMPartition* partitions;  // Points to an NDMPartitionInfo when version_2 is TRUE.
 
@@ -154,6 +154,8 @@ struct ndm {
   int (*check_page)(ui32 pn, ui8* data, ui8* spr, int* stat, void* dev);
   int (*erase_block)(ui32 pn, void* dev);
   int (*is_block_bad)(ui32 pn, void* dev);
+
+  Logger logger;
 
   // Device Dependent Variables
   void* dev;          // optional value set by driver
@@ -192,3 +194,5 @@ int printf(const char*, ...);
 #endif
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_ULIB_FTL_NDM_NDMP_H_

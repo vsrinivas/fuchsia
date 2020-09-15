@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/ftl/ndm-driver.h>
-
+#include <stdarg.h>
 #include <zircon/assert.h>
 
 #include <memory>
+#include <optional>
 
 #include "ftl.h"
 #include "ftl_private.h"
+#include "ndm/ndmp.h"
 
 namespace ftl {
 
@@ -21,7 +23,7 @@ bool g_init_performed = false;
 struct UserData {
   uint16_t major_version = 1;
   uint16_t minor_version = 0;
-  uint32_t ftl_flags;  // Flags used to create the FtlNdmVol structure.
+  uint32_t ftl_flags;   // Flags used to create the FtlNdmVol structure.
   uint32_t extra_free;  // Overallocation for the FTL.
   uint32_t reserved_1[5];
   VolumeOptions options;
@@ -140,6 +142,63 @@ int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* d
   return kNdmOk;
 }
 
+__PRINTFLIKE(1, 2) void LogTrace(const char* format, ...) {
+  fprintf(stderr, "[FTL] TRACE: ");
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+}
+
+__PRINTFLIKE(1, 2) void LogDebug(const char* format, ...) {
+  fprintf(stderr, "[FTL] DEBUG: ");
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+}
+
+__PRINTFLIKE(1, 2) void LogInfo(const char* format, ...) {
+  fprintf(stderr, "[FTL] INFO: ");
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+}
+
+__PRINTFLIKE(1, 2) void LogWarning(const char* format, ...) {
+  fprintf(stderr, "[FTL] WARNING: ");
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+}
+
+__PRINTFLIKE(1, 2) void LogError(const char* format, ...) {
+  fprintf(stderr, "[FTL] ERROR: ");
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+}
+
+Logger GetDefaultLogger() {
+  Logger logger = {
+      .trace = &LogTrace,
+      .debug = &LogDebug,
+      .info = &LogInfo,
+      .warning = &LogWarning,
+      .error = &LogError,
+  };
+
+  return logger;
+}
+
 }  // namespace
 
 NdmBaseDriver::~NdmBaseDriver() { RemoveNdmVolume(); }
@@ -170,6 +229,14 @@ bool NdmBaseDriver::BadBbtReservation() const {
 
 const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
                                            bool save_volume_data) {
+  return CreateNdmVolumeWithLogger(ftl_volume, options, save_volume_data, std::nullopt);
+}
+
+const char* NdmBaseDriver::CreateNdmVolumeWithLogger(const Volume* ftl_volume,
+                                                     const VolumeOptions& options,
+                                                     bool save_volume_data,
+                                                     std::optional<LoggerProxy> logger) {
+  logger_ = logger;
   if (!ndm_) {
     IsNdmDataPresent(options, save_volume_data);
   }
@@ -307,6 +374,29 @@ void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_
   driver->data_and_spare_check = CheckPage;
   driver->erase_block = EraseBlock;
   driver->is_block_bad = IsBadBlockImpl;
+  driver->logger = GetDefaultLogger();
+
+  if (logger_.has_value()) {
+    if (logger_->trace != nullptr) {
+      driver->logger.trace = logger_->trace;
+    }
+
+    if (logger_->debug != nullptr) {
+      driver->logger.debug = logger_->debug;
+    }
+
+    if (logger_->info != nullptr) {
+      driver->logger.info = logger_->info;
+    }
+
+    if (logger_->warn != nullptr) {
+      driver->logger.warning = logger_->warn;
+    }
+
+    if (logger_->error != nullptr) {
+      driver->logger.error = logger_->error;
+    }
+  }
 }
 
 __EXPORT

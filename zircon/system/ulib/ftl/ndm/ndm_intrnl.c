@@ -30,12 +30,11 @@ static Pair* ExtractedList;
 //      Inputs: list = pointer to NDM control block running BB list
 //              cnt = number of bad blocks in list
 //
-static void show_rbbl(Pair* list, ui32 cnt) {
+static void show_rbbl(NDM ndm, Pair* list, ui32 cnt) {
   Pair *past_end, *pair = list;
 
-  putchar('\n');
   for (past_end = pair + cnt; pair < past_end; ++pair)
-    printf("pair %u: vblk/key=%u, pblk/val=%d\n", pair - list, pair->key, pair->val);
+    ndm->logger.info("pair %u: vblk/key=%u, pblk/val=%d\n", pair - list, pair->key, pair->val);
 }
 #endif
 
@@ -1911,8 +1910,8 @@ int ndmExtractBBL(NDM ndm) {
     return FsError2(NDM_ENOMEM, ENOMEM);
   memcpy(ExtractedList, ndm->run_bad_blk, size);
 #if BBL_INSERT_DEBUG
-  show_rbbl(ndm->run_bad_blk, ndm->num_rbb);
-  show_rbbl(ExtractedList, ExtractedCnt);
+  show_rbbl(ndm, ndm->run_bad_blk, ndm->num_rbb);
+  show_rbbl(ndm, ExtractedList, ExtractedCnt);
 #endif
 
   // Simplify list, eliminating chains.
@@ -1928,7 +1927,7 @@ int ndmExtractBBL(NDM ndm) {
     }
   }
 #if BBL_INSERT_DEBUG
-  show_rbbl(ExtractedList, ExtractedCnt);
+  show_rbbl(ndm, ExtractedList, ExtractedCnt);
 #endif
 
   // Return number of blocks that failed so far.
@@ -1954,7 +1953,8 @@ int ndmInsertBBL(NDM ndm) {
   pair = ExtractedList;
   for (last_pair = pair + ExtractedCnt - 1; pair <= last_pair; ++pair) {
 #if BBL_INSERT_DEBUG
-    printf("pair %u: vblk/key=%u, pblk/val=%d\n", pair - ExtractedList, pair->key, pair->val);
+    ndm->logger.debug("pair %u: vblk/key=%u, pblk/val=%d", pair - ExtractedList, pair->key,
+                      pair->val);
 #endif
 
     // Adjust bad block count. If too many, error.
@@ -2044,7 +2044,7 @@ int ndmInsertBBL(NDM ndm) {
     ++ndm->num_rbb;
   }
 #if BBL_INSERT_DEBUG
-  show_rbbl(ndm->run_bad_blk, ndm->num_rbb);
+  show_rbbl(ndm, ndm->run_bad_blk, ndm->num_rbb);
 #endif
 
   // Free bad block list memory, zero count, and save the metadata.

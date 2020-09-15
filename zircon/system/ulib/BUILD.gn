@@ -11,6 +11,7 @@ group("tests") {
   testonly = true
   deps = [
     "edid:tests",
+    "ftl/test:tests",
     "fzl:tests",
     "hid-parser/test:tests",
     "inspect:tests",

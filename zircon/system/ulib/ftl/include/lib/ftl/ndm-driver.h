@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FTL_NDM_DRIVER_H_
+#define LIB_FTL_NDM_DRIVER_H_
+
+#include <zircon/compiler.h>
 
 #include <cstdint>
-#include <zircon/compiler.h>
+#include <optional>
 
 struct ndm;
 struct NDMDrvr;
@@ -35,6 +38,15 @@ struct VolumeOptions {
   uint32_t page_size;
   uint32_t eb_size;  // Extra bytes, a.k.a. OOB.
   uint32_t flags;
+};
+
+// Helper for overriding default logging routines.
+struct LoggerProxy {
+  __PRINTFLIKE(1, 2) void (*trace)(const char*, ...) = nullptr;
+  __PRINTFLIKE(1, 2) void (*debug)(const char*, ...) = nullptr;
+  __PRINTFLIKE(1, 2) void (*info)(const char*, ...) = nullptr;
+  __PRINTFLIKE(1, 2) void (*warn)(const char*, ...) = nullptr;
+  __PRINTFLIKE(1, 2) void (*error)(const char*, ...) = nullptr;
 };
 
 // Encapsulates the lower layer TargetFtl-Ndm driver.
@@ -114,6 +126,10 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
                               bool save_volume_data = true);
 
+  // Just like |CreateNdmVolume| but provides an override for default logging routines.
+  const char* CreateNdmVolumeWithLogger(const Volume* ftl_volume, const VolumeOptions& options,
+                                        bool save_volume_data, std::optional<LoggerProxy> logger);
+
   // Deletes the underlying NDM volume.
   bool RemoveNdmVolume();
 
@@ -149,6 +165,7 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
  private:
   ndm* ndm_ = nullptr;
   bool volume_data_saved_ = false;
+  std::optional<LoggerProxy> logger_ = std::nullopt;
 };
 
 // Performs global module initialization. This is exposed to support unit tests,
@@ -160,3 +177,5 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
 bool InitModules();
 
 }  // namespace ftl
+
+#endif  // LIB_FTL_NDM_DRIVER_H_

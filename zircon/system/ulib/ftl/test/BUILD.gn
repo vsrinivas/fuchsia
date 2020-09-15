@@ -13,14 +13,15 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":ftl_test" ]
+  deps = [ ":ftl-library-test" ]
 }
 
-test("ftl_test") {
+test("ftl-test") {
+  output_name = "ftl-library-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -30,7 +31,6 @@ test("ftl_test") {
       configs -= fdio_config
     }
   }
-  output_name = "ftl-lib-test"
   sources = [
     "ndm_driver_test.cc",
     "ndm_test.cc",
@@ -43,7 +43,7 @@ test("ftl_test") {
   defines = [ "NDM_DEBUG" ]
 }
 
-bootfs_test("ftl_test-bootfs-test") {
-  name = "ftl-lib-test"
-  deps = [ ":ftl_test" ]
+fuchsia_unittest_package("ftl-library-test") {
+  executable_path = "test/ftl-library-test"
+  deps = [ ":ftl-test" ]
 }
