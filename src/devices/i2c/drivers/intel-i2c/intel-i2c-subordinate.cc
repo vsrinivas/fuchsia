@@ -41,7 +41,7 @@ bool DoUntil(const fit::function<bool()>& condition, fit::function<void()> actio
 }
 
 bool WaitFor(const fit::function<bool()>& condition, const zx::duration poll_interval) {
-  return DoUntil(condition, nullptr, poll_interval);
+  return DoUntil(condition, []{}, poll_interval);
 }
 
 std::unique_ptr<IntelI2cSubordinate> IntelI2cSubordinate::Create(IntelI2cController* controller,
