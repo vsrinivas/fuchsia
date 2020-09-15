@@ -108,7 +108,8 @@ TEST_F(WebSemanticsTest, StaticSemantics) {
   ASSERT_TRUE(node);
 }
 
-TEST_F(WebSemanticsTest, HitTesting) {
+// BUG(fxb.dev/60002): Disable this test until the flakes are resolved.
+TEST_F(WebSemanticsTest, DISABLED_HitTesting) {
   ASSERT_NO_FATAL_FAILURE(RenderPage("static.html"));
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
