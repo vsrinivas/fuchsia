@@ -58,6 +58,9 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // denied.
   virtual void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback);
 
+  // clears existing a11y focus.
+  virtual void ClearA11yFocus();
+
  protected:
   // For mocks only.
   A11yFocusManager();
@@ -80,9 +83,6 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
 
   // Interface used to request Focus Chain Updates.
   AccessibilityFocusChainRequester* const focus_chain_requester_ = nullptr;
-
-  // Used to register this class as a listener of Focus Chain Updates for a11y.
-  AccessibilityFocusChainRegistry* const registry_ = nullptr;
 
   // Used to manipulate semantic annotations.
   FocusHighlightManager* const focus_highlight_manager_ = nullptr;

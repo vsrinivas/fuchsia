@@ -104,5 +104,21 @@ TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
   CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
 }
 
+TEST_F(A11yFocusManagerTest, ClearsTheA11YFocus) {
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  ViewRefHelper view_ref_helper;
+  bool success = false;
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), a11y::A11yFocusManager::kRootNodeId,
+                                    [&success](bool result) { success = result; });
+  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
+  EXPECT_TRUE(success);
+
+  a11y_focus_manager_->ClearA11yFocus();
+  auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
+  ASSERT_FALSE(a11y_focus);
+  auto highlighted_node = mock_focus_highlight_manager_.GetHighlightedNode();
+  ASSERT_FALSE(highlighted_node);
+}
+
 }  // namespace
 }  // namespace accessibility_test

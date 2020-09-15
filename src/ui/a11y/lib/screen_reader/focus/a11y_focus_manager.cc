@@ -18,12 +18,11 @@ A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain
                                    AccessibilityFocusChainRegistry* registry,
                                    FocusHighlightManager* focus_highlight_manager)
     : focus_chain_requester_(focus_chain_requester),
-      registry_(registry),
       focus_highlight_manager_(focus_highlight_manager),
       weak_ptr_factory_(this) {
-  FX_DCHECK(registry_);
+  FX_DCHECK(registry);
   FX_DCHECK(focus_highlight_manager_);
-  registry_->Register(weak_ptr_factory_.GetWeakPtr());
+  registry->Register(weak_ptr_factory_.GetWeakPtr());
 }
 
 A11yFocusManager::A11yFocusManager() : weak_ptr_factory_(this) {}
@@ -84,6 +83,11 @@ void A11yFocusManager::UpdateHighlights() {
   newly_focused_node.node_id = focused_node_in_view_map_[currently_focused_view_];
 
   focus_highlight_manager_->UpdateHighlight(newly_focused_node);
+}
+
+void A11yFocusManager::ClearA11yFocus() {
+  currently_focused_view_ = ZX_KOID_INVALID;
+  focus_highlight_manager_->ClearHighlight();
 }
 
 }  // namespace a11y
