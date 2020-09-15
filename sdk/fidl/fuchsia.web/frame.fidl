@@ -339,7 +339,7 @@ protocol MessagePort {
 };
 
 /// Specifies additional information about a newly created popup frame.
-table PopupFrameCreationInfo {
+resource table PopupFrameCreationInfo {
     /// The URL to which the popup frame was initially navigated.
     1: Url initial_url;
 

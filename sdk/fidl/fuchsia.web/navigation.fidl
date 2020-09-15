@@ -62,7 +62,7 @@ protocol NavigationController {
 
 /// Additional parameters for modifying the behavior of
 /// [`fuchsia.web.NavigationController/LoadUrl`].
-table LoadUrlParams {
+resource table LoadUrlParams {
     /// Provides a hint to the browser UI about how [`fuchsia.web.NavigationController/LoadUrl`]
     /// was triggered.
     1: LoadUrlReason type;
@@ -81,7 +81,7 @@ table LoadUrlParams {
 };
 
 /// Contains information about the [`fuchsia.web.Frame`]'s navigation state.
-table NavigationState {
+resource table NavigationState {
     /// The page's URL.
     1: Url url;
 

@@ -201,7 +201,7 @@ protocol Context {
     GetRemoteDebuggingPort() -> (uint16 port) error ContextError;
 };
 
-table CreateFrameParams {
+resource table CreateFrameParams {
     /// Set to true to enable remote debugging. The [`fuchsia.web.Frame`] will be closed with
     /// `ERR_INVALID_ARGS` if `remote_debugging_port` was not set in
     /// [`fuchsia.web.CreateContextParams`].
