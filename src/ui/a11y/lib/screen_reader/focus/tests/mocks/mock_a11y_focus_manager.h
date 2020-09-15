@@ -27,11 +27,17 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   // Returns true if IsSetA11yFocusCalled was called.
   bool IsSetA11yFocusCalled() const;
 
+  // Resets the IsCalled* methods return values (useful for reading expectations on an object,
+  // clearing the values, and running new expectations).
+  void ResetExpectations();
+
   // Updates A11yFocusInfo with the given values.
   void UpdateA11yFocus(zx_koid_t koid, uint32_t node_id);
 
   void set_should_get_a11y_focus_fail(bool value);
   void set_should_set_a11y_focus_fail(bool value);
+
+  void ClearA11yFocus() override { a11y_focus_info_.view_ref_koid = ZX_KOID_INVALID; }
 
  private:
   // Tracks if GetA11yFocus() is called.

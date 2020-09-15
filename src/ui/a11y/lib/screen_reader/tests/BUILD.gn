@@ -16,6 +16,7 @@ executable("screen_reader_tests") {
     "default_action_unittest.cc",
     "explore_action_unittest.cc",
     "linear_navigation_action_unittest.cc",
+    "recover_a11y_focus_action_unittest.cc",
     "screen_reader_context_unittest.cc",
     "screen_reader_message_generator_unittest.cc",
     "screen_reader_unittest.cc",

@@ -49,6 +49,8 @@ class ExploreActionTest : public gtest::TestLoopFixture {
     a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
     mock_speaker_ptr_ = screen_reader_context_->mock_speaker_ptr();
 
+    a11y_focus_manager_ptr_->SetA11yFocus(100u, 10000, [](bool result) { EXPECT_TRUE(result); });
+    a11y_focus_manager_ptr_->ResetExpectations();
     // Creating test node to update.
     std::vector<Node> update_nodes;
     Node node = accessibility_test::CreateTestNode(0, "Label A", {1u});
