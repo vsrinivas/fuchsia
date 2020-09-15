@@ -23,7 +23,7 @@ protocol this_is_a_protocol {
     Copy(string s, uint32 count) -> (string s);
 };
 
-struct protocols_and_requests {
+resource struct protocols_and_requests {
     this_is_a_protocol nonnullable_protocol;
     this_is_a_protocol? nullable_protocol;
     request<this_is_a_protocol> nonnullable_request;
@@ -62,7 +62,7 @@ struct default_values {
 
 const uint32 arrays_size = 32;
 
-struct arrays {
+resource struct arrays {
     array<bool>:1 b_0;
     array<int8>:1 i8_0;
     array<int16>:1 i16_0;
@@ -105,7 +105,7 @@ struct arrays {
 
 const uint32 vectors_size = 32;
 
-struct vectors {
+resource struct vectors {
     vector<bool> b_0;
     vector<int8> i8_0;
     vector<int16> i16_0;
@@ -238,7 +238,7 @@ struct vectors {
 };
 
 [Awesome]
-struct handles {
+resource struct handles {
     handle handle_handle;
     zx.handle:PROCESS process_handle;
     zx.handle:THREAD thread_handle;
@@ -364,12 +364,12 @@ struct xunions {
     this_is_a_xunion? nullable_xu;
 };
 
-struct protocols {
+resource struct protocols {
     this_is_a_protocol i;
     this_is_a_protocol? nullable_i;
 };
 
-struct requests {
+resource struct requests {
     request<this_is_a_protocol> r;
     request<this_is_a_protocol>? nullable_r;
 };

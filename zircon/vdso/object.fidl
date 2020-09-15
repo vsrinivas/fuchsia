@@ -6,7 +6,7 @@ library zx;
 
 // TODO(scottmg): Apply rights spec from WaitMany on |items| to |handle| here,
 // somehow.
-struct WaitItem {
+resource struct WaitItem {
     handle handle;
     signals waitfor;
     signals pending;

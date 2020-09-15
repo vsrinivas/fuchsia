@@ -49,7 +49,7 @@ table GetSnapshotParameters {
 ///
 /// Clients typically upload the data straight to servers. So the data comes in the form of
 /// arbitrary key-value pairs that clients can directly forward to the servers.
-table Snapshot {
+resource table Snapshot {
     /// A <filename, ZIP archive> pair.
     ///
     /// The ZIP archive contains several files corresponding to the various data it collected from
@@ -73,7 +73,7 @@ enum ImageEncoding {
 };
 
 /// An encoded image of the screen.
-struct Screenshot {
+resource struct Screenshot {
     fuchsia.mem.Buffer image;
 
     // While all encoded images contain their dimensions in their headers, some

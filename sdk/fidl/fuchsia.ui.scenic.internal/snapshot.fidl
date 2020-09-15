@@ -9,7 +9,7 @@ using fuchsia.mem;
 // A snapshot result contains a buffer containing the snapshotted
 // data as well as a boolean to check whether the snapshot of that
 // compositor was successful or not.
-struct SnapshotResult {
+resource struct SnapshotResult {
     bool success;
     fuchsia.mem.Buffer buffer;
 };

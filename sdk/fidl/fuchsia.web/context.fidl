@@ -43,7 +43,7 @@ protocol ContextProvider {
 ///   "mime": "text/html"
 /// }
 /// ```
-table ContentDirectoryProvider {
+resource table ContentDirectoryProvider {
     /// Name of the provider. Must be non-empty and composed solely of alphanumerics, dots, and
     /// dashes.
     1: string:255 name;
@@ -92,7 +92,7 @@ bits ContextFeatureFlags : uint64 {
     LEGACYMETRICS = 0x80;
 };
 
-table CreateContextParams {
+resource table CreateContextParams {
     /// Service directory to be used by the context. The following services must be present in the
     /// directory:
     /// - [`fuchsia.device.NameProvider`]

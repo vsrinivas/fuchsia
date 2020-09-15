@@ -67,7 +67,7 @@ struct Request {
     uint32 flags = 0;
 };
 
-struct Response {
+resource struct Response {
     fuchsia.mem.Buffer buffer;
 
     /// Buffer identifier for the buffer. Responses with the same buffer_id are

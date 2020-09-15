@@ -73,7 +73,7 @@ protocol TestHarness {
 };
 
 /// Describes which service to connect to using `ConnectToModularService()`.
-union ModularService {
+resource union ModularService {
     1: request<fuchsia.modular.PuppetMaster> puppet_master;
     2: request<fuchsia.modular.ComponentContext> component_context;
     3: reserved;
@@ -107,7 +107,7 @@ protocol InterceptedComponent {
 /// `TestHarnessSpec.env_services_to_inherit` and
 /// `TestHarnessSpec.injected_services`. Additional services override the
 /// default services listed above.
-table TestHarnessSpec {
+resource table TestHarnessSpec {
     /// Configuration for basemgr. See `fuchsia.modular.session.BasemgrConfig`
     /// for a description of the defaults.
     ///
@@ -162,7 +162,7 @@ table TestHarnessSpec {
 ///
 /// If the same service is provided in more than one place, `TestHarness`
 /// connection is closed with a `ZX_ERR_ALREADY_EXISTS` epitaph.
-table EnvironmentServicesSpec {
+resource table EnvironmentServicesSpec {
     /// A directory of services to be provided to the test harness environment.
     ///
     /// Optional.
@@ -191,7 +191,7 @@ struct ComponentService {
 
 /// Describes a component to intercept. Malformed parameters result in closing
 /// `TestHarness` with a `ZX_ERR_INVALID_ARGS` epitaph.
-table InterceptSpec {
+resource table InterceptSpec {
     /// Required. Must be a valid component URL (e.g., fuchsia-pkg://..), or is
     /// considered malformed.
     1: fuchsia.sys.component_url component_url;

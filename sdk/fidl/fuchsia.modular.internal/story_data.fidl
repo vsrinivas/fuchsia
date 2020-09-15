@@ -8,7 +8,7 @@ using fuchsia.modular;
 
 /// Metadata and summary information about a single story.  Does not contain the
 /// data necessary to run a story: see story_model.fidl for that.
-table StoryData {
+resource table StoryData {
     /// Metadata available to the SessionShell.
     1: fuchsia.modular.StoryInfo2 story_info;
 

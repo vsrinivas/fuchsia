@@ -27,7 +27,7 @@ using zx;
 /// Example 2. We use ViewRefs to create a FocusChain, which identifies Views
 /// considered as "in-focus" down the View hierarchy. When a View is destroyed,
 /// Scenic signals to all FocusChain holders that the ViewRef is now invalid.
-struct ViewRef {
+resource struct ViewRef {
     zx.handle:EVENTPAIR reference;
 };
 
@@ -45,6 +45,6 @@ struct ViewRef {
 /// described above).  The client must not clone the ViewRefControl. It must
 /// not remove or modify the ViewRefControl's capabilities; otherwise the View
 /// is not created.
-struct ViewRefControl {
+resource struct ViewRefControl {
     zx.handle:EVENTPAIR reference;
 };

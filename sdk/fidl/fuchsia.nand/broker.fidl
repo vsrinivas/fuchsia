@@ -8,7 +8,7 @@ using zx;
 
 // Defines a Read/Write/Erase request to be sent to the nand driver.
 [ForDeprecatedCBindings]
-struct BrokerRequest {
+resource struct BrokerRequest {
     zx.handle:VMO? vmo; // Only used for read and write.
     uint32 length; // In pages (read / write) or blocks (erase).
     uint32 offset_nand; // In pages (read / write) or blocks (erase).

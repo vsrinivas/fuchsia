@@ -8,24 +8,24 @@ struct CopyableStruct {
     int32 x;
 };
 
-struct MoveOnlyStruct {
+resource struct MoveOnlyStruct {
     handle? h;
 };
 
 /// Verifies that user code can manipulate these union payloads.
-union TestUnion {
+resource union TestUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
     3: MoveOnlyStruct move_only;
 };
 
-flexible union TestXUnion {
+flexible resource union TestXUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
     3: handle h;
 };
 
-struct TestXUnionInStruct {
+resource struct TestXUnionInStruct {
     TestXUnion xu;
 };
 

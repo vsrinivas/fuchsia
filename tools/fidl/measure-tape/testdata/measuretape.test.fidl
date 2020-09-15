@@ -7,7 +7,7 @@ library measuretape;
 using zx;
 
 // 24 bytes + selected member size
-union TopLevelUnion {
+resource union TopLevelUnion {
     1: uint64 primitive;
     2: handle handle;
     3: StructWithString struct_with_string;
@@ -44,7 +44,7 @@ struct StructWithOptString {
 };
 
 // 16 bytes + max_set_ordinal * 16 + sum of all set members
-table Table {
+resource table Table {
     5: uint32 primitive;
     2: reserved;
     1: reserved;
@@ -68,14 +68,14 @@ struct StructWithTwoArrays {
 };
 
 // 9 bytes
-struct StructWithOneHandle {
+resource struct StructWithOneHandle {
     uint8 tiny1;
     zx.handle:VMO vmo;
     uint8 tiny2;
 };
 
 // 12 bytes
-struct StructWithTwoHandles {
+resource struct StructWithTwoHandles {
     uint8 tiny1;
     zx.handle:VMO vmo1;
     zx.handle:VMO vmo2;

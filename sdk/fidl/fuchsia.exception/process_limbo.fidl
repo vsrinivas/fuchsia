@@ -110,7 +110,7 @@ protocol ProcessLimbo {
 /// so no modification can be done to them.
 ///
 /// NOTE: Both `process` and `thread` will be valid if present.
-table ProcessExceptionMetadata {
+resource table ProcessExceptionMetadata {
     1: ExceptionInfo info;
 
     /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.

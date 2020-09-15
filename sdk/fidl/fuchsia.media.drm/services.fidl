@@ -72,7 +72,7 @@ protocol KeySystem {
                                    request<ContentDecryptionModule> cdm);
 };
 
-table DataStoreParams {
+resource table DataStoreParams {
     /// Directory into which this data store should write persistent
     /// provisioning and licenses, or their proxy. This field is required.
     1: fuchsia.io.Directory data_directory;

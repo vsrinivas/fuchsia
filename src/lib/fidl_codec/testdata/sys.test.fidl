@@ -16,7 +16,7 @@ using zx;
 /// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
 /// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 /// and its size.
-struct Buffer {
+resource struct Buffer {
     /// The vmo.
     zx.handle:VMO vmo;
 
@@ -183,7 +183,7 @@ protocol Environment {
     GetDirectory(zx.handle:CHANNEL directory_request);
 };
 
-struct FlatNamespace {
+resource struct FlatNamespace {
     // The mount point for each of the directories below.
     //
     // For example, ["/pkg", "/svc"].
@@ -204,7 +204,7 @@ protocol JobProvider {
 
 // An FDIO file descriptor.
 // TODO(abarth): Use the real FDIO declaration once FDIO converts to FIDL2.
-struct FileDescriptor {
+resource struct FileDescriptor {
     // The FDIO types of the handle (e.g., FA_FDIO_REMOTE).
     int32 type0;
     int32 type1;
@@ -218,7 +218,7 @@ struct FileDescriptor {
 
 // Information used to create an instance of a component and obtain
 // services from it.
-struct LaunchInfo {
+resource struct LaunchInfo {
     // The location from which to retrieve this component.
     //
     // This field will probably be replaced with a stronger notion of identity,
@@ -256,7 +256,7 @@ struct LaunchInfo {
     ServiceList? additional_services;
 };
 
-struct ServiceList {
+resource struct ServiceList {
     // A list of services that can be requested from `provider`.
     vector<string> names;
 
@@ -299,7 +299,7 @@ protocol Loader {
 //
 // For ELF binaries, this information is provided in the initialization message
 // given to libc by fuchsia.process.Launcher.
-struct StartupInfo {
+resource struct StartupInfo {
     // The launch info for the to start.
     LaunchInfo launch_info;
 
@@ -329,7 +329,7 @@ struct ProgramMetadata {
 //
 // Typically provided to `Runner.StartComponent` when starting a
 // component.
-struct Package {
+resource struct Package {
     // A read-only binary representation of the component. For example, if the
     // component is intended to run in the Dart virtual machine, this data might
     // contain a dartx package.

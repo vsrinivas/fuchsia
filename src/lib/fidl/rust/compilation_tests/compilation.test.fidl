@@ -36,6 +36,6 @@ struct Result {
     string ensure_that_type_named_result_compiles;
 };
 
-struct HasHostFidlHandleStubbing {
+resource struct HasHostFidlHandleStubbing {
     zx.handle:LOG log;
 };

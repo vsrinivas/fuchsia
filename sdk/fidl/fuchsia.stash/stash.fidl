@@ -26,13 +26,13 @@ struct ListItem {
 
 /// KeyValue is used when a series of keys are being read, or the default state
 /// for the store is being set.
-struct KeyValue {
+resource struct KeyValue {
     string:MAX_KEY_SIZE key;
     Value val;
 };
 
 /// Value holds a value for a given key.
-union Value {
+resource union Value {
     1: int64 intval;
     2: float64 floatval;
     3: bool boolval;

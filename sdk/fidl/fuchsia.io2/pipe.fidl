@@ -19,7 +19,7 @@ protocol Pipe {
 /// There is no universal requirement as to if it is uni- or bi-directional.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Pipe`] protocol.
-table PipeInfo {
+resource table PipeInfo {
     /// The backing socket transport for the pipe.
     /// The rights on this socket should correspond to the rights on the
     /// node connection.

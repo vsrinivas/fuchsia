@@ -7,7 +7,7 @@ library fidl.test.llcpp.basictypes;
 using zx;
 
 [ForDeprecatedCBindings]
-struct SimpleStruct {
+resource struct SimpleStruct {
     int32 field;
     zx.handle:EVENTPAIR ep;
     array<array<zx.handle:EVENTPAIR>:4>:5 arr;

@@ -39,7 +39,7 @@ protocol ComponentContext {
 };
 
 /// Used by ComponentContext.ConnectToAgentService
-table AgentServiceRequest {
+resource table AgentServiceRequest {
     /// The name of the requested service.
     1: string:MAX service_name;
 

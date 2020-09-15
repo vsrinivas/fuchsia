@@ -13,7 +13,7 @@ using zx;
 /// Scenic.TakeScreenshot() returns a raw BGRA formatted image in
 /// sRGB color space and with a non-linear transfer function in this
 /// struct.
-struct ScreenshotData {
+resource struct ScreenshotData {
     fuchsia.images.ImageInfo info;
     fuchsia.mem.Buffer data;
 };

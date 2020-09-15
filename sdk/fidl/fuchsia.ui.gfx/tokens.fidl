@@ -17,7 +17,7 @@ using zx;
 /// The exact nature of the inter-client reference depends on the specific
 /// resources created from the tokens.  For example, creating a `ViewHolder`
 /// resource from this token allows a client to embed another client's `View`.
-struct ImportToken {
+resource struct ImportToken {
     zx.handle:EVENTPAIR value;
 };
 
@@ -33,6 +33,6 @@ struct ImportToken {
 /// resources created from the tokens.  For example, creating a `View`
 /// resource from this token allows everything attached to the `View` to be
 /// embedded in another clients `ViewHolder`.
-struct ExportToken {
+resource struct ExportToken {
     zx.handle:EVENTPAIR value;
 };

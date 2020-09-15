@@ -7,7 +7,7 @@ library fuchsia.ui.scenic;
 using fuchsia.ui.input;
 using fuchsia.ui.gfx;
 
-union Event {
+resource union Event {
     1: fuchsia.ui.gfx.Event gfx;
     2: fuchsia.ui.input.InputEvent input;
     3: Command unhandled;

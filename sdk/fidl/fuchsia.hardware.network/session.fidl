@@ -44,7 +44,7 @@ bits SessionFlags : uint16 {
 };
 
 /// Data-plane FIFOs.
-struct Fifos {
+resource struct Fifos {
     /// Handle for the rx FIFO.
     /// Clients must write 16-bit descriptor indexes to this FIFO to be able to receive
     /// frames.
@@ -55,7 +55,7 @@ struct Fifos {
 };
 
 /// Session configuration.
-struct SessionInfo {
+resource struct SessionInfo {
     /// VMO containing the descriptors. 16-bit indices transmitted over the FIFOs index a descriptor
     /// in this VMO (byte offset = descriptor_length * 8 * index).
     zx.handle:VMO descriptors;

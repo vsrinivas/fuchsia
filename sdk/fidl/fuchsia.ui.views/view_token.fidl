@@ -13,7 +13,7 @@ using zx;
 /// A Scenic client can reference contents from another client by creating a
 /// `ViewHolder` resource using this token.  The other client must also create
 /// a `View` resource using the corresponding `ViewToken`.
-struct ViewHolderToken {
+resource struct ViewHolderToken {
     zx.handle:EVENTPAIR value;
 };
 
@@ -24,6 +24,6 @@ struct ViewHolderToken {
 /// A Scenic client can have its contents referenced from another client by
 /// creating a `View` resource using this token.  The other client must also
 /// create a `ViewHolder` resource using the corresponding `ViewHolderToken`.
-struct ViewToken {
+resource struct ViewToken {
     zx.handle:EVENTPAIR value;
 };

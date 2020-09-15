@@ -14,7 +14,7 @@ enum ProvisioningStatus {
 
 /// Message passed to a [`ProvisioningFetcher`] by a DRM system, to pass on to
 /// the provisioning server.
-struct ProvisioningRequest {
+resource struct ProvisioningRequest {
     /// A suggested server to send the `message` to.
     fuchsia.url.Url? default_provisioning_server_url;
 
@@ -28,7 +28,7 @@ struct ProvisioningRequest {
 
 /// Message originating from the provisioning server that the
 /// [`ProvisioningFetcher`] must pass back to the DRM system.
-struct ProvisioningResponse {
+resource struct ProvisioningResponse {
     /// The DRM system specific provisioning response message body received from
     /// the provisioning server. The VMO must at least have the following
     /// rights:

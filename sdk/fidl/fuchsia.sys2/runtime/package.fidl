@@ -9,7 +9,7 @@ using fuchsia.io;
 /// A package is a signed collection of immutable files.
 ///
 /// This object provides access to a package's content and relevant metadata.
-table Package {
+resource table Package {
     /// The URL of the package itself.
     1: string package_url;
 

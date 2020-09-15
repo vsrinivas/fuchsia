@@ -40,7 +40,7 @@ flexible union SelectorArgument {
 
 /// A fidl union containing a complete hierarchy of structured diagnostics
 /// data, such that the content can be parsed into a file by itself.
-flexible union FormattedContent {
+flexible resource union FormattedContent {
     /// A diagnostics schema encoded as json.
     /// The VMO will contain up to 1mb of diagnostics data.
     1: fuchsia.mem.Buffer json;

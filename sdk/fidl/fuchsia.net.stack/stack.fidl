@@ -129,7 +129,7 @@ enum Error {
 /// An Ethernet device.
 /// The provided `network_device` is expected to support `Ethernet` frames.
 /// Its MAC address and MAC filtering is controlled by the provided `mac` channel.
-struct EthernetDeviceDefinition {
+resource struct EthernetDeviceDefinition {
     /// The connection to the device's data plane.
     fuchsia.hardware.network.Device network_device;
     /// The connection to the device's addressing control plane.
@@ -137,7 +137,7 @@ struct EthernetDeviceDefinition {
 };
 
 /// Devices that can be used to back a `Stack` interface.
-union DeviceDefinition {
+resource union DeviceDefinition {
     /// A `fuchsia.hardware.network.Device` that exchanges only IP frames. It either doesn't have a
     /// layer 2 or its layer 2 is irrelevant to the `Stack`.
     1: fuchsia.hardware.network.Device ip;

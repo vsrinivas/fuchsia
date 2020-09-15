@@ -72,7 +72,7 @@ protocol StoryShell {
 };
 
 /// A pair mapping a surface ID to a view (via `view_holder_token`).
-struct ViewConnection {
+resource struct ViewConnection {
     /// The ID for the surface
     string:MAX surface_id;
 
@@ -81,7 +81,7 @@ struct ViewConnection {
 };
 
 /// DEPRECATED, for transition purposes only.
-struct ViewConnection2 {
+resource struct ViewConnection2 {
     /// The ID for the surface
     string:MAX surface_id;
 
@@ -107,7 +107,7 @@ struct SurfaceInfo {
 };
 
 /// Contains metadata for a Surface.
-table SurfaceInfo2 {
+resource table SurfaceInfo2 {
     /// ID of the view that is parent of this Surface.
     1: string:MAX parent_id;
 

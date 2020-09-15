@@ -8,7 +8,7 @@ using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using fuchsia.ui.views;
 
-union Command {
+resource union Command {
     1: fuchsia.ui.gfx.Command gfx;
     2: reserved;
     3: fuchsia.ui.views.Command views;

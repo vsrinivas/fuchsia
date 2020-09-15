@@ -22,7 +22,7 @@ bits DeviceSignal : uint32 {
 
 /// The object may be cast to the shared interface of devices.
 [Deprecated = "devices will be services in the future"]
-table DeviceInfo {
+resource table DeviceInfo {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.
@@ -31,7 +31,7 @@ table DeviceInfo {
 
 /// The object may be cast to a Tty interface.
 [Deprecated = "tty functionalities may be covered by a tty service"]
-table TtyInfo {
+resource table TtyInfo {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.

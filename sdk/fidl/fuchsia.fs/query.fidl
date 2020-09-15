@@ -28,7 +28,7 @@ protocol Query {
 ///
 /// If a particular field is not applicable or not supported, implementations
 /// should leave it absent.
-table FilesystemInfo {
+resource table FilesystemInfo {
     /// The number of data bytes which may be stored in the filesystem.
     1: uint64 total_bytes;
 

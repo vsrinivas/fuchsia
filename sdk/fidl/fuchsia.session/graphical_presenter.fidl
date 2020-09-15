@@ -54,7 +54,7 @@ enum ViewControllerEpitaph {
 };
 
 /// A description of a view that can be presented by a `GraphicalPresenter`.
-table ViewSpec {
+resource table ViewSpec {
     /// The view holder token for the presented view.
     1: fuchsia.ui.views.ViewHolderToken view_holder_token;
 

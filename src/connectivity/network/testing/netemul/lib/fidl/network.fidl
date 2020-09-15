@@ -122,7 +122,7 @@ protocol DeviceProxy {
 };
 
 /// A connection to an endpoint's underlying protocol.
-union DeviceConnection {
+resource union DeviceConnection {
     /// Set if the endpoint's backing is `ETHERTAP`.
     1: fuchsia.hardware.ethernet.Device ethernet;
     /// Set if the endpoint's backing is `NETWORK_DEVICE`.

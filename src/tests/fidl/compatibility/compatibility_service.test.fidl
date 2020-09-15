@@ -86,7 +86,7 @@ struct default_values {
 // kMaxMessageSize or kMaxMessageHandles.
 const uint32 arrays_size = 3;
 
-struct arrays {
+resource struct arrays {
     array<bool>:1 b_0;
     array<int8>:1 i8_0;
     array<int16>:1 i16_0;
@@ -113,7 +113,7 @@ struct arrays {
     array<handle>:arrays_size handle_1;
 };
 
-struct arrays_2d {
+resource struct arrays_2d {
     array<array<bool>:2>:arrays_size b;
     array<array<int8>:2>:arrays_size i8;
     array<array<int16>:2>:arrays_size i16;
@@ -132,7 +132,7 @@ struct arrays_2d {
 // kMaxMessageSize or kMaxMessageHandles.
 const uint32 vectors_size = 3;
 
-struct vectors {
+resource struct vectors {
     vector<bool> b_0;
     vector<int8> i8_0;
     vector<int16> i16_0;
@@ -258,7 +258,7 @@ struct vectors {
 // We don't test handle types that don't support duplication
 // (supports_duplication in zx/object_traits.h) or that require special
 // privileges to create.
-struct handles {
+resource struct handles {
     handle handle_handle;
     handle:PROCESS process_handle;
     handle:THREAD thread_handle;
@@ -424,7 +424,7 @@ struct unions {
 };
 
 // This struct is meant to exercise almost all features of FIDL.
-struct Struct {
+resource struct Struct {
     primitive_types primitive_types;
     default_values default_values;
     arrays arrays;
@@ -454,7 +454,7 @@ struct Struct {
 };
 
 // This struct contains arrays of all different kinds of FIDL types.
-struct ArraysStruct {
+resource struct ArraysStruct {
     array<bool>:arrays_size bools;
     array<int8>:arrays_size int8s;
     array<int16>:arrays_size int16s;
@@ -484,7 +484,7 @@ struct ArraysStruct {
 };
 
 // This struct contains vectors of all different kinds of FIDL types.
-struct VectorsStruct {
+resource struct VectorsStruct {
     vector<bool>:vectors_size bools;
     vector<int8>:vectors_size int8s;
     vector<int16>:vectors_size int16s;
@@ -514,7 +514,7 @@ struct VectorsStruct {
 };
 
 // This table has members all different FIDL types.
-table AllTypesTable {
+resource table AllTypesTable {
     1: bool bool_member;
     2: int8 int8_member;
     3: int16 int16_member;
@@ -539,7 +539,7 @@ table AllTypesTable {
 };
 
 // This xunion has members all different FIDL types.
-flexible union AllTypesXunion {
+flexible resource union AllTypesXunion {
      1: bool bool_member;
      2: int8 int8_member;
      3: int16 int16_member;

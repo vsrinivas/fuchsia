@@ -6,7 +6,7 @@ library fuchsia.images;
 
 using zx;
 
-struct EncodedImage {
+resource struct EncodedImage {
   /// The vmo.
   zx.handle:VMO vmo;
   /// The size of the image in the vmo in bytes.

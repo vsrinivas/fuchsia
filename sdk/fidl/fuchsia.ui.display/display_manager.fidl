@@ -11,7 +11,7 @@ using zx;
 /// Also serves as a capability, enabling the owner to perform certain
 /// operations on displays in the DisplayManager protocol and other protocols
 /// (like Scenic).
-struct DisplayRef {
+resource struct DisplayRef {
     zx.handle:EVENT reference;
 };
 
@@ -25,7 +25,7 @@ const int32 MODE_INTERLACED = 0x1;
 const uint32 IDENTIFIER_MAX_LEN = 128;
 using DisplayIdentifier = string:IDENTIFIER_MAX_LEN;
 
-table Info {
+resource table Info {
     // Unique identifier for the display.
     1: DisplayRef display_ref;
 

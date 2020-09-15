@@ -21,7 +21,7 @@ using Mat3 = array<float32>:9;
 /// A specification for an injector |Device|.
 ///
 /// All fields required.
-table Config {
+resource table Config {
     /// An identifier for the pointer device that issues pointer event streams.
     1: uint32 device_id;
 
@@ -66,7 +66,7 @@ enum DeviceType {
 ///     ancestor of the target.
 /// (2) Coordinate System. It provides the reference coordinate system to define
 ///     the viewport's position and size, relative to the target.
-union Context {
+resource union Context {
     /// A Scenic view from which injection is attempted for injected events.
     /// - This view must be connected to the scene graph for injection.
     /// - Injected events are confined to this view and its sub-views.
@@ -75,7 +75,7 @@ union Context {
 
 /// The region in which dispatch is attempted for injected events.
 /// The particular dispatch policy is specified in |Config|.
-union Target {
+resource union Target {
     /// A Scenic view in which dispatch is attempted for injected events.
     /// - This view must be connected to the scene graph for dispatch.
     /// - Injected events are confined to this view and its sub-views.

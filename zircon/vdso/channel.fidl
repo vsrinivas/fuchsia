@@ -8,14 +8,14 @@ using HandleOp = uint32;
 
 // TODO(scottmg): ZX_HANDLE_OP_xyz here.
 
-struct HandleInfo {
+resource struct HandleInfo {
     handle handle;
     obj_type type;
     rights rights;
     uint32 unused;
 };
 
-struct ChannelCallArgs {
+resource struct ChannelCallArgs {
     vector<byte> wr_bytes;
     vector<handle> wr_handles;
     // TODO(scottmg): mutable_vector_void
@@ -24,7 +24,7 @@ struct ChannelCallArgs {
     vector<handle> rd_handles;
 };
 
-struct HandleDisposition {
+resource struct HandleDisposition {
     HandleOp operation;
     handle handle;
     obj_type type;

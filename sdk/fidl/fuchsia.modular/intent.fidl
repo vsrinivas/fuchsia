@@ -8,7 +8,7 @@ using fuchsia.mem;
 
 /// The Intent struct is a runtime descriptor for an abstract action to be initiated
 /// in Fuchsia. For details please see docs/intent.md.
-struct Intent {
+resource struct Intent {
     /// The name of the action represented by this Intent.
     ///
     /// This is nullable for backwards compatibility.
@@ -26,7 +26,7 @@ struct Intent {
 /// NON-FUNCTIONAL: `IntentParameter` is no longer supported but must remain for ABI compatibility.
 /// A struct representing a parameter that is passed to the handler of an Intent's
 /// Action.
-struct IntentParameter {
+resource struct IntentParameter {
     /// The name of the parameter. The handler (i.e. selected mod) will be provided
     /// with the data for this parameter under a link called `name`.
     string:MAX? name;
@@ -37,7 +37,7 @@ struct IntentParameter {
 
 /// NON-FUNCTIONAL: `IntentParameterData` is no longer supported but must remain defined for
 /// `IntentParameter`'s ABI compatibility.
-union IntentParameterData {
+resource union IntentParameterData {
     /// Set this if you already have an Entity reference at runtime.
     /// Entity.getTypes() will be used to set the constraints for this noun during
     /// resolution.

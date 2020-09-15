@@ -44,7 +44,7 @@ struct None {
 };
 
 /// Represents a buffer parameter.
-table Buffer {
+resource table Buffer {
     1: Direction direction;
 
     /// The VMO is allowed to be not present for situations where the TEE allows for buffer size
@@ -76,7 +76,7 @@ table Value {
     4: uint64 c;
 };
 
-flexible union Parameter {
+flexible resource union Parameter {
     1: None none;
     2: Buffer buffer;
     3: Value value;
@@ -98,7 +98,7 @@ enum ReturnOrigin : uint32 {
 /// of the parameter set. The returned parameter set will be a copy of the input parameter set, but
 /// with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
 /// Buffer.size to the number of bytes written.
-table OpResult {
+resource table OpResult {
     1: uint64 return_code;
     2: ReturnOrigin return_origin;
     3: ParameterSet parameter_set;

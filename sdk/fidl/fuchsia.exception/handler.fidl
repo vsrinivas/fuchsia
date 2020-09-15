@@ -41,7 +41,7 @@ struct ExceptionInfo {
 /// Generic wrapper over a thread exception. Mirrors closely the information
 /// given by an exception channel.
 /// Both |process| and |thread| will be valid if present.
-table ProcessException {
+resource table ProcessException {
     /// `exception` is guaranteed to be valid.
     1: zx.handle:EXCEPTION exception;
     2: ExceptionInfo info;

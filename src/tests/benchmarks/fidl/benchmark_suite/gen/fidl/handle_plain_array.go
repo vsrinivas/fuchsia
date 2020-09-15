@@ -27,7 +27,7 @@ func init() {
 func fidlGenHandleArrayPlain(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct HandleArrayPlain%[1]d {
+resource struct HandleArrayPlain%[1]d {
 	array<handle>:%[1]d handles;
 };`, size), nil
 }

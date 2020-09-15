@@ -144,7 +144,7 @@ struct BufferCollectionConstraintsAuxBuffers {
 };
 
 [ForDeprecatedCBindings]
-struct VmoBuffer {
+resource struct VmoBuffer {
     /// The same VMO can be used by more than one CodecBuffer (only of the same
     /// buffer_lifetime_ordinal), but each vmo handle must be a separate handle.
     ///
@@ -161,7 +161,7 @@ struct VmoBuffer {
 /// Information about a buffer collection and its buffers.
 // TODO(fxb/32119): change struct to table
 [ForDeprecatedCBindings]
-struct BufferCollectionInfo_2 {
+resource struct BufferCollectionInfo_2 {
     /// The total number of buffers.
     uint32 buffer_count;
 
@@ -186,7 +186,7 @@ struct BufferCollectionInfo_2 {
 };
 
 [ForDeprecatedCBindings]
-struct SingleBufferInfo {
+resource struct SingleBufferInfo {
     SingleBufferSettings settings;
     VmoBuffer buffer;
 };

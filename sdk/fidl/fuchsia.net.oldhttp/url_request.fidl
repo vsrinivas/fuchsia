@@ -32,7 +32,7 @@ enum ResponseBodyMode {
   BUFFER_OR_STREAM = 2;
 };
 
-struct URLRequest {
+resource struct URLRequest {
   /// The URL to load.
   string url;
 

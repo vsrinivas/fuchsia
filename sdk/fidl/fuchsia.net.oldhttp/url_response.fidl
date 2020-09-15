@@ -4,7 +4,7 @@
 
 library fuchsia.net.oldhttp;
 
-struct URLResponse {
+resource struct URLResponse {
   /// If the response resulted in a network level error, this field will be set.
   HttpError? error;
 

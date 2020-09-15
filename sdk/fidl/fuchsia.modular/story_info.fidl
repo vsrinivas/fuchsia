@@ -27,7 +27,7 @@ struct StoryInfo {
 
 /// Information about a story as provided to the SessionShell.
 /// For transition purposes only.
-table StoryInfo2 {
+resource table StoryInfo2 {
     /// The ID of the Story, used to reference it in method arguments.
     1: string:MAX id;
 

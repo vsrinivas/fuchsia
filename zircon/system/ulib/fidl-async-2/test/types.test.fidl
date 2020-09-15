@@ -10,7 +10,7 @@ struct CopyableStruct {
 };
 
 [ForDeprecatedCBindings]
-struct MoveOnlyStruct {
+resource struct MoveOnlyStruct {
     handle h;
 };
 

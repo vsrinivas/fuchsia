@@ -18,7 +18,7 @@ using zx;
 // fuchsia.sysmem2.BufferCollection.SetConstraints() which will accept
 // constraints as defined here.
 
-table VmoBuffer {
+resource table VmoBuffer {
     /// The same VMO can be used by more than one CodecBuffer (only of the same
     /// buffer_lifetime_ordinal), but each vmo handle must be a separate handle.
     ///
@@ -48,7 +48,7 @@ const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 128;
 /// Information about a buffer collection and its buffers.
 // TODO(fxb/32119): provide a way for clients to receive this table instead of the
 // struct fuchsia.sysmem.BufferCollectionInfo_2.
-table BufferCollectionInfo {
+resource table BufferCollectionInfo {
     /// These settings apply to all the buffers in the inital buffer allocation.
     /// This must be set.
     1: SingleBufferSettings settings;

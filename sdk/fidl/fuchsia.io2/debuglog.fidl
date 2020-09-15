@@ -16,7 +16,7 @@ protocol Debuglog {
 /// The debuglog representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Debuglog`] protocol.
-table DebuglogInfo {
+resource table DebuglogInfo {
     /// The backing debuglog kernel object.
     1: zx.handle:LOG debuglog;
 };

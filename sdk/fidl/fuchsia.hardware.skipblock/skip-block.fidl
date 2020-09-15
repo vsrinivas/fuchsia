@@ -20,7 +20,7 @@ struct PartitionInfo {
 };
 
 [ForDeprecatedCBindings]
-struct ReadWriteOperation {
+resource struct ReadWriteOperation {
     /// Memory object describing buffer to read into or write from.
     zx.handle:VMO vmo;
     /// VMO offset in bytes.
@@ -53,7 +53,7 @@ enum WriteBytesMode {
     ERASE_WRITE = 2;
 };
 
-struct WriteBytesOperation {
+resource struct WriteBytesOperation {
     /// Memory object describing buffer to write from.
     zx.handle:VMO vmo;
     /// VMO offset in bytes.

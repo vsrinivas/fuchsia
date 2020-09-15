@@ -38,7 +38,7 @@ const uint32 MAX_PROPERTIES_LEN = 32;
 const uint32 MAX_NAME_LEN = 32;
 
 /// Request to add a new child device
-struct AddDeviceAction {
+resource struct AddDeviceAction {
     /// Value that will be echoed back in the completion message
     uint64 action_id;
 
@@ -61,7 +61,7 @@ struct AddDeviceAction {
 };
 
 /// What a hook should do.
-union Action {
+resource union Action {
     /// Return this status.
     1: zx.status return_status;
 

@@ -6,7 +6,7 @@ library fuchsia.io2;
 
 /// Returns run-time information about a node that is specific to the
 /// current connection.
-table ConnectionInfo {
+resource table ConnectionInfo {
     /// The active variant corresponds to one of the supported protocols
     /// of the node, and represents the result of the connection-time
     /// negotiation. Provides auxiliary handles if applicable.
@@ -54,7 +54,7 @@ bits ConnectionInfoQuery : uint64 {
 ///
 /// The elements have one-to-one correspondence with the members of
 /// [`NodeProtocols`].
-flexible union Representation {
+flexible resource union Representation {
     /// See [`NodeProtocols.CONNECTOR`].
     1: ConnectorInfo connector;
 

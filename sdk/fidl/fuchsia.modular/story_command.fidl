@@ -12,7 +12,7 @@ library fuchsia.modular;
 ///   (3) Symmetrical with observation: the same structures are used to describe
 ///       operations to watchers of a story (through SessionWatcher) as are used
 ///       to control a story.
-union StoryCommand {
+resource union StoryCommand {
     // Deprecated operation: set_focus_state.
     1: reserved;
 
@@ -34,7 +34,7 @@ union StoryCommand {
 
 /// Adds a mod described by `intent` to the story with name `mod_name`. If
 /// `mod_name` already exists in the story, the mod is updated.
-struct AddMod {
+resource struct AddMod {
     /// The name of the mod within the story. The mod's name acts as the unique
     /// ID of the mod, scoped to the story in which it is contained. Since
     /// AddMod is reused for observation and mod names are vector<string:MAX>

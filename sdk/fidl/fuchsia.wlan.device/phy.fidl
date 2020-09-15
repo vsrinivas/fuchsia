@@ -78,7 +78,7 @@ struct QueryResponse {
     PhyInfo info;
 };
 
-struct CreateIfaceRequest {
+resource struct CreateIfaceRequest {
     MacRole role;
     // TODO(WLAN-927): Make `sme_channel` mandatory once all drivers support the channel.
     zx.handle:CHANNEL? sme_channel;

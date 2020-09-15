@@ -8,7 +8,7 @@ library fuchsia.sys2;
 ///
 /// This object provides the component's declaration, access to its package's
 /// content, and relevant metadata.
-table Component {
+resource table Component {
     /// The resolved URL of the component.
     /// This is the canonical URL obtained by the component resolver after
     /// following redirects and resolving relative paths.

@@ -39,7 +39,7 @@ struct Header {
 };
 
 /// The body of an HTTP request.
-union Body {
+resource union Body {
     /// A buffer that will contain the complete request or response body.
     1: fuchsia.mem.Buffer buffer;
 
@@ -48,7 +48,7 @@ union Body {
 };
 
 /// An HTTP request.
-table Request {
+resource table Request {
     /// The HTTP method if applicable.
     ///
     /// Defaults to "GET".
@@ -89,7 +89,7 @@ table RedirectTarget {
 };
 
 /// A response to an HTTP request.
-table Response {
+resource table Response {
     /// If the response resulted in a network level error, this field will be
     /// set.
     1: Error error;

@@ -14,7 +14,7 @@ using zx;
 /// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 /// and its size.
 [ForDeprecatedCBindings]
-struct Buffer {
+resource struct Buffer {
     /// The vmo that contains the buffer.
     zx.handle:VMO vmo;
 
@@ -34,7 +34,7 @@ struct Buffer {
 /// amounts of binary data (i.e., which is more efficient to provide using
 /// `bytes`) but also need to support arbitrary amounts of data (i.e., which
 /// need to be provided out-of-line in a `Buffer`).
-flexible union Data {
+flexible resource union Data {
     /// The binary data provided inline in the message.
     1: bytes bytes;
 

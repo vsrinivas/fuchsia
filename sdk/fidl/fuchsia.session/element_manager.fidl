@@ -106,7 +106,7 @@ enum ProposeElementError {
 };
 
 /// Description of an element to be added to a session.
-table ElementSpec {
+resource table ElementSpec {
     /// The component URL of the element. Required.
     1: fuchsia.url.Url component_url;
 

@@ -240,34 +240,34 @@ table ValueTable {
     4: IntStructUnion third_union;
 };
 
-struct HandleStruct {
+resource struct HandleStruct {
     zx.handle:CHANNEL h1;
     zx.handle:CHANNEL h2;
     zx.handle:CHANNEL h3;
 };
 
-struct OptHandleStruct {
+resource struct OptHandleStruct {
     zx.handle:CHANNEL? sh1;
     zx.handle:CHANNEL? sh2;
 };
 
-table HandleTable {
+resource table HandleTable {
     1: zx.handle:CHANNEL h1;
     2: OptHandleStruct s1;
 };
 
-struct TraversalOrder {
+resource struct TraversalOrder {
     OptHandleStruct? s;
     zx.handle:CHANNEL? h1;
     zx.handle:CHANNEL? h2;
 };
 
-struct TraversalStruct {
+resource struct TraversalStruct {
     uint32 a;
     zx.handle:CHANNEL? b;
 };
 
-struct TraversalMain {
+resource struct TraversalMain {
     uint32 x;
     TraversalStruct? y;
 };

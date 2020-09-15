@@ -72,7 +72,7 @@ table ChannelParameters {
 };
 
 /// A channel opened to a peer.
-table Channel {
+resource table Channel {
     /// Socket interface for sending/receiving SDUs on the channel.
     /// Always present.
     1: zx.handle:SOCKET socket;

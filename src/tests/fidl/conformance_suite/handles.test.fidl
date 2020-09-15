@@ -7,32 +7,32 @@ library conformance;
 // TODO(fxb/36441): Allow bindings to compile on host with handles.
 
 [BindingsDenylist = "cpp, llcpp"]
-struct SingleHandle {
+resource struct SingleHandle {
     handle h;
 };
 
 [BindingsDenylist = "cpp, llcpp"]
-struct SingleOptionalHandle {
+resource struct SingleOptionalHandle {
     handle? h;
 };
 
 [BindingsDenylist = "cpp, llcpp"]
-struct ArrayOfHandles {
+resource struct ArrayOfHandles {
     array<handle>:3 a;
 };
 
 [BindingsDenylist = "cpp, llcpp"]
-struct ArrayOfOptionalHandles {
+resource struct ArrayOfOptionalHandles {
     array<handle?>:3 a;
 };
 
 [BindingsDenylist = "cpp, llcpp"]
-struct VectorOfHandles {
+resource struct VectorOfHandles {
     vector<handle> v;
 };
 
 [BindingsDenylist = "cpp, llcpp"]
-struct VectorOfOptionalHandles {
+resource struct VectorOfOptionalHandles {
     vector<handle?> v;
 };
 
@@ -52,7 +52,7 @@ resource_definition handle : uint32 {
 };
 
 [BindingsDenylist = "cpp, llcpp"]
-struct MultipleHandleSubtypes {
+resource struct MultipleHandleSubtypes {
     handle untyped;
     handle:EVENT event;
     handle:CHANNEL channel;

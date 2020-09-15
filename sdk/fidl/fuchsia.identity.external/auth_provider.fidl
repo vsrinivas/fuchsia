@@ -8,7 +8,7 @@ using fuchsia.auth;
 using fuchsia.identity.tokens as tokens;
 
 /// The request format used to create a new OAuth 2.0 Refresh Token.
-table OauthRefreshTokenRequest {
+resource table OauthRefreshTokenRequest {
     /// The account to create the token for, if known. If omitted, the user will
     /// be prompted to specify an account.
     1: tokens.AccountId account_id;

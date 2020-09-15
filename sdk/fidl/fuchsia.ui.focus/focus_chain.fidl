@@ -20,7 +20,7 @@ using fuchsia.ui.views;
 ///
 /// Reception. Only certain components may receive a FocusChain, as it
 /// captures global information about the scene graph.
-table FocusChain {
+resource table FocusChain {
     1: vector<fuchsia.ui.views.ViewRef> focus_chain;
 };
 

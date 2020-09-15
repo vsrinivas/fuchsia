@@ -6,7 +6,7 @@ library fuchsia.sys;
 
 using zx;
 
-struct FlatNamespace {
+resource struct FlatNamespace {
   /// The mount point for each of the directories below.
   ///
   /// For example, ["/pkg", "/svc"].

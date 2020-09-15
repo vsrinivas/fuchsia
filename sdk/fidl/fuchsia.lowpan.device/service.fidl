@@ -40,7 +40,7 @@ enum ServiceError : int32 {
 
 /// Table of protocol requests that is passed into `Lookup.Lookup()`
 /// and `Driver.GetProtocols()`.
-table Protocols {
+resource table Protocols {
     1: request<Device> device;
     2: request<DeviceExtra> device_extra;
     3: request<fuchsia.lowpan.test.DeviceTest> device_test;

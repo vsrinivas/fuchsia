@@ -51,7 +51,7 @@ struct SdioHwInfo {
     uint32 host_max_transfer_size;
 };
 
-struct SdioRwTxn {
+resource struct SdioRwTxn {
     uint32 addr;
     uint32 data_size;
     bool incr;

@@ -9,7 +9,7 @@ using zx;
 /// Auxiliary data for the POSIX socket representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.posix.socket/Control`] protocol.
-table PosixSocketInfo {
+resource table PosixSocketInfo {
     /// The backing transport for the socket.
     /// The rights on this socket should correspond to the rights on the
     /// node connection.

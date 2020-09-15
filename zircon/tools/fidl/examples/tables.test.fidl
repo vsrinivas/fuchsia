@@ -12,10 +12,10 @@ struct B {
     A? bar;
 };
 
-struct C {
+resource struct C {
     handle baz;
 };
 
-struct D {
+resource struct D {
     C qux;
 };

@@ -181,7 +181,7 @@ bits VmoFlags : uint64 {
 /// Auxiliary data for the file representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/File`] protocol.
-table FileInfo {
+resource table FileInfo {
     /// An optional event which transmits information about an object's
     /// readability or writability. This event relays information about the
     /// underlying object, not the capability granted to client: this event

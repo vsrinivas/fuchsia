@@ -11,7 +11,7 @@ using zx;
 /// how to interpret the optional handle.
 ///
 /// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
-union NodeInfo {
+resource union NodeInfo {
     1: Service service;
     2: FileObject file;
     3: DirectoryObject directory;
@@ -37,7 +37,7 @@ const uint32 FILE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
 
 /// The object may be cast to interface 'File'.
 [ForDeprecatedCBindings]
-struct FileObject {
+resource struct FileObject {
     /// An optional event which transmits information about an object's readability
     /// or writability. This event relays information about the underlying object, not
     /// the capability granted to client: this event may be signalled "readable" on a
@@ -59,7 +59,7 @@ struct DirectoryObject {
 
 /// The object is accompanied by a pipe.
 [ForDeprecatedCBindings]
-struct Pipe {
+resource struct Pipe {
     zx.handle:SOCKET socket;
 };
 
@@ -68,7 +68,7 @@ struct Pipe {
 /// may represent multiple Vmofiles. To identify the logical portion of the VMO
 /// that represents the single file, an offset and length parameter are also supplied.
 [ForDeprecatedCBindings]
-struct Vmofile {
+resource struct Vmofile {
     /// The VMO which backs this file.
     zx.handle:VMO vmo;
     /// The index into `vmo` which represents the first byte of the file.
@@ -90,7 +90,7 @@ const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
 
 /// The object may be cast to interface 'Device'.
 [ForDeprecatedCBindings]
-struct Device {
+resource struct Device {
     /// An optional event which transmits information about a device's state.
     ///
     /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
@@ -99,20 +99,20 @@ struct Device {
 
 /// The object may be cast to interface 'Tty'
 [ForDeprecatedCBindings]
-struct Tty {
+resource struct Tty {
     zx.handle:EVENTPAIR? event;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].
 [ForDeprecatedCBindings]
-struct DatagramSocket {
+resource struct DatagramSocket {
     /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
     zx.handle:EVENTPAIR event;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.StreamSocket`].
 [ForDeprecatedCBindings]
-struct StreamSocket {
+resource struct StreamSocket {
     zx.handle:SOCKET socket;
 };
 

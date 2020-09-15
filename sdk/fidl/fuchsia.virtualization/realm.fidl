@@ -30,7 +30,7 @@ enum BlockFormat {
 const uint64 MAX_BLOCK_DEVICE_ID_SIZE = 20;
 
 /// Properties describing a single block device in the system.
-struct BlockDevice {
+resource struct BlockDevice {
     /// A label used to identify the block device.
     string:MAX_BLOCK_DEVICE_ID_SIZE id;
     /// The access mode for the block backing file.
@@ -131,7 +131,7 @@ protocol WaylandDispatcher {
 };
 
 /// Properties describing a virtio_wl device.
-struct WaylandDevice {
+resource struct WaylandDevice {
     /// The amount of guest-physical address space to allocate for virtio_wl
     /// buffers.
     ///
@@ -151,7 +151,7 @@ struct MagmaDevice {
     uint64 memory = 17179869184;
 };
 
-struct LaunchInfo {
+resource struct LaunchInfo {
     /// The URL of the package to launch.
     string url;
 

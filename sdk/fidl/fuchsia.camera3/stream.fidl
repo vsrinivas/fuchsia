@@ -79,7 +79,7 @@ protocol Stream {
 };
 
 /// Metadata concerning a given frame.
-struct FrameInfo {
+resource struct FrameInfo {
     /// Identifies the buffer used for this frame as an index into the most recently negotiated
     /// buffer collection.
     uint32 buffer_index;

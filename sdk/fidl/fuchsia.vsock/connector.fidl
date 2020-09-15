@@ -8,7 +8,7 @@ using zx;
 using fuchsia.hardware.vsock;
 
 /// Collection of objects that represent an open connection.
-struct ConnectionTransport {
+resource struct ConnectionTransport {
     /// `data` socket that is ultimately given to the underlying vsock driver and
     /// is where all incoming data can be received from.
     zx.handle:SOCKET data;

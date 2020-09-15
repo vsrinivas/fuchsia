@@ -10,7 +10,7 @@ table t {
     1: string s;
 };
 
-flexible union xu {
+flexible resource union xu {
     1: int32 i;
     2: float32 f;
     3: string s;

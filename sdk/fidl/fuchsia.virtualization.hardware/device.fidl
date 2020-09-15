@@ -31,7 +31,7 @@ struct Trap {
 };
 
 /// Contains the basic information required to start execution of a device.
-struct StartInfo {
+resource struct StartInfo {
     /// The trap associated with a device. It is up to the device to set this
     /// trap during device setup.
     Trap trap;

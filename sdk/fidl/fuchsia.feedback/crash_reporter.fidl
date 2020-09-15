@@ -23,7 +23,7 @@ const uint32 MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT = 16;
 const uint32 MAX_EVENT_ID_LENGTH = 128;
 
 /// Represents a crash report.
-table CrashReport {
+resource table CrashReport {
     /// The name of the program that crashed, e.g., the process or component's name.
     1: string:MAX_PROGRAM_NAME_LENGTH program_name;
 
@@ -60,7 +60,7 @@ table CrashReport {
 ///
 /// Add a new member when the server needs to special case how it handles certain annotations and
 /// attachments for a given type of crashes, e.g., a `RuntimeCrashReport` for Javascript.
-flexible union SpecificCrashReport {
+flexible resource union SpecificCrashReport {
     /// Intended for arbitrary crashes, e.g., OOM, out-of-disk.
     1: GenericCrashReport generic;
 
@@ -85,7 +85,7 @@ table GenericCrashReport {
 };
 
 /// Represents a crash report for a native exception out of which the client has built a minidump.
-table NativeCrashReport {
+resource table NativeCrashReport {
     /// The core dump in the Minidump format.
     1: fuchsia.mem.Buffer minidump;
 };
@@ -94,7 +94,7 @@ const uint32 MAX_EXCEPTION_TYPE_LENGTH = 128;
 const uint32 MAX_EXCEPTION_MESSAGE_LENGTH = 2048;
 
 /// Represents a crash report for a runtime exception, applicable to most languages.
-table RuntimeCrashReport {
+resource table RuntimeCrashReport {
     /// The exception type, e.g., "FileSystemException".
     1: string:MAX_EXCEPTION_TYPE_LENGTH exception_type;
 

@@ -14,7 +14,7 @@ const uint64 MAX_TREE_NAME_LIST_SIZE = 64;
 using TreeName = string:MAX_TREE_NAME_LENGTH;
 
 /// The content of a specific Inspect Tree.
-table TreeContent {
+resource table TreeContent {
     /// Buffer containing the bytes of a tree in Inspect format.
     1: fuchsia.mem.Buffer buffer;
 };

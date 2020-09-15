@@ -21,7 +21,7 @@ struct LaunchService {
 
 /// A single virtual device to make available for child processes.
 /// Virtual devices are mounted on /vdev.
-struct VirtualDevice {
+resource struct VirtualDevice {
     /// Relative path to /vdev.
     string:MAX path;
     /// Virtual device server.
@@ -47,7 +47,7 @@ table LoggerOptions {
 };
 
 /// Options used to create environment.
-table EnvironmentOptions {
+resource table EnvironmentOptions {
     /// Environment name, for debugging purposes.
     /// If none provided, a random name will be generated.
     1: string:MAX name;

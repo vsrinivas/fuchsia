@@ -487,7 +487,7 @@ table StreamBufferSettings {
 //
 // TODO(dustingreen): Consider renaming this to StreamBufferSettings once that's
 // an option.
-table StreamBufferPartialSettings {
+resource table StreamBufferPartialSettings {
     /// The containing message starts a new buffer_lifetime_ordinal.
     ///
     /// There is a separate buffer_lifetime_ordinal for input vs. output.
@@ -579,7 +579,7 @@ table StreamBufferPartialSettings {
 ///
 /// When `single_buffer_mode` is true, there is only buffer_index 0 shared by all
 /// packet(s) of the relevant input or output.
-table StreamBuffer {
+resource table StreamBuffer {
     /// When using AddOutputBuffer()/AddInputBuffer(), this must match the
     /// buffer_lifetime_ordinal of the most recent
     /// SetOutputBufferSettings()/SetInputBufferSettings().
@@ -614,7 +614,7 @@ table StreamBuffer {
 /// but the idea with this union is to have a struct per logical way of storing
 /// the data.  Any multi-domain storage within a gralloc buffer will likely be
 /// only indirectly represented here.
-union StreamBufferData {
+resource union StreamBufferData {
     1: StreamBufferDataVmo vmo;
 
     // TODO(dustingreen): add the gralloc way
@@ -623,7 +623,7 @@ union StreamBufferData {
 /// StreamBufferDataVmo
 ///
 /// Details for a buffer backed by a VMO.
-table StreamBufferDataVmo {
+resource table StreamBufferDataVmo {
     /// The same VMO can be used by more than one StreamBuffer (only of the same
     /// buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
     1: zx.handle:VMO vmo_handle;

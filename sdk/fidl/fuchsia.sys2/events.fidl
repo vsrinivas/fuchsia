@@ -94,7 +94,7 @@ table AboveRootCapability {
 };
 
 /// Describes the result of a state transition.
-flexible union EventResult {
+flexible resource union EventResult {
     /// The payload of the event if the state transition described by the event
     /// succeeds.
     1: EventPayload payload;
@@ -201,7 +201,7 @@ table StoppedError {
 };
 
 /// Encapsulates additional data/protocols for some event types.
-flexible union EventPayload {
+flexible resource union EventPayload {
     /// Payload for CapabilityReady events
     1: CapabilityReadyPayload capability_ready;
 
@@ -234,7 +234,7 @@ flexible union EventPayload {
 };
 
 /// Payload for CapabilityReady events
-table CapabilityReadyPayload {
+resource table CapabilityReadyPayload {
     // TODO(56604): Once name-based capabilities have landed, this (and the
     // filter field) should be a name.
     /// The path of the capability.
@@ -245,7 +245,7 @@ table CapabilityReadyPayload {
 };
 
 /// Payload for CapabilityRequested events
-table CapabilityRequestedPayload {
+resource table CapabilityRequestedPayload {
     /// The path of the capability.
     // TODO(56604): Once name-based capabilities have landed, this (and the
     // filter field) should be a name.
@@ -257,7 +257,7 @@ table CapabilityRequestedPayload {
 };
 
 /// Payload for CapabilityRouted events
-table CapabilityRoutedPayload {
+resource table CapabilityRoutedPayload {
     /// Allows setting a capability provider for
     /// CapabilityRouted events
     /// This will not be available with an async event.
@@ -312,7 +312,7 @@ table ComponentDescriptor {
 };
 
 /// Contains all information about a single event
-table Event {
+resource table Event {
     /// Event type corresponding to the event
     1: EventType event_type;
 

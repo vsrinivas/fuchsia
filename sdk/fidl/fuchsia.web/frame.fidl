@@ -298,7 +298,7 @@ protocol Frame {
     GetPrivateMemorySize() -> (uint64 size_bytes);
 };
 
-table WebMessage {
+resource table WebMessage {
     /// The message payload, encoded as an UTF-8 string. This is a required property.
     1: fuchsia.mem.Buffer data;
 
@@ -311,11 +311,11 @@ table WebMessage {
     3: vector<OutgoingTransferable>:MAX outgoing_transfer;
 };
 
-flexible union OutgoingTransferable {
+flexible resource union OutgoingTransferable {
     1: request<MessagePort> message_port;
 };
 
-flexible union IncomingTransferable {
+flexible resource union IncomingTransferable {
     1: MessagePort message_port;
 };
 

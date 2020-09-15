@@ -8,7 +8,7 @@ using zx;
 
 /// An FDIO file descriptor.
 // TODO(abarth): Use the real FDIO declaration once FDIO converts to FIDL2.
-struct FileDescriptor {
+resource struct FileDescriptor {
     /// The FDIO types of the handle (e.g., `FA_FDIO_REMOTE`).
     int32 type0;
     int32 type1;
@@ -22,7 +22,7 @@ struct FileDescriptor {
 
 /// Information used to create an instance of a component and obtain
 /// services from it.
-struct LaunchInfo {
+resource struct LaunchInfo {
     /// The location from which to retrieve this component.
     ///
     /// This field will probably be replaced with a stronger notion of identity,
@@ -61,7 +61,7 @@ struct LaunchInfo {
     ServiceList? additional_services;
 };
 
-struct ServiceList {
+resource struct ServiceList {
     /// A list of services that can be requested from `provider`.
     vector<string> names;
 

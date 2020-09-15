@@ -18,7 +18,7 @@ protocol Memory {
 /// The node is a file which is represented as a VMO.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Memory`] protocol.
-table MemoryInfo {
+resource table MemoryInfo {
     /// Although a VMO is returned as a part of this structure, that VMO may
     /// back multiple files. To identify the logical portion of the VMO that
     /// represents the single file, offset and size are also supplied.

@@ -8,7 +8,7 @@ using fuchsia.mem;
 using zx;
 
 /// Commands that are used to modify the state of a `Session`.
-union Command {
+resource union Command {
     1: CreateResourceCmd create_resource;
     2: ReleaseResourceCmd release_resource;
     3: ExportResourceCmdDeprecated export_resource;
@@ -105,7 +105,7 @@ union Command {
 
 /// Instructs the compositor to create the specified `Resource`, and to register
 /// it in a table so that it can be referenced by subsequent commands.
-struct CreateResourceCmd {
+resource struct CreateResourceCmd {
     /// An ID that is currently not used within the session.
     uint32 id;
     ResourceArgs resource;
@@ -131,7 +131,7 @@ struct ReleaseResourceCmd {
 /// No specific mechanism is provided for transferring a token from an exporter
 /// to an importer; collaborators may choose any out-of-band API they wish to do
 /// so.
-struct ExportResourceCmdDeprecated {
+resource struct ExportResourceCmdDeprecated {
     uint32 id;
     zx.handle:EVENTPAIR token;
 };
@@ -158,7 +158,7 @@ struct ExportResourceCmdDeprecated {
 // TODO: describe how the imported resource behaves if the exported resource
 // isn't yet available, or becomes unavailable (e.g. an imported Material might
 // act as a plain white texture).
-struct ImportResourceCmdDeprecated {
+resource struct ImportResourceCmdDeprecated {
     uint32 id;
     zx.handle:EVENTPAIR token;
     ImportSpec spec;
@@ -402,7 +402,7 @@ protocol SnapshotCallbackDEPRECATED {
     OnData(fuchsia.mem.Buffer data);
 };
 
-struct TakeSnapshotCmdDEPRECATED {
+resource struct TakeSnapshotCmdDEPRECATED {
     uint32 node_id;
     SnapshotCallbackDEPRECATED callback;
 };

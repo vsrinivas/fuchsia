@@ -12,23 +12,23 @@ protocol LinearizerTest {
     VectorOfString(vector<string> v);
 };
 
-struct StructWithHandle {
+resource struct StructWithHandle {
     handle h;
     int32 foo;
 };
 
-struct StructWithManyHandles {
+resource struct StructWithManyHandles {
     handle h1;
     handle h2;
     vector<handle>:2 hs;
 };
 
-table TableOfStructWithHandle {
+resource table TableOfStructWithHandle {
     1: StructWithHandle a;
     2: StructWithManyHandles b;
 };
 
-table SmallerTableOfStructWithHandle {
+resource table SmallerTableOfStructWithHandle {
     1: reserved;
     2: StructWithManyHandles b;
 };

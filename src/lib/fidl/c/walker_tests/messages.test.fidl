@@ -16,7 +16,7 @@ protocol Handles {
     MultipleNullableHandles(uint32 data0, handle? h0, uint64 data1, handle? h1, handle? h2, uint64 data2);
 };
 
-struct NonnullableHandleArray {
+resource struct NonnullableHandleArray {
     array<handle>:4 handles;
 };
 
@@ -51,23 +51,23 @@ protocol Vectors {
     MultipleNullableVectorsOfUint32s(vector<uint32>? vu0, vector<uint32>? vu1);
 };
 
-union SingleHandleUnion {
+resource union SingleHandleUnion {
     1: handle h0;
 };
 
-union MultipleHandlesUnion {
+resource union MultipleHandlesUnion {
     1: handle h;
     2: array<handle>:2 hs;
     3: array<array<handle>:2>:2 hss;
 };
 
-union MaybeRecurse {
+resource union MaybeRecurse {
     1: handle h;
     2: MaybeRecurseHelper more;
 };
 
 // Unions cannot have nullable fields, so wrap it in a struct.
-struct MaybeRecurseHelper {
+resource struct MaybeRecurseHelper {
     MaybeRecurse? more;
 };
 
@@ -79,42 +79,42 @@ protocol Unions {
     Recursion(MaybeRecurse u);
 };
 
-struct Inline3 {
+resource struct Inline3 {
     uint32 padding;
     handle h;
 };
 
-struct Inline2 {
+resource struct Inline2 {
     uint64 padding;
     Inline3 l3;
     handle h;
 };
 
-struct Inline1 {
+resource struct Inline1 {
     handle h;
     Inline2 l2;
     uint64 padding;
 };
 
-struct Inline0 {
+resource struct Inline0 {
     uint64 padding;
     Inline1 L1;
     handle h;
 };
 
-struct OutOfLine3 {
+resource struct OutOfLine3 {
     uint32 padding;
     handle h;
 };
 
-struct OutOfLine2 {
+resource struct OutOfLine2 {
     uint64 padding;
     OutOfLine3? l3_present;
     OutOfLine3? l3_absent;
     OutOfLine3 l3_inline;
 };
 
-struct OutOfLine1 {
+resource struct OutOfLine1 {
     handle h;
     OutOfLine2? l2_present;
     OutOfLine2 l2_inline;
@@ -122,7 +122,7 @@ struct OutOfLine1 {
     uint64 padding;
 };
 
-struct OutOfLine0 {
+resource struct OutOfLine0 {
     uint64 padding;
     OutOfLine1? l1_absent;
     OutOfLine1 l1_inline;

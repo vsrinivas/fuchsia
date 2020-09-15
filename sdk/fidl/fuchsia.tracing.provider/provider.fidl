@@ -110,7 +110,7 @@ enum BufferingMode : uint8 {
 // add configuration data without changing the method signature. Structs still
 // introduce ABI compatibility issues, this will be switched to a table when
 // tables are ready for use in zircon.
-struct ProviderConfig {
+resource struct ProviderConfig {
     /// `buffering_mode` specifies what happens when the buffer fills.
     BufferingMode buffering_mode;
 

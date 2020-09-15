@@ -11,19 +11,19 @@ enum MyError : int32 {
     REALLY_BAD_ERROR = 2;
 };
 
-struct HandleStruct {
+resource struct HandleStruct {
     zx.handle:EVENT h;
 };
 
-struct VectorStruct {
+resource struct VectorStruct {
     vector<HandleStruct> v;
 };
 
-union HandleUnion {
+resource union HandleUnion {
     1: zx.handle:EVENT h;
 };
 
-struct HandleUnionStruct {
+resource struct HandleUnionStruct {
     HandleUnion u;
 };
 

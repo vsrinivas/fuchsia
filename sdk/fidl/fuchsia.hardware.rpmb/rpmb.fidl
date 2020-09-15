@@ -35,7 +35,7 @@ flexible union DeviceInfo {
 /// not be performed if the write operation failed. Invalid parameters passed through tx_frames or
 /// rx_frames will cause an error to be returned immediately, without either operation having been
 /// performed.
-struct Request {
+resource struct Request {
     /// May not be null as all operations involve sending at least one frame. tx_frames.size must be
     /// a multiple of and at least FRAME_SIZE.
     fuchsia.mem.Range tx_frames;

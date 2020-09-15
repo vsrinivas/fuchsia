@@ -26,7 +26,7 @@ struct Info {
 };
 
 [ForDeprecatedCBindings]
-struct Fifos {
+resource struct Fifos {
     // handles for the rx and tx fifo
     zx.handle:FIFO rx;
     zx.handle:FIFO tx;

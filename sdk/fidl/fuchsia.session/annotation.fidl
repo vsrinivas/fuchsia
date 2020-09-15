@@ -9,7 +9,7 @@ using fuchsia.mem;
 /// The value of an [`fuchsia.session/Annotation`].
 ///
 /// The actual field used depends on the type of annotation.
-union Value {
+resource union Value {
     1: string:MAX text;
     2: fuchsia.mem.Buffer buffer;
 };
@@ -19,7 +19,7 @@ union Value {
 /// The Session Framework does not constrain the contents of `key` and `value`
 /// in any way. Cooperating components that exchange annotations must define
 /// and validate annotation entries based on their own conventions.
-struct Annotation {
+resource struct Annotation {
     /// An identfier for this annotation.
     string:MAX key;
 
@@ -45,7 +45,7 @@ enum AnnotationError {
 };
 
 /// The annotations applied to an element.
-table Annotations {
+resource table Annotations {
     /// A list of dynamically-defined annotations.
     1: vector<Annotation>:MAX custom_annotations;
 };

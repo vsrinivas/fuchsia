@@ -8,6 +8,6 @@ library benchmarkfidl;
 
 using zx;
 
-struct HandleArrayEvent64 {
+resource struct HandleArrayEvent64 {
     array<zx.handle:EVENT>:64 handles;
 };

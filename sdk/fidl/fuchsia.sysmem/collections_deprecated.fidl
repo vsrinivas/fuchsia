@@ -9,7 +9,7 @@ using zx;
 /// Information about a buffer collection and its buffers.
 // TODO(fxb/32119): change struct to table
 [ForDeprecatedCBindings]
-struct BufferCollectionInfo {
+resource struct BufferCollectionInfo {
     /// The number of buffers in the collection.
     uint32 buffer_count;
 

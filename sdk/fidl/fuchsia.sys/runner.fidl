@@ -11,7 +11,7 @@ using zx;
 ///
 /// For ELF binaries, this information is provided in the initialization
 /// message given to `libc` by `fuchsia.process.Launcher`.
-struct StartupInfo {
+resource struct StartupInfo {
     /// The launch info for the component to start.
     LaunchInfo launch_info;
 
@@ -40,7 +40,7 @@ struct ProgramMetadata {
 /// A binary representation of a component.
 ///
 /// Typically provided to `Runner.StartComponent` when starting a component.
-struct Package {
+resource struct Package {
     /// A read-only binary representation of the component. For example, if the
     /// component is intended to run in the Dart virtual machine, this data
     /// might contain a dartx package.

@@ -127,7 +127,7 @@ struct FrameMetadata {
 };
 
 /// Collection of request protocols that tun devices can offer.
-table Protocols {
+resource table Protocols {
     /// Connection request to the [`fuchsia.hardware.network/Device`] protocol.
     ///
     /// The request is always fulfilled.
@@ -205,7 +205,7 @@ protocol Device {
 /// A collection of connection requests to ends of a [`fuchsia.net.tun/DevicePair`].
 ///
 /// Used to connect to a `DevicePair` through [`fuchsia.net.tun/DevicePair.ConnectProtocols`].
-table DevicePairEnds {
+resource table DevicePairEnds {
     /// Connection request to protocols on the left end.
     1: Protocols left;
     /// Connection request to protocols on the right end.

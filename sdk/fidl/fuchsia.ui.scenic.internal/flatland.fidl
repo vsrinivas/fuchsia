@@ -93,12 +93,12 @@ protocol ContentLink {
 };
 
 /// A typed wrapper for an eventpair, representing the child endpoint of a Link.
-struct GraphLinkToken {
+resource struct GraphLinkToken {
     zx.handle:EVENTPAIR value;
 };
 
 /// A typed wrapper for an eventpair, representing the parent endpoint of a Link.
-struct ContentLinkToken {
+resource struct ContentLinkToken {
     zx.handle:EVENTPAIR value;
 };
 

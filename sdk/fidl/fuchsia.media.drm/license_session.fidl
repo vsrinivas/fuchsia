@@ -43,14 +43,14 @@ struct LicenseInitData {
 
 /// A message originating from the [`LicenseSession`] that the caller must route
 /// to the license server.
-struct LicenseMessage {
+resource struct LicenseMessage {
     LicenseMessageType type;
     fuchsia.mem.Buffer message;
 };
 
 /// A message originating from the license server that the caller must provide
 /// to the [`LicenseSession`] via `ProcessLicenseServerMessage`.
-struct LicenseServerMessage {
+resource struct LicenseServerMessage {
     fuchsia.mem.Buffer message;
 };
 

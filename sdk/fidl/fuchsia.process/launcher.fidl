@@ -15,7 +15,7 @@ using zx;
 ///
 /// This structure represents one such handle and its associated zx.procarg
 /// identifier.
-struct HandleInfo {
+resource struct HandleInfo {
     /// The handle to use for this process argument.
     handle handle;
 
@@ -33,7 +33,7 @@ struct HandleInfo {
 /// their intended use by the new process as namespace entries.
 ///
 /// This structure represents one such handle and its associated namespace path.
-struct NameInfo {
+resource struct NameInfo {
     /// Path at which to install the associated directory.
     ///
     /// Must be an absolute path (i.e., start with '/').
@@ -44,7 +44,7 @@ struct NameInfo {
 };
 
 /// The information needed to launch a process.
-struct LaunchInfo {
+resource struct LaunchInfo {
     /// The executable to run in the process.
     zx.handle:VMO executable;
 
@@ -58,7 +58,7 @@ struct LaunchInfo {
 /// The information required to start a process.
 ///
 /// To start the process, call `zx_process_start` with the arguments provided.
-struct ProcessStartData {
+resource struct ProcessStartData {
     /// The process that was created.
     zx.handle:PROCESS process;
 

@@ -10,7 +10,7 @@ using zx;
 
 /// These are all of the types of resources that can be created within a
 /// `Session`. Add new fields only to the bottom of the list.
-union ResourceArgs {
+resource union ResourceArgs {
     // Memory resources.
     1: MemoryArgs memory;
     2: ImageArgs image;
@@ -65,19 +65,19 @@ union ResourceArgs {
     32: ImagePipe2Args image_pipe2;
 };
 
-struct ImagePipeArgs {
+resource struct ImagePipeArgs {
     request<fuchsia.images.ImagePipe> image_pipe_request;
 };
 
 /// `ImagePipe2` is a `Resource` that can be used as a `Texture` for a `Material`.
-struct ImagePipe2Args {
+resource struct ImagePipe2Args {
     request<fuchsia.images.ImagePipe2> image_pipe_request;
 };
 
 /// `Memory` is a `Resource` that wraps a client-provided Zircon vmo to register
 /// it with Scenic.
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
-struct MemoryArgs {
+resource struct MemoryArgs {
     // The VMO which backs this memory.
     zx.handle:VMO vmo;
 
@@ -116,7 +116,7 @@ struct BufferArgs {
 /// Usually the `View` and its associated `ViewHolder` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
-struct ViewArgs {
+resource struct ViewArgs {
     fuchsia.ui.views.ViewToken token;
     string? debug_name;
 };
@@ -138,7 +138,7 @@ struct ViewArgs {
 /// feed-forward style. It is accompanied by a `ViewRefControl`, which Scenic
 /// uses to signal `View` destruction across the system; the `ViewRefControl`
 /// must be unique - do not clone it.
-struct ViewArgs3 {
+resource struct ViewArgs3 {
     fuchsia.ui.views.ViewToken token;
     /// `control_ref.reference` must have default eventpair rights (i.e., with
     /// signaling), minus ZX_RIGHT_DUPLICATE.
@@ -157,7 +157,7 @@ struct ViewArgs3 {
 /// Usually the `ViewHolder` and its associated `View` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
-struct ViewHolderArgs {
+resource struct ViewHolderArgs {
     fuchsia.ui.views.ViewHolderToken token;
     string? debug_name;
 };
@@ -179,7 +179,7 @@ struct DisplayCompositorArgs {
 
 /// An ImagePipeCompositor draws its attached `LayerStack` into an image that is
 /// presented on an image-pipe.
-struct ImagePipeCompositorArgs {
+resource struct ImagePipeCompositorArgs {
     fuchsia.images.ImagePipe target;
 };
 

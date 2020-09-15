@@ -8,7 +8,7 @@ using fuchsia.mem;
 
 /// An attachment and its plain ASCII string key.
 /// Attachments are larger objects, e.g., log files. They may be binary or text data.
-struct Attachment {
+resource struct Attachment {
     string:128 key;
     fuchsia.mem.Buffer value;
 };

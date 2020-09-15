@@ -9,7 +9,7 @@ using fuchsia.images;
 using fuchsia.scenic.scheduling;
 
 /// Arguments passed into Present2(). Note that every argument is mandatory.
-table Present2Args {
+resource table Present2Args {
     /// `requested_presentation_time` specifies the time on or after which the
     /// client would like the enqueued operations to take visible effect
     /// (light up pixels on the screen), expressed in nanoseconds in the

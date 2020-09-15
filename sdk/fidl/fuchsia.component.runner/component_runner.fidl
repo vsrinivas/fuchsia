@@ -38,7 +38,7 @@ protocol ComponentRunner {
 /// A single component namespace entry, which describes a namespace mount point
 /// (`path`) and the directory backing it (`directory`). This type is usually
 /// composed inside a vector.  See `ComponentStartInfo.ns` for more details.
-table ComponentNamespaceEntry {
+resource table ComponentNamespaceEntry {
     /// The mount point for the directory, including a
     /// leading slash. For example: "/pkg", "/svc", or "/config/data".
     1: string:fuchsia.component.MAX_PATH_LENGTH path;
@@ -48,7 +48,7 @@ table ComponentNamespaceEntry {
 };
 
 /// Parameters for starting a new component instance.
-table ComponentStartInfo {
+resource table ComponentStartInfo {
     /// The resolved URL of the component.
     ///
     /// This is the canonical URL obtained by the component resolver after
