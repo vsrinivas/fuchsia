@@ -25,7 +25,6 @@ class ErmineStory {
 
   // An optional view controller which allows the story to communicate with the
   // process.
-  @visibleForTesting
   ViewControllerImpl viewController;
 
   ViewRef viewRef;
@@ -134,12 +133,8 @@ class ErmineStory {
   }
 
   void presentView(
-      ViewHolderToken viewHolderToken, ViewRef viewRef, ViewControllerImpl vc) {
-    childViewConnectionNotifier.value = ChildViewConnection(
-      viewHolderToken,
-      onAvailable: (_) {},
-      onUnavailable: (_) {},
-    );
+      ChildViewConnection connection, ViewRef viewRef, ViewControllerImpl vc) {
+    childViewConnectionNotifier.value = connection;
     this.viewRef = viewRef;
     viewController = vc;
     viewController?.didPresent();

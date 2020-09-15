@@ -7,7 +7,7 @@ import 'dart:async';
 import 'package:fidl_fuchsia_session/fidl_async.dart' as fidl;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fidl/fidl.dart';
-import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 
 import 'suggestion.dart';
 
@@ -17,16 +17,24 @@ import 'suggestion.dart';
 /// requesting source did not provide a channel. The methods will still be safe
 /// to call even if it is not bound.
 typedef PresentViewCallback = void Function(
-    ViewHolderToken, ViewRef, ViewControllerImpl, String);
+    ChildViewConnection, ViewRef, ViewControllerImpl, String);
+
+/// A callback which is invoked when the element is dismissed by the session.
+///
+/// This callback is the result of the session getting notified of a component
+/// exiting by itself or a crash. It is NOT due to the user closing it from
+/// the shell.
+typedef DismissViewCallback = void Function(ViewControllerImpl);
 
 /// A service which implements the fuchsia.session.GraphicalPresenter protocol.
 class PresenterService extends fidl.GraphicalPresenter {
   static const String serviceName = fidl.GraphicalPresenter.$serviceName;
 
   final List<fidl.GraphicalPresenterBinding> _bindings = [];
-  final PresentViewCallback _onPresent;
+  final PresentViewCallback onPresent;
+  final DismissViewCallback onDismiss;
 
-  PresenterService(this._onPresent);
+  PresenterService({this.onPresent, this.onDismiss});
 
   /// Binds the request to this model.
   void bind(InterfaceRequest<fidl.GraphicalPresenter> request) {
@@ -42,7 +50,8 @@ class PresenterService extends fidl.GraphicalPresenter {
   @override
   Future<void> presentView(fidl.ViewSpec viewSpec,
       InterfaceRequest<fidl.ViewController> viewControllerRequest) async {
-    final viewController = ViewControllerImpl()..bind(viewControllerRequest);
+    final viewController = ViewControllerImpl(onDismiss)
+      ..bind(viewControllerRequest);
 
     // Check to see if we have an id that we included in the annotation.
     final idAnnotation = viewSpec.annotations?.customAnnotations
@@ -50,8 +59,13 @@ class PresenterService extends fidl.GraphicalPresenter {
 
     final viewHolderToken = viewSpec.viewHolderToken;
     if (viewHolderToken != null) {
-      _onPresent(
+      final connection = ChildViewConnection(
         viewHolderToken,
+        onAvailable: (_) {},
+        onUnavailable: (_) {},
+      );
+      onPresent(
+        connection,
         viewSpec.viewRef,
         viewController,
         idAnnotation?.value?.text ?? '',
@@ -66,14 +80,13 @@ class ViewControllerImpl extends fidl.ViewController {
   final _binding = fidl.ViewControllerBinding();
   final StreamController<void> _onPresentedStreamController =
       StreamController.broadcast();
+  DismissViewCallback onDismiss;
+
+  ViewControllerImpl(this.onDismiss);
 
   void bind(InterfaceRequest<fidl.ViewController> interfaceRequest) {
     if (interfaceRequest != null && interfaceRequest.channel != null) {
       _binding.bind(this, interfaceRequest);
-      _binding.whenClosed.then((_) {
-        //TODO(47793) Need to watch our binding for unexpected closures and notify the user
-        log.info('binding closed unexpectedly');
-      });
     }
   }
 
@@ -91,9 +104,7 @@ class ViewControllerImpl extends fidl.ViewController {
 
   @override
   Future<void> dismiss() async {
-    // TODO(47792): A call to dismiss indicates that the view should go away we need to
-    // allow the user of this class to asynchronously dismiss the view before closing
-    // the channel.
+    onDismiss?.call(this);
     close();
   }
 

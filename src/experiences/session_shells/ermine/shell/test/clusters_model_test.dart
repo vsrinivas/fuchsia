@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
@@ -32,9 +33,9 @@ void main() {
     when(eventPair.isValid).thenReturn(false);
 
     clustersModel.presentStory(
-      ViewHolderToken(value: eventPair),
+      MockChildViewConnection(),
       ViewRef(reference: eventPair),
-      ViewControllerImpl(),
+      ViewControllerImpl((_) {}),
       'id',
     );
 
@@ -43,6 +44,25 @@ void main() {
 
     final id = clustersModel.focusedStory.id;
     expect(clustersModel.getStory(id), isNotNull);
+  });
+
+  test('Dismissed stories should be deleted', () {
+    final eventPair = MockEventPair();
+    when(eventPair.isValid).thenReturn(false);
+
+    final viewController = ViewControllerImpl((_) {});
+    clustersModel.presentStory(
+      MockChildViewConnection(),
+      ViewRef(reference: eventPair),
+      viewController,
+      'id',
+    );
+
+    final story = clustersModel.focusedStory;
+    expect(story.viewController, viewController);
+
+    clustersModel.dismissStory(viewController);
+    expect(clustersModel.hasStories, false);
   });
 
   test('Story maximize/minimize should toggle fullscreen', () {
@@ -111,5 +131,7 @@ void main() {
     expect(clustersModel.currentCluster.value, firstCluster);
   });
 }
+
+class MockChildViewConnection extends Mock implements ChildViewConnection {}
 
 class MockEventPair extends Mock implements EventPair {}

@@ -13,7 +13,6 @@ use {
     },
     fidl_fuchsia_ui_app::ViewProviderMarker,
     fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
     futures::{select, stream::StreamExt, FutureExt, TryStreamExt},
@@ -125,7 +124,14 @@ async fn run_until_closed(
             // that there was a crash. The current contract is that if the
             // view controller binding closes without a dismiss then the
             // presenter should treat this as a crash and respond accordingly.
-            fx_log_info!("An element closed unexpectedly: {:?}", element);
+            if let Some(proxy) = view_controller_proxy {
+                // We want to allow the presenter the ability to dismiss
+                // the view so we tell it to dismiss and then wait for
+                // the view controller stream to close.
+                let _ = proxy.dismiss();
+                //TODO(47925) introdue a timeout here
+                wait_for_view_controller_close(proxy).await;
+            }
         },
         _ = wait_for_optional_view_controller_close(view_controller_proxy.clone()).fuse() =>  {
             // signals that the presenter would like to close the element.

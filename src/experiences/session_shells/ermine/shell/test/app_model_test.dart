@@ -216,6 +216,7 @@ void main() {
   test('Should update peekNotifier when fullscreen', () async {
     final story = MockErmineStory();
     when(clustersModel.fullscreenStory).thenReturn(story);
+    when(clustersModel.hasStories).thenReturn(true);
 
     expect(appModel.isFullscreen, true);
 

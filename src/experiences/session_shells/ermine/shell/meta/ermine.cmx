@@ -26,11 +26,12 @@
             "fuchsia.settings.Intl",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.brightness.Control",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.policy.Presentation",
+            "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry"
         ]

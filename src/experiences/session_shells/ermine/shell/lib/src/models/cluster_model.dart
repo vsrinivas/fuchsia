@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
 
 import '../utils/presenter.dart';
@@ -79,7 +80,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
 
   @override
   void presentStory(
-    ViewHolderToken token,
+    ChildViewConnection connection,
     ViewRef viewRef,
     ViewControllerImpl viewController,
     String id,
@@ -97,7 +98,16 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
       _addErmineStory(story);
     }
 
-    story.presentView(token, viewRef, viewController);
+    story.presentView(connection, viewRef, viewController);
+  }
+
+  @override
+  void dismissStory(ViewControllerImpl viewController) {
+    // Find the story with the supplied viewController.
+    final story =
+        stories.where((story) => story.viewController == viewController).first;
+    assert(story != null);
+    story.delete();
   }
 
   /// Creates and adds a [Story] to the current cluster given it's [StoryInfo],

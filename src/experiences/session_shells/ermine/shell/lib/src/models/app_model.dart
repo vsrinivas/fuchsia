@@ -132,7 +132,10 @@ class AppModel {
   @visibleForTesting
   void advertise() {
     // Expose the presenter service to the environment.
-    _presenterService = PresenterService(clustersModel.presentStory);
+    _presenterService = PresenterService(
+      onPresent: clustersModel.presentStory,
+      onDismiss: clustersModel.dismissStory,
+    );
     _startupContext.outgoing
         .addPublicService(_presenterService.bind, PresenterService.serviceName);
   }

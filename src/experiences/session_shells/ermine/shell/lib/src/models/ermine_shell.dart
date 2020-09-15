@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 
 import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
@@ -29,8 +30,8 @@ abstract class ErmineShell {
   /// it has been launched. The story may have been proposed by ermine or
   /// an external source.
   void presentStory(
-    /// The view holder token used to connect the view to the process
-    ViewHolderToken token,
+    /// The [ChildViewConnection] used to connect the view to the process.
+    ChildViewConnection connection,
 
     /// The [ViewRef] of the view used as a handle for focusing.
     ViewRef viewRef,
@@ -43,4 +44,7 @@ abstract class ErmineShell {
     /// story was launched from ermine.
     String id,
   );
+
+  /// Called when a story is dismissed by the session instead of the user.
+  void dismissStory(ViewControllerImpl viewController);
 }
