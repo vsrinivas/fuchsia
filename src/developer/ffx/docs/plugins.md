@@ -26,6 +26,10 @@ ffx_plugin("ffx_example") {
   edition = "2018"
   with_unit_tests = true
   deps = []
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }
 ```
 

@@ -1,10 +1,11 @@
 # CLI
 
 The Command Line Interface (CLI) provides the UX for FFX. It is responsible for:
- - Parsing user parameters (CLI Parameters)
- - Communicating with the daemon (starting it if necessary)
- - Routing parsed parameters and requested FIDL proxies to the proper code path
-   for execution
+
+- Parsing user parameters (CLI Parameters)
+- Communicating with the daemon (starting it if necessary)
+- Routing parsed parameters and requested FIDL proxies to the proper code path
+  for execution
 
 ## Parsing CLI Parameters
 

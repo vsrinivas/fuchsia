@@ -39,25 +39,30 @@ This will list all of the available `ffx` subcommands. You'll see something
 like:
 
 ```
-Usage: ffx [--config <config>] [--environment-file <environment-file>] [--target <target>] <command> [<args>]
+Usage: ffx [-c <config>] [-e <env>] [-t <target>] [<command>] [<args>]
 
-Fuchsia Development Bridge
+Fuchsia's developer tool
 
 Options:
-  --config          runtime configuration information
-  --environment-file
-                    environment file where configuration is initialized
-  --target          target selection
+  -c, --config      override default configuration
+  -e, --env         override default environment settings
+  -t, --target      apply operations across single or multiple targets
   --help            display usage information
 
 Commands:
-  doctor            diagnoses and attempts to resolve ffx connectivity issues
-  package           Packaging tools
-  component         observe and control components
-  config            configuration management
-  daemon            daemon related commands
-  target            target related commands
-
+  component         Discover and manage components
+  config            View and switch default and user configurations
+  daemon            Interact with/control the ffx daemon
+  diagnostic        Run diagnostic tests on Fuchsia targets
+  docs              View suite of docs for ffx and for Fuchsia
+  doctor            Run common checks for the ffx tool and host environment
+  emulator          Start and manage Fuchsia emulators
+  overnet           Interact with the Overnet mesh
+  package           Create and publish Fuchsia packages
+  sdk               Modify or query the installed SDKs
+  target            Interact with a target device or emulator
+  vendor            Run partner plugins
+  version           Print out ffx tool and daemon versions
 ```
 
 You can use `fx ffx help <subcommand>` or `fx ffx <subcommand> --help` to see
@@ -89,6 +94,7 @@ A couple columns worth explanation:
 
 If you wait 10 to 15 seconds and run the same command again, you should see the
 value in the `RCS` column change to `Y`.
+
 ```sh
 $ fx ffx target list
 NAME                    TYPE       STATE      ADDRS/IP                       AGE     RCS
@@ -260,11 +266,12 @@ Hello, world!
 ## Resolving connectivity issues
 
 If you're experiencing problems communicating with a target device using `ffx`,
-you can use the `doctor` command to diagnose and attempt to resolve them.
-If you file a bug that involves a target device,
-we'll typically ask for the output from `ffx doctor` to provide information about where the problem is.
+you can use the `doctor` command to diagnose and attempt to resolve them. If you
+file a bug that involves a target device, we'll typically ask for the output
+from `ffx doctor` to provide information about where the problem is.
 
-`doctor` will attempt to communicate with the [ffx daemon](daemon.md), killing and restarting it if needed. If this is successful, it will attempt to SSH into
+`doctor` will attempt to communicate with the [ffx daemon](daemon.md), killing
+and restarting it if needed. If this is successful, it will attempt to SSH into
 a target device and start the [Remote Control Service](rcs.md).
 
 If you try running `ffx doctor` under normal circumstances, you should see:
@@ -284,8 +291,10 @@ Attempting to communicate with RCS...success
 SUCCESS. You should be able to run ffx commands now.
 ```
 
-If `doctor` fails, it will try to suggest a resolution to the problem. It will also provide a link to the Monorail component in which you can file a bug if you persistently
-have problems. For example, if `doctor` is unable to start the RCS, you would see the following:
+If `doctor` fails, it will try to suggest a resolution to the problem. It will
+also provide a link to the Monorail component in which you can file a bug if you
+persistently have problems. For example, if `doctor` is unable to start the RCS,
+you would see the following:
 
 ```
 $ fx ffx doctor

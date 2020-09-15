@@ -1,6 +1,6 @@
 #Using FIDL Proxies with Plugins
 
-FFX plugins can communicate with a target device using FIDL through 
+FFX plugins can communicate with a target device using FIDL through
 [Overnet](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/overnet/).
 
 Extending the example from the [plugins](plugins.md) page we can add
@@ -23,7 +23,7 @@ ffx_plugin("ffx_example") {
 
 This makes the FIDL proxy bindings available for import in the
 plugin. In this case you can now import `fidl_fuchsia_device`.
-Start by importing the type.  It is easiest if you include 
+Start by importing the type.  It is easiest if you include
 `fidl_fuchsia_device` either directly or as an alias.
 
 ```rust
@@ -55,10 +55,10 @@ function. FFX plugins can accept proxies in the parameter list:
 
 ```rust
 #[ffx_plugin(
-    fdevice::NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider" 
+    fdevice::NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
 )]
 pub async fn example(
-    name_proxy: fdevice::NameProviderProxy, 
+    name_proxy: fdevice::NameProviderProxy,
     _cmd: ExampleCommand,
 ) -> Result<(), Error> {
     if let Ok(name) = name_proxy.get_device_name().await? {
@@ -77,19 +77,19 @@ of the function signature:
 
 ```rust
 #[ffx_plugin(
-    fdevice::NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider" 
+    fdevice::NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
 )]
 ```
 
 And that's it.  The plugin should now be able to communicate with
 target device using native FIDL calls.  FFX plugins can accept any
 number of plugins as long as the same steps are followed and the
-proxies are correctly mapped to component selectors. 
+proxies are correctly mapped to component selectors.
 
 There are two exceptions to this rule.  FFX already knows how to
 communicate with two proxies without mappings.  It's enough to just
 add these proxies to the parameter list without changing the
 ffx_plugin annotation:
 
-  - [DaemonProxy](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.developer.bridge/daemon.fidl) - more info can be found [here](daemon.md)
-  - [Remote Control Service (RCS)](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.developer.remotecontrol/remote-control.fidl) - more info can be found [here](rcs.md)
+- [DaemonProxy](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.developer.bridge/daemon.fidl) - more info can be found [here](daemon.md)
+- [Remote Control Service (RCS)](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.developer.remotecontrol/remote-control.fidl) - more info can be found [here](rcs.md)
