@@ -26,7 +26,12 @@ use {
         Body,
     },
     std::{
-        net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs},
+        convert::TryFrom as _,
+        net::{
+            AddrParseError, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
+            ToSocketAddrs,
+        },
+        num::{ParseIntError, TryFromIntError},
         pin::Pin,
     },
     tcp_stream_ext::TcpStreamExt as _,
@@ -39,6 +44,7 @@ pub type HttpClient = Client<HyperConnector, Body>;
 pub type HttpsClient = Client<hyper_rustls::HttpsConnector<HyperConnector>, Body>;
 
 /// A future that yields a hyper-compatible TCP stream.
+#[must_use = "futures do nothing unless polled"]
 pub struct HyperConnectorFuture {
     tcp_connector_res: Result<TcpConnector, Option<io::Error>>,
     tcp_options: TcpOptions,
@@ -131,14 +137,15 @@ pub struct TcpOptions {
 #[derive(Clone)]
 pub struct HyperConnector {
     tcp_options: TcpOptions,
+    provider: RealProviderConnector,
 }
 
 impl HyperConnector {
     pub fn new() -> Self {
-        Self { tcp_options: std::default::Default::default() }
+        Self::from_tcp_options(TcpOptions::default())
     }
     pub fn from_tcp_options(tcp_options: TcpOptions) -> Self {
-        Self { tcp_options }
+        Self { tcp_options, provider: RealProviderConnector }
     }
 }
 
@@ -170,7 +177,7 @@ impl Service<Uri> for HyperConnector {
                     }
                 };
 
-                let addr = if let Some(addr) = parse_ip_addr(host, port) {
+                let addr = if let Some(addr) = parse_ip_addr(&self.provider, host, port)? {
                     addr
                 } else {
                     // TODO(cramertj): smarter DNS-- nonblocking, don't just pick first addr
@@ -221,14 +228,42 @@ pub fn new_https_client() -> HttpsClient {
     new_https_client_from_tcp_options(std::default::Default::default())
 }
 
-fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
-    if let Ok(addr) = host.parse::<Ipv4Addr>() {
-        return Some(SocketAddr::V4(SocketAddrV4::new(addr, port)));
+trait ProviderConnector {
+    fn connect(&self) -> Result<ProviderSynchronousProxy, io::Error>;
+}
+
+#[derive(Clone)]
+struct RealProviderConnector;
+
+impl ProviderConnector for RealProviderConnector {
+    fn connect(&self) -> Result<ProviderSynchronousProxy, io::Error> {
+        let (proxy, server) = zx::Channel::create()?;
+        let () =
+            connect_channel_to_service_at::<ProviderMarker>(server, "/svc").map_err(|err| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("failed to connect to socket provider service: {}", err),
+                )
+            })?;
+        Ok(ProviderSynchronousProxy::new(proxy))
+    }
+}
+
+fn parse_ip_addr(
+    provider: &impl ProviderConnector,
+    host: &str,
+    port: u16,
+) -> Result<Option<SocketAddr>, io::Error> {
+    match host.parse::<Ipv4Addr>() {
+        Ok(addr) => {
+            return Ok(Some(SocketAddr::V4(SocketAddrV4::new(addr, port))));
+        }
+        Err(AddrParseError { .. }) => {}
     }
 
     // IPv6 literals are always enclosed in [].
     if !host.starts_with("[") || !host.ends_with(']') {
-        return None;
+        return Ok(None);
     }
 
     let host = &host[1..host.len() - 1];
@@ -236,7 +271,19 @@ fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
     // IPv6 addresses with zones always contain "%25", which is "%" URL encoded.
     let mut host_parts = host.splitn(2, "%25");
 
-    let addr = host_parts.next()?.parse::<Ipv6Addr>().ok()?;
+    let addr = match host_parts.next() {
+        Some(addr) => addr,
+        None => {
+            return Ok(None);
+        }
+    };
+
+    let addr = match addr.parse::<Ipv6Addr>() {
+        Ok(addr) => addr,
+        Err(AddrParseError { .. }) => {
+            return Ok(None);
+        }
+    };
 
     let scope_id = match host_parts.next() {
         Some(zone_id) => {
@@ -261,40 +308,62 @@ fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
             //
             // TODO: use Ipv6Addr::is_unicast_link_local_strict when available in stable rust.
             if addr.segments()[..4] != [0xfe80, 0, 0, 0] {
-                return None;
+                return Ok(None);
             }
 
             // TODO: validate that the value matches rfc6874 grammar `ZoneID = 1*( unreserved / pct-encoded )`.
             match zone_id.parse::<u32>() {
                 Ok(zone_id_num) => zone_id_num,
-                Err(_) => {
-                    let (proxy, server) = zx::Channel::create().expect("failed to create channel");
-                    connect_channel_to_service_at::<ProviderMarker>(server, "/svc")
-                        .expect("failed to connect to service");
-                    let mut proxy = ProviderSynchronousProxy::new(proxy);
+                Err(ParseIntError { .. }) => {
+                    let mut proxy = provider.connect()?;
                     let id = proxy
                         .interface_name_to_index(zone_id, zx::Time::INFINITE)
-                        .expect("failed to get interface index");
-                    match id {
-                        Ok(id) => id as u32,
-                        Err(_) => return None,
-                    }
+                        .map_err(|err| {
+                            io::Error::new(
+                                io::ErrorKind::Other,
+                                format!(
+                                    "failed to get interface index from socket provider: {}",
+                                    err
+                                ),
+                            )
+                        })?
+                        .map_err(|status| zx::Status::from_raw(status).into_io_error())?;
+
+                    // SocketAddrV6 only works with 32 bit scope ids.
+                    u32::try_from(id).map_err(|TryFromIntError { .. }| {
+                        io::Error::new(
+                            io::ErrorKind::Other,
+                            "interface index too large to convert to scope_id",
+                        )
+                    })?
                 }
             }
         }
         None => 0,
     };
 
-    Some(SocketAddr::V6(SocketAddrV6::new(addr, port, 0, scope_id)))
+    Ok(Some(SocketAddr::V6(SocketAddrV6::new(addr, port, 0, scope_id))))
 }
 
 #[cfg(test)]
 mod test {
     use {
         super::*,
+        fidl::endpoints::RequestStream,
+        fidl_fuchsia_posix_socket::{ProviderRequest, ProviderRequestStream},
         fuchsia_async::{self as fasync, net::TcpListener, Executor},
-        futures::stream::StreamExt as _,
+        futures::stream::{StreamExt as _, TryStreamExt as _},
+        matches::assert_matches,
+        std::cell::RefCell,
     };
+
+    struct PanicConnector;
+
+    impl ProviderConnector for PanicConnector {
+        fn connect(&self) -> Result<ProviderSynchronousProxy, io::Error> {
+            panic!("should not be trying to talk to the Provider service")
+        }
+    }
 
     #[test]
     fn can_create_client() {
@@ -339,57 +408,125 @@ mod test {
         .unwrap()
         .stream;
 
-        assert_eq!(stream.std().keepalive().unwrap(), Some(idle));
-        assert_eq!(stream.std().keepalive_interval().unwrap(), interval);
-        assert_eq!(stream.std().keepalive_count().unwrap(), count);
+        assert_matches!(stream.std().keepalive(), Ok(Some(v)) if v == idle);
+        assert_matches!(stream.std().keepalive_interval(), Ok(v) if v == interval);
+        assert_matches!(stream.std().keepalive_count(), Ok(v) if v == count);
     }
 
     #[test]
     fn test_parse_ipv4_addr() {
-        let addr = parse_ip_addr("1.2.3.4", 8080);
         let expected = "1.2.3.4:8080".parse::<SocketAddr>().unwrap();
-        assert_eq!(addr, Some(expected));
+        assert_matches!(parse_ip_addr(&PanicConnector, "1.2.3.4", 8080), Ok(Some(addr)) if addr == expected);
     }
 
     #[test]
     fn test_parse_invalid_addresses() {
-        assert_eq!(parse_ip_addr("1.2.3", 8080), None);
-        assert_eq!(parse_ip_addr("1.2.3.4.5", 8080), None);
-        assert_eq!(parse_ip_addr("localhost", 8080), None);
-        assert_eq!(parse_ip_addr("[fe80::1:2:3:4", 8080), None);
-        assert_eq!(parse_ip_addr("[[fe80::1:2:3:4]", 8080), None);
+        assert_matches!(parse_ip_addr(&PanicConnector, "1.2.3", 8080), Ok(None));
+        assert_matches!(parse_ip_addr(&PanicConnector, "1.2.3.4.5", 8080), Ok(None));
+        assert_matches!(parse_ip_addr(&PanicConnector, "localhost", 8080), Ok(None));
+        assert_matches!(parse_ip_addr(&PanicConnector, "[fe80::1:2:3:4", 8080), Ok(None));
+        assert_matches!(parse_ip_addr(&PanicConnector, "[[fe80::1:2:3:4]", 8080), Ok(None));
+        assert_matches!(parse_ip_addr(&PanicConnector, "[]", 8080), Ok(None));
     }
 
     #[test]
     fn test_parse_ipv6_addr() {
-        let addr = parse_ip_addr("[fe80::1:2:3:4]", 8080);
         let expected = "[fe80::1:2:3:4]:8080".parse::<SocketAddr>().unwrap();
-        assert_eq!(addr, Some(expected));
+        assert_matches!(parse_ip_addr(&PanicConnector, "[fe80::1:2:3:4]", 8080), Ok(Some(addr)) if addr == expected);
     }
 
     #[test]
     fn test_parse_ipv6_addr_with_zone() {
         let expected = "fe80::1:2:3:4".parse::<Ipv6Addr>().unwrap();
 
-        let addr = parse_ip_addr("[fe80::1:2:3:4%250]", 8080);
-        assert_eq!(addr, Some(SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 0))));
+        assert_matches!(
+            parse_ip_addr(&PanicConnector, "[fe80::1:2:3:4%250]", 8080),
+            Ok(Some(addr)) if addr == SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 0))
+        );
 
-        let addr = parse_ip_addr("[fe80::1:2:3:4%252]", 8080);
-        assert_eq!(addr, Some(SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 2))));
+        assert_matches!(
+            parse_ip_addr(&PanicConnector, "[fe80::1:2:3:4%252]", 8080),
+            Ok(Some(addr)) if addr == SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 2))
+        );
     }
 
     #[test]
     fn test_parse_ipv6_addr_with_zone_supports_interface_names() {
         let expected = "fe80::1:2:3:4".parse::<Ipv6Addr>().unwrap();
 
-        let addr = parse_ip_addr("[fe80::1:2:3:4%25lo]", 8080);
-        assert_eq!(addr, Some(SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 1))));
+        assert_matches!(
+            parse_ip_addr(&RealProviderConnector, "[fe80::1:2:3:4%25lo]", 8080),
+            Ok(Some(addr)) if addr == SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 1))
+        );
 
-        assert_eq!(parse_ip_addr("[fe80::1:2:3:4%25unknownif]", 8080), None);
+        assert_matches!(
+            parse_ip_addr(&RealProviderConnector, "[fe80::1:2:3:4%25]", 8080),
+            Err(err) if err.kind() == io::ErrorKind::NotFound
+        );
+
+        assert_matches!(
+            parse_ip_addr(&RealProviderConnector, "[fe80::1:2:3:4%25unknownif]", 8080),
+            Err(err) if err.kind() == io::ErrorKind::NotFound
+        );
     }
 
     #[test]
     fn test_parse_ipv6_addr_with_zone_must_be_local() {
-        assert_eq!(parse_ip_addr("[fe81::1:2:3:4%252]", 8080), None);
+        assert_matches!(parse_ip_addr(&PanicConnector, "[fe81::1:2:3:4%252]", 8080), Ok(None));
+    }
+
+    #[test]
+    fn test_parse_ipv6_addr_handles_connection_errors() {
+        struct ErrorConnector;
+
+        impl ProviderConnector for ErrorConnector {
+            fn connect(&self) -> Result<ProviderSynchronousProxy, io::Error> {
+                Err(io::Error::new(io::ErrorKind::Other, "something bad happened"))
+            }
+        }
+
+        assert_matches!(parse_ip_addr(&ErrorConnector, "[fe80::1:2:3:4%25lo]", 8080),
+            Err(err) if err.kind() == io::ErrorKind::Other);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_parse_ipv6_addr_handles_large_interface_indices() {
+        let (proxy, server) = zx::Channel::create().unwrap();
+        let proxy = ProviderSynchronousProxy::new(proxy);
+        let server = fasync::Channel::from_channel(server).unwrap();
+        let mut stream = ProviderRequestStream::from_channel(server);
+
+        let task = fasync::Task::blocking(async move {
+            while let Some(req) = stream.try_next().await.unwrap_or(None) {
+                match req {
+                    ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
+                        let mut res = Ok(std::u64::MAX);
+                        responder.send(&mut res).unwrap()
+                    }
+                    _ => panic!("unexpected request"),
+                }
+            }
+        });
+
+        struct ErrorConnector {
+            proxy: RefCell<Option<ProviderSynchronousProxy>>,
+        }
+
+        impl ProviderConnector for ErrorConnector {
+            fn connect(&self) -> Result<ProviderSynchronousProxy, io::Error> {
+                let proxy = self.proxy.borrow_mut().take().unwrap();
+                Ok(proxy)
+            }
+        }
+
+        let mut connector = ErrorConnector { proxy: RefCell::new(Some(proxy)) };
+
+        assert_matches!(
+            parse_ip_addr(&mut connector, "[fe80::1:2:3:4%25lo]", 8080),
+            Err(err) if err.kind() == io::ErrorKind::Other
+        );
+
+        // Make sure the connection is terminated.
+        let () = task.await;
     }
 }
