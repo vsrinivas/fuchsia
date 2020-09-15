@@ -62,6 +62,7 @@ class ConnectivityManagerImpl final
  private:
   // ===== Members that implement the ConnectivityManager abstract interface.
 
+  // WiFi Station Methods
   WiFiStationMode _GetWiFiStationMode(void);
   WEAVE_ERROR _SetWiFiStationMode(WiFiStationMode val);
   bool _IsWiFiStationEnabled(void);
@@ -71,6 +72,9 @@ class ConnectivityManagerImpl final
   WEAVE_ERROR _SetWiFiStationReconnectIntervalMS(uint32_t val);
   bool _IsWiFiStationProvisioned(void);
   void _ClearWiFiStationProvision(void);
+  WEAVE_ERROR _GetAndLogWifiStatsCounters(void);
+
+  // WiFi AP Methods
   WiFiAPMode _GetWiFiAPMode(void);
   WEAVE_ERROR _SetWiFiAPMode(WiFiAPMode val);
   bool _IsWiFiAPActive(void);
@@ -80,15 +84,19 @@ class ConnectivityManagerImpl final
   void _MaintainOnDemandWiFiAP(void);
   uint32_t _GetWiFiAPIdleTimeoutMS(void);
   void _SetWiFiAPIdleTimeoutMS(uint32_t val);
-  WEAVE_ERROR _GetAndLogWifiStatsCounters(void);
+
+  // Internet Connectivity Methods
   bool _HaveIPv4InternetConnectivity(void);
   bool _HaveIPv6InternetConnectivity(void);
+
+  // Service Tunnel Methods
   ServiceTunnelMode _GetServiceTunnelMode(void);
   WEAVE_ERROR _SetServiceTunnelMode(ServiceTunnelMode val);
   bool _IsServiceTunnelConnected(void);
   bool _IsServiceTunnelRestricted(void);
   bool _HaveServiceConnectivityViaTunnel(void);
   bool _HaveServiceConnectivity(void);
+
   WEAVE_ERROR _Init(void);
   void _OnPlatformEvent(const WeaveDeviceEvent* event);
   bool _CanStartWiFiScan();
@@ -106,23 +114,6 @@ class ConnectivityManagerImpl final
   static ConnectivityManagerImpl sInstance;
 
   // ===== Private members reserved for use by this class only.
-
-  enum WiFiStationState {
-    kWiFiStationState_NotConnected,
-    kWiFiStationState_Connecting,
-    kWiFiStationState_Connecting_Succeeded,
-    kWiFiStationState_Connecting_Failed,
-    kWiFiStationState_Connected,
-    kWiFiStationState_Disconnecting,
-  };
-
-  enum WiFiAPState {
-    kWiFiAPState_NotActive,
-    kWiFiAPState_Activating,
-    kWiFiAPState_Active,
-    kWiFiAPState_Deactivating,
-  };
-
   enum Flags {
     kFlag_HaveIPv4InternetConnectivity = 0x0001,
     kFlag_HaveIPv6InternetConnectivity = 0x0002,
@@ -131,15 +122,7 @@ class ConnectivityManagerImpl final
     kFlag_AwaitingConnectivity = 0x0010,
   };
 
-  uint64_t mLastStationConnectFailTime;
-  uint64_t mLastAPDemandTime;
-  WiFiStationMode mWiFiStationMode;
-  WiFiStationState mWiFiStationState;
-  WiFiAPMode mWiFiAPMode;
-  WiFiAPState mWiFiAPState;
-  ServiceTunnelMode mServiceTunnelMode;
-  uint32_t mWiFiStationReconnectIntervalMS;
-  uint32_t mWiFiAPIdleTimeoutMS;
+  ServiceTunnelMode service_tunnel_mode_;
   uint16_t flags_;
 
   // Handle service tunnel notifications.
@@ -163,32 +146,55 @@ class ConnectivityManagerImpl final
   void StopServiceTunnel(WEAVE_ERROR err);
 };
 
-inline bool ConnectivityManagerImpl::_IsWiFiStationApplicationControlled(void) {
-  return mWiFiStationMode == kWiFiStationMode_ApplicationControlled;
+// TODO(fxbug.dev/59955): These functions temporarily report that the network is
+// always enabled and always provisioned. These should be properly implemented
+// by reaching out to the WLAN FIDLs.
+inline ConnectivityManager::WiFiStationMode ConnectivityManagerImpl::_GetWiFiStationMode(void) {
+  return kWiFiStationMode_Enabled;
 }
-
-inline bool ConnectivityManagerImpl::_IsWiFiStationConnected(void) {
-  return mWiFiStationState == kWiFiStationState_Connected;
+inline bool ConnectivityManagerImpl::_IsWiFiStationEnabled(void) { return true; }
+inline WEAVE_ERROR ConnectivityManagerImpl::_SetWiFiStationMode(WiFiStationMode val) {
+  return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
 }
-
-inline bool ConnectivityManagerImpl::_IsWiFiAPApplicationControlled(void) {
-  return mWiFiAPMode == kWiFiAPMode_ApplicationControlled;
+inline bool ConnectivityManagerImpl::_IsWiFiStationProvisioned(void) { return true; }
+inline void ConnectivityManagerImpl::_ClearWiFiStationProvision(void) {}
+inline WEAVE_ERROR ConnectivityManagerImpl::_GetAndLogWifiStatsCounters(void) {
+  return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
 }
-
+inline bool ConnectivityManagerImpl::_IsWiFiStationConnected(void) { return true; }
 inline uint32_t ConnectivityManagerImpl::_GetWiFiStationReconnectIntervalMS(void) {
-  return mWiFiStationReconnectIntervalMS;
+  return UINT32_MAX;
 }
+inline bool ConnectivityManagerImpl::_CanStartWiFiScan() { return true; }
+inline void ConnectivityManagerImpl::_OnWiFiScanDone() {}
+inline void ConnectivityManagerImpl::_OnWiFiStationProvisionChange() {}
 
+// TODO(fxbug.dev/59956): These functions temporarily report that AP mode is
+// disabled and unsupported. These should be properly implemented by reaching
+// out the the WLAN FIDLs.
+inline WEAVE_ERROR ConnectivityManagerImpl::_SetWiFiAPMode(WiFiAPMode val) {
+  return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
+}
+inline void ConnectivityManagerImpl::_DemandStartWiFiAP(void) {}
+inline void ConnectivityManagerImpl::_StopOnDemandWiFiAP(void) {}
+inline void ConnectivityManagerImpl::_MaintainOnDemandWiFiAP(void) {}
+inline void ConnectivityManagerImpl::_SetWiFiAPIdleTimeoutMS(uint32_t val) {}
+inline bool ConnectivityManagerImpl::_IsWiFiStationApplicationControlled(void) {
+  return kWiFiStationMode_NotSupported;
+}
+inline bool ConnectivityManagerImpl::_IsWiFiAPApplicationControlled(void) { return false; }
 inline ConnectivityManager::WiFiAPMode ConnectivityManagerImpl::_GetWiFiAPMode(void) {
-  return mWiFiAPMode;
+  return WiFiAPMode::kWiFiAPMode_NotSupported;
+}
+inline bool ConnectivityManagerImpl::_IsWiFiAPActive(void) { return false; }
+inline uint32_t ConnectivityManagerImpl::_GetWiFiAPIdleTimeoutMS(void) { return UINT32_MAX; }
+
+inline WEAVE_ERROR ConnectivityManagerImpl::_SetServiceTunnelMode(ServiceTunnelMode val) {
+  return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
 }
 
-inline bool ConnectivityManagerImpl::_IsWiFiAPActive(void) {
-  return mWiFiAPState == kWiFiAPState_Active;
-}
-
-inline uint32_t ConnectivityManagerImpl::_GetWiFiAPIdleTimeoutMS(void) {
-  return mWiFiAPIdleTimeoutMS;
+inline ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::_GetServiceTunnelMode(void) {
+  return service_tunnel_mode_;
 }
 
 inline bool ConnectivityManagerImpl::_HaveIPv4InternetConnectivity(void) {
@@ -197,14 +203,6 @@ inline bool ConnectivityManagerImpl::_HaveIPv4InternetConnectivity(void) {
 
 inline bool ConnectivityManagerImpl::_HaveIPv6InternetConnectivity(void) {
   return ::nl::GetFlag(flags_, kFlag_HaveIPv6InternetConnectivity);
-}
-
-inline ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::_GetServiceTunnelMode(void) {
-  return mServiceTunnelMode;
-}
-
-inline bool ConnectivityManagerImpl::_CanStartWiFiScan() {
-  return mWiFiStationState != kWiFiStationState_Connecting;
 }
 
 inline bool ConnectivityManagerImpl::_HaveServiceConnectivity(void) {

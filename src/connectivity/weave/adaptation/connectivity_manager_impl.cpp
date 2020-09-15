@@ -43,36 +43,6 @@ namespace DeviceLayer {
 
 ConnectivityManagerImpl ConnectivityManagerImpl::sInstance;
 
-ConnectivityManager::WiFiStationMode ConnectivityManagerImpl::_GetWiFiStationMode(void) {
-  return kWiFiStationMode_Enabled;
-}
-
-bool ConnectivityManagerImpl::_IsWiFiStationEnabled(void) { return true; }
-
-WEAVE_ERROR ConnectivityManagerImpl::_SetWiFiStationMode(WiFiStationMode val) {
-  return WEAVE_NO_ERROR;
-}
-
-bool ConnectivityManagerImpl::_IsWiFiStationProvisioned(void) { return true; }
-
-void ConnectivityManagerImpl::_ClearWiFiStationProvision(void) {}
-
-WEAVE_ERROR ConnectivityManagerImpl::_SetWiFiAPMode(WiFiAPMode val) { return WEAVE_NO_ERROR; }
-
-void ConnectivityManagerImpl::_DemandStartWiFiAP(void) {}
-
-void ConnectivityManagerImpl::_StopOnDemandWiFiAP(void) {}
-
-void ConnectivityManagerImpl::_MaintainOnDemandWiFiAP(void) {}
-
-void ConnectivityManagerImpl::_SetWiFiAPIdleTimeoutMS(uint32_t val) {}
-
-WEAVE_ERROR ConnectivityManagerImpl::_GetAndLogWifiStatsCounters(void) { return WEAVE_NO_ERROR; }
-
-WEAVE_ERROR ConnectivityManagerImpl::_SetServiceTunnelMode(ServiceTunnelMode val) {
-  return WEAVE_NO_ERROR;
-}
-
 bool ConnectivityManagerImpl::_IsServiceTunnelConnected(void) {
   WeaveTunnelAgent::AgentState tunnel_state = ServiceTunnelAgent.GetWeaveTunnelAgentState();
   return (tunnel_state == WeaveTunnelAgent::kState_PrimaryTunModeEstablished ||
@@ -180,7 +150,7 @@ void ConnectivityManagerImpl::StopServiceTunnel(WEAVE_ERROR err) {
 }
 
 WEAVE_ERROR ConnectivityManagerImpl::_Init() {
-  mServiceTunnelMode = kServiceTunnelMode_Enabled;
+  service_tunnel_mode_ = kServiceTunnelMode_Enabled;
   flags_ = 0;
   WEAVE_ERROR err;
 
@@ -202,7 +172,7 @@ WEAVE_ERROR ConnectivityManagerImpl::_Init() {
 
 // Check if service tunnel should be started.
 bool ConnectivityManagerImpl::ShouldStartServiceTunnel() {
-  return (mServiceTunnelMode == kServiceTunnelMode_Enabled &&
+  return (service_tunnel_mode_ == kServiceTunnelMode_Enabled &&
           ConfigurationMgr().IsMemberOfFabric() && ConfigurationMgr().IsServiceProvisioned());
 }
 
@@ -237,12 +207,6 @@ void ConnectivityManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
       break;
   }
 }
-
-void ConnectivityManagerImpl::_OnWiFiScanDone() {}
-
-void ConnectivityManagerImpl::_OnWiFiStationProvisionChange() {}
-
-// ==================== ConnectivityManager Private Methods ====================
 
 }  // namespace DeviceLayer
 }  // namespace Weave
