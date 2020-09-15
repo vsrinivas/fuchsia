@@ -152,7 +152,6 @@ executable("test_suite") {
   ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/shared",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
@@ -170,7 +169,6 @@ executable("hw_watchpointer") {
   sources = [ "hw_watchpointer.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/shared",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
@@ -186,7 +184,6 @@ executable("multi_threaded") {
   sources = [ "multi_threaded.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
@@ -214,7 +211,6 @@ executable("process_spawner") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
@@ -231,7 +227,6 @@ executable("thread_signals") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
@@ -246,7 +241,6 @@ executable("limbo_caller") {
   deps = [
     "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",

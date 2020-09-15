@@ -16,7 +16,6 @@ driver_module("fvm") {
   ]
   deps = [
     ":shared",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
   ]
 }

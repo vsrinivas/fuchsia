@@ -24,7 +24,6 @@ executable("codec_runner_sw_sbc") {
 
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/codec/codecs:chunk_input_stream",
     "//src/media/codec/codecs:timestamp_extrapolator",
     "//src/media/codec/codecs/sw:codec_adapter_sw",

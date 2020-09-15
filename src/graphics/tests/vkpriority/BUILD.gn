@@ -10,8 +10,6 @@ executable("vkpriority") {
     "vkpriority.cc",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

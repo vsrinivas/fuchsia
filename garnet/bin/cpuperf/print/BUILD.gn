@@ -28,7 +28,6 @@ executable("cpuperf_print") {
     "//garnet/bin/cpuperf:session_result_spec",
     "//garnet/lib/debugger_utils",
     "//garnet/lib/perfmon",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
   configs += [

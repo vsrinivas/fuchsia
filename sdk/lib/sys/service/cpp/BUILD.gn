@@ -51,7 +51,6 @@ executable("sys_service_unittests") {
     ":cpp",
     "//examples/fidl/fuchsia.examples",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",

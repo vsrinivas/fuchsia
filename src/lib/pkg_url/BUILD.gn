@@ -30,7 +30,6 @@ executable("tests") {
 
   deps = [
     ":pkg_url",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -54,16 +53,10 @@ fuzzers_package("pkg_url_fuzzers") {
 
 fuzzer("fuchsia_pkg_url_fuzzer") {
   sources = [ "fuchsia_pkg_url_fuzztest.cc" ]
-  deps = [
-    ":pkg_url",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":pkg_url" ]
 }
 
 fuzzer("url_resolver_fuzzer") {
   sources = [ "url_resolver_fuzztest.cc" ]
-  deps = [
-    ":pkg_url",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":pkg_url" ]
 }

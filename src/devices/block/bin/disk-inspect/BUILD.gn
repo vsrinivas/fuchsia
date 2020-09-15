@@ -8,7 +8,6 @@ executable("disk-inspect") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/line_input",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/disk_inspector",

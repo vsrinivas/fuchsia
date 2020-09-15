@@ -44,11 +44,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "loadbench"
   sources = [ "loadbench.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":lib" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -103,7 +99,6 @@ executable("loadbench_unittests") {
 
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

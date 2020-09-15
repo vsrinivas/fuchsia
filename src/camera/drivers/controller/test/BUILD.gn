@@ -30,7 +30,6 @@ executable("test") {
     ":constants",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/controller/sherlock:config",
     "//src/camera/drivers/test_utils",

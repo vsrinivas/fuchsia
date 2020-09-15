@@ -9,7 +9,6 @@ executable("virtmagma_unit_tests_linux") {
   testonly = true
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/src/libmagma_linux",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan:headers",
@@ -26,7 +25,6 @@ executable("virtmagma_vulkan_unit_tests") {
 
   deps = [
     ":basic_compute",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan:vulkan_headers_and_loader",
   ]

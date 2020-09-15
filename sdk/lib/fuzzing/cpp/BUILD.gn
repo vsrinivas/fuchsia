@@ -36,7 +36,6 @@ test("fuzzing_traits_unittests") {
   sources = [ "traits_unittest.cc" ]
   deps = [
     ":traits",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -55,7 +54,6 @@ test("fuzz_input_unittests") {
 
   deps = [
     ":cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

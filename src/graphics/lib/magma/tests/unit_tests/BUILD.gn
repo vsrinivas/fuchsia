@@ -27,7 +27,6 @@ executable("unit_tests") {
     ":magma_system_tests",
     ":magma_util_tests",
     "$magma_build_root/tests/helper:logger_init_helper",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

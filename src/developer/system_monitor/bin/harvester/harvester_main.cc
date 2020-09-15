@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 #include <zircon/status.h>
 
 #include <string>

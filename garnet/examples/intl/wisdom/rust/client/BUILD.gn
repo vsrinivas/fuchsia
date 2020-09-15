@@ -18,7 +18,6 @@ rustc_binary("intl_wisdom_client_rust") {
     "//garnet/examples/intl/wisdom/fidl:wisdom-rustc",
     "//garnet/lib/rust/fidl_fuchsia_intl_ext",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

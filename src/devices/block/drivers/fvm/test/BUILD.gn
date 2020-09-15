@@ -14,7 +14,6 @@ test("fvm-driver-unittests") {
   ]
   include_dirs = [ ".." ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/block/drivers/fvm:shared",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",

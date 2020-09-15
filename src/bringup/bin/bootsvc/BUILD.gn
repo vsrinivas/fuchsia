@@ -80,7 +80,6 @@ executable("bin") {
     ":lib",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -128,7 +127,6 @@ test("bootfs_loader_service_test") {
   sources = [ "bootfs-loader-service-test.cc" ]
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/loader_service:loader_service_test_fixture",
   ]
 

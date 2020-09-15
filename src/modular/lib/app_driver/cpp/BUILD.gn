@@ -31,6 +31,7 @@ source_set("module_driver") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/lifecycle/cpp",
   ]
 }

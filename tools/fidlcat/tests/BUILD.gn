@@ -9,7 +9,6 @@ executable("fidlcat_test_bin") {
   testonly = true
   sources = [ "fidlcat_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

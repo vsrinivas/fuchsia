@@ -21,10 +21,7 @@ executable("fake_command") {
 executable("fake_failing_test") {
   testonly = true
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 
   sources = [ "fake_failing_test.cc" ]
 }
@@ -32,10 +29,7 @@ executable("fake_failing_test") {
 executable("fake_passing_test") {
   testonly = true
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 
   sources = [ "fake_passing_test.cc" ]
 }

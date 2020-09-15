@@ -37,7 +37,6 @@ test("fs_test_support") {
     "main.cc",
   ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fs-management",

@@ -67,10 +67,7 @@ executable("trace_tests_bin") {
 
   output_name = "trace_tests"
 
-  deps = [
-    ":gtest_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":gtest_main" ]
 
   # TODO(46850): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
@@ -179,7 +176,6 @@ executable("trace_integration_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/tracing/lib/test_utils",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
@@ -206,7 +202,6 @@ executable("basic_integration_test_app") {
 
   deps = [
     ":integration_test_utils",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -229,7 +224,6 @@ executable("two_providers_one_engine") {
   sources = [ "two_providers_one_engine.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
@@ -273,7 +267,6 @@ executable("two_providers_two_engines_test_app") {
     ":integration_test_utils",
     ":self_contained_provider",
     "//garnet/bin/trace:options",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -297,7 +290,6 @@ executable("nested_environment_test") {
 
   deps = [
     ":integration_test_utils",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/task-utils",
@@ -327,7 +319,6 @@ executable("return_child_result_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/tracing/lib/test_utils",
     "//third_party/googletest:gtest",
   ]
@@ -352,7 +343,6 @@ executable("detach_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
@@ -368,7 +358,6 @@ executable("ktrace_integration_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/tracing/lib/test_utils",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -383,7 +372,6 @@ executable("shared_provider_app") {
 
   deps = [
     ":integration_test_utils",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -402,7 +390,6 @@ executable("shared_provider_integration_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace-reader",
@@ -419,7 +406,6 @@ executable("provider_destruction_app") {
 
   deps = [
     ":integration_test_utils",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -438,7 +424,6 @@ executable("provider_destruction_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace-reader",

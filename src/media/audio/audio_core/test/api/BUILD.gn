@@ -48,14 +48,12 @@ resource("audio-core-config-with-ultrasound") {
 
 audio_core_api_test_component("activity-reporter-test") {
   source = "activity_reporter_test.cc"
-  executable_deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 }
 
 audio_core_api_test_component("audio-capturer-test") {
   source = "audio_capturer_test.cc"
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock/testing",
   ]
@@ -63,33 +61,23 @@ audio_core_api_test_component("audio-capturer-test") {
 
 audio_core_api_test_component("audio-capturer-pipeline-test") {
   source = "audio_capturer_pipeline_test.cc"
-  executable_deps = [
-    "//sdk/lib/media/audio/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  executable_deps = [ "//sdk/lib/media/audio/cpp" ]
 }
 
 audio_core_api_test_component("audio-device-enumerator-test") {
   source = "audio_device_enumerator_test.cc"
-  executable_deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/media/audio/audio_core/testing",
-  ]
+  executable_deps = [ "//src/media/audio/audio_core/testing" ]
 }
 
 audio_core_api_test_component("audio-policy-pipeline-test") {
   source = "audio_policy_pipeline_test.cc"
-  executable_deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl",
-  ]
+  executable_deps = [ "//src/lib/fxl" ]
 }
 
 audio_core_api_test_component("audio-renderer-test") {
   source = "audio_renderer_test.cc"
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock/testing",
   ]
@@ -97,10 +85,7 @@ audio_core_api_test_component("audio-renderer-test") {
 
 audio_core_api_test_component("audio-renderer-pipeline-test") {
   source = "audio_renderer_pipeline_test.cc"
-  executable_deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/media/audio/lib/analysis",
-  ]
+  executable_deps = [ "//src/media/audio/lib/analysis" ]
   component_deps = [
     ":audio-core-config-with-inversion-filter",
     ":audio-core-config-with-sleeper-filter",
@@ -110,21 +95,16 @@ audio_core_api_test_component("audio-renderer-pipeline-test") {
 
 audio_core_api_test_component("audio-tuner-test") {
   source = "audio_tuner_test.cc"
-  executable_deps = [
-    "//sdk/fidl/fuchsia.media.tuning",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  executable_deps = [ "//sdk/fidl/fuchsia.media.tuning" ]
 }
 
 audio_core_api_test_component("gain-control-test") {
   source = "gain_control_test.cc"
-  executable_deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 }
 
 audio_core_api_test_component("ultrasound-test") {
   source = "ultrasound_test.cc"
   executable_deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
   ]
@@ -133,20 +113,15 @@ audio_core_api_test_component("ultrasound-test") {
 
 audio_core_api_test_component("usage-gain-reporter-test") {
   source = "usage_gain_reporter_test.cc"
-  executable_deps = [
-    "//sdk/fidl/fuchsia.media.audio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  executable_deps = [ "//sdk/fidl/fuchsia.media.audio" ]
 }
 
 audio_core_api_test_component("usage-reporter-test") {
   source = "usage_reporter_test.cc"
-  executable_deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 }
 
 audio_core_api_test_component("volume-control-test") {
   source = "volume_control_test.cc"
-  executable_deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 }
 
 # These tests can run anywhere, including in emulators.

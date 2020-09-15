@@ -30,7 +30,6 @@ executable("speak_bin") {
   deps = [
     "//sdk/fidl/fuchsia.tts",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

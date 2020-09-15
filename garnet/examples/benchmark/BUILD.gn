@@ -7,8 +7,6 @@ import("//build/package.gni")
 executable("benchmark_example") {
   sources = [ "main.cc" ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [
     "//src/lib/fsl",
     "//src/lib/fxl",

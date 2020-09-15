@@ -13,8 +13,6 @@ executable("msd_img_rgx_integration_tests_executable") {
 
   sources = [ "test_shutdown.cc" ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/fdio",
@@ -40,8 +38,6 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
   ]
 
   include_dirs = [ "//src/graphics/drivers/msd-img-rgx/no_hardware" ]
-
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",

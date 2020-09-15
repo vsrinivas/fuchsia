@@ -44,7 +44,10 @@ source_set("gesture") {
     "//src/ui/lib/glm_workaround",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 group("tests") {

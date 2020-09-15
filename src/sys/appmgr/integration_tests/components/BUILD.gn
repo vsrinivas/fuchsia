@@ -16,8 +16,6 @@ executable("echo1") {
 
   sources = [ "echo.cc" ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [ "//src/lib/fxl" ]
 }
 
@@ -25,8 +23,6 @@ executable("echo2") {
   output_name = "components_test_echo2"
 
   sources = [ "echo.cc" ]
-
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 
   public_deps = [ "//src/lib/fxl" ]
 }
@@ -36,8 +32,6 @@ executable("echo_stdin") {
 
   sources = [ "echo_stdin.cc" ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [ "//src/lib/fxl" ]
 }
 
@@ -45,8 +39,6 @@ executable("getenv") {
   output_name = "components_test_getenv"
 
   sources = [ "getenv.cc" ]
-
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 
   public_deps = [ "//src/lib/fxl" ]
 }
@@ -58,7 +50,6 @@ executable("components_binary_test") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]

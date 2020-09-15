@@ -30,7 +30,6 @@ test("minfs-allocator-unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/minfs",

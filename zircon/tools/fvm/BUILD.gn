@@ -14,7 +14,6 @@ import("//build/sdk/sdk_host_tool.gni")
 executable("fvm") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
     "//src/storage/volume_image/ftl:raw-nand-image-utils",

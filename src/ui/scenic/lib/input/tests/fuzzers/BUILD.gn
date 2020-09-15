@@ -9,7 +9,6 @@ fuzzer("input-fuzzer") {
   sources = [ "input_fuzztest.cc" ]
   deps = [
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ui/scenic/cpp",
     "//src/ui/scenic/lib/input/tests:util",
   ]

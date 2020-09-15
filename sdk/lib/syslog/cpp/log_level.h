@@ -19,8 +19,6 @@ constexpr LogSeverity LOG_WARNING = 0x40;
 constexpr LogSeverity LOG_ERROR = 0x50;
 constexpr LogSeverity LOG_FATAL = 0x60;
 
-constexpr LogSeverity LOG_NONE = 0x00;
-
 constexpr LogSeverity DefaultLogLevel = LOG_INFO;
 constexpr int LogSeverityStepSize = 0x10;
 constexpr int LogVerbosityStepSize = 0x1;

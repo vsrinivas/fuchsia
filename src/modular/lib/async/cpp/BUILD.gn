@@ -21,6 +21,7 @@ source_set("future") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-default",

@@ -39,6 +39,7 @@ source_set("button_checker") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
   ]
   public_deps = [

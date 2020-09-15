@@ -56,7 +56,6 @@ test("factoryfs_unit") {
   ]
   deps = [
     ":factoryfs",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",

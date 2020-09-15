@@ -13,7 +13,6 @@ executable("listener_unittest_exe") {
   sources = [ "listener_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -30,7 +29,6 @@ executable("log_message_store_unittest_exe") {
   sources = [ "log_message_store_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -47,7 +45,6 @@ executable("lz4_encoding_unittest_exe") {
   sources = [ "lz4_encoding_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_decoder",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:lz4_decoder",
@@ -69,7 +66,6 @@ executable("reader_unittest_exe") {
   sources = [ "reader_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
@@ -90,7 +86,6 @@ executable("system_log_recorder_unittest_exe") {
   sources = [ "system_log_recorder_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
@@ -112,7 +107,6 @@ executable("writer_unittest_exe") {
   sources = [ "writer_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",

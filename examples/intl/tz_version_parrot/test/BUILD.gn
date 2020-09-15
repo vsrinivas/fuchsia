@@ -22,7 +22,6 @@ executable("tz_version_parrot_test_bin") {
   deps = [
     "//examples/intl/tz_version_parrot",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

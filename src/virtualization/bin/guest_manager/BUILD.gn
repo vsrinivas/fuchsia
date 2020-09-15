@@ -50,10 +50,7 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("guest_manager") {
@@ -80,7 +77,6 @@ executable("guest_manager_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
   ]

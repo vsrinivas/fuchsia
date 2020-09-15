@@ -13,7 +13,6 @@ executable("tel-driver-unit-test") {
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver_src",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",

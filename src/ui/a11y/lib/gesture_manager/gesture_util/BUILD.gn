@@ -10,5 +10,8 @@ source_set("gesture_util") {
 
   public_deps = [ "//sdk/fidl/fuchsia.ui.input.accessibility" ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }

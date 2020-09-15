@@ -23,7 +23,6 @@ if (is_host) {
     sources = [ "main.cc" ]
     deps = [
       ":src",
-      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/fxl",
     ]
   }
@@ -42,7 +41,6 @@ if (is_host) {
     ]
     deps = [
       ":src",
-      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/lib/files",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",

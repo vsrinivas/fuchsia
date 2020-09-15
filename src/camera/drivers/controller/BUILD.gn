@@ -45,6 +45,7 @@ source_set("source") {
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/controller/configs",
     "//src/camera/lib/format_conversion",
     "//src/devices/bus/lib/device-protocol-pdev",

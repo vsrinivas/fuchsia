@@ -26,7 +26,6 @@ executable("fuchsia_async_testloop_c_test") {
   deps = [
     ":guest",
     "//garnet/public/lib/gtest:gtest",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

@@ -106,7 +106,6 @@ test("fvm_sparse_image_reader_test") {
   sources = [ "fvm_sparse_image_reader_test.cc" ]
   deps = [
     ":fvm-sparse-image",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/volume_image/ftl:ftl-image",

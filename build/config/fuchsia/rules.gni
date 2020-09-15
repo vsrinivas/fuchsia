@@ -27,8 +27,6 @@ template("driver_module") {
     # Save the target name as forward_variables_from below might override it.
     _target_name = target_name
 
-    assert_no_deps = []
-
     # Explicitly forward visibility, implicitly forward everything else.
     # See comment in //build/config/BUILDCONFIG.gn for details on this pattern.
     forward_variables_from(invoker, [ "visibility" ])
@@ -61,21 +59,6 @@ template("driver_module") {
     _dest_dir = "driver"
     if (defined(invoker.test) && invoker.test) {
       _dest_dir += "/test"
-    }
-
-    has_syslog_backend = false
-
-    if (defined(deps)) {
-      foreach(dep, deps) {
-        dep = get_label_info(dep, "label_no_toolchain")
-        has_syslog_backend =
-            has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
-            dep == "//sdk/lib/syslog/cpp:backend_legacy"
-      }
-    }
-
-    if (!has_syslog_backend) {
-      assert_no_deps += [ "//sdk/lib/syslog/cpp" ]
     }
 
     metadata = {

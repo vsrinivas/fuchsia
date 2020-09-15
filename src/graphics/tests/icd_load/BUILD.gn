@@ -19,8 +19,5 @@ source_set("icd_load_src") {
 executable("icd_load") {
   testonly = true
 
-  deps = [
-    ":icd_load_src",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":icd_load_src" ]
 }

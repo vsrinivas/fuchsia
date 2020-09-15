@@ -33,10 +33,9 @@ executable("unittests") {
     "settings_test.cc",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

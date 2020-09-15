@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 

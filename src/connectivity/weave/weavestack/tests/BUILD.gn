@@ -21,11 +21,10 @@ executable("unittests") {
     "stack_utils_test.cc",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
   public_deps = [
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/weavestack:lib",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

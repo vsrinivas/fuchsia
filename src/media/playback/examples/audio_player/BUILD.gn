@@ -38,7 +38,6 @@ executable("audio_player_bin") {
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/url",
     "//zircon/public/lib/fit",

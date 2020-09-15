@@ -28,6 +28,7 @@ static_library("fs_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs",
     "//src/storage/fuchsia-fatfs:fatfs",
@@ -53,7 +54,6 @@ test("access_tests") {
   deps = [
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fdio-caller",
   ]
@@ -72,7 +72,6 @@ test("append_tests") {
   sources = [ "append.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -91,7 +90,6 @@ test("attr_tests") {
   sources = [ "attr.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -110,7 +108,6 @@ test("basic_tests") {
   sources = [ "basic.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -128,7 +125,6 @@ test("case_sensitivity_tests") {
   sources = [ "case_sensitivity.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -146,7 +142,6 @@ test("clone_tests") {
   sources = [ "clone.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -183,7 +178,6 @@ test("directory_tests") {
   sources = [ "directory.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -203,7 +197,6 @@ test("dot_dot_tests") {
   deps = [
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
@@ -223,7 +216,6 @@ test("fcntl_tests") {
   sources = [ "fcntl.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -260,7 +252,6 @@ test("link_tests") {
   sources = [ "link.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -279,7 +270,6 @@ test("lseek_tests") {
   sources = [ "lseek.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -301,7 +291,6 @@ test("minfs_tests") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fdio-caller",
@@ -323,7 +312,6 @@ test("mmap_tests") {
   sources = [ "mmap.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
@@ -343,7 +331,6 @@ test("overflow_tests") {
   sources = [ "overflow.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -361,7 +348,6 @@ test("persist_tests") {
   sources = [ "persist.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -380,7 +366,6 @@ test("random_op_tests") {
   sources = [ "random_op.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -399,7 +384,6 @@ test("realpath_tests") {
   sources = [ "realpath.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -419,7 +403,6 @@ test("rename_tests") {
   deps = [
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -440,7 +423,6 @@ test("resize_tests") {
   deps = [
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -462,7 +444,6 @@ test("rw_tests") {
   sources = [ "rw.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -481,7 +462,6 @@ test("rw_workers_tests") {
   sources = [ "rw_workers.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -500,7 +480,6 @@ test("sparse_tests") {
   sources = [ "sparse.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -519,7 +498,6 @@ test("sync_tests") {
   sources = [ "sync.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -538,7 +516,6 @@ test("threading_tests") {
   sources = [ "threading.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -560,7 +537,6 @@ test("truncate_tests") {
   ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -597,7 +573,6 @@ test("unlink_tests") {
   sources = [ "unlink.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -617,7 +592,6 @@ test("watcher_tests") {
   deps = [
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -641,7 +615,6 @@ fuchsia_test_package("fs-tests") {
     ":basic-tests",
     ":case-sensitivity-tests",
     ":clone-tests",
-
     # Uncomment this when fxb/53973 is fixed.
     # ":corrupt-tests",
     ":directory-tests",
@@ -674,7 +647,6 @@ test("directory_large_tests") {
   sources = [ "directory_large.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -713,7 +685,6 @@ test("sparse_large_tests") {
   sources = [ "sparse_large.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -735,7 +706,6 @@ test("truncate_large_tests") {
   ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]

@@ -51,29 +51,17 @@ source_set("system_data_updater_server_provider") {
 fidl_protocol_fuzzer("logger_factory_fuzzer") {
   fidl = "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt"
   protocol = "fuchsia.cobalt.LoggerFactory"
-  deps = [
-    ":logger_factory_server_provider",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":logger_factory_server_provider" ]
 }
 
 fidl_protocol_fuzzer("logger_fuzzer") {
   fidl = "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt"
   protocol = "fuchsia.cobalt.Logger"
-  deps = [
-    ":logger_server_provider",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":logger_server_provider" ]
 }
 
 fidl_protocol_fuzzer("system_data_updater_fuzzer") {
   fidl = "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt"
   protocol = "fuchsia.cobalt.SystemDataUpdater"
-  deps = [
-    ":system_data_updater_server_provider",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
-
-  # TODO(46554): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps = [ ":system_data_updater_server_provider" ]
 }

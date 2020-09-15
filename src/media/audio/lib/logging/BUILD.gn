@@ -11,5 +11,8 @@ source_set("cli") {
 source_set("logging") {
   sources = [ "logging.h" ]
 
-  public_deps = [ "//sdk/lib/syslog/cpp" ]
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }

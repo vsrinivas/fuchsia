@@ -51,7 +51,6 @@ test("zbitl-unittests") {
     "view-tests.cc",
   ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/zbitl",

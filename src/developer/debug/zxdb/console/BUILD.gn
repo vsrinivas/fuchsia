@@ -301,8 +301,5 @@ test("zxdb_google_analytics_client_manualtest") {
     "google_analytics_client_manualtest.cc",
     "google_analytics_client_manualtest.h",
   ]
-  deps = [
-    ":console",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":console" ]
 }

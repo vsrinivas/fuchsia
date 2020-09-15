@@ -20,7 +20,6 @@ executable("insntrace_integration_tests") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.cpu.insntrace",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/tracing/lib/test_utils",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",

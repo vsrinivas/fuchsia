@@ -18,7 +18,6 @@ driver_module("aml-mipicsi-driver") {
     "//sdk/banjo/ddk.protocol.mipicsi",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",

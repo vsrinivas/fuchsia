@@ -4,6 +4,8 @@
 
 #include "garnet/bin/run_test_component/max_severity_config.h"
 
+#include <lib/syslog/logger.h>
+
 #include <rapidjson/document.h>
 #include <src/lib/fxl/strings/string_printf.h>
 

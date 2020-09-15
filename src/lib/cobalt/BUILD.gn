@@ -19,7 +19,6 @@ executable("unittests") {
   output_name = "cobalt_lib_unittests"
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/cobalt/cpp:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]

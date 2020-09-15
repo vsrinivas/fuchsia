@@ -162,10 +162,7 @@ executable("sparse_array_tests") {
     "sparse_array_tests.cc",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -178,10 +175,7 @@ executable("bitarr_tests") {
     "bitarr_tests.cc",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
   configs += [ "//build/config:Wno-conversion" ]
 }
 

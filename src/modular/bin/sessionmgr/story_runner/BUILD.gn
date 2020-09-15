@@ -82,7 +82,6 @@ executable_package("dev_story_shell") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/fidl:view_host",
@@ -98,7 +97,6 @@ executable("story_controller_impl_unittest") {
 
   deps = [
     ":story_runner",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",

@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
 
+#include <lib/syslog/logger.h>
+
 #include <filesystem>
 
 #include "src/media/audio/audio_core/audio_device.h"

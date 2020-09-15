@@ -19,6 +19,7 @@ source_set("device") {
   public_deps = [
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
@@ -53,10 +54,7 @@ executable("virtio_balloon_bin") {
 
   output_name = "virtio_balloon"
   sources = [ "virtio_balloon.cc" ]
-  deps = [
-    ":virtio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":virtio" ]
 }
 
 package("virtio_balloon") {
@@ -87,6 +85,7 @@ source_set("block") {
     ":device",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/bitmap",
     "//zircon/system/ulib/trace",
   ]
@@ -103,7 +102,6 @@ executable("virtio_block_bin") {
   deps = [
     ":block",
     ":virtio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -130,10 +128,7 @@ executable("virtio_console_bin") {
 
   output_name = "virtio_console"
   sources = [ "virtio_console.cc" ]
-  deps = [
-    ":virtio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":virtio" ]
 }
 
 package("virtio_console") {
@@ -156,10 +151,7 @@ executable("virtio_input_bin") {
 
   output_name = "virtio_input"
   sources = [ "virtio_input.cc" ]
-  deps = [
-    ":virtio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":virtio" ]
 }
 
 package("virtio_input") {
@@ -195,7 +187,6 @@ executable("virtio_gpu_bin") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
   ]
@@ -241,7 +232,6 @@ executable("virtio_magma_bin") {
   output_name = "virtio_magma"
   deps = [
     ":virtio_magma_lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/src/libmagma",
   ]
 }
@@ -252,7 +242,6 @@ executable("virtio_magma_bin_mock_system") {
   output_name = "virtio_magma_mock_system"
   deps = [
     ":virtio_magma_lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/tests/mock:magma_system",
   ]
 }
@@ -315,7 +304,6 @@ executable("virtio_net_bin") {
     ":virtio",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.netstack",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
   ]
 
@@ -343,10 +331,7 @@ executable("virtio_rng_bin") {
 
   output_name = "virtio_rng"
   sources = [ "virtio_rng.cc" ]
-  deps = [
-    ":virtio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":virtio" ]
 }
 
 package("virtio_rng") {
@@ -373,11 +358,7 @@ executable("virtio_wl_bin") {
     "virtio_wl.cc",
     "virtio_wl.h",
   ]
-
-  deps = [
-    ":virtio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":virtio" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -425,7 +406,6 @@ executable("device_tests") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fxl/test:gtest_main",

@@ -10,7 +10,6 @@ executable("blobfs-corrupt") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/block-client",
@@ -26,7 +25,6 @@ executable("blobfs-corrupt-test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",

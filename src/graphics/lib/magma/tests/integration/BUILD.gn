@@ -22,7 +22,6 @@ executable("magma_abi_conformance_tests") {
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
@@ -57,7 +56,6 @@ executable("virtmagma_abi_conformance_tests") {
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma_linux",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

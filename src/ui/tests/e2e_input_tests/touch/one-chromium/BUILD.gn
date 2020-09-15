@@ -17,7 +17,6 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

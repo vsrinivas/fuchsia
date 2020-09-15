@@ -38,6 +38,7 @@ source_set("intl_property_provider_impl") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/service/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
     "//third_party/icu",
@@ -83,6 +84,7 @@ source_set("locale_util") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
 
@@ -102,7 +104,6 @@ executable("locale_util_unit_test_bin") {
     ":locale_util",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.intl",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/icu_data/cpp",

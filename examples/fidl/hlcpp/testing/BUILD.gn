@@ -13,7 +13,6 @@ executable("bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest_main",
   ]
 }

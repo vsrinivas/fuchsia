@@ -17,7 +17,6 @@ executable("last_reboot_info_provider_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/last_reboot:last_reboot_info_provider",
     "//src/developer/forensics/last_reboot:reboot_reason",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -79,7 +78,6 @@ executable("reboot_reason_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/last_reboot:reboot_reason",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl/test:gtest_main",
@@ -95,7 +93,6 @@ executable("reboot_watcher_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -114,7 +111,6 @@ executable("reporter_unittest_exe") {
   sources = [ "reporter_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/last_reboot:reporter",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",

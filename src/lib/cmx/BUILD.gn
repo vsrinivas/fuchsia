@@ -54,7 +54,6 @@ executable("cmx_unittests") {
     ":cmx",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
@@ -85,7 +84,6 @@ fuzzer("cmx_fuzzer") {
   sources = [ "cmx_fuzztest.cc" ]
   deps = [
     ":cmx",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
 
     # TODO(57392): Move it back to //third_party once unification completes.

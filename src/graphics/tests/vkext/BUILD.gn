@@ -17,7 +17,6 @@ executable("vkext") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_impl",
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/tests/common",

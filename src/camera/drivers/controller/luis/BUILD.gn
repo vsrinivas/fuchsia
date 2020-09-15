@@ -30,10 +30,7 @@ source_set("config") {
 }
 
 camera_controller_driver("luis-camera-controller") {
-  deps = [
-    ":config",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":config" ]
 
   # The following config files are currently gated behind internal
   # access to the CIPD repository.

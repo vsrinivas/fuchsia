@@ -32,7 +32,6 @@ executable("integration_tests") {
 
   deps = [
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/debug_agent:test_lib",
     "//src/developer/debug/ipc:client",
     "//src/lib/fxl",

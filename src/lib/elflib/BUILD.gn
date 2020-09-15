@@ -34,7 +34,6 @@ test("elflib_unittest") {
 
   deps = [
     ":elflib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
@@ -94,16 +93,12 @@ group("tests") {
   deps = [
     ":elflib_fuzzers",
     ":elflib_tests",
-    "//sdk/lib/syslog/cpp",
   ]
 }
 
 fuzzer("elflib_fuzzer") {
   sources = [ "elflib_fuzztest.cc" ]
-  deps = [
-    ":elflib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":elflib" ]
 }
 
 fuzzers_package("elflib_fuzzers") {

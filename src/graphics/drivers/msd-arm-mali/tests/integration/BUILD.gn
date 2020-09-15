@@ -35,10 +35,7 @@ executable("msd_arm_mali_integration_tests") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "../../include",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "../../include" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

@@ -20,7 +20,6 @@ executable("sim_add_test") {
   sources = [ "sim_add_test.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",

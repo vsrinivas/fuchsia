@@ -17,7 +17,6 @@ executable("scenic_util_tests_bin") {
   output_name = "scenic_util_tests"
   sources = [ "util_tests.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/scenic/util",
     "//third_party/googletest:gtest",

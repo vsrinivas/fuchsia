@@ -54,6 +54,7 @@ source_set("codec_buffer") {
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 }
@@ -78,6 +79,7 @@ source_set("codec_client") {
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/media/lib/test:codec_buffer",
     "//src/media/lib/test:one_shot_event",

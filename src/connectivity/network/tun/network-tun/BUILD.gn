@@ -52,10 +52,7 @@ source_set("src") {
 executable("bin") {
   output_name = "network_tun"
   sources = [ "main.cc" ]
-  deps = [
-    ":src",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":src" ]
 }
 
 package("network-tun") {
@@ -84,7 +81,6 @@ executable("network_tun_unittest") {
 
   deps = [
     ":src",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",

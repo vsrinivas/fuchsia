@@ -14,7 +14,6 @@ executable("intl_wisdom_test_bin") {
   deps = [
     "../cpp:intl_wisdom",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

@@ -163,6 +163,7 @@ source_set("cobalt") {
     "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
   ]
@@ -184,6 +185,7 @@ source_set("privacy_settings") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fit",
   ]
 }

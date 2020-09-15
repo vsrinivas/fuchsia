@@ -11,10 +11,7 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
 
   sources = [ "mt8167-test.cc" ]
 
-  deps = [
-    "../../mtk:driver_sources",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "../../mtk:driver_sources" ]
 
   public_deps = [
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",

@@ -18,7 +18,6 @@ executable("config_unittest_exe") {
   sources = [ "config_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:config",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gtest",
@@ -32,7 +31,6 @@ executable("crash_register_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:crash_register",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -97,7 +95,6 @@ executable("crash_reports_integration_test_exe") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing/fakes:cobalt",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fsl",
@@ -192,7 +189,6 @@ executable("privacy_settings_ptr_unittest_exe") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.settings",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:privacy_settings_ptr",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -214,7 +210,6 @@ executable("queue_unittest_exe") {
   ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:queue",
     "//src/developer/forensics/crash_reports/info",
@@ -235,7 +230,6 @@ executable("report_util_unittest_exe") {
   sources = [ "report_util_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:report_util",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
@@ -250,7 +244,6 @@ executable("sized_data_reader_unittest_exe") {
 
   deps = [
     ":test_data",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:sized_data_reader",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",

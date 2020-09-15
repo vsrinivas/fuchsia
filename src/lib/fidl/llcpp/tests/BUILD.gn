@@ -29,7 +29,6 @@ executable("fidl_llcpp_conformance_test_bin") {
   deps = [
     ":generated_conformance_test",
     "//sdk/lib/fidl/cpp:fidl_test_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
     "//third_party/googletest:gtest",
@@ -58,7 +57,6 @@ test("fidl_llcpp_conformance_test") {
   sources = [ "test_utils.cc" ]
   deps = [
     ":generated_conformance_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
     "//third_party/googletest:gtest",
@@ -120,7 +118,6 @@ executable("fidl_llcpp_types_test_bin") {
     ":llcpptest.handles.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
     ":llcpptest.transitional.test_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
@@ -173,7 +170,6 @@ executable("fidl_llcpp_builder_test_bin") {
   ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",

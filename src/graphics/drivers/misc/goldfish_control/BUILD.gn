@@ -30,7 +30,6 @@ driver_module("control_driver") {
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

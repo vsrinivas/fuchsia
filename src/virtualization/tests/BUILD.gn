@@ -130,7 +130,6 @@ executable("unit_tests") {
   sources = [ "guest_console_test.cc" ]
   deps = [
     ":guest_console",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
@@ -197,7 +196,6 @@ executable("virtualization_core_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gmock",
   ]
 }
@@ -230,7 +228,6 @@ executable("virtualization_block_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
     "//third_party/googletest:gmock",
@@ -265,7 +262,6 @@ executable("virtualization_gpu_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gmock",
   ]
 }
@@ -298,7 +294,6 @@ executable("virtualization_input_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -330,7 +325,6 @@ executable("virtualization_net_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/inet",
     "//src/virtualization/bin/vmm:guest_config",
     "//third_party/googletest:gmock",
@@ -365,7 +359,6 @@ executable("virtualization_vsock_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gmock",
   ]
 }
@@ -529,7 +522,6 @@ executable("termina_integration_tests_bin") {
   deps = [
     ":lib",
     ":test_main",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
   ]
 }

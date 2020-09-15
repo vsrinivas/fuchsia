@@ -13,7 +13,6 @@ executable("modular_test_harness_bin") {
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -30,7 +29,6 @@ executable("test_session_shell_bin") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/fidl:view_host",
@@ -47,7 +45,6 @@ executable("test_story_shell_bin") {
   deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
@@ -65,7 +62,6 @@ executable("modular_test_harness_test") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

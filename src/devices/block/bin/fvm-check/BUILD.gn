@@ -13,7 +13,6 @@ executable("fvm-check") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/boringssl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",

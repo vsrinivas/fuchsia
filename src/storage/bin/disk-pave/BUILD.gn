@@ -31,7 +31,6 @@ executable("install-disk-image") {
   deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/lib/paver",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",

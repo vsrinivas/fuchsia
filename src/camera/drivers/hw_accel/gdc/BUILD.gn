@@ -23,6 +23,7 @@ source_set("source") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -53,10 +54,7 @@ source_set("source") {
 
 driver_module("driver") {
   output_name = "gdc"
-  deps = [
-    ":source",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":source" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [

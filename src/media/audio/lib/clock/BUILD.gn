@@ -19,7 +19,10 @@ source_set("clone_mono") {
     "clone_mono.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   public_deps = [ "//zircon/public/lib/zx" ]
 }
@@ -30,7 +33,10 @@ source_set("pid") {
     "pid_control.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -42,7 +48,10 @@ source_set("utils") {
     "utils.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   public_deps = [
     "//src/media/audio/lib/timeline",

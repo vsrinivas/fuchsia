@@ -61,8 +61,8 @@ template("sdk_static_library") {
 
   no_headers = defined(invoker.no_headers) && invoker.no_headers
 
-  if (!no_headers &&
-      (invoker.category == "partner" || invoker.category == "public")) {
+  if ((invoker.category == "partner" || invoker.category == "public") &&
+      !no_headers) {
     api_reference = "${atom_name}.api"
     if (defined(invoker.api)) {
       api_reference = invoker.api
@@ -106,7 +106,7 @@ template("sdk_static_library") {
     }
     if (libcxx_linkage == "static") {
       configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-    } else if (is_fuchsia) {
+    } else {
       # Adding this linker flag keeps us honest about not commiting to a
       # specific C++ ABI. If this flag is causing your library to not
       # compile, consider whether your library really ought to be in the SDK.

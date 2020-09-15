@@ -16,7 +16,6 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.activity.control",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",

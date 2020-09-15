@@ -12,7 +12,6 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.input.report",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/lib/files",
     "//src/lib/fxl",

@@ -24,7 +24,6 @@ executable("deprecated_timezone_unit_tests") {
     "//garnet/bin/timezone:lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

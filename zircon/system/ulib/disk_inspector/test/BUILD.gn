@@ -41,7 +41,6 @@ test("disk_inspector_unit") {
     "type_utils_test.cc",
   ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/block-client",

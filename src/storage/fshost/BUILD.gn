@@ -178,7 +178,6 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -200,7 +199,6 @@ test("fshost_test") {
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
@@ -239,7 +237,6 @@ test("fshost_loader_service_test") {
   deps = [
     ":block-watcher",
     ":fshost-registry",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/loader_service:loader_service_test_fixture",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
@@ -254,7 +251,6 @@ test("fshost_inspect_test") {
   sources = [ "inspect-manager-test.cc" ]
   deps = [
     ":inspect",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -297,7 +293,6 @@ test("block_watcher_test") {
     ":block-watcher",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",

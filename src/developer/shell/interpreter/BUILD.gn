@@ -26,7 +26,10 @@ static_library("shell_interpreter") {
     "src/value.cc",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -114,7 +117,6 @@ executable("shell_server_test_bin") {
     ":shell_server",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/shell/common",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

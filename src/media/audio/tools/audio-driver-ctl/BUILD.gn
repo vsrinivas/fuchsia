@@ -49,10 +49,7 @@ executable("bin") {
   output_name = "audio-driver-ctl"
   output_dir = "$root_out_dir/zircon-migrated"
   sources = [ "audio.cc" ]
-  deps = [
-    ":src",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":src" ]
 }
 
 test("test") {
@@ -66,7 +63,6 @@ test("test") {
   deps = [
     ":src",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

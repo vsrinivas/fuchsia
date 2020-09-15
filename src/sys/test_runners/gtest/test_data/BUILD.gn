@@ -12,7 +12,6 @@ executable("echo_gtest_client") {
     "//examples/components/routing/fidl:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -33,7 +32,6 @@ executable("gtest_runner_no_tests") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -51,7 +49,6 @@ executable("gtest_runner_sample_tests") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -68,10 +65,7 @@ executable("huge_gtest_runner_example") {
   testonly = true
   sources = [ "huge_gtest.cc" ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 fuchsia_component("huge_gtest_component") {

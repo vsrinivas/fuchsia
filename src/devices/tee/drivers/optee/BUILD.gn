@@ -101,7 +101,6 @@ test("optee-client-test") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",

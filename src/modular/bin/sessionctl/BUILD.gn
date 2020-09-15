@@ -16,7 +16,6 @@ executable("sessionctl_bin") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/async/cpp:future",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -52,6 +51,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/async/cpp:future",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -78,7 +78,6 @@ executable("sessionctl_unittest") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//src/modular/lib/testing:test_story_command_executor",

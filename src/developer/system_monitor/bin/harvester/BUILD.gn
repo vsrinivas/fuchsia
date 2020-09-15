@@ -54,6 +54,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/memory/metrics",
     "//src/developer/system_monitor/lib/dockyard:lib",
     "//src/developer/system_monitor/lib/dockyard:proto",
@@ -77,7 +78,6 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/grpc:grpc++",
   ]
 }
@@ -127,7 +127,6 @@ executable("system_monitor_harvester_test") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

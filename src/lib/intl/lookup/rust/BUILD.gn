@@ -43,7 +43,6 @@ rustc_staticlib("lib") {
   test_deps = [
     ":fuchsia.intl.test-rustc",
     ":l10n",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 
   sources = [ "src/lib.rs" ]

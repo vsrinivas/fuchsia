@@ -8,22 +8,20 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#define WEAK __attribute__((weak))
-
 namespace syslog_backend {
 
-WEAK void SetLogSettings(const syslog::LogSettings& settings);
+void SetLogSettings(const syslog::LogSettings& settings);
 
-WEAK void SetLogSettings(const syslog::LogSettings& settings,
-                         const std::initializer_list<std::string>& tags);
+void SetLogSettings(const syslog::LogSettings& settings,
+                    const std::initializer_list<std::string>& tags);
 
-WEAK syslog::LogSeverity GetMinLogLevel();
+syslog::LogSeverity GetMinLogLevel();
 
-WEAK void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
-                   const char* condition, const std::string& msg);
+void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+              const char* condition, const std::string& msg);
 
-WEAK void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
-                        const char* condition, const syslog::LogValue& msg);
+void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+                   const char* condition, const syslog::LogValue& msg);
 
 }  // namespace syslog_backend
 

@@ -74,7 +74,6 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pin-utils",
   ]
@@ -282,10 +281,7 @@ rustc_binary("bin") {
   ]
 
   # TODO(56138): Fix the leaks and remove this.
-  deps += [
-    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [ "src/main.rs" ]
 }
@@ -325,7 +321,6 @@ rustc_binary("setui-config-test") {
   name = "setui-config-test"
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",

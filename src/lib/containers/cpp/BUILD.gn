@@ -31,7 +31,6 @@ test("containers_cpp_unittests") {
 
   deps = [
     ":cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

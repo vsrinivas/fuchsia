@@ -34,7 +34,6 @@ executable("bridge_unittest_exe") {
   sources = [ "bridge_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
@@ -50,7 +49,6 @@ executable("caching_ptr_unittest_exe") {
   sources = [ "caching_ptr_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:channel_provider",
@@ -88,7 +86,6 @@ executable("cobalt_unittest_exe") {
   sources = [ "cobalt_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -107,7 +104,6 @@ executable("component_unittest_exe") {
   sources = [ "component_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils/component",
     "//third_party/googletest:gmock",
@@ -121,7 +117,6 @@ executable("device_id_provider_ptr_unittest_exe") {
   sources = [ "device_id_provider_ptr_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:device_id_provider",
@@ -154,7 +149,6 @@ executable("inspect_protocol_stats_unittest_exe") {
   sources = [ "inspect_protocol_stats_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:inspect_node_manager",
@@ -182,7 +176,6 @@ executable("oneshot_ptr_unittest_exe") {
   sources = [ "oneshot_ptr_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:channel_provider",
@@ -202,7 +195,6 @@ executable("promise_unittest_exe") {
   sources = [ "promise_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
@@ -219,7 +211,6 @@ executable("time_unittest_exe") {
   sources = [ "time_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:time",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/timekeeper:testing",
@@ -233,7 +224,6 @@ executable("utc_time_provider_unittest_exe") {
   sources = [ "utc_time_provider_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:utc_provider",

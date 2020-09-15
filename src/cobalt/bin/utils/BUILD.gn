@@ -37,6 +37,7 @@ source_set("clock") {
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/cobalt/src/lib/util:clock",
   ]
 }
@@ -63,7 +64,6 @@ executable("cobalt_utils_unittests") {
     ":fuchsia_http_client",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/cobalt/bin/testing:fake_http_loader",
     "//src/lib/fsl",
     "//third_party/googletest:gmock",

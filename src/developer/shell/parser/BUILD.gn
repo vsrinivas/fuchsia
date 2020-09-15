@@ -23,6 +23,7 @@ static_library("parser") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/icu",
     "//zircon/public/lib/fit",
   ]
@@ -43,7 +44,6 @@ test("parser_tests_bin") {
 
   deps = [
     ":parser",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fit",
   ]

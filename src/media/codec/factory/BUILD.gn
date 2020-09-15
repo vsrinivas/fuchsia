@@ -18,6 +18,7 @@ source_set("factory_source") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -30,10 +31,7 @@ executable("factory") {
 
   sources = [ "main.cc" ]
 
-  deps = [
-    ":factory_source",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":factory_source" ]
 }
 
 executable("codec_detect_hw_encode_test_bin") {
@@ -45,7 +43,6 @@ executable("codec_detect_hw_encode_test_bin") {
 
   deps = [
     ":factory_source",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
@@ -73,7 +70,6 @@ executable("codec_detect_hw_decode_test_bin") {
 
   deps = [
     ":factory_source",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]

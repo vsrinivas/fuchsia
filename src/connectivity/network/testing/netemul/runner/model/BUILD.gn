@@ -52,7 +52,6 @@ executable("model_unittest") {
     ":model",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
 

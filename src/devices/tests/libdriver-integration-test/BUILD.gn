@@ -30,7 +30,6 @@ test("tests") {
     "//sdk/fidl/fuchsia.device.test",
     "//sdk/fidl/fuchsia.io:fuchsia.io",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",

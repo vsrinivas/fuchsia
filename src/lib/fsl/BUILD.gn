@@ -39,7 +39,6 @@ executable("fsl_unittests") {
   deps = [
     ":fsl",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

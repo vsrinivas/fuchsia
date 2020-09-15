@@ -13,7 +13,6 @@ executable("test_utils_test") {
   deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/test_utils",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
@@ -31,7 +30,6 @@ executable("button_checker_test") {
   testonly = true
   sources = [ "button_checker_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main",
   ]

@@ -21,7 +21,6 @@ executable("uuid_unittests") {
 
   deps = [
     ":uuid",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

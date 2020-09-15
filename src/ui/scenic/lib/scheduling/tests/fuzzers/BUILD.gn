@@ -8,7 +8,6 @@ import("//build/package.gni")
 fuzzer("frame-scheduler-fuzzer") {
   sources = [ "frame_scheduler_fuzztest.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
   ]

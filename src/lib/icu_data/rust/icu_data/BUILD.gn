@@ -25,10 +25,7 @@ rustc_library("icu_data") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//third_party/rust_crates:matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   non_rust_deps = [
     "../../cpp:icu_data_cpp",

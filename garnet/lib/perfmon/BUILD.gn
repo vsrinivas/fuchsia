@@ -90,7 +90,6 @@ executable("perfmon_tests_app") {
   deps = [
     ":perfmon",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

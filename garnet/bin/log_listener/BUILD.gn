@@ -82,7 +82,6 @@ executable("log_listener_return_code_test") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
   ]

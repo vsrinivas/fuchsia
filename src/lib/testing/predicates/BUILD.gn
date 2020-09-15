@@ -18,7 +18,6 @@ test("predicates-lib-unittests") {
   sources = [ "predicates_test.cc" ]
   deps = [
     ":predicates",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -12,7 +12,6 @@ test("test") {
     "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.mipicsi:ddk.protocol.mipicsi_mock",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/sensors/imx227:source",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",

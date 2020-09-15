@@ -42,7 +42,6 @@ executable("memory_metrics_unittests") {
     ":utils",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
   ]
@@ -81,7 +80,6 @@ executable("memory_metrics_systemtests") {
     ":utils",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
   ]

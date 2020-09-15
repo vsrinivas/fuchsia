@@ -51,7 +51,6 @@ driver_module("ge2d-driver") {
   deps = [
     ":lib",
     "test:device_test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/driver-unit-test",
   ]
 

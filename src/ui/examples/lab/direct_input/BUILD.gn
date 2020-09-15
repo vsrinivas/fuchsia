@@ -18,7 +18,6 @@ executable("direct_input") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",

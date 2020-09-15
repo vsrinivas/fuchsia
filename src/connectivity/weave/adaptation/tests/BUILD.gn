@@ -76,7 +76,6 @@ executable("weave_ble_manager_unittests") {
   sources = [ "ble_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -90,7 +89,6 @@ executable("configuration_manager_unittests") {
   sources = [ "configuration_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -104,7 +102,6 @@ executable("group_key_store_unittests") {
   sources = [ "group_key_store_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -121,7 +118,6 @@ executable("platform_case_auth_delegate_unittests") {
   sources = [ "platform_case_auth_delegate_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -138,7 +134,6 @@ executable("weave_platform_manager_unittests") {
   sources = [ "platform_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -152,7 +147,6 @@ executable("weave_config_manager_unittests") {
   sources = [ "weave_config_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/files:files",
     "//src/lib/fxl/test:gtest_main",
@@ -167,7 +161,6 @@ executable("weave_thread_stack_manager_unittests") {
   sources = [ "thread_stack_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

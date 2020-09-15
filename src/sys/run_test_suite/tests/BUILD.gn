@@ -28,7 +28,6 @@ executable("run_test_suite_long_running_test") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

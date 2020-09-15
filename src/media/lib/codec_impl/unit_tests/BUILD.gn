@@ -21,7 +21,6 @@ executable("codec_impl_unit_tests_bin") {
 
   deps = [
     ":codec_impl_tests",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
@@ -70,7 +69,6 @@ executable("decryptor_adapter_tests_bin") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",

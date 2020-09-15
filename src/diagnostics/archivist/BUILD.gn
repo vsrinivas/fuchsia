@@ -222,11 +222,8 @@ rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
     ":lib",
     "//src/lib/fuzzing/rust:fuzz",
     "//src/lib/syslog/rust:syslog",
-    "//zircon/system/ulib/syslog",
   ]
-
-  non_rust_deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
-
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
   source_root = "src/fuzzer.rs"
 
   sources = [ "src/fuzzer.rs" ]

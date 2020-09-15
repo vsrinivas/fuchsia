@@ -67,7 +67,6 @@ executable("vsh_unittest") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",

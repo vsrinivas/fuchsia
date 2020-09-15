@@ -24,7 +24,6 @@ if (is_host) {
   executable("zxdb") {
     sources = [ "main_host.cc" ]
     deps = [
-      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/console",
@@ -41,7 +40,6 @@ if (is_host) {
     sources = [ "main_e2e_test.cc" ]
     deps = [
       ":e2e_test_headers",
-      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/debug/zxdb/console:e2e_tests",
       "//src/lib/fxl/test:test_settings",
       "//third_party/googletest:gtest",
@@ -50,7 +48,6 @@ if (is_host) {
 
   test("zxdb_tests") {
     deps = [
-      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/debug/ipc:tests",
       "//src/developer/debug/shared:tests",
       "//src/developer/debug/zxdb/client:tests",
@@ -73,7 +70,6 @@ if (is_host) {
 
       deps = [
         ":copy_large_test_data",
-        "//sdk/lib/syslog/cpp:backend_legacy",
         "//src/developer/debug/zxdb/symbols:test_support",
         "//src/lib/fxl/test:gtest_main",
         "//third_party/googletest:gtest",
@@ -97,7 +93,6 @@ if (is_host) {
     sources = [ "zxdb_perftests.cc" ]
 
     deps = [
-      "//sdk/lib/syslog/cpp:backend_legacy",
       "//src/developer/debug/zxdb/common:perf_test",
       "//src/developer/debug/zxdb/symbols:perf_tests",
       "//third_party/googletest:gtest",

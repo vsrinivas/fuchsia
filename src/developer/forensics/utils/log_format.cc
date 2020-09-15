@@ -5,6 +5,7 @@
 #include "src/developer/forensics/utils/log_format.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/logger.h>
 
 #include <cinttypes>
 
@@ -15,19 +16,19 @@ namespace forensics {
 namespace {
 
 std::string SeverityToString(const int32_t severity) {
-  if (severity == syslog::LOG_TRACE) {
+  if (severity == FX_LOG_TRACE) {
     return "TRACE";
-  } else if (severity == syslog::LOG_DEBUG) {
+  } else if (severity == FX_LOG_DEBUG) {
     return "DEBUG";
-  } else if (severity > syslog::LOG_DEBUG && severity < syslog::LOG_INFO) {
-    return fxl::StringPrintf("VLOG(%d)", syslog::LOG_INFO - severity);
-  } else if (severity == syslog::LOG_INFO) {
+  } else if (severity > FX_LOG_DEBUG && severity < FX_LOG_INFO) {
+    return fxl::StringPrintf("VLOG(%d)", FX_LOG_INFO - severity);
+  } else if (severity == FX_LOG_INFO) {
     return "INFO";
-  } else if (severity == syslog::LOG_WARNING) {
+  } else if (severity == FX_LOG_WARNING) {
     return "WARN";
-  } else if (severity == syslog::LOG_ERROR) {
+  } else if (severity == FX_LOG_ERROR) {
     return "ERROR";
-  } else if (severity == syslog::LOG_FATAL) {
+  } else if (severity == FX_LOG_FATAL) {
     return "FATAL";
   }
   return "INVALID";

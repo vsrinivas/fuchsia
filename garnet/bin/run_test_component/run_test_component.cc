@@ -9,6 +9,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fitx/result.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/logger.h>
 #include <limits.h>
 
 #include <regex>
@@ -42,22 +43,22 @@ bool to_bool(std::string str) {
 
 fitx::result<bool, uint32_t> ParseLogLevel(const std::string& level) {
   if (level == "TRACE") {
-    return fitx::success(syslog::LOG_TRACE);
+    return fitx::success(FX_LOG_TRACE);
   }
   if (level == "DEBUG") {
-    return fitx::success(syslog::LOG_DEBUG);
+    return fitx::success(FX_LOG_DEBUG);
   }
   if (level == "INFO") {
-    return fitx::success(syslog::LOG_INFO);
+    return fitx::success(FX_LOG_INFO);
   }
   if (level == "WARN") {
-    return fitx::success(syslog::LOG_WARNING);
+    return fitx::success(FX_LOG_WARNING);
   }
   if (level == "ERROR") {
-    return fitx::success(syslog::LOG_ERROR);
+    return fitx::success(FX_LOG_ERROR);
   }
   if (level == "FATAL") {
-    return fitx::success(syslog::LOG_FATAL);
+    return fitx::success(FX_LOG_FATAL);
   }
   return fitx::error(false);
 }

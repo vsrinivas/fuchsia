@@ -20,7 +20,6 @@ executable("bcmdhd_crossdriver_test") {
   testonly = true
   sources = [ "bcmdhd_crossdriver_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
@@ -33,7 +32,6 @@ executable("brcmu_utils_test") {
   testonly = true
   sources = [ "brcmu_utils_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
@@ -46,7 +44,6 @@ executable("channel_conversion_test") {
   testonly = true
   sources = [ "channel_conversion_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
@@ -58,7 +55,6 @@ executable("cfg80211_test") {
   testonly = true
   sources = [ "cfg80211_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
@@ -70,7 +66,6 @@ executable("debug_test") {
   testonly = true
   sources = [ "debug_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
@@ -83,7 +78,6 @@ executable("dma_buffer_test") {
   testonly = true
   sources = [ "dma_buffer_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
@@ -97,7 +91,6 @@ executable("dma_pool_test") {
   testonly = true
   sources = [ "dma_pool_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
@@ -112,7 +105,6 @@ executable("dma_ring_test") {
   testonly = true
   sources = [ "dma_ring_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
@@ -127,7 +119,6 @@ executable("intrusive_list_test") {
   testonly = true
   sources = [ "intrusive_list_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -139,7 +130,6 @@ executable("netbuf_test") {
   testonly = true
   sources = [ "netbuf_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/devices/testing/fake_ddk",
@@ -154,7 +144,6 @@ executable("task_queue_test") {
   testonly = true
   sources = [ "task_queue_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/sync",
@@ -168,7 +157,6 @@ executable("timer_test") {
   testonly = true
   sources = [ "timer_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
@@ -182,7 +170,6 @@ executable("workqueue_test") {
   testonly = true
   sources = [ "workqueue_test.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",

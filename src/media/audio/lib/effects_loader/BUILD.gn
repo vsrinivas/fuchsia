@@ -20,6 +20,7 @@ source_set("effects_loader") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/effects",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/fbl",
   ]
 
@@ -46,7 +47,6 @@ executable("test") {
   deps = [
     ":effects_loader",
     "testing",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 

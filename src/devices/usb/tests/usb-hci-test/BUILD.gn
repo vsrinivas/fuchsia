@@ -47,7 +47,6 @@ test("usb-hci-test") {
     "//sdk/fidl/fuchsia.hardware.usb.hcitest",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",

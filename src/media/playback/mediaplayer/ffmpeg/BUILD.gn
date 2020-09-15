@@ -35,6 +35,7 @@ source_set("ffmpeg") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/lib/ffmpeg",
   ]
 

@@ -22,7 +22,6 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -71,10 +70,7 @@ executable("return_arg_test_util") {
 
   sources = [ "return_arg_util.cc" ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 test_package("fdio_spawn_tests") {

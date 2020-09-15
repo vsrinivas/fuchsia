@@ -41,7 +41,6 @@ executable("isolated_devmgr") {
     ":src",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
@@ -103,7 +102,6 @@ executable("test_bin") {
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
@@ -146,9 +144,9 @@ isolated_devmgr_component("virtual-audio-devmgr") {
 # A device that causes a crash when it's operated on
 driver_module("crash-device") {
   configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
+   "//build/config:all_source",
+   "//build/config/fuchsia:enable_zircon_asserts",
+ ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {
@@ -169,8 +167,8 @@ fuchsia_component("isolated-devmgr-tests") {
   testonly = true
   manifest = "isolated-devmgr-tests.cmx"
   deps = [
-    ":crash-device",
     ":ethertap-devmgr",
+    ":crash-device",
     ":test_bin",
     ":virtual-audio-devmgr",
     "//src/connectivity/ethernet/drivers/ethernet",

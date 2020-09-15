@@ -30,7 +30,6 @@ executable("passing-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -41,7 +40,6 @@ executable("no-onfinished-after-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -52,7 +50,6 @@ executable("disabled-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -63,7 +60,6 @@ executable("failing-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -74,7 +70,6 @@ executable("incomplete-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
   sources = [ "incomplete_test_example.cc" ]
@@ -84,7 +79,6 @@ executable("invalid-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
   sources = [ "invalid_test_example.cc" ]
@@ -94,7 +88,6 @@ executable("no-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -105,7 +98,6 @@ executable("huge-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -116,7 +108,6 @@ executable("get-tests-hangs-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -127,7 +118,6 @@ executable("get-tests-closes-channel-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -138,7 +128,6 @@ executable("run-hangs-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -149,7 +138,6 @@ executable("run-closes-channel-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -95,7 +95,6 @@ graphics_compute_unittests_package("graphics-compute-unittests") {
     "tests/common/spinel:unittests",
     "tests/common/svg:unittests",
     "tests/mock_spinel:mock_spinel_unittests",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -106,7 +105,6 @@ graphics_compute_unittests_package("graphics-compute-vk-unittests") {
     "spinel:vk_unittests",
     "tests:common_vk_unittests",
     "tests/common/spinel_vk:unittests",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
   needs_vulkan = true
 

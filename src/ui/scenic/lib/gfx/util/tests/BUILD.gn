@@ -15,7 +15,6 @@ executable("unittests") {
   sources = [ "validate_eventpair_unittest.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/gfx:util",
     "//src/ui/scenic/lib/gfx:validate_eventpair",

@@ -14,7 +14,6 @@ executable("log_validator_cpp_puppet_bin") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/syslog/streams/cpp:streams",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
     "//src/diagnostics/log-validator/fidl:validate",

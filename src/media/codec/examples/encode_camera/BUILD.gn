@@ -19,7 +19,6 @@ executable("encode_camera") {
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/media/lib/test:codec_buffer",
     "//zircon/public/lib/async",

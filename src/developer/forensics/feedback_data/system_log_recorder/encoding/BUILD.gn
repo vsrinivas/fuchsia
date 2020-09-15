@@ -73,6 +73,7 @@ source_set("lz4_encoder") {
     ":lz4_utils",
     ":ring_buffer",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -109,6 +110,7 @@ source_set("ring_buffer") {
   deps = [
     ":lz4_utils",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 

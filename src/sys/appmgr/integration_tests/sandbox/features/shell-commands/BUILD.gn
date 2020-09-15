@@ -17,7 +17,6 @@ sandbox_test_package("has_shell_commands") {
   sources = [ "has_shell_commands.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -28,7 +27,6 @@ sandbox_test_package("no_shell_commands") {
   sources = [ "no_shell_commands.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]

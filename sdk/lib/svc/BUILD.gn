@@ -41,7 +41,6 @@ test("svc_unittests") {
     ":svc",
     "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zx",
   ]

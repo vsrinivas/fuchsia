@@ -19,7 +19,6 @@ executable("bin") {
   sources = [ "src/smart_door_server.cc" ]
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -38,6 +37,7 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/json_parser",
     "//src/security/codelab/services:codelab",
     "//zircon/public/lib/fbl",
@@ -106,7 +106,6 @@ executable("smart-door-server-unittest-bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
@@ -136,7 +135,6 @@ executable("smart-door-functional-test-bin") {
 
   deps = [
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/security/codelab/services:codelab",

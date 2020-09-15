@@ -29,10 +29,7 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("guest_runner") {

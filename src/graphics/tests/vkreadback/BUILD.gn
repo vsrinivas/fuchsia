@@ -24,10 +24,7 @@ executable("vkreadback") {
 
   sources = [ "main.cc" ]
 
-  deps = [
-    ":vkreadback_src",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":vkreadback_src" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

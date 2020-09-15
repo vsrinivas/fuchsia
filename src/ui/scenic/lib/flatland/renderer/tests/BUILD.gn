@@ -29,7 +29,6 @@ executable("unittests") {
   ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/lib/escher/test/common:gtest_escher",
     "//src/ui/scenic/lib/display:display",

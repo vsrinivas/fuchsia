@@ -20,6 +20,7 @@ source_set("format") {
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/lib/timeline",
     "//zircon/public/lib/ffl",
     "//zircon/system/ulib/trace",
@@ -46,7 +47,6 @@ executable("unittest-bin") {
 
   deps = [
     ":format",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

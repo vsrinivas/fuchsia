@@ -28,7 +28,6 @@ executable("vkcontext") {
 
   deps = [
     ":common",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/vulkan",
   ]
 

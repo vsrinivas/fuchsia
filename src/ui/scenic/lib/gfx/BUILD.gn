@@ -313,6 +313,7 @@ source_set("validate_eventpair") {
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]

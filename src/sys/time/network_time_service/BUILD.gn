@@ -26,6 +26,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.time.external",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/sys/time/lib/network_time:lib",
     "//third_party/roughtime:client_lib",
@@ -46,7 +47,6 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-default",
@@ -103,7 +103,6 @@ executable("network_time_service_unittests") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

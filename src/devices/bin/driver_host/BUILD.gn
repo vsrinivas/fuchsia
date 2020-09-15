@@ -19,7 +19,6 @@ executable("driver_host") {
   deps = [
     ":common",
     ":driver",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -132,7 +131,6 @@ test("driver_host_test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
@@ -148,8 +146,8 @@ isolated_devmgr_unittest_package("driver-host-tests") {
   executable_path = "test/driver_host_test"
 
   deps = [
-    ":driver-host-test-child-driver",
     ":driver-host-test-driver",
+    ":driver-host-test-child-driver",
     ":driver_host_test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",

@@ -8,7 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fitx/result.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/logger.h>
 
 #include <string>
 
@@ -22,8 +22,8 @@ struct ParseArgsResult {
   std::string realm_label;
   /// Timeout in seconds for test. By default there is no timeout.
   int32_t timeout = -1;
-  int32_t min_log_severity = syslog::LOG_TRACE;
-  int32_t max_log_severity = syslog::LOG_FATAL;
+  int32_t min_log_severity = FX_LOG_TRACE;
+  int32_t max_log_severity = FX_LOG_NONE;
 };
 
 // Parses args.

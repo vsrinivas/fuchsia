@@ -8,17 +8,6 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 sdk_source_set("cpp") {
-  # TODO(59937): Remove when Go fuzzer links OK against this.
-  if (current_toolchain == "//build/toolchain/fuchsia:x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer-shared" ||
-      current_toolchain == "//build/toolchain:host_x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain:host_x64-asan-fuzzer" ||
-      current_toolchain ==
-      "//build/toolchain/fuchsia:x64-ubsan-fuzzer-shared") {
-    build_as_static = true
-  }
-
   # Keep internal for now until the API stabilizes.
   category = "internal"
 
@@ -46,17 +35,6 @@ sdk_source_set("cpp") {
 }
 
 sdk_source_set("backend_host") {
-  # TODO(59937): Remove when Go fuzzer links OK against this.
-  if (current_toolchain == "//build/toolchain/fuchsia:x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer-shared" ||
-      current_toolchain == "//build/toolchain:host_x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain:host_x64-asan-fuzzer" ||
-      current_toolchain ==
-      "//build/toolchain/fuchsia:x64-ubsan-fuzzer-shared") {
-    build_as_static = true
-  }
-
   # Keep internal for now until the API stabilizes.
   category = "internal"
 
@@ -74,52 +52,7 @@ sdk_source_set("backend_host") {
   public_configs = [ "//sdk/config" ]
 }
 
-sdk_source_set("backend_legacy_fuchsia") {
-  # TODO(59937): Remove when Go fuzzer links OK against this.
-  if (current_toolchain == "//build/toolchain/fuchsia:x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer-shared" ||
-      current_toolchain == "//build/toolchain:host_x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain:host_x64-asan-fuzzer" ||
-      current_toolchain ==
-      "//build/toolchain/fuchsia:x64-ubsan-fuzzer-shared") {
-    build_as_static = true
-  }
-
-  # Keep internal for now until the API stabilizes.
-  category = "internal"
-
-  sdk_name = "syslog_cpp_backend_legacy_fuchsia"
-
-  include_base = "//sdk"
-
-  sources = [ "logging_backend_fuchsia_legacy.cc" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ ":cpp" ]
-
-  public_deps = [
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/syslog",
-  ]
-
-  public_configs = [ "//sdk/config" ]
-}
-
 sdk_source_set("backend_legacy") {
-  # TODO(59937): Remove when Go fuzzer links OK against this.
-  if (current_toolchain == "//build/toolchain/fuchsia:x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer" ||
-      current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer-shared" ||
-      current_toolchain == "//build/toolchain:host_x64-ubsan-fuzzer" ||
-      current_toolchain == "//build/toolchain:host_x64-asan-fuzzer" ||
-      current_toolchain ==
-      "//build/toolchain/fuchsia:x64-ubsan-fuzzer-shared") {
-    build_as_static = true
-  }
-
   # Keep internal for now until the API stabilizes.
   category = "internal"
 
@@ -128,7 +61,19 @@ sdk_source_set("backend_legacy") {
   include_base = "//sdk"
 
   if (is_fuchsia) {
-    public_deps = [ ":backend_legacy_fuchsia" ]
+    sources = [ "logging_backend_fuchsia_legacy.cc" ]
+
+    libs = [ "zircon" ]
+
+    deps = [ ":cpp" ]
+
+    public_deps = [
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/syslog",
+    ]
+
+    public_configs = [ "//sdk/config" ]
   } else {
     public_deps = [ ":backend_host" ]
   }
@@ -148,32 +93,6 @@ sdk_shared_library("backend_fuchsia_globals") {
   libs = [ "zircon" ]
 }
 
-sdk_source_set("backend_fuchsia_lib") {
-  # Keep internal for now until the API stabilizes.
-  category = "internal"
-
-  sdk_name = "syslog_cpp_backend_fuchsia_lib"
-
-  include_base = "//sdk"
-
-  sources = [
-    "logging_backend_fuchsia.cc",
-    "logging_backend_fuchsia_globals.h",
-  ]
-
-  deps = [
-    ":backend_fuchsia_globals",
-    ":cpp",
-    "//sdk/fidl/fuchsia.diagnostics.stream",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
-    "//sdk/lib/fdio",
-    "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//zircon/public/lib/fit",
-  ]
-
-  public_configs = [ "//sdk/config" ]
-}
-
 sdk_source_set("backend") {
   # Keep internal for now until the API stabilizes.
   category = "internal"
@@ -181,7 +100,24 @@ sdk_source_set("backend") {
   sdk_name = "syslog_cpp_backend"
 
   if (is_fuchsia) {
-    public_deps = [ ":backend_fuchsia_lib" ]
+    sources = [
+      "logging_backend_fuchsia.cc",
+      "logging_backend_fuchsia_globals.h",
+    ]
+
+    deps = [
+      ":backend_fuchsia_globals",
+      ":cpp",
+      "//sdk/fidl/fuchsia.diagnostics.stream",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+      "//sdk/lib/fdio",
+      "//sdk/lib/syslog/streams/cpp:streams-encoder",
+      "//zircon/public/lib/fit",
+    ]
+
+    include_base = "//sdk"
+
+    public_configs = [ "//sdk/config" ]
   } else {
     public_deps = [ ":backend_host" ]
   }
@@ -199,7 +135,6 @@ executable("logging_cpp_unittests") {
   ]
 
   deps = [
-    ":backend_legacy",
     ":cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

@@ -28,7 +28,6 @@ executable("wav_rec_bin") {
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock:utils",

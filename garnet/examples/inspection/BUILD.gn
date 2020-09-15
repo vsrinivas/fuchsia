@@ -42,7 +42,6 @@ executable("client") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
   ]
 }
@@ -81,7 +80,6 @@ executable("example_server_cpp_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

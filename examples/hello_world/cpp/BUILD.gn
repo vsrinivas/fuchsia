@@ -42,10 +42,7 @@ package("hello_world_cpp") {
 test("hello_world_cpp_unittests") {
   sources = [ "hello_world_unittest.cc" ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 test_package("hello_world_cpp_tests") {

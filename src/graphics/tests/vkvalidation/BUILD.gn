@@ -26,7 +26,6 @@ executable("test_vk_validation") {
   testonly = true
   sources = [ "test_validation_layers.cc" ]
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
   ]

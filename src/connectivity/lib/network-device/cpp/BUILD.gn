@@ -33,7 +33,6 @@ executable("cpp-test") {
   deps = [
     ":client",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/network/tun/fidl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

@@ -39,7 +39,6 @@ executable("twoplustwo_cpp") {
   sources = [ "two_plus_two.cc" ]
   testonly = true
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

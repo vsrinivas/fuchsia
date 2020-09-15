@@ -31,7 +31,6 @@ test("fvm") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/blobfs",
     "//third_party/boringssl",
     "//zircon/public/lib/async",
@@ -77,7 +76,6 @@ test("fvm-integration") {
   }
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",

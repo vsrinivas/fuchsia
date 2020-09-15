@@ -50,7 +50,6 @@ executable("persistent_storage_test_util_bin") {
   deps = [
     ":data_file_reader_writer",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

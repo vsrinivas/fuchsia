@@ -18,6 +18,7 @@ source_set("lib") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/lib/fake_camera",
     "//src/camera/lib/fake_stream",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

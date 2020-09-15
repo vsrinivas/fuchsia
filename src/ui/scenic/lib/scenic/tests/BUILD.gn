@@ -51,7 +51,6 @@ executable("unittests") {
   deps = [
     ":dummy_system",
     ":testing_deps",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
     "//src/ui/scenic/lib/shutdown/tests:unittests",

@@ -58,10 +58,7 @@ executable("bin") {
 
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 
   if (is_fuchsia) {
     include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]

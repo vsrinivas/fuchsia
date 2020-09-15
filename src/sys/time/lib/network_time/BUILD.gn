@@ -32,6 +32,7 @@ source_set("lib") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/boringssl",
     "//third_party/roughtime:client_lib",
@@ -58,7 +59,6 @@ executable("network_time_unittests") {
 
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

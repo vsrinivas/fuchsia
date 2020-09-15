@@ -42,7 +42,6 @@ executable("json_parser_unittests_bin") {
 
   deps = [
     ":json_parser",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

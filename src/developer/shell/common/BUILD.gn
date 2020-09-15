@@ -17,6 +17,7 @@ source_set("common") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
   ]
 }

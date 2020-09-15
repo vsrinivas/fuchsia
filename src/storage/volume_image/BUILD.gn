@@ -112,7 +112,6 @@ test("storage-volume-image-test") {
     "fvm:fvm-test",
     "serialization:tests",
     "utils:tests",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 
@@ -124,7 +123,6 @@ test("storage-volume-image-test") {
 test("storage-volume-image-integration-test") {
   deps = [
     "ftl:integration-tests",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 

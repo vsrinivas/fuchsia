@@ -19,6 +19,7 @@ source_set("last_reboot_info_provider") {
   deps = [
     ":reboot_reason",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -69,6 +70,7 @@ source_set("reboot_log") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
   ]
@@ -85,7 +87,10 @@ source_set("reboot_reason") {
     "//src/developer/forensics/utils/cobalt",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   visibility = [ "//src/developer/forensics/last_reboot/*" ]
 }
@@ -131,6 +136,7 @@ source_set("reporter") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",

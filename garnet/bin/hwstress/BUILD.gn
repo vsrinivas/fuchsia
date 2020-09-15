@@ -59,10 +59,7 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ ":lib" ]
 }
 
 # Traditional CLI package.
@@ -139,7 +136,6 @@ executable("hwstress_test") {
   deps = [
     ":lib",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
@@ -161,7 +157,6 @@ executable("hwstress_v2_test") {
   deps = [
     ":lib",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr/v2_component",  # requires CFv2.

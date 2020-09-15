@@ -17,7 +17,6 @@ sandbox_test_package("has-build-info") {
   sources = [ "has_build_info.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -28,7 +27,6 @@ sandbox_test_package("no-build-info") {
   sources = [ "no_build_info.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
@@ -40,7 +38,6 @@ sandbox_test_package("restricted-build-info") {
   sources = [ "no_build_info.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]

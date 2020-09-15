@@ -18,7 +18,6 @@ executable("nonhardware_tests") {
   ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/graphics/drivers/msd-vsi-vip/src",
     "//src/graphics/lib/magma/src/magma_util:mapped_batch",
     "//src/graphics/lib/magma/src/sys_driver:sys_driver",

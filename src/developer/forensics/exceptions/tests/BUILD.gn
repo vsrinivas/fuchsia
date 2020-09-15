@@ -18,6 +18,7 @@ source_set("test_lib") {
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
   ]
@@ -41,7 +42,6 @@ executable("exception_broker_config_test_exe") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/exceptions:lib",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -57,7 +57,6 @@ executable("exception_broker_integration_test_exe") {
 
   deps = [
     ":test_lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/exceptions:lib",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing",
@@ -82,7 +81,6 @@ executable("exception_broker_unittest_exe") {
     ":test_lib",
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/exceptions:lib",
     "//src/developer/forensics/exceptions/handler:lib",
     "//src/developer/forensics/testing:gmatchers",

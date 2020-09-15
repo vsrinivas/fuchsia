@@ -30,7 +30,6 @@ executable("codec_runner_sw_ffmpeg") {
 
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/codec/codecs/sw:codec_adapter_sw",
     "//src/media/codec/codecs/sw:codec_runner_sw",
     "//src/media/lib/codec_impl",

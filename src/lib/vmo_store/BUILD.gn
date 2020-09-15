@@ -34,7 +34,6 @@ executable("test_bin") {
   ]
   deps = [
     ":vmo_store",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/testing/fake-bti",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",

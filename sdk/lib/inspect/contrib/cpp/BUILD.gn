@@ -64,7 +64,6 @@ executable("archive_reader_test") {
   sources = [ "archive_reader_unittest.cc" ]
   deps = [
     ":archive_reader",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zxtest",
   ]
 }

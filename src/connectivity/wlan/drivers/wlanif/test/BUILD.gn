@@ -51,7 +51,6 @@ executable("convert_unittest") {
   sources = [ "convert_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/wlanif:test_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fxl/test:gtest_main",
@@ -68,7 +67,6 @@ executable("device_unittest") {
   sources = [ "device_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/wlan/drivers/wlanif:test_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/driver",
@@ -90,7 +88,6 @@ executable("impl_unittest") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
