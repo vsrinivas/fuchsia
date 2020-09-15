@@ -316,9 +316,11 @@ impl<'a> InterfaceServerSender<'a> {
         Self { channel }
     }
     pub fn send_on_event(&self) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-            InterfaceEncoder::encode_on_event_response(bytes, handles)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+            InterfaceEncoder::encode_on_event_response(bytes_, handles_)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -545,11 +547,12 @@ impl InterfaceControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
     pub fn send_on_event(&self) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x914c226136244ed);
-
         let mut response = ();
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(0, 0x914c226136244ed),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner

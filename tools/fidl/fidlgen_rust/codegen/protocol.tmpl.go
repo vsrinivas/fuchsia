@@ -353,14 +353,14 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+		::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
 			{{ $protocol.Name }}Encoder::encode_{{ $method.Name }}_response(
-				bytes, handles,
+				bytes_, handles_,
 				{{- range $index, $param := $method.Response -}}
 					{{ $param.Name -}},
 				{{- end -}}
 			)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			self.channel.write(&*bytes_, &mut *handles_).map_err(fidl::Error::ServerResponseWrite)?;
 			Ok(())
 		})
 	}
@@ -373,15 +373,15 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+		::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
 			{{ $protocol.Name }}Encoder::encode_{{ $method.Name }}_response(
-				bytes, handles,
+				bytes_, handles_,
 				txid.as_raw_id(),
 				{{- range $index, $param := $method.Response -}}
 					{{ $param.Name -}},
 				{{- end -}}
 			)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			self.channel.write(&*bytes_, &mut *handles_).map_err(fidl::Error::ServerResponseWrite)?;
 			Ok(())
 		})
 	}
@@ -754,9 +754,6 @@ impl {{ $protocol.Name }}ControlHandle {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			0, {{ $method.Ordinal | printf "%#x" }});
-
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
 				{{- if ne 0 $index -}}, {{ $param.Name -}}
@@ -766,7 +763,7 @@ impl {{ $protocol.Name }}ControlHandle {
 		);
 
 		let mut msg = fidl::encoding::TransactionMessage {
-			header,
+			header: fidl::encoding::TransactionHeader::new(0, {{ $method.Ordinal | printf "%#x" }}),
 			body: &mut response,
 		};
 
@@ -860,8 +857,6 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
 			{{- if ne 0 $index -}}, {{ $param.Name -}}
@@ -871,7 +866,7 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 		);
 
 		let mut msg = fidl::encoding::TransactionMessage {
-			header,
+			header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
 			body: &mut response,
 		};
 

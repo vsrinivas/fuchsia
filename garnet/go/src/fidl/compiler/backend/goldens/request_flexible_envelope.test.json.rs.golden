@@ -266,14 +266,16 @@ impl<'a> ProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut f: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
             ProtocolEncoder::encode_request_strict_response_flexible_response(
-                bytes,
-                handles,
+                bytes_,
+                handles_,
                 txid.as_raw_id(),
                 f,
             )?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -282,14 +284,16 @@ impl<'a> ProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut f: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
             ProtocolEncoder::encode_request_flexible_response_strict_response(
-                bytes,
-                handles,
+                bytes_,
+                handles_,
                 txid.as_raw_id(),
                 f,
             )?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -671,11 +675,12 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
     }
 
     fn send_raw(&self, mut f: &mut FlexibleFoo) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (f);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse");
@@ -748,11 +753,12 @@ impl ProtocolRequestFlexibleResponseStrictResponder {
     }
 
     fn send_raw(&self, mut f: &mut StrictFoo) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (f);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse");

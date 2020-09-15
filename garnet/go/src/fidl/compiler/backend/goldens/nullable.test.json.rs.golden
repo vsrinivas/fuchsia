@@ -358,9 +358,11 @@ impl<'a> SimpleProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut sum: i32,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-            SimpleProtocolEncoder::encode_add_response(bytes, handles, txid.as_raw_id(), sum)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+            SimpleProtocolEncoder::encode_add_response(bytes_, handles_, txid.as_raw_id(), sum)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -654,11 +656,12 @@ impl SimpleProtocolAddResponder {
     }
 
     fn send_raw(&self, mut sum: i32) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (sum);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.nullable/SimpleProtocolAddResponse");

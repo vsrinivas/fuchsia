@@ -531,9 +531,11 @@ impl<'a> ParentServerSender<'a> {
         txid: fidl::client::Txid,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-            ParentEncoder::encode_get_child_response(bytes, handles, txid.as_raw_id(), c)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+            ParentEncoder::encode_get_child_response(bytes_, handles_, txid.as_raw_id(), c)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -542,9 +544,16 @@ impl<'a> ParentServerSender<'a> {
         txid: fidl::client::Txid,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-            ParentEncoder::encode_get_child_request_response(bytes, handles, txid.as_raw_id(), r)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+            ParentEncoder::encode_get_child_request_response(
+                bytes_,
+                handles_,
+                txid.as_raw_id(),
+                r,
+            )?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -1023,11 +1032,12 @@ impl ParentGetChildResponder {
     }
 
     fn send_raw(&self, mut c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (c);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ParentGetChildResponse");
@@ -1103,11 +1113,12 @@ impl ParentGetChildRequestResponder {
     }
 
     fn send_raw(&self, mut r: fidl::endpoints::ServerEnd<ChildMarker>) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (r);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ParentGetChildRequestResponse");

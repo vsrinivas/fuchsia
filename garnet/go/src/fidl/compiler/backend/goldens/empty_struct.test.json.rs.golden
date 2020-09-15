@@ -221,9 +221,11 @@ impl<'a> EmptyProtocolServerSender<'a> {
         Self { channel }
     }
     pub fn send_receive(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-            EmptyProtocolEncoder::encode_receive_response(bytes, handles, e)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+            EmptyProtocolEncoder::encode_receive_response(bytes_, handles_, e)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -232,14 +234,16 @@ impl<'a> EmptyProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut e: &mut Empty,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
             EmptyProtocolEncoder::encode_send_and_receive_response(
-                bytes,
-                handles,
+                bytes_,
+                handles_,
                 txid.as_raw_id(),
                 e,
             )?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -538,11 +542,12 @@ impl EmptyProtocolControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
     pub fn send_receive(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x63ba2e5c5fdb4895);
-
         let mut response = (e);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(0, 0x63ba2e5c5fdb4895),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
@@ -612,11 +617,12 @@ impl EmptyProtocolSendAndReceiveResponder {
     }
 
     fn send_raw(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (e);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/EmptyProtocolSendAndReceiveResponse");

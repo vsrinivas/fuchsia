@@ -180,9 +180,11 @@ impl<'a> TopServerSender<'a> {
         txid: fidl::client::Txid,
         mut foo: &mut fidl_bottom::Foo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-            TopEncoder::encode_get_foo_response(bytes, handles, txid.as_raw_id(), foo)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+            TopEncoder::encode_get_foo_response(bytes_, handles_, txid.as_raw_id(), foo)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -470,11 +472,12 @@ impl TopGetFooResponder {
     }
 
     fn send_raw(&self, mut foo: &mut fidl_bottom::Foo) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (foo);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "top/TopGetFooResponse");

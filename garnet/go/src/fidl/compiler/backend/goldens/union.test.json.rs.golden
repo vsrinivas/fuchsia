@@ -760,11 +760,13 @@ impl<'a> TestProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut xu: &mut StrictBoundedXUnion,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
             TestProtocolEncoder::encode_strict_x_union_hence_response_may_be_stack_allocated_response(
-				bytes, handles,
+				bytes_, handles_,
 				txid.as_raw_id(),xu,)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -773,11 +775,13 @@ impl<'a> TestProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut xu: &mut OlderSimpleUnion,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
             TestProtocolEncoder::encode_flexible_x_union_hence_response_must_be_heap_allocated_response(
-				bytes, handles,
+				bytes_, handles_,
 				txid.as_raw_id(),xu,)?;
-            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            self.channel
+                .write(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
     }
@@ -1161,11 +1165,12 @@ impl TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
     }
 
     fn send_raw(&self, mut xu: &mut StrictBoundedXUnion) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (xu);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse");
@@ -1238,11 +1243,12 @@ impl TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
     }
 
     fn send_raw(&self, mut xu: &mut OlderSimpleUnion) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
-
         let mut response = (xu);
 
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
 
         ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse");

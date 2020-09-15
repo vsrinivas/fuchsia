@@ -21,6 +21,11 @@ protocol TestInterface {
     TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
     TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);
     TestErrorMethod(uint16 arg) -> () error ErrorReturn;
+    // TODO(fxbug.dev/59947): add "responder" and "control_handle"
+    TestNameClashesTwoWay(bytes bytes, vector<handle> handles, string header)
+        -> (bytes bytes, vector<handle> handles, string header);
+    TestNameClashesOneWay(bytes bytes, vector<handle> handles, string header);
+    -> TestNameClashesEvent(bytes bytes, vector<handle> handles, string header);
 };
 
 struct HasBigArray {
