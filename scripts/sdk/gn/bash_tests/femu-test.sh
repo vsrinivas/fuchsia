@@ -28,9 +28,6 @@ function run_femu_wrapper() {
 # Verifies that the correct emulator command is run by femu, do not activate the network interface
 TEST_femu_standalone() {
 
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
-
   # Create fake ZIP file download so femu.sh doesn't try to download it, and
   # later on provide a mocked emulator script so it doesn't try to unzip it.
   touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
@@ -73,8 +70,6 @@ TEST_femu_standalone() {
 }
 
 TEST_femu_fallback_to_fvm_fastboot_if_raw_image_not_exist() {
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
   # Create fake ZIP file download so femu.sh doesn't try to download it, and
   # later on provide a mocked emulator script so it doesn't try to unzip it.
@@ -106,9 +101,6 @@ TEST_femu_fallback_to_fvm_fastboot_if_raw_image_not_exist() {
 
 # Verifies that the --experiment-arm64 option selects arm64 support
 TEST_femu_arm64() {
-
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
   # Create fake ZIP file download so femu.sh doesn't try to download it, and
   # later on provide a mocked emulator script so it doesn't try to unzip it.
@@ -145,9 +137,6 @@ TEST_femu_arm64() {
 # Verifies that the correct emulator command is run by femu, along with the image setup.
 # This tests the -N option for networking.
 TEST_femu_networking() {
-
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
   # Create fake "ip tuntap show" command to let fx emu know the network is configured with some mocked output
   cat >"${PATH_DIR_FOR_TEST}/ip.mock_side_effects" <<INPUT
@@ -227,9 +216,6 @@ INPUT
 # Verifies that fx emu starts up grpcwebproxy correctly
 TEST_femu_grpcwebproxy() {
 
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
-
   # Create fake "kill" command so when emu tries to kill grpcwebproxy, it doesn't fail
   # this test. Need to embed "enable -n kill" into fx-image-common.sh to disable the
   # bash builtin kill so we can intercept it.
@@ -277,9 +263,6 @@ INPUT
 # Verifies that the --setup-ufw option runs ufw
 TEST_femu_ufw() {
 
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
-
   if is-mac; then
     BT_EXPECT_FAIL run_femu_wrapper \
       --setup-ufw > femu_ufw_error.txt 2>&1
@@ -294,10 +277,92 @@ TEST_femu_ufw() {
   fi
 }
 
+TEST_femu_help() {
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" --help > "${BT_TEMP_DIR}/usage.txt"
+
+readonly EXPECTED_HELP="Usage: femu.sh
+  [--work-dir <directory to store image assets>]
+    Defaults to ${BT_TEMP_DIR}/test-home/.fuchsia
+  [--bucket <fuchsia gsutil bucket>]
+    Default is read using \`fconfig.sh get emu-bucket\` if set. Otherwise defaults to fuchsia.
+  [--image <image name>]
+     Default is read using \`fconfig.sh get emu-image\` if set. Otherwise defaults to qemu-x64.
+  [--authorized-keys <file>]
+    The authorized public key file for securing the device.  Defaults to 
+    ${BT_TEMP_DIR}/test-home/.ssh/fuchsia_authorized_keys, which is generated if needed.
+  [--version <version>]
+    Specify the CIPD version of AEMU to download.
+    Defaults to aemu.version file with git_revision:unknown
+  [--experiment-arm64]
+    Override FUCHSIA_ARCH to arm64, instead of the default x64.
+    This is required for *-arm64 system images, and is not auto detected.
+  [--setup-ufw]
+    Set up ufw firewall rules needed for Fuchsia device discovery
+    and package serving, then exit. Only works on Linux with ufw
+    firewall, and requires sudo.
+  [--help] [-h]
+    Show command line options for femu.sh and emu subscript
+
+Remaining arguments are passed to emu wrapper and emulator:
+  -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
+  -c <text> append item to kernel command line
+  -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
+  -N run with emulated nic via tun/tap
+  -I <ifname> uses the tun/tap interface named ifname
+  -u <path> execute emu if-up script, default: linux: no script, macos: tap ifup script.
+  -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
+  -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
+  -r <fps> webrtc frame rate when using gRPC service, default is 30
+  -t <cmd> execute the given command to obtain turn configuration
+  -x <port> enable WebRTC HTTP service on port
+  -X <directory> location of grpcwebproxy, defaults to looking in prebuilt/third_party/grpcwebproxy
+  -w <size> window size, default is 1280x800
+  -s <cpus> number of cpus, 1 for uniprocessor
+  -m <mb> total memory, in MB
+  -k <authorized_keys_file> SSH authorized keys file, otherwise defaults to ~/.ssh/fuchsia_authorized_keys
+  -K <kernel_image> path to image to use as kernel, defaults to kernel generated by the current build.
+  -z <zbi_image> path to image to use as ZBI, defaults to zircon-a generated by the current build.
+  -f <fvm_image> path to full FVM image, defaults to image generated by the current build.
+  -A <arch> architecture of images (x64, arm64), default is the current build.
+  -H|--headless run in headless mode
+  --audio run with audio hardware added to the virtual machine
+  --host-gpu run with host GPU acceleration
+  --software-gpu run without host GPU acceleration
+  --debugger pause on launch and wait for a debugger process to attach before resuming
+
+Invalid argument names are not flagged as errors, and are passed on to emulator"
+
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/usage.txt" "${EXPECTED_HELP}"
+}
+
+TEST_femu_with_props() {
+
+ BT_EXPECT "${FCONFIG_CMD}" set emu-bucket "test-bucket"
+ BT_EXPECT "${FCONFIG_CMD}" set emu-image "test-image"
+
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
+
+  # Need to configure a DISPLAY so that we can get past the graphics error checks
+  export DISPLAY="fakedisplay"
+
+  # Run command.
+  BT_EXPECT run_femu_wrapper
+
+  # Check that fpave.sh was called to download the needed system images
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
+  gn-test-check-mock-args _ANY_ --prepare --image test-image --bucket test-bucket --work-dir "${FUCHSIA_WORK_DIR}"
+
+}
+
+
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
+  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/femu.sh
   scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
@@ -345,6 +410,11 @@ BT_SET_UP() {
 
   MOCKED_FVM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fvm"
   MOCKED_ZBI="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/zbi"
+  FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
+
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
 
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
   mkdir -p "${FUCHSIA_WORK_DIR}/image"

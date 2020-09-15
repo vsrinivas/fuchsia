@@ -14,8 +14,8 @@ set -eu
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
-FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
-IMAGE_NAME="qemu-x64"
+
+
 VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 VER_GRPCWEBPROXY="$(cat "${SCRIPT_SRC_DIR}/grpcwebproxy.version")"
 ENABLE_GRPCWEBPROXY=0
@@ -29,6 +29,8 @@ FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 export FUCHSIA_SDK_PATH
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 export FUCHSIA_IMAGE_WORK_DIR
+DEFAULT_FUCHSIA_IMAGE="qemu-x64"
+DEFAULT_FUCHSIA_AUTHKEYS="$(get-fuchsia-auth-keys-file)"
 
 # Download a URL $1 from CIPD, extract into directory $2
 function download-extract-cipd {
@@ -65,16 +67,16 @@ emu_help () {
 }
 
 usage () {
-  echo "Usage: $0"
+  echo "Usage: $(basename "$0")"
   echo "  [--work-dir <directory to store image assets>]"
   echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}"
   echo "  [--bucket <fuchsia gsutil bucket>]"
-  echo "    Defaults to ${FUCHSIA_BUCKET}"
+  echo "    Default is read using \`fconfig.sh get emu-bucket\` if set. Otherwise defaults to ${DEFAULT_FUCHSIA_BUCKET}".
   echo "  [--image <image name>]"
-  echo "    Defaults to ${IMAGE_NAME}"
+  echo "     Default is read using \`fconfig.sh get emu-image\` if set. Otherwise defaults to ${DEFAULT_FUCHSIA_IMAGE}".
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
-  echo "    ${FUCHSIA_IMAGE_WORK_DIR}/.ssh/authorized_keys, which is generated if needed."
+  echo "    ${DEFAULT_FUCHSIA_AUTHKEYS}, which is generated if needed."
   echo "  [--version <version>]"
   echo "    Specify the CIPD version of AEMU to download."
   echo "    Defaults to aemu.version file with ${VER_AEMU}"
@@ -94,6 +96,8 @@ usage () {
   echo "Invalid argument names are not flagged as errors, and are passed on to emulator"
 }
 AUTH_KEYS_FILE=""
+FUCHSIA_BUCKET=""
+IMAGE_NAME=""
 EMU_ARGS=()
 
 # Parse command line
@@ -159,7 +163,21 @@ done
 if [[ "${AUTH_KEYS_FILE}" != "" ]]; then
   auth_keys_file="${AUTH_KEYS_FILE}"
 else
-  auth_keys_file="$(get-fuchsia-auth-keys-file)"
+  auth_keys_file="${DEFAULT_FUCHSIA_AUTHKEYS}"
+fi
+
+if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
+  FUCHSIA_BUCKET="$(get-fuchsia-property emu-bucket)"
+  if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
+    FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
+  fi
+fi
+
+if [[ "${IMAGE_NAME}" == "" ]]; then
+  IMAGE_NAME="$(get-fuchsia-property emu-image)"
+  if [[ "${IMAGE_NAME}" == "" ]]; then
+    IMAGE_NAME="${DEFAULT_FUCHSIA_IMAGE}"
+  fi
 fi
 
 # Download the system images and packages

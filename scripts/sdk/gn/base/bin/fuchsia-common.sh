@@ -19,6 +19,8 @@ FUCHSIA_PROPERTY_NAMES=(
   "device-ip" # Used as the default for --device-ip
   "device-name" # Used as the default for --device-name
   "image" # Used as the default for image
+  "emu-image" # Used as the default for image when running the emulator.
+  "emu-bucket" # Used as the default for bucket when running the emulator.
 )
 
 function is-mac {
