@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/audio.h>
 
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -112,6 +113,7 @@ class HermeticAudioTest : public TestFixture {
 
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();
+  void OnDeviceAdded(fuchsia::media::AudioDeviceInfo info);
   void OnDefaultDeviceChanged(uint64_t old_default_token, uint64_t new_default_token);
   void ExpectInspectMetrics(const std::vector<std::string>& path,
                             const ExpectedInspectProperties& props);
@@ -123,6 +125,11 @@ class HermeticAudioTest : public TestFixture {
     bool is_removed = false;
     bool is_default = false;
   };
+
+  // Ensures all devices have been accounted for before the most recent OnDefaultDeviceChanged
+  // callback can be processed.
+  bool initial_devices_received_ = false;
+  std::queue<uint64_t> pending_default_device_tokens_;
 
   std::unordered_map<uint64_t, std::string> token_to_unique_id_;
   std::unordered_map<std::string, DeviceInfo> devices_;

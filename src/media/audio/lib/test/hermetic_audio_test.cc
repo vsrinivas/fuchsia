@@ -56,6 +56,24 @@ void HermeticAudioTest::SetUp() {
   environment_->ConnectToService(audio_dev_enum_.NewRequest());
   AddErrorHandler(audio_dev_enum_, "AudioDeviceEnumerator");
   WatchForDeviceArrivals();
+
+  // A race can occur in which a device is added before the OnDeviceAdded callback is registered,
+  // which causes the OnDefaultDeviceChanged callback to fail to recognize the default device.
+  //
+  // Here, any devices missed by OnDeviceAdded are accounted for; OnDefaultDeviceChanged processes
+  // the most recent pending_default_device_token_ once initial_devices_received_.
+  audio_dev_enum_->GetDevices([this](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+    for (const auto& info : devices) {
+      if (token_to_unique_id_.count(info.token_id) == 0) {
+        OnDeviceAdded(info);
+      }
+    }
+    initial_devices_received_ = true;
+    while (!pending_default_device_tokens_.empty()) {
+      OnDefaultDeviceChanged(0, pending_default_device_tokens_.front());
+      pending_default_device_tokens_.pop();
+    }
+  });
 }
 
 void HermeticAudioTest::TearDown() {
@@ -217,29 +235,7 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
     if (token_to_unique_id_.count(info.token_id) > 0) {
       FAIL() << "Device with token " << info.token_id << " already exists";
     }
-    auto id = info.unique_id;
-    token_to_unique_id_[info.token_id] = id;
-    if (info.is_input) {
-      if (!devices_[id].input) {
-        ADD_FAILURE() << "Unexpected arrival of input device " << id << ", no such device exists";
-      }
-      if (devices_[id].info != std::nullopt) {
-        ADD_FAILURE() << "Duplicate arrival of input device " << id;
-      }
-      devices_[id].input->set_token(info.token_id);
-    } else {
-      if (!devices_[id].output) {
-        ADD_FAILURE() << "Unexpected arrival of output device " << id << ", no such device exists";
-      }
-      if (devices_[id].info != std::nullopt) {
-        ADD_FAILURE() << "Duplicate arrival of output device " << id;
-      }
-      devices_[id].output->set_token(info.token_id);
-    }
-    token_to_unique_id_[info.token_id] = id;
-    devices_[id].info = info;
-    AUDIO_LOG(DEBUG) << "Output device (token = " << info.token_id << ", id = " << id
-                     << ") has been added";
+    OnDeviceAdded(info);
   };
 
   audio_dev_enum_.events().OnDeviceRemoved = [this](uint64_t token) {
@@ -315,8 +311,39 @@ void HermeticAudioTest::WaitForDeviceDepartures() {
   audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
 }
 
+void HermeticAudioTest::OnDeviceAdded(fuchsia::media::AudioDeviceInfo info) {
+  auto id = info.unique_id;
+  token_to_unique_id_[info.token_id] = id;
+  if (info.is_input) {
+    if (!devices_[id].input) {
+      ADD_FAILURE() << "Unexpected arrival of input device " << id << ", no such device exists";
+    }
+    if (devices_[id].info != std::nullopt) {
+      ADD_FAILURE() << "Duplicate arrival of input device " << id;
+    }
+    devices_[id].input->set_token(info.token_id);
+  } else {
+    if (!devices_[id].output) {
+      ADD_FAILURE() << "Unexpected arrival of output device " << id << ", no such device exists";
+    }
+    if (devices_[id].info != std::nullopt) {
+      ADD_FAILURE() << "Duplicate arrival of output device " << id;
+    }
+    devices_[id].output->set_token(info.token_id);
+  }
+  token_to_unique_id_[info.token_id] = id;
+  devices_[id].info = info;
+  AUDIO_LOG(DEBUG) << "Output device (token = " << info.token_id << ", id = " << id
+                   << ") has been added";
+}
+
 void HermeticAudioTest::OnDefaultDeviceChanged(uint64_t old_default_token,
                                                uint64_t new_default_token) {
+  // In case of multiple pending calls during SetUp, process most recent new_default_token.
+  if (!initial_devices_received_) {
+    pending_default_device_tokens_.push(new_default_token);
+    return;
+  }
   EXPECT_TRUE(old_default_token == 0 || token_to_unique_id_.count(old_default_token) > 0)
       << "Default device changed from unknown device " << old_default_token << " to "
       << new_default_token;

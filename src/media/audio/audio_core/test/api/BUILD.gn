@@ -154,15 +154,11 @@ fuchsia_test_package("audio-core-api-tests") {
   test_components = [
     ":activity-reporter-test",
     ":audio-capturer-test",
-
-    # TODO(58396):Disabled due to flake.
-    # ":audio-device-enumerator-test",
+    ":audio-device-enumerator-test",
     ":audio-renderer-test",
     ":audio-tuner-test",
     ":gain-control-test",
-
-    # TODO(59115): Disabled due to flake.
-    # ":ultrasound-test",
+    ":ultrasound-test",
     ":usage-gain-reporter-test",
     ":usage-reporter-test",
     ":volume-control-test",
