@@ -14,6 +14,7 @@
 #include <ddktl/protocol/badblock.h>
 #include <fbl/array.h>
 
+#include "ddk/protocol/nand.h"
 #include "nand_operation.h"
 #include "oob_doubler.h"
 
@@ -339,6 +340,15 @@ bool NandDriverImpl::HandleAlternateConfig(const ftl::Volume* ftl_volume,
     return true;
   }
   RemoveNdmVolume();
+
+  ftl::NandOperation operation(op_size_);
+  operation.GetOperation()->command = NAND_OP_ERASE;
+  // Erase all new blocks when extending.
+  operation.GetOperation()->erase.first_block = num_blocks;
+  operation.GetOperation()->erase.num_blocks = info_.num_blocks - num_blocks;
+  if (operation.Execute(&parent_) != ZX_OK) {
+    return true;
+  }
 
   options.num_blocks = info_.num_blocks;
   if (!IsNdmDataPresent(options)) {
