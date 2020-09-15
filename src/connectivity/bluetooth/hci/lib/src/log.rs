@@ -65,3 +65,35 @@ macro_rules! bt_log_trace {
 macro_rules! bt_log_spew {
     ($($arg:tt)+) => (if LOG_SEVERITY <= SEVERITY_SPEW { bt_log!("SPEW", $($arg)+) });
 }
+
+/// Invoke the fuchsia_trace::duration! macro with the "bluetooth" category.
+#[macro_export]
+macro_rules! trace_duration {
+    ($name:expr $(, $key:expr => $val:expr)*) => {
+        ::fuchsia_trace::duration!("bluetooth", $name $(,$key => $val)*);
+    }
+}
+
+/// Invoke the fuchsia_trace::instant! macro with the "bluetooth" category.
+#[macro_export]
+macro_rules! trace_instant {
+    ($name:expr, $scope:expr $(, $key:expr => $val:expr)*) => {
+        ::fuchsia_trace::instant!("bluetooth", $name, $scope $(,$key => $val)*);
+    }
+}
+
+/// Invoke the fuchsia_trace::flow_begin! macro with the "bluetooth" category.
+#[macro_export]
+macro_rules! trace_flow_begin {
+    ($name:expr, $flow_id:expr $(, $key:expr => $val:expr)*) => {
+        ::fuchsia_trace::flow_begin!("bluetooth", $name, $flow_id $(,$key => $val)*);
+    }
+}
+
+/// Invoke the fuchsia_trace::flow_end! macro with the "bluetooth" category.
+#[macro_export]
+macro_rules! trace_flow_end {
+    ($name:expr, $flow_id:expr $(, $key:expr => $val:expr)*) => {
+        ::fuchsia_trace::flow_end!("bluetooth", $name, $flow_id $(,$key => $val)*);
+    }
+}

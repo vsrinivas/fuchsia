@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_LIB_BINDINGS_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_LIB_BINDINGS_H_
 
+#include <ddk/protocol/serialimpl/async.h>
+
 typedef struct bt_hci_transport_handle* bt_hci_transport_handle_t;
 
 // Start up a new worker thread, returning a handle that can be used to pass messages to that
@@ -12,7 +14,7 @@ typedef struct bt_hci_transport_handle* bt_hci_transport_handle_t;
 extern "C" zx_status_t bt_hci_transport_start(const char* name, bt_hci_transport_handle_t*);
 
 // Shut down and destroy worker thread, freeing the bt_hci_transport_handle_t afterward.
-// bt_hci_transport_handle_t is not a valid pointer after this function is called.
+// bt_hci_transport_handle_t is not valid after this function is called.
 //
 // The second argument is a timeout in milliseconds. The function will block until
 // all the resources associated with the bt_hci_transport_handle_t have been freed or the timeout
@@ -39,5 +41,19 @@ extern "C" zx_status_t bt_hci_transport_open_acl_data_channel(const bt_hci_trans
 extern "C" zx_status_t bt_hci_transport_open_snoop_channel(const bt_hci_transport_handle_t,
                                                            zx_handle_t snoop_channel,
                                                            uint64_t timeout_ms);
+
+// Interact with a uart-based hci transport using the serial implementation directly.
+// Note that this function takes ownership of the serial.
+//
+// |serial| must point to a valid handle for a serial_impl_async_protocol
+// implementation. The client is responsible for obtaining that valid handle before calling this
+// function to pass ownership of the handle into the library. Generally, the underlying serial
+// transport will be a parent device onto which which the client has bound as a child.
+//
+// The third argument is a timeout in milliseconds. If the timeout is exceeded, a ZX_ERR_TIMEOUT
+// status will be returned.
+extern "C" zx_status_t bt_hci_transport_open_uart(const bt_hci_transport_handle_t,
+                                                  serial_impl_async_protocol_t* serial,
+                                                  uint64_t timeout_ms);
 
 #endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_LIB_BINDINGS_H_

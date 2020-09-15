@@ -1,9 +1,9 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync, fuchsia_trace as trace,
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Duration},
     futures::{
         channel::mpsc::Receiver,
@@ -271,7 +271,7 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                 }
             }
             res = cmd_read => {
-                trace::duration!("bluetooth", "Worker::CommandReadOutgoing");
+                trace_duration!("Worker::CommandReadOutgoing");
 
                 // End current borrow of cmd by cmd_read
                 cmd_read = Fuse::terminated();
@@ -294,7 +294,7 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                     .recv_msg(&mut cmd_buf).fuse();
             }
             res = acl_read => {
-                trace::duration!("bluetooth", "Worker::AclReadOutgoing");
+                trace_duration!("Worker::AclReadOutgoing");
 
                 // End current borrow of acl by acl_read
                 acl_read = Fuse::terminated();
@@ -317,11 +317,12 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                     .recv_msg(&mut acl_buf).fuse();
             }
             res = transport_borrow.next() => {
+                trace_duration!("Worker::IncomingPacket");
                 match res {
                     Some(token) => {
                         match transport_borrow.take_incoming(token, incoming_buffer) {
                             IncomingPacket::Event(mut data) => {
-                                trace::duration!("bluetooth", "Worker::EventSendIncoming");
+                                trace_duration!("Worker::EventSendIncoming");
                                 incoming_buffer = data;
                                 let mut success = true;
                                 if let Some(cmd) = worker.cmd.as_ref() {
@@ -335,7 +336,7 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                                 worker.snoop.write(Snoop::INCOMING_EVT, &incoming_buffer);
                             }
                             IncomingPacket::Acl(mut data) => {
-                                trace::duration!("bluetooth", "Worker::AclSendIncoming");
+                                trace_duration!("Worker::AclSendIncoming");
 
                                 incoming_buffer = data;
                                 let mut success = true;

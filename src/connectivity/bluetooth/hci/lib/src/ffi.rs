@@ -12,7 +12,29 @@ use {
     std::ffi::CStr,
 };
 
-use crate::{control_plane::Message, worker::WorkerHandle};
+use self::uart::{serial_impl_async_protocol_t, Serial};
+use crate::{control_plane::Message, transport::Uart, worker::WorkerHandle};
+
+pub mod uart;
+
+/// Send a control plane message to the worker using the provided `WorkerHandle` pointer.
+///
+/// Memory Safety: In order to safely call this function, `ptr` must point to a valid `WorkerHandle`
+/// object or null. A null `ptr` results in a panic or abort but is memory safe. Passing in null
+/// should be avoided, but the check is made as another line of defense against dereferencing a null
+/// ptr.
+unsafe fn send_worker_control_message(
+    ptr: *const WorkerHandle,
+    timeout_ms: u64,
+    message: Message,
+) -> zx_status_t {
+    let worker = {
+        assert!(!ptr.is_null());
+        &*ptr
+    };
+    let timeout = Duration::from_millis(timeout_ms as i64);
+    worker.control_plane.lock().send(message, timeout).into_raw()
+}
 
 /// Create a new worker object and return a thread-safe handle to communicate with it.
 #[no_mangle]
@@ -36,15 +58,10 @@ pub unsafe extern "C" fn bt_hci_transport_start(
 /// `ptr`.
 #[no_mangle]
 pub unsafe extern "C" fn bt_hci_transport_unbind(
-    ptr: *mut WorkerHandle,
+    ptr: *const WorkerHandle,
     timeout_ms: u64,
 ) -> zx_status_t {
-    let worker = {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
-    let timeout = Duration::from_millis(timeout_ms as i64);
-    worker.control_plane.lock().send(Message::Unbind, timeout).into_raw()
+    send_worker_control_message(ptr, timeout_ms, Message::Unbind)
 }
 
 /// Shutdown the `Worker` associated with this `WorkerHandle`, freeing all owned memory,
@@ -59,19 +76,26 @@ pub unsafe extern "C" fn bt_hci_transport_shutdown(ptr: *mut WorkerHandle, timeo
     { Box::from_raw(ptr) }.shutdown((timeout_ms as i64).millis());
 }
 
+/// bt_hci_transport_open_uart takes ownership of serial.
+#[no_mangle]
+pub unsafe extern "C" fn bt_hci_transport_open_uart(
+    ptr: *const WorkerHandle,
+    serial: *mut serial_impl_async_protocol_t,
+    timeout_ms: u64,
+) -> zx_status_t {
+    let serial = { Serial::new(serial) };
+    let message = Message::OpenTransport(Box::new(Uart::builder(serial)));
+    send_worker_control_message(ptr, timeout_ms, message)
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn bt_hci_transport_open_command_channel(
     ptr: *const WorkerHandle,
     in_handle: zx_handle_t,
     timeout_ms: u64,
 ) -> zx_status_t {
-    let worker = {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
     let chan = { zx::Handle::from_raw(in_handle) }.into();
-    let timeout = Duration::from_millis(timeout_ms as i64);
-    worker.control_plane.lock().send(Message::OpenCmd(chan), timeout).into_raw()
+    send_worker_control_message(ptr, timeout_ms, Message::OpenCmd(chan))
 }
 
 #[no_mangle]
@@ -80,13 +104,8 @@ pub unsafe extern "C" fn bt_hci_transport_open_acl_data_channel(
     in_handle: zx_handle_t,
     timeout_ms: u64,
 ) -> zx_status_t {
-    let worker = {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
     let chan = { zx::Handle::from_raw(in_handle) }.into();
-    let timeout = Duration::from_millis(timeout_ms as i64);
-    worker.control_plane.lock().send(Message::OpenAcl(chan), timeout).into_raw()
+    send_worker_control_message(ptr, timeout_ms, Message::OpenAcl(chan))
 }
 
 #[no_mangle]
@@ -95,13 +114,8 @@ pub unsafe extern "C" fn bt_hci_transport_open_snoop_channel(
     in_handle: zx_handle_t,
     timeout_ms: u64,
 ) -> zx_status_t {
-    let worker = {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
     let chan = { zx::Handle::from_raw(in_handle) }.into();
-    let timeout = Duration::from_millis(timeout_ms as i64);
-    worker.control_plane.lock().send(Message::OpenSnoop(chan), timeout).into_raw()
+    send_worker_control_message(ptr, timeout_ms, Message::OpenSnoop(chan))
 }
 
 #[cfg(test)]
@@ -145,6 +159,31 @@ mod tests {
 
         // freeing null ptr is ok
         unsafe { bt_hci_transport_shutdown(std::ptr::null_mut(), TIMEOUT_MS) };
+    }
+
+    #[test]
+    fn open_transport_uart() {
+        let name = CString::new("test").unwrap();
+        let mut worker = std::ptr::null_mut();
+        let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut worker) };
+        assert_eq!(status, ZX_OK);
+        let serial = Box::new(serial_impl_async_protocol_t::new());
+        let status =
+            unsafe { bt_hci_transport_open_uart(worker, Box::into_raw(serial), TIMEOUT_MS) };
+        assert_eq!(status, ZX_OK);
+
+        // test that errors are mapped through ffi function.
+        let serial = Box::new(serial_impl_async_protocol_t::new());
+        let status =
+            unsafe { bt_hci_transport_open_uart(worker, Box::into_raw(serial), TIMEOUT_MS) };
+        assert_eq!(status, ZX_ERR_ALREADY_BOUND);
+    }
+
+    #[test]
+    #[should_panic]
+    fn open_transport_uart_with_null_worker() {
+        let serial = Box::new(serial_impl_async_protocol_t::new());
+        unsafe { bt_hci_transport_open_uart(std::ptr::null(), Box::into_raw(serial), TIMEOUT_MS) };
     }
 
     #[test]

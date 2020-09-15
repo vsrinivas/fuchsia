@@ -13,6 +13,7 @@ rustc_staticlib("bt-hci") {
   edition = "2018"
 
   deps = [
+    "//src/connectivity/bluetooth/hci/lib:serial_impl_async_wrapper",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/trace/rust:trace",
@@ -31,13 +32,28 @@ rustc_staticlib("bt-hci") {
     "src/control_plane.rs",
     "src/error.rs",
     "src/ffi.rs",
+    "src/ffi/uart.rs",
     "src/lib.rs",
     "src/log.rs",
     "src/snoop.rs",
     "src/test_utils.rs",
     "src/transport.rs",
+    "src/transport/uart.rs",
+    "src/transport/uart/parse_util.rs",
+    "src/transport/uart/parser.rs",
     "src/worker.rs",
   ]
+}
+
+static_library("serial_impl_async_wrapper") {
+  sources = [ "serial_impl_async_wrapper.cc" ]
+
+  public_deps = [
+    "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//src/lib/ddk",
+  ]
+
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 unittest_package("bt-hci-lib-tests") {

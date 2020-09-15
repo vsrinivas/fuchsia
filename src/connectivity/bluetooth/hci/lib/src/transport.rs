@@ -7,14 +7,24 @@ use {
     futures::{stream::FusedStream, Sink, Stream},
 };
 
+pub mod uart;
+pub use uart::Uart;
+
 /// Represents an HCI packet received from the controller.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Clone))]
 pub enum IncomingPacket {
-    #[allow(dead_code)] // removed in fxrev.dev/339230
     Event(Vec<u8>),
-    #[allow(dead_code)] // removed in fxrev.dev/339230
     Acl(Vec<u8>),
+}
+
+impl IncomingPacket {
+    pub fn inner(&self) -> &[u8] {
+        match self {
+            IncomingPacket::Event(b) => &b,
+            IncomingPacket::Acl(b) => &b,
+        }
+    }
 }
 
 /// A zero-sized type that cannot be constructed outside of the `transport` module but can be
