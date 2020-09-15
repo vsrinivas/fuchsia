@@ -6,8 +6,11 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-source_set("lib") {
+source_set("common") {
   sources = [
+    "ast_builder.cc",
+    "ast_builder.h",
+    "err.h",
     "result.cc",
     "result.h",
   ]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/shell/console/ast_builder.h"
+#include "src/developer/shell/common/ast_builder.h"
 
 #include <algorithm>
 

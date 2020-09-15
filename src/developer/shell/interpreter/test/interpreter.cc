@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include "src/developer/shell/console/ast_builder.h"
+#include "src/developer/shell/common/ast_builder.h"
 #include "src/developer/shell/interpreter/test/interpreter_test.h"
 
 shell::console::AstBuilder::NodeId NullNode;

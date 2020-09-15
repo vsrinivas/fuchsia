@@ -17,8 +17,8 @@
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/developer/shell/common/ast_builder.h"
 #include "src/developer/shell/common/result.h"
-#include "src/developer/shell/console/ast_builder.h"
 
 shell::console::AstBuilder::NodePair AddObject(
     shell::console::AstBuilder& builder, std::vector<std::string>& names,

@@ -12,7 +12,7 @@
 #include "lib/async-loop/default.h"
 #include "lib/fidl-async/cpp/bind.h"
 #include "lib/svc/dir.h"
-#include "src/developer/shell/console/ast_builder.h"
+#include "src/developer/shell/common/ast_builder.h"
 #include "src/developer/shell/interpreter/src/expressions.h"
 #include "src/developer/shell/interpreter/src/instructions.h"
 #include "src/developer/shell/interpreter/src/schema.h"

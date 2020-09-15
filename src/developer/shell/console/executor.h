@@ -13,8 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/shell/common/err.h"
 #include "src/developer/shell/console/command.h"
-#include "src/developer/shell/console/err.h"
 
 namespace shell::console {
 

@@ -19,10 +19,10 @@ source_set("lib") {
   ]
 
   public_deps = [
-    ":common",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/shell/common:lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/shell/common",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/developer/shell/interpreter:shell_server_lib",
     "//src/developer/shell/parser",
@@ -31,20 +31,6 @@ source_set("lib") {
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/cmdline",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-# TODO(jeremymanson): Break this out into its own directory.
-source_set("common") {
-  sources = [
-    "ast_builder.cc",
-    "ast_builder.h",
-    "err.h",
-  ]
-
-  public_deps = [ "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

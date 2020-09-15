@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "fuchsia/shell/llcpp/fidl.h"
-#include "src/developer/shell/console/err.h"
+#include "src/developer/shell/common/err.h"
 
 namespace shell::console {
 
