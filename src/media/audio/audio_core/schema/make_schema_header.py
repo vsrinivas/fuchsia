@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright (c) 2018 Google Inc.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@ FOOTER = """
 
 def main():
     if len(sys.argv) != 3:
-        print "Usage: %s <input_file> <output_file>" % (sys.argv[0],)
+        print("Usage: %s <input_file> <output_file>" % (sys.argv[0],))
         exit(-1)
 
     lines = open(sys.argv[1], 'r').readlines()
