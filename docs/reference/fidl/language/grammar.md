@@ -82,7 +82,7 @@ declaration = bits-declaration | const-declaration | enum-declaration | protocol
             | struct-declaration | table-declaration | union-declaration
             | type-alias-declaration | resource-declaration | service-declaration ;
 
-declaration-modifiers = "flexible" | "strict" ;
+declaration-modifiers = "flexible" | "strict" | "resource";
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 

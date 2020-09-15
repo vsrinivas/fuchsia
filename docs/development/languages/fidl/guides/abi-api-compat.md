@@ -274,6 +274,15 @@ they often accompany other incompatible changes:
 * `[MaxBytes]`
 * `[MaxHandles]`
 
+### Modifiers {#modifiers}
+
+Adding or removing the `strict` modifier on an enum, bits, or union declaration
+is a source-incompatible and binary-incompatible change.
+
+Adding or removing the `resource` modifier on a struct, table, or union
+declaration is a source-incompatible change.
+<!-- TODO(fxbug.dev/59962): Binary compatible with one exception. -->
+
 ### Evolving switch on enums, or union tag {#switch-evolvability}
 
 When adding an enum member (or adding a union variant), any switch on the enum
