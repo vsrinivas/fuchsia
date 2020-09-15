@@ -52,6 +52,5 @@ zbitl/
 zircon-headers/
 zircon-internal/
 zstd/
-zx/
 zxc/
 zxtest/

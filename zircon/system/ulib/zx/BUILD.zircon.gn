@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 assert(is_fuchsia)
 
 zx_library("zx") {
@@ -41,6 +43,7 @@ zx_library("zx") {
     "lib/zx/vmar.h",
     "lib/zx/vmo.h",
   ]
+  sdk_migrated = true
   sources = [
     "bti.cc",
     "channel.cc",

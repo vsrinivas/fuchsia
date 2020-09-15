@@ -62,7 +62,6 @@ group("ulib") {
     "zircon",
     "zircon:zircon-headers",
     "zircon-internal",
-    "zx",
     "zxc",
     "zxtest",
   ]

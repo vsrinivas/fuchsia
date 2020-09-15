@@ -1,0 +1,14 @@
+# Copyright 20120 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_alias.gni")
+
+group("zx") {
+  public_deps = [ "//zircon/system/ulib/zx" ]
+}
+
+sdk_alias("zx_sdk") {
+  target = "//zircon/system/ulib/zx:zx_sdk"
+  type = "atom"
+}
