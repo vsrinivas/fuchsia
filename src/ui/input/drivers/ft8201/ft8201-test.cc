@@ -16,6 +16,10 @@
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
+zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
+  return ZX_ERR_NOT_FOUND;
+}
+
 namespace touch {
 
 class FakeTouchDevice : public fake_i2c::FakeI2c {

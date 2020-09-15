@@ -79,8 +79,10 @@ class Ft8201Device : public DeviceType,
                      fuchsia_input_report::InputDevice::Interface,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
-  explicit Ft8201Device(zx_device_t* parent, ddk::I2cChannel i2c,
-                        ddk::GpioProtocolClient interrupt_gpio, ddk::GpioProtocolClient reset_gpio)
+  Ft8201Device(zx_device_t* parent, ddk::I2cChannel i2c) : Ft8201Device(parent, i2c, {}, {}) {}
+
+  Ft8201Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::GpioProtocolClient interrupt_gpio,
+               ddk::GpioProtocolClient reset_gpio)
       : DeviceType(parent),
         i2c_(i2c),
         interrupt_gpio_(interrupt_gpio),
@@ -89,6 +91,7 @@ class Ft8201Device : public DeviceType,
   ~Ft8201Device() override = default;
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
 
   // Visible for testing.
   static zx::status<Ft8201Device*> CreateAndGetDevice(void* ctx, zx_device_t* parent);
@@ -111,11 +114,48 @@ class Ft8201Device : public DeviceType,
 
   // Visible for testing.
   void WaitForNextReader();
+  zx_status_t FirmwareDownloadIfNeeded();
 
  private:
+  static constexpr uint8_t kPrambootPacketCommand = 0xae;
+  static constexpr uint8_t kFirmwarePacketCommand = 0xbf;
+
   static Ft8201Contact ParseContact(const uint8_t* contact_buffer);
+  static uint8_t CalculateEcc(const uint8_t* buffer, size_t size, uint8_t initial = 0);
 
   zx_status_t Init();
+
+  // Enters romboot and returns true if firmware download is needed, returns false otherwise.
+  zx::status<bool> CheckFirmwareAndStartRomboot(uint8_t firmware_version);
+
+  // Waits for the specified boot ID value to be read. Sends a reset command between reads if
+  // send_reset is true.
+  zx_status_t WaitForBootId(uint16_t expected_id, zx::duration retry_sleep, bool send_reset);
+  zx::status<uint16_t> GetBootId();
+
+  // Returns true if the expected value was read before the timeout, false if not.
+  zx::status<bool> WaitForFlashStatus(uint16_t expected_value, int tries, zx::duration retry_sleep);
+
+  zx_status_t SendDataPacket(uint8_t command, uint32_t address, const uint8_t* buffer, size_t size);
+
+  zx_status_t SendPramboot(const zx::vmo& vmo, size_t size);
+  zx_status_t SendPrambootPacket(uint32_t address, const uint8_t* buffer, size_t size) {
+    return SendDataPacket(kPrambootPacketCommand, address, buffer, size);
+  }
+
+  zx_status_t EraseFlash(size_t firmware_size);
+  zx_status_t SendFirmware(const zx::vmo& vmo, size_t size);
+  zx_status_t SendFirmwarePacket(uint32_t address, const uint8_t* buffer, size_t size) {
+    return SendDataPacket(kFirmwarePacketCommand, address, buffer, size);
+  }
+  zx_status_t CheckFirmwareEcc(size_t size, uint8_t expected_ecc);
+
+  zx::status<uint8_t> ReadReg8(uint8_t address);
+  zx::status<uint16_t> ReadReg16(uint8_t address);
+
+  zx_status_t Write8(uint8_t value);
+  zx_status_t WriteReg8(uint8_t address, uint8_t value);
+
   int Thread();
   void Shutdown();  // Only called after thread_ has been started.
 
