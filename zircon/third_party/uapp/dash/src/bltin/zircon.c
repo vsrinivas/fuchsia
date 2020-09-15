@@ -643,64 +643,63 @@ typedef struct admin_resp {
 
 // Define a function to call to a method in fuchsia.hardware.power.statecontrol.Admin that does
 // _not_ take a parameter.
-#define DEFINE_PARAMETERLESS_ADMIN_CALL(name)                                                   \
-  static int send_##name() {                                                                    \
-    zx_handle_t channel;                                                                        \
-    zx_status_t status =                                                                        \
-        connect_to_service("/svc/fuchsia.hardware.power.statecontrol.Admin", &channel);         \
-                                                                                                \
-    if (status != ZX_OK) {                                                                      \
-      return status;                                                                            \
-    }                                                                                           \
-                                                                                                \
-    alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_Admin##name##Request msg;       \
-    fidl_init_txn_header(&msg.hdr, 0,                                                           \
-                         fuchsia_hardware_power_statecontrol_Admin##name##Ordinal);          \
-                                                                                                \
-    const char* errs;                                                                           \
-    void* msg_handle = (void*)&msg;                                                             \
-    uint32_t actual_handle_count;                                                               \
-                                                                                                \
-    zx_status_t call_status =                                                                   \
-        fidl_encode(&fuchsia_hardware_power_statecontrol_Admin##name##RequestTable, msg_handle, \
-                    sizeof(msg), NULL, 0, &actual_handle_count, &errs);                         \
-    if (call_status != ZX_OK) {                                                                 \
-      return -1;                                                                                \
-    }                                                                                           \
-                                                                                                \
-    admin_resp_t resp;                                                                          \
-    zx_channel_call_args_t call_args;                                                           \
-    call_args.wr_bytes = msg_handle;                                                            \
-    call_args.wr_handles = NULL;                                                                \
-    call_args.rd_bytes = (void*)&resp;                                                          \
-    call_args.rd_handles = NULL;                                                                \
-    call_args.wr_num_bytes = sizeof(fuchsia_hardware_power_statecontrol_Admin##name##Request);  \
-    call_args.wr_num_handles = 0;                                                               \
-    call_args.rd_num_bytes = sizeof(resp);                                                      \
-    call_args.rd_num_handles = 0;                                                               \
-    uint32_t bytes_rx;                                                                          \
-    uint32_t handles_rx;                                                                        \
-    call_status =                                                                               \
-        zx_channel_call(channel, 0, ZX_TIME_INFINITE, &call_args, &bytes_rx, &handles_rx);      \
-    if (call_status != ZX_OK) {                                                                 \
-      printf("send_#name: zx_channel_call failed: %i\n", call_status);                          \
-      return -1;                                                                                \
-    }                                                                                           \
-                                                                                                \
-    switch (resp.data.tag) {                                                                    \
-      case 1:                                                                                   \
-        /* success! */                                                                          \
-        break;                                                                                  \
-      case 2:                                                                                   \
-        /* service returned an error */                                                         \
-        printf("send_#name: Failure with error: %s\n", zx_status_get_string(resp.err));         \
-        break;                                                                                  \
-      default:                                                                                  \
-        printf("send_#name: Unexpected service response code: %lu", resp.data.tag);             \
-        break;                                                                                  \
-    }                                                                                           \
-                                                                                                \
-    return 0;                                                                                   \
+#define DEFINE_PARAMETERLESS_ADMIN_CALL(name)                                                    \
+  static int send_##name() {                                                                     \
+    zx_handle_t channel;                                                                         \
+    zx_status_t status =                                                                         \
+        connect_to_service("/svc/fuchsia.hardware.power.statecontrol.Admin", &channel);          \
+                                                                                                 \
+    if (status != ZX_OK) {                                                                       \
+      return status;                                                                             \
+    }                                                                                            \
+                                                                                                 \
+    alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_Admin##name##Request msg;        \
+    fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_power_statecontrol_Admin##name##Ordinal); \
+                                                                                                 \
+    const char* errs;                                                                            \
+    void* msg_handle = (void*)&msg;                                                              \
+    uint32_t actual_handle_count;                                                                \
+                                                                                                 \
+    zx_status_t call_status =                                                                    \
+        fidl_encode(&fuchsia_hardware_power_statecontrol_Admin##name##RequestTable, msg_handle,  \
+                    sizeof(msg), NULL, 0, &actual_handle_count, &errs);                          \
+    if (call_status != ZX_OK) {                                                                  \
+      return -1;                                                                                 \
+    }                                                                                            \
+                                                                                                 \
+    admin_resp_t resp;                                                                           \
+    zx_channel_call_args_t call_args;                                                            \
+    call_args.wr_bytes = msg_handle;                                                             \
+    call_args.wr_handles = NULL;                                                                 \
+    call_args.rd_bytes = (void*)&resp;                                                           \
+    call_args.rd_handles = NULL;                                                                 \
+    call_args.wr_num_bytes = sizeof(fuchsia_hardware_power_statecontrol_Admin##name##Request);   \
+    call_args.wr_num_handles = 0;                                                                \
+    call_args.rd_num_bytes = sizeof(resp);                                                       \
+    call_args.rd_num_handles = 0;                                                                \
+    uint32_t bytes_rx;                                                                           \
+    uint32_t handles_rx;                                                                         \
+    call_status =                                                                                \
+        zx_channel_call(channel, 0, ZX_TIME_INFINITE, &call_args, &bytes_rx, &handles_rx);       \
+    if (call_status != ZX_OK) {                                                                  \
+      printf("send_" #name ": zx_channel_call failed: %i\n", call_status);                       \
+      return -1;                                                                                 \
+    }                                                                                            \
+                                                                                                 \
+    switch (resp.data.tag) {                                                                     \
+      case 1:                                                                                    \
+        /* success! */                                                                           \
+        break;                                                                                   \
+      case 2:                                                                                    \
+        /* service returned an error */                                                          \
+        printf("send_" #name ": Failure with error: %s\n", zx_status_get_string(resp.err));      \
+        break;                                                                                   \
+      default:                                                                                   \
+        printf("send_" #name ": Unexpected service response code: %lu\n", resp.data.tag);        \
+        break;                                                                                   \
+    }                                                                                            \
+                                                                                                 \
+    return 0;                                                                                    \
   }
 
 DEFINE_PARAMETERLESS_ADMIN_CALL(Poweroff);
