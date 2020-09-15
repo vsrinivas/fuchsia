@@ -55,6 +55,25 @@ TEST(BcmdhdCrossdriver, ChspecMalformedForInvalidChannel) {
   EXPECT_TRUE(chspec_malformed(invalid_chanspec));
 };
 
+TEST(BcmdhdCrossdriver, ControlChannelFromBadChspec) {
+  // This band + bandwidth combination is invalid.
+  chanspec_t invalid_chanspec = WL_CHANSPEC_BAND_2G | WL_CHANSPEC_BW_80;
+  uint8_t ctl_chan;
+  zx_status_t status = chspec_ctlchan(invalid_chanspec, &ctl_chan);
+  EXPECT_NE(status, ZX_OK);
+  // This band + channel combination is invalid.
+  invalid_chanspec = WL_CHANSPEC_BAND_5G | (MAXCHANNEL + 1);
+  status = chspec_ctlchan(invalid_chanspec, &ctl_chan);
+  EXPECT_NE(status, ZX_OK);
+};
+
+TEST(BcmdhdCrossdriver, ControlChannelFromGoodChspec) {
+  chanspec_t valid_chanspec = kChanspec5g80MhzCh42;
+  uint8_t ctl_chan;
+  zx_status_t status = chspec_ctlchan(valid_chanspec, &ctl_chan);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(ctl_chan, 36);
+}
 // This is a smoke test. A wl_wstats_cnt_t with empty histograms is possible.
 TEST(BcmdhdCrossdriver, GetHistogramsSucceedsWithEmptyWstatsCounters) {
   const wl_wstats_cnt_t wstats_cnt = {};

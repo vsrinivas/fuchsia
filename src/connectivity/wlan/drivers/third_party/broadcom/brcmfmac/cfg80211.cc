@@ -4456,7 +4456,6 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
 static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
   uint16_t chanspec = 0;
-  wlan_channel_t chan;
   wlanif_channel_switch_info_t info;
   zx_status_t err = ZX_OK;
   bcme_status_t fw_err;
@@ -4486,11 +4485,20 @@ static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
     return err;
   }
 
-  chanspec_to_channel(&cfg->d11inf, chanspec, &chan);
-  BRCMF_DBG(CONN, "IF: %d chanspec: 0x%x channel: %d", ifp->ifidx, chanspec, chan.primary);
-  info.new_channel = chan.primary;
+  // Get the control channel given chanspec
+  uint8_t ctl_chan;
+  err = chspec_ctlchan(chanspec, &ctl_chan);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", chanspec,
+              zx_status_get_string(err));
+    return err;
+  }
 
-  // Inform channel switch in wlanif.
+  BRCMF_DBG(CONN, "Channel switch ind IF: %d chanspec: 0x%x control channel: %d", ifp->ifidx,
+            chanspec, ctl_chan);
+  info.new_channel = ctl_chan;
+
+  // Inform wlanif of the channel switch.
   wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
 
   return ZX_OK;
