@@ -1,1 +1,37 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/migrated_targets.gni")
+
+assert(toolchain.environment == "efi")
+
+# TODO(54322): Keep in sync with BUILD.gn until the bootloader
+# is fully migrated to the Fuchsia build.
+
+source_set("src") {
+  sources = [
+    "abr.c",
+    "cmdline.c",
+    "device_id.c",
+    "diskio.c",
+    "fastboot.c",
+    "framebuffer.c",
+    "inet6.c",
+    "misc.c",
+    "netboot.c",
+    "netifc.c",
+    "osboot.c",
+    "pci.c",
+    "zircon.c",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "$zx/kernel/lib/efi",
+    "$zx/system/public",
+    "$zx/system/ulib/abr",
+    "$zx/system/ulib/gfx-font-data",
+    "$zx/system/ulib/tftp",
+    "$zx/third_party/ulib/cksum",
+  ]
+}

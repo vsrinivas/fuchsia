@@ -185,23 +185,23 @@ template("esp") {
       ]
     }
 
+    if (!defined(deps)) {
+      deps = []
+    }
+
     if (target_cpu == "x64") {
-      foreach(image, zircon_images) {
-        if (image.name == "bootloader" && image.type == "efi" &&
-            image.cpu == target_cpu) {
-          gigaboot_bin = "$zircon_root_build_dir/${image.path}"
-        }
-      }
+      gigaboot_target =
+          "//zircon/bootloader:bootloader(//zircon/bootloader:efi_$target_cpu)"
+      gigaboot_bin =
+          get_label_info(gigaboot_target, "root_out_dir") + "/bootx64.efi"
       args += [
         "--efi-bootloader",
         rebase_path(gigaboot_bin),
       ]
       inputs += [ gigaboot_bin ]
+      deps += [ gigaboot_target ]
     }
 
-    if (!defined(deps)) {
-      deps = []
-    }
     deps += [ mkfs_label ]
   }
 }

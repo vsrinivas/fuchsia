@@ -72,28 +72,6 @@ _DEFAULT_OUT_PREFIX = 'toolchains'
 #
 _ALL_TOOLCHAINS = [
     {
-        'name': 'bootloader_x64',
-        'gn': {
-            'toolchain': '//zircon/bootloader:efi_x64',
-        },
-        'zn': {
-            'toolchain': '//bootloader:efi-x64-win-clang',
-        },
-        'output_extension': 'exe',
-        'no_shared': True,
-    },
-    {
-        'name': 'bootloader_arm64',
-        'gn': {
-            'toolchain': '//zircon/bootloader:efi_arm64',
-        },
-        'zn': {
-            'toolchain': '//bootloader:efi-arm64-win-clang',
-        },
-        'output_extension': 'exe',
-        'no_shared': True,
-    },
-    {
         'name': 'user.vdso_x64',
         'gn': {
             'toolchain': '//zircon/system/ulib/zircon:user.vdso_x64',

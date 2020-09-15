@@ -67,8 +67,8 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
   group("efi_config_deps") {
   }
 
-  # TODO(digit): Rename to 'bootloader' after migration completes.
-  executable("bootloader-gn") {
+  # This is the Gigaboot bootloader binary.
+  executable("bootloader") {
     output_dir = root_out_dir
     if (current_cpu == "arm64") {
       output_name = "bootaa64"
@@ -92,7 +92,7 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
     ]
   }
 } else {
-  group("bootloader-gn") {
-    public_deps = [ ":bootloader-gn(//zircon/bootloader:efi_${current_cpu})" ]
+  group("bootloader") {
+    public_deps = [ ":bootloader(//zircon/bootloader:efi_${current_cpu})" ]
   }
 }

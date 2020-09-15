@@ -433,10 +433,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     testonly = true
     environment_label = "$zx/public/gn/toolchain:user"
     cpu = cpu
-    deps = [
-      "$zx/bootloader",
-      "$zx/kernel",
-    ]
+    deps = [ "$zx/kernel" ]
     metadata = {
       legacy_barrier = []
     }

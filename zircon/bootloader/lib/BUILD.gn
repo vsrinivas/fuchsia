@@ -1,1 +1,29 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/migrated_targets.gni")
+assert(toolchain.environment == "efi")
+
+source_set("lib") {
+  sources = [
+    "cmdline.c",
+    "console-printf.c",
+    "ctype.c",
+    "efi/guids.c",
+    "inet.c",
+    "loadfile.c",
+    "printf.c",
+    "stdlib.c",
+    "string.c",
+    "strings.c",
+    "utf_conversion.c",
+    "xefi.c",
+  ]
+  deps = [
+    "$zx/kernel/lib/efi",
+
+    # This only actually adds anything to the profile build.
+    "$zx/kernel/lib/instrumentation:profile",
+  ]
+}
