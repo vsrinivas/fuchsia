@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
@@ -105,6 +106,8 @@ class MinfsChecker {
   // was found in the underlying filesystem -- even if it was fixed.
   bool conforming_;
 
+  void DumpStats();
+
  private:
   MinfsChecker();
 
@@ -146,6 +149,8 @@ class MinfsChecker {
   blk_t cached_indirect_;
   uint8_t doubly_indirect_cache_[kMinfsBlockSize];
   uint8_t indirect_cache_[kMinfsBlockSize];
+  uint32_t indirect_blocks_ = 0;
+  uint32_t directory_blocks_ = 0;
 };
 
 zx_status_t MinfsChecker::GetInode(Inode* inode, ino_t ino, bool check_magic) const {
@@ -400,6 +405,9 @@ std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo blo
   vec.push_back(block_info);
   blk_info_.insert(std::pair<blk_t, std::vector<BlockInfo>>(bno, vec));
   alloc_blocks_++;
+  if (block_info.type != BlockType::DirectBlock) {
+    ++indirect_blocks_;
+  }
   return std::nullopt;
 }
 
@@ -574,6 +582,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     if ((status = CheckDirectory(&inode, ino, parent, CD_RECURSE)) < 0) {
       return status;
     }
+    directory_blocks_ += inode.block_count;
   } else {
     if (ino == kMinfsRootIno) {
       FS_TRACE_ERROR("Root inode must be a directory\n");
@@ -827,6 +836,14 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
   checker->fs_ = std::move(fs);
   *out = std::move(checker);
   return ZX_OK;
+}
+
+void MinfsChecker::DumpStats() {
+  std::cerr << "Minfs fsck:" << std::endl
+            << "  inodes           : " << alloc_inodes_ - 1 << std::endl
+            << "  blocks           : " << alloc_blocks_ - 1 << std::endl
+            << "  indirect blocks  : " << indirect_blocks_ << std::endl
+            << "  directory blocks : " << directory_blocks_ << std::endl;
 }
 
 // Write Superblock and Backup Superblock to disk.
@@ -1127,6 +1144,8 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
   if (status != ZX_OK) {
     return status;
   }
+
+  chk->DumpStats();
 
   if (out_bc != nullptr) {
     *out_bc = MinfsChecker::Destroy(std::move(chk));
