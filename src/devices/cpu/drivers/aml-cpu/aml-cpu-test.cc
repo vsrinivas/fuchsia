@@ -6,7 +6,6 @@
 
 #include <lib/fake_ddk/fidl-helper.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <memory>
 #include <vector>

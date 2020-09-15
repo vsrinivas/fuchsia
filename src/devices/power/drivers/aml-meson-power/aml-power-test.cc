@@ -4,8 +4,6 @@
 
 #include "aml-power.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
-
 #include <optional>
 
 #include <ddk/platform-defs.h>

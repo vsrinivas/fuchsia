@@ -4,7 +4,6 @@
 
 #include <fuchsia/perfmon/cpu/llcpp/fidl.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/clock.h>
