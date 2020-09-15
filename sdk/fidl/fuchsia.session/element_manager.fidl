@@ -7,72 +7,112 @@ library fuchsia.session;
 using fuchsia.sys;
 using fuchsia.url;
 
-/// The ElementManager is responsible for service requests to add elements to a
-/// session.
+/// An interface used to add elements to a session.
 ///
-/// An Element is a component which is expected to be instantiated as a child
-/// of the session and interact with the user in some way.
+/// An *element* is a component that is expected to be instantiated as a child
+/// of the session and to interact with the user in some way. An *element proposer*
+/// is a component that calls `ProposeElement` to add an element to the session.
 ///
-/// For example, a component acting as an element proposer may be listening to
-/// the network for instructions to display an element to the user. When such
-/// a network command is received, the element proposer proposes to add an
-/// element to the session via the `ElementManager` protocol.
+/// The session will typically implement `ElementManager` and provide it
+/// to its child element proposers.
+///
+/// For example, an element proposer may be a non-interactive application that
+/// listens to the network for a command to display an element to the user.
+/// When it receives the command, the element proposer proposes to add an
+/// element to the session via the `ElementManager` protocol. Similarly,
+/// the element proposer may be part of an interactive user interface that
+/// proposes elements based on user input.
 [Discoverable]
 protocol ElementManager {
-    /// Proposes to add an Element to the session.
+    /// Proposes to add an element to the session.
     ///
-    /// If `ProposeElement()` returns without error, the caller can assume
+    /// If `ProposeElement` returns without error, the caller can assume
     /// the element is now part of the session. However, whether or not the
-    /// element component is actively running, or not, is left to the session's
-    /// discretion. For example, a session may decide to conserve resources by
-    /// suspending an element which is not in focus, or delay the running of an
+    /// element component is actively running, or not, depends on the session
+    /// implementation. For example, a session may decide to conserve resources by
+    /// suspending an element which is not visible, or delay the running of an
     /// element until a more appropriate time.
     ///
-    /// `spec` describes the Element to add.
-    /// `element_controller` can be used to set and get annotations on the Element
-    ///     created by the `ElementManager`.
+    /// ## ElementSpec
+    ///
+    /// * `spec.component_url` is required
+    ///
+    /// If `spec.additional_services` is specified,
+    ///
+    /// * `spec.component_url` must point to a CFv1 component
+    ///   (`additional_services` is not supported for CFv2 components)
+    ///
+    /// * The [`fuchsia.sys/ServiceList.host_directory`] field in
+    ///   `spec.additional_services` must be set to a channel to a directory hosting
+    ///   the services ([`fuchsia.sys/ServiceList.provider`] is not supported
+    ///   and must be null)
+    ///
+    /// + `spec` describes the element to add
+    /// + `element_controller` can be used to observe and affect the lifecycle of the
+    ///   element, and to set and get annotations on the element
+    /// * error `ProposeElementError.NOT_FOUND` if `spec.component_url` is
+    ///   missing or could not be resolved
+    /// * error `ProposeElementError.REJECTED` if `spec.additional_services` is
+    ///   specified for a CFv2 `spec.component_url`
+    /// * error `ProposeElementError.REJECTED` if `spec.additional_services`
+    ///   does not have a valid [`fuchsia.sys/ServiceList.host_directory`]
+    /// * error `ProposeElementError.REJECTED` if `spec.additional_services`
+    ///   contains a non-null [`fuchsia.sys/ServiceList.provider`]
     ProposeElement(ElementSpec spec, request<ElementController>? element_controller)
         -> () error ProposeElementError;
 };
 
+/// An interface that gives clients of `ElementManager` (element proposers) control
+/// over the proposed element's lifecycle and annotations.
+///
+/// ## Lifecycle
+///
+/// The client must keep `ElementController` connected to ensure the element
+/// remains in the session and is not destroyed. Once `ElementController` is closed,
+/// the element and its component will be terminated. The element may also terminate
+/// itself, which will cause `ElementController` to close.
 protocol ElementController {
-    /// The server is expected to adhere to the following conventions:
-    /// * If a key is new, a new annotation is added.
-    /// * If a key already exists, the annotation is updated.
-    /// * If a key exists with a null value, the annotation is deleted.
+    /// Adds, updates, or removes annotations on the element.
+    ///
+    /// When `annotations.custom_annotations` is specified, the server is
+    /// expected to adhere to the following conventions:
+    ///
+    /// * If a key is new, a new annotation is added
+    /// * If a key already exists and the value is not null,
+    ///   the annotation value is updated
+    /// * If a key already exists and the value is null,
+    ///   the annotation is deleted
+    ///
+    /// * error `AnnotationError.REJECTED` if the `annotations` could not be set
+    ///   (the exact reason depends on the session implementation;
+    ///   see [`AnnotationError.REJECTED`] for some specific examples)
     SetAnnotations(Annotations annotations) -> () error AnnotationError;
 
-    /// Returns the current `Annotations` for the controlled element.
+    /// Returns the current `Annotations` for the element.
+    ///
+    /// * error `AnnotationError.NOT_FOUND` if the annotations could not be read.
     GetAnnotations() -> (Annotations annotations) error AnnotationError;
 };
 
-/// Errors which can be returned when attempting to add elements to a session.
+/// Errors that can be returned when attempting to add elements to a session.
 enum ProposeElementError {
-    /// There was an error resolving the element's component url.
+    /// The element's component URL could not be resolved.
     NOT_FOUND = 1;
 
-    /// The session rejected the proposal to add the element. Reasons may include
-    /// errors with components of the ElementSpec. (See `AnnotationError` for
-    /// some specific examples.)
+    /// The session rejected the proposal to add the element.
+    ///
+    /// This may be because of a malformed `ElementSpec`.
     REJECTED = 2;
 };
 
-/// Describes an Element to be added to a session.
+/// Description of an element to be added to a session.
 table ElementSpec {
-    /// The component URL of the Element.
+    /// The component URL of the element. Required.
     1: fuchsia.url.Url component_url;
 
-    /// Initial metadata on the element. Optional.
+    /// Initial annotations on the element. Optional.
     2: Annotations annotations;
 
     /// A list of services passed to the Element. Optional.
-    ///
-    /// If specified, `ElementSpec.component_url` must point to a CFv1 component.
-    /// This is not supported for CFv2 components. If this field is set,
-    /// proposing a CFv2 component will fail.
-    ///
-    /// The [`fuchsia.sys/ServiceList.provider`] field is not supported
-    /// and must be null. Instead, [`fuchsia.sys/ServiceList.host_directory`]
-    /// must be set to a channel for a directory hosting the services.
     3: fuchsia.sys.ServiceList additional_services;
 };

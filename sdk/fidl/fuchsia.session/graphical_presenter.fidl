@@ -6,50 +6,59 @@ library fuchsia.session;
 
 using fuchsia.ui.views;
 
-/// A `GraphicalPresenter` organizes and presents graphical views.
+/// An interface used to present graphical views.
+///
+/// The `GraphicalPresenter` protocol is typically implemented by a session component or
+/// its child that presents element views.
 ///
 /// The presented views can be annotated with `fuchsia.session.Annotations` to communicate
 /// presentation properties to the `GraphicalPresenter`.
-///
-/// The `GraphicalPresenter` protocol is used, for example, when a session component written
-/// in Rust wants to delegate presenting element views to a child component written in
-/// Flutter.
-///
-/// For example, a session component that manages the lifecycle of elements may delegate
-/// presentation of element views to a different child component that implements
-/// `GraphicalPresenter`.
 [Discoverable]
 protocol GraphicalPresenter {
     /// Presents the view described by `view_spec`.
     ///
-    /// `view_controller_request` allows clients to control aspects of the presented view.
-    /// If the `view_controller_request` is closed by the `GraphicalPresenter`, the client
-    /// can assume that the view is no longer being presented.
+    /// ## ViewSpec
     ///
-    /// If the client closes the `view_controller_request`, or there is no request, the
-    /// `GraphicalPresenter` may dismiss the view at any time with no signal to the
-    /// client.
+    /// `view_spec.view_holder_token` and `view_spec.view_ref` must be valid,
+    /// otherwise `PresentView` will fail with `ViewControllerEpitaph.INVALID_VIEW_SPEC`.
     ///
-    /// The client is notified of view events via the `ViewController`.
+    /// ## ViewController
+    ///
+    /// `view_controller_request` allows clients to receive a `ViewController` for the
+    /// presented view. The client can use the `ViewController` to control the view's
+    /// presentation and receive events.
+    ///
+    /// If `view_controller_request` is closed, the client can assume that the view is
+    /// no longer being presented, and will not be presented in the future.
+    ///
+    /// If the client closes the `view_controller_request`, or does not provide a request
+    /// to `PresentView`, the view may be dismissed at any time with no signal to the client.
+    ///
+    /// ## Errors
+    ///
+    /// `PresentView` errors are signaled by closing `view_controller_request`
+    /// with an epitaph, `ViewControllerEpitaph`. See [`ViewController`].
+    ///
+    /// + `view_spec` describes the view to present
+    /// + `view_controller_request` an optional request for a controller for the view
     PresentView(ViewSpec view_spec, request<ViewController>? view_controller_request);
 };
 
-/// Errors returned by `GraphicalPresenter.PresentView`.
+/// Epitaph returned when `ViewController` is closed to signal an error.
 enum ViewControllerEpitaph {
     /// The provided `ViewSpec` was missing a valid `ViewHolderToken`.
     INVALID_VIEW_SPEC = 1;
+
     /// The presenter rejected the request to present the view.
     REJECTED = 2;
 };
 
-/// A `ViewSpec` contains all the information `GraphicalPresenter` needs to present a view.
+/// A description of a view that can be presented by a `GraphicalPresenter`.
 table ViewSpec {
     /// The view holder token for the presented view.
-    /// Required.
     1: fuchsia.ui.views.ViewHolderToken view_holder_token;
 
     /// The `ViewRef` of the presented view.
-    /// Required.
     2: fuchsia.ui.views.ViewRef view_ref;
 
     /// The annotations associated with the presented view.
@@ -67,25 +76,41 @@ table ViewSpec {
     3: Annotations annotations;
 };
 
-/// A `ViewController` gives clients of `GraphicalPresenter` control over the views
-/// they present.
+/// An interface that gives clients of `GraphicalPresenter` control over a view
+/// that was presented.
 ///
-/// EPITAPH
+/// ## Lifecycle
 ///
-/// This interface uses a FIDL epitaph to indicate that the view:
-/// - failed to be presented: `INVALID_VIEW_SPEC`
-/// - presentation was rejected: `REJECTED`
-/// - view was dismissed: `ZX_OK`
+/// The client must keep `ViewController` connected to ensure the view is
+/// presented. Once `ViewController` is closed, the view will be
+/// permanently dismissed.
+///
+/// For example, if the view originates from an element, the component
+/// that manages the element's lifecycle may choose to stop the element's
+/// component once the `ViewController` is closed.
+///
+/// ## Epitaph
+///
+/// This protocol is closed with an epitaph:
+///
+/// * `ViewControllerEpitaph.INVALID_VIEW_SPEC` if the view failed to be
+///   presented because of a malformed `ViewSpec`
+///   (see [`GraphicalPresenter.PresentView`])
+/// * `ViewControllerEpitaph.REJECTED` if the presenter rejected the request
+///   to present the view (see [`GraphicalPresenter.PresentView`])
+/// * `ViewControllerEpitaph.ZX_OK` when the view is dismissed
 protocol ViewController {
     /// Annotates the view with `annotations`.
+    ///
     /// The presenter must observe incoming annotation requests and update
     /// the presentation accordingly.
     ///
     /// The presenter must adhere to the following rules for annotation updates:
-    /// - Annotations are added when their `Annotation.key` was not present in a previous
-    ///   set of annotations.
-    /// - Annotations are updated when their `Annotation.value` is non-null.
-    /// - Annotations are deleted when their `Annotation.value` is null.
+    ///
+    /// * Annotations are added when their `Annotation.key` was not present in a
+    ///   previous set of annotations
+    /// * Annotations are updated when their `Annotation.value` is non-null
+    /// * Annotations are deleted when their `Annotation.value` is null
     ///
     /// When the `Annotate` call returns, clients can assume that annotations have
     /// been updated and incorporated into the presentation.

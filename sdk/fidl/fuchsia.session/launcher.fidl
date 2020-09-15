@@ -11,19 +11,25 @@ using fuchsia.url;
 protocol Launcher {
     /// Launches the session detailed in `configuration`.
     ///
-    /// If a session is currently running, the component associated with the running session will
-    /// be destroyed.
+    /// If a session is currently running, the component associated with the running
+    /// session will be destroyed.
+    ///
+    /// + `configuration` describes the session to launch
+    /// * error `LaunchSessionError.NOT_FOUND` if `configuration.session_url` is
+    ///   missing or could not be resolved
+    /// * error `LaunchSessionError.FAILED` if the session failed to launch
     LaunchSession(SessionConfiguration configuration) -> () error LaunchSessionError;
 
     /// Restarts the current session.
     ///
-    /// An error is returned if there is no current session or the session failed to restart.
+    /// * error `LaunchSessionError.NOT_FOUND` if no session is currently running,
+    ///   or `LaunchSessionError.FAILED` if it failed to restart
     RestartSession() -> () error LaunchSessionError;
 };
 
 /// Errors returned when a session fails to launch or restart.
 enum LaunchSessionError {
-    /// There was an error resolving the session's component url.
+    /// There was an error resolving the session's component URL.
     NOT_FOUND = 1;
 
     /// The session failed to launch.

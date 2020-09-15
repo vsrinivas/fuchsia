@@ -6,7 +6,7 @@ library fuchsia.session;
 
 using fuchsia.mem;
 
-/// The value of a [`fuchsia.session/Entry`].
+/// The value of an [`fuchsia.session/Annotation`].
 ///
 /// The actual field used depends on the type of annotation.
 union Value {
@@ -16,9 +16,9 @@ union Value {
 
 /// An annotation defined dynamically by key/value pair.
 ///
-/// The `Key`, `Value` type, and legal values are not enforced by the Session Framework. Cooperating
-/// components that exchange annotations must define and validate annotation entries based on their
-/// own conventions.
+/// The Session Framework does not constrain the contents of `key` and `value`
+/// in any way. Cooperating components that exchange annotations must define
+/// and validate annotation entries based on their own conventions.
 struct Annotation {
     /// An identfier for this annotation.
     string:MAX key;
@@ -27,24 +27,24 @@ struct Annotation {
     Value? value;
 };
 
-/// Error returned from calls to SetAnnotations() or GetAnnotations().
+/// Error returned from methods that operate on annotations.
 enum AnnotationError {
-    /// The session rejected the annotations to add to the controlled element.
+    /// The session rejected the provided annotations.
+    ///
     /// Reasons for rejection may be due to annotations that violate defined
     /// type constraints, such as:
-    ///   * The `Value` size exceeds the maximum length.
-    ///   * The total number of annotations on an element exceeds `MAX`
+    ///
+    /// * The `Value` size exceeds the maximum length
+    /// * The total number of annotations on an element exceeds `MAX`
     REJECTED = 1;
 
-    /// The element failed to return the annotations from a call to get_annotations()/
-    /// Reasons for the failure may be due to inability to read buffer bytes.
+    /// The annotations on an element could not be returned.
+    ///
+    /// Reasons for this failure may be due to inability to read buffer bytes.
     NOT_FOUND = 2;
 };
 
-// NOTE: `Annotations` is a table (and not a type alias) to anticipate the possibility that
-// `Annotations` may be extended with additional well-known annotations, using hard-coded
-// table fields of any legal type.
-/// Contains the annotations applied to an Element.
+/// The annotations applied to an element.
 table Annotations {
     /// A list of dynamically-defined annotations.
     1: vector<Annotation>:MAX custom_annotations;
