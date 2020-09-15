@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_types.h"
 #include "tools/fidlcat/lib/code_generator/test_generator.h"
 
 namespace fidlcat {
@@ -59,11 +61,11 @@ TEST_F(CodeGeneratorTest, GenerateIncludes) {
 class TestGeneratorTest : public ::testing::Test {
  public:
   TestGeneratorTest() : test_generator_(nullptr, "") {
-    struct_def_input_ = std::make_shared<fidl_codec::Struct>("struct_input");
+    struct_def_input_ = std::make_shared<fidl_codec::Struct>("StructInput");
     struct_def_input_->AddMember("base", std::make_unique<fidl_codec::Int64Type>());
     struct_def_input_->AddMember("exponent", std::make_unique<fidl_codec::Int64Type>());
 
-    struct_def_output_ = std::make_shared<fidl_codec::Struct>("struct_output");
+    struct_def_output_ = std::make_shared<fidl_codec::Struct>("StructOutput");
     struct_def_output_->AddMember("result", std::make_unique<fidl_codec::Int64Type>());
     struct_def_output_->AddMember("result_words", std::make_unique<fidl_codec::StringType>());
 
@@ -192,6 +194,52 @@ TEST_F(TestGeneratorTest, GenerateInputInitializers) {
   EXPECT_EQ(os_.str(),
             "int64_t in_base_0 = 2;\n"
             "int64_t in_exponent_0 = 3;\n");
+}
+
+TEST_F(TestGeneratorTest, GenerateInitializationStruct) {
+  fidl_codec::CppVisitor visitor("my_struct_var");
+
+  auto struct_input_type =
+      std::make_unique<fidl_codec::StructType>(*(struct_def_input_.get()), false);
+
+  auto struct_output_type =
+      std::make_unique<fidl_codec::StructType>(*(struct_def_output_.get()), false);
+
+  auto struct_dummy_input = std::make_unique<fidl_codec::StructValue>(*struct_def_input_.get());
+  struct_dummy_input->AddField("base", std::make_unique<fidl_codec::IntegerValue>(int64_t(3)));
+  struct_dummy_input->AddField("exponent", std::make_unique<fidl_codec::IntegerValue>(int64_t(2)));
+
+  auto struct_dummy_output = std::make_unique<fidl_codec::StructValue>(*struct_def_output_.get());
+  struct_dummy_output->AddField("result", std::make_unique<fidl_codec::IntegerValue>(int64_t(8)));
+  struct_dummy_output->AddField("result_words", std::make_unique<fidl_codec::StringValue>("eight"));
+
+  auto struct_def_recursive = std::make_shared<fidl_codec::Struct>("struct_recursive");
+  struct_def_recursive->AddMember("input", std::move(struct_input_type));
+  struct_def_recursive->AddMember("output", std::move(struct_output_type));
+
+  auto struct_recursive = std::make_shared<fidl_codec::StructValue>(*struct_def_recursive.get());
+  struct_recursive->AddField("input", std::move(struct_dummy_input));
+  struct_recursive->AddField("output", std::move(struct_dummy_output));
+
+  auto struct_recursive_type =
+      std::make_unique<fidl_codec::StructType>(*(struct_def_recursive.get()), false);
+  struct_recursive->Visit(&visitor, struct_recursive_type.get());
+  std::shared_ptr<fidl_codec::CppVariable> cpp_var = visitor.result();
+
+  cpp_var->GenerateInitialization(printer_);
+
+  // TODO(nimaj):
+  // Generate literals and avoid creating new variables for int and strings.
+  EXPECT_EQ(os_.str(),
+            "int64_t my_struct_var_input_base = 3;\n"
+            "int64_t my_struct_var_input_exponent = 2;\n"
+            "StructInput my_struct_var_input = { my_struct_var_input_base, "
+            "my_struct_var_input_exponent };\n"
+            "int64_t my_struct_var_output_result = 8;\n"
+            "std::string my_struct_var_output_result_words = \"eight\";\n"
+            "StructOutput my_struct_var_output = { my_struct_var_output_result, "
+            "my_struct_var_output_result_words };\n"
+            "struct_recursive my_struct_var = { my_struct_var_input, my_struct_var_output };\n");
 }
 
 TEST_F(TestGeneratorTest, GenerateOutputDeclarations) {

@@ -70,6 +70,32 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
   const fidl_codec::StructValue* decoded_input_value = nullptr;
   const fidl_codec::StructValue* decoded_output_value = nullptr;
 
+  switch (syscall_kind) {
+    case SyscallKind::kChannelWrite:
+      decoded_input_value = output_event->invoked_event()->GetMessage()->decoded_request();
+      if (!decoded_input_value) {
+        // monitored process is a server; event is a response sent by server
+        decoded_input_value = output_event->invoked_event()->GetMessage()->decoded_response();
+      }
+      break;
+    case SyscallKind::kChannelRead:
+      decoded_output_value = output_event->GetMessage()->decoded_response();
+      if (!decoded_output_value) {
+        // monitored process is a server; event is a request received by the server
+        decoded_output_value = output_event->GetMessage()->decoded_request();
+      }
+      break;
+    case SyscallKind::kChannelCall:
+      decoded_input_value = output_event->invoked_event()->GetMessage()->decoded_request();
+      if (decoded_input_value && output_event->GetMessage() != nullptr) {
+        decoded_output_value = output_event->GetMessage()->decoded_response();
+      }
+      break;
+    default:
+      return nullptr;
+      break;
+  }
+
   // Extract handle information from output event in 2 steps:
   // (1/2) Find handle's struct member
   const fidl_codec::StructMember* handle_member = syscall->SearchInlineMember("handle", true);

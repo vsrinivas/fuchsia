@@ -42,7 +42,12 @@ class Proxy {
 };
 
 void Proxy::group_0() {
-  proxy_->EchoString([this]() {
+  std::string in_value_0 = "hello world";
+  std::string out_response_0;
+  proxy_->EchoString(in_value_0, [this](std::string out_response_0) {
+    std::string out_response_0_expected = "hello world";
+    ASSERT_EQ(out_response_0, out_response_0_expected);
+
     loop_.Quit();
   });
 }
