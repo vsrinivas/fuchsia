@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fake_ddk/fake_ddk.h>
-
+#include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/shareddma.h>
 #include <soc/as370/as370-dma.h>

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 
+#include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-audio-in.h>
