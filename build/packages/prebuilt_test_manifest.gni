@@ -33,10 +33,6 @@ template("prebuilt_test_manifest") {
   foreach(test, manifest) {
     test_package = test.package
     component_name = test.component_name
-    runner = "run-test-component"
-    if (defined(test.runner)) {
-      runner = test.runner
-    }
     test_disabled = false
     if (defined(invoker.disabled_tests)) {
       foreach(disabled_test, invoker.disabled_tests) {
@@ -50,7 +46,6 @@ template("prebuilt_test_manifest") {
       prebuilt_test_package(test_package) {
         archive = "${invoker.archive_dir}/${test_package}.far"
         component_name = component_name
-        runner = runner
         forward_variables_from(invoker,
                                [
                                  "environments",

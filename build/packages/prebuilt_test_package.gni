@@ -35,31 +35,19 @@ import("//build/testing/test_spec.gni")
 template("prebuilt_test_package") {
   assert(defined(invoker.archive), "archive must be defined.")
   assert(defined(invoker.component_name), "component_name must be defined.")
-  assert(defined(invoker.runner), "runner must be defined.")
+
+  # TODO(fxbug.dev/58561): Fix callers and then remove here.
+  not_needed(invoker, [ "runner" ])
 
   package_name = target_name
   if (defined(invoker.package)) {
     package_name = invoker.package
   }
-  package_deps = []
 
-  if (invoker.runner == "run") {
-    package_deps += [ "//garnet/packages/prod:run" ]
-  } else if (invoker.runner == "run-test-component") {
-    package_deps += [ "//garnet/packages/testing:run_test_component" ]
-  } else {
-    assert(
-        false,
-        "unexpected runner \"${invoker.runner}; must be one of \"run\" or \"run_test_component\"")
-  }
   spec_target_name = "${target_name}_${invoker.component_name}_spec"
   test_spec(spec_target_name) {
     target = ":${invoker.target_name}"
     package_url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}.cmx"
-    command = [
-      "${invoker.runner}",
-      package_url,
-    ]
 
     forward_variables_from(invoker,
                            [
@@ -68,12 +56,11 @@ template("prebuilt_test_package") {
                              "log_settings",
                            ])
   }
-  package_deps += [ ":$spec_target_name" ]
 
   prebuilt_package(target_name) {
     package_name = package_name
     testonly = true
     archive = invoker.archive
-    deps = package_deps
+    deps = [ ":$spec_target_name" ]
   }
 }
