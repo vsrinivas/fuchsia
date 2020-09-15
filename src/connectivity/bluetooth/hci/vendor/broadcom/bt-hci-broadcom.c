@@ -21,7 +21,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/bt/vendor.h>
 #include <ddk/protocol/serialimpl/async.h>
 
 // TODO: how can we parameterize this?
@@ -96,18 +95,6 @@ typedef struct {
 } __PACKED bcm_set_bdaddr_cmd_t;
 #define BCM_SET_BDADDR_CMD 0xfc01
 
-typedef struct {
-  hci_command_header_t header;
-  uint16_t connection_handle;
-  uint8_t priority;
-  uint8_t direction;
-} __PACKED bcm_set_acl_priority_cmd_t;
-#define BCM_SET_ACL_PRIORITY_CMD (0x3F << 10) | 0x11A
-#define BCM_ACL_PRIORITY_NORMAL 0x00
-#define BCM_ACL_PRIORITY_HIGH 0x01
-#define BCM_ACL_DIRECTION_SOURCE 0x00
-#define BCM_ACL_DIRECTION_SINK 0x01
-
 #define HCI_EVT_COMMAND_COMPLETE 0x0e
 
 // Max size of a event frame. Max is 255 + sizeof(hci_event_header_t)
@@ -126,31 +113,20 @@ typedef struct {
 } bcm_hci_t;
 
 static int bcm_hci_start_thread(void* arg);
-static bt_vendor_protocol_ops_t vendor_protocol_ops;
 
 static zx_status_t bcm_hci_get_protocol(void* ctx, uint32_t proto_id, void* out_proto) {
-  bcm_hci_t* hci = ctx;
-
-  switch (proto_id) {
-    case ZX_PROTOCOL_BT_HCI: {
-      bt_hci_protocol_t* hci_proto = out_proto;
-
-      // Forward the underlying bt-transport ops.
-      hci_proto->ops = hci->hci.ops;
-      hci_proto->ctx = hci->hci.ctx;
-
-      return ZX_OK;
-    }
-    case ZX_PROTOCOL_BT_VENDOR: {
-      bt_vendor_protocol_t* vendor_proto = out_proto;
-      vendor_proto->ops = &vendor_protocol_ops;
-      vendor_proto->ctx = ctx;
-
-      return ZX_OK;
-    }
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
+  if (proto_id != ZX_PROTOCOL_BT_HCI) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
+
+  bcm_hci_t* hci = ctx;
+  bt_hci_protocol_t* hci_proto = out_proto;
+
+  // Forward the underlying bt-transport ops.
+  hci_proto->ops = hci->hci.ops;
+  hci_proto->ctx = hci->hci.ctx;
+
+  return ZX_OK;
 }
 
 static void bcm_hci_init(void* ctx) {
@@ -218,59 +194,6 @@ static fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops = {
 static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_bluetooth_Hci_dispatch(ctx, txn, msg, &fidl_ops);
 }
-
-static bt_vendor_features_t vendor_get_features(void* ctx) {
-  return BT_VENDOR_FEATURES_SET_ACL_PRIORITY_COMMAND;
-}
-
-static zx_status_t encode_set_acl_priority_command(const bt_vendor_set_acl_priority_params_t params,
-                                                   void* out_buffer, size_t buffer_size,
-                                                   size_t* actual_size) {
-  if (buffer_size < sizeof(bcm_set_acl_priority_cmd_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  bcm_set_acl_priority_cmd_t command = {
-      .header =
-          {
-              .opcode = htole16(BCM_SET_ACL_PRIORITY_CMD),
-              .parameter_total_size =
-                  sizeof(bcm_set_acl_priority_cmd_t) - sizeof(hci_command_header_t),
-          },
-      .connection_handle = htole16(params.connection_handle),
-      .priority = (params.priority == BT_VENDOR_ACL_PRIORITY_NORMAL) ? BCM_ACL_PRIORITY_NORMAL
-                                                                     : BCM_ACL_PRIORITY_HIGH,
-      .direction = (params.direction == BT_VENDOR_ACL_DIRECTION_SOURCE) ? BCM_ACL_DIRECTION_SOURCE
-                                                                        : BCM_ACL_DIRECTION_SINK,
-  };
-
-  memcpy(out_buffer, &command, sizeof(command));
-  *actual_size = sizeof(command);
-
-  return ZX_OK;
-}
-
-static zx_status_t vendor_encode_command(void* ctx, bt_vendor_command_t command,
-                                         const bt_vendor_params_t* params, void* out_encoded_buffer,
-                                         size_t out_encoded_buffer_size,
-                                         size_t* out_encoded_actual) {
-  if (!params || !out_encoded_buffer || !out_encoded_actual) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  switch (command) {
-    case BT_VENDOR_COMMAND_SET_ACL_PRIORITY:
-      return encode_set_acl_priority_command(params->set_acl_priority, out_encoded_buffer,
-                                             out_encoded_buffer_size, out_encoded_actual);
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-}
-
-static bt_vendor_protocol_ops_t vendor_protocol_ops = {
-    .encode_command = vendor_encode_command,
-    .get_features = vendor_get_features,
-};
 
 static zx_protocol_device_t bcm_hci_device_proto = {
     .version = DEVICE_OPS_VERSION,
@@ -495,7 +418,7 @@ static int bcm_hci_start_thread(void* arg) {
     goto fail;
   }
 
-  // Send Reset command
+   // Send Reset command
   status = bcm_hci_send_command(hci, &RESET_CMD, sizeof(RESET_CMD), NULL, 0);
   if (status != ZX_OK) {
     goto fail;
