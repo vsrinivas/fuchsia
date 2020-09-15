@@ -150,7 +150,7 @@ source_set("test_util") {
   public_deps = [ ":cpp_base" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_support") {

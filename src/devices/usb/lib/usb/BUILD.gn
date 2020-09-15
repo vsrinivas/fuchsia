@@ -40,5 +40,5 @@ zx_library("usb") {
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_configs = [ "//build/config:Wno-conversion" ]
 }

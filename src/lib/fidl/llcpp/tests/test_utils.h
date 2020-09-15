@@ -125,7 +125,8 @@ bool LinearizeAndEncodeFailure(FidlType* value, zx_status_t expected_error_code)
 template <typename FidlType>
 bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
+  uint32_t size = static_cast<uint32_t>(bytes.size());
+  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], size, size));
   auto decode_result = fidl::Decode(std::move(message));
   if (decode_result.status != ZX_OK || decode_result.error != nullptr) {
     std::cout << "Decoding failed (" << zx_status_get_string(decode_result.status)
@@ -143,7 +144,8 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
 template <typename FidlType>
 bool DecodeFailure(std::vector<uint8_t> bytes, zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
+  uint32_t size = static_cast<uint32_t>(bytes.size());
+  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], size, size));
   auto decode_result = fidl::Decode(std::move(message));
   if (decode_result.status == ZX_OK) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;

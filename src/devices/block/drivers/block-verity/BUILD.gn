@@ -147,6 +147,9 @@ driver_module("block-verity") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/digest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("block-verity-test") {

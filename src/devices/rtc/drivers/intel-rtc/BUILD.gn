@@ -22,4 +22,7 @@ driver_module("intel-rtc") {
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

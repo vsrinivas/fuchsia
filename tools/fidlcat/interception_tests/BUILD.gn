@@ -68,5 +68,8 @@ if (is_host) {
       # TODO(57392): Move it back to //third_party once unification completes.
       "//zircon/third_party/rapidjson",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }

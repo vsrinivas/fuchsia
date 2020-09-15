@@ -38,6 +38,9 @@ driver_module("wlantap_driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_package("wlantap") {

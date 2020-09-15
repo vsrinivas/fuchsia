@@ -70,6 +70,9 @@ trace_engine_library("trace-engine") {
   sdk_publishable = true
   shared = true
   static = false
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  extra_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # A special version for programs and shared libraries that can't use

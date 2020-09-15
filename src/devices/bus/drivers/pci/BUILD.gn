@@ -86,6 +86,9 @@ if (platform_enable_user_pci) {
       "bind.cc",
     ]
     deps = [ ":user_pci" ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   driver_module("bus-pci.proxy") {
@@ -122,6 +125,9 @@ if (platform_enable_user_pci) {
       "//src/lib/ddktl",
       "//zircon/public/lib/fidl",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   driver_module("bus-pci.proxy") {
@@ -144,6 +150,9 @@ if (platform_enable_user_pci) {
       "//src/lib/ddk",
       "//src/lib/ddktl",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 

@@ -64,6 +64,9 @@ test("fidl_llcpp_conformance_test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fidl.llcpp.types.test") {

@@ -32,10 +32,8 @@ source_set("fostr") {
 
   public_configs = [ "//garnet/public:config" ]
 
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs += [ "//build/config:Wno-conversion" ]
 }
 
 shared_library("fostr_shared") {
@@ -44,10 +42,8 @@ shared_library("fostr_shared") {
     "indent.h",
   ]
 
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 if (is_host) {

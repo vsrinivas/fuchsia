@@ -29,6 +29,9 @@ source_set("spinel_vk_utils") {
     "${graphics_compute_dir}/spinel/platforms/vk:vk",
     "${graphics_compute_dir}/spinel/platforms/vk:vk_find_target",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 graphics_compute_unittests("unittests") {

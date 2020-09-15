@@ -75,7 +75,7 @@ static_library("perfmon") {
     public_deps += [ "//zircon/system/public" ]
   }
 
-  configs += [
+  public_configs = [
     # TODO(fxb/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]

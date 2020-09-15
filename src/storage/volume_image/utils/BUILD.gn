@@ -32,6 +32,9 @@ source_set("lz4-compression") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("lz4-compression-test") {
@@ -57,10 +60,9 @@ source_set("guid") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("guid-test") {

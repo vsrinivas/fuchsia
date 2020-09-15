@@ -25,4 +25,7 @@ driver_module("machina") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

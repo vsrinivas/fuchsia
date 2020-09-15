@@ -14,10 +14,9 @@ source_set("cpp") {
   ]
 
   public_deps = [ "//zircon/public/lib/safemath" ]
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 test("containers_cpp_unittests") {

@@ -42,6 +42,9 @@ driver_module("goldfish_driver") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_package("goldfish") {

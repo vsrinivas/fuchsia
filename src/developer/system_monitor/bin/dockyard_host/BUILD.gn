@@ -15,6 +15,9 @@ if (is_host) {
       "//src/developer/system_monitor/lib/dockyard:headers",
       "//src/lib/fxl",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   executable("dockyard_host") {

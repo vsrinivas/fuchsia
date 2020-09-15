@@ -24,4 +24,7 @@ driver_module("pc-ps2") {
     "//src/lib/ddk",
     "//zircon/system/ulib/hid",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

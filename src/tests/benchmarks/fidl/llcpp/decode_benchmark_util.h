@@ -39,8 +39,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      fidl::EncodedMessage<FidlType> message(
-          fidl::BytePart(&test_data[0], test_data.size(), test_data.size()));
+      uint32_t size = (uint32_t)test_data.size();
+      fidl::EncodedMessage<FidlType> message(fidl::BytePart(&test_data[0], size, size));
       auto decode_result = fidl::Decode(std::move(message));
       ZX_ASSERT(decode_result.status == ZX_OK);
     }

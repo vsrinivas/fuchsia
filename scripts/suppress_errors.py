@@ -68,8 +68,10 @@ def can_have_config(params):
         return config not in desc_out
     except subprocess.CalledProcessError as e:
         if 'Don\'t know how to display "configs" for ' in e.output:
-            # Target type cannot have configs
-            return False
+            # Target type cannot have configs,
+            # or the actual target is in another toolchain.
+            # Assume the latter.
+            return True
         elif " matches no targets, configs or files" in e.output:
             # The target probably exists in a non-default toolchain.
             # Assume that it can have the config.

@@ -30,6 +30,9 @@ source_set("lib") {
   ]
 
   public_deps = [ ":headers" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 proto_library("proto") {
@@ -72,4 +75,7 @@ test("dockyard_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

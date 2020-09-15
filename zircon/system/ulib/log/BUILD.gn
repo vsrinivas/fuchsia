@@ -35,4 +35,7 @@ target(default_library_type, "log") {
   if (is_fuchsia) {
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -83,7 +83,9 @@ source_set("linuxisms") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//zircon/system/public",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for DMA buffer handling.

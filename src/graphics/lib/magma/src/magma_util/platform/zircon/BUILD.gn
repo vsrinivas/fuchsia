@@ -22,10 +22,9 @@ source_set("buffer") {
     "$magma_build_root/src/magma_util/platform:trace",
     "..:object",
   ]
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("bus_mapper") {

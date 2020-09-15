@@ -39,6 +39,9 @@ driver_module("bt-hci-broadcom") {
     "//zircon/system/ulib/ddk",
   ]
   data_deps = [ ":firmware" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 firmware("firmware") {

@@ -45,5 +45,8 @@ foreach(driver, simple_drivers) {
       "//src/devices/pci/lib/device-protocol-pci",
       "//src/lib/ddk",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
