@@ -22,10 +22,7 @@ foreach(artifact, zircon_artifacts) {
 }
 
 group("images") {
-  deps = [
-    ":legacy-aux",
-    ":legacy-tests",
-  ]
+  deps = [ ":legacy-aux" ]
 }
 
 ###############################################################################
@@ -56,22 +53,4 @@ aggregate_manifest("legacy-aux") {
   ]
 
   reference = "legacy-aux-$target_cpu"
-}
-
-# IMPORTANT NOTE: this target is now frozen, please do not add any more
-# dependencies to it.
-aggregate_manifest("legacy-tests") {
-  deps = [
-    ":test.sys.libc-test",
-    ":test.sys.noop-test",
-    ":test.sys.noop-test.asan",
-    ":test.sys.noop-test.asan-ubsan",
-    ":test.sys.noop-test.profile",
-    ":test.sys.noop-test.sancov",
-    ":test.sys.noop-test.ubsan",
-    ":test.sys.noop-test.ubsan-sancov",
-    ":test.sys.noop-test.ubsan-sancov-full",
-  ]
-
-  reference = "legacy-tests-$target_cpu"
 }

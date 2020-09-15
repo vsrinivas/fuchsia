@@ -258,8 +258,7 @@ group("tests") {
   deps += []
 
   # The following targets contribute tests to the zbi.
-  deps += [ "//build/unification/future/images:legacy_tests" ] +
-          common_test_contents
+  deps += common_test_contents
 
   # Add various drivers and binaries used in manual testing.
   deps += [ ":manual_testing" ]
