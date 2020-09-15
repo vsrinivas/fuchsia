@@ -46,6 +46,7 @@ class FsOperationType : public OperationBase {
     Truncate,
     Unlink,
     Write,
+    PageFault,
   };
 
   explicit FsOperationType(CommonFsOperation type, std::chrono::nanoseconds timeout)
@@ -94,6 +95,8 @@ class FsOperationType : public OperationBase {
         return "Unlink";
       case CommonFsOperation::Write:
         return "Write";
+      case CommonFsOperation::PageFault:
+        return "PageFault";
       default:
         return "Unknown operation";
     }

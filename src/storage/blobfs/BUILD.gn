@@ -48,7 +48,6 @@ source_set("private_headers") {
       "iterator/node-populator.h",
       "metrics.h",
       "pager/page-watcher.h",
-      "pager/pager-watchdog.h",
       "pager/transfer-buffer.h",
       "pager/user-pager.h",
       "read-metrics.h",
@@ -56,7 +55,10 @@ source_set("private_headers") {
     ]
   }
   public_configs = [ ":headers_config" ]
-  deps = [ "//src/lib/chunked-compression" ]
+  deps = [
+    "//src/lib/chunked-compression",
+    "//src/storage/lib/watchdog",
+  ]
 }
 
 zx_library("blobfs") {
@@ -93,6 +95,7 @@ zx_library("blobfs") {
     "iterator/vector-extent-iterator.cc",
   ]
   public_deps = [
+    "//src/storage/lib/watchdog",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs",
@@ -154,7 +157,6 @@ zx_library("blobfs") {
       "metrics.cc",
       "mount.cc",
       "pager/page-watcher.cc",
-      "pager/pager-watchdog.cc",
       "pager/transfer-buffer.cc",
       "pager/user-pager.cc",
       "query.cc",

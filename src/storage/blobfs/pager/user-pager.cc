@@ -22,13 +22,12 @@
 
 #include "compression/zstd-seekable.h"
 #include "metrics.h"
+#include "src/storage/lib/watchdog/include/lib/watchdog/operations.h"
 
 namespace blobfs {
 namespace pager {
 
-constexpr zx::duration kWatchdogTimeout = zx::sec(60);
-
-UserPager::UserPager(BlobfsMetrics* metrics) : watchdog_(kWatchdogTimeout), metrics_(metrics) {}
+UserPager::UserPager(BlobfsMetrics* metrics) : metrics_(metrics) {}
 
 zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<TransferBuffer> buffer,
                                                          BlobfsMetrics* metrics) {
@@ -66,6 +65,14 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<Transfe
   // in any of the steps within |SetDeadlineProfile|, we log a warning, and successfully return the
   // UserPager instance.
   SetDeadlineProfile(thread);
+
+  // Initialize and start the watchdog.
+  pager->watchdog_ = fs_watchdog::CreateWatchdog();
+  zx::status<> watchdog_status = pager->watchdog_->Start();
+  if (!watchdog_status.is_ok()) {
+    FS_TRACE_ERROR("blobfs: Could not start pager watchdog\n");
+    return zx::error(watchdog_status.status_value());
+  }
 
   return zx::ok(std::move(pager));
 }
@@ -169,7 +176,9 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
     return PagerErrorStatus::kErrBadState;
   }
 
-  PagerWatchdog::ArmToken watchdog_token = watchdog_.Arm();
+  static const fs_watchdog::FsOperationType kOperation(
+      fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
+  [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
 
   if (info.decompressor != nullptr) {
     return TransferChunkedPagesToVmo(offset, length, vmo, info);

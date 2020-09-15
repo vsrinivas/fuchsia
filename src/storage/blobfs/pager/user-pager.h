@@ -18,10 +18,9 @@
 
 #include "../metrics.h"
 #include "../transaction-manager.h"
-#include "pager-watchdog.h"
+#include "src/storage/lib/watchdog/include/lib/watchdog/watchdog.h"
 #include "transfer-buffer.h"
 #include "user-pager-info.h"
-
 namespace blobfs {
 namespace pager {
 
@@ -179,7 +178,7 @@ class UserPager {
   // Watchdog which triggers if any page faults exceed a threshold deadline.  This *must* come
   // before the loop below so that the loop, which might have references to the watchdog, is
   // destryoed first.
-  PagerWatchdog watchdog_;
+  std::unique_ptr<fs_watchdog::WatchdogInterface> watchdog_;
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
