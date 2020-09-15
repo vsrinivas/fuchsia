@@ -246,9 +246,17 @@ func (d *Distribution) Create(params Params) *Instance {
 	args = append(args, "-append", getCommonKernelCmdline(params))
 	path := d.systemPath(params.Arch)
 	fmt.Printf("Running %s %s\n", path, args)
-	return &Instance{
+
+	i := &Instance{
 		cmd: exec.Command(path, args...),
 	}
+	// QEMU looks in the cwd for some specially named files, in particular
+	// multiboot.bin, so avoid picking those up accidentally. See
+	// https://fxbug.dev/53751.
+	// TODO(fxb/58804): Remove this.
+	i.cmd.Dir = "/"
+
+	return i
 }
 
 // RunNonInteractive runs an instance of QEMU that runs a single command and
