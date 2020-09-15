@@ -300,6 +300,11 @@ table StartedPayload {
 
 /// Payload for Stopped events.
 table StoppedPayload {
+    /// The epitaph set on the fuchsia.component.runner/ComponentController
+    /// protocol channel. This is the exit status of the component. The
+    /// possible status values and their meaning are described in the definition
+    /// of the ComponentController protocol.
+    1: zx.status status;
 };
 
 /// A descriptor providing metadata about a target component instance.

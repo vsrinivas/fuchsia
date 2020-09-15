@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    elf_test_helper::{self as test_helper, ExitStatus},
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_syslog::{self as fxlog},
-    test_utils_lib::events::{Destroyed, Event, EventMatcher, EventSource, Ordering, Stopped},
+    regex::Regex,
+    test_utils_lib::events::{Destroyed, Event, EventMatcher, EventSource, Stopped},
 };
 
 /// This test invokes components which don't stop when they're told to. We
@@ -42,8 +44,13 @@ async fn test_stop_timeouts() {
     // We don't know what "X" is for sure, it will tend to be "1", but there
     // is no contract around this and the validation logic does not accept
     // generic regexes.
-    let target_moniker = format!("./{}:{}:*", collection_name, child_name);
-    let expected_events = vec![
+    let moniker_stem = format!("./{}:{}:", collection_name, child_name);
+    let target_moniker = format!("{}*", moniker_stem);
+    let custom_child_regex =
+        Regex::new(&format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem)).unwrap();
+    let inherited_child_regex =
+        Regex::new(&format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem)).unwrap();
+    let mut expected_events = vec![
         EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
         EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
         EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
@@ -51,5 +58,14 @@ async fn test_stop_timeouts() {
         EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
         EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
     ];
-    event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
+    let rxs = vec![inherited_child_regex, custom_child_regex];
+    // Each child we expect to hit its stop timeout and be killed, which should
+    // be reported as a non-zero status code.I
+    test_helper::validate_exit(&mut event_stream, &mut expected_events, rxs, ExitStatus::Crash)
+        .await;
+
+    assert!(
+        expected_events.is_empty(),
+        format!("Some expected events were not received: {:?}", expected_events)
+    );
 }

@@ -298,7 +298,9 @@ pub enum EventPayload {
         component_decl: ComponentDecl,
         bind_reason: BindReason,
     },
-    Stopped,
+    Stopped {
+        status: zx::Status,
+    },
     Running {
         started_timestamp: zx::Time,
     },
@@ -348,10 +350,10 @@ impl fmt::Debug for EventPayload {
                 formatter.field("component_decl", &component_decl).finish()
             }
             EventPayload::Resolved { decl } => formatter.field("decl", decl).finish(),
+            EventPayload::Stopped { status } => formatter.field("status", status).finish(),
             EventPayload::Destroyed
             | EventPayload::Discovered
             | EventPayload::MarkedForDestruction
-            | EventPayload::Stopped
             | EventPayload::Running { .. } => formatter.finish(),
         }
     }
@@ -500,11 +502,13 @@ impl fmt::Display for Event {
                     EventPayload::Started { bind_reason, .. } => {
                         format!("because {}", bind_reason.to_string())
                     }
+                    EventPayload::Stopped { status } => {
+                        format!("with status: {}", status.to_string())
+                    }
                     EventPayload::Destroyed
                     | EventPayload::Discovered
                     | EventPayload::MarkedForDestruction
                     | EventPayload::Resolved { .. }
-                    | EventPayload::Stopped
                     | EventPayload::Running { .. } => "".to_string(),
                 };
                 format!("[{}] '{}' {}", self.event_type().to_string(), self.target_moniker, payload)

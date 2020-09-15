@@ -114,6 +114,9 @@ async fn maybe_create_event_result(
                 fsys::RunningPayload { started_timestamp: Some(started_timestamp.into_nanos()) },
             ))))
         }
+        Ok(EventPayload::Stopped { status }) => Ok(Some(fsys::EventResult::Payload(
+            fsys::EventPayload::Stopped(fsys::StoppedPayload { status: Some(status.into_raw()) }),
+        ))),
         Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
         Err(EventError {
             source,
@@ -245,9 +248,6 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
         }
         EventType::Started => {
             fsys::EventResult::Payload(fsys::EventPayload::Started(fsys::StartedPayload {}))
-        }
-        EventType::Stopped => {
-            fsys::EventResult::Payload(fsys::EventPayload::Stopped(fsys::StoppedPayload {}))
         }
         _ => fsys::EventResult::__UnknownVariant { ordinal: 999, bytes: vec![], handles: vec![] },
     };

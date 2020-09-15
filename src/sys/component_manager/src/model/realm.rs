@@ -32,7 +32,9 @@ use {
     futures::{
         future::{join_all, AbortHandle, Abortable, BoxFuture, Either, FutureExt},
         lock::{MappedMutexGuard, Mutex, MutexGuard},
+        StreamExt,
     },
+    log::warn,
     std::convert::TryInto,
     std::iter::Iterator,
     std::{
@@ -472,41 +474,47 @@ impl Realm {
     ///
     /// REQUIRES: All dependents have already been stopped.
     pub async fn stop_instance(self: &Arc<Self>, shut_down: bool) -> Result<(), ModelError> {
-        let was_running = {
+        let (was_running, stop_result) = {
             let mut execution = self.lock_execution().await;
             let was_running = execution.runtime.is_some();
 
-            if let Some(runtime) = &mut execution.runtime {
-                let stop_timer = Box::pin(async move {
-                    let timer = fasync::Timer::new(fasync::Time::after(zx::Duration::from(
-                        self.environment.stop_timeout(),
-                    )));
-                    timer.await;
-                });
-                let kill_timer = Box::pin(async move {
-                    let timer = fasync::Timer::new(fasync::Time::after(zx::Duration::from(
-                        DEFAULT_KILL_TIMEOUT,
-                    )));
-                    timer.await;
-                });
-                runtime.stop_component(stop_timer, kill_timer).await.map_err(|e| {
-                    ModelError::RunnerCommunicationError {
-                        moniker: self.abs_moniker.clone(),
-                        operation: "stop".to_string(),
-                        err: ClonableError::from(anyhow::Error::from(e)),
-                    }
-                })?;
-            }
+            let component_stop_result = {
+                if let Some(runtime) = &mut execution.runtime {
+                    let stop_timer = Box::pin(async move {
+                        let timer = fasync::Timer::new(fasync::Time::after(zx::Duration::from(
+                            self.environment.stop_timeout(),
+                        )));
+                        timer.await;
+                    });
+                    let kill_timer = Box::pin(async move {
+                        let timer = fasync::Timer::new(fasync::Time::after(zx::Duration::from(
+                            DEFAULT_KILL_TIMEOUT,
+                        )));
+                        timer.await;
+                    });
+                    runtime
+                        .stop_component(stop_timer, kill_timer)
+                        .await
+                        .map_err(|e| ModelError::RunnerCommunicationError {
+                            moniker: self.abs_moniker.clone(),
+                            operation: "stop".to_string(),
+                            err: ClonableError::from(anyhow::Error::from(e)),
+                        })?
+                        .component_exit_status
+                } else {
+                    zx::Status::PEER_CLOSED
+                }
+            };
 
             execution.runtime = None;
             execution.shut_down |= shut_down;
-            was_running
+            (was_running, component_stop_result)
         };
         // When the realm is stopped, any child instances in transient collections must be
         // destroyed.
         self.destroy_transient_children().await?;
         if was_running {
-            let event = Event::new(self, Ok(EventPayload::Stopped));
+            let event = Event::new(self, Ok(EventPayload::Stopped { status: stop_result }));
             self.hooks.dispatch(&event).await?;
         }
         Ok(())
@@ -911,12 +919,40 @@ pub struct Runtime {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum StopComponentSuccess {
+/// Represents the result of a request to stop a component, which has two
+/// pieces. There is what happened to sending the request over the FIDL
+/// channel to the controller and then what the exit status of the component
+/// is. For example, the component might have exited with error before the
+/// request was sent, in which case we encountered no error processing the stop
+/// request and the component is considered to have terminated abnormally.
+pub struct ComponentStopOutcome {
+    /// The result of the request to stop the component.
+    pub request: StopRequestSuccess,
+    /// The final status of the component.
+    pub component_exit_status: zx::Status,
+}
+
+#[derive(Debug, PartialEq)]
+/// Outcomes of the stop request that are considered success. A request success
+/// indicates that the request was sent without error over the
+/// ComponentController channel or that sending the request was not necessary
+/// because the component stopped previously.
+pub enum StopRequestSuccess {
+    /// Component stopped before its stopped was requested.
     AlreadyStopped,
+    /// The component did not stop in time, but was killed before the kill
+    /// timeout.
     Killed,
+    /// The component did not stop in time and was killed after the kill
+    /// timeout was reached.
     KilledAfterTimeout,
+    /// The component had no Controller, no request was sent, and therefore no
+    /// error occured in the send process.
     NoController,
+    /// The component stopped within the timeout.
     Stopped,
+    /// The component stopped after the timeout, but before the kill message
+    /// could be sent.
     StoppedWithTimeoutRace,
 }
 #[derive(Debug, PartialEq)]
@@ -1016,14 +1052,17 @@ impl Runtime {
         &'a mut self,
         stop_timer: BoxFuture<'a, ()>,
         kill_timer: BoxFuture<'b, ()>,
-    ) -> Result<StopComponentSuccess, StopComponentError> {
+    ) -> Result<ComponentStopOutcome, StopComponentError> {
         // Potentially there is no controller, perhaps because the component
         // has no running code. In this case this is a no-op.
         if let Some(controller) = self.controller.as_ref() {
             stop_component_internal(controller, stop_timer, kill_timer).await
         } else {
             // TODO(jmatt) Need test coverage
-            Ok(StopComponentSuccess::NoController)
+            Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::NoController,
+                component_exit_status: zx::Status::OK,
+            })
         }
     }
 }
@@ -1040,28 +1079,36 @@ async fn stop_component_internal<'a, 'b>(
     controller: &fcrunner::ComponentControllerProxy,
     stop_timer: BoxFuture<'a, ()>,
     kill_timer: BoxFuture<'b, ()>,
-) -> Result<StopComponentSuccess, StopComponentError> {
-    match do_runner_stop(controller, stop_timer).await {
-        Some(r) => return r,
-        None => {}
-    }
+) -> Result<ComponentStopOutcome, StopComponentError> {
+    let result = match do_runner_stop(controller, stop_timer).await {
+        Some(r) => r,
+        None => {
+            // We must have hit the stop timeout because calling stop didn't return
+            // a result, move to killing the component.
+            do_runner_kill(controller, kill_timer).await
+        }
+    };
 
-    // We must have hit the stop timeout because calling stop didn't return
-    // a result, move to killing the component.
-    do_runner_kill(controller, kill_timer).await
+    match result {
+        Ok(request_outcome) => Ok(ComponentStopOutcome {
+            request: request_outcome,
+            component_exit_status: wait_for_epitaph(controller).await,
+        }),
+        Err(e) => Err(e),
+    }
 }
 
 async fn do_runner_stop<'a>(
     controller: &fcrunner::ComponentControllerProxy,
     stop_timer: BoxFuture<'a, ()>,
-) -> Option<Result<StopComponentSuccess, StopComponentError>> {
+) -> Option<Result<StopRequestSuccess, StopComponentError>> {
     // Ask the controller to stop the component
     match controller.stop() {
         Ok(()) => {}
         Err(e) => {
             if fidl::Error::is_closed(&e) {
                 // Channel was closed already, component is considered stopped
-                return Some(Ok(StopComponentSuccess::AlreadyStopped));
+                return Some(Ok(StopRequestSuccess::AlreadyStopped));
             } else {
                 // There was some problem sending the message, perhaps a
                 // protocol error, but there isn't really a way to recover.
@@ -1078,14 +1125,14 @@ async fn do_runner_stop<'a>(
     // Wait for either the timer to fire or the channel to close
     match futures::future::select(stop_timer, channel_close).await {
         Either::Left(((), _channel_close)) => None,
-        Either::Right((_timer, _close_result)) => Some(Ok(StopComponentSuccess::Stopped)),
+        Either::Right((_timer, _close_result)) => Some(Ok(StopRequestSuccess::Stopped)),
     }
 }
 
 async fn do_runner_kill<'a>(
     controller: &fcrunner::ComponentControllerProxy,
     kill_timer: BoxFuture<'a, ()>,
-) -> Result<StopComponentSuccess, StopComponentError> {
+) -> Result<StopRequestSuccess, StopComponentError> {
     match controller.kill() {
         Ok(()) => {
             // Wait for the controller to close the channel
@@ -1101,8 +1148,8 @@ async fn do_runner_kill<'a>(
             // If the control channel closes first, report the component to be
             // kill "normally", otherwise report it as killed after timeout.
             match futures::future::select(kill_timer, channel_close).await {
-                Either::Left(((), _channel_close)) => Ok(StopComponentSuccess::KilledAfterTimeout),
-                Either::Right((_timer, _close_result)) => Ok(StopComponentSuccess::Killed),
+                Either::Left(((), _channel_close)) => Ok(StopRequestSuccess::KilledAfterTimeout),
+                Either::Right((_timer, _close_result)) => Ok(StopRequestSuccess::Killed),
             }
         }
         Err(e) => {
@@ -1110,11 +1157,28 @@ async fn do_runner_kill<'a>(
                 // Even though we hit the timeout, the channel is closed,
                 // so we assume stop succeeded and there was a race with
                 // the timeout
-                Ok(StopComponentSuccess::StoppedWithTimeoutRace)
+                Ok(StopRequestSuccess::StoppedWithTimeoutRace)
             } else {
                 // There was some problem sending the message, perhaps a
                 // protocol error, but there isn't really a way to recover.
                 Err(StopComponentError::SendKillFailed)
+            }
+        }
+    }
+}
+
+/// Watch the event stream and wait for an epitaph. A message which is not an
+/// epitaph is discarded. If any error is received besides the error associated
+/// with an epitaph, this function returns zx::Status::PEER_CLOSED.
+async fn wait_for_epitaph(controller: &fcrunner::ComponentControllerProxy) -> zx::Status {
+    loop {
+        match controller.take_event_stream().next().await {
+            Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => return status,
+            Some(Err(_)) | None => return zx::Status::PEER_CLOSED,
+            Some(Ok(event)) => {
+                // Some other message was received
+                warn!("Received unexpected event waiting for component stop: {:?}", event);
+                continue;
             }
         }
     }
@@ -1176,7 +1240,10 @@ pub mod tests {
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
         match stop_component_internal(&client_proxy, stop_timer, kill_timer).await {
-            Ok(StopComponentSuccess::Stopped) => {}
+            Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::Stopped,
+                component_exit_status: zx::Status::OK,
+            }) => {}
             Ok(result) => {
                 panic!("unexpected successful stop result {:?}", result);
             }
@@ -1213,7 +1280,10 @@ pub mod tests {
         // Drop the server end so it closes
         drop(server);
         match stop_component_internal(&client_proxy, stop_timer, kill_timer).await {
-            Ok(StopComponentSuccess::AlreadyStopped) => {}
+            Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::AlreadyStopped,
+                component_exit_status: zx::Status::PEER_CLOSED,
+            }) => {}
             Ok(result) => {
                 panic!("unexpected successful stop result {:?}", result);
             }
@@ -1282,7 +1352,10 @@ pub mod tests {
         // The controller channel should be closed so we can drive the stop
         // future to completion.
         match exec.run_until_stalled(&mut stop_future) {
-            Poll::Ready(Ok(StopComponentSuccess::Stopped)) => {}
+            Poll::Ready(Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::Stopped,
+                component_exit_status: zx::Status::OK,
+            })) => {}
             Poll::Ready(Ok(result)) => {
                 panic!("unexpected successful stop result {:?}", result);
             }
@@ -1371,13 +1444,8 @@ pub mod tests {
         new_time = fasync::Time::from_nanos(exec.now().into_nanos() + kill_timeout.into_nanos());
         exec.set_fake_time(new_time);
         exec.wake_expired_timers();
-        // At this point stop_component() will have completed, but the
-        // controller's future is not polled to completion, since it is not
-        // required to complete the stop_component future.
-        assert_eq!(
-            Poll::Ready(Ok(StopComponentSuccess::KilledAfterTimeout)),
-            exec.run_until_stalled(&mut stop_fut)
-        );
+
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut stop_fut));
 
         // This future waits for the client channel to close. This creates a
         // rendezvous between the controller's execution context and the test.
@@ -1404,6 +1472,17 @@ pub mod tests {
         );
         exec.set_fake_time(new_time);
         exec.wake_expired_timers();
+
+        // At this point stop_component() will have completed, but the
+        // controller's future is not polled to completion, since it is not
+        // required to complete the stop_component future.
+        assert_eq!(
+            Poll::Ready(Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::KilledAfterTimeout,
+                component_exit_status: zx::Status::OK
+            })),
+            exec.run_until_stalled(&mut stop_fut)
+        );
 
         // Now we expect the message check future to complete because the
         // controller should have closed the channel.
@@ -1477,7 +1556,10 @@ pub mod tests {
         // At this point stop_component() will have completed, but the
         // controller's future was not polled to completion.
         assert_eq!(
-            Poll::Ready(Ok(StopComponentSuccess::Killed)),
+            Poll::Ready(Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::Killed,
+                component_exit_status: zx::Status::OK
+            })),
             exec.run_until_stalled(&mut stop_fut)
         );
     }
@@ -1563,7 +1645,10 @@ pub mod tests {
         // the control channel is closed, but stop_component will perceive this
         // happening after its timeout expired.
         assert_eq!(
-            Poll::Ready(Ok(StopComponentSuccess::StoppedWithTimeoutRace)),
+            Poll::Ready(Ok(ComponentStopOutcome {
+                request: StopRequestSuccess::StoppedWithTimeoutRace,
+                component_exit_status: zx::Status::OK
+            })),
             exec.run_until_stalled(&mut stop_fut)
         );
     }

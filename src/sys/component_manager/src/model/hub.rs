@@ -562,7 +562,7 @@ impl Hook for Hub {
                 )
                 .await?;
             }
-            Ok(EventPayload::Stopped) => {
+            Ok(EventPayload::Stopped { .. }) => {
                 self.on_stopped_async(&event.target_moniker).await?;
             }
             _ => {}

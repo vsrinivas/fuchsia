@@ -1628,7 +1628,7 @@ pub mod tests {
         #[async_trait]
         impl Hook for StopErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-                if let Ok(EventPayload::Stopped) = event.result {
+                if let Ok(EventPayload::Stopped { .. }) = event.result {
                     self.on_shutdown_instance_async(&event.target_moniker).await?;
                 }
                 Ok(())

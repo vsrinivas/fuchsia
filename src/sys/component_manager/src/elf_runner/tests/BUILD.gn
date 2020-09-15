@@ -4,11 +4,25 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 group("tests") {
   testonly = true
   deps = [ ":elf_runner_lifecycle_test" ]
+}
+
+rustc_library("elf_test_helper") {
+  edition = 2018
+  source_root = "helpers.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//third_party/rust_crates:regex",
+  ]
+  sources = [ "helpers.rs" ]
 }
 
 rustc_test("lifecycle") {
@@ -17,6 +31,7 @@ rustc_test("lifecycle") {
   edition = "2018"
 
   deps = [
+    ":elf_test_helper",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -27,6 +42,7 @@ rustc_test("lifecycle") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "lifecycle.rs" ]
@@ -93,6 +109,7 @@ rustc_test("lifecycle_timeout") {
   edition = "2018"
 
   deps = [
+    ":elf_test_helper",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -103,6 +120,7 @@ rustc_test("lifecycle_timeout") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "lifecycle_timeout.rs" ]
@@ -114,6 +132,7 @@ rustc_test("lifecycle_timeout_unresponsive") {
   edition = "2018"
 
   deps = [
+    ":elf_test_helper",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -124,6 +143,7 @@ rustc_test("lifecycle_timeout_unresponsive") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "lifecycle_timeout_unresponsive.rs" ]

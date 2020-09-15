@@ -613,7 +613,7 @@ impl EventMatcher {
 pub struct EventDescriptor {
     event_type: Option<fsys::EventType>,
     capability_id: Option<String>,
-    target_moniker: Option<String>,
+    pub target_moniker: Option<String>,
 }
 
 /// This implementation of PartialEq allows comparison between `EventDescriptor`s when the order in
@@ -729,6 +729,22 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
 pub struct EventLog {
     recorded_events: Arc<Mutex<Vec<EventDescriptor>>>,
     abort_handle: AbortHandle,
+}
+
+trait Convert<T> {
+    fn conv(i: T) -> Self;
+}
+
+impl<A> Convert<A> for A {
+    fn conv(i: A) -> A {
+        i
+    }
+}
+
+impl Convert<i32> for zx::Status {
+    fn conv(i: i32) -> Self {
+        zx::Status::from_raw(i)
+    }
 }
 
 impl EventLog {
@@ -917,9 +933,9 @@ macro_rules! create_event {
 
                             // Extract the additional data from the Payload object.
                             $(
-                                let $data_name: $data_ty = payload.$data_name.ok_or(
+                                let $data_name: $data_ty = $data_ty::conv(payload.$data_name.ok_or(
                                     format_err!("Missing $data_name from $event_type object")
-                                )?;
+                                )?);
                             )*
 
                             // Extract the additional protocols from the Payload object.
@@ -1029,7 +1045,21 @@ create_event!(Discovered, discovered);
 create_event!(MarkedForDestruction, marked_for_destruction);
 create_event!(Resolved, resolved);
 create_event!(Started, started);
-create_event!(Stopped, stopped);
+create_event!(
+    event_type: Stopped,
+    event_name: stopped,
+    payload: {
+        data: {
+            {
+                name: status,
+                ty: zx::Status,
+            }
+        },
+        client_protocols: {},
+        server_protocols: {},
+    },
+    error_payload: {}
+);
 create_event!(
     event_type: Running,
     event_name: running,

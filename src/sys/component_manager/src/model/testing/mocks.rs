@@ -478,12 +478,12 @@ impl MockController {
                                 fasync::Task::spawn(async move {
                                     fasync::Timer::new(fasync::Time::after(delay_copy)).await;
                                     if close_channel {
-                                        c.shutdown();
+                                        c.shutdown_with_epitaph(zx::Status::OK);
                                     }
                                 })
                                 .detach();
                             } else if self.stop_resp.close_channel {
-                                c.shutdown();
+                                c.shutdown_with_epitaph(zx::Status::OK);
                                 break;
                             }
                         }
@@ -500,7 +500,7 @@ impl MockController {
                                 fasync::Task::spawn(async move {
                                     fasync::Timer::new(fasync::Time::after(delay_copy)).await;
                                     if close_channel {
-                                        c.shutdown();
+                                        c.shutdown_with_epitaph(zx::Status::OK);
                                     }
                                 })
                                 .detach();
@@ -508,7 +508,7 @@ impl MockController {
                                     break;
                                 }
                             } else if self.kill_resp.close_channel {
-                                c.shutdown();
+                                c.shutdown_with_epitaph(zx::Status::OK);
                                 break;
                             }
                         }
