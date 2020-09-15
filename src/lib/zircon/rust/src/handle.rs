@@ -58,6 +58,7 @@ impl Drop for Handle {
 
 impl Handle {
     /// Initialize a handle backed by ZX_HANDLE_INVALID, the only safe non-handle.
+    #[inline(always)]
     pub const fn invalid() -> Handle {
         Handle(sys::ZX_HANDLE_INVALID)
     }

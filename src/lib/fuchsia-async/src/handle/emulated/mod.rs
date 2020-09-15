@@ -166,6 +166,7 @@ impl HandleBased for Handle {}
 
 impl Handle {
     /// Return an invalid handle
+    #[inline(always)]
     pub const fn invalid() -> Handle {
         Handle(INVALID_HANDLE)
     }
