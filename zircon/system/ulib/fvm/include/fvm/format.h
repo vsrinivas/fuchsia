@@ -16,6 +16,48 @@
 #include <fbl/algorithm.h>
 #include <gpt/gpt.h>
 
+// FVM is a virtual volume manager that allows partitions inside of it to be dynamically sized. It
+// allocates data to partitions in units of fixed-size "slices".
+//
+// It maintains two copies of its data so there is a previous version to roll-back to in case of
+// corruption. The latest one is determined by looking at the generation numbers stored in the
+// headers (see Header::generation).
+//
+// There are two main structures which follow the header: the partition table contains the
+// information for each virtual partition, and the allocation table maps which slice of the device
+// is allocated to which partition.
+//
+// It's possible for the FVM partition to be smaller than the underlying physical device. The
+// current size used by FVM is stored in |fvm_partition_size| (the header does not store the size of
+// the underlying device). As long as the allocation table has enough entries, the FVM partition may
+// be dynamically expanded to use more of the underlying device.
+//
+//             +----------------------------------
+// Block 0  -> | Header (primary)
+//             | <padding>
+//             +----------------------------------
+// Block 1  -> | Partition table (starts at block boundary)
+//       .     |
+//       .     |   ... Table of VPartitionEntry ...
+//       .     |
+//             +----------------------------------
+// Block N  -> | Allocation table (starts at block boundary)
+//       .     |
+//       .     |   ... Table of SliceEntry[pslice_count] ...
+//       .     |
+//             |   -------------------                 <- Metadata used size.
+//             |
+//             |   <unused allocation table space>
+//             |
+//             +==================================     <- Metadata allocated size (block boundary).
+// Block X  -> | Header (secondary, starts at block boundary)
+//             +----------------------------------
+//             | Partition table (secondary)
+//             +----------------------------------
+//             | Allocation table (secondary)
+//             +==================================
+//             | Physical slice "1" data...
+
 namespace fvm {
 
 // Unique identifier mapped to a GPT partition that contains a FVM.
@@ -66,28 +108,51 @@ struct block_alignment {
 
 // FVM header which describes the contents and layout of the volume manager.
 struct Header {
-  // Unique identifier for this format type.
+  // Unique identifier for this format type. Expected to be kMagic.
   uint64_t magic;
-  // Version of the format.
+
+  // Version of the format. The current version is kVersion.
   uint64_t version;
-  // Number of slices which can be addressed and allocated by the virtual parititons.
+
+  // The number of physical slices which can be addressed and allocated by the virtual parititons.
+  // This is the number of slices that will fit in the current fvm_partition_size, minus the size
+  // of the two copies of the metadata at the beginning of the device.
+  //
+  // Physical slices are 1-indexed (0 means "none"). Therefore:
+  //   1 <= |maximum valid pslice| <= pslice_count
   uint64_t pslice_count;
-  // Size of the each slice in size.
+
+  // Size of the each slice in bytes. Must be a multiple of kBlockSize.
   uint64_t slice_size;
-  // Size of the volume the fvm described by this header is expecting to interact with.
+
+  // Current size of the volume the fvm described by this header. This might be smaller than the
+  // size of the underlying device (see comments at the top of the file). Must be a multiple of
+  // kBlockSize.
   uint64_t fvm_partition_size;
-  // Size of the partition table of the superblock the header describes, which contains
-  // partition metadata.
+
+  // Size in bytes of the partition table of the superblock the header describes. Must be a
+  // multiple of kBlockSize.
+  //
+  // Currently this is fixed to be the size required to hold exactly kMaxVPartitions and various
+  // code assumes this constant.
+  // TODO(fxb/40192): Use this value so the partition table can have different sizes.
   uint64_t vpartition_table_size;
-  // Size of the allocation table allocated size. This includes extra space allowing the
-  // fvm to grow as the underlying volume grows. The actual allocation table size, which defines
-  // the number of slices that can be addressed, is determined by |fvm_partition_size|.
+
+  // Size in bytes reserved for the allocation table. Must be a multiple of kBlockSize. This
+  // includes extra space allowing the fvm to grow as the underlying volume grows. The
+  // currently-used allocation table size, which defines the number of slices that can be addressed,
+  // is derived from |pslice_count|.
   uint64_t allocation_table_size;
+
   // Use to determine over two copies(primary, secondary) of superblock, which one is the latest
-  // one.
+  // one. This is incremented for each metadata change so the valid metadata with the largest
+  // generation is the one to use.
   uint64_t generation;
-  // Integrity check.
+
+  // Integrity check of the entire metadata (one copy). When computing the hash (use
+  // fvm::UpdateHash() to compute), this field is is considered to be 0-filled.
   uint8_t hash[digest::kSha256Length];
+
   // Fill remainder of the block.
   uint8_t reserved[0];
 };
