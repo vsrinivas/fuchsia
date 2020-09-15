@@ -105,6 +105,9 @@ prebuilt_test_manifest("chromium_tests") {
     archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
   }
   environments = test_env
+  log_settings = {
+    max_severity = "ERROR"
+  }
 
   disabled_tests = []
 

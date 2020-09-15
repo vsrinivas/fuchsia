@@ -51,7 +51,11 @@ template("prebuilt_test_manifest") {
         archive = "${invoker.archive_dir}/${test_package}.far"
         component_name = component_name
         runner = runner
-        forward_variables_from(invoker, [ "environments" ])
+        forward_variables_from(invoker,
+                               [
+                                 "environments",
+                                 "log_settings",
+                               ])
       }
       test_targets += [ ":${test_package}" ]
     }
