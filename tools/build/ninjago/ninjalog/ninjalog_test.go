@@ -696,16 +696,35 @@ func TestStatsByType(t *testing.T) {
 				"unknown": 6 * time.Second,
 			},
 			want: []Stat{
-				{Type: "gomacc", Count: 3, Time: 57 * time.Second, Weighted: 6 * time.Second},
-				{Type: "rustc", Count: 2, Time: 12 * time.Second, Weighted: 9 * time.Second},
-				{Type: "unknown", Count: 1, Time: 100 * time.Millisecond, Weighted: 6 * time.Second},
+				{
+					Type:     "gomacc",
+					Count:    3,
+					Time:     57 * time.Second,
+					Weighted: 6 * time.Second,
+					Times:    []time.Duration{5 * time.Second, 10 * time.Second, 42 * time.Second},
+				},
+				{
+					Type:     "rustc",
+					Count:    2,
+					Time:     12 * time.Second,
+					Weighted: 9 * time.Second,
+					Times:    []time.Duration{time.Second, 11 * time.Second},
+				},
+				{
+					Type:     "unknown",
+					Count:    1,
+					Time:     100 * time.Millisecond,
+					Weighted: 6 * time.Second,
+					Times:    []time.Duration{100 * time.Millisecond},
+				},
 			},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := StatsByType(tc.steps, tc.weighted, func(s Step) string { return s.Category() })
 			orderByType := cmpopts.SortSlices(func(x, y Stat) bool { return x.Type < y.Type })
-			if diff := cmp.Diff(tc.want, got, orderByType); diff != "" {
+			orderByDuration := cmpopts.SortSlices(func(x, y time.Duration) bool { return x < y })
+			if diff := cmp.Diff(tc.want, got, orderByType, orderByDuration); diff != "" {
 				t.Errorf("StatsByType(%#v, %#v, 'step.Category()') = %#v\nwant:\n%#v\ndiff(-want, +got):\n%s", tc.steps, tc.weighted, got, tc.want, diff)
 			}
 		})

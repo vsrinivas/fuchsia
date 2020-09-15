@@ -64,9 +64,14 @@ type action struct {
 
 // All fields are exported so this struct can be serialized by json.
 type catBuildTime struct {
+	// Name of this category.
 	Category string
+	// Number of actions in this category.
+	Count int32
 	// The sum of build times spent for all actions in this category.
 	BuildTime time.Duration
+	// Build time of the fastest and slowest action in this category.
+	MinBuildTime, MaxBuildTime time.Duration
 }
 
 // All fields are exported so this struct can be serialized by json.
@@ -75,8 +80,12 @@ type buildStats struct {
 	CriticalPath []action
 	// Slowests includes the slowest 30 builds actions.
 	Slowests []action
-	// CatBuildTimes includes accumulative build times by category.
+	// CatBuildTimes groups build times by category.
 	CatBuildTimes []catBuildTime
+	// Sum of build times of all actions.
+	TotalBuildTime time.Duration
+	// Wall time spent to complete this build.
+	BuildDuration time.Duration
 }
 
 // constructGraph constructs a ninjagraph based on files from input paths, and
@@ -122,7 +131,11 @@ func constructGraph(ps paths) (ninjagraph.Graph, []ninjalog.Step, error) {
 	return graph, steps, nil
 }
 
-func extractBuildStats(g ninjagraph.Graph, steps []ninjalog.Step) (buildStats, error) {
+type graph interface {
+	CriticalPath() ([]ninjalog.Step, error)
+}
+
+func extractBuildStats(g graph, steps []ninjalog.Step) (buildStats, error) {
 	criticalPath, err := g.CriticalPath()
 	if err != nil {
 		return buildStats{}, err
@@ -137,10 +150,35 @@ func extractBuildStats(g ninjagraph.Graph, steps []ninjalog.Step) (buildStats, e
 		ret.Slowests = append(ret.Slowests, toAction(step))
 	}
 
+	for _, step := range steps {
+		ret.TotalBuildTime += step.Duration()
+		// The first action always starts at time zero, so build duration equals to
+		// the end time of the last action.
+		if step.End > ret.BuildDuration {
+			ret.BuildDuration = step.End
+		}
+	}
+
 	for _, stat := range ninjalog.StatsByType(steps, nil, func(s ninjalog.Step) string { return s.Category() }) {
+		var minBuildTime, maxBuildTime time.Duration
+		for i, t := range stat.Times {
+			if i == 0 {
+				minBuildTime, maxBuildTime = t, t
+				continue
+			}
+			if t < minBuildTime {
+				minBuildTime = t
+			}
+			if t > maxBuildTime {
+				maxBuildTime = t
+			}
+		}
 		ret.CatBuildTimes = append(ret.CatBuildTimes, catBuildTime{
-			Category:  stat.Type,
-			BuildTime: stat.Time,
+			Category:     stat.Type,
+			Count:        stat.Count,
+			BuildTime:    stat.Time,
+			MinBuildTime: minBuildTime,
+			MaxBuildTime: maxBuildTime,
 		})
 	}
 	return ret, nil
@@ -171,16 +209,16 @@ func main() {
 	log := logger.NewLogger(level, painter, os.Stdout, os.Stderr, "")
 
 	if *ninjalogPath == "" {
-		log.Errorf("--ninjalog is required")
+		log.Fatalf("--ninjalog is required")
 	}
 	if *compdbPath == "" {
-		log.Errorf("--compdb is required")
+		log.Fatalf("--compdb is required")
 	}
 	if *graphPath == "" {
-		log.Errorf("--graph is required")
+		log.Fatalf("--graph is required")
 	}
 	if *outputPath == "" {
-		log.Errorf("--output is required")
+		log.Fatalf("--output is required")
 	}
 
 	log.Infof("Reading input files and constructing graph.")
@@ -190,19 +228,19 @@ func main() {
 		graph:    *graphPath,
 	})
 	if err != nil {
-		log.Errorf("Failed to construct graph: %v", err)
+		log.Fatalf("Failed to construct graph: %v", err)
 	}
 
 	log.Infof("Extracting build stats from graph.")
-	stats, err := extractBuildStats(graph, steps)
+	stats, err := extractBuildStats(&graph, steps)
 	if err != nil {
-		log.Errorf("Failed to extract build stats from graph: %v", err)
+		log.Fatalf("Failed to extract build stats from graph: %v", err)
 	}
 
 	log.Infof("Creating %s and serializing the build stats to it.", *outputPath)
 	outputFile, err := os.Create(*outputPath)
 	if err != nil {
-		log.Errorf("Failed to create output file: %v", err)
+		log.Fatalf("Failed to create output file: %v", err)
 	}
 	defer func() {
 		if err := outputFile.Close(); err != nil {
@@ -211,7 +249,7 @@ func main() {
 	}()
 
 	if err := serializeBuildStats(stats, outputFile); err != nil {
-		log.Errorf("Failed to serialize build stats: %v", err)
+		log.Fatalf("Failed to serialize build stats: %v", err)
 	}
 	log.Infof("Done.")
 }

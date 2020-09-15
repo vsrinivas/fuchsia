@@ -536,11 +536,13 @@ type Stat struct {
 	// provided by the caller when this stat is calculated.
 	Type string
 	// Count of builds for this type.
-	Count int
+	Count int32
 	// Accumulative build time for this type.
 	Time time.Duration
 	// Accumulative weighted build time for this time.
 	Weighted time.Duration
+	// Build times of all actions grouped under this stat.
+	Times []time.Duration
 }
 
 // StatsByType summarizes build step statistics with weighted and typeOf.
@@ -558,12 +560,14 @@ func StatsByType(steps []Step, weighted map[string]time.Duration, typeOf func(St
 			stats[i].Count++
 			stats[i].Time += step.Duration()
 			stats[i].Weighted += weighted[step.Out]
+			stats[i].Times = append(stats[i].Times, step.Duration())
 			continue
 		}
 		stats = append(stats, Stat{
 			Type:     t,
 			Count:    1,
 			Time:     step.Duration(),
+			Times:    []time.Duration{step.Duration()},
 			Weighted: weighted[step.Out],
 		})
 		m[t] = len(stats) - 1
