@@ -7,19 +7,19 @@
 
 #include <lib/zbitl/memory.h>
 
-#include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 template <typename T>
 struct FblArrayTestTraits {
   using storage_type = fbl::Array<T>;
+  using payload_type = fbl::Span<T>;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
 
-    fbl::Array<T> storage_;
+    storage_type storage_;
   };
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
@@ -30,12 +30,12 @@ struct FblArrayTestTraits {
     *context = {std::move(storage)};
   }
 
-  static void Read(const fbl::Array<T>& storage, fbl::Span<T> payload, size_t size,
-                   std::string* contents) {
+  static void Read(const storage_type& storage, payload_type payload, size_t size,
+                   Bytes* contents) {
     contents->resize(size);
     auto bytes = fbl::as_bytes(payload);
-    ASSERT_EQ(size, bytes.size());
-    memcpy(contents->data(), bytes.data(), bytes.size());
+    ASSERT_LE(size, bytes.size());
+    memcpy(contents->data(), bytes.data(), size);
   }
 };
 

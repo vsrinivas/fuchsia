@@ -14,6 +14,8 @@
 #include <mach-o/dyld.h>
 #endif
 
+#include <filesystem>
+
 #include "tests.h"
 
 namespace {
@@ -56,7 +58,7 @@ size_t GetExpectedNumberOfItems(TestDataZbiType type) {
   }
 }
 
-void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload) {
+void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents) {
   size_t num_items = GetExpectedNumberOfItems(type);
   ASSERT_LT(idx, num_items, "expected only %zu items", num_items);
   switch (type) {
@@ -64,12 +66,12 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload) 
       // Assert would have already fired above.
       __UNREACHABLE;
     case TestDataZbiType::kOneItem: {
-      *payload = "hello world";
-      break;
+      *contents = "hello world";
+      return;
     }
     case TestDataZbiType::kBadCrcItem: {
-      *payload = "hello w\xaa\xaa\xaa\xaa";
-      break;
+      *contents = "hello w\xaa\xaa\xaa\xaa";
+      return;
     }
     case TestDataZbiType::kMultipleSmallItems: {
       static const char* const payloads[] = {
@@ -97,8 +99,8 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload) 
           "-- and that government of the people, by the people, for the people, shall not perish "
           "from the earth.",
       };
-      *payload = payloads[idx];
-      break;
+      *contents = payloads[idx];
+      return;
     }
     case TestDataZbiType::kSecondItemOnPageBoundary: {
       static const char* const payloads[] = {
@@ -150,8 +152,8 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload) 
           "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
           "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
       };
-      *payload = payloads[idx];
-      break;
+      *contents = payloads[idx];
+      return;
     }
   }
 }

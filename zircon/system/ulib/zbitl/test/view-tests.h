@@ -7,12 +7,12 @@
 #include <memory>
 #include <string_view>
 
-#include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 template <typename T>
 struct BasicStringViewTestTraits {
   using storage_type = std::basic_string_view<T>;
+  using payload_type = std::basic_string_view<T>;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
 
@@ -33,8 +33,7 @@ struct BasicStringViewTestTraits {
     *context = {std::move(buff), n};
   }
 
-  static void Read(std::basic_string_view<T> storage, std::basic_string_view<T> payload,
-                   size_t size, std::string* contents) {
+  static void Read(storage_type storage, payload_type payload, size_t size, Bytes* contents) {
     *contents = {reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(T)};
   }
 };

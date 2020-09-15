@@ -7,13 +7,11 @@
 
 #include <lib/zbitl/stdio.h>
 
-#include <string>
-
-#include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 struct StdioTestTraits {
   using storage_type = FILE*;
+  using payload_type = long int;
 
   struct Context {
     ~Context() {
@@ -24,7 +22,7 @@ struct StdioTestTraits {
 
     storage_type TakeStorage() const { return storage_; }
 
-    FILE* storage_ = nullptr;
+    storage_type storage_ = nullptr;
   };
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
@@ -34,7 +32,7 @@ struct StdioTestTraits {
     context->storage_ = f;
   }
 
-  static void Read(FILE* storage, long int payload, size_t size, std::string* contents) {
+  static void Read(storage_type storage, payload_type payload, size_t size, Bytes* contents) {
     contents->resize(size);
     ASSERT_EQ(0, fseek(storage, payload, SEEK_SET), "failed to seek to payload: %s",
               strerror(errno));

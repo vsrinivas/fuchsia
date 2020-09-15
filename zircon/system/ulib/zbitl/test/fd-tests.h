@@ -8,20 +8,18 @@
 #include <fcntl.h>
 #include <lib/zbitl/fd.h>
 
-#include <string>
-
-#include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 struct FdTestTraits {
   using storage_type = fbl::unique_fd;
+  using payload_type = off_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
 
-    fbl::unique_fd storage_;
+    storage_type storage_;
   };
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
@@ -29,8 +27,8 @@ struct FdTestTraits {
     context->storage_ = std::move(fd);
   }
 
-  static void Read(const fbl::unique_fd& storage, off_t payload, size_t size,
-                   std::string* contents) {
+  static void Read(const storage_type& storage, payload_type payload, size_t size,
+                   Bytes* contents) {
     contents->resize(size);
     ssize_t n = pread(storage.get(), contents->data(), size, payload);
     ASSERT_GE(n, 0, "pread: %s", strerror(errno));

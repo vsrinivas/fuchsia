@@ -8,7 +8,6 @@
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
-#include <filesystem>
 #include <string>
 #include <type_traits>
 
@@ -24,6 +23,11 @@
                 static_cast<int>(result_.error_value().zbi_error.size()), \
                 result_.error_value().zbi_error.data());                  \
   } while (0)
+
+// While it is convenient to use std::string as a container in representing ZBI
+// content, we alias the type to convey that it need not necessarily represent
+// text.
+using Bytes = std::string;
 
 constexpr size_t kMaxZbiSize = 4192;
 
@@ -43,9 +47,7 @@ enum class TestDataZbiType {
 
 size_t GetExpectedNumberOfItems(TestDataZbiType type);
 
-// Test payloads are known not to contain NULs so we are free to use
-// EXPECT_STR_EQ on the set string value to indeed compare the whole payload.
-void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload);
+void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents);
 
 std::string GetExpectedJson(TestDataZbiType type);
 
@@ -122,11 +124,12 @@ inline void TestIteration(TestDataZbiType type) {
   for (auto [header, payload] : view) {
     EXPECT_EQ(kItemType, header->type);
 
-    std::string actual;
+    Bytes actual;
     ASSERT_NO_FATAL_FAILURES(TestTraits::Read(view.storage(), payload, header->length, &actual));
-    std::string expected;
+    Bytes expected;
     ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx++, &expected));
-    EXPECT_STR_EQ(expected.c_str(), actual.c_str());
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
 
     const uint32_t flags = header->flags;
     EXPECT_TRUE(flags & ZBI_FLAG_VERSION, "flags: %#x", flags);
@@ -230,11 +233,12 @@ void TestMutation(TestDataZbiType type) {
 
     EXPECT_EQ(kItemType, header->type);
 
-    std::string actual;
+    Bytes actual;
     ASSERT_NO_FATAL_FAILURES(TestTraits::Read(view.storage(), payload, header->length, &actual));
-    std::string expected;
+    Bytes expected;
     ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &expected));
-    EXPECT_STR_EQ(expected.c_str(), actual.c_str());
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
 
     ASSERT_TRUE(view.EditHeader(it, {.type = ZBI_TYPE_DISCARD}).is_ok());
   }
@@ -251,11 +255,12 @@ void TestMutation(TestDataZbiType type) {
   for (auto [header, payload] : view) {
     EXPECT_EQ(ZBI_TYPE_DISCARD, header->type);
 
-    std::string actual;
+    Bytes actual;
     ASSERT_NO_FATAL_FAILURES(TestTraits::Read(view.storage(), payload, header->length, &actual));
-    std::string expected;
+    Bytes expected;
     ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx++, &expected));
-    EXPECT_STR_EQ(expected.c_str(), actual.c_str());
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
   }
   EXPECT_EQ(expected_num_items, idx);
 

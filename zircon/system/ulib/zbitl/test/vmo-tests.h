@@ -9,32 +9,33 @@
 
 #include <memory>
 
-#include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 struct VmoTestTraits {
   using storage_type = zx::vmo;
+  using payload_type = uint64_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
 
-    zx::vmo storage_;
+    storage_type storage_;
   };
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     ASSERT_TRUE(fd);
-    std::unique_ptr<std::byte[]> buff{new std::byte[size]};
-    ASSERT_EQ(size, read(fd.get(), buff.get(), size), "%s", strerror(errno));
+    std::unique_ptr<std::byte[]> contents{new std::byte[size]};
+    ASSERT_EQ(size, read(fd.get(), contents.get(), size), "%s", strerror(errno));
 
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(size, 0u, &vmo));
-    ASSERT_OK(vmo.write(buff.get(), 0u, size));
+    ASSERT_OK(vmo.write(contents.get(), 0u, size));
     *context = {std::move(vmo)};
   }
 
-  static void Read(const zx::vmo& storage, uint64_t payload, size_t size, std::string* contents) {
+  static void Read(const storage_type& storage, payload_type payload, size_t size,
+                   Bytes* contents) {
     contents->resize(size);
     ASSERT_EQ(ZX_OK, storage.read(contents->data(), payload, size));
   }
@@ -42,13 +43,14 @@ struct VmoTestTraits {
 
 struct UnownedVmoTestTraits {
   using storage_type = zx::unowned_vmo;
+  using payload_type = uint64_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
 
-    zx::unowned_vmo storage_;
+    storage_type storage_;
     zx::vmo keepalive_;
   };
 
@@ -59,21 +61,22 @@ struct UnownedVmoTestTraits {
     context->keepalive_ = std::move(vmo_context.storage_);
   }
 
-  static void Read(const zx::unowned_vmo& storage, uint64_t payload, size_t size,
-                   std::string* contents) {
+  static void Read(const storage_type& storage, payload_type payload, size_t size,
+                   Bytes* contents) {
     ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Read(*storage, payload, size, contents));
   }
 };
 
 struct MapOwnedVmoTestTraits {
   using storage_type = zbitl::MapOwnedVmo;
+  using payload_type = uint64_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
 
-    zbitl::MapOwnedVmo storage_;
+    storage_type storage_;
   };
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
@@ -82,21 +85,22 @@ struct MapOwnedVmoTestTraits {
     *context = {zbitl::MapOwnedVmo{vmo_context.TakeStorage()}};
   }
 
-  static void Read(const zbitl::MapOwnedVmo& storage, uint64_t payload, size_t size,
-                   std::string* contents) {
+  static void Read(const storage_type& storage, payload_type payload, size_t size,
+                   Bytes* contents) {
     ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
   }
 };
 
 struct MapUnownedVmoTestTraits {
   using storage_type = zbitl::MapUnownedVmo;
+  using payload_type = uint64_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
 
-    zbitl::MapUnownedVmo storage_;
+    storage_type storage_;
     zx::vmo keepalive_;
   };
 
@@ -108,8 +112,8 @@ struct MapUnownedVmoTestTraits {
     context->keepalive_ = std::move(unowned_vmo_context.keepalive_);
   }
 
-  static void Read(const zbitl::MapUnownedVmo& storage, uint64_t payload, size_t size,
-                   std::string* contents) {
+  static void Read(const storage_type& storage, payload_type payload, size_t size,
+                   Bytes* contents) {
     ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
   }
 };
