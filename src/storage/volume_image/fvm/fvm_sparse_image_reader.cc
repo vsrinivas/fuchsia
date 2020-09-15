@@ -13,6 +13,7 @@
 #include <fvm/fvm-sparse.h>
 #include <fvm/fvm.h>
 
+#include "fvm/format.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/utils/lz4_decompressor.h"
@@ -184,7 +185,6 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
     }
     offset += sizeof(partition_descriptor);
 
-    static uint8_t empty_guid[fvm::kGuidSize];
     int allocated_slices = 0;
 
     // For all extents within the partition...
@@ -208,9 +208,8 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
 
     // Push FVM's partition entry
     fvm_partitions.push_back(fvm::VPartitionEntry::Create(
-        partition_descriptor.type,
-        empty_guid,  // TODO: fvm needs to initialise this
-        allocated_slices, fvm::VPartitionEntry::Name(partition_descriptor.name),
+        partition_descriptor.type, fvm::kPlaceHolderInstanceGuid.data(), allocated_slices,
+        fvm::VPartitionEntry::Name(partition_descriptor.name),
         0));  // TODO: figure out flags
 
     total_slices += allocated_slices;

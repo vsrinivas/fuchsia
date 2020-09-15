@@ -8,15 +8,21 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 test("fvm-driver-integration") {
   output_name = "fvm-driver-integration-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "volume_manager_api_test.cc" ]
+  sources = [
+    "partition_load_test.cc",
+    "volume_manager_api_test.cc",
+  ]
   include_dirs = [ ".." ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//src/devices/block/drivers/fvm:shared",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fvm-devices",
   ]

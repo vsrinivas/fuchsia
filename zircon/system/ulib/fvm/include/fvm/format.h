@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <array>
 #include <limits>
 #include <string>
 #include <type_traits>
@@ -89,6 +90,10 @@ static constexpr uint64_t kSliceEntryVPartitionBits = 16;
 
 // Maximum number of VSlices that can be addressed.
 static constexpr uint64_t kMaxVSlices = 1ull << (kSliceEntryVSliceBits - 1);
+
+// Provides a placeholder instange GUID, that will be updated when a driver loads a partition with
+// such instance GUID.
+static constexpr std::array<uint8_t, kGuidSize> kPlaceHolderInstanceGuid = {0};
 
 namespace internal {
 // Minimal safety checks for persisted data structures. Currently they are required to be trivial

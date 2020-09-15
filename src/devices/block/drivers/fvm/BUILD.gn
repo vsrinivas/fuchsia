@@ -38,6 +38,7 @@ source_set("shared") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/uuid:uuid",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

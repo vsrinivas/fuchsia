@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <new>
@@ -33,7 +34,9 @@
 #include <fvm/fvm.h>
 
 #include "fvm-private.h"
+#include "fvm/format.h"
 #include "slice-extent.h"
+#include "src/lib/uuid/uuid.h"
 #include "vpartition.h"
 
 namespace fvm {
@@ -329,15 +332,31 @@ zx_status_t VPartitionManager::Load() {
 
   // 0th vpartition is invalid
   std::unique_ptr<VPartition> vpartitions[fvm::kMaxVPartitions] = {};
+  bool has_updated_partitions = false;
 
   // Iterate through FVM Entry table, allocating the VPartitions which
   // claim to have slices.
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
-    if (GetVPartEntryLocked(i)->slices == 0) {
+    auto* entry = GetVPartEntryLocked(i);
+    if (entry->slices == 0) {
       continue;
     }
+
+    // Update instance placeholder GUIDs to a newly generated guid.
+    if (memcmp(entry->guid, kPlaceHolderInstanceGuid.data(), kGuidSize) == 0) {
+      uuid::Uuid uuid = uuid::Uuid::Generate();
+      memcpy(entry->guid, uuid.bytes(), uuid::kUuidSize);
+      has_updated_partitions = true;
+    }
+
     if ((status = VPartition::Create(this, i, &vpartitions[i])) != ZX_OK) {
       zxlogf(ERROR, "Failed to Create vpartition %zu", i);
+      return status;
+    }
+  }
+
+  if (has_updated_partitions) {
+    if ((status = WriteFvmLocked()) != ZX_OK) {
       return status;
     }
   }
