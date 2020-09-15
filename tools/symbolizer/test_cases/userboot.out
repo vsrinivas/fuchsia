@@ -1,131 +1,28 @@
 # This log is printed by userboot each time Fuchsia starts.
 # It's obtained through `fx log --raw`.
-[0][1][7][klog] INFO: {{{reset}}}
- [[[ELF module #0x0 "<application>" BuildID=adf7d9e8026ecf53]]]
-[0][1][7][klog] INFO: {{{module:adf7d9e8026ecf53:<application>:0}}}
- [[[ELF seg #0x0 0x2f52d658000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2f52d658000:0xe000:load:0:r:0x0}}}
- [[[ELF seg #0x0 0x2f52d658000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2f52d666000:0x28000:load:0:rx:0xe000}}}
- [[[ELF seg #0x0 0x2f52d658000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2f52d68e000:0x3000:load:0:rw:0x36000}}}
- [[[ELF seg #0x0 0x2f52d658000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2f52d691000:0x1000:load:0:rw:0x39000}}}
-[0][1][7][klog] INFO: dso: id=adf7d9e8026ecf53 base=0x000002f52d658000 name=<application>
- [[[ELF module #0x3 "libfdio.so" BuildID=f60992baff92044c]]]
-[0][1][7][klog] INFO: {{{module:f60992baff92044c:libfdio.so:3}}}
- [[[ELF seg #0x3 0x32e2cf11000]]]
-[0][1][7][klog] INFO: {{{mmap:0x32e2cf11000:0xd000:load:3:r:0x0}}}
- [[[ELF seg #0x3 0x32e2cf11000]]]
-[0][1][7][klog] INFO: {{{mmap:0x32e2cf1e000:0x22000:load:3:rx:0xd000}}}
- [[[ELF seg #0x3 0x32e2cf11000]]]
-[0][1][7][klog] INFO: {{{mmap:0x32e2cf40000:0x4000:load:3:rw:0x2f000}}}
- [[[ELF seg #0x3 0x32e2cf11000]]]
-[0][1][7][klog] INFO: {{{mmap:0x32e2cf44000:0x4000:load:3:rw:0x33000}}}
-[0][1][7][klog] INFO: dso: id=f60992baff92044c base=0x0000032e2cf11000 name=libfdio.so
- [[[ELF module #0x4 "libtrace-engine.so" BuildID=dea34425d53db67a]]]
-[0][1][7][klog] INFO: {{{module:dea34425d53db67a:libtrace-engine.so:4}}}
- [[[ELF seg #0x4 0xf590769000]]]
-[0][1][7][klog] INFO: {{{mmap:0xf590769000:0x3000:load:4:r:0x0}}}
- [[[ELF seg #0x4 0xf590769000]]]
-[0][1][7][klog] INFO: {{{mmap:0xf59076c000:0x5000:load:4:rx:0x3000}}}
- [[[ELF seg #0x4 0xf590769000]]]
-[0][1][7][klog] INFO: {{{mmap:0xf590771000:0x1000:load:4:rw:0x8000}}}
- [[[ELF seg #0x4 0xf590769000]]]
-[0][1][7][klog] INFO: {{{mmap:0xf590772000:0x1000:load:4:rw:0x9000}}}
-[0][1][7][klog] INFO: dso: id=dea34425d53db67a base=0x000000f590769000 name=libtrace-engine.so
- [[[ELF module #0x5 "libsyslog.so" BuildID=12e7e9e8afe5deeb]]]
-[0][1][7][klog] INFO: {{{module:12e7e9e8afe5deeb:libsyslog.so:5}}}
- [[[ELF seg #0x5 0x3c14028000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c14028000:0x3000:load:5:r:0x0}}}
- [[[ELF seg #0x5 0x3c14028000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c1402b000:0x4000:load:5:rx:0x3000}}}
- [[[ELF seg #0x5 0x3c14028000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c1402f000:0x1000:load:5:rw:0x7000}}}
- [[[ELF seg #0x5 0x3c14028000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c14030000:0x1000:load:5:rw:0x8000}}}
-[0][1][7][klog] INFO: dso: id=12e7e9e8afe5deeb base=0x0000003c14028000 name=libsyslog.so
- [[[ELF module #0x6 "libasync-default.so" BuildID=e5dc1fc8cccd2881]]]
-[0][1][7][klog] INFO: {{{module:e5dc1fc8cccd2881:libasync-default.so:6}}}
- [[[ELF seg #0x6 0x2ba3a176000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ba3a176000:0x1000:load:6:r:0x0}}}
- [[[ELF seg #0x6 0x2ba3a176000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ba3a177000:0x1000:load:6:rx:0x1000}}}
- [[[ELF seg #0x6 0x2ba3a176000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ba3a178000:0x1000:load:6:rw:0x2000}}}
-[0][1][7][klog] INFO: dso: id=e5dc1fc8cccd2881 base=0x000002ba3a176000 name=libasync-default.so
- [[[ELF module #0x7 "liblaunchpad.so" BuildID=dfcb8169051ee697]]]
-[0][1][7][klog] INFO: {{{module:dfcb8169051ee697:liblaunchpad.so:7}}}
- [[[ELF seg #0x7 0x2fc093ea000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2fc093ea000:0x3000:load:7:r:0x0}}}
- [[[ELF seg #0x7 0x2fc093ea000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2fc093ed000:0x4000:load:7:rx:0x3000}}}
- [[[ELF seg #0x7 0x2fc093ea000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2fc093f1000:0x1000:load:7:rw:0x7000}}}
- [[[ELF seg #0x7 0x2fc093ea000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2fc093f2000:0x1000:load:7:rw:0x8000}}}
-[0][1][7][klog] INFO: dso: id=dfcb8169051ee697 base=0x000002fc093ea000 name=liblaunchpad.so
- [[[ELF module #0x8 "libmemfs.so" BuildID=1bc3047b36bba826]]]
-[0][1][7][klog] INFO: {{{module:1bc3047b36bba826:libmemfs.so:8}}}
- [[[ELF seg #0x8 0x3c8d65eb000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c8d65eb000:0x8000:load:8:r:0x0}}}
- [[[ELF seg #0x8 0x3c8d65eb000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c8d65f3000:0x1b000:load:8:rx:0x8000}}}
- [[[ELF seg #0x8 0x3c8d65eb000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c8d660e000:0x3000:load:8:rw:0x23000}}}
- [[[ELF seg #0x8 0x3c8d65eb000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c8d6611000:0x1000:load:8:rw:0x26000}}}
-[0][1][7][klog] INFO: dso: id=1bc3047b36bba826 base=0x000003c8d65eb000 name=libmemfs.so
- [[[ELF module #0x2 "<vDSO>" BuildID=b60aa30791277c5b]]]
-[0][1][7][klog] INFO: {{{module:b60aa30791277c5b:<vDSO>:2}}}
- [[[ELF seg #0x2 0x802e9e00d000]]]
-[0][1][7][klog] INFO: {{{mmap:0x802e9e00d000:0x7000:load:2:r:0x0}}}
- [[[ELF seg #0x2 0x802e9e00d000]]]
-[0][1][7][klog] INFO: {{{mmap:0x802e9e014000:0x2000:load:2:rx:0x7000}}}
-[0][1][7][klog] INFO: dso: id=b60aa30791277c5b base=0x0000802e9e00d000 name=<vDSO>
- [[[ELF module #0x9 "libc++.so.2" BuildID=7cb4c1ab4a2c73b2]]]
-[0][1][7][klog] INFO: {{{module:7cb4c1ab4a2c73b2:libc++.so.2:9}}}
- [[[ELF seg #0x9 0x3c636c5a000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c636c5a000:0x4e000:load:9:r:0x0}}}
- [[[ELF seg #0x9 0x3c636c5a000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c636ca8000:0x67000:load:9:rx:0x4e000}}}
- [[[ELF seg #0x9 0x3c636c5a000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c636d0f000:0x6000:load:9:rw:0xb5000}}}
- [[[ELF seg #0x9 0x3c636c5a000]]]
-[0][1][7][klog] INFO: {{{mmap:0x3c636d15000:0x7000:load:9:rw:0xbb000}}}
-[0][1][7][klog] INFO: dso: id=7cb4c1ab4a2c73b2 base=0x000003c636c5a000 name=libc++.so.2
- [[[ELF module #0xa "libc++abi.so.1" BuildID=1820e427d1a18a0b]]]
-[0][1][7][klog] INFO: {{{module:1820e427d1a18a0b:libc++abi.so.1:10}}}
- [[[ELF seg #0xa 0x1c36a0ec000]]]
-[0][1][7][klog] INFO: {{{mmap:0x1c36a0ec000:0x10000:load:10:r:0x0}}}
- [[[ELF seg #0xa 0x1c36a0ec000]]]
-[0][1][7][klog] INFO: {{{mmap:0x1c36a0fc000:0x1a000:load:10:rx:0x10000}}}
- [[[ELF seg #0xa 0x1c36a0ec000]]]
-[0][1][7][klog] INFO: {{{mmap:0x1c36a116000:0x4000:load:10:rw:0x2a000}}}
- [[[ELF seg #0xa 0x1c36a0ec000]]]
-[0][1][7][klog] INFO: {{{mmap:0x1c36a11a000:0x1000:load:10:rw:0x2e000}}}
-[0][1][7][klog] INFO: dso: id=1820e427d1a18a0b base=0x000001c36a0ec000 name=libc++abi.so.1
- [[[ELF module #0x1 "libc.so" BuildID=8ce60b04bdfd0610]]]
-[0][1][7][klog] INFO: {{{module:8ce60b04bdfd0610:libc.so:1}}}
- [[[ELF seg #0x1 0x8328bf1d7000]]]
-[0][1][7][klog] INFO: {{{mmap:0x8328bf1d7000:0x4c000:load:1:r:0x0}}}
- [[[ELF seg #0x1 0x8328bf1d7000]]]
-[0][1][7][klog] INFO: {{{mmap:0x8328bf223000:0x56000:load:1:rx:0x4c000}}}
- [[[ELF seg #0x1 0x8328bf1d7000]]]
-[0][1][7][klog] INFO: {{{mmap:0x8328bf279000:0x2000:load:1:rw:0xa2000}}}
- [[[ELF seg #0x1 0x8328bf1d7000]]]
-[0][1][7][klog] INFO: {{{mmap:0x8328bf27b000:0x3000:load:1:rw:0xa4000}}}
-[0][1][7][klog] INFO: dso: id=8ce60b04bdfd0610 base=0x00008328bf1d7000 name=libc.so
- [[[ELF module #0xb "libunwind.so.1" BuildID=7b0d4cebd9c3618d]]]
-[0][1][7][klog] INFO: {{{module:7b0d4cebd9c3618d:libunwind.so.1:11}}}
- [[[ELF seg #0xb 0x2ccd75d8000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ccd75d8000:0x3000:load:11:r:0x0}}}
- [[[ELF seg #0xb 0x2ccd75d8000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ccd75db000:0x5000:load:11:rx:0x3000}}}
- [[[ELF seg #0xb 0x2ccd75d8000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ccd75e0000:0x1000:load:11:rw:0x8000}}}
- [[[ELF seg #0xb 0x2ccd75d8000]]]
-[0][1][7][klog] INFO: {{{mmap:0x2ccd75e1000:0x1000:load:11:rw:0x9000}}}
-[0][1][7][klog] INFO: dso: id=7b0d4cebd9c3618d base=0x000002ccd75d8000 name=libunwind.so.1
-[0][1][3][klog] INFO: userboot: loader-service channel peer closed
-[0][1][3][klog] INFO: userboot: finished!
+[00003.938180][4][7][klog] INFO: [[[ELF module #0x0 "<application>" BuildID=adf7d9e8026ecf53 0x2f52d658000]]]
+[00003.938180][4][7][klog] INFO: dso: id=adf7d9e8026ecf53 base=0x000002f52d658000 name=<application>
+[00003.938194][4][7][klog] INFO: [[[ELF module #0x3 "libfdio.so" BuildID=f60992baff92044c 0x32e2cf11000]]]
+[00003.938194][4][7][klog] INFO: dso: id=f60992baff92044c base=0x0000032e2cf11000 name=libfdio.so
+[00003.938207][4][7][klog] INFO: [[[ELF module #0x4 "libtrace-engine.so" BuildID=dea34425d53db67a 0xf590769000]]]
+[00003.938207][4][7][klog] INFO: dso: id=dea34425d53db67a base=0x000000f590769000 name=libtrace-engine.so
+[00003.938220][4][7][klog] INFO: [[[ELF module #0x5 "libsyslog.so" BuildID=12e7e9e8afe5deeb 0x3c14028000]]]
+[00003.938220][4][7][klog] INFO: dso: id=12e7e9e8afe5deeb base=0x0000003c14028000 name=libsyslog.so
+[00003.938230][4][7][klog] INFO: [[[ELF module #0x6 "libasync-default.so" BuildID=e5dc1fc8cccd2881 0x2ba3a176000]]]
+[00003.938230][4][7][klog] INFO: dso: id=e5dc1fc8cccd2881 base=0x000002ba3a176000 name=libasync-default.so
+[00003.938243][4][7][klog] INFO: [[[ELF module #0x7 "liblaunchpad.so" BuildID=dfcb8169051ee697 0x2fc093ea000]]]
+[00003.938243][4][7][klog] INFO: dso: id=dfcb8169051ee697 base=0x000002fc093ea000 name=liblaunchpad.so
+[00003.938256][4][7][klog] INFO: [[[ELF module #0x8 "libmemfs.so" BuildID=1bc3047b36bba826 0x3c8d65eb000]]]
+[00003.938256][4][7][klog] INFO: dso: id=1bc3047b36bba826 base=0x000003c8d65eb000 name=libmemfs.so
+[00003.938265][4][7][klog] INFO: [[[ELF module #0x2 "<vDSO>" BuildID=b60aa30791277c5b 0x802e9e00d000]]]
+[00003.938265][4][7][klog] INFO: dso: id=b60aa30791277c5b base=0x0000802e9e00d000 name=<vDSO>
+[00003.938277][4][7][klog] INFO: [[[ELF module #0x9 "libc++.so.2" BuildID=7cb4c1ab4a2c73b2 0x3c636c5a000]]]
+[00003.938277][4][7][klog] INFO: dso: id=7cb4c1ab4a2c73b2 base=0x000003c636c5a000 name=libc++.so.2
+[00003.938290][4][7][klog] INFO: [[[ELF module #0xa "libc++abi.so.1" BuildID=1820e427d1a18a0b 0x1c36a0ec000]]]
+[00003.938290][4][7][klog] INFO: dso: id=1820e427d1a18a0b base=0x000001c36a0ec000 name=libc++abi.so.1
+[00003.938302][4][7][klog] INFO: [[[ELF module #0x1 "libc.so" BuildID=8ce60b04bdfd0610 0x8328bf1d7000]]]
+[00003.938302][4][7][klog] INFO: dso: id=8ce60b04bdfd0610 base=0x00008328bf1d7000 name=libc.so
+[00003.938315][4][7][klog] INFO: [[[ELF module #0xb "libunwind.so.1" BuildID=7b0d4cebd9c3618d 0x2ccd75d8000]]]
+[00003.938315][4][7][klog] INFO: dso: id=7b0d4cebd9c3618d base=0x000002ccd75d8000 name=libunwind.so.1
+[00003.938824][5][3][klog] INFO: userboot: loader-service channel peer closed
+[00003.938864][5][3][klog] INFO: userboot: finished!
