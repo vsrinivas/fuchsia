@@ -24,16 +24,8 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	var builder strings.Builder
 	builder.WriteString("[\n")
 	for i, d := range defs {
-		switch d.Subtype {
-		case fidlir.Channel:
-			builder.WriteString("gidl_util::create_channel().unwrap(),")
-		case fidlir.Event:
-			builder.WriteString("gidl_util::create_event().unwrap(),")
-		default:
-			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
-		}
 		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+		builder.WriteString(fmt.Sprintf("HandleSubtype::%s, // #%d\n", handleTypeName(d.Subtype), i))
 	}
 	builder.WriteString("]")
 	return builder.String()
@@ -177,6 +169,19 @@ func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 		return "f64"
 	default:
 		panic(fmt.Sprintf("unexpected subtype %v", subtype))
+	}
+}
+
+func handleTypeName(subtype fidlir.HandleSubtype) string {
+	switch subtype {
+	case fidlir.Handle:
+		return "Handle"
+	case fidlir.Channel:
+		return "Channel"
+	case fidlir.Event:
+		return "Event"
+	default:
+		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
 	}
 }
 

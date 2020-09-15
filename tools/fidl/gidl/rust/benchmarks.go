@@ -28,7 +28,7 @@ use {
 	fuchsia_criterion::criterion::{BatchSize, Bencher},
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,
-	gidl_util::{copy_handle, copy_handles_at, disown_handles},
+	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles},
 };
 
 // BENCHMARKS is aggregated by a generated benchmark_suite.rs file, which is ultimately
@@ -53,7 +53,7 @@ const _V1_CONTEXT: &Context = &Context {};
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
 	b.iter(|| {
 		{{- if .HandleDefs }}
-		let handle_defs = vec!{{ .HandleDefs }};
+		let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 		let handle_defs = unsafe { disown_handles(handle_defs) };
 		let handle_defs = handle_defs.as_ref();
 		{{- end }}
@@ -65,7 +65,7 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 	b.iter_batched_ref(
 		|| {
 			{{- if .HandleDefs }}
-			let handle_defs = vec!{{ .HandleDefs }};
+			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 			let handle_defs = unsafe { disown_handles(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			{{- end }}
@@ -86,7 +86,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 	{{- if .HandleDefs }}
 	b.iter_batched_ref(
 		|| {
-			let handle_defs = vec!{{ .HandleDefs }};
+			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 			let handle_defs = unsafe { disown_handles(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			let original_value = &mut {{ .Value }};
@@ -146,7 +146,7 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 			let sender = <{{ .ValueType }}EventProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(async_sender_fidl_chan_end);
 			b.iter_batched_ref(|| {
 				{{- if .HandleDefs }}
-				let handle_defs = vec!{{ .HandleDefs }};
+				let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 				let handle_defs = unsafe { disown_handles(handle_defs) };
 				let handle_defs = handle_defs.as_ref();
 				{{- end }}
@@ -191,7 +191,7 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	let mut proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
 	b.iter_batched_ref(|| {
 		{{- if .HandleDefs }}
-		let handle_defs = vec!{{ .HandleDefs }};
+		let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 		let handle_defs = unsafe { disown_handles(handle_defs) };
 		let handle_defs = handle_defs.as_ref();
 		{{- end }}

@@ -24,7 +24,7 @@ use {
 	fidl::{AsHandleRef, Error, Handle, encoding::{Context, Decodable, Decoder, Encoder}},
 	fidl_conformance as conformance,
 	fuchsia_zircon_status::Status,
-	gidl_util::{copy_handle, copy_handles_at, disown_handles, get_info_handle_valid},
+	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles, get_info_handle_valid},
 	matches::assert_matches,
 };
 
@@ -34,7 +34,7 @@ const V1_CONTEXT: &Context = &Context {};
 #[test]
 fn test_{{ .Name }}_encode() {
 	{{- if .HandleDefs }}
-	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 	let handle_defs = unsafe { disown_handles(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let expected_handles = unsafe { disown_handles(copy_handles_at(handle_defs, &{{ .Handles }})) };
@@ -59,7 +59,7 @@ fn test_{{ .Name }}_encode() {
 fn test_{{ .Name }}_decode() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
-	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 	let handle_defs = unsafe { disown_handles(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let handles = &mut unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
@@ -83,7 +83,7 @@ fn test_{{ .Name }}_decode() {
 #[test]
 fn test_{{ .Name }}_encode_failure() {
 	{{- if .HandleDefs }}
-	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 	let handle_defs = unsafe { disown_handles(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	{{- end }}
@@ -109,7 +109,7 @@ fn test_{{ .Name }}_encode_failure() {
 fn test_{{ .Name }}_decode_failure() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
-	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 	let handle_defs = unsafe { disown_handles(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let handles = &mut unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
