@@ -24,6 +24,7 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/pv.h>
 #include <dev/interrupt.h>
+#include <ktl/iterator.h>
 #include <vm/vm_aspace.h>
 
 // We currently only implement support for the xAPIC
@@ -263,7 +264,7 @@ static void pv_mask_ipi(cpu_mask_t mask, uint32_t request) {
   uint64_t masks[(UINT8_MAX + 1) / mask_size] = {};
   // pv_ipi() requires a 128 bit CPU mask. Verify that the number of masks is
   // divisible by 2, so we can provide the low and high part of the CPU mask.
-  static_assert(std::size(masks) % 2 == 0);
+  static_assert(ktl::size(masks) % 2 == 0);
 
   const cpu_num_t num_cpus = std::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
   for (cpu_num_t cpu_id = lowest_cpu_set(mask); cpu_id < num_cpus; cpu_id++) {
@@ -275,7 +276,7 @@ static void pv_mask_ipi(cpu_mask_t mask, uint32_t request) {
     }
   }
 
-  for (size_t i = 0; i < std::size(masks); i += 2) {
+  for (size_t i = 0; i < ktl::size(masks); i += 2) {
     if (masks[i] || masks[i + 1]) {
       __UNUSED int ret = pv_ipi(masks[i], masks[i + 1], i * mask_size, request);
       DEBUG_ASSERT(ret >= 0);
