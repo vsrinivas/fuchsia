@@ -20,7 +20,7 @@ rustc_library("fuchsia-inspect-derive") {
   edition = "2018"
 
   deps = [
-    "macro",
+    "macro:fuchsia-inspect-derive-macro",
     "//src/lib/diagnostics/inspect/rust",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",

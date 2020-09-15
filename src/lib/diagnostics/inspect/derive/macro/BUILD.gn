@@ -4,10 +4,6 @@
 
 import("//build/rust/rustc_macro.gni")
 
-group("macro") {
-  deps = [ ":fuchsia-inspect-derive-macro" ]
-}
-
 rustc_macro("fuchsia-inspect-derive-macro") {
   name = "fuchsia_inspect_derive_macro"
   version = "0.1.0"
