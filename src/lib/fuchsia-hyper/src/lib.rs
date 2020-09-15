@@ -308,7 +308,10 @@ fn parse_ip_addr(
             //
             // TODO: use Ipv6Addr::is_unicast_link_local_strict when available in stable rust.
             if addr.segments()[..4] != [0xfe80, 0, 0, 0] {
-                return Ok(None);
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "zone_id is only usable with link local addresses",
+                ));
             }
 
             // TODO: validate that the value matches rfc6874 grammar `ZoneID = 1*( unreserved / pct-encoded )`.
@@ -472,7 +475,9 @@ mod test {
 
     #[test]
     fn test_parse_ipv6_addr_with_zone_must_be_local() {
-        assert_matches!(parse_ip_addr(&PanicConnector, "[fe81::1:2:3:4%252]", 8080), Ok(None));
+        assert_matches!(
+            parse_ip_addr(&PanicConnector, "[fe81::1:2:3:4%252]", 8080),
+            Err(err) if err.kind() == io::ErrorKind::Other);
     }
 
     #[test]
