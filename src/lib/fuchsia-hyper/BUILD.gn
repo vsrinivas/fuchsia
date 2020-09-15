@@ -27,10 +27,6 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:tokio",
   ]
-  test_deps = [
-    "//src/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:matches",
-  ]
 
   sources = [ "src/lib.rs" ]
 }
