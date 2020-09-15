@@ -10,65 +10,13 @@
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 
+#include <chrono>
 #include <cstdio>
 #include <string_view>
 
 #include <fbl/macros.h>
 
 namespace fs_watchdog {
-
-enum class CommonFsOperation {
-  Append,
-  Close,
-  Create,
-  Link,
-  Lookup,
-  Open,
-  Read,
-  Readdir,
-  Rename,
-  SetAttributes,
-  Sync,
-  Truncate,
-  Unlink,
-  Write,
-};
-
-// Helper function that returns name of the given common fs operations.
-inline std::string_view OperationName(CommonFsOperation operation) {
-  switch (operation) {
-    case CommonFsOperation::Append:
-      return "Append";
-    case CommonFsOperation::Close:
-      return "Close";
-    case CommonFsOperation::Create:
-      return "Create";
-    case CommonFsOperation::Link:
-      return "Link";
-    case CommonFsOperation::Lookup:
-      return "Lookup";
-    case CommonFsOperation::Open:
-      return "Open";
-    case CommonFsOperation::Read:
-      return "Read";
-    case CommonFsOperation::Readdir:
-      return "Readdir";
-    case CommonFsOperation::Rename:
-      return "Rename";
-    case CommonFsOperation::SetAttributes:
-      return "SetAttributes";
-    case CommonFsOperation::Sync:
-      return "Sync";
-    case CommonFsOperation::Truncate:
-      return "Truncate";
-    case CommonFsOperation::Unlink:
-      return "Unlink";
-    case CommonFsOperation::Write:
-      return "Write";
-    default:
-      return "Unknown operation";
-  }
-}
 
 // This abstraction puts similar properties of a operation type into one unit.
 class OperationBase {
@@ -78,6 +26,82 @@ class OperationBase {
 
   // Returns timeout, if set, for this operation type.
   virtual std::chrono::nanoseconds Timeout() const = 0;
+};
+
+// A helper class that defines common filesystem operations types.
+class FsOperationType : public OperationBase {
+ public:
+  enum class CommonFsOperation {
+    Append,
+    Close,
+    Create,
+    Link,
+    Lookup,
+    Open,
+    Read,
+    Readdir,
+    Rename,
+    SetAttributes,
+    Sync,
+    Truncate,
+    Unlink,
+    Write,
+  };
+
+  explicit FsOperationType(CommonFsOperation type, std::chrono::nanoseconds timeout)
+      : type_(type), timeout_(timeout) {}
+
+  FsOperationType(const FsOperationType&) = delete;
+  FsOperationType(FsOperationType&&) = delete;
+  FsOperationType& operator=(const FsOperationType&) = delete;
+  FsOperationType& operator=(FsOperationType&&) = delete;
+
+  // Returns name of the opertation
+  std::string_view Name() const final { return OperationName(type_); }
+
+  // Returns operation timeout.
+  std::chrono::nanoseconds Timeout() const final { return timeout_; }
+
+ private:
+  // Helper function that returns name of the given common fs operations.
+  static inline std::string_view OperationName(CommonFsOperation operation) {
+    switch (operation) {
+      case CommonFsOperation::Append:
+        return "Append";
+      case CommonFsOperation::Close:
+        return "Close";
+      case CommonFsOperation::Create:
+        return "Create";
+      case CommonFsOperation::Link:
+        return "Link";
+      case CommonFsOperation::Lookup:
+        return "Lookup";
+      case CommonFsOperation::Open:
+        return "Open";
+      case CommonFsOperation::Read:
+        return "Read";
+      case CommonFsOperation::Readdir:
+        return "Readdir";
+      case CommonFsOperation::Rename:
+        return "Rename";
+      case CommonFsOperation::SetAttributes:
+        return "SetAttributes";
+      case CommonFsOperation::Sync:
+        return "Sync";
+      case CommonFsOperation::Truncate:
+        return "Truncate";
+      case CommonFsOperation::Unlink:
+        return "Unlink";
+      case CommonFsOperation::Write:
+        return "Write";
+      default:
+        return "Unknown operation";
+    }
+  }
+
+  // Type of operation
+  CommonFsOperation type_;
+  std::chrono::nanoseconds timeout_;
 };
 
 // Abstract class to track generic filesystem operation.
@@ -126,7 +150,7 @@ class FsOperationTracker : public OperationTracker {
   // In addition to taking default action on operation timeout, OnTimeOut
   // gives an opportunity to the client to take custom action if needed.
   // OnTimeOut is called after default handler is called.
-  void OnTimeOut(FILE* out_stream) const override = 0;
+  void OnTimeOut(FILE* out_stream) const override {}
 
   zx::status<> Complete() {
     auto ret = watchdog_->Untrack(GetId());

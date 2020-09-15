@@ -377,6 +377,16 @@ TEST(Watchdog, DelayedCompletionLogging) {
   ASSERT_TRUE(CheckOccurance(*str.get(), kTestOperationName1, 2));
 }
 
+// Define a an operation(of Append type) with new timeout and track it.
+TEST(Watchdog, TrackFsOperationType) {
+  static const FsOperationType kMyfsAppendOperation(FsOperationType::CommonFsOperation::Append,
+                                                    std::chrono::nanoseconds(1000000000));
+
+  auto watchdog = CreateWatchdog(kDefaultOptions);
+  EXPECT_TRUE(watchdog->Start().is_ok());
+
+  FsOperationTracker tracker(&kMyfsAppendOperation, watchdog.get());
+}
 }  // namespace
 
 }  // namespace fs_watchdog
