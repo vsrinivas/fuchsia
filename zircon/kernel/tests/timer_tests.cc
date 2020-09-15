@@ -25,6 +25,7 @@
 #include <kernel/timer.h>
 #include <ktl/atomic.h>
 #include <ktl/iterator.h>
+#include <ktl/optional.h>
 #include <ktl/unique_ptr.h>
 
 #include "tests.h"
@@ -516,6 +517,51 @@ static bool print_timer_queues() {
   END_TEST;
 }
 
+static bool deadline_after() {
+  BEGIN_TEST;
+
+  ktl::array<ktl::optional<TimerSlack>, 5> kSlackModes{
+      ktl::nullopt,        // nullopt is used for testing the default mode (should be "none").
+      TimerSlack::none(),  // an explicit test of "none"
+      TimerSlack(ZX_USEC(100), TIMER_SLACK_CENTER),
+      TimerSlack(ZX_USEC(200), TIMER_SLACK_EARLY),
+      TimerSlack(ZX_USEC(200), TIMER_SLACK_LATE),
+  };
+
+  // Test to make sure that a relative timeout which is an infinite amount of
+  // time from now produces an infinite deadline.
+  for (const auto& slack : kSlackModes) {
+    Deadline deadline = slack.has_value() ? Deadline::after(ZX_TIME_INFINITE, slack.value())
+                                          : Deadline::after(ZX_TIME_INFINITE);
+    ASSERT_EQ(ZX_TIME_INFINITE, deadline.when());
+
+    // Default slack should be "none"
+    const TimerSlack& expected = slack.has_value() ? slack.value() : TimerSlack::none();
+    ASSERT_EQ(expected.amount(), deadline.slack().amount());
+    ASSERT_EQ(expected.mode(), deadline.slack().mode());
+  }
+
+  // While we cannot control the precise deadline which will be produced from
+  // our call to Deadline::after, we _can_ bound the range it might exist in.
+  // Test for this as well.
+  for (const auto& slack : kSlackModes) {
+    constexpr zx_duration_t kTimeout = ZX_MSEC(10);
+    zx_time_t before = zx_time_add_duration(current_time(), kTimeout);
+    Deadline deadline =
+        slack.has_value() ? Deadline::after(kTimeout, slack.value()) : Deadline::after(kTimeout);
+    zx_time_t after = zx_time_add_duration(current_time(), kTimeout);
+    ASSERT_LE(before, deadline.when());
+    ASSERT_GE(after, deadline.when());
+
+    // Default slack should be "none"
+    const TimerSlack& expected = slack.has_value() ? slack.value() : TimerSlack::none();
+    ASSERT_EQ(expected.amount(), deadline.slack().amount());
+    ASSERT_EQ(expected.mode(), deadline.slack().mode());
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(timer_tests)
 UNITTEST("cancel_before_deadline", cancel_before_deadline)
 UNITTEST("cancel_after_fired", cancel_after_fired)
@@ -523,5 +569,5 @@ UNITTEST("cancel_from_callback", cancel_from_callback)
 UNITTEST("set_from_callback", set_from_callback)
 UNITTEST("trylock_or_cancel_canceled", trylock_or_cancel_canceled)
 UNITTEST("trylock_or_cancel_get_lock", trylock_or_cancel_get_lock)
-UNITTEST("print_timer_queues", print_timer_queues)
+UNITTEST("Deadline::after", deadline_after)
 UNITTEST_END_TESTCASE(timer_tests, "timer", "timer tests")

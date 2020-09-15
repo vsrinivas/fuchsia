@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_DEADLINE_H_
 
 #include <assert.h>
+#include <platform.h>
 #include <zircon/types.h>
 
 enum slack_mode : uint32_t {
@@ -57,6 +58,11 @@ class Deadline {
   constexpr Deadline(zx_time_t when, TimerSlack slack) : when_(when), slack_(slack) {}
 
   static constexpr Deadline no_slack(zx_time_t when) { return Deadline(when, TimerSlack::none()); }
+
+  // Construct a deadline using relative duration measured from now.
+  static Deadline after(zx_duration_t after, TimerSlack slack = TimerSlack::none()) {
+    return Deadline(zx_time_add_duration(current_time(), after), slack);
+  }
 
   // A deadline that will never be reached.
   static constexpr const Deadline& infinite() { return infinite_; }
