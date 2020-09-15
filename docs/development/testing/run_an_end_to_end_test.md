@@ -20,6 +20,9 @@ To run this end-to-end test, the steps are:
 *   [Start the emulator with the Fuchsia image](#start-the-emulator-with-the-fuchsia-image).
 *   [Run the end-to-end test](#run-the-end-to-end-test).
 
+Also, to run any end-to-end test, see the
+[General instructions](#general-instructions) section.
+
 ## Prerequisites
 
 Verify the following requirements:
@@ -123,39 +126,88 @@ Saw a screen that is not black.
 1 of 1 test passed
 ```
 
-## Run any end-to-end test {#run-any-end-to-end-test}
+## General instructions {:#general-instructions}
+
+### Run any end-to-end test {#run-any-end-to-end-test}
 
 Use the `fx run-e2e-tests` command to run an end-to-end test from your host
 machine:
 
-```posix-terminal
-fx run-e2e-tests <TEST_NAME>
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx run-e2e-tests <var>TEST_NAME</var></code>
+</pre>
 
-Some product configurations may include a set of end-to-end tests by default.
-However, if you want to run an end-to-end test that is not part of your product
-configuration, configure and build your Fuchsia image to include the specific
+Some product configurations may include a set of end-to-end tests by default
+(see [Examine product configuration files](#examine-product-configuration-files)).
+However, if you want to run an end-to-end test that is not part of your
+product configuration, configure your Fuchsia image to include the specific
 test:
 
 <pre class="prettyprint">
 <code class="devsite-terminal">fx set <var>PRODUCT</var>.<var>BOARD</var> --with <var>TEST_DIRECTORY</var>:<var>TARGET</var></code>
 </pre>
 
-```posix-terminal
-fx build
-```
-
-For example, the following command configures your Fuchsia image to include all
-the end-to-end tests in the
+For example, the following commands configure and build your Fuchsia image
+with all the end-to-end tests in the
 <code>[//src/tests/end_to_end/perf](/src/tests/end_to_end/perf/)</code> test
 directory:
 
-```posix-terminal
-fx set workstation.qemu-x64 --with //src/tests/end_to_end/perf:test
+```none
+$ fx set workstation.qemu-x64 --with //src/tests/end_to_end/perf:test
+$ fx build
 ```
 
-Note: Some end-to-end tests can only run on specific product configurations.
+Note: Some end-to-end tests are designed to run only on specific product
+configurations.
 
 For the list of all available end-to-end tests in the Fuchsia repository, see
 the [//src/tests/end\_to\_end](/src/tests/end_to_end/) directory.
 
+### Examine product configuration files {#examine-product-configuration-files}
+
+To find out which end-to-end tests are included in a
+specific product configuration, examine product configuration files (`.gni`) in
+the Fuchsia repository's <code>[//products][products-dir]</code> directory.
+
+The following example shows the product configurations files in the
+`//products` directory:
+
+```none
+~/fuchsia/products$ ls *.gni
+bringup.gni  core.gni  terminal.gni  workstation.gni
+```
+To see the list of all available product configurations, you can run the
+following command:
+
+```posix-terminal
+fx list-products
+```
+
+Among these product configurations, <code>[terminal][terminal-gni]</code> and
+<code>[workstation][workstation-gni]</code> include end-to-end tests by
+default. The following example shows the end-to-end tests included
+in `terminal.gni`:
+
+```none
+cache_package_labels += [
+  ...
+  "//src/tests/end_to_end/bundles:end_to_end_deps",
+  "//src/tests/end_to_end/bundles:terminal_end_to_end_deps",
+]
+
+...
+
+universe_package_labels += [
+  "//src/tests/end_to_end/screen_is_not_black:no_basemgr_test",
+  "//src/tests/end_to_end/sl4f:test",
+  "//src/tests/end_to_end/audio_record:test",
+  "//src/tests/end_to_end/perf:test",
+  ...
+]
+```
+
+<!-- Reference links -->
+
+[products-dir]: /products/
+[terminal-gni]: /products/terminal.gni
+[workstation-gni]: /products/workstation.gni
