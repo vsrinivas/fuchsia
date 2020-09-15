@@ -130,33 +130,47 @@ impl<T> Cursor<T> {
     /// snapshot was taken.
     fn new_snapshot(list: ArcList<T>) -> Self {
         let until_id = list.inner.lock().tail.upgrade().map(|t| t.id).unwrap_or_default();
-        Self { list, last_id_seen: 0, until_id, next: Default::default() }
+        Self::new(list, 0, until_id)
     }
 
-    /// Retrieve the next item from the list. May return `Some` after having previously returned
-    /// `None` if the list was concurrently modified.
-    pub fn get_next(&mut self) -> Option<LazyItem<T>> {
+    /// A cursor will return results with IDs equal to or greater than `from` and less than or
+    /// equal to `to`.
+    fn new(list: ArcList<T>, from: u64, to: u64) -> Self {
+        Self { list, last_id_seen: from, until_id: to, next: Default::default() }
+    }
+}
+
+impl<T> Stream for Cursor<T> {
+    type Item = LazyItem<T>;
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.last_id_seen >= self.until_id {
+            return Poll::Ready(None);
+        }
+
         if let Some(to_return) = self.next.upgrade() {
             // self.next is alive
             if to_return.id > self.until_id {
+                self.last_id_seen = to_return.id;
                 // we're past the end of this cursor's valid range
-                return None;
+                return Poll::Ready(None);
             }
 
             // the number we missed is equal to the difference between
             // the last ID we saw and the ID *just before* the current value
             let num_missed = (to_return.id - 1) - self.last_id_seen;
-            if num_missed > 0 {
+            let item = if num_missed > 0 {
                 // advance the cursor's high-water mark by the number we missed
                 // so we only report each dropped item once
                 self.last_id_seen += num_missed;
-                Some(LazyItem::ItemsDropped(num_missed))
+                LazyItem::ItemsDropped(num_missed)
             } else {
                 // we haven't missed anything, proceed normally
                 self.last_id_seen = to_return.id;
                 self.next = to_return.next();
-                Some(LazyItem::Next(to_return.inner.clone()))
-            }
+                LazyItem::Next(to_return.inner.clone())
+            };
+
+            Poll::Ready(Some(item))
         } else {
             // self.next is stale, either we fell off the list or this is our first call
             let head = self.list.inner.lock().head.clone();
@@ -165,28 +179,21 @@ impl<T> Cursor<T> {
                 if head.id > self.last_id_seen {
                     // start playing catch-up
                     self.next = Arc::downgrade(&head);
-                    self.get_next()
+                    self.poll_next(cx)
                 } else {
                     // we're at the tail
-                    None
+                    Poll::Pending
                 }
             } else {
                 // the list is empty
-                None
+                Poll::Pending
             }
         }
     }
 }
 
-impl<T> Stream for Cursor<T> {
-    type Item = LazyItem<T>;
-    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Poll::Ready(self.as_mut().get_next())
-    }
-}
-
 /// The next element in the stream or a marker of the number of items dropped since last polled.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum LazyItem<T> {
     /// The next item in the stream.
     Next(Arc<T>),
@@ -225,41 +232,42 @@ mod tests {
     async fn all_delivered_without_drops() {
         let list = ArcList::default();
         let mut dead_cursor = list.snapshot();
-        assert!(dead_cursor.get_next().is_none(), "no items in the list");
+        assert_eq!(dead_cursor.next().await, None, "no items in the list");
 
         list.push_back(1);
         list.push_back(2);
         list.push_back(3);
 
         let mut middle_cursor = list.snapshot();
-        assert_eq!(*middle_cursor.get_next().unwrap().unwrap(), 1);
-        assert_eq!(*middle_cursor.get_next().unwrap().unwrap(), 2);
-        assert_eq!(*middle_cursor.get_next().unwrap().unwrap(), 3);
-        assert!(dead_cursor.get_next().is_none(), "no items in list at snapshot");
-        assert!(middle_cursor.get_next().is_none(), "no items left in list");
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 1);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 2);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 3);
+        assert_eq!(dead_cursor.next().await, None, "no items in the list at snapshot");
+        assert_eq!(dead_cursor.next().await, None, "no items in list at snapshot");
+        assert_eq!(middle_cursor.next().await, None, "no items left in list");
 
         list.push_back(4);
         list.push_back(5);
 
-        assert!(dead_cursor.get_next().is_none(), "no items in list at snapshot");
-        assert!(middle_cursor.get_next().is_none(), "no items left in list at snapshot");
+        assert_eq!(dead_cursor.next().await, None, "no items in list at snapshot");
+        assert_eq!(middle_cursor.next().await, None, "no items left in list at snapshot");
 
         let mut full_cursor = list.snapshot();
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 1);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 2);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 3);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 4);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 5);
-        assert!(full_cursor.get_next().is_none(), "no items left");
-        assert!(dead_cursor.get_next().is_none(), "no items in list at snapshot");
-        assert!(middle_cursor.get_next().is_none(), "no items left in list at snapshot");
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 1);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 2);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 3);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 4);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 5);
+        assert_eq!(full_cursor.next().await, None, "no items left");
+        assert_eq!(dead_cursor.next().await, None, "no items in list at snapshot");
+        assert_eq!(middle_cursor.next().await, None, "no items left in list at snapshot");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn drops_are_counted() {
         let list: ArcList<i32> = ArcList::default();
         let mut dead_cursor = list.snapshot();
-        assert!(dead_cursor.get_next().is_none(), "no items in the list");
+        assert!(dead_cursor.next().await.is_none(), "no items in the list");
 
         list.push_back(1);
         list.push_back(2);
@@ -271,20 +279,20 @@ mod tests {
         list.pop_front();
         list.pop_front();
 
-        middle_cursor.get_next().unwrap().expect_dropped(2);
-        assert_eq!(*middle_cursor.get_next().unwrap().unwrap(), 3);
-        assert_eq!(*middle_cursor.get_next().unwrap().unwrap(), 4);
-        assert_eq!(*middle_cursor.get_next().unwrap().unwrap(), 5);
-        assert!(dead_cursor.get_next().is_none(), "no items in list at snapshot");
-        assert!(middle_cursor.get_next().is_none(), "no items left in list");
+        middle_cursor.next().await.unwrap().expect_dropped(2);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 3);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 4);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 5);
+        assert!(dead_cursor.next().await.is_none(), "no items in list at snapshot");
+        assert!(middle_cursor.next().await.is_none(), "no items left in list");
 
         let mut full_cursor = list.snapshot();
-        full_cursor.get_next().unwrap().expect_dropped(2);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 3);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 4);
-        assert_eq!(*full_cursor.get_next().unwrap().unwrap(), 5);
-        assert!(full_cursor.get_next().is_none(), "no items left");
-        assert!(dead_cursor.get_next().is_none(), "no items in list at snapshot");
-        assert!(middle_cursor.get_next().is_none(), "no items left in list at snapshot");
+        full_cursor.next().await.unwrap().expect_dropped(2);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 3);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 4);
+        assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 5);
+        assert!(full_cursor.next().await.is_none(), "no items left");
+        assert!(dead_cursor.next().await.is_none(), "no items in list at snapshot");
+        assert!(middle_cursor.next().await.is_none(), "no items left in list at snapshot");
     }
 }

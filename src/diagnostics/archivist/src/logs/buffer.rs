@@ -4,6 +4,7 @@
 
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
+use futures::StreamExt;
 use inspect::NumericProperty;
 use std::sync::Arc;
 
@@ -66,11 +67,11 @@ where
     }
 
     /// Returns a Vec of the current items.
-    pub fn collect(&self) -> Vec<Arc<T>> {
+    pub async fn collect(&self) -> Vec<Arc<T>> {
         let mut items = vec![];
         let mut snapshot = self.buffer.snapshot();
 
-        while let Some(item) = snapshot.get_next() {
+        while let Some(item) = snapshot.next().await {
             match item {
                 arc_list::LazyItem::Next(i) => items.push(i),
                 arc_list::LazyItem::ItemsDropped(n) => {
@@ -99,8 +100,8 @@ mod tests {
     where
         T: Accounted + Clone,
     {
-        fn collect_cloned(&self) -> Vec<T> {
-            self.collect().into_iter().map(|t| (*t).clone()).collect()
+        async fn collect_cloned(&self) -> Vec<T> {
+            self.collect().await.into_iter().map(|t| (*t).clone()).collect()
         }
     }
 
@@ -112,7 +113,7 @@ mod tests {
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 4));
-        assert_eq!(&m.collect_cloned()[..], &[(1, 4), (2, 4), (3, 4)]);
+        assert_eq!(&m.collect_cloned().await[..], &[(1, 4), (2, 4), (3, 4)]);
         assert_inspect_tree!(inspector,
         root: {
             buffer_stats: {
@@ -129,10 +130,10 @@ mod tests {
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 5));
-        assert_eq!(&m.collect_cloned()[..], &[(2, 4), (3, 5)]);
+        assert_eq!(&m.collect_cloned().await[..], &[(2, 4), (3, 5)]);
         m.push((4, 4));
         m.push((5, 4));
-        assert_eq!(&m.collect_cloned()[..], &[(4, 4), (5, 4)]);
+        assert_eq!(&m.collect_cloned().await[..], &[(4, 4), (5, 4)]);
         assert_inspect_tree!(inspector,
         root: {
             buffer_stats: {

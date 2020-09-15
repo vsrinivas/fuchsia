@@ -421,7 +421,7 @@ impl LogManager {
 
         let mut inner = self.inner.lock().await;
 
-        let cached = inner.log_msg_buffer.collect();
+        let cached = inner.log_msg_buffer.collect().await;
         listener.backfill(cached).await;
 
         if !listener.is_healthy() {
