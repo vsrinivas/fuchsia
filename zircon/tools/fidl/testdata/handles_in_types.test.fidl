@@ -14,15 +14,15 @@ resource_definition handle : uint32 {
     };
 };
 
-table TableWithHandle {
+resource table TableWithHandle {
     1: handle:VMO h;
 };
 
-flexible union UnionWithHandle {
+flexible resource union UnionWithHandle {
     1: handle:VMO h;
 };
 
-struct HandlesInTypes {
+resource struct HandlesInTypes {
     handle:VMO normal_handle;
 
     vector<handle:VMO> handle_in_vec;

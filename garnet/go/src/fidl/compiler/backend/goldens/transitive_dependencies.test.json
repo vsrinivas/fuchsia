@@ -45,7 +45,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 4,
         "alignment": 4,

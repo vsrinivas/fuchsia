@@ -96,7 +96,7 @@
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 25,
-        "column": 8,
+        "column": 17,
         "length": 14
       },
       "anonymous": false,
@@ -249,7 +249,7 @@
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 17,
-        "column": 7,
+        "column": 16,
         "length": 15
       },
       "members": [
@@ -291,7 +291,7 @@
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 21,
-        "column": 16,
+        "column": 25,
         "length": 15
       },
       "members": [

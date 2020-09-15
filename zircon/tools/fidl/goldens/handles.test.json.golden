@@ -639,7 +639,7 @@
       "location": {
         "filename": "handles.test.fidl",
         "line": 52,
-        "column": 8,
+        "column": 17,
         "length": 7
       },
       "anonymous": false,

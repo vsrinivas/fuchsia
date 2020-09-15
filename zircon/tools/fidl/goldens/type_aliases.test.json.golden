@@ -103,7 +103,7 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 27,
-        "column": 8,
+        "column": 17,
         "length": 21
       },
       "anonymous": false,

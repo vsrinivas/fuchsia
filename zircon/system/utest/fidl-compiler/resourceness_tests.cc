@@ -14,12 +14,10 @@
 
 namespace {
 
-const fidl::ExperimentalFlags FLAGS(fidl::ExperimentalFlags::Flag::kDefaultNoHandles);
-
 void invalid_resource_modifier(const std::string& type, const std::string& definition) {
   std::string fidl_library = "library example;\n\n" + definition + "\n";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
 
@@ -96,7 +94,7 @@ TEST(ResourcenessTests, good_resource_struct) {
            "resource struct Foo { vector<handle> v; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_TRUE(library.Compile(), "%s", fidl_library.c_str());
     EXPECT_EQ(library.LookupStruct("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
@@ -113,7 +111,7 @@ TEST(ResourcenessTests, good_resource_table) {
            "resource table Foo { 1: vector<handle> v; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_TRUE(library.Compile(), "%s", fidl_library.c_str());
     EXPECT_EQ(library.LookupTable("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
@@ -129,7 +127,7 @@ TEST(ResourcenessTests, good_resource_union) {
            "resource union Foo { 1: vector<handle> v; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_TRUE(library.Compile(), "%s", fidl_library.c_str());
     EXPECT_EQ(library.LookupUnion("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
@@ -146,7 +144,7 @@ TEST(ResourcenessTests, bad_handles_in_value_struct) {
            "struct Foo { vector<handle>:0 bad_member; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -166,7 +164,7 @@ TEST(ResourcenessTests, bad_handles_in_value_table) {
            "table Foo { 1: vector<handle>:0 bad_member; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -186,7 +184,7 @@ TEST(ResourcenessTests, bad_handles_in_value_union) {
            "union Foo { 1: vector<handle>:0 bad_member; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -211,7 +209,7 @@ library example;
 protocol Protocol {};
 
 )FIDL" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -239,7 +237,7 @@ resource table ResourceTable {};
 resource union ResourceUnion { 1: bool b; };
 
 )FIDL" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -274,7 +272,7 @@ resource table ResourceTable {};
 resource union ResourceUnion { 1: bool b; };
 
 )FIDL" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -305,7 +303,7 @@ resource table ResourceTable {};
 resource union ResourceUnion { 1: bool b; };
 
 )FIDL" + definition + "\n";
-    TestLibrary library(fidl_library, FLAGS);
+    TestLibrary library(fidl_library);
     library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
@@ -330,7 +328,7 @@ struct Foo {
 resource struct ResourceStruct {};
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
 
@@ -363,7 +361,7 @@ resource struct Middle {
 resource struct Bottom {};
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupStruct("Top")->resourceness, fidl::types::Resourceness::kResource);
@@ -382,7 +380,7 @@ struct Middle {
 resource struct Bottom {};
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
 
@@ -413,7 +411,7 @@ struct Boros {
 };
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
 }
@@ -431,7 +429,7 @@ resource struct Boros {
 };
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
 }
@@ -449,7 +447,7 @@ struct Boros {
 };
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
@@ -468,7 +466,7 @@ strict resource union SR { 1: bool b; };
 resource strict union RS { 1: bool b; };
 )FIDL";
 
-  TestLibrary library(fidl_library, FLAGS);
+  TestLibrary library(fidl_library);
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
 

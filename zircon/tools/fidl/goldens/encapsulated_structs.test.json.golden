@@ -12,7 +12,7 @@
     {
       "name": "fidl.test.encapsulatedstructs/Int8Int32",
       "location": {
-        "filename": "encapsulated_structs.fidl",
+        "filename": "encapsulated_structs.test.fidl",
         "line": 3,
         "column": 8,
         "length": 9
@@ -26,7 +26,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 4,
             "column": 10,
             "length": 1
@@ -43,7 +43,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 6,
             "column": 11,
             "length": 1
@@ -54,7 +54,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 8,
         "alignment": 4,
@@ -69,7 +69,7 @@
     {
       "name": "fidl.test.encapsulatedstructs/Int16Int8",
       "location": {
-        "filename": "encapsulated_structs.fidl",
+        "filename": "encapsulated_structs.test.fidl",
         "line": 9,
         "column": 8,
         "length": 9
@@ -83,7 +83,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 10,
             "column": 11,
             "length": 1
@@ -100,7 +100,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 11,
             "column": 10,
             "length": 1
@@ -111,7 +111,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 4,
         "alignment": 2,
@@ -126,7 +126,7 @@
     {
       "name": "fidl.test.encapsulatedstructs/ArrayInt16Int8",
       "location": {
-        "filename": "encapsulated_structs.fidl",
+        "filename": "encapsulated_structs.test.fidl",
         "line": 15,
         "column": 8,
         "length": 14
@@ -145,7 +145,7 @@
           },
           "name": "arr",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 16,
             "column": 24,
             "length": 3
@@ -156,7 +156,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 12,
         "alignment": 2,
@@ -171,7 +171,7 @@
     {
       "name": "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
       "location": {
-        "filename": "encapsulated_structs.fidl",
+        "filename": "encapsulated_structs.test.fidl",
         "line": 20,
         "column": 8,
         "length": 23
@@ -186,7 +186,7 @@
           },
           "name": "trailing",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 21,
             "column": 15,
             "length": 8
@@ -204,7 +204,7 @@
           },
           "name": "inner",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 25,
             "column": 15,
             "length": 5
@@ -222,7 +222,7 @@
           },
           "name": "array",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 26,
             "column": 20,
             "length": 5
@@ -233,7 +233,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 4,
@@ -248,9 +248,9 @@
     {
       "name": "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
       "location": {
-        "filename": "encapsulated_structs.fidl",
+        "filename": "encapsulated_structs.test.fidl",
         "line": 31,
-        "column": 8,
+        "column": 17,
         "length": 25
       },
       "anonymous": false,
@@ -263,7 +263,7 @@
           },
           "name": "element",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 32,
             "column": 16,
             "length": 7
@@ -282,7 +282,7 @@
           },
           "name": "h",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 33,
             "column": 12,
             "length": 1
@@ -308,9 +308,9 @@
     {
       "name": "fidl.test.encapsulatedstructs/TopLevelStruct",
       "location": {
-        "filename": "encapsulated_structs.fidl",
+        "filename": "encapsulated_structs.test.fidl",
         "line": 37,
-        "column": 8,
+        "column": 17,
         "length": 14
       },
       "anonymous": false,
@@ -323,7 +323,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 38,
             "column": 29,
             "length": 1
@@ -341,7 +341,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "encapsulated_structs.fidl",
+            "filename": "encapsulated_structs.test.fidl",
             "line": 39,
             "column": 31,
             "length": 1

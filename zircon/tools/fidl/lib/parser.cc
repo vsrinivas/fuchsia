@@ -1234,12 +1234,7 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
   if (!Ok())
     Fail();
 
-  auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
-  // TODO(fxbug.dev/7989) This is just to avoid goldens churn, and should be removed.
-  if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
-    resourceness = types::Resourceness::kResource;
-  }
-
+  const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
   return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                   std::move(identifier), std::move(members),
                                                   resourceness);
@@ -1333,12 +1328,7 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
   if (!Ok())
     Fail();
 
-  auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
-  // TODO(fxbug.dev/7989) This is just to avoid goldens churn, and should be removed.
-  if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
-    resourceness = types::Resourceness::kResource;
-  }
-
+  const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
   return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                  std::move(identifier), std::move(members),
                                                  types::Strictness::kFlexible, resourceness);
@@ -1439,12 +1429,7 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
   if (!contains_non_reserved_member)
     return Fail(ErrMustHaveNonReservedMember);
 
-  auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
-  // TODO(fxbug.dev/7989) This is just to avoid goldens churn, and should be removed.
-  if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
-    resourceness = types::Resourceness::kResource;
-  }
-
+  const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
   return std::make_unique<raw::UnionDeclaration>(
       scope.GetSourceElement(), std::move(attributes), std::move(identifier), std::move(members),
       modifiers.strictness.value_or(types::Strictness::kStrict), resourceness);

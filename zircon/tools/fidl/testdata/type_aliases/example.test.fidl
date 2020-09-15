@@ -24,7 +24,7 @@ using vec_at_most_5 = vector:5;
 using channel = handle:CHANNEL;
 using client_end = channel;
 
-struct ExampleOfUseOfAliases {
+resource struct ExampleOfUseOfAliases {
     u32 field_of_u32;
     vec_at_most_five<string> field_of_vec_at_most_five_of_string;
     vec_at_most_five<uint32> field_of_vec_at_most_five_of_uint32;

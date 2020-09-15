@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Int8Int32 {#Int8Int32}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.fidl#3)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.test.fidl#3)*
 
 
 
@@ -31,7 +31,7 @@
 </table>
 
 ### Int16Int8 {#Int16Int8}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.fidl#9)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.test.fidl#9)*
 
 
 
@@ -54,7 +54,7 @@
 </table>
 
 ### ArrayInt16Int8 {#ArrayInt16Int8}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.fidl#15)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.test.fidl#15)*
 
 
 
@@ -70,7 +70,7 @@
 </table>
 
 ### StructPaddingTestStruct {#StructPaddingTestStruct}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.fidl#20)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.test.fidl#20)*
 
 
 
@@ -100,7 +100,7 @@
 </table>
 
 ### NonInlineStructTestStruct {#NonInlineStructTestStruct}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.fidl#31)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.test.fidl#31)*
 
 
 
@@ -123,7 +123,7 @@
 </table>
 
 ### TopLevelStruct {#TopLevelStruct}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.fidl#37)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/encapsulated_structs.test.fidl#37)*
 
 
 

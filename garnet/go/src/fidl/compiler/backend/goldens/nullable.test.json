@@ -260,7 +260,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -304,7 +304,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -321,7 +321,7 @@
       "location": {
         "filename": "nullable.test.fidl",
         "line": 13,
-        "column": 8,
+        "column": 17,
         "length": 24
       },
       "anonymous": false,
@@ -363,7 +363,7 @@
       "location": {
         "filename": "nullable.test.fidl",
         "line": 21,
-        "column": 8,
+        "column": 17,
         "length": 26
       },
       "anonymous": false,
@@ -404,7 +404,7 @@
       "location": {
         "filename": "nullable.test.fidl",
         "line": 25,
-        "column": 8,
+        "column": 17,
         "length": 25
       },
       "anonymous": false,
@@ -468,7 +468,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 4,
         "alignment": 4,
@@ -509,7 +509,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 8,
         "alignment": 8,
@@ -550,7 +550,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -606,7 +606,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,

@@ -16,7 +16,6 @@ class ExperimentalFlags {
   enum class Flag : FlagSet {
     kEnableHandleRights = 0b01,
     kDisallowOldHandleSyntax = 0b100,
-    kDefaultNoHandles = 0b1000,
   };
 
   ExperimentalFlags() : flags_(0) {}

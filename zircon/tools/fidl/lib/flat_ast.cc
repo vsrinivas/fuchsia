@@ -2927,10 +2927,6 @@ void Library::VerifyDeclAttributes(Decl* decl) {
 
 void VerifyResourcenessStep::ForDecl(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
-  if (!library_->experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
-    return;
-  }
-
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       const auto* struct_decl = static_cast<const Struct*>(decl);

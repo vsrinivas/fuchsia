@@ -28,13 +28,13 @@ struct StructPaddingTestStruct {
     // elements.
 };
 
-struct NonInlineStructTestStruct {
+resource struct NonInlineStructTestStruct {
     Int16Int8? element; // 8-byte alignment
     handle h;
     // 4-byte padding after handle.
 };
 
-struct TopLevelStruct {
+resource struct TopLevelStruct {
     StructPaddingTestStruct a;
     NonInlineStructTestStruct b;
 };

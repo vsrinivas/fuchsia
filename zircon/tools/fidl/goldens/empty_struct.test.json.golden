@@ -358,7 +358,7 @@
       },
       "anonymous": false,
       "members": [],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 1,
         "alignment": 1,

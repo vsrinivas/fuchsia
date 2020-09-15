@@ -49,7 +49,7 @@ using aliased_plain_handle = handle;
 using aliased_subtype_handle = handle:VMO;
 using aliased_rights_handle = handle:<VMO, 1>;
 
-struct Handles {
+resource struct Handles {
     handle plain_handle;
 
     handle:BTI bti_handle;

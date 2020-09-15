@@ -10,7 +10,7 @@ struct StructWithNullableVector {
     vector<int32>? val;
 };
 
-struct StructWithNullableHandle {
+resource struct StructWithNullableHandle {
     zx.handle:VMO? val;
 };
 
@@ -18,11 +18,11 @@ protocol SimpleProtocol {
     Add(int32 a, int32 b) -> (int32 sum);
 };
 
-struct StructWithNullableProtocol {
+resource struct StructWithNullableProtocol {
     SimpleProtocol? val;
 };
 
-struct StructWithNullableRequest {
+resource struct StructWithNullableRequest {
     request<SimpleProtocol>? val;
 };
 

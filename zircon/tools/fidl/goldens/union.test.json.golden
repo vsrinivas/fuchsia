@@ -246,7 +246,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -287,7 +287,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -328,7 +328,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -350,7 +350,7 @@
       },
       "anonymous": false,
       "members": [],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 1,
         "alignment": 1,
@@ -391,7 +391,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -449,7 +449,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -524,7 +524,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -579,7 +579,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -634,7 +634,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -706,7 +706,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -778,7 +778,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -850,7 +850,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -888,7 +888,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -951,7 +951,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1004,7 +1004,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1057,7 +1057,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1110,7 +1110,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1173,7 +1173,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1236,7 +1236,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1289,7 +1289,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1361,7 +1361,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1429,7 +1429,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1468,7 +1468,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1511,7 +1511,7 @@
         }
       ],
       "strict": true,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -1584,7 +1584,7 @@
         }
       ],
       "strict": false,
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
