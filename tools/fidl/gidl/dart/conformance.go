@@ -68,7 +68,8 @@ void main() {
 				{{ .ValueType }},
 				{{ .Bytes }},
 				{{ .HandleDefs }},
-				{{ .Handles }});
+				{{ .Handles }},
+				{{ .UnusedHandles }});
 			{{- else }}
 			DecodeSuccessCase.run(
 				{{ .DecoderName }},
@@ -133,7 +134,7 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	DecoderName, Name, Value, ValueType, Bytes, HandleDefs, Handles string
+	DecoderName, Name, Value, ValueType, Bytes, HandleDefs, Handles, UnusedHandles string
 }
 
 type encodeFailureCase struct {
@@ -214,13 +215,14 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				DecoderName: decoderName(encoding.WireFormat),
-				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Value:       valueStr,
-				ValueType:   valueType,
-				Bytes:       buildBytes(encoding.Bytes),
-				HandleDefs:  buildHandles(decodeSuccess.HandleDefs),
-				Handles:     toDartIntList(encoding.Handles),
+				DecoderName:   decoderName(encoding.WireFormat),
+				Name:          testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Value:         valueStr,
+				ValueType:     valueType,
+				Bytes:         buildBytes(encoding.Bytes),
+				HandleDefs:    buildHandles(decodeSuccess.HandleDefs),
+				Handles:       toDartIntList(encoding.Handles),
+				UnusedHandles: toDartIntList(gidlir.GetUnusedHandles(decodeSuccess.Value, encoding.Handles)),
 			})
 		}
 	}

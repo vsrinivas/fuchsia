@@ -127,3 +127,39 @@ func TypeFromValue(value Value) string {
 	}
 	return record.Name
 }
+
+// GetUnusedHandles returns the list of handles from the input slice that do not
+// appear in the provided Value
+func GetUnusedHandles(value Value, handles []Handle) []Handle {
+	usedHandles := make(map[Handle]struct{})
+	populateUsedHandles(value, usedHandles)
+
+	var unused []Handle
+	for _, handle := range handles {
+		if _, ok := usedHandles[handle]; !ok {
+			unused = append(unused, handle)
+		}
+	}
+	return unused
+}
+
+func populateUsedHandles(value Value, seen map[Handle]struct{}) {
+	switch value := value.(type) {
+	case Handle:
+		seen[value] = struct{}{}
+	case Record:
+		for _, field := range value.Fields {
+			if field.Key.IsUnknown() {
+				unknownData := field.Value.(UnknownData)
+				for _, handle := range unknownData.Handles {
+					seen[handle] = struct{}{}
+				}
+			}
+			populateUsedHandles(field.Value, seen)
+		}
+	case []interface{}:
+		for _, item := range value {
+			populateUsedHandles(item, seen)
+		}
+	}
+}

@@ -280,6 +280,39 @@ decode_success("TableWithUnknownTrailingFields") {
     },
 }
 
+decode_success("TableWithUnknownTrailingFieldsAndHandles") {
+    bindings_allowlist = [dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2,
+        ]
+    }
+}
+
 success("InlineXUnionInStruct") {
     value = TestInlineXUnionInStruct {
         before: "before",
