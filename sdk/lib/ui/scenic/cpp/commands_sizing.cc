@@ -457,6 +457,10 @@ class MeasuringTape {
     num_bytes_ += FIDL_ALIGN(40);
   }
 
+  void Measure(const ::fuchsia::ui::gfx::ImageArgs2& value) {
+    num_bytes_ += FIDL_ALIGN(16);
+  }
+
   void Measure(const ::fuchsia::ui::gfx::ImagePipe2Args& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
@@ -652,6 +656,11 @@ class MeasuringTape {
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImage: {
         __attribute__((unused)) auto const& _image = value.image();
         Measure(_image);
+        break;
+      }
+      case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImage2: {
+        __attribute__((unused)) auto const& _image2 = value.image2();
+        Measure(_image2);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {

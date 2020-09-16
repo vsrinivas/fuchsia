@@ -404,6 +404,7 @@ template("escher_library") {
       ]
       public_deps += [
         "//sdk/fidl/fuchsia.images",
+        "//sdk/lib/fidl/cpp",
         "//sdk/lib/vfs/cpp",
         "//zircon/public/lib/fit",
         "//zircon/system/ulib/async-loop:async-loop-cpp",

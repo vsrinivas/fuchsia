@@ -390,5 +390,21 @@ std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height, size_
   return ptr;
 }
 
+vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format) {
+  vk::ImageCreateInfo create_info;
+  create_info.imageType = vk::ImageType::e2D;
+  create_info.extent = vk::Extent3D{1, 1, 1};
+  create_info.flags = vk::ImageCreateFlags();
+  create_info.format = vk_format;
+  create_info.mipLevels = 1;
+  create_info.arrayLayers = 1;
+  create_info.samples = vk::SampleCountFlagBits::e1;
+  create_info.tiling = vk::ImageTiling::eOptimal;
+  create_info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+  create_info.sharingMode = vk::SharingMode::eExclusive;
+  create_info.initialLayout = vk::ImageLayout::eUndefined;
+  return create_info;
+}
+
 }  // namespace image_utils
 }  // namespace escher

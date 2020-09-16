@@ -14,6 +14,7 @@
 #include "lib/inspect/cpp/inspect.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
+#include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
@@ -101,6 +102,16 @@ class Session : public CommandDispatcher {
 
   fxl::WeakPtr<ViewTreeUpdater> view_tree_updater() { return view_tree_updater_.GetWeakPtr(); }
 
+  void RegisterBufferCollection(
+      uint32_t buffer_collection_id,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
+
+  void DeregisterBufferCollection(uint32_t buffer_collection_id);
+
+  std::unordered_map<uint32_t, BufferCollectionInfo>& BufferCollections() {
+    return buffer_collections_;
+  }
+
  private:
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }
@@ -150,6 +161,11 @@ class Session : public CommandDispatcher {
 
   inspect::Node inspect_node_;
   inspect::UintProperty inspect_resource_count_;
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+
+  std::unordered_map<uint32_t, BufferCollectionInfo> buffer_collections_;
+  std::vector<BufferCollectionInfo> deregistered_buffer_collections_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

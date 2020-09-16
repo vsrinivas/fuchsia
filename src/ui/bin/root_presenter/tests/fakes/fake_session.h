@@ -37,6 +37,12 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   void SetDebugName(std::string debug_name) override {}
 
+  void RegisterBufferCollection(
+      uint32_t buffer_collection_id,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override {}
+
+  void DeregisterBufferCollection(uint32_t buffer_collection_id) override {}
+
   // Test method
   bool PresentWasCalled() { return presents_called_ > 0; }
   int PresentsCalled() { return presents_called_; }

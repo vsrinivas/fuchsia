@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/trace/event.h>
 
@@ -61,6 +62,10 @@ Session::Session(SessionId id, SessionContext session_context,
   FX_DCHECK(event_reporter_);
 
   inspect_resource_count_ = inspect_node_.CreateUint("resource_count", 0);
+
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator_.NewRequest().TakeChannel().release());
+  FX_DCHECK(status == ZX_OK);
 }
 
 Session::~Session() {
@@ -116,6 +121,14 @@ bool Session::ApplyScheduledUpdates(CommandContext* command_context,
   // Updates have been applied - inspect latest session resource and tree stats.
   inspect_resource_count_.Set(resource_count_);
 
+  auto buffer_collections_it = deregistered_buffer_collections_.begin();
+  while (buffer_collections_it != deregistered_buffer_collections_.end()) {
+    if (buffer_collections_it->ImageResourceIds().empty()) {
+      deregistered_buffer_collections_.erase(buffer_collections_it);
+    }
+    ++buffer_collections_it;
+  }
+
   return true;
 }
 
@@ -150,6 +163,49 @@ bool Session::ApplyUpdate(CommandContext* command_context,
     }
   }
   return true;
+}
+
+void Session::RegisterBufferCollection(
+    uint32_t buffer_collection_id,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  if (buffer_collection_id == 0) {
+    error_reporter_->ERROR() << "RegisterBufferCollection called with buffer_collection_id 0.";
+    return;
+  }
+
+  if (buffer_collections_.count(buffer_collection_id)) {
+    error_reporter_->ERROR()
+        << "RegisterBufferCollection called with pre-existing buffer_collection_id "
+        << buffer_collection_id << ".";
+    return;
+  }
+
+  auto result =
+      BufferCollectionInfo::New(sysmem_allocator_.get(), session_context_.escher, std::move(token));
+  if (result.is_error()) {
+    error_reporter_->ERROR() << "Unable to register collection.";
+    return;
+  }
+
+  buffer_collections_[buffer_collection_id] = std::move(result.value());
+}
+
+void Session::DeregisterBufferCollection(uint32_t buffer_collection_id) {
+  if (buffer_collection_id == 0) {
+    error_reporter_->ERROR() << "DeregisterBufferCollection called with buffer_collection_id 0.";
+    return;
+  }
+
+  auto buffer_collections_it = buffer_collections_.find(buffer_collection_id);
+
+  if (buffer_collections_it == buffer_collections_.end()) {
+    error_reporter_->ERROR() << "DeregisterBufferCollection failed, buffer_collection_id "
+                             << buffer_collection_id << " not found.";
+    return;
+  }
+
+  buffer_collections_.erase(buffer_collections_it);
+  deregistered_buffer_collections_.push_back(std::move(buffer_collections_it->second));
 }
 
 }  // namespace gfx

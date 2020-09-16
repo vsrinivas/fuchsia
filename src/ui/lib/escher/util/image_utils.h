@@ -146,6 +146,9 @@ std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height,
 std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height,
                                           size_t* out_size = nullptr);
 
+// Creates a vk::ImageCreateInfo with common default values and |vk_format|.
+vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format);
+
 }  // namespace image_utils
 }  // namespace escher
 

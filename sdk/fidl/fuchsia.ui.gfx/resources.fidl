@@ -63,6 +63,7 @@ resource union ResourceArgs {
     30: reserved;
     31: ViewArgs3 view3;
     32: ImagePipe2Args image_pipe2;
+    33: ImageArgs2 image2;
 };
 
 resource struct ImagePipeArgs {
@@ -91,6 +92,7 @@ resource struct MemoryArgs {
 
 /// An image mapped to a range of a `Memory` resource.
 // TODO: more precise and extensive docs.
+[Deprecated]
 struct ImageArgs {
     fuchsia.images.ImageInfo info;
 
@@ -98,7 +100,24 @@ struct ImageArgs {
     uint32 memory_offset; // byte offset of image within `Memory` resource
 };
 
+/// An image mapped to a range of a `Memory` resource.
+struct ImageArgs2 {
+    uint32 width;
+    uint32 height;
+
+    /// The id of a `BufferCollection`. Before creating this resource, the
+    /// buffer collection should be registered on the same `Session` with
+    /// `RegisterBufferCollection` and it should have its contraints set.
+    /// Once the buffers are allocated successfully (e.g. after calling
+    /// `WaitForBuffersAllocated`), the collection's id can be used to create
+    /// the image resource.
+    uint32 buffer_collection_id;
+    /// The index of the VMO from the `BufferCollection` that backs this image.
+    uint32 buffer_collection_index;
+};
+
 /// A buffer mapped to a range of `Memory`.
+// TODO: replace BufferArgs with BufferArgs2 that supports sysmem.
 struct BufferArgs {
     uint32 memory_id; // id of a `Memory` resource
     uint32 memory_offset; // byte offset of buffer within `Memory` resource

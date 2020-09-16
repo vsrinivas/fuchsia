@@ -10,6 +10,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/flib/fence.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
@@ -18,42 +20,6 @@
 
 namespace scenic_impl {
 namespace gfx {
-
-namespace {
-
-vk::Format SysmemPixelFormatTypeToVkFormat(fuchsia::sysmem::PixelFormatType pixel_format) {
-  switch (pixel_format) {
-    case fuchsia::sysmem::PixelFormatType::BGRA32:
-      return vk::Format::eB8G8R8A8Srgb;
-    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
-      return vk::Format::eR8G8B8A8Srgb;
-    case fuchsia::sysmem::PixelFormatType::NV12:
-      return vk::Format::eG8B8R82Plane420Unorm;
-    case fuchsia::sysmem::PixelFormatType::I420:
-      return vk::Format::eG8B8R83Plane420Unorm;
-    default:
-      break;
-  }
-  return vk::Format::eUndefined;
-}
-
-vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format) {
-  vk::ImageCreateInfo create_info;
-  create_info.imageType = vk::ImageType::e2D;
-  create_info.extent = vk::Extent3D{1, 1, 1};
-  create_info.flags = vk::ImageCreateFlags();
-  create_info.format = vk_format;
-  create_info.mipLevels = 1;
-  create_info.arrayLayers = 1;
-  create_info.samples = vk::SampleCountFlagBits::e1;
-  create_info.tiling = vk::ImageTiling::eOptimal;
-  create_info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-  create_info.sharingMode = vk::SharingMode::eExclusive;
-  create_info.initialLayout = vk::ImageLayout::eUndefined;
-  return create_info;
-}
-
-}  // namespace
 
 const ResourceTypeInfo ImagePipe2::kTypeInfo = {ResourceType::kImagePipe | ResourceType::kImageBase,
                                                 "ImagePipe2"};
@@ -164,7 +130,8 @@ void ImagePipe2::AddBufferCollection(
   }
 
   // Set VkImage constraints
-  const vk::ImageCreateInfo& create_info = GetDefaultImageConstraints(vk::Format::eUndefined);
+  const vk::ImageCreateInfo& create_info =
+      escher::image_utils::GetDefaultImageConstraints(vk::Format::eUndefined);
   vk::BufferCollectionFUCHSIA buffer_collection_fuchsia;
   const bool set_constraints = SetBufferCollectionConstraints(
       session_, std::move(vulkan_token), create_info, &buffer_collection_fuchsia);
@@ -470,7 +437,7 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
     return nullptr;
   }
 
-  vk::Format pixel_format = SysmemPixelFormatTypeToVkFormat(
+  vk::Format pixel_format = escher::SysmemPixelFormatTypeToVkFormat(
       info.buffer_collection_info.settings.image_format_constraints.pixel_format.type);
   if (pixel_format == vk::Format::eUndefined) {
     error_reporter_->ERROR() << __func__ << ": Pixel format not supported.";
@@ -482,7 +449,8 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
   vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
   collection_image_info.collection = info.vk_buffer_collection;
   collection_image_info.index = buffer_collection_index;
-  vk::ImageCreateInfo image_create_info = GetDefaultImageConstraints(pixel_format);
+  vk::ImageCreateInfo image_create_info =
+      escher::image_utils::GetDefaultImageConstraints(pixel_format);
   image_create_info.setPNext(&collection_image_info);
   image_create_info.extent = vk::Extent3D{image_format.coded_width, image_format.coded_height, 1};
   if (info.buffer_collection_info.settings.buffer_settings.is_secure) {

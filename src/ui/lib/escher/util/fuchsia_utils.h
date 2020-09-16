@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_UTIL_FUCHSIA_UTILS_H_
 #define SRC_UI_LIB_ESCHER_UTIL_FUCHSIA_UTILS_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 
@@ -30,6 +31,9 @@ zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem);
 std::pair<escher::GpuMemPtr, escher::ImagePtr> GenerateExportableMemImage(
     vk::Device device, escher::ResourceManager* resource_manager,
     const escher::ImageInfo& image_info);
+
+// Converts sysmem pixel format to equivalent vk::Format.
+vk::Format SysmemPixelFormatTypeToVkFormat(fuchsia::sysmem::PixelFormatType pixel_format);
 
 }  // namespace escher
 

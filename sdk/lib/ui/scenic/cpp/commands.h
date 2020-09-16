@@ -32,6 +32,9 @@ fuchsia::ui::gfx::Command NewCreateMemoryCmd(uint32_t id, zx::vmo vmo, uint64_t 
                                              fuchsia::images::MemoryType memory_type);
 fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uint32_t memory_offset,
                                             fuchsia::images::ImageInfo info);
+fuchsia::ui::gfx::Command NewCreateImage2Cmd(uint32_t id, uint32_t width, uint32_t height,
+                                             uint32_t buffer_collection_id,
+                                             uint32_t buffer_collection_index);
 fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uint32_t memory_offset,
                                             fuchsia::images::PixelFormat format,
                                             fuchsia::images::ColorSpace color_space,

@@ -34,6 +34,10 @@ class Image : public ImageBase {
                       const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
+  static ImagePtr New(Session* session, ResourceId id, uint32_t width, uint32_t height,
+                      uint32_t buffer_collection_id, uint32_t buffer_collection_index,
+                      ErrorReporter* error_reporter);
+
   void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
                          escher::ImageLayoutUpdater* layout_uploader) override;
 

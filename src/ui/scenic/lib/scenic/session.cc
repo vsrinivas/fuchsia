@@ -247,6 +247,24 @@ void Session::SetDebugName(std::string debug_name) {
   }
 }
 
+void Session::RegisterBufferCollection(
+    uint32_t buffer_collection_id,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  auto dispatcher = dispatchers_[System::TypeId::kGfx].get();
+  FX_DCHECK(dispatcher);
+  auto gfx_session = static_cast<gfx::Session*>(dispatcher);
+
+  gfx_session->RegisterBufferCollection(buffer_collection_id, std::move(token));
+}
+
+void Session::DeregisterBufferCollection(uint32_t buffer_collection_id) {
+  auto dispatcher = dispatchers_[System::TypeId::kGfx].get();
+  FX_DCHECK(dispatcher);
+  auto gfx_session = static_cast<gfx::Session*>(dispatcher);
+
+  gfx_session->DeregisterBufferCollection(buffer_collection_id);
+}
+
 Session::EventAndErrorReporter::EventAndErrorReporter(Session* session)
     : session_(session), weak_factory_(this) {
   FX_DCHECK(session_);

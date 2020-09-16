@@ -26,6 +26,7 @@ fidl("fuchsia.ui.scenic") {
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.scenic.scheduling",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",

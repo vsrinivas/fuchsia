@@ -23,6 +23,7 @@
 #include "src/ui/lib/escher/vk/image_factory.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/annotation_manager.h"
+#include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"

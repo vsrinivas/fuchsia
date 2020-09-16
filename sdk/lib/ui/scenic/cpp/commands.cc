@@ -73,6 +73,21 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
+fuchsia::ui::gfx::Command NewCreateImage2Cmd(uint32_t id, uint32_t width, uint32_t height,
+                                             uint32_t buffer_collection_id,
+                                             uint32_t buffer_collection_index) {
+  fuchsia::ui::gfx::ImageArgs2 image;
+  image.width = width;
+  image.height = height;
+  image.buffer_collection_id = buffer_collection_id;
+  image.buffer_collection_index = buffer_collection_index;
+
+  fuchsia::ui::gfx::ResourceArgs resource;
+  resource.set_image2(image);
+
+  return NewCreateResourceCmd(id, std::move(resource));
+}
+
 fuchsia::ui::gfx::Command NewCreateImagePipeCmd(
     uint32_t id, fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
   fuchsia::ui::gfx::ImagePipeArgs image_pipe;

@@ -59,6 +59,8 @@ source_set("gfx") {
     "api/internal_snapshot_impl.h",
     "engine/annotation_manager.cc",
     "engine/annotation_manager.h",
+    "engine/buffer_collection.cc",
+    "engine/buffer_collection.h",
     "engine/engine.cc",
     "engine/engine.h",
     "engine/engine_renderer.cc",
@@ -234,6 +236,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/zxc",
   ]
 
   deps = [

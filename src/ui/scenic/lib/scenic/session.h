@@ -57,6 +57,14 @@ class Session final : public fuchsia::ui::scenic::Session {
   // |fuchsia::ui::scenic::Session|
   void SetDebugName(std::string debug_name) override;
 
+  // |fuchsia::ui::scenic::Session|
+  void RegisterBufferCollection(
+      uint32_t buffer_collection_id,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+
+  // |fuchsia::ui::scenic::Session|
+  void DeregisterBufferCollection(uint32_t buffer_collection_id) override;
+
   void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
 
   void OnPresented(const std::map<scheduling::PresentId, zx::time>& latched_times,

@@ -85,7 +85,8 @@ void Session::Enqueue(fuchsia::ui::scenic::Command command) {
   // accumulated so far.
   if (commands_.size() > 0 &&
       (static_cast<int64_t>(ZX_CHANNEL_MAX_MSG_BYTES) < commands_num_bytes_ + size.num_bytes ||
-       static_cast<int64_t>(ZX_CHANNEL_MAX_MSG_HANDLES) < commands_num_handles_ + size.num_handles)) {
+       static_cast<int64_t>(ZX_CHANNEL_MAX_MSG_HANDLES) <
+           commands_num_handles_ + size.num_handles)) {
     Flush();
   }
 
@@ -152,6 +153,16 @@ void Session::Present2(zx_duration_t requested_presentation_time,
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
                                        RequestPresentationTimesCallback callback) {
   session_->RequestPresentationTimes(requested_prediction_span, std::move(callback));
+}
+
+void Session::RegisterBufferCollection(
+    uint32_t buffer_collection_id,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  session_->RegisterBufferCollection(buffer_collection_id, std::move(token));
+}
+
+void Session::DeregisterBufferCollection(uint32_t buffer_collection_id) {
+  session_->DeregisterBufferCollection(buffer_collection_id);
 }
 
 void Session::Unbind() {

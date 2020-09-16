@@ -161,6 +161,30 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   device.freeMemory(memory);
 }
 
+TEST_F(SessionTest, RegisterBufferCollectionWithId0) {
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+
+  session()->RegisterBufferCollection(0, std::move(token));
+  ExpectLastReportedError("RegisterBufferCollection called with buffer_collection_id 0.");
+}
+
+TEST_F(SessionTest, RegisterBufferCollectionInvalid) {
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+
+  session()->RegisterBufferCollection(1, std::move(token));
+  ExpectLastReportedError("Unable to register collection.");
+}
+
+TEST_F(SessionTest, DeregisterBufferCollectionWithId0) {
+  session()->DeregisterBufferCollection(0);
+  ExpectLastReportedError("DeregisterBufferCollection called with buffer_collection_id 0.");
+}
+
+TEST_F(SessionTest, DeregisterBufferCollectionInexistent) {
+  session()->DeregisterBufferCollection(1);
+  ExpectLastReportedError("DeregisterBufferCollection failed, buffer_collection_id 1 not found.");
+}
+
 // TODO:
 // - test that FindResource() cannot return resources that have the wrong
 // type.

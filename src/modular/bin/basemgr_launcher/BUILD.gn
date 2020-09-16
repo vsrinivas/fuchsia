@@ -64,6 +64,7 @@ executable("basemgr_launcher_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/scenic:scenic",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxc",
   ]
 }
 
