@@ -435,8 +435,6 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
                  "frame index", frame_trace_id);
   TRACE_FLOW_END("gfx", "scenic_frame", frame_number);
 
-  TRACE_FLOW_BEGIN("gfx", "present_image", frame_trace_id);
-
   FX_DCHECK(record);
   if (record->frame_timings) {
     record->frame_timings->OnFrameRendered(record->swapchain_index, render_finished_time);

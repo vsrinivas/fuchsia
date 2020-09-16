@@ -63,6 +63,7 @@ void Image::StartPresent() {
   ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
   ZX_DEBUG_ASSERT(mtx_trylock(mtx()) == thrd_busy);
   TRACE_DURATION("gfx", "Image::StartPresent", "id", id);
+  TRACE_FLOW_BEGIN("gfx", "present_image", id);
 
   presenting_ = true;
 }

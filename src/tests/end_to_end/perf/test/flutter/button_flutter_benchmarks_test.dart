@@ -37,6 +37,7 @@ void main() {
       'flutter',
       'gfx',
       'kernel:meta',
+      'magma',
     ]);
     await traceSession.start();
 

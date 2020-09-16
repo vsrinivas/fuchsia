@@ -74,8 +74,7 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   bool switching_client = false;
 };
 
-using ControllerParent =
-    ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::Messageable>;
+using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::Messageable>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
