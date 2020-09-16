@@ -220,24 +220,6 @@ class Unbindable : public base_mixin {
   }
 };
 
-// DEPRECATED (fxb/34574).
-// Use Unbindable instead.
-template <typename D>
-class UnbindableNew : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckUnbindableNew<D>();
-    proto->unbind = Unbind_New;
-  }
-
- private:
-  static void Unbind_New(void* ctx) {
-    auto dev = static_cast<D*>(ctx);
-    UnbindTxn txn(dev->zxdev());
-    dev->DdkUnbindNew(std::move(txn));
-  }
-};
-
 template <typename D>
 class Readable : public base_mixin {
  protected:

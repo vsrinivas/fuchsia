@@ -195,20 +195,10 @@ DECLARE_HAS_MEMBER_FN(has_ddk_unbind, DdkUnbind);
 
 template <typename D>
 constexpr void CheckUnbindable() {
-  static_assert(has_ddk_unbind<D>::value, "Unbindable classes must implement DdkUnbindNew");
+  static_assert(has_ddk_unbind<D>::value, "Unbindable classes must implement DdkUnbind");
   static_assert(std::is_same<decltype(&D::DdkUnbind), void (D::*)(UnbindTxn txn)>::value,
                 "DdkUnbind must be a public non-static member function with signature "
                 "'void DdkUnbind(ddk::UnbindTxn)'.");
-}
-
-DECLARE_HAS_MEMBER_FN(has_ddk_unbind_new, DdkUnbindNew);
-
-template <typename D>
-constexpr void CheckUnbindableNew() {
-  static_assert(has_ddk_unbind_new<D>::value, "UnbindableNew classes must implement DdkUnbindNew");
-  static_assert(std::is_same<decltype(&D::DdkUnbindNew), void (D::*)(UnbindTxn txn)>::value,
-                "DdkUnbindNew must be a public non-static member function with signature "
-                "'void DdkUnbindNew(ddk::UnbindTxn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_release, DdkRelease);

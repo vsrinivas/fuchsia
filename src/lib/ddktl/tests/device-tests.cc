@@ -207,7 +207,7 @@ DEFINE_FAIL_CASE(GetProtocolable)
 DEFINE_FAIL_CASE(Initializable)
 DEFINE_FAIL_CASE(Openable)
 DEFINE_FAIL_CASE(Closable)
-DEFINE_FAIL_CASE(UnbindableNew)
+DEFINE_FAIL_CASE(Unbindable)
 DEFINE_FAIL_CASE(Readable)
 DEFINE_FAIL_CASE(Writable)
 DEFINE_FAIL_CASE(GetSizable)
@@ -282,7 +282,7 @@ TEST(DdktlDevice, FailNoGetProtocol) { do_test<TestNotGetProtocolable>(); }
 TEST(DdktlDevice, FailNoInitialize) { do_test<TestNotInitializable>(); }
 TEST(DdktlDevice, FailNoOpen) { do_test<TestNotOpenable>(); }
 TEST(DdktlDevice, FailNoClose) { do_test<TestNotClosable>(); }
-TEST(DdktlDevice, FailNoUnbindeNew) { do_test<TestNotUnbindableNew>(); }
+TEST(DdktlDevice, FailNoUnbind) { do_test<TestNotUnbindable>(); }
 TEST(DdktlDevice, FailNoReade) { do_test<TestNotReadable>(); }
 TEST(DdktlDevice, FailNoWrite) { do_test<TestNotWritable>(); }
 TEST(DdktlDevice, FailNoGetSize) { do_test<TestNotGetSizable>(); }
