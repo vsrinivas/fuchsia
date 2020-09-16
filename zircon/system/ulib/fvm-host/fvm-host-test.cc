@@ -746,6 +746,17 @@ TEST_F(FvmHostTest, TestPaveZxcryptFail) {
   ASSERT_EQ(unlink(fvm_path), 0);
 }
 
+TEST_F(FvmHostTest, TestFvmVerifyOK) {
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true);
+  chmod(fvm_path, S_IRUSR);
+  ASSERT_OK(FvmContainer::Verify(fvm_path, 0));
+}
+
+TEST_F(FvmHostTest, TestFvmVerifyFail) {
+  CreateSparseEnsure(0, kDefaultSliceSize);
+  ASSERT_NOT_OK(FvmContainer::Verify(sparse_path, 0));
+}
+
 TEST_F(FvmHostTest, TestCreateWithResizeImageFileToFit) {
   size_t offset = 4096;
   std::unique_ptr<FvmContainer> out;

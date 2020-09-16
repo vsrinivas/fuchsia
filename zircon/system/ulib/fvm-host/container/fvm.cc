@@ -28,6 +28,8 @@
 #define IOCTL_GET_BLOCK_COUNT BLKGETSIZE
 #endif
 
+constexpr int DEFAULT_OPEN_MODE = 0644;
+
 zx_status_t FvmContainer::CreateNew(const char* path, size_t slice_size, off_t offset, off_t length,
                                     std::unique_ptr<FvmContainer>* out) {
   std::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset, length));
@@ -54,13 +56,18 @@ zx_status_t FvmContainer::CreateExisting(const char* path, off_t offset,
   return ZX_OK;
 }
 
+zx_status_t FvmContainer::Verify(const char* path, off_t offset) {
+  std::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, 0, offset, 0));
+  return fvmContainer->InitExisting(InitExistingMode::kCheckOnly);
+}
+
 FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length)
     : Container(path, slice_size, 0), disk_offset_(offset), disk_size_(length) {}
 
 FvmContainer::~FvmContainer() = default;
 
 zx_status_t FvmContainer::InitNew() {
-  fd_.reset(open(path_.data(), O_RDWR, 0644));
+  fd_.reset(open(path_.data(), O_RDWR, DEFAULT_OPEN_MODE));
   if (!fd_) {
     if (errno != ENOENT) {
       fprintf(stderr, "Failed to open path %s: %s\n", path_.data(), strerror(errno));
@@ -72,7 +79,7 @@ zx_status_t FvmContainer::InitNew() {
       return ZX_ERR_INVALID_ARGS;
     }
 
-    fd_.reset(open(path_.data(), O_RDWR | O_CREAT | O_EXCL, 0644));
+    fd_.reset(open(path_.data(), O_RDWR | O_CREAT | O_EXCL, DEFAULT_OPEN_MODE));
 
     if (!fd_) {
       fprintf(stderr, "Failed to create path %s\n", path_.data());
@@ -132,8 +139,9 @@ zx_status_t FvmContainer::VerifyFileSize(uint64_t* size_out, bool allow_resize) 
   return ZX_OK;
 }
 
-zx_status_t FvmContainer::InitExisting() {
-  fd_.reset(open(path_.data(), O_RDWR, 0644));
+zx_status_t FvmContainer::InitExisting(InitExistingMode mode) {
+  int flag = mode == InitExistingMode::kAllowModification ? O_RDWR : O_RDONLY;
+  fd_.reset(open(path_.data(), flag, DEFAULT_OPEN_MODE));
 
   if (!fd_) {
     fprintf(stderr, "Failed to open path %s: %s\n", path_.data(), strerror(errno));
@@ -285,7 +293,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
 
   fbl::StringBuffer<PATH_MAX> path;
   path.AppendPrintf("%s%s", path_.c_str(), temp);
-  fbl::unique_fd fd(open(path.c_str(), O_RDWR | O_CREAT, 0644));
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR | O_CREAT, DEFAULT_OPEN_MODE));
 
   if (!fd) {
     fprintf(stderr, "Unable to open temp file %s\n", path.c_str());

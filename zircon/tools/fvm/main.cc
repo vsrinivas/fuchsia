@@ -312,14 +312,9 @@ zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
 }
 
 zx_status_t IsRawFvmImageFile(const char* path, size_t offset, bool* result) {
-  fbl::unique_fd fd(open(path, O_RDONLY, 0644));
-  if (!fd) {
-    fprintf(stderr, "Fail to open file %s\n", path);
-    return ZX_ERR_IO;
-  }
-  std::unique_ptr<FvmContainer> container;
-  *result = FvmContainer::CreateExisting(path, offset, &container) == ZX_OK;
-  return ZX_OK;
+  zx_status_t status = FvmContainer::Verify(path, offset);
+  *result = status == ZX_OK;
+  return status;
 }
 
 zx_status_t IsFvmSparseImageFile(const char* path, bool* result) {

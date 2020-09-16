@@ -99,6 +99,9 @@ class FvmContainer final : public Container {
   static zx_status_t CreateExisting(const char* path, off_t offset,
                                     std::unique_ptr<FvmContainer>* out);
 
+  // Verify if a given file contains an valid image located at |offset|.
+  static zx_status_t Verify(const char* path, off_t offset);
+
   ~FvmContainer();
 
   // Resets the FvmContainer state so we are ready to add a new set of partitions
@@ -147,8 +150,13 @@ class FvmContainer final : public Container {
   // Resets the FvmContainer state so we are ready to add a new set of partitions.
   zx_status_t InitNew();
 
+  enum class InitExistingMode {
+    kCheckOnly,
+    kAllowModification,
+  };
+
   // Reads fvm data from disk so we are able to inspect the existing container.
-  zx_status_t InitExisting();
+  zx_status_t InitExisting(InitExistingMode mode = InitExistingMode::kAllowModification);
 
   // Verifies that the size of the existing file is valid based on the provided disk offset and
   // length. Optionally returns the file size as |size_out|.
