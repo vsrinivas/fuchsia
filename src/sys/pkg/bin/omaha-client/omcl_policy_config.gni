@@ -42,7 +42,7 @@ template("omcl_policy_config") {
                            ])
     assert(
         defined(periodic_interval_minutes) || defined(startup_delay_seconds) ||
-            defined(retry_delay_seconds || allow_reboot_when_idle),
+            defined(retry_delay_seconds) || defined(allow_reboot_when_idle),
         "at least one config parameter should be defined")
   }
 
