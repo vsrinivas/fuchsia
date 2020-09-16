@@ -36,9 +36,6 @@ template("prebuilt_test_package") {
   assert(defined(invoker.archive), "archive must be defined.")
   assert(defined(invoker.component_name), "component_name must be defined.")
 
-  # TODO(fxbug.dev/58561): Fix callers and then remove here.
-  not_needed(invoker, [ "runner" ])
-
   package_name = target_name
   if (defined(invoker.package)) {
     package_name = invoker.package
