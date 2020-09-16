@@ -35,7 +35,6 @@ _common_image_deps += [
   "//src/bringup/bin/trace-benchmark",
   "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/network/bin/ping",
-  "//src/developer/cmd:bin",
   "//src/developer/forensics/crasher/cpp:crasher_exe",
   "//src/devices/block/bin/disk-inspect",
   "//src/devices/block/bin/fvm-check",
