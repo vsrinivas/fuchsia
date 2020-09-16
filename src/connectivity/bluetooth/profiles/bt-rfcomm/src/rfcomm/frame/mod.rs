@@ -77,6 +77,8 @@ macro_rules! tofrom_decodable_enum {
 pub enum FrameParseError {
     #[error("Provided buffer is too small")]
     BufferTooSmall,
+    #[error("Invalid buffer size provided. Expected: {}, Actual: {}", .0, .1)]
+    InvalidBufferLength(usize, usize),
     #[error("FCS check for the Frame failed")]
     FCSCheckFailed,
     #[error("DLCI ({:?}) is invalid", .0)]

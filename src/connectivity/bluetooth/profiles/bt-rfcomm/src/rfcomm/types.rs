@@ -100,7 +100,7 @@ impl Role {
 
 /// The C/R bit in RFCOMM. This is used both at the frame level and the multiplexer
 /// channel command level. See RFCOMM 5.1.3 and 5.4.6, respectively.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CommandResponse {
     Command,
     Response,

@@ -65,7 +65,10 @@ pub struct DLCParameterNegotiationCommand {
 impl Decodable for DLCParameterNegotiationCommand {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != DLC_PARAMETER_NEGOTIATION_LENGTH {
-            return Err(FrameParseError::Other(format_err!("Invalid buf length")));
+            return Err(FrameParseError::InvalidBufferLength(
+                DLC_PARAMETER_NEGOTIATION_LENGTH,
+                buf.len(),
+            ));
         }
 
         let mut fixed_buf = [0; DLC_PARAMETER_NEGOTIATION_LENGTH];
@@ -122,7 +125,10 @@ mod tests {
     #[test]
     fn test_parse_too_small_buf() {
         let buf = [0x00, 0x00, 0x00]; // Too small.
-        assert!(DLCParameterNegotiationCommand::decode(&buf[..]).is_err());
+        assert_matches!(
+            DLCParameterNegotiationCommand::decode(&buf[..]),
+            Err(FrameParseError::InvalidBufferLength(DLC_PARAMETER_NEGOTIATION_LENGTH, 3))
+        );
     }
 
     #[test]

@@ -10,6 +10,9 @@ use {
 };
 
 mod dlc_parameter_negotiation;
+mod flow_control;
+mod non_supported;
+mod test_command;
 
 use crate::pub_decodable_enum;
 use crate::rfcomm::{frame::FrameParseError, types::CommandResponse};
