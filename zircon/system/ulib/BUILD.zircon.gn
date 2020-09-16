@@ -44,7 +44,6 @@ group("ulib") {
     "ram-crashlog",
     "region-alloc",
     "runtime",
-    "smbios",
     "sync",
     "syscalls-headers",
     "vdso-code-header",

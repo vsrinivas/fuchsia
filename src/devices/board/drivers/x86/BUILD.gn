@@ -36,9 +36,9 @@ source_set("smbios") {
   deps = [
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/smbios",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/smbios",
   ]
 }
 

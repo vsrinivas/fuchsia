@@ -31,7 +31,6 @@ ram-crashlog/
 region-alloc/
 runtime/
 safemath/
-smbios/
 sync/
 syscalls-headers/
 usbhost-static/
