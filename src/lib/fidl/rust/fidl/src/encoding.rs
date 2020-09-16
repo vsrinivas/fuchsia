@@ -21,6 +21,7 @@ const MIN_TLS_CODING_BUF_SIZE: usize = 512;
 /// Acquire a mutable reference to the thread-local encoding buffers.
 ///
 /// This function may not be called recursively.
+#[inline]
 pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> R) -> R {
     CODING_BUF.with(|buf| {
         let mut buf = buf.borrow_mut();
@@ -37,6 +38,7 @@ pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) ->
 /// Encodes the provided type into the thread-local encoding buffers.
 ///
 /// This function may not be called recursively.
+#[inline]
 pub fn with_tls_encoded<T, E: From<Error>>(
     val: &mut impl Encodable,
     f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> std::result::Result<T, E>,
@@ -63,6 +65,7 @@ pub fn with_tls_encoded<T, E: From<Error>>(
 ///
 /// FIDL conformance tests are used to validate that there are no uninitialized
 /// bytes in the output across a range types and values.
+#[inline]
 unsafe fn resize_vec_no_zeroing<T>(buf: &mut Vec<T>, new_len: usize) {
     if new_len > buf.capacity() {
         buf.reserve(new_len - buf.len());
@@ -87,6 +90,7 @@ pub fn round_up_to_align(x: usize, align: usize) -> usize {
 }
 
 #[doc(hidden)] // only exported for macro use
+#[inline]
 pub fn take_handle<T: HandleBased>(handle: &mut T) -> Handle {
     let invalid = T::from_handle(Handle::invalid());
     mem::replace(handle, invalid).into_handle()
@@ -125,6 +129,7 @@ pub struct Context {}
 
 impl Context {
     /// Returns the header flags to set when encoding with this context.
+    #[inline]
     fn header_flags(&self) -> HeaderFlags {
         HeaderFlags::UNIONS_USE_XUNION_FORMAT
     }
@@ -149,12 +154,14 @@ pub struct Encoder<'a> {
 
 /// The default context for encoding.
 /// During migrations, this controls the default write path.
+#[inline]
 fn default_encode_context() -> Context {
     Context {}
 }
 
 impl<'a> Encoder<'a> {
     /// FIDL2-encodes `x` into the provided data and handle buffers.
+    #[inline]
     pub fn encode<T: Encodable + ?Sized>(
         buf: &'a mut Vec<u8>,
         handles: &'a mut Vec<Handle>,
@@ -170,6 +177,7 @@ impl<'a> Encoder<'a> {
     /// WARNING: Do not call this directly unless you know what you're doing.
     /// FIDL uses `Context` to coordinate soft migrations, so improper uses of
     /// this function could result in ABI breakage.
+    #[inline]
     pub fn encode_with_context<T: Encodable + ?Sized>(
         context: &Context,
         buf: &'a mut Vec<u8>,
@@ -252,6 +260,7 @@ impl<'a> Encoder<'a> {
     }
 
     /// Append bytes to the very end (out-of-line) of the buffer.
+    #[inline]
     pub fn append_out_of_line_bytes(&mut self, bytes: &[u8]) {
         if bytes.len() == 0 {
             return;
@@ -280,6 +289,7 @@ impl<'a> Encoder<'a> {
     }
 
     /// Append handles to the buffer.
+    #[inline]
     pub fn append_handles(&mut self, handles: &mut [Handle]) {
         self.handles.reserve(handles.len());
         for handle in handles {
@@ -290,6 +300,7 @@ impl<'a> Encoder<'a> {
     /// Returns the encoder's context.
     ///
     /// This is needed for accessing the context in macros during migrations.
+    #[inline]
     pub fn context(&self) -> &Context {
         self.context
     }
@@ -313,6 +324,7 @@ impl<'a> Encoder<'a> {
     }
 
     /// Acquires a mutable reference to the buffer in the encoder.
+    #[inline]
     pub fn mut_buffer(&mut self) -> &mut [u8] {
         self.buf
     }
@@ -344,6 +356,7 @@ impl<'a> Decoder<'a> {
     /// FIDL2-decodes a value of type `T` from the provided data and handle
     /// buffers. Assumes the buffers came from inside a transaction message
     /// wrapped by `header`.
+    #[inline]
     pub fn decode_into<T: Decodable>(
         header: &TransactionHeader,
         buf: &'a [u8],
@@ -390,6 +403,7 @@ impl<'a> Decoder<'a> {
     /// WARNING: Do not call this directly unless you know what you're doing.
     /// FIDL uses `Context` to coordinate soft migrations, so improper uses of
     /// this function could result in ABI breakage.
+    #[inline]
     pub fn decode_with_context<T: Decodable>(
         context: &Context,
         buf: &'a [u8],
@@ -415,6 +429,7 @@ impl<'a> Decoder<'a> {
     }
 
     /// Take the next handle from the `handles` list.
+    #[inline]
     pub fn take_next_handle(&mut self) -> Result<Handle> {
         if self.next_handle >= self.handles.len() {
             return Err(Error::OutOfRange);
@@ -480,12 +495,14 @@ impl<'a> Decoder<'a> {
     }
 
     /// The number of handles that have not yet been consumed.
+    #[inline]
     pub fn remaining_handles(&self) -> usize {
         self.handles.len() - self.next_handle
     }
 
     /// A convenience method to skip over the specified number of zero bytes used for padding, also
     /// checking that all those bytes are in fact zeroes.
+    #[inline]
     pub fn check_padding(&self, offset: usize, len: usize) -> Result<()> {
         if len == 0 {
             // Skip body (so it can be optimized out).
@@ -514,17 +531,20 @@ impl<'a> Decoder<'a> {
     /// Returns the decoder's context.
     ///
     /// This is needed for accessing the context in macros during migrations.
+    #[inline]
     pub fn context(&self) -> &Context {
         self.context
     }
 
     /// The position of the next out of line block and the end of the current
     /// blocks.
+    #[inline]
     pub fn next_out_of_line(&self) -> usize {
         self.next_out_of_line
     }
 
     /// The buffer holding the message to be decoded.
+    #[inline]
     pub fn buffer(&self) -> &[u8] {
         self.buf
     }
@@ -810,6 +830,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
     }
 
     impl Encodable for $float_ty {
+        #[inline]
         unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
@@ -823,6 +844,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
         #[inline(always)]
         fn new_empty() -> Self { 0 as $float_ty }
 
+        #[inline]
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
@@ -861,6 +883,7 @@ macro_rules! impl_slice_encoding_base {
         }
 
         impl Encodable for Option<&[$prim_ty]> {
+            #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut Encoder<'_>,
@@ -882,6 +905,7 @@ macro_rules! impl_slice_encoding_by_iter {
         impl_slice_encoding_base!($prim_ty);
 
         impl Encodable for &[$prim_ty] {
+            #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut Encoder<'_>,
@@ -905,6 +929,7 @@ macro_rules! impl_slice_encoding_by_copy {
         impl_slice_encoding_base!($prim_ty);
 
         impl Encodable for &[$prim_ty] {
+            #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut Encoder<'_>,
@@ -932,6 +957,7 @@ impl_codable_float!(f32, f64,);
 impl_layout!(bool, align: 1, size: 1);
 
 impl Encodable for bool {
+    #[inline]
     fn encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -948,6 +974,7 @@ impl Decodable for bool {
     fn new_empty() -> Self {
         false
     }
+    #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         *self = match decoder.buf[offset] {
             0 => false,
@@ -1021,6 +1048,7 @@ impl Decodable for i8 {
 }
 
 /// Encodes `slice` as a FIDL array.
+#[inline]
 unsafe fn encode_array<T: Encodable>(
     slice: &mut [T],
     encoder: &mut Encoder<'_>,
@@ -1046,6 +1074,7 @@ unsafe fn encode_array<T: Encodable>(
 }
 
 /// Decodes a FIDL array into `slice`.
+#[inline]
 unsafe fn decode_array<T: Decodable>(
     slice: &mut [T],
     decoder: &mut Decoder<'_>,
@@ -1077,12 +1106,14 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     }
 
     impl<T: Encodable> Encodable for [T; $len] {
+        #[inline]
         unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
             encode_array(self, encoder, offset, recursion_depth)
         }
     }
 
     impl<T: Decodable> Decodable for [T; $len] {
+        #[inline]
         fn new_empty() -> Self {
             let mut arr = mem::MaybeUninit::<[T; $len]>::uninit();
             unsafe {
@@ -1094,6 +1125,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
             }
         }
 
+        #[inline]
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             decode_array(self, decoder, offset)
         }
@@ -1116,6 +1148,7 @@ impl_codable_for_fixed_array!(64,);
 impl_codable_for_fixed_array!(256,);
 
 /// Encode an optional vector-like component.
+#[inline]
 pub unsafe fn encode_vector<T: Encodable>(
     encoder: &mut Encoder<'_>,
     offset: usize,
@@ -1145,6 +1178,7 @@ pub unsafe fn encode_vector<T: Encodable>(
 }
 
 /// Encode an missing vector-like component.
+#[inline]
 pub unsafe fn encode_absent_vector(
     encoder: &mut Encoder<'_>,
     offset: usize,
@@ -1155,6 +1189,7 @@ pub unsafe fn encode_absent_vector(
 }
 
 /// Like `encode_vector`, but optimized for `&[u8]`.
+#[inline]
 unsafe fn encode_vector_from_bytes(
     encoder: &mut Encoder<'_>,
     offset: usize,
@@ -1175,6 +1210,7 @@ unsafe fn encode_vector_from_bytes(
 }
 
 /// Like `encode_vector`, but encodes from an iterator.
+#[inline]
 pub unsafe fn encode_vector_from_iter<Iter, T>(
     encoder: &mut Encoder<'_>,
     offset: usize,
@@ -1212,6 +1248,7 @@ where
 
 /// Attempts to decode a string into `string`, returning a `bool`
 /// indicating whether or not a string was present.
+#[inline]
 fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) -> Result<bool> {
     let mut len: u64 = 0;
     len.decode(decoder, offset)?;
@@ -1236,6 +1273,7 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
 
 /// Attempts to decode a FIDL vector into `vec`, returning a `bool` indicating
 /// whether the vector was present.
+#[inline]
 unsafe fn decode_vector<T: Decodable>(
     decoder: &mut Decoder<'_>,
     vec: &mut Vec<T>,
@@ -1275,6 +1313,7 @@ unsafe fn decode_vector<T: Decodable>(
 impl_layout!(&str, align: 8, size: 16);
 
 impl Encodable for &str {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1288,6 +1327,7 @@ impl Encodable for &str {
 impl_layout!(String, align: 8, size: 16);
 
 impl Encodable for String {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1304,6 +1344,7 @@ impl Decodable for String {
         String::new()
     }
 
+    #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         if decode_string(decoder, self, offset)? {
             Ok(())
@@ -1316,6 +1357,7 @@ impl Decodable for String {
 impl_layout!(Option<&str>, align: 8, size: 16);
 
 impl Encodable for Option<&str> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1334,6 +1376,7 @@ impl Encodable for Option<&str> {
 impl_layout!(Option<String>, align: 8, size: 16);
 
 impl Encodable for Option<String> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1355,6 +1398,7 @@ impl Decodable for Option<String> {
         None
     }
 
+    #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         let was_some;
         {
@@ -1371,6 +1415,7 @@ impl Decodable for Option<String> {
 impl_layout_forall_T!(&mut dyn ExactSizeIterator<Item = T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1384,6 +1429,7 @@ impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
 impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Vec<T> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1412,6 +1458,7 @@ impl<T: Decodable> Decodable for Vec<T> {
 impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1425,6 +1472,7 @@ impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
 impl_layout_forall_T!(Option<Vec<T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<Vec<T>> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1529,6 +1577,7 @@ macro_rules! fidl_bits {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             fn encode(
                 &mut self,
                 encoder: &mut $crate::encoding::Encoder<'_>,
@@ -1545,6 +1594,7 @@ macro_rules! fidl_bits {
                 Self::empty()
             }
 
+            #[inline]
             fn decode(
                 &mut self,
                 decoder: &mut $crate::encoding::Decoder<'_>,
@@ -1576,6 +1626,7 @@ macro_rules! fidl_enum {
         )*],
     ) => {
         impl $name {
+            #[inline]
             pub fn from_primitive(prim: $prim_ty) -> Option<Self> {
                 match prim {
                     $(
@@ -1585,6 +1636,7 @@ macro_rules! fidl_enum {
                 }
             }
 
+            #[inline]
             pub fn into_primitive(self) -> $prim_ty {
                 self as $prim_ty
             }
@@ -1603,6 +1655,7 @@ macro_rules! fidl_enum {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> ::std::result::Result<(), $crate::Error>
             {
@@ -1621,6 +1674,7 @@ macro_rules! fidl_enum {
                 panic!("new_empty called on enum with no variants")
             }
 
+            #[inline]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
                 -> ::std::result::Result<(), $crate::Error>
             {
@@ -1719,6 +1773,8 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for $ty<$($($generic,)*)*> {
+
+#[inline]
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
@@ -1732,6 +1788,7 @@ macro_rules! handle_based_codable {
             fn new_empty() -> Self {
                 <$ty<$($($generic,)*)*> as $crate::handle::HandleBased>::from_handle($crate::handle::Handle::invalid())
             }
+            #[inline]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
                 -> $crate::Result<()>
             {
@@ -1750,6 +1807,7 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for Option<$ty<$($($generic,)*)*>> {
+            #[inline]
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
@@ -1763,6 +1821,7 @@ macro_rules! handle_based_codable {
         impl<$($($generic,)*)*> $crate::encoding::Decodable for Option<$ty<$($($generic,)*)*>> {
             #[inline(always)]
             fn new_empty() -> Self { None }
+            #[inline]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 let mut handle: Option<$crate::handle::Handle> = None;
                 $crate::fidl_decode!(&mut handle, decoder, offset)?;
@@ -1785,6 +1844,7 @@ impl Layout for zx_status::Status {
 }
 
 impl Encodable for zx_status::Status {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1800,6 +1860,7 @@ impl Decodable for zx_status::Status {
     fn new_empty() -> Self {
         Self::from_raw(0)
     }
+    #[inline]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         let mut val: i32 = 0;
         val.unsafe_decode(decoder, offset)?;
@@ -1890,6 +1951,7 @@ impl<T: Autonull> Layout for Option<&mut T> {
 }
 
 impl<T: Autonull> Encodable for Option<&mut T> {
+    #[inline]
     fn encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1935,6 +1997,7 @@ impl<T: Autonull> Layout for Option<Box<T>> {
 }
 
 impl<T: Autonull> Encodable for Option<Box<T>> {
+    #[inline]
     fn encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -1948,6 +2011,7 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
 
 // Presence indicators always include at least one non-zero byte,
 // while absence indicators should always be entirely zeros.
+#[inline]
 fn check_for_presence(
     decoder: &mut Decoder<'_>,
     offset: usize,
@@ -1961,6 +2025,7 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
     fn new_empty() -> Self {
         None
     }
+    #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         if T::naturally_nullable(decoder.context) {
             let inline_size = decoder.inline_size_of::<T>();
@@ -2028,6 +2093,7 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 // Ensure padding is zero by writing zero to the padded region which will be partially overwritten
                 // when the field is written.
@@ -2044,6 +2110,7 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Decodable for $name {
+            #[inline]
             fn new_empty() -> Self {
                 Self {
                     $(
@@ -2052,6 +2119,7 @@ macro_rules! fidl_struct {
                 }
             }
 
+            #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 // Apply masks to check if padded regions are zero.
                 $(
@@ -2132,6 +2200,7 @@ macro_rules! fidl_struct_copy {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
                 let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
                 let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
@@ -2147,6 +2216,7 @@ macro_rules! fidl_struct_copy {
         }
 
         impl $crate::encoding::Decodable for $name {
+            #[inline]
             fn new_empty() -> Self {
                 Self {
                     $(
@@ -2155,6 +2225,7 @@ macro_rules! fidl_struct_copy {
                 }
             }
 
+            #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 let buf_ptr = decoder.buffer().as_ptr().offset(offset as isize);
 
@@ -2204,6 +2275,7 @@ macro_rules! fidl_empty_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut $crate::encoding::Encoder<'_>,
@@ -2219,6 +2291,7 @@ macro_rules! fidl_empty_struct {
             fn new_empty() -> Self {
                 $name
             }
+            #[inline]
             unsafe fn unsafe_decode(
                 &mut self,
                 decoder: &mut $crate::encoding::Decoder<'_>,
@@ -2282,6 +2355,7 @@ pub unsafe fn encode_in_envelope(
 
 /// Decodes an unknown field in a table. If it is non-empty, also skips over the
 /// unknown out-of-line payload.
+#[inline]
 pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
     let mut num_bytes: u32 = 0;
     num_bytes.decode(decoder, offset)?;
@@ -2325,6 +2399,7 @@ macro_rules! fidl_table {
     ) => {
         impl $name {
             /// Generates an empty table, with every field set to `None`.
+#[inline]
             pub fn empty() -> Self {
                 Self {$(
                         $member_name: None,
@@ -2343,6 +2418,7 @@ macro_rules! fidl_table {
 
             // Implementation of unsafe_encode that isn't an unsafe function to avoid a large unsafe block that may
             // lead to unintended unsafe operations.
+            #[inline(always)]
             fn unsafe_encode_impl(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 // Vector header
                 let max_ordinal = self.find_max_ordinal();
@@ -2385,7 +2461,8 @@ macro_rules! fidl_table {
             }
 
             // Implementation of unsafe_decode that isn't an unsafe function to avoid a large unsafe block that may
-            // lead to unintended unsafe operations.
+            // lead to unintended unsafe operations
+            #[inline(always)]
             fn unsafe_decode_impl(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                     // Decode envelope vector header
                     let mut len: u64 = 0;
@@ -2535,6 +2612,7 @@ macro_rules! fidl_reverse_blocks {
 /// # Safety:
 ///   - Unsafe due to calls to unsafe_decode. See unsafe_decode documentation for a
 ///   description of safety requirements.
+#[inline]
 pub unsafe fn unsafe_decode_xunion_inline_portion(
     decoder: &mut Decoder,
     offset: usize,
@@ -2577,6 +2655,7 @@ where
     O: Encodable,
     E: Encodable,
 {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -2615,6 +2694,7 @@ where
         Ok(<O as Decodable>::new_empty())
     }
 
+    #[inline]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         let (ordinal, _, _) = unsafe_decode_xunion_inline_portion(decoder, offset)?;
         let member_inline_size = match ordinal {
@@ -2687,6 +2767,7 @@ macro_rules! fidl_xunion {
         $( unknown_member: $unknown_name:ident, )?
     ) => {
         impl $name {
+            #[inline]
             fn ordinal(&self) -> u64 {
                 match *self {
                     $(
@@ -2707,6 +2788,7 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
@@ -2747,6 +2829,7 @@ macro_rules! fidl_xunion {
                 )?
             }
 
+            #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 #![allow(irrefutable_let_patterns, unused)]
                 let (ordinal, num_bytes, num_handles) = $crate::encoding::unsafe_decode_xunion_inline_portion(decoder, offset)?;
@@ -2833,6 +2916,7 @@ pub struct TransactionHeader {
 impl TransactionHeader {
     /// Returns whether the message containing this TransactionHeader is in a
     /// compatible wire format
+    #[inline]
     pub fn is_compatible(&self) -> bool {
         self.magic_number == MAGIC_NUMBER_INITIAL
     }
@@ -2873,6 +2957,7 @@ bitflags! {
 }
 
 impl Into<[u8; 3]> for HeaderFlags {
+    #[inline]
     fn into(self) -> [u8; 3] {
         let bytes = self.bits.to_le_bytes();
         [bytes[0], bytes[1], bytes[2]]
@@ -2881,32 +2966,39 @@ impl Into<[u8; 3]> for HeaderFlags {
 
 impl TransactionHeader {
     /// Creates a new transaction header with the default encode context and magic number.
+    #[inline]
     pub fn new(tx_id: u32, ordinal: u64) -> Self {
         TransactionHeader::new_full(tx_id, ordinal, &default_encode_context(), MAGIC_NUMBER_INITIAL)
     }
     /// Creates a new transaction header with a specific context and magic number.
+    #[inline]
     pub fn new_full(tx_id: u32, ordinal: u64, context: &Context, magic_number: u8) -> Self {
         TransactionHeader { tx_id, flags: context.header_flags().into(), magic_number, ordinal }
     }
     /// Returns the header's transaction id.
+    #[inline]
     pub fn tx_id(&self) -> u32 {
         self.tx_id
     }
     /// Returns the header's message ordinal.
+    #[inline]
     pub fn ordinal(&self) -> u64 {
         self.ordinal
     }
     /// Returns true if the header is for an epitaph message.
+    #[inline]
     pub fn is_epitaph(&self) -> bool {
         self.ordinal == EPITAPH_ORDINAL
     }
 
     /// Returns the magic number.
+    #[inline]
     pub fn magic_number(&self) -> u8 {
         self.magic_number
     }
 
     /// Returns the header's flags as a `HeaderFlags` value.
+    #[inline]
     pub fn flags(&self) -> HeaderFlags {
         let bytes = [self.flags[0], self.flags[1], self.flags[2], 0];
         HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
@@ -2915,6 +3007,7 @@ impl TransactionHeader {
     /// Returns the context to use for decoding the message body associated with
     /// this header. During migrations, this is dependent on `self.flags()` and
     /// controls dynamic behavior in the read path.
+    #[inline]
     pub fn decoding_context(&self) -> Context {
         Context {}
     }
@@ -2940,6 +3033,7 @@ impl<T: Layout> Layout for TransactionMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -3023,18 +3117,22 @@ fidl_struct! {
 
 impl PersistentHeader {
     /// Creates a new `PersistentHeader` with the default encode context and magic number.
+    #[inline]
     pub fn new() -> Self {
         PersistentHeader::new_full(&default_encode_context(), MAGIC_NUMBER_INITIAL)
     }
     /// Creates a new `PersistentHeader` with a specific context and magic number.
+    #[inline]
     pub fn new_full(context: &Context, magic_number: u8) -> Self {
         PersistentHeader { flags: context.header_flags().into(), magic_number }
     }
     /// Returns the magic number.
+    #[inline]
     pub fn magic_number(&self) -> u8 {
         self.magic_number
     }
     /// Returns the header's flags as a `HeaderFlags` value.
+    #[inline]
     pub fn flags(&self) -> HeaderFlags {
         let bytes = [self.flags[0], self.flags[1], self.flags[2], 0];
         HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
@@ -3042,11 +3140,13 @@ impl PersistentHeader {
     /// Returns the context to use for decoding the message body associated with
     /// this header. During migrations, this is dependent on `self.flags()` and
     /// controls dynamic behavior in the read path.
+    #[inline]
     pub fn decoding_context(&self) -> Context {
         Context {}
     }
     /// Returns whether the message containing this `PersistentHeader` is in a
     /// compatible wire format.
+    #[inline]
     pub fn is_compatible(&self) -> bool {
         self.magic_number == MAGIC_NUMBER_INITIAL
     }
@@ -3072,6 +3172,7 @@ impl<T: Layout> Layout for PersistentMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -3214,6 +3315,7 @@ macro_rules! tuple_impls {
             where $typ: Encodable,
                   $( $ntyp: Encodable,)*
         {
+            #[inline]
             unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
                 // Tuples are encoded like structs.
                 // $idx is always 0 for the first element.
@@ -3237,6 +3339,7 @@ macro_rules! tuple_impls {
             where $typ: Decodable,
                   $( $ntyp: Decodable, )*
         {
+            #[inline]
             fn new_empty() -> Self {
                 (
                     $typ::new_empty(),
@@ -3246,6 +3349,7 @@ macro_rules! tuple_impls {
                 )
             }
 
+            #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
                 let mut cur_offset = 0;
                 self.$idx.unsafe_decode(decoder, offset)?;
@@ -3295,6 +3399,7 @@ tuple_impls!(
 impl_layout!((), align: 1, size: 0);
 
 impl Encodable for () {
+    #[inline]
     fn encode(
         &mut self,
         _: &mut Encoder<'_>,
@@ -3310,6 +3415,7 @@ impl Decodable for () {
     fn new_empty() -> Self {
         ()
     }
+    #[inline]
     fn decode(&mut self, _: &mut Decoder<'_>, _offset: usize) -> Result<()> {
         Ok(())
     }
@@ -3327,6 +3433,7 @@ impl<T: Layout> Layout for &mut T {
 }
 
 impl<T: Encodable> Encodable for &mut T {
+    #[inline]
     fn encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -3336,6 +3443,7 @@ impl<T: Encodable> Encodable for &mut T {
         (&mut **self).encode(encoder, offset, recursion_depth)
     }
 
+    #[inline]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
