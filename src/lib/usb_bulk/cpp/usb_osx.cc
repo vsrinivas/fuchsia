@@ -225,27 +225,6 @@ static int try_interfaces(IOUSBDeviceInterface500 **dev, usb_handle *handle) {
     if (handle->callback(&handle->info, handle->callback_data)) {
       handle->interface = interface;
       handle->success = 1;
-
-      /*
-       * Clear both the endpoints, because it has been observed
-       * that the Mac may otherwise (incorrectly) start out with
-       * them in bad state.
-       */
-
-      if (handle->info.has_bulk_in) {
-        kr = (*interface)->ClearPipeStallBothEnds(interface, handle->bulkIn);
-        if (kr != 0) {
-          ERR("could not clear input pipe; result %x, ignoring...\n", kr);
-        }
-      }
-
-      if (handle->info.has_bulk_out) {
-        kr = (*interface)->ClearPipeStallBothEnds(interface, handle->bulkOut);
-        if (kr != 0) {
-          ERR("could not clear output pipe; result %x, ignoring....\n", kr);
-        }
-      }
-
       goto done;
     }
 
@@ -451,7 +430,22 @@ static int init_usb(ifc_match_func callback, void *callback_data,
 UsbInterface::~UsbInterface() { Close(); }
 
 int UsbInterface::Close() {
-  /* TODO: Something better here? */
+  if (handle_ == nullptr || handle_->interface == nullptr) {
+    return 0;
+  }
+
+  IOReturn result = (*handle_->interface)->USBInterfaceClose(handle_->interface);
+  if (result) {
+    ERR("USBInterfaceClose failed with status %x\n", result);
+    return -1;
+  }
+  result = (*handle_->interface)->Release(handle_->interface);
+  if (result) {
+    ERR("Release failed with status %x\n", result);
+    return -1;
+  }
+
+  handle_->interface = nullptr;
   return 0;
 }
 
