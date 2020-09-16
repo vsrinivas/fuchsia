@@ -14,39 +14,31 @@ namespace internal {
 // TODO(madhaviyengar): Move this constant to zircon/fidl.h
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
-ClientBase::~ClientBase() {
-  Unbind();
-  // Invoke OnError() on any outstanding ResponseContexts outside of locks.
-  list_node_t delete_list;
-  {
-    std::scoped_lock lock(lock_);
-    contexts_.clear();
-    list_move(&delete_list_, &delete_list);
-  }
-  list_node_t* node = nullptr;
-  list_node_t* temp_node = nullptr;
-  list_for_every_safe(&delete_list, node, temp_node) {
-    list_delete(node);
-    static_cast<ResponseContext*>(node)->OnError();
-  }
+zx_status_t ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
+                             async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound) {
+  ZX_DEBUG_ASSERT(!binding_.lock());
+  ZX_DEBUG_ASSERT(client.get() == this);
+  auto binding = AsyncBinding::CreateClientBinding(
+      dispatcher, std::move(channel), this,
+      [client = std::weak_ptr(client)](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*) {
+        if (auto _client = client.lock())
+          return _client->Dispatch(std::move(_client), msg);
+        return std::optional<UnbindInfo>({UnbindInfo::kUnbind, ZX_OK});
+      },
+      [on_unbound = std::move(on_unbound), client](
+          void*, UnbindInfo info, zx::channel channel) mutable {
+        client->ReleaseResponseContextsWithError();
+        client = nullptr;
+        on_unbound(info, std::move(channel));
+      });
+  auto status = binding->BeginWait();
+  binding_ = std::move(binding);
+  return status;
 }
 
 void ClientBase::Unbind() {
   if (auto binding = binding_.lock())
     binding->Unbind(std::move(binding));
-}
-
-ClientBase::ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
-                       TypeErasedOnUnboundFn on_unbound)
-    : binding_(AsyncBinding::CreateClientBinding(
-          dispatcher, std::move(channel), this,
-          [this](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*) { return Dispatch(msg); },
-          std::move(on_unbound))) {}
-
-zx_status_t ClientBase::Bind() {
-  if (auto binding = binding_.lock())
-    return binding->BeginWait();
-  return ZX_ERR_CANCELED;
 }
 
 void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
@@ -72,16 +64,33 @@ void ClientBase::ForgetAsyncTxn(ResponseContext* context) {
   list_delete(static_cast<list_node_t*>(context));
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(fidl_msg_t* msg) {
+void ClientBase::ReleaseResponseContextsWithError() {
+  // Invoke OnError() on any outstanding ResponseContexts outside of locks.
+  list_node_t delete_list;
+  {
+    std::scoped_lock lock(lock_);
+    contexts_.clear();
+    list_move(&delete_list_, &delete_list);
+  }
+  list_node_t* node = nullptr;
+  list_node_t* temp_node = nullptr;
+  list_for_every_safe(&delete_list, node, temp_node) {
+    list_delete(node);
+    static_cast<ResponseContext*>(node)->OnError();
+  }
+}
+
+std::optional<UnbindInfo> ClientBase::Dispatch(std::shared_ptr<ClientBase>&& calling_ref,
+                                               fidl_msg_t* msg) {
+  auto client = std::move(calling_ref);  // Move reference into scope.
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
 
   if (hdr->ordinal == kFidlOrdinalEpitaph) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     if (hdr->txid != 0) {
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
+      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
     }
-    return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
-                              reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
+    return UnbindInfo{UnbindInfo::kPeerClosed, reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -107,12 +116,15 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_msg_t* msg) {
     fidl_trace(DidLLCPPDecode);
     if (status != ZX_OK) {
       context->OnError();
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+      return UnbindInfo{UnbindInfo::kDecodeError, status};
     }
+
+    client = nullptr;  // Release the reference to `this` before invoking user code.
     context->OnReply(reinterpret_cast<uint8_t*>(msg->bytes));
     return {};
   }
 
+  client = nullptr;  // Release the reference to `this` before invoking user code.
   // Dispatch events (received messages with no txid).
   return DispatchEvent(msg);
 }

@@ -21,6 +21,9 @@ zx_library("ddktl") {
     # <ddktl/device-internal.h> has #include <fbl/macros.h>.
     "//zircon/public/lib/fbl",
 
+    # <ddktl/fidl.h> has #include <lib/fidl/llcpp/transaction.h>.
+    "//zircon/public/lib/fidl-llcpp:headers",
+
     # <ddktl/device.h> has #include <lib/zx/channel.h>.
     "//zircon/public/lib/zx",
 

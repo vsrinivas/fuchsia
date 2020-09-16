@@ -124,6 +124,7 @@ if (is_fuchsia) {
       "$zx/system/ulib/fbl:headers",
 
       # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
+      # <lib/fidl/llcpp/types.h> has #include <lib/fit/function.h>
       "$zx/system/ulib/fit:headers",
 
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/sync/completion.h>

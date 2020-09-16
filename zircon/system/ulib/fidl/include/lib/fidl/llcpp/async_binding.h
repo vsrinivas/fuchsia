@@ -21,9 +21,6 @@
 
 namespace fidl {
 
-template <typename Interface>
-using OnUnboundFn = fit::callback<void(Interface*, UnbindInfo, zx::channel)>;
-
 namespace internal {
 
 using TypeErasedServerDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);

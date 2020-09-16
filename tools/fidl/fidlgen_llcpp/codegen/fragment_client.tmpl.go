@@ -76,10 +76,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
  private:
   friend class ::fidl::Client<{{ .Name }}>;
 
-  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
-             ::fidl::internal::TypeErasedOnUnboundFn on_unbound, AsyncEventHandlers handlers)
-      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher, std::move(on_unbound)),
-        handlers_(std::move(handlers)) {}
+  explicit ClientImpl(AsyncEventHandlers handlers) : handlers_(std::move(handlers)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 

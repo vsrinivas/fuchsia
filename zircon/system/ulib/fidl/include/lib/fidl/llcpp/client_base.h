@@ -21,7 +21,9 @@ namespace fidl {
 namespace internal {
 
 // ResponseContext contains the state for an outstanding asynchronous transaction. It inherits from
-// an intrusive container node so that ClientBase can track it.
+// an intrusive container node so that ClientBase can track it. The user (or generated code) passes
+// a pointer to the ResponseContext to the ClientBase, implicitly transferring ownership. Ownership
+// is only returned to the caller once either OnReply() or OnError() is invoked.
 // TODO(fxb/50664): fbl::WAVLTree must be made available in the SDK, otherwise it needs to be
 // replaced here with some tree that is available there.
 // NOTE: ResponseContext uses list_node_t in order to safely iterate over outstanding transactions
@@ -71,16 +73,16 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
 
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
 // handling and unbinding, and asynchronous transaction tracking. Users should not directly interact
-// with this class.
+// with this class. ClientBase objects are expected to be managed via std::shared_ptr.
 class ClientBase {
  public:
-  // Transfer ownership of the channel to a new client, initializing state.
-  ClientBase(zx::channel channel, async_dispatcher_t* dispatcher, TypeErasedOnUnboundFn on_unbound);
+  // Creates an unbound ClientBase. Bind() must be called before any other APIs are invoked.
+  ClientBase() = default;
 
   // If the binding is not already unbound or in the process of being unbound, unbinds the channel
   // from the dispatcher, invoking on_unbound if provided. Note that this object will have been
   // destroyed prior to on_unbound being invoked.
-  virtual ~ClientBase();
+  virtual ~ClientBase() = default;
 
   // Neither copyable nor movable.
   ClientBase(const ClientBase& other) = delete;
@@ -89,7 +91,9 @@ class ClientBase {
   ClientBase& operator=(ClientBase&& other) = delete;
 
   // Bind the channel to the dispatcher. Invoke on_unbound on error or unbinding.
-  zx_status_t Bind();
+  // NOTE: This is not thread-safe and must be called exactly once, before any other APIs.
+  zx_status_t Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
+                   async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound);
 
   // Asynchronously unbind the channel from the dispatcher. on_unbound will be invoked on a
   // dispatcher thread if provided.
@@ -100,6 +104,9 @@ class ClientBase {
 
   // Forget the transaction associated with the given context. Used when zx_channel_write() fails.
   void ForgetAsyncTxn(ResponseContext* context);
+
+  // Releases all outstanding `ResponseContext`s. Invoked after the ClientBase is unbound.
+  void ReleaseResponseContextsWithError();
 
   // Returns a strong reference to binding to prevent channel deletion during a zx_channel_call() or
   // zx_channel_write(). The caller is responsible for releasing the reference.
@@ -115,8 +122,9 @@ class ClientBase {
   virtual std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) = 0;
 
  private:
-  // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual Dispatch().
-  std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg);
+  // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual
+  // DispatchEvent().
+  std::optional<UnbindInfo> Dispatch(std::shared_ptr<ClientBase>&& calling_ref, fidl_msg_t* msg);
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncBinding> binding_;

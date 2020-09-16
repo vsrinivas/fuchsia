@@ -78,9 +78,7 @@ class TestProtocol {
    private:
     friend class Client<TestProtocol>;
 
-    ClientImpl(zx::channel channel, async_dispatcher_t* dispatcher,
-               internal::TypeErasedOnUnboundFn on_unbound, AsyncEventHandlers handlers)
-        : internal::ClientBase(std::move(channel), dispatcher, std::move(on_unbound)) {}
+    explicit ClientImpl(AsyncEventHandlers handlers) {}
 
     // For each event, increment the event count.
     std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) {
@@ -337,20 +335,20 @@ TEST(ClientBindingTestCase, BindingRefPreventsUnbind) {
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
-TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
-  class ReleaseTestResponseContext : public internal::ResponseContext {
-   public:
-    explicit ReleaseTestResponseContext(sync_completion_t* done)
-        : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
-          done_(done) {}
-    void OnReply(uint8_t* reply) override { delete this; }
-    void OnError() override {
-      sync_completion_signal(done_);
-      delete this;
-    }
-    sync_completion_t* done_;
-  };
+class ReleaseTestResponseContext : public internal::ResponseContext {
+ public:
+  explicit ReleaseTestResponseContext(sync_completion_t* done)
+      : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
+        done_(done) {}
+  void OnReply(uint8_t* reply) override { delete this; }
+  void OnError() override {
+    sync_completion_signal(done_);
+    delete this;
+  }
+  sync_completion_t* done_;
+};
 
+TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
@@ -365,6 +363,24 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
 
   // Delete the client and ensure that the response context is deleted.
   delete client;
+  EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+}
+
+TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnUnbound) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  Client<TestProtocol> client(std::move(local), loop.dispatcher());
+
+  // Create and register a response context which will signal when deleted.
+  sync_completion_t done;
+  client->PrepareAsyncTxn(new ReleaseTestResponseContext(&done));
+
+  // Trigger unbinding and wait for the transaction context to be released.
+  remote.reset();
   EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
 
