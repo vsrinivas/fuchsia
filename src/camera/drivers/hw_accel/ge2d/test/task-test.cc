@@ -70,7 +70,9 @@ void DuplicateWatermarkInfo(const water_mark_info_t& input, const zx::vmo& vmo, 
                             std::vector<water_mark_info_t>* output) {
   for (uint32_t i = 0; i < count; i++) {
     output->push_back(input);
-    output->back().watermark_vmo = vmo.get();
+    zx::vmo dup_vmo;
+    vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    output->back().watermark_vmo = dup_vmo.release();
   }
 }
 
@@ -166,6 +168,13 @@ class TaskTest : public zxtest::Test {
     ASSERT_OK(status);
   }
 
+  // This should be called after a watermark task has taken ownership of the watermark info.
+  void ClearWatermarkVmos() {
+    for (auto& watermark : duplicated_watermark_info_) {
+      watermark.watermark_vmo = ZX_HANDLE_INVALID;
+    }
+  }
+
   // Sets up Ge2dDevice, initialize a task.
   // Returns a task id.
   zx_status_t SetupForFrameProcessing(ddk_mock::MockMmioRegRegion& fake_regs, uint32_t& resize_task,
@@ -232,6 +241,9 @@ class TaskTest : public zxtest::Test {
   void TearDown() override {
     EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection_));
     EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection_));
+    for (auto& watermark : duplicated_watermark_info_) {
+      zx_handle_close(watermark.watermark_vmo);
+    }
   }
 
   void TriggerInterrupts(TaskType type) {
@@ -253,7 +265,7 @@ class TaskTest : public zxtest::Test {
   // Array of output Image formats.
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
   resize_info_t resize_info_;
-  water_mark_info_t watermark_info_;
+  water_mark_info_t watermark_info_{};
   std::vector<water_mark_info_t> duplicated_watermark_info_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
@@ -410,9 +422,11 @@ TEST_F(TaskTest, InitTaskTest) {
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);
     EXPECT_EQ(received_ids.end(), entry);
     received_ids.push_back(task_id);
+    std::vector<water_mark_info_t> watermark_info;
+    DuplicateWatermarkInfo(watermark_info_, watermark_vmo_, kImageFormatTableSize, &watermark_info);
     status = ge2d_device_->Ge2dInitTaskWaterMark(
-        &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
-        duplicated_watermark_info_.size(), output_image_format_table_, kImageFormatTableSize, 0,
+        &input_buffer_collection_, &output_buffer_collection_, watermark_info.data(),
+        watermark_info.size(), output_image_format_table_, kImageFormatTableSize, 0,
         &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     // Check to see if we are getting unique task ids.

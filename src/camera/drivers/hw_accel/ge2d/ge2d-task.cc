@@ -368,6 +368,8 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
       FX_LOG(ERROR, kTag, "Unable to get create contiguous input watermark VMO");
       return status;
     }
+    const char* kWatermarkName = "Ge2dWatermark";
+    wm.watermark_input_vmo.set_property(ZX_PROP_NAME, kWatermarkName, strlen(kWatermarkName));
     // Copy the watermark image over.
     fzl::VmoMapper mapped_watermark_input_vmo;
     status = mapped_watermark_input_vmo.Map(*zx::unowned_vmo(wm_info[i].watermark_vmo), 0,
@@ -402,6 +404,8 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
     }
 
     zx_cache_flush(mapped_contig_vmo.start(), output_vmo_size, ZX_CACHE_FLUSH_DATA);
+    mapped_watermark_input_vmo.Unmap();
+    zx_handle_close(wm_info[i].watermark_vmo);
   }
   // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
   status = zx::vmo::create_contiguous(bti, max_size, 0, &watermark_blended_vmo_);
@@ -409,6 +413,9 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
     FX_LOG(ERROR, kTag, "Unable to get create contiguous blended watermark VMO");
     return status;
   }
+  const char* kBlendedWatermarkName = "Ge2dBlendedWatermark";
+  watermark_blended_vmo_.set_property(ZX_PROP_NAME, kBlendedWatermarkName,
+                                      strlen(kBlendedWatermarkName));
   watermark_blended_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, max_size, nullptr, 0);
   AllocateWatermarkCanvasIds();
   return ZX_OK;
