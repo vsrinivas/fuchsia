@@ -8,6 +8,7 @@
 
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
+#include "connectivity_manager_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 // clang-format on
 
@@ -22,6 +23,7 @@ PlatformManagerImpl PlatformManagerImpl::sInstance;
 
 WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+  ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
   ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
 }
@@ -50,11 +52,13 @@ void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
 
 void PlatformManagerImpl::ShutdownWeaveStack(void) {
   Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_ShutdownWeaveStack();
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  ConnectivityMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(nullptr);
   context_.reset();
 }
 
-InetLayer::FuchsiaPlatformData* PlatformManagerImpl::GetPlatformData(void) {
+InetLayer::FuchsiaPlatformData *PlatformManagerImpl::GetPlatformData(void) {
   platform_data_.ctx = GetComponentContextForProcess();
   platform_data_.dispatcher = dispatcher_;
   return &platform_data_;

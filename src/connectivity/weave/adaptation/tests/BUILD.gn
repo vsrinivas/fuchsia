@@ -29,6 +29,9 @@ test_package("adaptation_tests") {
       name = "weave_config_manager_unittests"
     },
     {
+      name = "weave_connectivity_manager_unittests"
+    },
+    {
       name = "weave_thread_stack_manager_unittests"
     },
     {
@@ -42,6 +45,7 @@ test_package("adaptation_tests") {
     ":platform_case_auth_delegate_unittests",
     ":weave_ble_manager_unittests",
     ":weave_config_manager_unittests",
+    ":weave_connectivity_manager_unittests",
     ":weave_platform_manager_unittests",
     ":weave_thread_stack_manager_unittests",
   ]
@@ -161,6 +165,20 @@ executable("weave_thread_stack_manager_unittests") {
   sources = [ "thread_stack_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/weave/adaptation",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("weave_connectivity_manager_unittests") {
+  testonly = true
+  output_name = "weave_connectivity_manager_unittests"
+  sources = [ "connectivity_manager_unittests.cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

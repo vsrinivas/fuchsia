@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/weave_connectivity_manager_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

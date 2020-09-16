@@ -42,6 +42,9 @@ class PlatformManagerImpl final
   // Platform data contains component context and dispatcher.
   InetLayer::FuchsiaPlatformData* GetPlatformData(void);
 
+  // Posts an event to dispatcher.
+  void PostEvent(const WeaveDeviceEvent* event);
+
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
 
@@ -63,6 +66,10 @@ class PlatformManagerImpl final
   async_dispatcher_t* dispatcher_;
   InetLayer::FuchsiaPlatformData platform_data_;
 };
+
+inline void PlatformManagerImpl::PostEvent(const WeaveDeviceEvent* event) {
+  return _PostEvent(event);
+}
 
 /**
  * Returns the public interface of the PlatformManager singleton object.

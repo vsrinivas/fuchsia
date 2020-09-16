@@ -16,6 +16,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "configuration_manager_delegate_impl.h"
+#include "connectivity_manager_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
@@ -142,6 +143,7 @@ class BLEManagerTest : public WeaveTestFixture {
 
     ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+    ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().IsWoBLEEnabled(), true);
 
     ble_mgr_ = std::make_unique<BLEManagerImpl>();
