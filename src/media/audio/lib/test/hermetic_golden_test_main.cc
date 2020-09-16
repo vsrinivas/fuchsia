@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace media::audio::test {
@@ -19,6 +20,7 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  fxl::SetLogSettingsFromCommandLine(cl);
   media::audio::test::flag_save_inputs_and_outputs = cl.HasOption("save-inputs-and-outputs");
   return RUN_ALL_TESTS();
 }

@@ -267,6 +267,8 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
   audio_dev_enum_.events().OnDefaultDeviceChanged = [this](uint64_t old_default_token,
                                                            uint64_t new_default_token) {
     OnDefaultDeviceChanged(old_default_token, new_default_token);
+    AUDIO_LOG(DEBUG) << "Default device changed (old_token = " << old_default_token
+                     << ", new_token = " << new_default_token << ")";
   };
 }
 
