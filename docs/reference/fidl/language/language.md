@@ -458,7 +458,7 @@ Zircon, e.g. `channel`, `thread`, `vmo`. Please refer to the
 [grammar](grammar.md) for a full list.
 
 Structs, tables, and unions containing handles must be marked with the
-[`resource` modifier][#value-vs-resource].
+[`resource` modifier](#value-vs-resource).
 
 ```fidl
 // A record which contains some handles.
@@ -476,7 +476,7 @@ resource struct Record {
 *   Record type consisting of a sequence of typed fields.
 *   Declaration is not intended to be modified once deployed; use protocol
     extension instead.
-*   Declaration can have the [`resource` modifier][value-vs-resource].
+*   Declaration can have the [`resource` modifier](#value-vs-resource).
 *   Reference may be nullable.
 *   Structs contain zero or more members.
 
@@ -515,7 +515,7 @@ struct Circle {
 
 *   Record type consisting of a sequence of typed fields with ordinals.
 *   Declaration is intended for forward and backward compatibility in the face of schema changes.
-*   Declaration can have the [`resource` modifier][value-vs-resource].
+*   Declaration can have the [`resource` modifier](#value-vs-resource).
 *   Tables cannot be nullable. The semantics of "missing value" is expressed by an empty table
     i.e. where all members are absent, to avoid dealing with double nullability.
 *   Tables contain zero or more members.
@@ -562,7 +562,7 @@ table Profile {
 *   Declaration can be modified after deployment, while maintaining ABI
     compatibility. See the [Compatibility Guide][union-compat] for
     source-compatibility considerations.
-*   Declaration can have the [`resource` modifier][value-vs-resource].
+*   Declaration can have the [`resource` modifier](#value-vs-resource).
 *   Reference may be nullable.
 *   Unions contain one or more members. A union with no members would have no
     inhabitants and thus would make little sense in a wire format.
@@ -614,9 +614,9 @@ unknown data by the bindings.
 Every FIDL type is either a **value type** or a **resource type**. Resource
 types include:
 
-*   [handles][#handles]
-*   [protocol endpoints][#protocols-use]
-*   [aliases][#aliasing] of resource types
+*   [handles](#handles)
+*   [protocol endpoints](#protocols-use)
+*   [aliases](#aliasing) of resource types
 *   arrays and vectors of resource types
 *   structs, tables, and unions marked with the `resource` modifier
 *   nullable references to any of the above types
@@ -634,7 +634,7 @@ struct Foo { // ERROR: must be "resource struct Foo"
 Types can be marked with the `resource` modifier even if they do not contain
 handles. You should do this if you intend to add handles to the type in the
 future, since adding or removing the `resource` modifier requires
-[source-compatibility considerations](#resource-compat). For example:
+[source-compatibility considerations][resource-compat]. For example:
 
 ```fidl
 // No handles now, but we will add some in the future.
