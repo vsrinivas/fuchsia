@@ -13,6 +13,8 @@ mod dlc_parameter_negotiation;
 mod flow_control;
 mod modem_status;
 mod non_supported;
+mod remote_line_status;
+mod remote_port_negotiation;
 mod test_command;
 
 use crate::pub_decodable_enum;

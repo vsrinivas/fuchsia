@@ -44,6 +44,8 @@ rustc_binary("bin") {
     "src/rfcomm/frame/mux_commands/mod.rs",
     "src/rfcomm/frame/mux_commands/modem_status.rs",
     "src/rfcomm/frame/mux_commands/non_supported.rs",
+    "src/rfcomm/frame/mux_commands/remote_line_status.rs",
+    "src/rfcomm/frame/mux_commands/remote_port_negotiation.rs",
     "src/rfcomm/frame/mux_commands/test_command.rs",
     "src/rfcomm/mod.rs",
     "src/rfcomm/server.rs",
