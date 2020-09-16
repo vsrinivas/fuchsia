@@ -18,5 +18,21 @@ zx_library("mipi-dsi") {
   sdk = "source"
   sdk_headers = [ "lib/mipi-dsi/mipi-dsi.h" ]
   sources = [ "mipi-dsi.cc" ]
-  deps = [ "//sdk/banjo/ddk.protocol.dsiimpl" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.dsiimpl",
+    "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+  ]
 }

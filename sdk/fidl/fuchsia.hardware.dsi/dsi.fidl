@@ -69,7 +69,7 @@ table DsiConfig {
 table MipiDsiCmd {
     1: uint8 virtual_channel_id;
     2: uint8 dsi_data_type; // DSI data type as defined by mipi-dsi library
-    3: uint32 write_lenth; // Write length in bytes
+    3: uint32 write_length; // Write length in bytes
     4: uint32 expected_read_length; // Expected read length in bytes
     5: uint32 flags; // optional flags as defined by mipi-dsi library
 };

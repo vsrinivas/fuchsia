@@ -5,6 +5,7 @@
 #include "dsi-dw.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/mipi-dsi/mipi-dsi.h>
 
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
@@ -251,7 +252,7 @@ zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
   // 2.1 Configure virtual channel
   DsiDwDpiVcidReg::Get()
       .ReadFrom(&(*dsi_mmio_))
-      .set_dpi_vcid(MIPI_DSI_VIRTUAL_CHAN_ID)
+      .set_dpi_vcid(kMipiDsiVirtualChanId)
       .WriteTo(&(*dsi_mmio_));
 
   // 2.2, Configure Color format
@@ -548,26 +549,17 @@ zx_status_t DsiDw::GenericPayloadWrite(uint32_t data) {
 
 void DsiDw::EnableBta() {
   // enable ack req after each packet transmission
-  DsiDwCmdModeCfgReg::Get()
-      .ReadFrom(&(*dsi_mmio_))
-      .set_ack_rqst_en(MIPI_DSI_ACK)
-      .WriteTo(&(*dsi_mmio_));
+  DsiDwCmdModeCfgReg::Get().ReadFrom(&(*dsi_mmio_)).set_ack_rqst_en(1).WriteTo(&(*dsi_mmio_));
   // enable But Turn-Around request
-  DsiDwPckhdlCfgReg::Get().ReadFrom(&(*dsi_mmio_)).set_bta_en(MIPI_DSI_ACK).WriteTo(&(*dsi_mmio_));
+  DsiDwPckhdlCfgReg::Get().ReadFrom(&(*dsi_mmio_)).set_bta_en(1).WriteTo(&(*dsi_mmio_));
 }
 
 void DsiDw::DisableBta() {
   // disable ack req after each packet transmission
-  DsiDwCmdModeCfgReg::Get()
-      .ReadFrom(&(*dsi_mmio_))
-      .set_ack_rqst_en(MIPI_DSI_NO_ACK)
-      .WriteTo(&(*dsi_mmio_));
+  DsiDwCmdModeCfgReg::Get().ReadFrom(&(*dsi_mmio_)).set_ack_rqst_en(0).WriteTo(&(*dsi_mmio_));
 
   // disable But Turn-Around request
-  DsiDwPckhdlCfgReg::Get()
-      .ReadFrom(&(*dsi_mmio_))
-      .set_bta_en(MIPI_DSI_NO_ACK)
-      .WriteTo(&(*dsi_mmio_));
+  DsiDwPckhdlCfgReg::Get().ReadFrom(&(*dsi_mmio_)).set_bta_en(0).WriteTo(&(*dsi_mmio_));
 }
 
 zx_status_t DsiDw::WaitforBtaAck() {
@@ -586,7 +578,7 @@ zx_status_t DsiDw::WaitforBtaAck() {
 zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
   // Sanity check payload data and size
   if ((cmd.pld_data_count > 2) || (cmd.pld_data_count > 0 && cmd.pld_data_list == nullptr) ||
-      (cmd.dsi_data_type & MIPI_DSI_DT_GEN_SHORT_WRITE_0) != MIPI_DSI_DT_GEN_SHORT_WRITE_0) {
+      (cmd.dsi_data_type & kMipiDsiDtGenShortWrite0) != kMipiDsiDtGenShortWrite0) {
     DSI_ERROR("Invalid Gen short cmd sent\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -607,7 +599,7 @@ zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
 zx_status_t DsiDw::DcsWriteShort(const mipi_dsi_cmd_t& cmd) {
   // Sanity check payload data and size
   if ((cmd.pld_data_count > 1) || (cmd.pld_data_list == nullptr) ||
-      (cmd.dsi_data_type & MIPI_DSI_DT_DCS_SHORT_WRITE_0) != MIPI_DSI_DT_DCS_SHORT_WRITE_0) {
+      (cmd.dsi_data_type & kMipiDsiDtDcsShortWrite0) != kMipiDsiDtDcsShortWrite0) {
     DSI_ERROR("Invalid DCS short command\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -689,7 +681,7 @@ zx_status_t DsiDw::GenRead(const mipi_dsi_cmd_t& cmd) {
   if (cmd.flags & MIPI_DSI_CMD_FLAGS_SET_MAX) {
     // We will set the max return size as rlen
     regVal |= GEN_HDR_VC(cmd.virt_chn_id);
-    regVal |= MIPI_DSI_DT_SET_MAX_RET_PKT;
+    regVal |= kMipiDsiDtSetMaxRetPkt;
     regVal |= GEN_HDR_WC_LSB(static_cast<uint32_t>(cmd.rsp_data_count) & 0xFF);
     regVal |= GEN_HDR_WC_MSB((static_cast<uint32_t>(cmd.rsp_data_count) >> 8) & 0xFF);
 
@@ -764,23 +756,23 @@ zx_status_t DsiDw::SendCmd(const mipi_dsi_cmd_t& cmd) {
   zx_status_t status = ZX_OK;
 
   switch (cmd.dsi_data_type) {
-    case MIPI_DSI_DT_GEN_SHORT_WRITE_0:
-    case MIPI_DSI_DT_GEN_SHORT_WRITE_1:
-    case MIPI_DSI_DT_GEN_SHORT_WRITE_2:
+    case kMipiDsiDtGenShortWrite0:
+    case kMipiDsiDtGenShortWrite1:
+    case kMipiDsiDtGenShortWrite2:
       status = GenWriteShort(cmd);
       break;
-    case MIPI_DSI_DT_GEN_LONG_WRITE:
-    case MIPI_DSI_DT_DCS_LONG_WRITE:
+    case kMipiDsiDtGenLongWrite:
+    case kMipiDsiDtDcsLongWrite:
       status = GenWriteLong(cmd);
       break;
-    case MIPI_DSI_DT_GEN_SHORT_READ_0:
-    case MIPI_DSI_DT_GEN_SHORT_READ_1:
-    case MIPI_DSI_DT_GEN_SHORT_READ_2:
-    case MIPI_DSI_DT_DCS_READ_0:
+    case kMipiDsiDtGenShortRead0:
+    case kMipiDsiDtGenShortRead1:
+    case kMipiDsiDtGenShortRead2:
+    case kMipiDsiDtDcsRead0:
       status = GenRead(cmd);
       break;
-    case MIPI_DSI_DT_DCS_SHORT_WRITE_0:
-    case MIPI_DSI_DT_DCS_SHORT_WRITE_1:
+    case kMipiDsiDtDcsShortWrite0:
+    case kMipiDsiDtDcsShortWrite1:
       status = DcsWriteShort(cmd);
       break;
     default:
