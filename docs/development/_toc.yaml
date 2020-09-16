@@ -4,7 +4,8 @@
 toc:
 - title: "Overview"
   path: /docs/development/README.md
-- heading: "Set up Fuchsia hardware"
+- heading: "Hardware setup"
+- title: "Set up Fuchsia hardware"
   section:
   - include: /docs/development/hardware/_toc.yaml
 - heading: "Build and run"
