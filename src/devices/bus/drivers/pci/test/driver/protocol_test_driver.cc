@@ -464,6 +464,7 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   // Setting the same mode twice should work if no IRQs have been allocated off of this one.
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
+  ASSERT_OK(pci().ConfigureIrqMode(1));
 }
 
 const size_t kWaitDeadlineSecs = 5u;

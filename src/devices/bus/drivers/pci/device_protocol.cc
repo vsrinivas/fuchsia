@@ -61,37 +61,28 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
   switch (request_.op) {
     case PCI_OP_CONFIG_READ:
       return RpcConfigRead(ch);
-      break;
     case PCI_OP_CONFIG_WRITE:
       return RpcConfigWrite(ch);
-      break;
+    case PCI_OP_CONFIGURE_IRQ_MODE:
+      return RpcConfigureIrqMode(ch);
     case PCI_OP_ENABLE_BUS_MASTER:
       return RpcEnableBusMaster(ch);
-      break;
     case PCI_OP_GET_BAR:
       return RpcGetBar(ch);
-      break;
     case PCI_OP_GET_BTI:
       return RpcGetBti(ch);
-      break;
     case PCI_OP_GET_DEVICE_INFO:
       return RpcGetDeviceInfo(ch);
-      break;
     case PCI_OP_GET_NEXT_CAPABILITY:
       return RpcGetNextCapability(ch);
-      break;
     case PCI_OP_MAP_INTERRUPT:
       return RpcMapInterrupt(ch);
-      break;
     case PCI_OP_QUERY_IRQ_MODE:
       return RpcQueryIrqMode(ch);
-      break;
     case PCI_OP_RESET_DEVICE:
       return RpcResetDevice(ch);
-      break;
     case PCI_OP_SET_IRQ_MODE:
       return RpcSetIrqMode(ch);
-      break;
     default:
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   };
@@ -312,24 +303,31 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcConfigureIrqMode(const zx::unowned_channel& ch) {
-  pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
-  zx_status_t st = SetIrqMode(mode, request_.irq.requested_irqs);
-  if (st != ZX_OK) {
-    mode = PCI_IRQ_MODE_MSI;
-    st = SetIrqMode(mode, request_.irq.requested_irqs);
+  uint32_t irq_cnt = request_.irq.requested_irqs;
+  std::array<pci_irq_mode_t, 2> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI};
+  for (auto& mode : modes) {
+    if (auto result = QueryIrqMode(mode); result.is_ok() && result.value() >= irq_cnt) {
+      zx_status_t st = SetIrqMode(mode, irq_cnt);
+      zxlogf(DEBUG, "[%s] ConfigureIrqMode { mode = %u, requested_irqs = %u, status = %s }",
+             cfg_->addr(), mode, irq_cnt, zx_status_get_string(st));
+      return RpcReply(ch, st);
+    }
   }
 
-  zxlogf(DEBUG, "[%s] ConfigureIrqMode { mode = %u, requested_irqs = %u, status = %s }",
-         cfg_->addr(), mode, request_.irq.requested_irqs, zx_status_get_string(st));
-  return RpcReply(ch, st);
+  zxlogf(DEBUG, "[%s] ConfigureIrqMode { no valid modes found }", cfg_->addr());
+  return RpcReply(ch, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t Device::RpcQueryIrqMode(const zx::unowned_channel& ch) {
   response_.irq.max_irqs = 0;
-  zx_status_t st = QueryIrqMode(request_.irq.mode, &response_.irq.max_irqs);
+  auto result = QueryIrqMode(request_.irq.mode);
+  if (result.is_ok()) {
+    response_.irq.max_irqs = result.value();
+  }
+
   zxlogf(DEBUG, "[%s] QueryIrqMode { mode = %u, max_irqs = %u, status = %s }", cfg_->addr(),
-         request_.irq.mode, response_.irq.max_irqs, zx_status_get_string(st));
-  return RpcReply(ch, st);
+         request_.irq.mode, response_.irq.max_irqs, result.status_string());
+  return RpcReply(ch, result.status_value());
 }
 
 zx_status_t Device::RpcSetIrqMode(const zx::unowned_channel& ch) {

@@ -16,29 +16,26 @@
 
 namespace pci {
 
-zx_status_t Device::QueryIrqMode(pci_irq_mode_t mode, uint32_t* max_irqs) {
-  ZX_DEBUG_ASSERT(max_irqs);
+zx::status<uint32_t> Device::QueryIrqMode(pci_irq_mode_t mode) {
   fbl::AutoLock dev_lock(&dev_lock_);
   switch (mode) {
     case PCI_IRQ_MODE_LEGACY:
-      return ZX_ERR_NOT_SUPPORTED;
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
     case PCI_IRQ_MODE_MSI:
       if (caps_.msi) {
-        *max_irqs = caps_.msi->vectors_avail();
-        return ZX_OK;
+        return zx::ok(caps_.msi->vectors_avail());
       }
       break;
     case PCI_IRQ_MODE_MSI_X:
       if (caps_.msix) {
-        *max_irqs = caps_.msix->table_size();
-        return ZX_OK;
+        return zx::ok(caps_.msix->table_size());
       }
       break;
     case PCI_IRQ_MODE_DISABLED:
     default:
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
@@ -67,9 +64,15 @@ zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
 
   switch (mode) {
     case PCI_IRQ_MODE_MSI:
-      return EnableMsi(irq_cnt);
+      if (caps_.msi) {
+        return EnableMsi(irq_cnt);
+      }
+      break;
     case PCI_IRQ_MODE_MSI_X:
-      return EnableMsix(irq_cnt);
+      if (caps_.msix) {
+        return EnableMsix(irq_cnt);
+      }
+      break;
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

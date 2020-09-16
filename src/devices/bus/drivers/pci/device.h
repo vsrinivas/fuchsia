@@ -200,8 +200,7 @@ class Device : public PciDeviceType,
   // These methods handle IRQ configuration and are generally called by the
   // PciProtocol methods, though they may be used to disable IRQs on
   // initialization as well.
-  zx_status_t QueryIrqMode(pci_irq_mode_t mode, uint32_t* max_irqs) __TA_EXCLUDES(dev_lock_)
-      __TA_EXCLUDES(dev_lock_);
+  zx::status<uint32_t> QueryIrqMode(pci_irq_mode_t mode) __TA_EXCLUDES(dev_lock_);
   zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
   zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
