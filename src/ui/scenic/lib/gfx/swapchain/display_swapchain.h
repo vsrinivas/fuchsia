@@ -33,9 +33,8 @@ class DisplaySwapchainMockTest;
 class DisplaySwapchainTest;
 }  // namespace test
 
-// DisplaySwapchain implements the Swapchain interface by using a Vulkan
-// swapchain to present images to a physical display using the Zircon
-// display controller API.
+// DisplaySwapchain implements the Swapchain interface to present images to a physical display using
+// the Zircon display controller API.
 class DisplaySwapchain : public Swapchain {
  public:
   DisplaySwapchain(

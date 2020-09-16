@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/hardware-display-controller-provider#meta/hdcp.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
             },
             "system-services": [
@@ -15,13 +16,13 @@
     },
     "sandbox": {
         "dev": [
-            "class/display-controller",
             "class/sysmem"
         ],
         "features": [
             "vulkan"
         ],
         "services": [
+            "fuchsia.hardware.display.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

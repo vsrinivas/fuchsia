@@ -88,6 +88,7 @@ void DisplayInfoDelegate::GetDisplayOwnershipEvent(
 }
 
 App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
+         fit::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
@@ -108,7 +109,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
   FX_DCHECK(!device_watcher_);
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
-  fit::bridge<std::shared_ptr<scenic_impl::display::Display>> display_bridge;
+  fit::bridge<std::shared_ptr<display::Display>> display_bridge;
 
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
@@ -117,16 +118,23 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
         device_watcher_.reset();
       });
 
-  display_manager_.WaitForDefaultDisplayController(
+  // Instantiate DisplayManager and schedule a task to inject the display controller into it, once
+  // it becomes available.
+  display_manager_ = std::make_unique<display::DisplayManager>(
       [this, completer = std::move(display_bridge.completer)]() mutable {
-        completer.complete_ok(display_manager_.default_display_shared());
+        completer.complete_ok(display_manager_->default_display_shared());
       });
+  executor_.schedule_task(
+      dc_handles_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+        display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
+                                                       std::move(handles.value().dc_device));
+      }));
 
+  // Schedule a task to finish initialization once all promises have been completed.
   auto p =
       fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
           .and_then([this](std::tuple<fit::result<escher::EscherUniquePtr>,
-                                      fit::result<std::shared_ptr<scenic_impl::display::Display>>>&
-                               results) {
+                                      fit::result<std::shared_ptr<display::Display>>>& results) {
             InitializeServices(std::move(std::get<0>(results).value()),
                                std::move(std::get<1>(results).value()));
           });
@@ -221,7 +229,8 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_, &display_manager_);
+  auto gfx =
+      scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_, display_manager_.get());
   FX_DCHECK(gfx);
 
   frame_scheduler_->AddSessionUpdater(scenic_);

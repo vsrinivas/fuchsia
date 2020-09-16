@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/real_hw_display_controller_provider"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

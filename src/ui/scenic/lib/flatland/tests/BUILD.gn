@@ -29,6 +29,7 @@ executable("unittests") {
     "//garnet/public/lib/gtest:gtest",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/display:hdcp_client",
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/flatland/renderer",

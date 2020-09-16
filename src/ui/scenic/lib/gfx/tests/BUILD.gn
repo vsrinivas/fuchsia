@@ -205,6 +205,8 @@ executable("swapchain_tests") {
   deps = [
     ":testing_deps",
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/display:hdcp_client",
+    "//src/ui/lib/display:hdcp_service",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
 }

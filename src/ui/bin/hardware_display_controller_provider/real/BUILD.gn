@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+executable("bin") {
+  output_name = "real_hw_display_controller_provider"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/ui/lib/display:hdcp_service",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+}

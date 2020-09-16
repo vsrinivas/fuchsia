@@ -10,8 +10,6 @@ source_set("display") {
     "display_controller.h",
     "display_controller_listener.cc",
     "display_controller_listener.h",
-    "display_controller_watcher.cc",
-    "display_controller_watcher.h",
     "display_manager.cc",
     "display_manager.h",
     "display_manager2.cc",
@@ -22,9 +20,7 @@ source_set("display") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.display",
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
     "//sdk/fidl/fuchsia.ui.display",
-    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
@@ -37,7 +33,6 @@ source_set("display") {
     # TODO(fxb/23686): Remove this when we externalize Displays.
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
-    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]

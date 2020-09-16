@@ -179,6 +179,7 @@ group("scenic") {
     "//garnet/bin/ui/benchmarks/transparency_benchmark",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/prod:scenic",
+    "//src/ui/bin/hardware_display_controller_provider",
     "//src/ui/scenic:tests",
   ]
 }

@@ -80,6 +80,7 @@ test("touch-input-test-bin") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",

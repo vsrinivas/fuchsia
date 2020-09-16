@@ -187,8 +187,10 @@ struct ClientCompositionOp {
 /// Provider for display controllers.
 ///
 /// The driver supports two simultaneous clients - a primary client and a virtcon
-/// client.
-[ForDeprecatedCBindings]
+/// client.  In some cases, the provider service may provide access to only one or
+/// the other; if the client tries to open the other then `ZX_ERR_NOT_SUPPORTED` will
+/// be returned.
+[Discoverable, ForDeprecatedCBindings]
 protocol Provider {
     /// Open a virtcon client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new

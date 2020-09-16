@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"

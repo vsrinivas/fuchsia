@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
+#include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -12,6 +13,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
@@ -53,8 +55,9 @@ class DisplaySwapchainTest : public Fixture {
     gtest::RealLoopFixture::SetUp();
 
     async_set_default_dispatcher(dispatcher());
+    executor_ = std::make_unique<async::Executor>(dispatcher());
     sysmem_ = std::make_unique<Sysmem>();
-    display_manager_ = std::make_unique<display::DisplayManager>();
+    display_manager_ = std::make_unique<display::DisplayManager>([]() {});
 
     auto vulkan_device = CreateVulkanDeviceQueues(/*use_protected_memory*/ false);
     escher_ = std::make_unique<escher::Escher>(vulkan_device);
@@ -74,7 +77,14 @@ class DisplaySwapchainTest : public Fixture {
     error_reporter_ = std::make_shared<TestErrorReporter>();
     event_reporter_ = std::make_shared<TestEventReporter>();
     session_ = std::make_unique<Session>(1, session_context, event_reporter_, error_reporter_);
-    display_manager_->WaitForDefaultDisplayController([] {});
+
+    auto hdc_promise = ui_display::GetHardwareDisplayController();
+    executor_->schedule_task(
+        hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+          display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
+                                                         std::move(handles.value().dc_device));
+        }));
+
     RunLoopUntil([this] { return display_manager_->default_display() != nullptr; });
   }
 
@@ -87,6 +97,7 @@ class DisplaySwapchainTest : public Fixture {
     release_fence_signaller_.reset();
     escher_.reset();
     sysmem_.reset();
+    executor_.reset();
     display_manager_.reset();
     session_.reset();
     error_reporter_.reset();
@@ -150,6 +161,7 @@ class DisplaySwapchainTest : public Fixture {
 
   escher::Escher* escher() { return escher_.get(); }
   Sysmem* sysmem() { return sysmem_.get(); }
+  std::unique_ptr<async::Executor> executor_;
   display::DisplayManager* display_manager() { return display_manager_.get(); }
   Session* session() { return session_.get(); }
   display::Display* display() { return display_manager()->default_display(); }

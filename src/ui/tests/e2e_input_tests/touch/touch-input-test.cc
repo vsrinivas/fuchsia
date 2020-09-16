@@ -4,6 +4,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
+#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -106,14 +107,24 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
 
     // Set up Scenic inside the test environment.
     {
-      fuchsia::sys::LaunchInfo launch;
-      launch.url = kScenic;
-      if (FX_VLOG_IS_ON(1)) {
-        launch.arguments.emplace();
-        launch.arguments->push_back("--verbose=2");
-      }
-      is_ok =
-          services->AddServiceWithLaunchInfo(std::move(launch), fuchsia::ui::scenic::Scenic::Name_);
+      auto launch_info_provider = []() {
+        fuchsia::sys::LaunchInfo launch_info;
+        launch_info.url = kScenic;
+        if (FX_VLOG_IS_ON(1)) {
+          launch_info.arguments.emplace();
+          launch_info.arguments->push_back("--verbose=2");
+        }
+        return launch_info;
+      };
+
+      is_ok = services->AddServiceWithLaunchInfo(kScenic, launch_info_provider,
+                                                 fuchsia::ui::scenic::Scenic::Name_);
+      FX_CHECK(is_ok == ZX_OK);
+
+      // Scenic needs access to the fuchsia.hardware.display.Provider service, which is typically
+      // and in this case provided by Scenic itself.
+      is_ok = services->AddServiceWithLaunchInfo(kScenic, launch_info_provider,
+                                                 fuchsia::hardware::display::Provider::Name_);
       FX_CHECK(is_ok == ZX_OK);
       is_ok = services->AddServiceWithLaunchInfo({.url = kScenic},
                                                  fuchsia::ui::pointerinjector::Registry::Name_);
@@ -277,6 +288,8 @@ TEST_F(TouchInputTest, FlutterTap) {
   const std::string kOneFlutter = "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;
+
+  FX_LOGS(INFO) << "***** JJOSH: printing out something in the test, just to see.";
 
   // Get the display dimensions
   auto scenic = test_env()->ConnectToService<fuchsia::ui::scenic::Scenic>();

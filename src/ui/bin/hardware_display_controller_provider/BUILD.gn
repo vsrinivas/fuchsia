@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("hardware_display_controller_provider") {
+  public_deps = [ ":hardware-display-controller-provider" ]
+}
+
+package("hardware-display-controller-provider") {
+  deps = [ "real:bin" ]
+
+  binaries = [
+    {
+      name = "real_hw_display_controller_provider"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/real_hdcp.cmx")
+      dest = "hdcp.cmx"
+    },
+  ]
+}

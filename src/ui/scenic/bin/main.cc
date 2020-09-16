@@ -15,6 +15,8 @@
 #include "lib/sys/inspect/cpp/component.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/ui/lib/display/get_hardware_display_controller.h"
+#include "src/ui/lib/display/hardware_display_controller_provider_impl.h"
 #include "src/ui/scenic/bin/app.h"
 #include "src/ui/scenic/lib/scenic/util/scheduler_profile.h"
 
@@ -30,8 +32,16 @@ int main(int argc, const char** argv) {
 
   // Set up an inspect::Node to inject into the App.
   sys::ComponentInspector inspector(app_context.get());
+
+  // Obtain the default display controller via the fuchsia.hardware.display.Provider service that we
+  // find in our environment.  Scenic provides its own default implementation of this service, which
+  // can be overridden by the environment (e.g. by a test's "injected-services" facet).
+  ui_display::HardwareDisplayControllerProviderImpl hdcp_service_impl(app_context.get());
+  auto display_controller_promise = ui_display::GetHardwareDisplayController();
+
+  // Instantiate Scenic app.
   scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),
-                       [&loop] { loop.Quit(); });
+                       std::move(display_controller_promise), [&loop] { loop.Quit(); });
 
   // TODO(fxbug.dev/40858): Migrate to the role-based scheduler API when available,
   // instead of hard coding parameters.

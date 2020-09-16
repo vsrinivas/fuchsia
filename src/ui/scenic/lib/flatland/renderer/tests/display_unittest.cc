@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-testing/test_loop.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -10,16 +11,16 @@
 #include <thread>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
+#include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
-
-#include "src/ui/scenic/lib/display/util.h"
 
 using namespace scenic_impl;
 using namespace display;
@@ -37,9 +38,17 @@ class DisplayTest : public gtest::RealLoopFixture {
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
 
     async_set_default_dispatcher(dispatcher());
-    display_manager_ = std::make_unique<display::DisplayManager>();
+    executor_ = std::make_unique<async::Executor>(dispatcher());
 
-    display_manager_->WaitForDefaultDisplayController([] {});
+    display_manager_ = std::make_unique<display::DisplayManager>([]() {});
+
+    auto hdc_promise = ui_display::GetHardwareDisplayController();
+    executor_->schedule_task(
+        hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+          display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
+                                                         std::move(handles.value().dc_device));
+        }));
+
     RunLoopUntil([this] { return display_manager_->default_display() != nullptr; });
   }
 
@@ -47,6 +56,7 @@ class DisplayTest : public gtest::RealLoopFixture {
     if (VK_TESTS_SUPPRESSED()) {
       return;
     }
+    executor_.reset();
     display_manager_.reset();
     sysmem_allocator_ = nullptr;
     gtest::RealLoopFixture::TearDown();
@@ -71,6 +81,7 @@ class DisplayTest : public gtest::RealLoopFixture {
     return layer_id;
   }
 
+  std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<display::DisplayManager> display_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };

@@ -42,7 +42,7 @@ class DisplaySwapchainMockTest : public gtest::TestLoopFixture {
 
     async_set_default_dispatcher(dispatcher());
     sysmem_ = std::make_unique<Sysmem>();
-    display_manager_ = std::make_unique<display::DisplayManager>();
+    display_manager_ = std::make_unique<display::DisplayManager>([]() {});
   }
 
   // |testing::Test|

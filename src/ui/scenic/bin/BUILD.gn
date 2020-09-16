@@ -25,6 +25,8 @@ executable("bin") {
     ":base_deps",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/cobalt/cpp:cobalt_logger",
+    "//src/ui/lib/display:hdcp_client",
+    "//src/ui/lib/display:hdcp_service",
     "//src/ui/scenic/lib/annotation:annotation_registry",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
     "//src/ui/scenic/lib/shutdown",

@@ -10,7 +10,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
-#include "src/ui/scenic/lib/display/display_controller_watcher.h"
 
 namespace scenic_impl {
 namespace display {
@@ -18,11 +17,10 @@ namespace display {
 // Discovers and owns the default display controller, and waits for and exposes the default display.
 class DisplayManager {
  public:
-  DisplayManager() = default;
+  // |display_available_cb| is a one-shot callback that is triggered when the first display is
+  // observed, and cleared immediately afterward.
+  explicit DisplayManager(fit::closure display_available_cb);
   ~DisplayManager() = default;
-
-  // Waits for the default display to become available then invokes the callback.
-  void WaitForDefaultDisplayController(fit::closure display_available_cb);
 
   void BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
@@ -58,7 +56,6 @@ class DisplayManager {
 
   std::shared_ptr<Display> default_display_;
 
-  display::DisplayControllerWatcher dc_watcher_;
   fit::closure display_available_cb_;
   // A boolean indicating whether or not we have ownership of the display
   // controller (not just individual displays). The default is no.

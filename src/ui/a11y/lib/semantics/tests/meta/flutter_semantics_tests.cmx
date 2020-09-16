@@ -5,7 +5,7 @@
                 "fuchsia.accessibility.ColorTransform": "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
                 "fuchsia.accessibility.Magnifier": "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",

@@ -1,0 +1,48 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Provides a C++ implementation of fuchsia.hardware.display.Provider, which returns a connection to
+# the default display controller (via a proxied connection to the driver-provided version).  This
+# makes it easy for a component to implement this service.
+#
+# NOTE: the component's sandbox must contain "dev": "class/display-controller".
+source_set("hdcp_service") {
+  sources = [
+    "hardware_display_controller_provider_impl.cc",
+    "hardware_display_controller_provider_impl.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.display",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
+    "//sdk/lib/sys/cpp:cpp",
+    "//src/lib/files",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+# Provides a C++ utility function GetHardwareDisplayController() which connects to and interacts
+# with the fuchsia.hardware.display.Provider service, found within the component's environment.
+source_set("hdcp_client") {
+  sources = [
+    "get_hardware_display_controller.cc",
+    "get_hardware_display_controller.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+  ]
+}

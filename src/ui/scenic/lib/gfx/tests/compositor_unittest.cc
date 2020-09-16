@@ -38,7 +38,7 @@ class CompositorTest : public SessionTest {
 
   void SetUp() {
     SessionTest::SetUp();
-    display_manager_ = std::make_unique<display::DisplayManager>();
+    display_manager_ = std::make_unique<display::DisplayManager>([]() {});
 
     constexpr float display_width = 1024;
     constexpr float display_height = 768;

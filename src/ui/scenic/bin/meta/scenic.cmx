@@ -13,6 +13,7 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.hardware.display.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sysmem.Allocator",

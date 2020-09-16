@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-testing/test_loop.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -20,6 +21,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
@@ -74,20 +76,28 @@ class EngineTest : public gtest::RealLoopFixture {
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
 
     async_set_default_dispatcher(dispatcher());
-    display_manager_ = std::make_unique<scenic_impl::display::DisplayManager>();
 
     // TODO(fxbug.dev/59646): We want all of the flatland tests to be "headless" and not make use
     // of the real display controller. This isn't fully possible at the moment since we need the
     // real DC's functionality to register buffer collections. Once the new hardware independent
     // display controller driver is ready, we can hook that up to the fidl interface pointer instead
     // and keep the tests hardware agnostic.
-    display_manager_->WaitForDefaultDisplayController([] {});
+    executor_ = std::make_unique<async::Executor>(dispatcher());
+    display_manager_ = std::make_unique<scenic_impl::display::DisplayManager>([]() {});
+    auto hdc_promise = ui_display::GetHardwareDisplayController();
+    executor_->schedule_task(
+        hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+          display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
+                                                         std::move(handles.value().dc_device));
+        }));
+
     zx::duration timeout = zx::sec(5);
     RunLoopWithTimeoutOrUntil([this] { return display_manager_->default_display() != nullptr; },
                               timeout);
   }
 
   void TearDown() override {
+    executor_.reset();
     display_manager_.reset();
     sysmem_allocator_ = nullptr;
     gtest::RealLoopFixture::TearDown();
@@ -226,6 +236,7 @@ class EngineTest : public gtest::RealLoopFixture {
   const std::shared_ptr<LinkSystem> link_system_;
   std::shared_ptr<flatland::NullRenderer> renderer_;
   const scenic_impl::display::test::DisplayControllerObjects display_controller_objs_;
+  std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<scenic_impl::display::DisplayManager> display_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };

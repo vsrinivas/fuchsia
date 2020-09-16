@@ -34,6 +34,7 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::s
 // the binary, making each test not hermetic wrt. the others. A trade-off is
 // that the |sys::testing::TestWithEnvironment| method is more verbose.
 const std::map<std::string, std::string> kServices = {
+    {"fuchsia.hardware.display.Provider", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.tracing.provider.Registry",
      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
     {"fuchsia.ui.input.ImeService", "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"},

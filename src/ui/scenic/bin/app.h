@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "src/lib/fsl/io/device_watcher.h"
+#include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
@@ -41,6 +42,7 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
 class App {
  public:
   explicit App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
+               fit::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
                fit::closure quit_callback);
 
  private:
@@ -52,7 +54,7 @@ class App {
   std::shared_ptr<ShutdownManager> shutdown_manager_;
 
   gfx::Sysmem sysmem_;
-  display::DisplayManager display_manager_;
+  std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;

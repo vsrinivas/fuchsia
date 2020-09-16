@@ -12,21 +12,15 @@
 namespace scenic_impl {
 namespace display {
 
-void DisplayManager::WaitForDefaultDisplayController(fit::closure display_available_cb) {
-  FX_DCHECK(!default_display_);
-
-  display_available_cb_ = std::move(display_available_cb);
-
-  dc_watcher_.WaitForDisplayController([this](zx::channel dc_device, zx::channel dc_channel) {
-    BindDefaultDisplayController(
-        fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(std::move(dc_channel)),
-        std::move(dc_device));
-  });
-}
+DisplayManager::DisplayManager(fit::closure display_available_cb)
+    : display_available_cb_(std::move(display_available_cb)) {}
 
 void DisplayManager::BindDefaultDisplayController(
     fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
     zx::channel dc_device) {
+  FX_DCHECK(!default_display_controller_);
+  FX_DCHECK(controller);
+  FX_DCHECK(dc_device);
   default_display_controller_ = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
   default_display_controller_->Bind(std::move(controller));
   default_display_controller_listener_ = std::make_shared<display::DisplayControllerListener>(
@@ -49,8 +43,10 @@ void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::I
                                   std::move(display.pixel_format));
     OnClientOwnershipChange(owns_display_controller_);
 
-    display_available_cb_();
-    display_available_cb_ = nullptr;
+    if (display_available_cb_) {
+      display_available_cb_();
+      display_available_cb_ = nullptr;
+    }
   } else {
     for (uint64_t id : removed) {
       if (default_display_->display_id() == id) {
