@@ -80,14 +80,15 @@ struct SetColorBufferVulkanMode2Cmd {
 constexpr uint32_t kOP_rcSetColorBufferVulkanMode2 = 10051;
 constexpr uint32_t kSize_rcSetColorBufferVulkanMode2 = 20;
 
-struct __attribute__((__packed__)) MapGpaToBufferHandleCmd {
+struct __attribute__((__packed__)) MapGpaToBufferHandle2Cmd {
   uint32_t op;
   uint32_t size;
   uint32_t id;
   uint64_t gpa;
+  uint64_t map_size;
 };
-constexpr uint32_t kOP_rcMapGpaToBufferHandle = 10052;
-constexpr uint32_t kSize_rcMapGpaToBufferHandle = 20;
+constexpr uint32_t kOP_rcMapGpaToBufferHandle2 = 10054;
+constexpr uint32_t kSize_rcMapGpaToBufferHandle2 = 28;
 
 zx_koid_t GetKoidForVmo(const zx::vmo& vmo) {
   zx_info_handle_basic_t info;
@@ -422,8 +423,15 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
   int32_t hw_address_page_offset = -1;
   if (create_params.memory_property() &
       llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) {
+    uint64_t vmo_size;
+    status = vmo.get_size(&vmo_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: zx_vmo_get_size error: %d", kTag, status);
+      return fit::error(status);
+    }
     uint32_t map_result = 0;
-    status = MapGpaToBufferHandleLocked(id, create_params.physical_address(), &map_result);
+    status =
+        MapGpaToBufferHandleLocked(id, create_params.physical_address(), vmo_size, &map_result);
     if (status != ZX_OK || map_result < 0) {
       zxlogf(ERROR, "%s: failed to map gpa to color buffer: %d %d", kTag, status, map_result);
       return fit::error(status);
@@ -723,16 +731,18 @@ zx_status_t Control::SetColorBufferVulkanMode2Locked(uint32_t id, uint32_t mode,
   return ExecuteCommandLocked(kSize_rcSetColorBufferVulkanMode2, result);
 }
 
-zx_status_t Control::MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint32_t* result) {
-  TRACE_DURATION("gfx", "Control::MapGpaToBufferHandleLocked", "id", id, "gpa", gpa);
+zx_status_t Control::MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint64_t size,
+                                                uint32_t* result) {
+  TRACE_DURATION("gfx", "Control::MapGpaToBufferHandleLocked", "id", id, "gpa", gpa, "size", size);
 
-  auto cmd = static_cast<MapGpaToBufferHandleCmd*>(io_buffer_.virt());
-  cmd->op = kOP_rcMapGpaToBufferHandle;
-  cmd->size = kSize_rcMapGpaToBufferHandle;
+  auto cmd = static_cast<MapGpaToBufferHandle2Cmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcMapGpaToBufferHandle2;
+  cmd->size = kSize_rcMapGpaToBufferHandle2;
   cmd->id = id;
   cmd->gpa = gpa;
+  cmd->map_size = size;
 
-  return ExecuteCommandLocked(kSize_rcMapGpaToBufferHandle, result);
+  return ExecuteCommandLocked(kSize_rcMapGpaToBufferHandle2, result);
 }
 
 void Control::RemoveHeap(Heap* heap) {

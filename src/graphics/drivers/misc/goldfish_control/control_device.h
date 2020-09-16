@@ -101,7 +101,8 @@ class Control : public ControlType,
       TA_REQ(lock_);
   zx_status_t SetColorBufferVulkanMode2Locked(uint32_t id, uint32_t mode, uint32_t memory_property,
                                               uint32_t* result) TA_REQ(lock_);
-  zx_status_t MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint32_t* result) TA_REQ(lock_);
+  zx_status_t MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint64_t size, uint32_t* result)
+      TA_REQ(lock_);
 
   fbl::Mutex lock_;
   ddk::GoldfishPipeProtocolClient pipe_;
