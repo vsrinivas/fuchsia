@@ -22,7 +22,7 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-fx-warn "This command is being deprecated in favor of \`fx test\`. Read more at:\n  - https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests\n"
+fx-warn "This command is being deprecated in favor of \`fx test\`.\n         Usage: fx test <TEST_NAME>\n         To run end-to-end tests: fx test --e2e <TEST_NAME>\n         For more information, visit: https://fuchsia.dev/fuchsia-src/development/testing/run_tests_as_components\n"
 
 TEST_NAMES=()
 function main {

@@ -59,7 +59,7 @@ function main {
     shift
   esac
 
-  fx-warn "This command is being deprecated in favor of \`fx test\`. Read more at:\n  - https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests\n"
+  fx-warn "This command is being deprecated in favor of \`fx test\`.\n         Usage: fx test <TEST_NAME>\n         For more information, visit: https://fuchsia.dev/fuchsia-src/development/testing/run_tests_as_components\n"
 
   local test_specs="$(fx-command-run test --exact --info "${target}")"
   if [[ -z "${test_specs}" ]]; then
