@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/common_test_contents.gni")
-
 group("tests") {
   testonly = true
 
@@ -248,12 +246,6 @@ group("tests") {
       "//src/zircon/tests/x86-umip:x86-umip-bootfs-test",
     ]
   }
-
-  # Tests without metadata.
-  deps += []
-
-  # The following targets contribute tests to the zbi.
-  deps += common_test_contents
 
   # Add various drivers and binaries used in manual testing.
   deps += [ ":manual_testing" ]

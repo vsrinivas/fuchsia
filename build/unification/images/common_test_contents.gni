@@ -1,8 +1,0 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# This parameter contains tests that were originally provided by the ZN build
-# and inserted into bootfs or system images.
-# This list is mostly used by //bundles/bringup:tests.
-common_test_contents = []
