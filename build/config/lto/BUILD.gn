@@ -31,18 +31,29 @@ variant("lto") {
 
 variant("thinlto") {
   common_flags = [ "-flto=thin" ]
+
+  # These switches have the same meaning but different spellings for
+  # lld-link vs ld.lld.
+  if (current_os == "win") {
+    _jobs = "/opt:lldltojobs="
+    _cache_dir = "/lldltocache:"
+  } else {
+    _jobs = "--thinlto-jobs="
+    _cache_dir = "--thinlto-cache-dir="
+  }
+
   ldflags = [
     # The ThinLTO driver launches a number of threads in parallel whose
     # number is by default equivalent to the number of cores.  We need
     # to limit the parallelism to avoid aggressive competition between
     # different linker jobs.
-    "-Wl,--thinlto-jobs=$thinlto_jobs",
+    "-Wl,${_jobs}$thinlto_jobs",
 
     # Set the ThinLTO cache directory which is used to cache native
     # object files for ThinLTO incremental builds.  This directory is
     # not managed by Ninja and has to be cleaned manually, but it is
     # periodically garbage-collected by the ThinLTO driver.
-    "-Wl,--thinlto-cache-dir=$thinlto_cache_dir",
+    "-Wl,${_cache_dir}$thinlto_cache_dir",
   ]
   rustflags = [ "-Clto=thin" ]
 }
