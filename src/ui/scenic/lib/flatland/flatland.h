@@ -123,6 +123,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // currently linked to a parent, that means the link_origin. If not, that means the local_root_.
   TransformHandle GetRoot() const;
 
+  // For validating properties associated with content in tests only. If |content_id| does not
+  // exist for this Flatland instance, returns std::nullopt.
+  std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
+
   // TODO(53330): remove this function when FrameScheduler is integrated.
   // For signaling the buffer collection release fence in tests only. Calling this function will
   // signal the zx::event required for buffer collection deregistration. Each call will signal

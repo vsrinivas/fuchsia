@@ -887,6 +887,14 @@ TransformHandle Flatland::GetRoot() const {
   return parent_link_ ? parent_link_->link_origin : local_root_;
 }
 
+std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) const {
+  auto handle_kv = content_handles_.find(content_id);
+  if (handle_kv == content_handles_.end()) {
+    return std::nullopt;
+  }
+  return handle_kv->second;
+}
+
 void Flatland::SignalBufferReleaseFence() {
   buffer_collection_release_fence_.signal(0, ZX_EVENT_SIGNALED);
 
