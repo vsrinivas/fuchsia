@@ -19,3 +19,4 @@ fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_resolver_allowed.cmx
 fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/system-updater.cmx
+fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/usb-system-update-checker-isolated.cmx

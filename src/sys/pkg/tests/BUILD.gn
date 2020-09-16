@@ -16,6 +16,7 @@ group("tests") {
     "system-update-checker:tests",
     "system-updater:tests",
     "update:tests",
+    "usb-system-update-checker:tests",
   ]
 }
 

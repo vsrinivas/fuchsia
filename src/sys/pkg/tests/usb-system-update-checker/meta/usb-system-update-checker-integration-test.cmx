@@ -1,0 +1,36 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/usb-system-update-checker-integration-test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.NameProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
+            "fuchsia.stash.SecureStore",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.test.IsolatedDevmgr",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

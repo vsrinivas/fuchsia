@@ -3,9 +3,6 @@
         "binary": "bin/usb_system_update_checker"
     },
     "sandbox": {
-        "features": [
-            "build-info"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.pkg.PackageResolver",
