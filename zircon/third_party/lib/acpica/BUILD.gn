@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.V
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# As a special case, only define the 'headers' group as it is
+# a public_deps from //zircon/kernel/platform/pc.
+#
+# //zircon/third_part/lib/acpica will be migrated fully to the
+# Fuchsia build in a future CL
+
+# TODO(54180) Keep in sync with BUILD.zircon.gn
+
+group("headers") {
+  public_configs = [ ":headers.config" ]
+}
+
+config("headers.config") {
+  include_dirs = [ "source/include" ]
+
+  # UBSan warns on a few instances of misaligned loads. Define this macro to
+  # perform byte-by-byte accesses.
+  defines = [ "ACPI_MISALIGNMENT_NOT_SUPPORTED" ]
+}

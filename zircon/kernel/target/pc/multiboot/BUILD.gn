@@ -5,12 +5,12 @@
 # https://opensource.org/licenses/MIT
 
 # TODO(54160): Keep this in sync with BUILD.zircon.gn
+import("$zx_build/public/gn/migrated_targets.gni")
+multiboot_toolchain = "zircon_multiboot"
 
 # The Multiboot trampoline gets its own toolchain to build x86-32 code.
 if (current_toolchain == default_toolchain) {
   import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
-
-  multiboot_toolchain = "zircon_multiboot"
 
   # Define the special toolchain itself only in the default toolchain.
   zircon_toolchain_suite(multiboot_toolchain) {
@@ -25,8 +25,9 @@ if (current_toolchain == default_toolchain) {
       configs = [ "//zircon/kernel/target/pc/multiboot:multiboot_config" ]
     }
   }
-} else if (zircon_toolchain != false &&
-           zircon_toolchain.environment == "multiboot") {
+}
+
+if (zircon_toolchain != false && zircon_toolchain.environment == "multiboot") {
   # This is the top config for all code in the multiboot_toolchain.
   config("multiboot_config") {
     configs = [
@@ -53,5 +54,62 @@ if (current_toolchain == default_toolchain) {
   }
 
   group("multiboot_config_deps") {
+  }
+
+  # We could make a Multiboot image meant to be loaded without ELF headers
+  # and do `objcopy -O binary` here.  But there's no reason to, and having
+  # an ELF binary to look at is nicer.  To remove the ELF headers instead,
+  # the linker script would need to remove `+ SIZEOF_HEADERS` and then the
+  # multiboot header would be first thing in the raw binary.  The toolchain
+  # implicitly strips executables, so `multiboot.bin` is a lean, fully
+  # stripped ELF/Multiboot image.
+
+  # TODO(digit): Rename to 'multiboot' after complete move to Fuchsia build.
+  executable("multiboot-gn") {
+    output_extension = "bin"
+    output_dir = root_build_dir
+    output_path = rebase_path("$output_dir/$target_name.$output_extension",
+                              root_build_dir)
+    metadata = {
+      # For the //:images build_api_module().
+      images = []
+      foreach(name,
+              [
+                "multiboot-kernel",
+                "qemu-kernel",
+              ]) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = name
+            type = "kernel"
+            path = output_path
+            cpu = current_cpu
+          },
+        ]
+      }
+    }
+    sources = [
+      "multiboot-main.c",
+      "multiboot-start.S",
+      "paging.c",
+      "trampoline.c",
+      "util.c",
+    ]
+    deps = [
+      "$zx/kernel/arch/x86/page_tables:headers",
+      "$zx/kernel/platform/pc:headers",
+      "$zx/system/ulib/zbi",
+    ]
+    ldflags = [ "-Wl,-T," + rebase_path("multiboot.ld", root_build_dir) ]
+    inputs = [ "multiboot.ld" ]
+  }
+
+  not_needed([ "multiboot_toolchain" ])
+} else {
+  group("multiboot-gn") {
+    public_deps = [
+      ":$target_name(//zircon/kernel/target/pc/multiboot:$multiboot_toolchain)",
+    ]
   }
 }
