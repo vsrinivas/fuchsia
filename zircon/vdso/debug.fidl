@@ -6,9 +6,12 @@ library zx;
 
 [Transport = "Syscall"]
 protocol debug {
+    /// Read a message from the debug serial port.
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     debug_read(handle:RESOURCE handle) -> (status status, string buffer, usize actual);
 
+    /// Write a message to the debug serial port.
+    /// Rights: None.
     debug_write(string buffer) -> (status status);
 
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.

@@ -12169,6 +12169,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "Read", "a", "message", "from", "the", "debug", "serial", "port", "."
       ],
       "requirements": [
         "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
@@ -12211,8 +12212,10 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "Write", "a", "message", "to", "the", "debug", "serial", "port", "."
       ],
       "requirements": [
+        "None", "."
       ],
       "arguments": [
         {
