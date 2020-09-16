@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -152,6 +153,7 @@ func TestSSHTester(t *testing.T) {
 		copierReconErrs []error
 		wantErr         bool
 		wantConnErr     bool
+		runSnapshot     bool
 	}{
 		{
 			name:    "success",
@@ -186,6 +188,14 @@ func TestSSHTester(t *testing.T) {
 			wantErr:   true,
 			// Reconnection succeeds so we don't want the caller to see a ConnectionError.
 			wantConnErr: false,
+		},
+		{
+			name:        "reconnect before snapshot",
+			runErrs:     []error{nil, sshutil.ConnectionError{}, nil},
+			reconErrs:   []error{nil},
+			wantErr:     false,
+			wantConnErr: false,
+			runSnapshot: true,
 		},
 	}
 	for _, c := range cases {
@@ -223,6 +233,22 @@ func TestSSHTester(t *testing.T) {
 				}
 				if isConnErr := sshutil.IsConnectionError(err); isConnErr != c.wantConnErr {
 					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
+				}
+			}
+
+			if c.runSnapshot {
+				snapshotFile, err := ioutil.TempFile("", "snapshot")
+				if err != nil {
+					t.Fatal("TempFile() failed:", err)
+				}
+				defer func() {
+					if err := os.Remove(snapshotFile.Name()); err != nil {
+						t.Errorf("os.Remove(%s) failed: %v", snapshotFile.Name(), err)
+					}
+				}()
+				err = tester.RunSnapshot(context.Background(), snapshotFile.Name())
+				if err != nil {
+					t.Errorf("failed to run snapshot: %v", err)
 				}
 			}
 

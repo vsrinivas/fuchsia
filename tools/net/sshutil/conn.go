@@ -186,7 +186,7 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 	c.mu.Unlock()
 
 	if client == nil {
-		return nil, fmt.Errorf("ssh is disconnected")
+		return nil, ConnectionError{fmt.Errorf("ssh is disconnected")}
 	}
 
 	type result struct {
