@@ -12,8 +12,10 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
+    std::collections::HashSet,
     std::io::{stdout, Write},
     std::time::Duration,
+    termion::{color, style},
 };
 
 mod constants;
@@ -49,6 +51,7 @@ async fn doctor<W: Write>(
 ) -> Result<()> {
     let mut proxy_opt: Option<DaemonProxy> = None;
     let mut targets_opt: Option<Vec<Target>> = None;
+    writeln!(writer, "{}{}{}", style::Bold, DAEMON_CHECK_INTRO, style::Reset).unwrap();
     for i in 0..retry_count {
         proxy_opt = None;
         if i > 0 {
@@ -145,7 +148,15 @@ async fn doctor<W: Write>(
     }
 
     if proxy_opt.is_none() {
-        writeln!(writer, "{}", DAEMON_CHECKS_FAILED).unwrap();
+        writeln!(
+            writer,
+            "\n{}{}{}{}",
+            style::Bold,
+            color::Fg(color::Red),
+            DAEMON_CHECKS_FAILED,
+            style::Reset
+        )
+        .unwrap();
         writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
         return Ok(());
     }
@@ -158,69 +169,82 @@ async fn doctor<W: Write>(
 
     let targets = targets_opt.unwrap();
     let daemon = proxy_opt.take().unwrap();
-    let mut rcs_successful = false;
+    let mut successful_targets = HashSet::new();
 
-    for i in 0..retry_count {
-        if i > 0 {
-            writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
-        }
-
-        // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
-        let target = targets.get(0).unwrap();
-        if target_str.is_empty() {
-            writeln!(
-                writer,
-                "Chose target: '{}'. {}",
-                target.nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
-                TARGET_CHOICE_HELP
-            )
-            .unwrap();
-        }
-        print_status_line(writer, CONNECTING_TO_RCS);
-        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-        match timeout(
-            retry_delay,
-            daemon.get_remote_control(&target.nodename.as_ref().unwrap(), remote_server_end),
+    for target in targets.iter() {
+        writeln!(
+            writer,
+            "{}\nChecking target: '{}'. {}{}",
+            style::Bold,
+            target.nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
+            TARGET_CHOICE_HELP,
+            style::Reset
         )
-        .await
-        {
-            Err(_) => {
-                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                continue;
+        .unwrap();
+        for i in 0..retry_count {
+            if i > 0 {
+                writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
             }
-            Ok(Err(e)) => {
-                writeln!(writer, "{}", format_err(e.into())).unwrap();
-                continue;
-            }
-            Ok(Ok(_)) => {
-                writeln!(writer, "{}", SUCCESS).unwrap();
-            }
-        };
 
-        print_status_line(writer, COMMUNICATING_WITH_RCS);
-        match timeout(retry_delay, remote_proxy.identify_host()).await {
-            Err(_) => {
-                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                continue;
-            }
-            Ok(Err(e)) => {
-                writeln!(writer, "{}", format_err(e.into())).unwrap();
-                continue;
-            }
-            Ok(Ok(_)) => {
-                writeln!(writer, "{}", SUCCESS).unwrap();
-                rcs_successful = true;
-                break;
-            }
-        };
+            // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
+            print_status_line(writer, CONNECTING_TO_RCS);
+            let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+            match timeout(
+                retry_delay,
+                daemon.get_remote_control(&target.nodename.as_ref().unwrap(), remote_server_end),
+            )
+            .await
+            {
+                Err(_) => {
+                    writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
+                    continue;
+                }
+                Ok(Err(e)) => {
+                    writeln!(writer, "{}", format_err(e.into())).unwrap();
+                    continue;
+                }
+                Ok(Ok(_)) => {
+                    writeln!(writer, "{}", SUCCESS).unwrap();
+                }
+            };
+
+            print_status_line(writer, COMMUNICATING_WITH_RCS);
+            match timeout(retry_delay, remote_proxy.identify_host()).await {
+                Err(_) => {
+                    writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
+                    continue;
+                }
+                Ok(Err(e)) => {
+                    writeln!(writer, "{}", format_err(e.into())).unwrap();
+                    continue;
+                }
+                Ok(Ok(_)) => {
+                    writeln!(writer, "{}", SUCCESS).unwrap();
+                    successful_targets.insert(target.nodename.as_ref().unwrap()).to_string();
+                    break;
+                }
+            };
+        }
     }
 
-    if rcs_successful {
-        writeln!(writer, "\n\n{}", ALL_CHECKS_PASSED).unwrap();
-    } else {
-        writeln!(writer, "\n\n{}", RCS_TERMINAL_FAILURE).unwrap();
-        writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
+    writeln!(writer, "{}", style::Bold).unwrap();
+    writeln!(writer, "{}", TARGET_SUMMARY).unwrap();
+    for target in targets.iter() {
+        let nodename = target.nodename.as_ref().unwrap();
+        if successful_targets.contains(&nodename.clone()) {
+            writeln!(writer, "{}✓ {}", color::Fg(color::Green), nodename).unwrap();
+        } else {
+            writeln!(writer, "{}✗ {}", color::Fg(color::Red), nodename).unwrap();
+        }
     }
+    writeln!(writer, "{}", style::Reset).unwrap();
+
+    if targets.len() != successful_targets.len() {
+        writeln!(writer, "{}", RCS_TERMINAL_FAILURE).unwrap();
+        writeln!(writer, "{}", RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS).unwrap();
+        writeln!(writer, "{}", BUG_URL).unwrap();
+    }
+
     Ok(())
 }
 
@@ -245,12 +269,16 @@ mod test {
     };
 
     const NODENAME: &str = "fake-nodename";
+    const UNRESPONSIVE_NODENAME: &str = "fake-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
     const LISTING_TARGETS_WITH_FILTER: &str =
         "Attempting to list targets with filter 'fake-nodename'...";
     const LISTING_TARGETS_WITH_FAKE_FILTER: &str =
         "Attempting to list targets with filter 'extra-fake-nodename'...";
-    const CHOSE_TARGET: &str = "Chose target: 'fake-nodename'. ";
+    const CHOSE_TARGET: &str = "Checking target: 'fake-nodename'. ";
+    const CHOSE_UNRESPONSIVE_TARGET: &str = "Checking target: 'fake-nodename-unresponsive'. ";
+    const SUCCESSFUL_TARGET: &str = "✓ fake-nodename";
+    const FAILED_TARGET: &str = "✗ fake-nodename-unresponsive";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
 
     struct FakeStateManager {
@@ -408,14 +436,16 @@ mod test {
         );
     }
 
-    fn setup_responsive_daemon_server_with_target(responsive_rcs: bool) -> DaemonProxy {
+    fn setup_responsive_daemon_server_with_targets() -> DaemonProxy {
         spawn_local_stream_handler(move |req| async move {
             match req {
-                DaemonRequest::GetRemoteControl { remote, target: _, responder } => {
-                    if responsive_rcs {
+                DaemonRequest::GetRemoteControl { remote, target, responder } => {
+                    if target == NODENAME {
                         serve_responsive_rcs(remote);
-                    } else {
+                    } else if target == UNRESPONSIVE_NODENAME {
                         serve_unresponsive_rcs(remote);
+                    } else {
+                        panic!("got unexpected target string: '{}'", target);
                     }
                     responder.send(&mut Ok(())).unwrap();
                 }
@@ -423,9 +453,9 @@ mod test {
                     responder.send(&value).unwrap();
                 }
                 DaemonRequest::ListTargets { value, responder } => {
-                    if !value.is_empty() && value != NODENAME {
+                    if !value.is_empty() && value != NODENAME && value != UNRESPONSIVE_NODENAME {
                         responder.send(&mut vec![].drain(..)).unwrap();
-                    } else {
+                    } else if value == NODENAME {
                         responder
                             .send(
                                 &mut vec![Target {
@@ -439,6 +469,30 @@ mod test {
                                 .drain(..),
                             )
                             .unwrap();
+                    } else {
+                        responder
+                            .send(
+                                &mut vec![
+                                    Target {
+                                        nodename: Some(NODENAME.to_string()),
+                                        addresses: Some(vec![]),
+                                        age_ms: Some(0),
+                                        rcs_state: Some(RemoteControlState::Unknown),
+                                        target_type: Some(TargetType::Unknown),
+                                        target_state: Some(TargetState::Unknown),
+                                    },
+                                    Target {
+                                        nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
+                                        addresses: Some(vec![]),
+                                        age_ms: Some(0),
+                                        rcs_state: Some(RemoteControlState::Unknown),
+                                        target_type: Some(TargetType::Unknown),
+                                        target_state: Some(TargetState::Unknown),
+                                    },
+                                ]
+                                .drain(..),
+                            )
+                            .unwrap();
                     }
                 }
                 _ => {
@@ -447,13 +501,6 @@ mod test {
             }
         })
         .unwrap()
-    }
-    fn setup_responsive_daemon_server_with_responsive_target() -> DaemonProxy {
-        setup_responsive_daemon_server_with_target(true)
-    }
-
-    fn setup_responsive_daemon_server_with_unresponsive_target() -> DaemonProxy {
-        setup_responsive_daemon_server_with_target(false)
     }
 
     fn setup_daemon_server_list_fails() -> DaemonProxy {
@@ -505,6 +552,10 @@ mod test {
                 );
             }
         }
+
+        // Verify that there aren't any additional lines in the actual output that didn't get
+        // compared in the previous loop.
+        assert!(output.lines().collect::<Vec<_>>().len() <= line_substrings.len());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -527,6 +578,7 @@ mod test {
         verify_lines(
             &output,
             vec![
+                format!("{}", DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
                 format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
                 format!("{}{}", SPAWNING_DAEMON, SUCCESS),
@@ -564,6 +616,7 @@ mod test {
         verify_lines(
             &output,
             vec![
+                format!("{}", DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
@@ -599,6 +652,7 @@ mod test {
         verify_lines(
             &output,
             vec![
+                format!("{}", DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
@@ -650,6 +704,7 @@ mod test {
         verify_lines(
             &output,
             vec![
+                format!("{}", DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
                 format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
                 format!("{}{}", SPAWNING_DAEMON, SUCCESS),
@@ -679,43 +734,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_responsive_target())],
-        );
-
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY).await.unwrap();
-        }
-
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
-                format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
-                format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
-                String::default(),
-                String::default(),
-                String::from(ALL_CHECKS_PASSED),
-            ],
-        );
-
-        fake.assert_no_leftover_calls();
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_finds_target_connects_to_unresponsive_rcs() {
-        let fake = FakeDaemonManager::new(
-            vec![true],
-            vec![],
-            vec![],
-            vec![Ok(setup_responsive_daemon_server_with_unresponsive_target())],
+            vec![Ok(setup_responsive_daemon_server_with_targets())],
         );
 
         let mut output = String::new();
@@ -729,17 +748,26 @@ mod test {
         verify_lines(
             &output,
             vec![
+                format!("{}", DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
                 format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
+                String::default(),
                 format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
+                format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
+                format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
+                String::default(),
+                format!("{}{}", CHOSE_UNRESPONSIVE_TARGET, TARGET_CHOICE_HELP),
                 format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_RCS, FAILED_TIMEOUT),
                 String::default(),
+                String::from(TARGET_SUMMARY),
+                String::from(SUCCESSFUL_TARGET),
+                String::from(FAILED_TARGET),
                 String::default(),
-                String::from("Connecting to RCS failed after maximum attempts"),
-                String::default(),
+                String::from(RCS_TERMINAL_FAILURE),
+                String::from(RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS),
                 String::from(BUG_URL),
             ],
         );
@@ -753,7 +781,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_responsive_target())],
+            vec![Ok(setup_responsive_daemon_server_with_targets())],
         );
 
         let mut output = String::new();
@@ -767,15 +795,19 @@ mod test {
         verify_lines(
             &output,
             vec![
+                String::from(DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
                 format!("{}{}", LISTING_TARGETS_WITH_FILTER, SUCCESS),
+                String::default(),
+                format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
                 format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
                 String::default(),
+                String::from(TARGET_SUMMARY),
+                String::from(SUCCESSFUL_TARGET),
                 String::default(),
-                String::from(ALL_CHECKS_PASSED),
             ],
         );
 
@@ -788,7 +820,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_responsive_target())],
+            vec![Ok(setup_responsive_daemon_server_with_targets())],
         );
 
         let mut output = String::new();
@@ -804,6 +836,7 @@ mod test {
         verify_lines(
             &output,
             vec![
+                format!("{}", DAEMON_CHECK_INTRO),
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
@@ -812,7 +845,7 @@ mod test {
                 String::default(),
                 String::from("No targets found"),
                 String::default(),
-                BUG_URL.to_string(),
+                String::from(BUG_URL),
             ],
         );
 
