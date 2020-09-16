@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use {
-    crate::{
-        constants::INSPECT_ASYNC_TIMEOUT_SECONDS, events::types::InspectData,
-        inspect::collector::InspectDataCollector,
-    },
-    anyhow::format_err,
+    crate::{events::types::InspectData, inspect::collector::InspectDataCollector},
     diagnostics_data::{self as schema, LifecycleType},
     fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_async::{self as fasync},
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy, Property},
-    fuchsia_zircon::{self as zx, DurationNum},
+    fuchsia_zircon::{self as zx},
     inspect_fidl_load as deprecated_inspect,
     std::convert::TryFrom,
     std::sync::Arc,
@@ -189,56 +185,63 @@ impl PopulatedInspectDataContainer {
                     let mut acc: Vec<SnapshotData> = vec![];
                     for (filename, data) in data_map {
                         match data {
-                            InspectData::Tree(tree, _) => match SnapshotTree::try_from(&tree).await {
+                            InspectData::Tree(tree, _) => match SnapshotTree::try_from(&tree).await
+                            {
                                 Ok(snapshot_tree) => {
                                     acc.push(SnapshotData::successful(
-                                        ReadSnapshot::Tree(snapshot_tree), filename));
+                                        ReadSnapshot::Tree(snapshot_tree),
+                                        filename,
+                                    ));
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
-                                        schema::Error{message: format!("{:?}", e)}, filename));
+                                        schema::Error { message: format!("{:?}", e) },
+                                        filename,
+                                    ));
                                 }
                             },
                             InspectData::DeprecatedFidl(inspect_proxy) => {
-                                match deprecated_inspect::load_hierarchy(inspect_proxy)
-                                    .on_timeout(
-                                        INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
-                                        || {
-                                            Err(format_err!(
-                                                "Timed out reading via deprecated inspect protocol.",
-                                            ))
-                                        },
-                                    )
-                                    .await
-                                {
+                                match deprecated_inspect::load_hierarchy(inspect_proxy).await {
                                     Ok(hierarchy) => {
                                         acc.push(SnapshotData::successful(
-                                            ReadSnapshot::Finished(hierarchy), filename));
+                                            ReadSnapshot::Finished(hierarchy),
+                                            filename,
+                                        ));
                                     }
                                     Err(e) => {
                                         acc.push(SnapshotData::failed(
-                                            schema::Error{message: format!("{:?}", e)}, filename));
-                                   }
+                                            schema::Error { message: format!("{:?}", e) },
+                                            filename,
+                                        ));
+                                    }
                                 }
                             }
                             InspectData::Vmo(vmo) => match Snapshot::try_from(&vmo) {
                                 Ok(snapshot) => {
                                     acc.push(SnapshotData::successful(
-                                        ReadSnapshot::Single(snapshot), filename));
+                                        ReadSnapshot::Single(snapshot),
+                                        filename,
+                                    ));
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
-                                        schema::Error{message: format!("{:?}", e)}, filename));
+                                        schema::Error { message: format!("{:?}", e) },
+                                        filename,
+                                    ));
                                 }
                             },
                             InspectData::File(contents) => match Snapshot::try_from(contents) {
                                 Ok(snapshot) => {
                                     acc.push(SnapshotData::successful(
-                                        ReadSnapshot::Single(snapshot), filename));
+                                        ReadSnapshot::Single(snapshot),
+                                        filename,
+                                    ));
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
-                                        schema::Error{message: format!("{:?}", e)}, filename));
+                                        schema::Error { message: format!("{:?}", e) },
+                                        filename,
+                                    ));
                                 }
                             },
                             InspectData::Empty => {}

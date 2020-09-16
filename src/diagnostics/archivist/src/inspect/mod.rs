@@ -95,6 +95,9 @@ pub struct ReaderServer {
     pub inspect_reader_server_stats: Arc<diagnostics::DiagnosticsServerStats>,
     /// The format requested by the client.
     format: Format,
+    /// Configuration specifying max number of seconds to wait for a single
+    /// component's diagnostic data as defined in StreamParameters.
+    batch_retrieval_timeout_seconds: Option<i64>,
 }
 
 fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
@@ -118,12 +121,14 @@ impl ReaderServer {
     pub fn new(
         inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
         format: Format,
+        batch_retrieval_timeout_seconds: Option<i64>,
         configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
         inspect_reader_server_stats: Arc<DiagnosticsServerStats>,
     ) -> Self {
         ReaderServer {
             inspect_repo,
             format,
+            batch_retrieval_timeout_seconds,
             configured_selectors: configured_selectors.map(|selectors| {
                 selectors.into_iter().map(|selector| Arc::new(selector)).collect()
             }),
@@ -241,6 +246,7 @@ impl ReaderServer {
     ) -> Receiver<PopulatedInspectDataContainer> {
         let (mut sender, receiver) = channel(constants::MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER);
         let global_stats = self.inspect_reader_server_stats.global_stats().clone();
+        let batch_retrieval_timeout_seconds = self.batch_retrieval_timeout_seconds();
         fasync::Task::spawn(async move {
             for fut in inspect_batch.into_iter().map(move |inspect_data_packet| {
                 let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
@@ -248,7 +254,7 @@ impl ReaderServer {
                 let component_url = inspect_data_packet.component_url.clone();
                 let global_stats = global_stats.clone();
                 PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
-                    constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
+                    batch_retrieval_timeout_seconds.seconds().after_now(),
                     move || {
                         global_stats.add_timeout();
                         let error_string = format!(
@@ -380,6 +386,13 @@ impl ReaderServer {
         anyhow::ensure!(matches!(format, Format::Json), "only JSON is supported right now");
         formatter::serialize_to_formatted_json_content(inspect_data)
     }
+
+    fn batch_retrieval_timeout_seconds(&self) -> i64 {
+        match self.batch_retrieval_timeout_seconds {
+            Some(batch_retrieval_timeout_seconds) => batch_retrieval_timeout_seconds,
+            None => constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS,
+        }
+    }
 }
 
 #[async_trait]
@@ -485,6 +498,7 @@ mod tests {
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
+    const BATCH_RETRIEVAL_TIMEOUT_SECONDS: Option<i64> = Some(300);
 
     fn get_vmo(text: &[u8]) -> zx::Vmo {
         let vmo = zx::Vmo::create(4096).unwrap();
@@ -793,8 +807,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    // TODO(59745): Reenable when this cannot time out.
-    #[ignore]
     async fn canonical_inspect_reader_stress_test() {
         // Test that 3 directories, each with 33 vmos, has snapshots served over 3 batches
         // each of which contains the 33 vmos of one component.
@@ -920,6 +932,7 @@ mod tests {
                 let reader_server = ReaderServer::new(
                     inspect_repo.clone(),
                     Format::Json,
+                    BATCH_RETRIEVAL_TIMEOUT_SECONDS,
                     None,
                     test_batch_iterator_stats1.clone(),
                 );
@@ -1057,6 +1070,7 @@ mod tests {
             let reader_server = ReaderServer::new(
                 inspect_repo.clone(),
                 Format::Json,
+                BATCH_RETRIEVAL_TIMEOUT_SECONDS,
                 None,
                 test_batch_iterator_stats1,
             );
@@ -1188,6 +1202,7 @@ mod tests {
             let reader_server = ReaderServer::new(
                 inspect_repo.clone(),
                 Format::Json,
+                BATCH_RETRIEVAL_TIMEOUT_SECONDS,
                 None,
                 test_batch_iterator_stats2,
             );

@@ -141,6 +141,7 @@ impl ArchiveAccessor {
                 let inspect_reader_server = inspect::ReaderServer::new(
                     self.diagnostics_repo.clone(),
                     format,
+                    stream_parameters.batch_retrieval_timeout_seconds,
                     Some(selectors),
                     inspect_reader_server_stats.clone(),
                 );
@@ -151,6 +152,7 @@ impl ArchiveAccessor {
                 let inspect_reader_server = inspect::ReaderServer::new(
                     self.diagnostics_repo.clone(),
                     format,
+                    stream_parameters.batch_retrieval_timeout_seconds,
                     None,
                     inspect_reader_server_stats.clone(),
                 );

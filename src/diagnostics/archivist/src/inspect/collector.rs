@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{constants::INSPECT_ASYNC_TIMEOUT_SECONDS, events::types::InspectData},
+    crate::events::types::InspectData,
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo},
     files_async,
-    fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_zircon::DurationNum,
     futures::future::BoxFuture,
     futures::stream::StreamExt,
     futures::{FutureExt, TryFutureExt},
@@ -66,30 +64,20 @@ impl InspectDataCollector {
     pub async fn populate_data_map(&mut self, inspect_proxy: &DirectoryProxy) -> Result<(), Error> {
         // TODO(36762): Use a streaming and bounded readdir API when available to avoid
         // being hung.
-        let entries = files_async::readdir_recursive(
-            inspect_proxy,
-            Some(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds()),
-        )
-        .filter_map(|result| {
-            async move {
-                // TODO(fxb/49157): decide how to show directories that we failed to read.
-                result.ok()
-            }
-        });
+        let entries = files_async::readdir_recursive(inspect_proxy, /* timeout= */ None)
+            .filter_map(|result| {
+                async move {
+                    // TODO(fxb/49157): decide how to show directories that we failed to read.
+                    result.ok()
+                }
+            });
         pin_mut!(entries);
         while let Some(entry) = entries.next().await {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.
             if let Ok(Some(proxy)) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry) {
-                let maybe_vmo = proxy
-                    .get_content()
-                    .err_into::<anyhow::Error>()
-                    .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
-                        Err(format_err!("Timed out reading contents via Tree protocol."))
-                    })
-                    .await?
-                    .buffer
-                    .map(|b| b.vmo);
+                let maybe_vmo =
+                    proxy.get_content().err_into::<anyhow::Error>().await?.buffer.map(|b| b.vmo);
 
                 self.maybe_add(&entry.name, InspectData::Tree(proxy, maybe_vmo));
                 continue;
@@ -117,30 +105,13 @@ impl InspectDataCollector {
             };
 
             // Obtain the vmo backing any VmoFiles.
-            match file_proxy
-                .describe()
-                .err_into::<anyhow::Error>()
-                .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
-                    Err(format_err!(
-                        "Timed out waiting for backing file description: {:?}",
-                        file_proxy
-                    ))
-                })
-                .await
-            {
+            match file_proxy.describe().err_into::<anyhow::Error>().await {
                 Ok(nodeinfo) => match nodeinfo {
                     NodeInfo::Vmofile(vmofile) => {
                         self.maybe_add(&entry.name, InspectData::Vmo(vmofile.vmo));
                     }
                     NodeInfo::File(_) => {
-                        let contents = io_util::read_file_bytes(&file_proxy)
-                            .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
-                                Err(format_err!(
-                                    "Timed out reading contents of fuchsia File: {:?}",
-                                    file_proxy
-                                ))
-                            })
-                            .await?;
+                        let contents = io_util::read_file_bytes(&file_proxy).await?;
                         self.maybe_add(&entry.name, InspectData::File(contents));
                     }
                     ty @ _ => {
@@ -188,12 +159,7 @@ impl InspectDataCollector {
     /// This currently only does a single pass over the directory to find information.
     pub fn collect(mut self: Box<Self>, path: PathBuf) -> BoxFuture<'static, Result<(), Error>> {
         async move {
-            let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path)
-                .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
-                    Err(format_err!("Timed out converting path into directory proxy: {:?}", path))
-                })
-                .await
-            {
+            let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path).await {
                 Ok(proxy) => proxy,
                 Err(e) => {
                     return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));

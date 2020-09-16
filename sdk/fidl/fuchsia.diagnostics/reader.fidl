@@ -107,6 +107,15 @@ table StreamParameters {
     /// of provided selectors, or can specify that they want all available data.
     /// NOTE: REQUIRED
     4: ClientSelectorConfiguration client_selector_configuration;
+
+    /// Configuration specifying max number of seconds to wait for a single
+    /// component to have its diagnostics data "pumped". This value can used
+    /// for testing or if you know the component you are interested is in under
+    /// heavy load.
+    /// If not provided, then PER_COMPONENT_ASYNC_TIMEOUT_SECONDS as defined
+    /// in //src/diagnostics/archivist/src/constants.rs will be used.
+    /// NOTE: OPTIONAL
+    5: int64 batch_retrieval_timeout_seconds;
 };
 
 /// Outer protocol for interacting with the different diagnostics data sources.
