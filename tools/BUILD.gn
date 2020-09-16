@@ -26,6 +26,7 @@ group("tools") {
     "//tools/net/device-finder:host",
     "//tools/netprotocol($host_toolchain)",
     "//tools/symbol-index:symbol_index_host",
+    "//tools/symbolizer:host",
   ]
 }
 
@@ -104,6 +105,7 @@ group("tests") {
     "//tools/serial:tests($host_toolchain)",
     "//tools/size_checker/cmd:tests",
     "//tools/symbol-index:tests",
+    "//tools/symbolizer:tests",
     "//tools/testing:tests($host_toolchain)",
     "//tools/zedmon:tests",
   ]
