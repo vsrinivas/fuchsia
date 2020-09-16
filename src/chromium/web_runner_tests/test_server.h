@@ -7,6 +7,7 @@
 
 #include <lib/fit/defer.h>
 
+#include <array>
 #include <string>
 #include <thread>
 #include <vector>
@@ -49,7 +50,7 @@ class TestServer {
   template <typename T>
   auto ServeAsync(T serve) {
     auto server = std::thread(std::move(serve));
-    // The socket must be closed before the thread goes out of scope so that any
+    // Close must be signaled before the thread goes out of scope so that any
     // blocking |Accept| calls terminate so that |serve| can terminate.
     return fit::defer([this, server = std::move(server)]() mutable {
       Close();
@@ -60,6 +61,7 @@ class TestServer {
  private:
   fxl::UniqueFD conn_;
   fxl::UniqueFD socket_;
+  std::array<fxl::UniqueFD, 2> close_;
   int port_ = -1;
 };
 

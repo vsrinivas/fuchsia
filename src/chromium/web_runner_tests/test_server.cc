@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <poll.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -16,6 +17,14 @@
 namespace web_runner_tests {
 
 bool TestServer::FindAndBindPort() {
+  int pipefd[2];
+  if (pipe(pipefd) < 0) {
+    fprintf(stderr, "pipe() failed: %d %s\n", errno, strerror(errno));
+    return false;
+  }
+  close_[0].reset(pipefd[0]);
+  close_[1].reset(pipefd[1]);
+
   socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!socket_.is_valid()) {
     fprintf(stderr, "socket() failed: %d %s\n", errno, strerror(errno));
@@ -43,7 +52,7 @@ bool TestServer::FindAndBindPort() {
 
   port_ = ntohs(addr.sin6_port);
 
-  if (listen(socket_.get(), 2) < 0) {
+  if (listen(socket_.get(), 1) < 0) {
     fprintf(stderr, "listen() failed: %d %s\n", errno, strerror(errno));
     return false;
   }
@@ -51,9 +60,31 @@ bool TestServer::FindAndBindPort() {
   return true;
 }
 
-void TestServer::Close() { socket_.reset(); }
+void TestServer::Close() { close_[0].reset(); }
 
 bool TestServer::Accept() {
+  struct pollfd pfd[] = {
+      {
+          .fd = socket_.get(),
+          .events = POLLIN,
+      },
+      {
+          .fd = close_[1].get(),
+          .events = POLLIN,
+      },
+  };
+  int n = poll(pfd, countof(pfd), -1);
+  if (n < 0) {
+    fprintf(stderr, "poll() failed: %d %s\n", errno, strerror(errno));
+    return false;
+  }
+  if (n == 0) {
+    fprintf(stderr, "poll() returned zero with infinite timeout\n");
+    return false;
+  }
+  if (pfd[1].revents) {
+    return false;
+  }
   conn_.reset(accept(socket_.get(), nullptr, nullptr));
   return conn_.is_valid();
 }
