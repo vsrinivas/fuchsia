@@ -305,8 +305,7 @@ func Main() {
 		syslog.Fatalf("loopback: %s", err)
 	}
 
-	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCache)
-	ns.dnsConfig.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
+	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 
 	socketProviderImpl := providerImpl{ns: ns}
 	ns.stats = stats{

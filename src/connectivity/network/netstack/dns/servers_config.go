@@ -36,8 +36,6 @@ type Server struct {
 	Source  name.DnsServerSource
 }
 
-type OnServersConfigChangedCallback func()
-
 // ServersConfig holds DNS resolvers' DNS servers configuration.
 type ServersConfig struct {
 	clock tcpip.Clock
@@ -69,8 +67,8 @@ type ServersConfig struct {
 		// is updated.
 		serversCache []Server
 
-		// Function called whenever the list of servers changes.
-		onServersChanged OnServersConfigChangedCallback
+		// Closed and replaced when the server list changes.
+		serversChanged chan struct{}
 	}
 }
 
@@ -80,6 +78,7 @@ func MakeServersConfig(clock tcpip.Clock) ServersConfig {
 	}
 	d.mu.ndpServers = make(map[tcpip.FullAddress]expiringDNSServerState)
 	d.mu.dhcpServers = make(map[tcpip.NICID]*[]tcpip.Address)
+	d.mu.serversChanged = make(chan struct{})
 	return d
 }
 
@@ -88,12 +87,24 @@ func MakeServersConfig(clock tcpip.Clock) ServersConfig {
 // The expiring servers will be at the front of the list, followed by
 // the runtime and default servers. The list will be deduplicated.
 func (d *ServersConfig) GetServersCache() []Server {
+	servers, _ := d.GetServersCacheAndChannel()
+	return servers
+}
+
+// GetServersCacheAndChannel returns a list of tcpip.FullAddress to DNS
+// servers, and the receive end of a channel which will be closed when the list
+// changes.
+//
+// The expiring servers will be at the front of the list, followed by
+// the runtime and default servers. The list will be deduplicated.
+func (d *ServersConfig) GetServersCacheAndChannel() ([]Server, <-chan struct{}) {
 	// If we already have a populated cache, return it.
 	d.mu.RLock()
 	cache := d.mu.serversCache
+	ch := d.mu.serversChanged
 	d.mu.RUnlock()
 	if cache != nil {
-		return cache
+		return cache, ch
 	}
 
 	// At this point the cache may need to be generated.
@@ -121,7 +132,7 @@ func (d *ServersConfig) GetServersCache() []Server {
 	// checking if the servers cache is populated after obtaining the WLock, this
 	// can be avoided.
 	if cache := d.mu.serversCache; cache != nil {
-		return cache
+		return cache, d.mu.serversChanged
 	}
 
 	have := make(map[tcpip.FullAddress]struct{})
@@ -182,13 +193,7 @@ func (d *ServersConfig) GetServersCache() []Server {
 
 	d.mu.serversCache = cache
 
-	return cache
-}
-
-func (d *ServersConfig) SetOnServersChanged(callback OnServersConfigChangedCallback) {
-	d.mu.Lock()
-	d.mu.onServersChanged = callback
-	d.mu.Unlock()
+	return cache, d.mu.serversChanged
 }
 
 // SetDefaultServers sets the default list of nameservers to query.
@@ -199,13 +204,13 @@ func (d *ServersConfig) SetDefaultServers(servers []tcpip.Address) {
 	d.mu.Lock()
 	d.mu.defaultServers = servers
 
-	// Clear cache and notify callback
+	// Clear cache and broadcast change by closing the channel.
 	d.mu.serversCache = nil
-	cb := d.mu.onServersChanged
+	ch := d.mu.serversChanged
+	d.mu.serversChanged = make(chan struct{})
 	d.mu.Unlock()
-	if cb != nil {
-		cb()
-	}
+
+	close(ch)
 }
 
 // UpdateDhcpServers updates the list of lists of runtime servers to query (e.g.
@@ -227,13 +232,13 @@ func (d *ServersConfig) UpdateDhcpServers(nicid tcpip.NICID, serverRefs *[]tcpip
 	} else {
 		delete(d.mu.dhcpServers, nicid)
 	}
-	// Clear cache and notify callback
+	// Clear cache and broadcast change by closing the channel.
 	d.mu.serversCache = nil
-	cb := d.mu.onServersChanged
+	ch := d.mu.serversChanged
+	d.mu.serversChanged = make(chan struct{})
 	d.mu.Unlock()
-	if cb != nil {
-		cb()
-	}
+
+	close(ch)
 }
 
 // UpdateNdpServers updates the list of NDP-discovered servers to query.
@@ -290,17 +295,18 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 			_ = syslog.InfoTf(syslogTagName, "immediately expired NDP learned DNS server %+v", s)
 		}
 	}
-	var cb OnServersConfigChangedCallback
+	var ch chan<- struct{}
 	if changed {
-		// Clear cache and set notify callback
+		// Clear cache and broadcast change by closing the channel.
 		d.mu.serversCache = nil
-		cb = d.mu.onServersChanged
+		ch = d.mu.serversChanged
+		d.mu.serversChanged = make(chan struct{})
 	}
 	d.mu.Unlock()
-	if cb != nil {
-		cb()
-	}
 
+	if ch != nil {
+		close(ch)
+	}
 }
 
 // RemoveAllServersWithNIC removes all servers associated with the specified
@@ -321,11 +327,11 @@ func (d *ServersConfig) RemoveAllServersWithNIC(nicID tcpip.NICID) {
 		}
 	}
 
-	// Clear cache and notify callback
+	// Clear cache and broadcast change by closing the channel.
 	d.mu.serversCache = nil
-	cb := d.mu.onServersChanged
+	ch := d.mu.serversChanged
+	d.mu.serversChanged = make(chan struct{})
 	d.mu.Unlock()
-	if cb != nil {
-		cb()
-	}
+
+	close(ch)
 }

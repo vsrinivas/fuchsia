@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -61,8 +62,7 @@ func makeDnsServer(address net.SocketAddress, source name.DnsServerSource) name.
 
 func createCollection() (*dnsServerWatcherCollection, *dns.ServersConfig) {
 	serverConfig := dns.MakeServersConfig(&tcpip.StdClock{})
-	watcherCollection := newDnsServerWatcherCollection(serverConfig.GetServersCache)
-	serverConfig.SetOnServersChanged(watcherCollection.NotifyServersChanged)
+	watcherCollection := newDnsServerWatcherCollection(serverConfig.GetServersCacheAndChannel)
 	return watcherCollection, &serverConfig
 }
 
@@ -134,10 +134,7 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 func TestDnsWatcherCancelledContext(t *testing.T) {
 	watcherCollection, _ := createCollection()
 
-	watcher := dnsServerWatcher{
-		getServersCache: watcherCollection.getServersCache,
-		broadcast:       &watcherCollection.broadcast,
-	}
+	watcher := dnsServerWatcher{parent: watcherCollection}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -147,9 +144,6 @@ func TestDnsWatcherCancelledContext(t *testing.T) {
 	}
 
 	watcher.mu.Lock()
-	if !watcher.mu.isDead {
-		t.Errorf("watcher must be marked as dead on context cancellation")
-	}
 	if watcher.mu.isHanging {
 		t.Errorf("watcher must not be marked as hanging on context cancellation")
 	}
@@ -294,4 +288,59 @@ func TestDnsWatcherDifferentAddressTypes(t *testing.T) {
 	// Remove the last server and verify result.
 	serverConfig.SetDefaultServers(nil)
 	checkServers([]net.SocketAddress{})
+}
+
+// TestDnsWatcherBroadcastRace is a regression test which ensures that it is
+// not possible to miss a broadcast that occurs immediately after the servers
+// list has been fetched.
+func TestDnsWatcherBroadcastRace(t *testing.T) {
+	watcherCollection, dnsClient := createCollection()
+
+	watchers := make([]*name.DnsServerWatcherWithCtxInterface, 1000)
+	defer func() {
+		for _, watcher := range watchers {
+			if err := watcher.Close(); err != nil {
+				t.Errorf("failed to close DNS server watcher: %s", err)
+			}
+		}
+	}()
+
+	for i := range watchers {
+		watchers[i] = bindWatcher(t, watcherCollection)
+	}
+
+	for j := 0; j < 100; j++ {
+		var servers []tcpip.Address
+		var want []name.DnsServer
+		if j%2 == 0 {
+			servers = []tcpip.Address{defaultServerIpv4, defaultServerIpv6}
+			want = []name.DnsServer{
+				makeDnsServer(defaultServerIPv4SocketAddress, staticDnsSource),
+				makeDnsServer(defaultServerIpv6SocketAddress, staticDnsSource),
+			}
+		}
+
+		var wg sync.WaitGroup
+		for i := range watchers {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+
+				if got, err := watchers[i].WatchServers(context.Background()); err != nil {
+					t.Errorf("failed to call WatchServers: %s", err)
+				} else if diff := cmp.Diff(got, want, cmpopts.IgnoreTypes(struct{}{}), cmpopts.EquateEmpty()); diff != "" {
+					t.Errorf("(-got +want)\n%s", diff)
+				}
+			}(i)
+		}
+
+		runtime.Gosched()
+
+		dnsClient.SetDefaultServers(servers)
+
+		wg.Wait()
+		if t.Failed() {
+			t.FailNow()
+		}
+	}
 }

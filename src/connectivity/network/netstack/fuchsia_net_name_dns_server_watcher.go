@@ -18,36 +18,11 @@ import (
 	"fidl/fuchsia/net/name"
 )
 
-type broadcastChannel struct {
-	mu struct {
-		sync.Mutex
-		channel chan struct{}
-	}
-}
-
-func (c *broadcastChannel) broadcast() {
-	c.mu.Lock()
-	ch := c.mu.channel
-	c.mu.channel = make(chan struct{})
-	c.mu.Unlock()
-
-	close(ch)
-}
-
-func (c *broadcastChannel) getChannel() <-chan struct{} {
-	c.mu.Lock()
-	ch := c.mu.channel
-	c.mu.Unlock()
-	return ch
-}
-
 type dnsServerWatcher struct {
-	getServersCache func() []dns.Server
-	broadcast       *broadcastChannel
-	mu              struct {
+	parent *dnsServerWatcherCollection
+	mu     struct {
 		sync.Mutex
 		isHanging    bool
-		isDead       bool
 		lastObserved []dns.Server
 	}
 }
@@ -84,11 +59,8 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 	}
 
 	for {
-		if w.mu.isDead {
-			return nil, fmt.Errorf("dnsServerWatcher: watcher killed")
-		}
-
-		if servers := w.getServersCache(); !serverListEquals(servers, w.mu.lastObserved) {
+		servers, ch := w.parent.getServersCacheAndChannel()
+		if !serverListEquals(servers, w.mu.lastObserved) {
 			dnsServer := make([]name.DnsServer, 0, len(servers))
 			for _, v := range servers {
 				dnsServer = append(dnsServer, dnsServerToFidl(v))
@@ -104,7 +76,7 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 
 		var err error
 		select {
-		case <-w.broadcast.getChannel():
+		case <-ch:
 		case <-ctx.Done():
 			err = fmt.Errorf("context cancelled during hanging get: %w", ctx.Err())
 		}
@@ -113,26 +85,21 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 		w.mu.isHanging = false
 
 		if err != nil {
-			w.mu.isDead = true
 			return nil, err
 		}
 	}
 }
 
 type dnsServerWatcherCollection struct {
-	getServersCache func() []dns.Server
-	broadcast       broadcastChannel
+	getServersCacheAndChannel func() ([]dns.Server, <-chan struct{})
 }
 
 // newDnsServerWatcherCollection creates a new dnsServerWatcherCollection that will observe the
-// server configuration provided by getServersCache.
-//
-// Callers are responsible for calling NotifyServersChanged when the configuration changes.
-func newDnsServerWatcherCollection(getServersCache func() []dns.Server) *dnsServerWatcherCollection {
+// server configuration provided by getServersCacheAndChannel.
+func newDnsServerWatcherCollection(getServersCacheAndChannel func() ([]dns.Server, <-chan struct{})) *dnsServerWatcherCollection {
 	collection := dnsServerWatcherCollection{
-		getServersCache: getServersCache,
+		getServersCacheAndChannel: getServersCacheAndChannel,
 	}
-	collection.broadcast.mu.channel = make(chan struct{})
 	return &collection
 }
 
@@ -141,16 +108,8 @@ func newDnsServerWatcherCollection(getServersCache func() []dns.Server) *dnsServ
 func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxInterfaceRequest) error {
 	go func() {
 		watcher := dnsServerWatcher{
-			getServersCache: c.getServersCache,
-			broadcast:       &c.broadcast,
+			parent: c,
 		}
-
-		defer func() {
-			watcher.mu.Lock()
-			watcher.mu.isDead = true
-			watcher.mu.Unlock()
-			watcher.broadcast.broadcast()
-		}()
 
 		stub := name.DnsServerWatcherWithCtxStub{
 			Impl: &watcher,
@@ -162,10 +121,4 @@ func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxIn
 	}()
 
 	return nil
-}
-
-// NotifyServersChanged notifies all bound fuchsia.net.name.DnsServerWatchers that the list of DNS
-// servers has changed.
-func (c *dnsServerWatcherCollection) NotifyServersChanged() {
-	c.broadcast.broadcast()
 }
