@@ -4,7 +4,7 @@
 
 #include <fs/journal/format.h>
 #include <fs/journal/header_view.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -27,7 +27,7 @@ TEST(JournalHeaderView, Initialize) {
   ASSERT_EQ(kSequenceNumber, header.SequenceNumber());
 
   for (uint32_t i = 0; i < kPayloadBlocks; i++) {
-    ASSERT_EQ(0, header.TargetBlock(i));
+    ASSERT_EQ(header.TargetBlock(i), 0ul);
     ASSERT_FALSE(header.EscapedBlock(i));
   }
 }
@@ -100,7 +100,7 @@ TEST(JournalHeaderView, TargetBlockPtr) {
   header.SetTargetBlock(target_block, target_block);
   auto ptr = header.TargetBlockPtr(target_block);
 
-  ASSERT_NOT_NULL(ptr);
+  ASSERT_NE(ptr, nullptr);
   ASSERT_EQ(ptr, &header_block->target_blocks[target_block]);
   ASSERT_EQ(*ptr, header_block->target_blocks[target_block]);
 }
@@ -142,7 +142,7 @@ TEST(JournalHeaderView, PayloadBlocksPtr) {
   JournalHeaderView header(span, kPayloadBlocks, kSequenceNumber);
   auto ptr = header.PayloadBlocksPtr();
 
-  ASSERT_NOT_NULL(ptr);
+  ASSERT_NE(ptr, nullptr);
   ASSERT_EQ(ptr, &header_block->payload_blocks);
   ASSERT_EQ(*ptr, header_block->payload_blocks);
 }

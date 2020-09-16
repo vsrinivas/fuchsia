@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include <fs/journal/format.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -30,7 +30,7 @@ TEST(InspectorDiskStruct, GetJournalSuperblockString) {
 	checksum: 0
 )""";
 
-  EXPECT_STR_EQ(disk_struct->ToString(&info, options).c_str(), output.c_str());
+  EXPECT_EQ(disk_struct->ToString(&info, options), output);
 }
 
 TEST(InspectorDiskStruct, GetJournalPrefixString) {
@@ -47,7 +47,7 @@ TEST(InspectorDiskStruct, GetJournalPrefixString) {
 	reserved: 0
 )""";
 
-  EXPECT_STR_EQ(disk_struct->ToString(&info, options).c_str(), output.c_str());
+  EXPECT_EQ(disk_struct->ToString(&info, options), output);
 }
 
 TEST(InspectorDiskStruct, GetJournalHeaderBlockString) {
@@ -70,7 +70,7 @@ TEST(InspectorDiskStruct, GetJournalHeaderBlockString) {
 	reserved: 0
 )""";
 
-  EXPECT_STR_EQ(disk_struct->ToString(&info, options).c_str(), output.c_str());
+  EXPECT_EQ(disk_struct->ToString(&info, options), output);
 }
 
 TEST(InspectorDiskStruct, GetJournalCommitBlockString) {
@@ -90,7 +90,7 @@ TEST(InspectorDiskStruct, GetJournalCommitBlockString) {
 	checksum: 0
 )""";
 
-  EXPECT_STR_EQ(disk_struct->ToString(&info, options).c_str(), output.c_str());
+  EXPECT_EQ(disk_struct->ToString(&info, options), output);
 }
 
 }  // namespace

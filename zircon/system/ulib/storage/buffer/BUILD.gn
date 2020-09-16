@@ -43,6 +43,7 @@ zx_library("buffer") {
     public_deps = [
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
     ]

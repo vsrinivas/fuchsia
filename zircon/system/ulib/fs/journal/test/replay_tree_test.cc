@@ -4,7 +4,7 @@
 
 #include "replay_tree.h"
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -46,7 +46,7 @@ TEST(ReplayTreeTest, ContiguousOperationsMerge) {
   tree.insert(operation_a);
   tree.insert(operation_b);
 
-  ASSERT_EQ(1, tree.size());
+  ASSERT_EQ(tree.size(), 1ul);
   ExpectOperationsEqual(operation_merged, tree.begin()->second.container().operation);
 }
 
@@ -62,7 +62,7 @@ TEST(ReplayTreeTest, NonContiguousDevOffsetsStaySeparate) {
   tree.insert(operation_a);
   tree.insert(operation_b);
 
-  ASSERT_EQ(2, tree.size());
+  ASSERT_EQ(tree.size(), 2ul);
   auto iter = tree.begin();
   ExpectOperationsEqual(operation_a, iter->second.container().operation);
   iter++;
@@ -81,7 +81,7 @@ TEST(ReplayTreeTest, NonContiguousVmoOffsetsStaySeparate) {
   tree.insert(operation_a);
   tree.insert(operation_b);
 
-  ASSERT_EQ(2, tree.size());
+  ASSERT_EQ(tree.size(), 2ul);
   auto iter = tree.begin();
   ExpectOperationsEqual(operation_a, iter->second.container().operation);
   iter++;
@@ -100,7 +100,7 @@ TEST(ReplayTreeTest, OverlappingDevOffsetTakesLatest) {
   tree.insert(operation_a);
   tree.insert(operation_b);
 
-  ASSERT_EQ(1, tree.size());
+  ASSERT_EQ(tree.size(), 1ul);
   ExpectOperationsEqual(operation_b, tree.begin()->second.container().operation);
 }
 
@@ -115,7 +115,7 @@ TEST(ReplayTreeTest, NonContiguousVmoOffsetUpdateBreaksMergedOperations) {
   tree.insert(o1);
   tree.insert(o2);
   tree.insert(o3);
-  ASSERT_EQ(2, tree.size());
+  ASSERT_EQ(tree.size(), 2ul);
   auto iter = tree.begin();
   ExpectOperationsEqual(o3, iter->second.container().operation);
   iter++;

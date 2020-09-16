@@ -14,9 +14,9 @@
 #include <zircon/device/block.h>
 
 #include <utility>
+#include <vector>
 
 #include <fbl/macros.h>
-#include <fbl/vector.h>
 #include <storage/operation/unbuffered_operation.h>
 
 namespace storage {
@@ -44,10 +44,10 @@ class UnbufferedOperationsBuilder {
 
   // Removes the vector of requests, and returns them to the caller.
   // This resets the |UnbufferedOperationsBuilder| object.
-  fbl::Vector<UnbufferedOperation> TakeOperations();
+  std::vector<UnbufferedOperation> TakeOperations();
 
  private:
-  fbl::Vector<UnbufferedOperation> operations_;
+  std::vector<UnbufferedOperation> operations_;
   uint64_t block_count_;
 };
 

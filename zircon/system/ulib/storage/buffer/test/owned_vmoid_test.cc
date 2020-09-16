@@ -5,7 +5,7 @@
 #include "storage/buffer/owned_vmoid.h"
 
 #include <zircon/status.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include <memory>
 
@@ -50,7 +50,7 @@ TEST(OwnedVmoidTest, AttachDetach) {
   OwnedVmoid vmoid(&registry);
 
   zx::vmo vmo;
-  EXPECT_OK(vmoid.AttachVmo(vmo));
+  EXPECT_EQ(vmoid.AttachVmo(vmo), ZX_OK);
   EXPECT_TRUE(vmoid.IsAttached());
   EXPECT_TRUE(registry.attached());
   EXPECT_EQ(vmoid.get(), kVmoid);
@@ -66,7 +66,7 @@ TEST(OwnedVmoidTest, AutoDetach) {
   {
     OwnedVmoid vmoid(&registry);
     zx::vmo vmo;
-    ASSERT_OK(vmoid.AttachVmo(vmo));
+    ASSERT_EQ(vmoid.AttachVmo(vmo), ZX_OK);
   }
   EXPECT_FALSE(registry.attached());
 }
@@ -86,7 +86,7 @@ TEST(OwnedVmoidTest, Move) {
     // Expect the underlying attachment to persist.
     OwnedVmoid vmoid(&registry);
     zx::vmo vmo;
-    ASSERT_OK(vmoid.AttachVmo(vmo));
+    ASSERT_EQ(vmoid.AttachVmo(vmo), ZX_OK);
     OwnedVmoid vmoid2 = std::move(vmoid);
 
     EXPECT_FALSE(vmoid.IsAttached());
@@ -98,7 +98,7 @@ TEST(OwnedVmoidTest, Move) {
     // Move after attach/detach
     OwnedVmoid vmoid(&registry);
     zx::vmo vmo;
-    ASSERT_OK(vmoid.AttachVmo(vmo));
+    ASSERT_EQ(vmoid.AttachVmo(vmo), ZX_OK);
     vmoid.Reset();
     OwnedVmoid vmoid2 = std::move(vmoid);
 

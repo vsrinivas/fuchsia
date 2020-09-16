@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -29,7 +29,7 @@ class Buffer : public storage::BlockBuffer {
   uint8_t buffer_[kBlockSize * kCapacity] = {};
 };
 
-class EntryViewFixture : public zxtest::Test {
+class EntryViewFixture : public testing::Test {
  public:
   storage::BlockBufferView make_view(size_t length) {
     return storage::BlockBufferView(&buffer_, 0, length);
@@ -61,7 +61,7 @@ TEST_F(EntryViewTest, SetHeaderFromOperation) {
   auto header = view.header();
   EXPECT_EQ(JournalObjectType::kHeader, header.ObjectType());
   EXPECT_EQ(JournalObjectType::kCommit, c_view.footer()->prefix.ObjectType());
-  EXPECT_EQ(1234, header.TargetBlock(0));
+  EXPECT_EQ(header.TargetBlock(0), 1234ul);
 }
 
 TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
@@ -88,9 +88,9 @@ TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
 
   JournalEntryView view(make_view(4), operations, 1);
   auto header = view.header();
-  EXPECT_EQ(1234, header.TargetBlock(0));
+  EXPECT_EQ(header.TargetBlock(0), 1234ul);
   EXPECT_FALSE(header.EscapedBlock(0));
-  EXPECT_EQ(5678, header.TargetBlock(1));
+  EXPECT_EQ(header.TargetBlock(1), 5678ul);
   EXPECT_FALSE(header.EscapedBlock(1));
 }
 
@@ -220,8 +220,8 @@ TEST_F(EntryViewEscapedTest, EscapedBlocksAreModifiedBySet) {
 
   EXPECT_TRUE(header.EscapedBlock(0));
   EXPECT_EQ(kTarget, header.TargetBlock(0));
-  EXPECT_EQ(0, ptr[0], "Payload prefix should have been escaped, but it was not");
-  EXPECT_EQ(0xDEADBEEF, ptr[1], "Remainder of payload should have remained unescaped");
+  EXPECT_EQ(ptr[0], 0ul) << "Payload prefix should have been escaped, but it was not";
+  EXPECT_EQ(0xDEADBEEF, ptr[1]) << "Remainder of payload should have remained unescaped";
 }
 
 TEST_F(EntryViewEscapedTest, EscapedBlocksCanBeDecoded) {
@@ -234,15 +234,15 @@ TEST_F(EntryViewEscapedTest, EscapedBlocksCanBeDecoded) {
 
   JournalEntryView view(buffer_view, operations(), 1);
 
-  EXPECT_EQ(0, ptr[0], "Payload prefix should have been escaped, but it was not");
+  EXPECT_EQ(ptr[0], 0ul) << "Payload prefix should have been escaped, but it was not";
 
   view.DecodePayloadBlocks();
   auto header = view.header();
 
   EXPECT_TRUE(header.EscapedBlock(0));
   EXPECT_EQ(kTarget, header.TargetBlock(0));
-  EXPECT_EQ(kJournalEntryMagic, ptr[0], "Payload prefix should have been reset, but it was not");
-  EXPECT_EQ(0xDEADBEEF, ptr[1], "Remainter of payload should have remained untouched");
+  EXPECT_EQ(kJournalEntryMagic, ptr[0]) << "Payload prefix should have been reset, but it was not";
+  EXPECT_EQ(0xDEADBEEF, ptr[1]) << "Remainter of payload should have remained untouched";
 }
 
 }  // namespace

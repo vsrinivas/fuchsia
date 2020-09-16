@@ -139,12 +139,11 @@ void RingBufferReservation::Reset() {
   ZX_DEBUG_ASSERT(!Reserved());
 }
 
-zx_status_t RingBufferReservation::CopyRequests(
-    const fbl::Vector<storage::UnbufferedOperation>& in_operations, size_t offset,
-    std::vector<storage::BufferedOperation>* out) {
+zx::status<size_t> RingBufferReservation::CopyRequests(
+    fbl::Span<const storage::UnbufferedOperation> in_operations, size_t offset,
+    std::vector<storage::BufferedOperation>* out_operations) {
   ZX_DEBUG_ASSERT_MSG(Reserved(), "Copying to invalid reservation");
-  std::vector<storage::BufferedOperation> out_operations;
-  out_operations.reserve(in_operations.size());
+  out_operations->reserve(out_operations->capacity() + in_operations.size());
 
   ZX_DEBUG_ASSERT_MSG(offset + BlockCount(in_operations) <= length(),
                       "Copying requests into a buffer beyond limit of prior reservation");
@@ -154,6 +153,7 @@ zx_status_t RingBufferReservation::CopyRequests(
   size_t reservation_offset = offset;
   // Offset into the target ring buffer.
   size_t ring_buffer_offset = (start() + reservation_offset) % capacity;
+  size_t done = 0;
 
   for (size_t i = 0; i < in_operations.size(); i++) {
     // Read parameters of the current request.
@@ -180,7 +180,7 @@ zx_status_t RingBufferReservation::CopyRequests(
     if (status != ZX_OK) {
       FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len, vmo_offset,
                      zx_status_get_string(status));
-      return status;
+      return zx::error(status);
     }
 
     storage::BufferedOperation out_op;
@@ -189,7 +189,7 @@ zx_status_t RingBufferReservation::CopyRequests(
     out_op.op.vmo_offset = ring_buffer_offset;
     out_op.op.dev_offset = dev_offset;
     out_op.op.length = buf_len;
-    out_operations.push_back(std::move(out_op));
+    out_operations->push_back(std::move(out_op));
 
     ring_buffer_offset = (ring_buffer_offset + buf_len) % capacity;
     reservation_offset += buf_len;
@@ -206,7 +206,7 @@ zx_status_t RingBufferReservation::CopyRequests(
       if (status != ZX_OK) {
         FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
                        vmo_offset, zx_status_get_string(status));
-        return status;
+        return zx::error(status);
       }
 
       ring_buffer_offset = (ring_buffer_offset + buf_len) % capacity;
@@ -219,12 +219,13 @@ zx_status_t RingBufferReservation::CopyRequests(
       out_op.op.vmo_offset = 0;
       out_op.op.dev_offset = dev_offset;
       out_op.op.length = buf_len;
-      out_operations.push_back(std::move(out_op));
+      out_operations->push_back(std::move(out_op));
     }
+
+    done += vmo_len;
   }
 
-  *out = std::move(out_operations);
-  return ZX_OK;
+  return zx::ok(done);
 }
 
 vmoid_t RingBufferReservation::vmoid() const {

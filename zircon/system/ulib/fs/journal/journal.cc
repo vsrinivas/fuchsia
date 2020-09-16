@@ -74,7 +74,7 @@ Journal::~Journal() {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
-Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> operations) {
   auto block_count_or =
       CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
   if (block_count_or.is_error()) {
@@ -94,11 +94,11 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
 
   // Once we have that space, copy the operations into the buffer.
   std::vector<storage::BufferedOperation> buffered_operations;
-  status = reservation.CopyRequests(operations, 0, &buffered_operations);
-  if (status != ZX_OK) {
+  auto result = reservation.CopyRequests(operations, 0, &buffered_operations);
+  if (result.is_error()) {
     FS_TRACE_ERROR("journal: Failed to copy operations into writeback buffer: %s\n",
-                   zx_status_get_string(status));
-    return fit::make_error_promise(status);
+                   result.status_string());
+    return fit::make_error_promise(result.error_value());
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 
@@ -117,7 +117,7 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
   }
 }
 
-Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteMetadata(std::vector<storage::UnbufferedOperation> operations) {
   if (!journal_buffer_) {
     ZX_DEBUG_ASSERT(!writer_.IsJournalingEnabled());
     return WriteData(std::move(operations));
@@ -143,11 +143,12 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
 
   // Once we have that space, copy the operations into the journal buffer.
   std::vector<storage::BufferedOperation> buffered_operations;
-  status = reservation.CopyRequests(operations, kJournalEntryHeaderBlocks, &buffered_operations);
-  if (status != ZX_OK) {
+  auto result =
+      reservation.CopyRequests(operations, kJournalEntryHeaderBlocks, &buffered_operations);
+  if (result.is_error()) {
     FS_TRACE_ERROR("journal: Failed to copy operations into journal buffer: %s\n",
-                   zx_status_get_string(status));
-    return fit::make_error_promise(status);
+                   result.status_string());
+    return fit::make_error_promise(result.error_value());
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 

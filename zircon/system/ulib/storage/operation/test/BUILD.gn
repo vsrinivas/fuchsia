@@ -14,10 +14,12 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":storage_operation" ]
+  deps = [ ":storage-operation-tests" ]
 }
 
 test("storage_operation") {
@@ -30,16 +32,23 @@ test("storage_operation") {
       configs -= fdio_config
     }
   }
-  output_name = "storage-operation-test"
   sources = [ "unbuffered_operations_builder_test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
     "//zircon/system/ulib/storage/operation",
   ]
 }
 
-bootfs_test("storage_operation-bootfs-test") {
-  name = "storage-operation-test"
+fuchsia_component("storage-operation-tests-component") {
+  component_name = "storage-operation-tests"
+  testonly = true
+  manifest = "meta/storage-operation-tests.cml"
   deps = [ ":storage_operation" ]
+}
+
+fuchsia_test_package("storage-operation-tests") {
+  test_components = [ ":storage-operation-tests-component" ]
 }

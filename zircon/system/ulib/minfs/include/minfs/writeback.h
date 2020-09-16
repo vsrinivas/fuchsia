@@ -65,42 +65,32 @@ class Transaction final : public PendingWork {
   void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final;
   void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) final;
 
-  size_t AllocateBlock() final {
-    return block_reservation_.Allocate();
-  }
+  size_t AllocateBlock() final { return block_reservation_.Allocate(); }
 
-  void DeallocateBlock(size_t block) final {
-    return block_reservation_.Deallocate(block);
-  }
+  void DeallocateBlock(size_t block) final { return block_reservation_.Deallocate(block); }
 
   ////////////////
   // Other methods.
-  size_t AllocateInode() {
-    return inode_reservation_.Allocate();
-  }
+  size_t AllocateInode() { return inode_reservation_.Allocate(); }
 
   void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);
 
 #ifdef __Fuchsia__
   // Returns a vector of all enqueued metadata write operations.
-  fbl::Vector<storage::UnbufferedOperation> RemoveMetadataOperations() {
+  std::vector<storage::UnbufferedOperation> RemoveMetadataOperations() {
     return metadata_operations_.TakeOperations();
   }
 
   // Returns a vector of all enqueued data write operations.
-  fbl::Vector<storage::UnbufferedOperation> RemoveDataOperations() {
+  std::vector<storage::UnbufferedOperation> RemoveDataOperations() {
     return data_operations_.TakeOperations();
   }
 
-  size_t SwapBlock(size_t old_bno) {
-    return block_reservation_.Swap(old_bno);
-  }
+  size_t SwapBlock(size_t old_bno) { return block_reservation_.Swap(old_bno); }
 
   std::vector<fbl::RefPtr<VnodeMinfs>> RemovePinnedVnodes();
 #else
-  std::vector<storage::BufferedOperation> TakeOperations() {
-    return builder_.TakeOperations();
-  }
+  std::vector<storage::BufferedOperation> TakeOperations() { return builder_.TakeOperations(); }
 #endif
 
  private:

@@ -6,7 +6,7 @@
 
 #include <lib/zx/vmo.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace storage {
 namespace {

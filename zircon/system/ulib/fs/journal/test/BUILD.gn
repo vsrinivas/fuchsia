@@ -16,12 +16,13 @@ import("//build/test.gni")
 import("//build/unification/zbi/bootfs_test.gni")
 
 import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":journal-unit",
-  ]
+  deps = [ ":journal-unit-tests" ]
 }
 
 test("journal-unit") {
@@ -49,10 +50,12 @@ test("journal-unit") {
     "superblock_test.cc",
   ]
   deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/journal",
     "//zircon/third_party/ulib/cksum",
   ]
@@ -88,7 +91,13 @@ fuzzer("journal-replay-fuzzer") {
   include_dirs = [ "test" ]
 }
 
-bootfs_test("journal-unit-bootfs-test") {
-  name = "journal-unit"
+fuchsia_component("journal-unit-tests-component") {
+  component_name = "journal-unit-tests"
+  testonly = true
+  manifest = "meta/journal-unit-tests.cml"
   deps = [ ":journal-unit" ]
+}
+
+fuchsia_test_package("journal-unit-tests") {
+  test_components = [ ":journal-unit-tests-component" ]
 }

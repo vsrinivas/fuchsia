@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 
 #include <map>
 
 #include <fs/journal/replay.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "entry_view.h"
 
@@ -45,18 +46,18 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   std::map<vmoid_t, zx::unowned_vmo> vmos_;
 };
 
-class ParseJournalTestFixture : public zxtest::Test {
+class ParseJournalTestFixture : public testing::Test {
  public:
   virtual ~ParseJournalTestFixture() = default;
 
   void SetUp() override {
     auto info_block_buffer = std::make_unique<storage::VmoBuffer>();
     registry_.SetNextVmoid(kInfoVmoid);
-    ASSERT_OK(info_block_buffer->Initialize(&registry_, 1, kBlockSize, "info-block"));
+    ASSERT_EQ(info_block_buffer->Initialize(&registry_, 1, kBlockSize, "info-block"), ZX_OK);
     info_block_ = JournalSuperblock(std::move(info_block_buffer));
 
     registry_.SetNextVmoid(kJournalVmoid);
-    ASSERT_OK(journal_buffer_.Initialize(&registry_, kJournalLength, kBlockSize, "journal"));
+    ASSERT_EQ(journal_buffer_.Initialize(&registry_, kJournalLength, kBlockSize, "journal"), ZX_OK);
 
     registry_.SetNextVmoid(kOtherVmoid);
   }
@@ -101,11 +102,12 @@ TEST_F(ParseJournalTest, EmptyJournalNoOperations) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  EXPECT_EQ(0, operations.size());
-  EXPECT_EQ(0, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  EXPECT_EQ(operations.size(), 0ul);
+  EXPECT_EQ(sequence_number, 0ul);
+  EXPECT_EQ(0ul, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, EmptyJournalNonzeroSequenceNumber) {
@@ -113,11 +115,12 @@ TEST_F(ParseJournalTest, EmptyJournalNonzeroSequenceNumber) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  EXPECT_EQ(0, operations.size());
+  EXPECT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  EXPECT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
 }
 
 void AddOperation(uint64_t dev_offset, uint64_t length,
@@ -150,13 +153,14 @@ TEST_F(ParseJournalTest, OneEntryOneOperation) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
 TEST_F(ParseJournalTest, OneEntryOneOperationFullJournal) {
@@ -174,13 +178,14 @@ TEST_F(ParseJournalTest, OneEntryOneOperationFullJournal) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, kDevOffset, kLength));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, kDevOffset, kLength));
 }
 
 TEST_F(ParseJournalTest, OneEntryOneOperationWrapsAroundJournal) {
@@ -206,18 +211,19 @@ TEST_F(ParseJournalTest, OneEntryOneOperationWrapsAroundJournal) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(2, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 2ul);
   vmo_offset += kJournalEntryHeaderBlocks;
 
   uint64_t length = kJournalLength - vmo_offset;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, dev_offset, length));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, dev_offset, length));
 
   dev_offset += length;
   vmo_offset = 0;
   length = kOperationLength - length;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset, dev_offset, length));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[1], vmo_offset, dev_offset, length));
 
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   ASSERT_EQ(vmo_offset + length + kJournalEntryCommitBlocks, next_entry_start);
@@ -237,17 +243,18 @@ TEST_F(ParseJournalTest, OneEntryManyOperations) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  EXPECT_EQ(3, operations.size());
+  EXPECT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  EXPECT_EQ(operations.size(), 3ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 3));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 3));
   vmo_offset += 3;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset, 20, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[1], vmo_offset, 20, 2));
   vmo_offset += 2;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[2], vmo_offset, 30, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[2], vmo_offset, 30, 1));
 }
 
 TEST_F(ParseJournalTest, MultipleEntriesDifferentDevOffsetCausesTwoEntriesParsed) {
@@ -268,15 +275,16 @@ TEST_F(ParseJournalTest, MultipleEntriesDifferentDevOffsetCausesTwoEntriesParsed
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(2, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 2ul);
   EXPECT_EQ(kGoldenSequenceNumber + 2, sequence_number);
   EXPECT_EQ(kEntryLengthA + kEntryLengthB, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
   vmo_offset += kEntryLengthA;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset, 20, 3));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[1], vmo_offset, 20, 3));
 }
 
 TEST_F(ParseJournalTest, MultipleEntriesSameDevOffsetCausesOneEntryParsed) {
@@ -297,13 +305,14 @@ TEST_F(ParseJournalTest, MultipleEntriesSameDevOffsetCausesOneEntryParsed) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 2, sequence_number);
   EXPECT_EQ(kEntryLengthA + kEntryLengthB, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks + kEntryLengthA;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
 // Tests that contiguous entries with a non-increasing sequence number will
@@ -330,12 +339,13 @@ TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   ASSERT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
 TEST_F(ParseJournalTest, EscapedEntry) {
@@ -356,23 +366,24 @@ TEST_F(ParseJournalTest, EscapedEntry) {
   // Verify that it was escaped.
   const auto& const_entry_view = entry_view;
   EXPECT_TRUE(const_entry_view.header().EscapedBlock(0));
-  EXPECT_EQ(0, ptr[0]);
+  EXPECT_EQ(ptr[0], 0ul);
   EXPECT_EQ(0xDEADBEEF, ptr[1]);
 
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 
   // Verify that the entry is un-escaped after parsing.
-  EXPECT_EQ(kJournalEntryMagic, ptr[0]);
-  EXPECT_EQ(0xDEADBEEF, ptr[1]);
+  EXPECT_EQ(ptr[0], kJournalEntryMagic);
+  EXPECT_EQ(ptr[1], 0xDEADBEEFul);
 }
 
 TEST_F(ParseJournalTest, TooOldDropped) {
@@ -390,11 +401,12 @@ TEST_F(ParseJournalTest, TooOldDropped) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(0, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
 }
 
 TEST_F(ParseJournalTest, NewerThanExpectedDropped) {
@@ -413,11 +425,12 @@ TEST_F(ParseJournalTest, NewerThanExpectedDropped) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  EXPECT_EQ(0, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  EXPECT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kUpdatedSequenceNumber, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
 }
 
 TEST_F(ParseJournalTest, EntryMultipleTimes) {
@@ -433,22 +446,24 @@ TEST_F(ParseJournalTest, EntryMultipleTimes) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
   operations.clear();
 
   // We can replay the same entries multiple times.
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   EXPECT_EQ(kEntryLength, next_entry_start);
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
 TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
@@ -470,11 +485,12 @@ TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(0, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
 }
 
 TEST_F(ParseJournalTest, EntryModifiedEntryDropped) {
@@ -495,11 +511,12 @@ TEST_F(ParseJournalTest, EntryModifiedEntryDropped) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(0, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
 }
 
 TEST_F(ParseJournalTest, EntryModifiedCommitDropped) {
@@ -520,11 +537,12 @@ TEST_F(ParseJournalTest, EntryModifiedCommitDropped) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(0, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
-  EXPECT_EQ(0, next_entry_start);
+  EXPECT_EQ(next_entry_start, 0ul);
 }
 
 TEST_F(ParseJournalTest, EntryModifiedAfterCommitStillKept) {
@@ -548,12 +566,13 @@ TEST_F(ParseJournalTest, EntryModifiedAfterCommitStillKept) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
+  ASSERT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 1ul);
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
 TEST_F(ParseJournalTest, DetectsCorruptJournalIfOldEntryHasBadChecksumButGoodLength) {
@@ -620,9 +639,10 @@ TEST_F(ParseJournalTest, DoesntDetectCorruptJournalIfOldEntryHasBadChecksumAndBa
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(0, operations.size());
+  EXPECT_EQ(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start),
+            ZX_OK);
+  ASSERT_EQ(operations.size(), 0ul);
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
 }
 
@@ -662,21 +682,21 @@ class ReplayJournalTest : public ParseJournalTestFixture {
 
   void ValidInfoReadRequest(const storage::BufferedOperation& request) const {
     EXPECT_EQ(storage::OperationType::kRead, request.op.type);
-    EXPECT_EQ(0, request.op.vmo_offset);
+    EXPECT_EQ(request.op.vmo_offset, 0ul);
     EXPECT_EQ(kJournalAreaStart, request.op.dev_offset);
     EXPECT_EQ(kJournalMetadataBlocks, request.op.length);
   }
 
   void ValidInfoWriteRequest(const storage::BufferedOperation& request) const {
     EXPECT_EQ(storage::OperationType::kWrite, request.op.type);
-    EXPECT_EQ(0, request.op.vmo_offset);
+    EXPECT_EQ(request.op.vmo_offset, 0ul);
     EXPECT_EQ(kJournalAreaStart, request.op.dev_offset);
     EXPECT_EQ(kJournalMetadataBlocks, request.op.length);
   }
 
   void ValidEntriesReadRequest(const storage::BufferedOperation& request) const {
     EXPECT_EQ(storage::OperationType::kRead, request.op.type);
-    EXPECT_EQ(0, request.op.vmo_offset);
+    EXPECT_EQ(request.op.vmo_offset, 0ul);
     EXPECT_EQ(kJournalEntryStart, request.op.dev_offset);
     EXPECT_EQ(kJournalEntryLength, request.op.length);
   }
@@ -685,17 +705,19 @@ class ReplayJournalTest : public ParseJournalTestFixture {
   // it into the requested vmoid.
   void TransferInfoTo(vmoid_t vmoid) {
     char buf[kBlockSize * kJournalMetadataBlocks];
-    EXPECT_OK(registry()->GetVmo(kInfoVmoid).read(buf, 0, sizeof(buf)));
-    EXPECT_OK(registry()->GetVmo(vmoid).write(buf, 0, sizeof(buf)));
+    EXPECT_EQ(registry()->GetVmo(kInfoVmoid).read(buf, 0, sizeof(buf)), ZX_OK);
+    EXPECT_EQ(registry()->GetVmo(vmoid).write(buf, 0, sizeof(buf)), ZX_OK);
   }
 
   // Take the contents of the pre-registered journal buffer and transfer
   // it into the requested vmoid.
   void TransferEntryTo(vmoid_t vmoid, size_t offset, uint64_t length) {
     char entry_buf[kBlockSize * length];
-    EXPECT_OK(
-        registry()->GetVmo(kJournalVmoid).read(entry_buf, offset * kBlockSize, sizeof(entry_buf)));
-    EXPECT_OK(registry()->GetVmo(vmoid).write(entry_buf, offset * kBlockSize, sizeof(entry_buf)));
+    EXPECT_EQ(
+        registry()->GetVmo(kJournalVmoid).read(entry_buf, offset * kBlockSize, sizeof(entry_buf)),
+        ZX_OK);
+    EXPECT_EQ(registry()->GetVmo(vmoid).write(entry_buf, offset * kBlockSize, sizeof(entry_buf)),
+              ZX_OK);
   }
 };
 
@@ -703,7 +725,7 @@ TEST_F(ReplayJournalTest, BadJournalSuperblockFails) {
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // Return OK, but don't provide any values. This should fail during replay.
-        EXPECT_LE(1, requests.size());
+        EXPECT_GE(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kRead, requests[0].op.type);
         return ZX_OK;
       },
@@ -716,8 +738,8 @@ TEST_F(ReplayJournalTest, BadJournalSuperblockFails) {
 
 TEST_F(ReplayJournalTest, CannotReadJournalFails) {
   MockTransactionHandler::TransactionCallback callbacks[] = {
-     [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_LE(1, requests.size());
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_GE(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kRead, requests[0].op.type);
         return ZX_ERR_IO;
       },
@@ -737,7 +759,7 @@ TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // First request: Reading from the journal.
-        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(requests.size(), 2ul);
         ValidInfoReadRequest(requests[0]);
         ValidEntriesReadRequest(requests[1]);
 
@@ -748,8 +770,9 @@ TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
   };
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
-  ASSERT_OK(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
-                          kBlockSize, &superblock));
+  ASSERT_EQ(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
+                          kBlockSize, &superblock),
+            ZX_OK);
   EXPECT_EQ(kStart, superblock.start());
   EXPECT_EQ(kSequenceNumber, superblock.sequence_number());
 }
@@ -780,7 +803,7 @@ TEST_F(ReplayJournalTest, OneEntry) {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // First request: Reading from the journal.
         // Transfer the pre-seeded info block.
-        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(requests.size(), 2ul);
         ValidInfoReadRequest(requests[0]);
         ValidEntriesReadRequest(requests[1]);
 
@@ -791,7 +814,7 @@ TEST_F(ReplayJournalTest, OneEntry) {
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code replays the provided operation.
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kJournalEntryHeaderBlocks, requests[0].op.vmo_offset);
         EXPECT_EQ(operations[0].op.dev_offset, requests[0].op.dev_offset);
@@ -800,15 +823,16 @@ TEST_F(ReplayJournalTest, OneEntry) {
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code updates the journal superblock.
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         ValidInfoWriteRequest(requests[0]);
         return ZX_OK;
       }};
 
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
-  ASSERT_OK(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
-                          kBlockSize, &superblock));
+  ASSERT_EQ(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
+                          kBlockSize, &superblock),
+            ZX_OK);
   EXPECT_EQ(kStart + entry_size, superblock.start());
   // The sequence_number should have advanced to avoid replaying the old entry.
   EXPECT_EQ(kSequenceNumber + 1, superblock.sequence_number());
@@ -840,7 +864,7 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // First request: Reading from the journal.
         // Transfer the pre-seeded info block.
-        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(requests.size(), 2ul);
         ValidInfoReadRequest(requests[0]);
         ValidEntriesReadRequest(requests[1]);
 
@@ -852,7 +876,7 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code replays the provided operation, but return
         // an error instead.
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         return ZX_ERR_IO;
       }};

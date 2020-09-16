@@ -9,9 +9,13 @@
 #error Fuchsia-only Header
 #endif
 
+#include <lib/zx/status.h>
+
 #include <vector>
 
 #include <fbl/mutex.h>
+#include <fbl/span.h>
+#include <fbl/vector.h>
 #include <storage/buffer/block_buffer_view.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/unbuffered_operation.h>
@@ -129,14 +133,15 @@ class RingBufferReservation {
   // in-memory buffer instead of their original VMOs, outputting these updated requests.
   //
   // Returns an error if a VMO from |requests| cannot be accessed to write into
-  // the buffer.
+  // the buffer, but otherwise returns the number of blocks copied.
   //
   // Preconditions:
   // - The reservation must be large enough to copy |requests|:
   //  - offset + BlockCount(in_requests) <= length()
   // - |Reserved()| must be true.
-  zx_status_t CopyRequests(const fbl::Vector<storage::UnbufferedOperation>& requests, size_t offset,
-                           std::vector<storage::BufferedOperation>* out);
+  zx::status<uint64_t> CopyRequests(fbl::Span<const storage::UnbufferedOperation> in_operations,
+                                    size_t offset,
+                                    std::vector<storage::BufferedOperation>* out_operations);
 
   BlockBufferView buffer_view() { return view_; }
 

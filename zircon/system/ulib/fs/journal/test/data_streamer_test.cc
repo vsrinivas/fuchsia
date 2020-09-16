@@ -8,8 +8,8 @@
 
 #include <fs/journal/journal.h>
 #include <fs/transaction/writeback.h>
+#include <gtest/gtest.h>
 #include <storage/buffer/vmoid_registry.h>
-#include <zxtest/zxtest.h>
 
 namespace fs {
 namespace {
@@ -64,25 +64,28 @@ constexpr uint64_t kWritebackLength = 8;
 // operations are chunked correctly.
 constexpr uint64_t kMaxChunk = (3 * kWritebackLength) / 4;
 
-class DataStreamerFixture : public zxtest::Test {
+class DataStreamerFixture : public testing::Test {
  public:
   void SetUp() override {
     std::unique_ptr<storage::BlockingRingBuffer> journal_buffer;
     std::unique_ptr<storage::BlockingRingBuffer> data_buffer;
-    ASSERT_OK(storage::BlockingRingBuffer::Create(&registry_, 10, kBlockSize,
-                                                  "journal-writeback-buffer", &journal_buffer));
-    ASSERT_OK(storage::BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
-                                                  "data-writeback-buffer", &data_buffer));
+    ASSERT_EQ(storage::BlockingRingBuffer::Create(&registry_, 10, kBlockSize,
+                                                  "journal-writeback-buffer", &journal_buffer),
+              ZX_OK);
+    ASSERT_EQ(storage::BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
+                                                  "data-writeback-buffer", &data_buffer),
+              ZX_OK);
     auto info_block_buffer = std::make_unique<storage::VmoBuffer>();
     constexpr size_t kInfoBlockBlockCount = 1;
-    ASSERT_OK(
-        info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, kBlockSize, "info-block"));
+    ASSERT_EQ(
+        info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, kBlockSize, "info-block"),
+        ZX_OK);
     JournalSuperblock info_block = JournalSuperblock(std::move(info_block_buffer));
     info_block.Update(0, 0);
 
-    journal_ = std::make_unique<Journal>(&handler_, std::move(info_block),
-                                         std::move(journal_buffer), std::move(data_buffer), 0,
-                                         Journal::Options());
+    journal_ =
+        std::make_unique<Journal>(&handler_, std::move(info_block), std::move(journal_buffer),
+                                  std::move(data_buffer), 0, Journal::Options());
   }
 
   MockTransactionHandler& handler() { return handler_; }
@@ -99,11 +102,11 @@ using DataStreamerTest = DataStreamerFixture;
 TEST_F(DataStreamerTest, StreamSmallOperationScheduledToWriteback) {
   const uint64_t kOperationLength = 2;
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo), ZX_OK);
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
         EXPECT_EQ(kOperationLength, requests[0].op.length);
@@ -131,18 +134,18 @@ TEST_F(DataStreamerTest, StreamOperationAsLargeAsWritebackIsChunked) {
   const uint64_t kOperationLength = kWritebackLength;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo), ZX_OK);
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
         EXPECT_EQ(kMaxChunk, requests[0].op.length);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kDevOffset + kMaxChunk, requests[0].op.dev_offset);
         EXPECT_EQ(kOperationLength - kMaxChunk, requests[0].op.length);
@@ -171,24 +174,24 @@ TEST_F(DataStreamerTest, StreamOperationLargerThanWritebackIsChunkedAndNonBlocki
   const uint64_t kOperationLength = kWritebackLength + 1;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo), ZX_OK);
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
         EXPECT_EQ(kMaxChunk, requests[0].op.length);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(requests.size(), 2ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kDevOffset + kMaxChunk, requests[0].op.dev_offset);
         EXPECT_EQ(kWritebackLength - kMaxChunk, requests[0].op.length);
         EXPECT_EQ(storage::OperationType::kWrite, requests[1].op.type);
         EXPECT_EQ(kDevOffset + kOperationLength - 1, requests[1].op.dev_offset);
-        EXPECT_EQ(1, requests[1].op.length);
+        EXPECT_EQ(requests[1].op.length, 1ul);
         return ZX_OK;
       },
 
@@ -215,11 +218,11 @@ TEST_F(DataStreamerTest, StreamManySmallOperationsAreMerged) {
   const uint64_t kOperationLength = 1;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create((kOperationLength * kOperationCount) * kBlockSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create((kOperationLength * kOperationCount) * kBlockSize, 0, &vmo), ZX_OK);
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
         EXPECT_EQ(kOperationCount * kOperationLength, requests[0].op.length);
@@ -250,7 +253,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
   const uint64_t kOperationLength = 1;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo), ZX_OK);
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) { return ZX_ERR_INTERNAL; },
@@ -272,7 +275,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
     journal->schedule_task(
         streamer.Flush().then([&](fit::context& context, fit::result<void, zx_status_t>& result) {
           EXPECT_TRUE(result.is_error());
-          EXPECT_STATUS(ZX_ERR_INTERNAL, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_INTERNAL);
           failed_promise_observed = true;
           return fit::ok();
         }));

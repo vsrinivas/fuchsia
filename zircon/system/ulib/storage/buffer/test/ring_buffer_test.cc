@@ -10,8 +10,8 @@
 #include <memory>
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <storage/operation/unbuffered_operations_builder.h>
-#include <zxtest/zxtest.h>
 
 namespace storage {
 namespace {
@@ -27,7 +27,7 @@ class MockVmoidRegistry : public VmoidRegistry {
  private:
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, Vmoid* out) override {
     *out = Vmoid(default_vmoid());
-    EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_));
+    EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_), ZX_OK);
     return ZX_OK;
   }
   zx_status_t BlockDetachVmo(Vmoid vmoid) override {
@@ -50,7 +50,8 @@ TEST(RingBufferTest, MakeRingBuffer) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
   const size_t kBlocks = 5;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer),
+            ZX_OK);
   EXPECT_EQ(kBlocks, buffer->capacity());
 }
 
@@ -58,63 +59,67 @@ TEST(RingBufferTest, ReserveOne) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
   const size_t kBlocks = 5;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer),
+            ZX_OK);
   RingBufferReservation reservation;
-  EXPECT_EQ(0, reservation.length());
-  EXPECT_OK(buffer->Reserve(1, &reservation));
+  EXPECT_EQ(reservation.length(), 0ul);
+  EXPECT_EQ(buffer->Reserve(1, &reservation), ZX_OK);
   EXPECT_EQ(vmoid_registry.default_vmoid(), reservation.vmoid());
-  EXPECT_EQ(0, reservation.start());
-  EXPECT_EQ(1, reservation.length());
+  EXPECT_EQ(reservation.start(), 0ul);
+  EXPECT_EQ(reservation.length(), 1ul);
 }
 
 TEST(RingBufferTest, ReserveMove) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
   const size_t kBlocks = 5;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer),
+            ZX_OK);
   RingBufferReservation reservation_a;
-  ASSERT_OK(buffer->Reserve(1, &reservation_a));
-  EXPECT_EQ(1, reservation_a.length());
+  ASSERT_EQ(buffer->Reserve(1, &reservation_a), ZX_OK);
+  EXPECT_EQ(reservation_a.length(), 1ul);
 
   // Move Construction.
   RingBufferReservation reservation_b(std::move(reservation_a));
-  EXPECT_EQ(0, reservation_a.length());
-  EXPECT_EQ(1, reservation_b.length());
+  EXPECT_EQ(reservation_a.length(), 0ul);
+  EXPECT_EQ(reservation_b.length(), 1ul);
 
   // Move Assignment.
   reservation_a = std::move(reservation_b);
-  EXPECT_EQ(1, reservation_a.length());
-  EXPECT_EQ(0, reservation_b.length());
+  EXPECT_EQ(reservation_a.length(), 1ul);
+  EXPECT_EQ(reservation_b.length(), 0ul);
 }
 
 TEST(RingBufferTest, ReservationBufferView) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
   const size_t kBlocks = 5;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer),
+            ZX_OK);
   RingBufferReservation reservation_a;
   RingBufferReservation reservation_b;
-  EXPECT_OK(buffer->Reserve(2, &reservation_a));
-  EXPECT_OK(buffer->Reserve(1, &reservation_b));
+  EXPECT_EQ(buffer->Reserve(2, &reservation_a), ZX_OK);
+  EXPECT_EQ(buffer->Reserve(1, &reservation_b), ZX_OK);
   EXPECT_EQ(vmoid_registry.default_vmoid(), reservation_a.vmoid());
   EXPECT_EQ(vmoid_registry.default_vmoid(), reservation_a.buffer_view().vmoid());
 
-  EXPECT_EQ(0, reservation_a.start());
-  EXPECT_EQ(2, reservation_a.length());
-  EXPECT_EQ(2, reservation_b.start());
-  EXPECT_EQ(1, reservation_b.length());
+  EXPECT_EQ(reservation_a.start(), 0ul);
+  EXPECT_EQ(reservation_a.length(), 2ul);
+  EXPECT_EQ(reservation_b.start(), 2ul);
+  EXPECT_EQ(reservation_b.length(), 1ul);
 }
 
 TEST(RingBufferTest, ReserveAndFreeOutOfOrder) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
   const size_t kBlocks = 10;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer),
+            ZX_OK);
   RingBufferReservation reservations[4];
-  ASSERT_OK(buffer->Reserve(1, &reservations[0]));
-  ASSERT_OK(buffer->Reserve(2, &reservations[1]));
-  ASSERT_OK(buffer->Reserve(3, &reservations[2]));
-  ASSERT_OK(buffer->Reserve(4, &reservations[3]));
+  ASSERT_EQ(buffer->Reserve(1, &reservations[0]), ZX_OK);
+  ASSERT_EQ(buffer->Reserve(2, &reservations[1]), ZX_OK);
+  ASSERT_EQ(buffer->Reserve(3, &reservations[2]), ZX_OK);
+  ASSERT_EQ(buffer->Reserve(4, &reservations[3]), ZX_OK);
 
   // Although we would ordinarily prefer to free in the order we allocated:
   // 0, 1, 2, 3
@@ -134,19 +139,19 @@ TEST(RingBufferTest, ReserveAndFreeOutOfOrder) {
 
   // Now ALL the blocks are freed.
   RingBufferReservation reservation;
-  EXPECT_OK(buffer->Reserve(kBlocks, &reservation));
+  EXPECT_EQ(buffer->Reserve(kBlocks, &reservation), ZX_OK);
 }
 
 // Create a test VMO. Write the following pattern to the vmo:
 // Block N: value + N
 void MakeTestVmo(size_t blocks, int value, zx::vmo* out_vmo) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(blocks * kBlockSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(blocks * kBlockSize, 0, &vmo), ZX_OK);
 
   uint8_t buf[kBlockSize];
   for (size_t i = 0; i < blocks; i++) {
     memset(buf, value++, sizeof(buf));
-    ASSERT_OK(vmo.write(buf, i * kBlockSize, kBlockSize));
+    ASSERT_EQ(vmo.write(buf, i * kBlockSize, kBlockSize), ZX_OK);
   }
   *out_vmo = std::move(vmo);
 }
@@ -155,10 +160,10 @@ void MakeTestVmo(size_t blocks, int value, zx::vmo* out_vmo) {
 // Additionally, check that |value| is also set in |addr|.
 void CheckVmoEquals(const zx::vmo& vmo, const void* addr, size_t offset, int value) {
   uint8_t buf[kBlockSize];
-  ASSERT_OK(vmo.read(buf, offset * kBlockSize, kBlockSize));
-  EXPECT_EQ(0, memcmp(buf, addr, kBlockSize), "VMO data not equal to addr");
+  ASSERT_EQ(vmo.read(buf, offset * kBlockSize, kBlockSize), ZX_OK);
+  EXPECT_EQ(0, memcmp(buf, addr, kBlockSize)) << "VMO data not equal to addr";
   memset(buf, value, sizeof(buf));
-  EXPECT_EQ(0, memcmp(buf, addr, kBlockSize), "VMO data not equal to value");
+  EXPECT_EQ(0, memcmp(buf, addr, kBlockSize)) << "VMO data not equal to value";
 }
 
 // Checks that, for the portion of data accessible in |reservation|, the |operation| is
@@ -173,12 +178,12 @@ void CheckOperationInRingBuffer(const zx::vmo& vmo, RingBufferReservation* reser
 }
 
 void ReserveAndCopyRequests(const std::unique_ptr<RingBuffer>& buffer,
-                            fbl::Vector<storage::UnbufferedOperation> requests,
+                            std::vector<storage::UnbufferedOperation> requests,
                             RingBufferRequests* out) {
   RingBufferReservation reservation;
-  ASSERT_OK(buffer->Reserve(BlockCount(requests), &reservation));
+  ASSERT_EQ(buffer->Reserve(BlockCount(requests), &reservation), ZX_OK);
   std::vector<storage::BufferedOperation> buffer_request;
-  ASSERT_OK(reservation.CopyRequests(requests, 0, &buffer_request));
+  ASSERT_TRUE(reservation.CopyRequests(requests, 0, &buffer_request).is_ok());
   *out = RingBufferRequests(std::move(buffer_request), std::move(reservation));
 }
 
@@ -203,20 +208,21 @@ TEST(RingBufferTest, OneRequestAtOffsetZero) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   RingBufferRequests request;
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
-  ASSERT_EQ(1, request.Operations().size());
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
+  ASSERT_EQ(request.Operations().size(), 1ul);
   // Start of RingBuffer.
-  EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
+  EXPECT_EQ(request.Operations()[0].op.vmo_offset, 0ul);
   // Same location on dev.
   EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].op.dev_offset);
   // Same length.
   EXPECT_EQ(operation.op.length, request.Operations()[0].op.length);
 
-  EXPECT_EQ(0, request.Reservation()->start());
+  EXPECT_EQ(request.Reservation()->start(), 0ul);
   EXPECT_EQ(operation.op.length, request.Reservation()->length());
   CheckOperationInRingBuffer(vmo, request.Reservation(), operation, 0, seed);
 }
@@ -242,20 +248,21 @@ TEST(RingBufferTest, OneRequestAtNonZeroOffset) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   RingBufferRequests request;
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
-  ASSERT_EQ(1, request.Operations().size());
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
+  ASSERT_EQ(request.Operations().size(), 1ul);
   // Start of RingBuffer.
-  EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
+  EXPECT_EQ(request.Operations()[0].op.vmo_offset, 0ul);
   // Same location on dev.
   EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].op.dev_offset);
   // Same length.
   EXPECT_EQ(operation.op.length, request.Operations()[0].op.length);
 
-  EXPECT_EQ(0, request.Reservation()->start());
+  EXPECT_EQ(request.Reservation()->start(), 0ul);
   EXPECT_EQ(operation.op.length, request.Reservation()->length());
   CheckOperationInRingBuffer(vmo, request.Reservation(), operation, 0, seed);
 }
@@ -288,14 +295,15 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoSameReservation) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   RingBufferRequests request;
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
-  ASSERT_EQ(2, request.Operations().size());
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
+  ASSERT_EQ(request.Operations().size(), 2ul);
   // Start of RingBuffer, and then immediately following the previous request.
-  EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
+  EXPECT_EQ(request.Operations()[0].op.vmo_offset, 0ul);
   EXPECT_EQ(operations[0].op.length, request.Operations()[1].op.vmo_offset);
   // Same location on dev.
   EXPECT_EQ(operations[0].op.dev_offset, request.Operations()[0].op.dev_offset);
@@ -304,7 +312,7 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoSameReservation) {
   EXPECT_EQ(operations[0].op.length, request.Operations()[0].op.length);
   EXPECT_EQ(operations[1].op.length, request.Operations()[1].op.length);
 
-  EXPECT_EQ(0, request.Reservation()->start());
+  EXPECT_EQ(request.Reservation()->start(), 0ul);
   EXPECT_EQ(operations[0].op.length + operations[1].op.length, request.Reservation()->length());
   CheckOperationInRingBuffer(vmo, request.Reservation(), operations[0], 0, seed);
   CheckOperationInRingBuffer(vmo, request.Reservation(), operations[1], operations[0].op.length,
@@ -324,8 +332,9 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   storage::UnbufferedOperationsBuilder builder;
   storage::UnbufferedOperation operations[2];
@@ -336,7 +345,7 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
   operations[0].op.dev_offset = 2;
   operations[0].op.length = 1;
   builder.Add(operations[0]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
 
   operations[1].vmo = zx::unowned_vmo(vmo.get());
   operations[1].op.type = storage::OperationType::kWrite;
@@ -344,13 +353,13 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
   operations[1].op.dev_offset = 4;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
 
-  ASSERT_EQ(1, requests[0].Operations().size());
-  ASSERT_EQ(1, requests[1].Operations().size());
+  ASSERT_EQ(requests[0].Operations().size(), 1ul);
+  ASSERT_EQ(requests[1].Operations().size(), 1ul);
 
   // Start of RingBuffer, and then immediately following the previous request.
-  EXPECT_EQ(0, requests[0].Operations()[0].op.vmo_offset);
+  EXPECT_EQ(requests[0].Operations()[0].op.vmo_offset, 0ul);
   EXPECT_EQ(operations[0].op.length, requests[1].Operations()[0].op.vmo_offset);
   // Same location on dev.
   EXPECT_EQ(operations[0].op.dev_offset, requests[0].Operations()[0].op.dev_offset);
@@ -359,7 +368,7 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
   EXPECT_EQ(operations[0].op.length, requests[0].Operations()[0].op.length);
   EXPECT_EQ(operations[1].op.length, requests[1].Operations()[0].op.length);
 
-  EXPECT_EQ(0, requests[0].Reservation()->start());
+  EXPECT_EQ(requests[0].Reservation()->start(), 0ul);
   EXPECT_EQ(operations[0].op.length, requests[1].Reservation()->start());
   EXPECT_EQ(operations[0].op.length, requests[0].Reservation()->length());
   EXPECT_EQ(operations[1].op.length, requests[1].Reservation()->length());
@@ -389,20 +398,21 @@ TEST(RingBufferTest, OneRequestFullRingBuffer) {
   const size_t kRingBufferBlocks = 3;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   RingBufferRequests request;
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
-  ASSERT_EQ(1, request.Operations().size());
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
+  ASSERT_EQ(request.Operations().size(), 1ul);
   // Start of RingBuffer.
-  EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
+  EXPECT_EQ(request.Operations()[0].op.vmo_offset, 0ul);
   // Same location on dev.
   EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].op.dev_offset);
   // Same length.
   EXPECT_EQ(operation.op.length, request.Operations()[0].op.length);
 
-  EXPECT_EQ(0, request.Reservation()->start());
+  EXPECT_EQ(request.Reservation()->start(), 0ul);
   EXPECT_EQ(operation.op.length, request.Reservation()->length());
   CheckOperationInRingBuffer(vmo, request.Reservation(), operation, 0, seed);
 }
@@ -428,12 +438,13 @@ TEST(RingBufferTest, OneRequestWithRingBufferFull) {
   const size_t kRingBufferBlocks = 3;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   RingBufferRequests request;
   ASSERT_EQ(ZX_ERR_NO_SPACE, buffer->Reserve(BlockCount(builder.TakeOperations()), nullptr));
-  ASSERT_EQ(0, request.Operations().size());
+  ASSERT_EQ(request.Operations().size(), 0ul);
 }
 
 //  VMO 1: [ A, B, C, _, _, _ ]
@@ -453,8 +464,9 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   const size_t kRingBufferBlocks = 6;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   storage::UnbufferedOperationsBuilder builder;
   storage::UnbufferedOperation operations[3];
@@ -465,7 +477,7 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 3;
   builder.Add(operations[0]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
 
   operations[1].vmo = zx::unowned_vmo(vmo.get());
   operations[1].op.type = storage::OperationType::kWrite;
@@ -473,7 +485,7 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   operations[1].op.dev_offset = 3;
   operations[1].op.length = 3;
   builder.Add(operations[1]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
 
   operations[2].vmo = zx::unowned_vmo(vmo.get());
   operations[2].op.type = storage::OperationType::kWrite;
@@ -489,7 +501,7 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   // Releasing the first request makes enough room in the buffer.
   { auto released = std::move(requests[0]); }
   builder.Add(operations[2]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[2]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[2]));
   CheckOperationInRingBuffer(vmo, requests[1].Reservation(), operations[1], 0, seed);
   CheckOperationInRingBuffer(vmo, requests[2].Reservation(), operations[2], 0, seed);
 }
@@ -510,8 +522,9 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   const size_t kRingBufferBlocks = 6;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(
-      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer),
+      ZX_OK);
 
   storage::UnbufferedOperationsBuilder builder;
   storage::UnbufferedOperation operations[3];
@@ -522,7 +535,7 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 3;
   builder.Add(operations[0]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
 
   operations[1].vmo = zx::unowned_vmo(vmo.get());
   operations[1].op.type = storage::OperationType::kWrite;
@@ -530,7 +543,7 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   operations[1].op.dev_offset = 4;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
 
   operations[2].vmo = zx::unowned_vmo(vmo.get());
   operations[2].op.type = storage::OperationType::kWrite;
@@ -546,7 +559,7 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   // Releasing the first request makes enough room in the buffer.
   { auto released = std::move(requests[0]); }
   builder.Add(operations[2]);
-  ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[2]));
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[2]));
   CheckOperationInRingBuffer(vmo, requests[1].Reservation(), operations[1], 0, seed);
   CheckOperationInRingBuffer(vmo, requests[2].Reservation(), operations[2], 0, seed);
 }
@@ -568,12 +581,13 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   const size_t kRingBufferBlocks = 4;
   MockVmoidRegistry vmoid_registry;
   VmoBuffer vmo_buffer;
-  ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
+  ASSERT_EQ(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"),
+            ZX_OK);
   auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
   RingBufferReservation reservations[3];
-  ASSERT_OK(buffer->Reserve(2, &reservations[0]));
-  ASSERT_OK(buffer->Reserve(1, &reservations[1]));
+  ASSERT_EQ(buffer->Reserve(2, &reservations[0]), ZX_OK);
+  ASSERT_EQ(buffer->Reserve(1, &reservations[1]), ZX_OK);
 
   storage::UnbufferedOperationsBuilder builder;
   storage::UnbufferedOperation operations[3];
@@ -586,7 +600,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   operations[0].op.length = 2;
   builder.Add(operations[0]);
   std::vector<storage::BufferedOperation> buffer_operation;
-  ASSERT_OK(reservations[0].CopyRequests(builder.TakeOperations(), 0, &buffer_operation));
+  ASSERT_TRUE(reservations[0].CopyRequests(builder.TakeOperations(), 0, &buffer_operation).is_ok());
 
   // "C"
   operations[1].vmo = zx::unowned_vmo(vmo.get());
@@ -595,14 +609,14 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   operations[1].op.dev_offset = 2;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  ASSERT_OK(reservations[1].CopyRequests(builder.TakeOperations(), 0, &buffer_operation));
+  ASSERT_TRUE(reservations[1].CopyRequests(builder.TakeOperations(), 0, &buffer_operation).is_ok());
 
-  ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[0].Data(0), 0, seed));
-  ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[1].Data(0), 2, seed + 2));
+  ASSERT_NO_FATAL_FAILURE(CheckVmoEquals(vmo, reservations[0].Data(0), 0, seed));
+  ASSERT_NO_FATAL_FAILURE(CheckVmoEquals(vmo, reservations[1].Data(0), 2, seed + 2));
 
   ASSERT_EQ(ZX_ERR_NO_SPACE, buffer->Reserve(3, &reservations[2]));
   { auto released = std::move(reservations[0]); }
-  ASSERT_OK(buffer->Reserve(3, &reservations[2]));
+  ASSERT_EQ(buffer->Reserve(3, &reservations[2]), ZX_OK);
 
   // "D"
   operations[2].vmo = zx::unowned_vmo(vmo.get());
@@ -613,11 +627,12 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   builder.Add(operations[2]);
 
   const size_t reservation_offset = 2;
-  ASSERT_OK(reservations[2].CopyRequests(builder.TakeOperations(), reservation_offset,
-                                         &buffer_operation));
+  ASSERT_TRUE(reservations[2]
+                  .CopyRequests(builder.TakeOperations(), reservation_offset, &buffer_operation)
+                  .is_ok());
 
-  ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[1].Data(0), 2, seed + 2));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(CheckVmoEquals(vmo, reservations[1].Data(0), 2, seed + 2));
+  ASSERT_NO_FATAL_FAILURE(
       CheckVmoEquals(vmo, reservations[2].Data(reservation_offset), 3, seed + 3));
 }
 
@@ -639,15 +654,16 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   VmoBuffer vmo_buffer;
-  ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
+  ASSERT_EQ(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"),
+            ZX_OK);
   auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
   RingBufferReservation reservation;
-  ASSERT_OK(buffer->Reserve(3, &reservation));
+  ASSERT_EQ(buffer->Reserve(3, &reservation), ZX_OK);
   // Write header from source VMO into reservation.
-  ASSERT_OK(vmo_a.read(reservation.Data(0), 0, kBlockSize));
+  ASSERT_EQ(vmo_a.read(reservation.Data(0), 0, kBlockSize), ZX_OK);
   // Write footer.
-  ASSERT_OK(vmo_a.read(reservation.Data(2), 2 * kBlockSize, kBlockSize));
+  ASSERT_EQ(vmo_a.read(reservation.Data(2), 2 * kBlockSize, kBlockSize), ZX_OK);
 
   // Data "B" of the VMO.
   storage::UnbufferedOperationsBuilder builder;
@@ -659,15 +675,15 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   operation.op.length = 1;
   builder.Add(operation);
   std::vector<storage::BufferedOperation> buffer_operation;
-  ASSERT_OK(reservation.CopyRequests(builder.TakeOperations(), 1, &buffer_operation));
-  ASSERT_EQ(1, buffer_operation.size());
-  ASSERT_EQ(1, buffer_operation[0].op.vmo_offset);
-  ASSERT_EQ(1, buffer_operation[0].op.dev_offset);
-  ASSERT_EQ(1, buffer_operation[0].op.length);
+  ASSERT_TRUE(reservation.CopyRequests(builder.TakeOperations(), 1, &buffer_operation).is_ok());
+  ASSERT_EQ(buffer_operation.size(), 1ul);
+  ASSERT_EQ(buffer_operation[0].op.vmo_offset, 1u);
+  ASSERT_EQ(buffer_operation[0].op.dev_offset, 1ul);
+  ASSERT_EQ(buffer_operation[0].op.length, 1ul);
 
-  ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.Data(0), 0, seed_a));
-  ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_b, reservation.Data(1), 1, seed_b + 1));
-  ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.Data(2), 2, seed_a + 2));
+  ASSERT_NO_FATAL_FAILURE(CheckVmoEquals(vmo_a, reservation.Data(0), 0, seed_a));
+  ASSERT_NO_FATAL_FAILURE(CheckVmoEquals(vmo_b, reservation.Data(1), 1, seed_b + 1));
+  ASSERT_NO_FATAL_FAILURE(CheckVmoEquals(vmo_a, reservation.Data(2), 2, seed_a + 2));
 }
 
 TEST(RingBufferTest, ReleaseReservationDecommitsMemory) {
@@ -679,20 +695,21 @@ TEST(RingBufferTest, ReleaseReservationDecommitsMemory) {
   const size_t kRingBufferBlocks = 128;
   MockVmoidRegistry vmoid_registry;
   VmoBuffer vmo_buffer;
-  ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
+  ASSERT_EQ(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"),
+            ZX_OK);
   auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
   zx_info_vmo_t info;
   auto write_blocks = [&](size_t count) {
     RingBufferReservation reservation;
-    ASSERT_OK(buffer->Reserve(count, &reservation));
+    ASSERT_EQ(buffer->Reserve(count, &reservation), ZX_OK);
     // Write header from the source VMO into the reservation.
     for (size_t i = 0; i < count; i++) {
-      ASSERT_OK(vmo.read(reservation.Data(i), 0, kBlockSize));
+      ASSERT_EQ(vmo.read(reservation.Data(i), 0, kBlockSize), ZX_OK);
     }
 
-    ASSERT_OK(
-        vmoid_registry.get_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(vmoid_registry.get_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr),
+              ZX_OK);
     ASSERT_EQ(count * kBlockSize, info.committed_bytes);
   };
   // First issue a write that uses half of the buffer.
@@ -702,17 +719,19 @@ TEST(RingBufferTest, ReleaseReservationDecommitsMemory) {
 
   // All committed bytes of the buffer should be released after the reservation
   // goes out of scope.
-  ASSERT_OK(vmoid_registry.get_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-  ASSERT_EQ(0, info.committed_bytes);
+  ASSERT_EQ(vmoid_registry.get_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr),
+            ZX_OK);
+  ASSERT_EQ(info.committed_bytes, 0ul);
 }
 
 TEST(RingBufferTest, ReserveZeroBlocksReturnsError) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
   const size_t kBlocks = 5;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer),
+            ZX_OK);
   RingBufferReservation reservation;
-  EXPECT_STATUS(buffer->Reserve(0, &reservation), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(buffer->Reserve(0, &reservation), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

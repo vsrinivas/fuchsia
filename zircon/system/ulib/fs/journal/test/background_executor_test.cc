@@ -6,7 +6,7 @@
 #include <mutex>
 
 #include <fs/journal/background_executor.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -19,7 +19,7 @@ TEST(BackgroundExecutorTest, DestructorCompletesOneScheduledTask) {
   {
     BackgroundExecutor executor;
     executor.schedule_task(fit::make_promise([&called]() -> fit::result<> {
-      ZX_ASSERT(!called);
+      EXPECT_FALSE(called);
       called = true;
       return fit::ok();
     }));
@@ -56,7 +56,7 @@ TEST(BackgroundExecutorTest, ScheduleNotStalledUntilDestructor) {
   bool called = false;
   executor.schedule_task(fit::make_promise([&]() -> fit::result<> {
     std::unique_lock<std::mutex> lock(mutex);
-    ZX_ASSERT(!called);
+    EXPECT_FALSE(called);
     called = true;
     cvar.notify_one();
     return fit::ok();

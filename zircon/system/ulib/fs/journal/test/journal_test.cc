@@ -17,11 +17,14 @@
 #include <fs/journal/initializer.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <safemath/checked_math.h>
-#include <zxtest/zxtest.h>
 
 namespace fs {
 namespace {
+
+using ::testing::ElementsAreArray;
 
 const vmoid_t kJournalVmoid = 1;
 const vmoid_t kWritebackVmoid = 2;
@@ -45,20 +48,22 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
   for (size_t i = 0; i < length; i++) {
     std::array<char, kBlockSize> buffer_buf{};
     size_t offset = (buffer_start + kBlockSize * i) % buffer_capacity;
-    ASSERT_OK(buffer.read(buffer_buf.data(), offset, kBlockSize));
+    ASSERT_EQ(buffer.read(buffer_buf.data(), offset, kBlockSize), ZX_OK);
 
     std::array<char, kBlockSize> expected_buf{};
     offset = (expected_offset + i) * kBlockSize;
-    ASSERT_OK(expected.read(expected_buf.data(), offset, kBlockSize));
+    ASSERT_EQ(expected.read(expected_buf.data(), offset, kBlockSize), ZX_OK);
 
     if (escape == EscapedBlocks::kVerified &&
         *reinterpret_cast<uint64_t*>(expected_buf.data()) == kJournalEntryMagic) {
       constexpr size_t kSkip = sizeof(kJournalEntryMagic);
       std::array<char, kSkip> skip_buffer{};
-      EXPECT_BYTES_EQ(skip_buffer.data(), buffer_buf.data(), kSkip);
-      EXPECT_BYTES_EQ(expected_buf.data() + kSkip, buffer_buf.data() + kSkip, kBlockSize - kSkip);
+      EXPECT_THAT(fbl::Span(skip_buffer.data(), kSkip), ElementsAreArray(buffer_buf.data(), kSkip));
+      EXPECT_THAT(fbl::Span(buffer_buf.data() + kSkip, kBlockSize - kSkip),
+                  ElementsAreArray(expected_buf.data() + kSkip, kBlockSize - kSkip));
     } else {
-      EXPECT_BYTES_EQ(expected_buf.data(), buffer_buf.data(), kBlockSize);
+      EXPECT_THAT(fbl::Span(expected_buf.data(), kBlockSize),
+                  ElementsAreArray(buffer_buf.data(), kBlockSize));
     }
   }
 }
@@ -66,8 +71,8 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
 void CopyBytes(const zx::vmo& source, const zx::vmo& destination, uint64_t offset,
                uint64_t length) {
   std::vector<uint8_t> buffer(length, 0);
-  EXPECT_OK(source.read(buffer.data(), offset, length));
-  EXPECT_OK(destination.write(buffer.data(), offset, length));
+  EXPECT_EQ(source.read(buffer.data(), offset, length), ZX_OK);
+  EXPECT_EQ(destination.write(buffer.data(), offset, length), ZX_OK);
 }
 
 // The collection of all behaviors which are used by the journaling subsystem,
@@ -100,7 +105,7 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   storage::VmoBuffer InitializeBuffer(size_t num_blocks) {
     storage::VmoBuffer buffer;
     SetNextVmoid(kOtherVmoid);
-    EXPECT_OK(buffer.Initialize(this, num_blocks, kBlockSize, "test-buffer"));
+    EXPECT_EQ(buffer.Initialize(this, num_blocks, kBlockSize, "test-buffer"), ZX_OK);
     for (size_t i = 0; i < num_blocks; i++) {
       memset(buffer.Data(i), static_cast<uint8_t>(i), kBlockSize);
     }
@@ -153,7 +158,7 @@ void MockVmoidRegistry::VerifyReplay(
     uint64_t expected_sequence_number) {
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_NO_FAILURES(Replay(&operations, &sequence_number));
+  ASSERT_NO_FATAL_FAILURE(Replay(&operations, &sequence_number));
   EXPECT_EQ(expected_sequence_number, sequence_number);
   ASSERT_EQ(expected_operations.size(), operations.size());
 
@@ -170,13 +175,13 @@ void MockVmoidRegistry::VerifyReplay(
 zx_status_t MockVmoidRegistry::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   switch (next_vmoid_) {
     case kJournalVmoid:
-      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.journal_vmo));
+      EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.journal_vmo), ZX_OK);
       break;
     case kWritebackVmoid:
-      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.writeback_vmo));
+      EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.writeback_vmo), ZX_OK);
       break;
     case kInfoVmoid:
-      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.info_vmo));
+      EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.info_vmo), ZX_OK);
       break;
   }
   *out = storage::Vmoid(next_vmoid_);
@@ -200,25 +205,25 @@ const zx::vmo& MockVmoidRegistry::GetVmo(vmoid_t vmoid, BufferType buffer) {
 
 void MockVmoidRegistry::CreateDiskVmos() {
   size_t size = 0;
-  EXPECT_OK(memory_buffers_.journal_vmo.get_size(&size));
-  EXPECT_OK(zx::vmo::create(size, 0, &disk_buffers_.journal_vmo));
+  EXPECT_EQ(memory_buffers_.journal_vmo.get_size(&size), ZX_OK);
+  EXPECT_EQ(zx::vmo::create(size, 0, &disk_buffers_.journal_vmo), ZX_OK);
   CopyBytes(memory_buffers_.journal_vmo, disk_buffers_.journal_vmo, 0, size);
 
-  EXPECT_OK(memory_buffers_.writeback_vmo.get_size(&size));
-  EXPECT_OK(zx::vmo::create(size, 0, &disk_buffers_.writeback_vmo));
+  EXPECT_EQ(memory_buffers_.writeback_vmo.get_size(&size), ZX_OK);
+  EXPECT_EQ(zx::vmo::create(size, 0, &disk_buffers_.writeback_vmo), ZX_OK);
   CopyBytes(memory_buffers_.writeback_vmo, disk_buffers_.writeback_vmo, 0, size);
 
-  EXPECT_OK(memory_buffers_.info_vmo.get_size(&size));
-  EXPECT_OK(zx::vmo::create(size, 0, &disk_buffers_.info_vmo));
+  EXPECT_EQ(memory_buffers_.info_vmo.get_size(&size), ZX_OK);
+  EXPECT_EQ(zx::vmo::create(size, 0, &disk_buffers_.info_vmo), ZX_OK);
   CopyBytes(memory_buffers_.info_vmo, disk_buffers_.info_vmo, 0, size);
 }
 
 void MockVmoidRegistry::Replay(std::vector<storage::BufferedOperation>* operations,
                                uint64_t* sequence_number) {
   zx::vmo info_vmo;
-  ASSERT_OK(disk_buffers_.info_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo));
+  ASSERT_EQ(disk_buffers_.info_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo), ZX_OK);
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.Map(std::move(info_vmo), kBlockSize));
+  ASSERT_EQ(mapper.Map(std::move(info_vmo), kBlockSize), ZX_OK);
   auto info_buffer =
       std::make_unique<storage::VmoBuffer>(this, std::move(mapper), kInfoVmoid, 1, kBlockSize);
   JournalSuperblock superblock(std::move(info_buffer));
@@ -227,15 +232,17 @@ void MockVmoidRegistry::Replay(std::vector<storage::BufferedOperation>* operatio
   // the "clone" to be modified while leaving the original journal untouched.
   zx::vmo journal_vmo;
   uint64_t length = kBlockSize * kJournalLength;
-  ASSERT_OK(
-      disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo));
-  ASSERT_OK(mapper.Map(std::move(journal_vmo), length));
+  ASSERT_EQ(
+      disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo),
+      ZX_OK);
+  ASSERT_EQ(mapper.Map(std::move(journal_vmo), length), ZX_OK);
   storage::VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength,
                                     kBlockSize);
 
   uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(&superblock, &journal_buffer, operations, sequence_number,
-                                &next_entry_start));
+  ASSERT_EQ(ParseJournalEntries(&superblock, &journal_buffer, operations, sequence_number,
+                                &next_entry_start),
+            ZX_OK);
 }
 
 // A transaction handler class, controlling all block device operations which are transmitted
@@ -291,25 +298,28 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 // This initialization is repeated between all tests, so it is deduplicated here. However,
 // journal construction itself is still left to each individaul test, but the prerequisite
 // structures can be "taken" from this fixture using the "take_*" methods below.
-class JournalTest : public zxtest::Test {
+class JournalTest : public testing::Test {
  public:
   void SetUp() override {
     registry_.SetNextVmoid(kJournalVmoid);
-    ASSERT_OK(storage::BlockingRingBuffer::Create(&registry_, kJournalLength, kBlockSize,
-                                                  "journal-writeback-buffer", &journal_buffer_));
+    ASSERT_EQ(storage::BlockingRingBuffer::Create(&registry_, kJournalLength, kBlockSize,
+                                                  "journal-writeback-buffer", &journal_buffer_),
+              ZX_OK);
 
     registry_.SetNextVmoid(kWritebackVmoid);
-    ASSERT_OK(storage::BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
-                                                  "data-writeback-buffer", &data_buffer_));
+    ASSERT_EQ(storage::BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
+                                                  "data-writeback-buffer", &data_buffer_),
+              ZX_OK);
 
     auto info_block_buffer = std::make_unique<storage::VmoBuffer>();
     registry_.SetNextVmoid(kInfoVmoid);
-    ASSERT_OK(info_block_buffer->Initialize(&registry_, kJournalMetadataBlocks, kBlockSize,
-                                            "info-block"));
+    ASSERT_EQ(
+        info_block_buffer->Initialize(&registry_, kJournalMetadataBlocks, kBlockSize, "info-block"),
+        ZX_OK);
     info_block_ = JournalSuperblock(std::move(info_block_buffer));
     info_block_.Update(0, 0);
 
-    ASSERT_NO_FAILURES(registry_.CreateDiskVmos());
+    ASSERT_NO_FATAL_FAILURE(registry_.CreateDiskVmos());
   }
 
   MockVmoidRegistry* registry() { return &registry_; }
@@ -335,7 +345,7 @@ class JournalTest : public zxtest::Test {
 // to the start of entries) with a sequence_number of |sequence_number|.
 void CheckInfoBlock(const zx::vmo& info, uint64_t start, uint64_t sequence_number) {
   std::array<char, kBlockSize> buf = {};
-  EXPECT_OK(info.read(buf.data(), 0, kBlockSize));
+  EXPECT_EQ(info.read(buf.data(), 0, kBlockSize), ZX_OK);
   const JournalInfo& journal_info = *reinterpret_cast<const JournalInfo*>(buf.data());
   EXPECT_EQ(kJournalMagic, journal_info.magic);
   EXPECT_EQ(start, journal_info.start_block);
@@ -362,11 +372,6 @@ void CheckWriteRequest(const storage::BufferedOperation& request, vmoid_t vmoid,
 // Tests typically use this class to validate both:
 // - Incoming requests to the "block device" are consistent, and
 // - Data from the original operation actually exists in the source buffer where it should.
-//
-// Due to limitations of zxtest, the EXPECT_* and ASSERT_* macros are not thread-safe.
-// As a result, for many of the following tests, which attempt to verify journal state from
-// an executor thread, caution must be taken to avoid concurrently EXPECT/ASSERT-ing anything
-// in the main thread while the journal is running.
 class JournalRequestVerifier {
  public:
   JournalRequestVerifier(const zx::vmo& info_block, const zx::vmo& journal,
@@ -442,20 +447,20 @@ class JournalRequestVerifier {
 void JournalRequestVerifier::VerifyDataWrite(
     const storage::UnbufferedOperation& operation,
     const std::vector<storage::BufferedOperation>& requests) const {
-  EXPECT_GE(requests.size(), 1, "Not enough operations");
-  EXPECT_LE(requests.size(), 2, "Too many operations");
+  EXPECT_GE(requests.size(), 1ul) << "Not enough operations";
+  EXPECT_LE(requests.size(), 2ul) << "Too many operations";
 
   uint64_t total_length = operation.op.length;
   uint64_t pre_wrap_length = std::min(kWritebackLength - DataOffset(), total_length);
   uint64_t post_wrap_length = total_length - pre_wrap_length;
 
-  ASSERT_NO_FAILURES(CheckWriteRequest(requests[0], kWritebackVmoid,
-                                       /* vmo_offset= */ DataOffset(),
-                                       /* dev_offset= */ operation.op.dev_offset,
-                                       /* length= */ pre_wrap_length));
+  ASSERT_NO_FATAL_FAILURE(CheckWriteRequest(requests[0], kWritebackVmoid,
+                                            /* vmo_offset= */ DataOffset(),
+                                            /* dev_offset= */ operation.op.dev_offset,
+                                            /* length= */ pre_wrap_length));
   if (post_wrap_length > 0) {
-    EXPECT_EQ(2, requests.size());
-    ASSERT_NO_FAILURES(
+    EXPECT_EQ(requests.size(), 2ul);
+    ASSERT_NO_FATAL_FAILURE(
         CheckWriteRequest(requests[1], kWritebackVmoid,
                           /* vmo_offset= */ 0,
                           /* dev_offset= */ operation.op.dev_offset + pre_wrap_length,
@@ -463,15 +468,15 @@ void JournalRequestVerifier::VerifyDataWrite(
   }
 
   // Verify that the writeback buffer is full of the data we used earlier.
-  ASSERT_NO_FAILURES(CheckCircularBufferContents(*data_writeback_, kWritebackLength,
-                                                 /* data_writeback_offset= */ DataOffset(),
-                                                 /* buffer= */ *operation.vmo,
-                                                 /* buffer_offset= */ operation.op.vmo_offset,
-                                                 /* length= */ pre_wrap_length,
-                                                 EscapedBlocks::kIgnored));
+  ASSERT_NO_FATAL_FAILURE(CheckCircularBufferContents(*data_writeback_, kWritebackLength,
+                                                      /* data_writeback_offset= */ DataOffset(),
+                                                      /* buffer= */ *operation.vmo,
+                                                      /* buffer_offset= */ operation.op.vmo_offset,
+                                                      /* length= */ pre_wrap_length,
+                                                      EscapedBlocks::kIgnored));
   if (post_wrap_length > 0) {
-    EXPECT_EQ(2, requests.size());
-    ASSERT_NO_FAILURES(
+    EXPECT_EQ(requests.size(), 2ul);
+    ASSERT_NO_FATAL_FAILURE(
         CheckCircularBufferContents(*data_writeback_, kWritebackLength,
                                     /* data_writeback_offset= */ 0,
                                     /* buffer= */ *operation.vmo,
@@ -483,7 +488,7 @@ void JournalRequestVerifier::VerifyDataWrite(
 void JournalRequestVerifier::VerifyJournalRequest(
     uint64_t entry_length, const std::vector<storage::BufferedOperation>& requests) const {
   // Verify the operation is from the metadata buffer, targeting the journal.
-  EXPECT_GE(requests.size(), 1, "Not enough operations");
+  EXPECT_GE(requests.size(), 1ul) << "Not enough operations";
 
   uint64_t journal_offset = JournalOffset();
 
@@ -511,7 +516,7 @@ void JournalRequestVerifier::VerifyJournalWrite(
     const std::vector<storage::BufferedOperation>& requests) const {
   uint64_t entry_length = operation.op.length + kEntryMetadataBlocks;
 
-  ASSERT_NO_FAILURES(VerifyJournalRequest(entry_length, requests));
+  ASSERT_NO_FATAL_FAILURE(VerifyJournalRequest(entry_length, requests));
 
   // Validate that all operations exist within the journal buffer.
   uint64_t buffer_offset = operation.op.vmo_offset;
@@ -528,11 +533,12 @@ void JournalRequestVerifier::VerifyJournalWrite(
       length--;
     }
 
-    ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
-                                                   /* journal_offset= */ vmo_offset,
-                                                   /* buffer= */ *operation.vmo,
-                                                   /* buffer_offset= */ buffer_offset,
-                                                   /* length= */ length, EscapedBlocks::kVerified));
+    ASSERT_NO_FATAL_FAILURE(CheckCircularBufferContents(*journal_, kJournalLength,
+                                                        /* journal_offset= */ vmo_offset,
+                                                        /* buffer= */ *operation.vmo,
+                                                        /* buffer_offset= */ buffer_offset,
+                                                        /* length= */ length,
+                                                        EscapedBlocks::kVerified));
 
     buffer_offset += length;
   }
@@ -542,7 +548,7 @@ void JournalRequestVerifier::VerifyMetadataWrite(
     const storage::UnbufferedOperation& operation,
     const std::vector<storage::BufferedOperation>& requests) const {
   // Verify the operation is from the metadata buffer, targeting the final location on disk.
-  EXPECT_GE(requests.size(), 1, "Not enough operations");
+  EXPECT_GE(requests.size(), 1ul) << "Not enough operations";
 
   uint64_t blocks_written = 0;
   for (const storage::BufferedOperation& request : requests) {
@@ -556,12 +562,12 @@ void JournalRequestVerifier::VerifyMetadataWrite(
     EXPECT_EQ(operation.op.dev_offset + blocks_written, request.op.dev_offset);
 
     const uint64_t buffer_offset = operation.op.vmo_offset + blocks_written;
-    ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
-                                                   /* journal_offset= */ request.op.vmo_offset,
-                                                   /* buffer= */ *operation.vmo,
-                                                   /* buffer_offset= */ buffer_offset,
-                                                   /* length= */ request.op.length,
-                                                   EscapedBlocks::kIgnored));
+    ASSERT_NO_FATAL_FAILURE(CheckCircularBufferContents(*journal_, kJournalLength,
+                                                        /* journal_offset= */ request.op.vmo_offset,
+                                                        /* buffer= */ *operation.vmo,
+                                                        /* buffer_offset= */ buffer_offset,
+                                                        /* length= */ request.op.length,
+                                                        EscapedBlocks::kIgnored));
 
     blocks_written += request.op.length;
   }
@@ -571,13 +577,13 @@ void JournalRequestVerifier::VerifyMetadataWrite(
 void JournalRequestVerifier::VerifyInfoBlockWrite(
     uint64_t sequence_number, const std::vector<storage::BufferedOperation>& requests) const {
   // Verify that the operation is the info block, with a new start block.
-  EXPECT_EQ(1, requests.size());
-  ASSERT_NO_FAILURES(CheckWriteRequest(requests[0],
-                                       /* vmoid= */ kInfoVmoid,
-                                       /* vmo_offset= */ 0,
-                                       /* dev_offset= */ journal_start_block_,
-                                       /* length= */ 1));
-  ASSERT_NO_FAILURES(CheckInfoBlock(*info_block_, JournalOffset(), sequence_number));
+  EXPECT_EQ(requests.size(), 1ul);
+  ASSERT_NO_FATAL_FAILURE(CheckWriteRequest(requests[0],
+                                            /* vmoid= */ kInfoVmoid,
+                                            /* vmo_offset= */ 0,
+                                            /* dev_offset= */ journal_start_block_,
+                                            /* length= */ 1));
+  ASSERT_NO_FATAL_FAILURE(CheckInfoBlock(*info_block_, JournalOffset(), sequence_number));
 }
 
 // Tests the constructor of the journal doesn't bother updating the info block on a zero-filled
@@ -608,7 +614,7 @@ TEST_F(JournalTest, NoWorkSyncCompletesBeforeJournalDestruction) {
 
   ASSERT_FALSE(sync_completed);
   journal.schedule_task(std::move(promise));
-  ASSERT_OK(sync_completion_wait(&sync_completion, zx::duration::infinite().get()));
+  ASSERT_EQ(sync_completion_wait(&sync_completion, zx::duration::infinite().get()), ZX_OK);
   ASSERT_TRUE(sync_completed);
 }
 
@@ -674,7 +680,7 @@ TEST_F(JournalTest, WriteNoDataSucceeds) {
     sync_completion_signal(&sync_completion);
   });
   journal.schedule_task(std::move(promise));
-  EXPECT_OK(sync_completion_wait(&sync_completion, zx::duration::infinite().get()));
+  EXPECT_EQ(sync_completion_wait(&sync_completion, zx::duration::infinite().get()), ZX_OK);
 }
 
 // Tests that writing metadata to the journal is observable from the "block device".
@@ -812,12 +818,12 @@ TEST_F(JournalTest, TrimDataObserveTransaction) {
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         if (requests.size() != 1) {
-          ADD_FAILURE("Unexpected count");
+          ADD_FAILURE() << "Unexpected count";
           return ZX_ERR_OUT_OF_RANGE;
         }
         EXPECT_EQ(storage::OperationType::kTrim, requests[0].op.type);
-        EXPECT_EQ(20, requests[0].op.dev_offset);
-        EXPECT_EQ(5, requests[0].op.length);
+        EXPECT_EQ(requests[0].op.dev_offset, 20ul);
+        EXPECT_EQ(requests[0].op.length, 5ul);
         return ZX_OK;
       },
   };
@@ -863,8 +869,8 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
   };
 
   ASSERT_EQ(kJournalLength,
-            2 * kEntryMetadataBlocks + operations[0].op.length + operations[1].op.length,
-            "Operations should just fill the journal (no early info writeback)");
+            2 * kEntryMetadataBlocks + operations[0].op.length + operations[1].op.length)
+      << "Operations should just fill the journal (no early info writeback)";
 
   constexpr uint64_t kJournalStartBlock = 55;
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
@@ -939,8 +945,8 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
       },
   };
 
-  ASSERT_EQ(kJournalLength, kEntryMetadataBlocks + operations[0].op.length,
-            "Operations should just fill the journal (no early info writeback)");
+  ASSERT_EQ(kJournalLength, kEntryMetadataBlocks + operations[0].op.length)
+      << "Operations should just fill the journal (no early info writeback)";
 
   constexpr uint64_t kJournalStartBlock = 55;
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
@@ -1024,8 +1030,8 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
   };
 
   ASSERT_EQ(kJournalLength + 1,
-            2 * kEntryMetadataBlocks + operations[0].op.length + operations[1].op.length,
-            "Operations should just barely overfill the journal to cause info writeback");
+            2 * kEntryMetadataBlocks + operations[0].op.length + operations[1].op.length)
+      << "Operations should just barely overfill the journal to cause info writeback";
 
   constexpr uint64_t kJournalStartBlock = 55;
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
@@ -1296,23 +1302,23 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
@@ -1328,21 +1334,25 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
   // This means that in-memory, operations[1] wraps around the internal buffer.
   storage::BlockingRingBufferReservation reservation0, reservation1;
   uint64_t block_count1 = operations[1].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count1, &reservation1));
+  ASSERT_EQ(journal_buffer->Reserve(block_count1, &reservation1), ZX_OK);
   uint64_t block_count0 = operations[0].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count0, &reservation0));
+  ASSERT_EQ(journal_buffer->Reserve(block_count0, &reservation0), ZX_OK);
 
   // Actually write operations[0] before operations[1].
   std::vector<storage::BufferedOperation> buffered_operations0;
-  ASSERT_OK(
-      reservation0.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations0));
+  ASSERT_TRUE(reservation0
+                  .CopyRequests(fbl::Span(&operations[0], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations0)
+                  .is_ok());
   auto result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation0), std::move(buffered_operations0)));
   ASSERT_TRUE(result.is_ok());
 
   std::vector<storage::BufferedOperation> buffered_operations1;
-  ASSERT_OK(
-      reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
+  ASSERT_TRUE(reservation1
+                  .CopyRequests(fbl::Span(&operations[1], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations1)
+                  .is_ok());
   result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)));
   ASSERT_TRUE(result.is_ok());
@@ -1414,12 +1424,12 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
         // Operation 1: [ 1, C, _, _, _, _, _, _, _, H ] (On-disk)
         //
         // This operation writes "H", then "1, C".
-        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(requests.size(), 2ul);
         verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
@@ -1429,12 +1439,12 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
         // Operation 2: [ _, _, H, 1, C, _, _, _, _, _ ] (On-disk)
         //
         // This operation writes "H", then "1, C".
-        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(requests.size(), 2ul);
         verifier.VerifyJournalWrite(operations[2], requests);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyMetadataWrite(operations[2], requests);
         verifier.ExtendJournalOffset(operations[2].op.length + kEntryMetadataBlocks);
         return ZX_OK;
@@ -1449,9 +1459,11 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   storage::BlockingRingBufferReservation reservation;
   std::vector<storage::BufferedOperation> buffered_operations;
   uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
-  ASSERT_OK(
-      reservation.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations));
+  ASSERT_EQ(journal_buffer->Reserve(block_count, &reservation), ZX_OK);
+  ASSERT_TRUE(reservation
+                  .CopyRequests(fbl::Span(&operations[0], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations)
+                  .is_ok());
   auto result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
@@ -1461,23 +1473,27 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   // This means that in-memory, operations[2] wraps around the internal buffer.
   storage::BlockingRingBufferReservation reservation1, reservation2;
   uint64_t block_count2 = operations[2].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count2, &reservation2));
+  ASSERT_EQ(journal_buffer->Reserve(block_count2, &reservation2), ZX_OK);
   uint64_t block_count1 = operations[1].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count1, &reservation1));
+  ASSERT_EQ(journal_buffer->Reserve(block_count1, &reservation1), ZX_OK);
 
   // Actually write operations[1] before operations[2].
   //
   // This means that on-disk, operations[1] wraps around the journal.
   std::vector<storage::BufferedOperation> buffered_operations1;
-  ASSERT_OK(
-      reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
+  ASSERT_TRUE(reservation1
+                  .CopyRequests(fbl::Span(&operations[1], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations1)
+                  .is_ok());
   result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)));
   ASSERT_TRUE(result.is_ok());
 
   std::vector<storage::BufferedOperation> buffered_operations2;
-  ASSERT_OK(
-      reservation2.CopyRequests({operations[2]}, kJournalEntryHeaderBlocks, &buffered_operations2));
+  ASSERT_TRUE(reservation2
+                  .CopyRequests(fbl::Span(&operations[2], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations2)
+                  .is_ok());
   result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation2), std::move(buffered_operations2)));
   ASSERT_TRUE(result.is_ok());
@@ -1535,13 +1551,13 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // "H", then "1, 2, 3", then "4, C".
-        EXPECT_EQ(3, requests.size());
+        EXPECT_EQ(requests.size(), 3ul);
         verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // "1, 2, 3, 4" are contiguous in the in-memory buffer.
-        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(requests.size(), 1ul);
         verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
@@ -1556,20 +1572,24 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   storage::BlockingRingBufferReservation reservation;
   std::vector<storage::BufferedOperation> buffered_operations;
   uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
-  ASSERT_OK(
-      reservation.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations));
+  ASSERT_EQ(journal_buffer->Reserve(block_count, &reservation), ZX_OK);
+  ASSERT_TRUE(reservation
+                  .CopyRequests(fbl::Span(&operations[0], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations)
+                  .is_ok());
   auto result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
 
   storage::BlockingRingBufferReservation reservation_unused;
-  ASSERT_OK(journal_buffer->Reserve(3, &reservation_unused));
+  ASSERT_EQ(journal_buffer->Reserve(3, &reservation_unused), ZX_OK);
   block_count = operations[1].op.length + kEntryMetadataBlocks;
-  ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
+  ASSERT_EQ(journal_buffer->Reserve(block_count, &reservation), ZX_OK);
 
-  ASSERT_OK(
-      reservation.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations));
+  ASSERT_TRUE(reservation
+                  .CopyRequests(fbl::Span(&operations[1], 1), kJournalEntryHeaderBlocks,
+                                &buffered_operations)
+                  .is_ok());
   result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
@@ -2027,8 +2047,8 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
 
   };
 
-  ASSERT_EQ(kWritebackLength + 1, operations[0].op.length + operations[1].op.length,
-            "Operations should slightly overflow the data buffer");
+  ASSERT_EQ(kWritebackLength + 1, operations[0].op.length + operations[1].op.length)
+      << "Operations should slightly overflow the data buffer";
 
   // Was operations[0] completed (received by transaction handler)?
   std::atomic<bool> op0_completed = false;
@@ -2214,7 +2234,7 @@ TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
     journal.schedule_task(std::move(promise));
   }
 
-  EXPECT_STATUS(ZX_ERR_NO_SPACE, data_status);
+  EXPECT_EQ(data_status, ZX_ERR_NO_SPACE);
 }
 
 // Tests that operations which won't fit in metadata writeback will fail.
@@ -2244,7 +2264,7 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
     journal.schedule_task(std::move(promise));
   }
 
-  EXPECT_STATUS(ZX_ERR_NO_SPACE, metadata_status);
+  EXPECT_EQ(metadata_status, ZX_ERR_NO_SPACE);
 }
 
 // Tests that the journal can be bypassed with an explicit constructor.
@@ -2339,18 +2359,18 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
                     Journal::Options());
-    auto promise =
-        journal.WriteData({operations[0]})
-            .then([&](fit::result<void, zx_status_t>& result) {
-              EXPECT_STATUS(ZX_ERR_IO, result.error(), "operations[0] should fail with ZX_ERR_IO");
-              first_operation_failed = true;
-              return journal.WriteData({operations[1]});
-            })
-            .or_else([&](zx_status_t& status) {
-              EXPECT_STATUS(ZX_ERR_IO_REFUSED, status);
-              second_operation_failed = true;
-              return fit::error(status);
-            });
+    auto promise = journal.WriteData({operations[0]})
+                       .then([&](fit::result<void, zx_status_t>& result) {
+                         EXPECT_EQ(result.error(), ZX_ERR_IO)
+                             << "operations[0] should fail with ZX_ERR_IO";
+                         first_operation_failed = true;
+                         return journal.WriteData({operations[1]});
+                       })
+                       .or_else([&](zx_status_t& status) {
+                         EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
+                         second_operation_failed = true;
+                         return fit::error(status);
+                       });
     journal.schedule_task(std::move(promise));
   }
 
@@ -2393,7 +2413,7 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
     auto data_promise = journal.WriteData({operations[0]});
     auto sync_promise = journal.Sync().then(
         [&](fit::result<void, zx_status_t>& result) -> fit::result<void, zx_status_t> {
-          EXPECT_STATUS(ZX_ERR_IO_REFUSED, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
           sync_done = true;
           return fit::ok();
         });
@@ -2451,13 +2471,13 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
     auto promise0 =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by our MockTransactionHandler implementation.
-          EXPECT_STATUS(ZX_ERR_IO, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_IO);
           first_operation_failed = true;
         });
     auto promise1 =
         journal.WriteMetadata({operations[1]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by the journal itself.
-          EXPECT_STATUS(ZX_ERR_IO_REFUSED, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
           second_operation_failed = true;
         });
 
@@ -2521,13 +2541,13 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
     auto promise0 =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by our MockTransactionHandler implementation.
-          EXPECT_STATUS(ZX_ERR_IO, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_IO);
           first_operation_failed = true;
         });
     auto promise1 =
         journal.WriteMetadata({operations[1]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by the journal itself.
-          EXPECT_STATUS(ZX_ERR_IO_REFUSED, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
           second_operation_failed = true;
         });
 
@@ -2606,13 +2626,13 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
         });
     auto sync_promise = journal.Sync().then([&](fit::result<void, zx_status_t>& result) {
       // Failure triggered by the info block writeback.
-      EXPECT_STATUS(ZX_ERR_IO, result.error());
+      EXPECT_EQ(result.error(), ZX_ERR_IO);
       sync_failed = true;
     });
     auto failed_promise =
         journal.WriteMetadata({operations[1]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by the journal itself.
-          EXPECT_STATUS(ZX_ERR_IO_REFUSED, result.error());
+          EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
           second_write_failed = true;
         });
 
@@ -2683,9 +2703,9 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         std::array<char, kBlockSize> buffer = {};
         uint64_t offset = (verifier.JournalOffset() + kJournalEntryHeaderBlocks) * kBlockSize;
         uint64_t length = kBlockSize;
-        EXPECT_OK(registry()->journal().read(buffer.data(), offset, length));
-        EXPECT_BYTES_NE(metadata.Data(0), buffer.data(), kBlockSize,
-                        "metadata should have been escaped (modified)");
+        EXPECT_EQ(registry()->journal().read(buffer.data(), offset, length), ZX_OK);
+        EXPECT_NE(memcmp(metadata.Data(0), buffer.data(), kBlockSize), 0)
+            << "metadata should have been escaped (modified)";
 
         // Verify that if we were to reboot now the operation would be replayed.
         uint64_t sequence_number = 1;
@@ -2699,9 +2719,10 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         std::array<char, kBlockSize> buffer = {};
         uint64_t offset = (verifier.JournalOffset() + kJournalEntryHeaderBlocks) * kBlockSize;
         uint64_t length = kBlockSize;
-        EXPECT_OK(registry()->journal().read(buffer.data(), offset, length));
-        EXPECT_BYTES_EQ(metadata.Data(0), buffer.data(), kBlockSize,
-                        "Metadata should only be escaped in the journal");
+        EXPECT_EQ(registry()->journal().read(buffer.data(), offset, length), ZX_OK);
+        EXPECT_THAT(fbl::Span(static_cast<const uint8_t*>(metadata.Data(0)), kBlockSize),
+                    ElementsAreArray(buffer.data(), kBlockSize))
+            << "Metadata should only be escaped in the journal";
 
         verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         return ZX_OK;
@@ -2725,7 +2746,7 @@ TEST_F(JournalTest, WriteMetadataWithBadBlockCountFails) {
   MockTransactionHandler handler(registry(), {}, 0);
   Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
                   Journal::Options());
-  fbl::Vector<storage::UnbufferedOperation> operations = {
+  std::vector<storage::UnbufferedOperation> operations = {
       storage::UnbufferedOperation{.op = {.type = storage::OperationType::kWrite, .length = 10}},
       storage::UnbufferedOperation{.op = {.type = storage::OperationType::kWrite,
                                           .length = std::numeric_limits<uint64_t>::max() - 10}}};
@@ -2733,11 +2754,11 @@ TEST_F(JournalTest, WriteMetadataWithBadBlockCountFails) {
   auto promise = journal.WriteMetadata(std::move(operations))
                      .inspect([&](const fit::result<void, zx_status_t>& result) {
                        ASSERT_TRUE(result.is_error());
-                       EXPECT_STATUS(result.error(), ZX_ERR_OUT_OF_RANGE);
+                       EXPECT_EQ(result.error(), ZX_ERR_OUT_OF_RANGE);
                        sync_completion_signal(&sync_completion);
                      });
   journal.schedule_task(std::move(promise));
-  EXPECT_OK(sync_completion_wait(&sync_completion, zx::duration::infinite().get()));
+  EXPECT_EQ(sync_completion_wait(&sync_completion, zx::duration::infinite().get()), ZX_OK);
 }
 
 zx_status_t MakeJournalHelper(uint8_t* dest_buffer, uint64_t blocks, uint64_t block_size) {
@@ -2768,12 +2789,12 @@ TEST(MakeJournal, ValidArgs) {
   constexpr uint64_t kBlockCount = 10;
   uint8_t blocks[kBlockCount * fs::kJournalBlockSize];
 
-  ASSERT_OK(MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize));
+  ASSERT_EQ(MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize), ZX_OK);
   auto info = reinterpret_cast<JournalInfo*>(blocks);
   ASSERT_EQ(kJournalMagic, info->magic);
-  ASSERT_EQ(0, info->reserved);
-  ASSERT_EQ(0, info->start_block);
-  ASSERT_EQ(0, info->timestamp);
+  ASSERT_EQ(info->reserved, 0ul);
+  ASSERT_EQ(info->start_block, 0ul);
+  ASSERT_EQ(info->timestamp, 0ul);
 
   auto csum = info->checksum;
   info->checksum = 0;
@@ -2787,7 +2808,7 @@ TEST(MakeJournal, SmallBUffer) {
   constexpr uint64_t kBlockCount = 1;
   uint8_t blocks[kBlockCount * (fs::kJournalBlockSize - 1)];
 
-  ASSERT_EQ(ZX_ERR_IO_OVERRUN, MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize - 1));
+  ASSERT_EQ(MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize - 1), ZX_ERR_IO_OVERRUN);
 }
 
 // TODO(ZX-4775): Test abandoning promises. This may require additional barrier support.

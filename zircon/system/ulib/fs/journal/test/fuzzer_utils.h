@@ -20,8 +20,8 @@
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
-#include <storage/operation/unbuffered_operation.h>
 #include <storage/operation/operation.h>
+#include <storage/operation/unbuffered_operation.h>
 
 namespace fs {
 
@@ -105,7 +105,7 @@ class FuzzerUtils final {
 
   zx_status_t FuzzSuperblock(JournalSuperblock* out_info);
   zx_status_t FuzzJournal(storage::VmoBuffer* out_journal);
-  fbl::Vector<storage::UnbufferedOperation> FuzzOperation(ReservedVmoid vmoid);
+  std::vector<storage::UnbufferedOperation> FuzzOperation(ReservedVmoid vmoid);
 
  private:
   FuzzedDataProvider input_;

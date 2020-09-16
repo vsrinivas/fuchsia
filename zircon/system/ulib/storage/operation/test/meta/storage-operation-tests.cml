@@ -1,0 +1,20 @@
+{
+    program: {
+        binary: "test/storage_operation",
+    },
+    use: [
+        { runner: "gtest_runner" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

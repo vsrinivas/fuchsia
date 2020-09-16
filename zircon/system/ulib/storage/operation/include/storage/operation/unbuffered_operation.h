@@ -8,7 +8,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 
-#include <fbl/vector.h>
+#include <fbl/span.h>
 #include <storage/operation/operation.h>
 
 namespace storage {
@@ -27,7 +27,7 @@ struct UnbufferedOperation {
 
 // Sums the |length| of all requests. It will assert if overflow occurs; the caller is responsible
 // for making sure this does not happen.
-uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& requests);
+uint64_t BlockCount(fbl::Span<const UnbufferedOperation> requests);
 
 }  // namespace storage
 

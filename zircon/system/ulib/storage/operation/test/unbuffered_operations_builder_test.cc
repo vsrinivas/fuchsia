@@ -6,28 +6,31 @@
 
 #include <lib/zx/vmo.h>
 
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace storage {
 namespace {
+
+using ::testing::_;
 
 constexpr size_t kVmoSize = 8192;
 
 TEST(UnbufferedOperationsBuilderTest, NoRequest) {
   UnbufferedOperationsBuilder builder;
-  EXPECT_EQ(0, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 0ul);
 
   auto requests = builder.TakeOperations();
 
-  EXPECT_TRUE(requests.is_empty());
-  EXPECT_EQ(0, builder.BlockCount());
+  EXPECT_TRUE(requests.empty());
+  EXPECT_EQ(builder.BlockCount(), 0ul);
 }
 
 TEST(UnbufferedOperationsBuilderTest, EmptyRequest) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
@@ -36,18 +39,18 @@ TEST(UnbufferedOperationsBuilderTest, EmptyRequest) {
   operation.op.dev_offset = 0;
   operation.op.length = 0;
   builder.Add(operation);
-  EXPECT_EQ(0, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 0ul);
 
   auto requests = builder.TakeOperations();
-  EXPECT_EQ(0, BlockCount(requests));
-  EXPECT_TRUE(requests.is_empty());
+  EXPECT_EQ(BlockCount(requests), 0ul);
+  EXPECT_TRUE(requests.empty());
 }
 
 TEST(UnbufferedOperationsBuilderTest, OneRequest) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
@@ -56,24 +59,24 @@ TEST(UnbufferedOperationsBuilderTest, OneRequest) {
   operation.op.dev_offset = 0;
   operation.op.length = 1;
   builder.Add(operation);
-  ASSERT_EQ(1, builder.BlockCount());
+  ASSERT_EQ(builder.BlockCount(), 1ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, BlockCount(requests));
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(BlockCount(requests), 1ul);
+  ASSERT_EQ(requests.size(), 1ul);
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operation.op.vmo_offset);
   EXPECT_EQ(requests[0].op.dev_offset, operation.op.dev_offset);
   EXPECT_EQ(requests[0].op.length, operation.op.length);
-  EXPECT_EQ(0, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 0ul);
 }
 
 TEST(UnbufferedOperationsBuilderTest, TwoRequestsDifferentVmos) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmos[2];
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmos[0]));
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmos[1]));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmos[0]), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmos[1]), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmos[0].get());
@@ -88,10 +91,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsDifferentVmos) {
   operations[1].op.dev_offset = 1;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
   auto requests = builder.TakeOperations();
-  EXPECT_EQ(3, BlockCount(requests));
-  ASSERT_EQ(2, requests.size());
+  EXPECT_EQ(BlockCount(requests), 3ul);
+  ASSERT_EQ(requests.size(), 2ul);
 
   for (size_t i = 0; i < 2; i++) {
     EXPECT_EQ(requests[i].vmo->get(), vmos[i].get());
@@ -105,7 +108,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedVmoOffset) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -120,10 +123,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedVmoOffset) {
   operations[1].op.dev_offset = 1;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
   auto requests = builder.TakeOperations();
-  EXPECT_EQ(3, BlockCount(requests));
-  ASSERT_EQ(2, requests.size());
+  EXPECT_EQ(BlockCount(requests), 3ul);
+  ASSERT_EQ(requests.size(), 2ul);
 
   for (size_t i = 0; i < 2; i++) {
     EXPECT_EQ(requests[i].vmo->get(), vmo.get());
@@ -137,7 +140,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedVmoOffsetRevers
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -152,10 +155,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedVmoOffsetRevers
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(requests.size(), 2ul);
 
   for (size_t i = 0; i < 2; i++) {
     EXPECT_EQ(requests[i].vmo->get(), vmo.get());
@@ -169,7 +172,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedDevOffset) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -184,10 +187,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedDevOffset) {
   operations[1].op.dev_offset = 2;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(requests.size(), 2ul);
 
   for (size_t i = 0; i < 2; i++) {
     EXPECT_EQ(requests[i].vmo->get(), vmo.get());
@@ -201,7 +204,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedDevOffsetRevers
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -216,10 +219,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoUnalignedDevOffsetRevers
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(requests.size(), 2ul);
 
   for (size_t i = 0; i < 2; i++) {
     EXPECT_EQ(requests[i].vmo->get(), vmo.get());
@@ -233,7 +236,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentTypes) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -248,10 +251,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentTypes) {
   operations[1].op.dev_offset = 1;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(requests.size(), 2ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.type, operations[0].op.type);
@@ -270,7 +273,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentStartCoalesced)
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -285,10 +288,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentStartCoalesced)
   operations[1].op.dev_offset = 1;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[0].op.vmo_offset);
@@ -300,7 +303,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentStartCoalescedR
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -315,10 +318,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentStartCoalescedR
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[1].op.vmo_offset);
@@ -330,7 +333,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentStartPartialCoa
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -345,15 +348,15 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoDifferentStartPartialCoa
   operations[1].op.dev_offset = 1;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[0].op.vmo_offset);
   EXPECT_EQ(requests[0].op.dev_offset, operations[0].op.dev_offset);
-  EXPECT_EQ(requests[0].op.length, 3);
+  EXPECT_EQ(requests[0].op.length, 3ul);
 }
 
 TEST(UnbufferedOperationsBuilderTest,
@@ -361,7 +364,7 @@ TEST(UnbufferedOperationsBuilderTest,
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -376,22 +379,22 @@ TEST(UnbufferedOperationsBuilderTest,
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[1].op.vmo_offset);
   EXPECT_EQ(requests[0].op.dev_offset, operations[1].op.dev_offset);
-  EXPECT_EQ(requests[0].op.length, 3);
+  EXPECT_EQ(requests[0].op.length, 3ul);
 }
 
 TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSameStartCoalesced) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -406,10 +409,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSameStartCoalesced) {
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 2;
   builder.Add(operations[1]);
-  ASSERT_EQ(2, builder.BlockCount());
+  ASSERT_EQ(builder.BlockCount(), 2ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[0].op.vmo_offset);
@@ -421,7 +424,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSameStartCoalescedRevers
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -436,10 +439,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSameStartCoalescedRevers
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  ASSERT_EQ(2, builder.BlockCount());
+  ASSERT_EQ(builder.BlockCount(), 2ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[0].op.vmo_offset);
@@ -451,7 +454,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSubsumeRequest) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -466,10 +469,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSubsumeRequest) {
   operations[1].op.dev_offset = 0;
   operations[1].op.length = 3;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[1].op.vmo_offset);
@@ -481,7 +484,7 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSubsumeRequestReverse) {
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -496,10 +499,10 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSubsumeRequestReverse) {
   operations[1].op.dev_offset = 1;
   operations[1].op.length = 1;
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(requests.size(), 1ul);
 
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
   EXPECT_EQ(requests[0].op.vmo_offset, operations[0].op.vmo_offset);
@@ -511,7 +514,7 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
   UnbufferedOperationsBuilder builder;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
   UnbufferedOperation operations[3];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
@@ -534,16 +537,16 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
   operations[2].op.length = 4;
 
   builder.Add(operations[0]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
   builder.Add(operations[1]);
-  EXPECT_EQ(6, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 6ul);
   builder.Add(operations[2]);
-  EXPECT_EQ(9, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 9ul);
 
   // operation[2] two can be coalesced with either operation[0] or with operation[1].
   // First added operation is preferred.
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(requests.size(), 2ul);
 
   // operations[0] was Added first. So operation[2] should have been coalesced with operation[0].
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
@@ -558,16 +561,16 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
 
   // Flip the order of Add. Now operation[2] should be coalesced with operation[1]
   builder.Add(operations[1]);
-  EXPECT_EQ(3, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 3ul);
   builder.Add(operations[0]);
-  EXPECT_EQ(6, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 6ul);
   builder.Add(operations[2]);
-  EXPECT_EQ(9, builder.BlockCount());
+  EXPECT_EQ(builder.BlockCount(), 9ul);
 
   // operation[2] two can be coalesced with either operation[0] or with operation[1].
   // First added operation is preferred.
   requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(requests.size(), 2ul);
 
   // operations[1] was Added first. So operation[2] should have been coalesced with operation[1].
   EXPECT_EQ(requests[0].vmo->get(), vmo.get());
@@ -582,11 +585,11 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
 }
 
 TEST(UnbufferedOperationsBuilderDeathTest, BlockCountOverflowAsserts) {
-  fbl::Vector<UnbufferedOperation> operations = {
+  std::vector<UnbufferedOperation> operations = {
       UnbufferedOperation{.op = {.length = std::numeric_limits<uint64_t>::max()}},
       UnbufferedOperation{.op = {.length = std::numeric_limits<uint64_t>::max()}},
   };
-  ASSERT_DEATH([&] { BlockCount(operations); });
+  ASSERT_DEATH({ BlockCount(operations); }, _);
 }
 
 }  // namespace

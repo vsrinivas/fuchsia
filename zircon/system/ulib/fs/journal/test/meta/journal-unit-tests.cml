@@ -1,0 +1,17 @@
+{
+    program: {
+        binary: "test/journal-unit",
+    },
+    use: [
+        { runner: "gtest_runner" },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

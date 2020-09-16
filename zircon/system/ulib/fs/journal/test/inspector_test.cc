@@ -4,10 +4,12 @@
 
 #include <inttypes.h>
 
+#include <string_view>
+
 #include <fs/inspectable.h>
 #include <fs/journal/format.h>
 #include <fs/journal/inspector_journal.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -73,6 +75,16 @@ const JournalHeaderBlock kJournalRevocationBlock = {
 };
 const uint32_t kRevocationBlockOffset = kCommitBlockOffset + 1;
 
+constexpr std::string_view kMagicStr = "magic";
+constexpr std::string_view kStartBlockStr = "start_block";
+constexpr std::string_view kReservedStr = "reserved";
+constexpr std::string_view kTimestampStr = "timestamp";
+constexpr std::string_view kChecksumStr = "checksum";
+constexpr std::string_view kSequenceNumberStr = "sequence number";
+constexpr std::string_view kFlagsStr = "flags";
+constexpr std::string_view kPayloadBlocksStr = "payload blocks";
+constexpr std::string_view kTargetBlockStr = "target block";
+
 class FakeInspectableJournal : public fs::Inspectable {
  public:
   explicit FakeInspectableJournal(uint32_t entry_count) {
@@ -109,7 +121,7 @@ TEST(JournalInspector, JournalObject) {
   JournalInfo info = kJournalInfo;
   JournalObject journalObj(info, 0, kCapacity, &fake_journal);
 
-  EXPECT_STR_EQ(fs::kJournalName, journalObj.GetName());
+  EXPECT_EQ(fs::kJournalName, journalObj.GetName());
   ASSERT_EQ(fs::kJournalNumElements, journalObj.GetNumElements());
 
   const uint64_t *value;
@@ -117,42 +129,42 @@ TEST(JournalInspector, JournalObject) {
 
   // Check if journal magic is correct.
   auto magic = journalObj.GetElementAt(0);
-  ASSERT_STR_EQ(magic->GetName(), "magic");
+  ASSERT_EQ(magic->GetName(), kMagicStr);
   magic->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(info.magic));
   ASSERT_EQ(*value, info.magic);
 
   // Check if journal start_block is correct.
   auto start_block = journalObj.GetElementAt(1);
-  ASSERT_STR_EQ(start_block->GetName(), "start_block");
+  ASSERT_EQ(start_block->GetName(), kStartBlockStr);
   start_block->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(info.start_block));
   ASSERT_EQ(*value, info.start_block);
 
   // Check if journal reserved is correct.
   auto reserved = journalObj.GetElementAt(2);
-  ASSERT_STR_EQ(reserved->GetName(), "reserved");
+  ASSERT_EQ(reserved->GetName(), kReservedStr);
   reserved->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(info.reserved));
   ASSERT_EQ(*value, info.reserved);
 
   // Check if journal timestamp is correct.
   auto timestamp = journalObj.GetElementAt(3);
-  ASSERT_STR_EQ(timestamp->GetName(), "timestamp");
+  ASSERT_EQ(timestamp->GetName(), kTimestampStr);
   timestamp->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(info.timestamp));
   ASSERT_EQ(*value, info.timestamp);
 
   // Check if journal checksum is correct.
   auto checksum = journalObj.GetElementAt(4);
-  ASSERT_STR_EQ(checksum->GetName(), "checksum");
+  ASSERT_EQ(checksum->GetName(), kChecksumStr);
   checksum->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(info.checksum));
   ASSERT_EQ(*value, info.checksum);
 
-  // Check if journal entries count is correct is correct.
+  // Check if journal entries count is correct.
   auto entries = journalObj.GetElementAt(5);
-  ASSERT_STR_EQ(entries->GetName(), kJournalEntriesName);
+  ASSERT_EQ(std::string_view(entries->GetName()), kJournalEntriesName);
   ASSERT_EQ(kCapacity - kJournalMetadataBlocks, entries->GetNumElements());
 }
 
@@ -170,25 +182,25 @@ TEST(JournalInspector, EntriesBlocks) {
   JournalInfo info = kJournalInfo;
   JournalObject journalObj(info, 0, kCapacity, &fake_journal);
   auto entries = journalObj.GetElementAt(5);
-  char str[1024];
 
   for (uint32_t i = 0; i < entries->GetNumElements(); i++) {
     auto entry = entries->GetElementAt(i);
+    std::string str = "Journal[" + std::to_string(i);
     switch (i) {
       case kHeaderBlockOffset - kJournalMetadataBlocks:
-        snprintf(str, sizeof(str), "Journal[%u]: Header", i);
+        str += "]: Header";
         break;
       case kCommitBlockOffset - kJournalMetadataBlocks:
-        snprintf(str, sizeof(str), "Journal[%u]: Commit", i);
+        str += "]: Commit";
         break;
       case kRevocationBlockOffset - kJournalMetadataBlocks:
-        snprintf(str, sizeof(str), "Journal[%u]: Revocation", i);
+        str += "]: Revocation";
         break;
       default:
-        snprintf(str, sizeof(str), "Journal[%u]: Block", i);
+        str += "]: Block";
         break;
     }
-    ASSERT_STR_EQ(str, entry->GetName());
+    ASSERT_EQ(str, entry->GetName());
   }
 }
 
@@ -205,43 +217,43 @@ TEST(JournalInspector, EntryHeader) {
 
   // Check if journal magic is correct.
   auto magic = entry->GetElementAt(0);
-  ASSERT_STR_EQ(magic->GetName(), "magic");
+  ASSERT_EQ(magic->GetName(), kMagicStr);
   magic->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kJournalEntryMagic);
 
   auto sequence_number = entry->GetElementAt(1);
-  ASSERT_STR_EQ(sequence_number->GetName(), "sequence number");
+  ASSERT_EQ(sequence_number->GetName(), kSequenceNumberStr);
   sequence_number->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kSequenceNumber);
 
   auto flags = entry->GetElementAt(2);
-  ASSERT_STR_EQ(flags->GetName(), "flags");
+  ASSERT_EQ(flags->GetName(), kFlagsStr);
   flags->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kJournalPrefixFlagHeader);
 
   auto reserved = entry->GetElementAt(3);
-  ASSERT_STR_EQ(reserved->GetName(), "reserved");
+  ASSERT_EQ(reserved->GetName(), kReservedStr);
   reserved->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
-  ASSERT_EQ(*value, 0);
+  ASSERT_EQ(*value, 0ul);
 
   auto payload_blocks = entry->GetElementAt(4);
-  ASSERT_STR_EQ(payload_blocks->GetName(), "payload blocks");
+  ASSERT_EQ(payload_blocks->GetName(), kPayloadBlocksStr);
   payload_blocks->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kPayloadBlocks);
 
   auto target_block = entry->GetElementAt(5);
-  ASSERT_STR_EQ(target_block->GetName(), "target block");
+  ASSERT_EQ(target_block->GetName(), kTargetBlockStr);
   target_block->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kTargetBlock1);
 
   target_block = entry->GetElementAt(6);
-  ASSERT_STR_EQ(target_block->GetName(), "target block");
+  ASSERT_EQ(target_block->GetName(), kTargetBlockStr);
   target_block->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kTargetBlock2);
@@ -260,28 +272,28 @@ TEST(JournalInspector, EntryCommit) {
 
   // Check if journal magic is correct.
   auto magic = entry->GetElementAt(0);
-  ASSERT_STR_EQ(magic->GetName(), "magic");
+  ASSERT_EQ(magic->GetName(), kMagicStr);
   magic->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kJournalEntryMagic);
 
   auto sequence_number = entry->GetElementAt(1);
-  ASSERT_STR_EQ(sequence_number->GetName(), "sequence number");
+  ASSERT_EQ(sequence_number->GetName(), kSequenceNumberStr);
   sequence_number->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kSequenceNumber);
 
   auto flags = entry->GetElementAt(2);
-  ASSERT_STR_EQ(flags->GetName(), "flags");
+  ASSERT_EQ(flags->GetName(), kFlagsStr);
   flags->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kJournalPrefixFlagCommit);
 
   auto reserved = entry->GetElementAt(3);
-  ASSERT_STR_EQ(reserved->GetName(), "reserved");
+  ASSERT_EQ(reserved->GetName(), kReservedStr);
   reserved->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
-  ASSERT_EQ(*value, 0);
+  ASSERT_EQ(*value, 0ul);
 }
 
 TEST(JournalInspector, EntryRevocationRecord) {
@@ -297,28 +309,28 @@ TEST(JournalInspector, EntryRevocationRecord) {
 
   // Check if journal magic is correct.
   auto magic = entry->GetElementAt(0);
-  ASSERT_STR_EQ(magic->GetName(), "magic");
+  ASSERT_EQ(magic->GetName(), kMagicStr);
   magic->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kJournalEntryMagic);
 
   auto sequence_number = entry->GetElementAt(1);
-  ASSERT_STR_EQ(sequence_number->GetName(), "sequence number");
+  ASSERT_EQ(sequence_number->GetName(), kSequenceNumberStr);
   sequence_number->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kSequenceNumber);
 
   auto flags = entry->GetElementAt(2);
-  ASSERT_STR_EQ(flags->GetName(), "flags");
+  ASSERT_EQ(flags->GetName(), kFlagsStr);
   flags->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
   ASSERT_EQ(*value, kJournalPrefixFlagRevocation);
 
   auto reserved = entry->GetElementAt(3);
-  ASSERT_STR_EQ(reserved->GetName(), "reserved");
+  ASSERT_EQ(reserved->GetName(), kReservedStr);
   reserved->GetValue(reinterpret_cast<const void **>(&value), &size);
   ASSERT_EQ(size, sizeof(uint64_t));
-  ASSERT_EQ(*value, 0);
+  ASSERT_EQ(*value, 0ul);
 }
 
 }  // namespace

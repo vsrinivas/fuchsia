@@ -9,8 +9,8 @@
 #include <atomic>
 #include <thread>
 
+#include <gtest/gtest.h>
 #include <storage/operation/unbuffered_operations_builder.h>
-#include <zxtest/zxtest.h>
 
 namespace storage {
 namespace {
@@ -41,18 +41,19 @@ TEST(BlockingRingBufferEmptyTest, EmptyBuffer) {
 
 TEST(BlockingRingBufferEmptyTest, EmptyReservation) {
   BlockingRingBufferReservation reservation;
-  EXPECT_EQ(0, reservation.length());
-  EXPECT_EQ(0, reservation.start());
+  EXPECT_EQ(reservation.length(), 0ul);
+  EXPECT_EQ(reservation.start(), 0ul);
 }
 
 // The arbitrarily-chosen size of the BlockingRingBuffer to use under test (in blocks).
 constexpr size_t kBlocks = 5;
 
-class BlockingRingBufferFixture : public zxtest::Test {
+class BlockingRingBufferFixture : public testing::Test {
  public:
   void SetUp() override {
-    ASSERT_OK(
-        BlockingRingBuffer::Create(&vmoid_registry_, kBlocks, kBlockSize, "test-buffer", &buffer_));
+    ASSERT_EQ(
+        BlockingRingBuffer::Create(&vmoid_registry_, kBlocks, kBlockSize, "test-buffer", &buffer_),
+        ZX_OK);
   }
 
   BlockingRingBuffer* buffer() { return buffer_.get(); }
@@ -69,33 +70,33 @@ TEST_F(BlockingRingBufferTest, CapacityTest) { EXPECT_EQ(kBlocks, buffer()->capa
 
 TEST_F(BlockingRingBufferTest, ReserveOne) {
   BlockingRingBufferReservation reservation;
-  EXPECT_OK(buffer()->Reserve(1, &reservation));
-  EXPECT_EQ(0, reservation.start());
-  EXPECT_EQ(1, reservation.length());
+  EXPECT_EQ(buffer()->Reserve(1, &reservation), ZX_OK);
+  EXPECT_EQ(reservation.start(), 0ul);
+  EXPECT_EQ(reservation.length(), 1ul);
 }
 
 TEST_F(BlockingRingBufferTest, ReservationMoveConstruction) {
   BlockingRingBufferReservation reservation_a;
-  EXPECT_OK(buffer()->Reserve(1, &reservation_a));
+  EXPECT_EQ(buffer()->Reserve(1, &reservation_a), ZX_OK);
 
   BlockingRingBufferReservation reservation_b(std::move(reservation_a));
-  EXPECT_EQ(0, reservation_a.length());
-  EXPECT_EQ(1, reservation_b.length());
+  EXPECT_EQ(reservation_a.length(), 0ul);
+  EXPECT_EQ(reservation_b.length(), 1ul);
 }
 
 TEST_F(BlockingRingBufferTest, ReservationMoveAssignment) {
   BlockingRingBufferReservation reservation_a;
-  EXPECT_OK(buffer()->Reserve(1, &reservation_a));
+  EXPECT_EQ(buffer()->Reserve(1, &reservation_a), ZX_OK);
 
   BlockingRingBufferReservation reservation_b;
   reservation_b = std::move(reservation_a);
-  EXPECT_EQ(0, reservation_a.length());
-  EXPECT_EQ(1, reservation_b.length());
+  EXPECT_EQ(reservation_a.length(), 0ul);
+  EXPECT_EQ(reservation_b.length(), 1ul);
 }
 
 TEST_F(BlockingRingBufferTest, ReservationAtCapacity) {
   BlockingRingBufferReservation reservation;
-  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
+  EXPECT_EQ(buffer()->Reserve(kBlocks, &reservation), ZX_OK);
   EXPECT_EQ(kBlocks, reservation.length());
 }
 
@@ -109,14 +110,14 @@ TEST_F(BlockingRingBufferTest, ReservationBeyondCapacity) {
 // even when someone else is holding a reservation.
 TEST_F(BlockingRingBufferTest, ReservationBeyondCapacityDoesNotBlockWithPriorReservation) {
   BlockingRingBufferReservation reservation_a;
-  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation_a));
+  EXPECT_EQ(buffer()->Reserve(kBlocks, &reservation_a), ZX_OK);
   BlockingRingBufferReservation reservation_b;
   EXPECT_EQ(ZX_ERR_NO_SPACE, buffer()->Reserve(kBlocks + 1, &reservation_b));
 }
 
 TEST_F(BlockingRingBufferTest, SingleBlockingReservation) {
   BlockingRingBufferReservation reservation;
-  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
+  EXPECT_EQ(buffer()->Reserve(kBlocks, &reservation), ZX_OK);
 
   // Try acquiring a reservation, but in a background thread, since this call will block.
   std::atomic<bool> made_reservation = false;
@@ -131,14 +132,14 @@ TEST_F(BlockingRingBufferTest, SingleBlockingReservation) {
   EXPECT_FALSE(made_reservation.load());
   { auto unused = std::move(reservation); }
   worker.join();
-  EXPECT_OK(status, "Reserving buffer in background thread failed");
+  EXPECT_EQ(status, ZX_OK) << "Reserving buffer in background thread failed";
   EXPECT_TRUE(made_reservation.load());
   EXPECT_EQ(kBlocks, blocking_reservation.length());
 }
 
 TEST_F(BlockingRingBufferTest, MultipleBlockingReservations) {
   BlockingRingBufferReservation reservation;
-  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
+  EXPECT_EQ(buffer()->Reserve(kBlocks, &reservation), ZX_OK);
 
   // Try acquiring a reservation in multiple blocking background threads.
   std::atomic<bool> made_reservation[kBlocks] = {false};
@@ -163,14 +164,14 @@ TEST_F(BlockingRingBufferTest, MultipleBlockingReservations) {
   for (size_t i = 0; i < kBlocks; i++) {
     workers[i].join();
     EXPECT_TRUE(made_reservation[i].load());
-    EXPECT_OK(reserve_results[i].load());
-    EXPECT_EQ(1, blocking_reservations[i].length());
+    EXPECT_EQ(reserve_results[i].load(), ZX_OK);
+    EXPECT_EQ(blocking_reservations[i].length(), 1ul);
   }
 }
 
 TEST_F(BlockingRingBufferTest, MovingWhileBlockingReservation) {
   BlockingRingBufferReservation reservation_a;
-  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation_a));
+  EXPECT_EQ(buffer()->Reserve(kBlocks, &reservation_a), ZX_OK);
 
   // Try acquiring a reservation, but in a background thread, since this call will block.
   std::atomic<bool> made_reservation = false;
@@ -201,7 +202,7 @@ TEST_F(BlockingRingBufferTest, MovingWhileBlockingReservation) {
 
   worker.join();
   EXPECT_TRUE(made_reservation.load());
-  EXPECT_OK(reserve_result.load());
+  EXPECT_EQ(reserve_result.load(), ZX_OK);
   EXPECT_EQ(kBlocks, blocking_reservation.length());
 }
 

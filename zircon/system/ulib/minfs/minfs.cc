@@ -584,18 +584,18 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   //   * The allocator will currently reserve inodes that are freed in the same transaction i.e. it
   //     won't be possible to use free inodes until the next transaction. This probably can't happen
   //     anyway.
-  if (!data_operations.is_empty() && !metadata_operations.is_empty()) {
+  if (!data_operations.empty() && !metadata_operations.empty()) {
     journal_->schedule_task(
         journal_->WriteData(std::move(data_operations))
             .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
             .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
             .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
-  } else if (!metadata_operations.is_empty()) {
+  } else if (!metadata_operations.empty()) {
     journal_->schedule_task(
         journal_->WriteMetadata(std::move(metadata_operations))
             .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
             .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
-  } else if (!data_operations.is_empty()) {
+  } else if (!data_operations.empty()) {
     journal_->schedule_task(
         journal_->WriteData(std::move(data_operations))
             .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))

@@ -68,7 +68,7 @@ void UnbufferedOperationsBuilder::Add(const UnbufferedOperation& new_operation) 
   block_count_ += operation.op.length;
 }
 
-fbl::Vector<UnbufferedOperation> UnbufferedOperationsBuilder::TakeOperations() {
+std::vector<UnbufferedOperation> UnbufferedOperationsBuilder::TakeOperations() {
   block_count_ = 0;
   return std::move(operations_);
 }

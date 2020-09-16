@@ -90,7 +90,7 @@ class Journal final : public fit::executor {
   // Multiple requests to WriteData are not ordered. If ordering is desired, it should
   // be added using a |fit::sequencer| object, or by chaining the data writeback promise
   // along an object which is ordered.
-  Promise WriteData(fbl::Vector<storage::UnbufferedOperation> operations);
+  Promise WriteData(std::vector<storage::UnbufferedOperation> operations);
 
   // Transmits operations contains metadata, which must be updated atomically with respect
   // to power failures if journaling is enabled.
@@ -98,7 +98,7 @@ class Journal final : public fit::executor {
   // Multiple requests to WriteMetadata are ordered. They are ordered by the invocation of the
   // |WriteMetadata| method, not by the completion of the returned promise. If provided, |callback|
   // will be invoked when the metadata has been submitted to the underlying device.
-  Promise WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations);
+  Promise WriteMetadata(std::vector<storage::UnbufferedOperation> operations);
 
   // Transmits operations containing trim requests, which must be ordered with respect
   // to metadata writes.

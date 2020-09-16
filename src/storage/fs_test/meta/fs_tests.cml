@@ -15,7 +15,6 @@
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.sys.Launcher",
             ],
         },
         {

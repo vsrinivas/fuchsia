@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs/journal/superblock.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace fs {
 namespace {
@@ -25,7 +25,7 @@ class Buffer : public storage::BlockBuffer {
   std::unique_ptr<uint8_t[]> buffer_;
 };
 
-class JournalSuperblockFixture : public zxtest::Test {
+class JournalSuperblockFixture : public testing::Test {
  public:
   void SetUp() override {
     // Grab a backdoor to the Buffer object, so we can change it while the superblock has
@@ -52,23 +52,23 @@ TEST_F(JournalSuperblockTest, UpdateChangesStartAndSequenceNumber) {
   superblock.Update(kStart, kSequenceNumber);
   EXPECT_EQ(kStart, superblock.start());
   EXPECT_EQ(kSequenceNumber, superblock.sequence_number());
-  EXPECT_OK(superblock.Validate());
+  EXPECT_EQ(superblock.Validate(), ZX_OK);
 }
 
 TEST_F(JournalSuperblockTest, EmptySuperblockIsNotValid) {
   JournalSuperblock superblock(take_buffer());
-  EXPECT_EQ(ZX_ERR_IO, superblock.Validate(), "An unset superblock should be invalid");
+  EXPECT_EQ(ZX_ERR_IO, superblock.Validate()) << "An unset superblock should be invalid";
 }
 
 TEST_F(JournalSuperblockTest, BadChecksumDoesNotValidate) {
   JournalSuperblock superblock(take_buffer());
   superblock.Update(1234, 5678);
-  EXPECT_OK(superblock.Validate(), "Superblock should be valid after Update");
+  EXPECT_EQ(superblock.Validate(), ZX_OK) << "Superblock should be valid after Update";
 
   // Let's pretend a bit was flipped while on disk.
   info()->timestamp++;
 
-  EXPECT_EQ(ZX_ERR_IO, superblock.Validate(), "Superblock shouldn't be valid with bad sequence");
+  EXPECT_EQ(superblock.Validate(), ZX_ERR_IO) << "Superblock shouldn't be valid with bad sequence";
 }
 
 }  // namespace

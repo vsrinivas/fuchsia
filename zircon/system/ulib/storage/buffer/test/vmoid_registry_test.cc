@@ -4,10 +4,13 @@
 
 #include "storage/buffer/vmoid_registry.h"
 
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace storage {
 namespace {
+
+using ::testing::_;
 
 TEST(VmoidTest, Move) {
   Vmoid vmoid(1), vmoid2;
@@ -19,23 +22,24 @@ TEST(VmoidTest, Move) {
 
 TEST(VmoidDeathTest, ForgottenDetachAssertsInDebug) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-  ASSERT_DEATH([]() { Vmoid vmoid(1); });
+  ASSERT_DEATH({ Vmoid vmoid(1); }, _);
 #else
-  ASSERT_NO_DEATH([]() { Vmoid vmoid(1); });
+  Vmoid vmoid(1);
 #endif
 }
 
 TEST(VmoidDeathTest, MoveToAttachedVmoidAssertsInDebug) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-  ASSERT_DEATH(([]() {
-                  Vmoid vmoid(1), vmoid2(2);
-                  vmoid = std::move(vmoid2);
-                }));
+  ASSERT_DEATH(
+      {
+        Vmoid vmoid(1);
+        Vmoid vmoid2(2);
+        vmoid = std::move(vmoid2);
+      },
+      _);
 #else
-  ASSERT_NO_DEATH(([]() {
-                     Vmoid vmoid(1), vmoid2(2);
-                     vmoid = std::move(vmoid2);
-                   }));
+  Vmoid vmoid(1), vmoid2(2);
+  vmoid = std::move(vmoid2);
 #endif
 }
 

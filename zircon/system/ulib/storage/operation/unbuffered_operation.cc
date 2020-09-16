@@ -7,7 +7,7 @@
 
 namespace storage {
 
-uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& operations) {
+uint64_t BlockCount(fbl::Span<const UnbufferedOperation> operations) {
   safemath::CheckedNumeric<uint64_t> total_length = 0;
   for (const auto& operation : operations) {
     total_length += operation.op.length;

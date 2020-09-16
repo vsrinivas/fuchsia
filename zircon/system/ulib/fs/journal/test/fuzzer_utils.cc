@@ -120,7 +120,7 @@ zx_status_t FuzzerUtils::FuzzJournal(VmoBuffer* out_journal) {
   return ZX_OK;
 }
 
-fbl::Vector<UnbufferedOperation> FuzzerUtils::FuzzOperation(ReservedVmoid vmoid) {
+std::vector<UnbufferedOperation> FuzzerUtils::FuzzOperation(ReservedVmoid vmoid) {
   UnbufferedOperationsBuilder builder;
   if (registry_.HasVmo(vmoid)) {
     const zx::vmo& vmo = registry_.GetVmo(vmoid);

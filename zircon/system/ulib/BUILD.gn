@@ -11,11 +11,14 @@ group("tests") {
   testonly = true
   deps = [
     "edid:tests",
+    "fs/journal/test",
     "ftl/test:tests",
     "fzl:tests",
     "hid-parser/test:tests",
     "inspect:tests",
     "nix:tests",
+    "storage/buffer/test",
+    "storage/operation/test",
     "sysconfig-client:tests",
     "zbitl/test",
     "zxio:tests",

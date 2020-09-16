@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <vector>
 
 #include <minfs/writeback.h>
 #include <zxtest/zxtest.h>
@@ -260,13 +261,13 @@ TEST(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
   Transaction transaction(&minfs);
 
   // Metadata operations should be empty.
-  fbl::Vector<storage::UnbufferedOperation> meta_operations =
+  std::vector<storage::UnbufferedOperation> meta_operations =
       transaction.RemoveMetadataOperations();
-  ASSERT_TRUE(meta_operations.is_empty());
+  ASSERT_TRUE(meta_operations.empty());
 
   // Data work should be empty.
-  fbl::Vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
-  ASSERT_TRUE(data_operations.is_empty());
+  std::vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
+  ASSERT_TRUE(data_operations.empty());
 }
 
 // Checks that the Transaction's metadata work is populated after enqueueing metadata writes.
@@ -283,7 +284,7 @@ TEST(TransactionTest, EnqueueAndVerifyMetadataWork) {
   UnownedVmoBuffer buffer(zx::unowned_vmo(1));
   transaction.EnqueueMetadata(op, &buffer);
 
-  fbl::Vector<storage::UnbufferedOperation> meta_operations =
+  std::vector<storage::UnbufferedOperation> meta_operations =
       transaction.RemoveMetadataOperations();
   ASSERT_EQ(1, meta_operations.size());
   ASSERT_EQ(1, meta_operations[0].vmo);
@@ -307,7 +308,7 @@ TEST(TransactionTest, EnqueueAndVerifyDataWork) {
   UnownedVmoBuffer buffer(zx::unowned_vmo(1));
   transaction.EnqueueData(op, &buffer);
 
-  fbl::Vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
+  std::vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
   ASSERT_EQ(1, data_operations.size());
   ASSERT_EQ(1, data_operations[0].vmo);
   ASSERT_EQ(2, data_operations[0].op.vmo_offset);
