@@ -37,6 +37,11 @@ static pbus_mmio_t sherlock_nna_mmios[] = {
         .base = T931_NNA_SRAM_BASE,
         .length = T931_NNA_SRAM_LENGTH,
     },
+    // Reset
+    {
+        .base = T931_RESET_BASE,
+        .length = T931_RESET_LENGTH,
+    },
 };
 
 static pbus_bti_t nna_btis[] = {

@@ -18,4 +18,7 @@
 #define HHI_NANOQ_MEM_PD_REG1 (0x44 << 2)
 #define HHI_VIPNANOQ_CLK_CNTL (0x72 << 2)
 
+// Reset.
+#define RESET_LEVEL2 0x88
+
 #endif  // SRC_DEVICES_ML_DRIVERS_AML_NNA_T931_NNA_REGS_H_

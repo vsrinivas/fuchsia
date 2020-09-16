@@ -37,6 +37,11 @@ static pbus_mmio_t vim3_nna_mmios[] = {
         .base = A311D_NNA_SRAM_BASE,
         .length = A311D_NNA_SRAM_LENGTH,
     },
+    // Reset
+    {
+        .base = A311D_RESET_BASE,
+        .length = A311D_RESET_LENGTH,
+    },
 };
 
 static pbus_bti_t nna_btis[] = {

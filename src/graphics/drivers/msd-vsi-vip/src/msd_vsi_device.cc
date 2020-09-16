@@ -24,6 +24,8 @@
 
 static constexpr uint32_t kInterruptIndex = 0;
 
+static constexpr uint32_t kSramMmioIndex = 4;
+
 class MsdVsiDevice::BatchRequest : public DeviceRequest {
  public:
   BatchRequest(std::unique_ptr<MappedBatch> batch, bool do_flush)
@@ -118,10 +120,9 @@ bool MsdVsiDevice::Init(void* device_handle) {
 
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
-  DASSERT(mmio_count > 1);
-  external_sram_ = platform_device_->platform_device()->GetMmioBuffer(mmio_count - 1);
+  external_sram_ = platform_device_->platform_device()->GetMmioBuffer(kSramMmioIndex);
   if (!external_sram_)
-    return DRETF(false, "GetMmioBuffer(%d) failed", mmio_count - 1);
+    return DRETF(false, "GetMmioBuffer(%d) failed", kSramMmioIndex);
 
   if (!external_sram_->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING))
     return DRETF(false, "Failed setting cache policy on external SRAM");

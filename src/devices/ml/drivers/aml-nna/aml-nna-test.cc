@@ -13,6 +13,7 @@ namespace {
 constexpr size_t kHiuRegSize = 0x2000 / sizeof(uint32_t);
 constexpr size_t kPowerRegSize = 0x1000 / sizeof(uint32_t);
 constexpr size_t kMemoryPDRegSize = 0x1000 / sizeof(uint32_t);
+constexpr size_t kResetRegSize = 0x100 / sizeof(uint32_t);
 }  // namespace
 
 namespace aml_nna {
@@ -28,25 +29,32 @@ TEST(AmlNnaTest, Init) {
   ddk_mock::MockMmioRegRegion memory_pd_mock(memory_pd_regs.get(), sizeof(uint32_t),
                                              kMemoryPDRegSize);
 
+  auto reset_regs = std::make_unique<ddk_mock::MockMmioReg[]>(kResetRegSize);
+  ddk_mock::MockMmioRegRegion reset_mock(reset_regs.get(), sizeof(uint32_t), kResetRegSize);
+
   power_regs[0x3a].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFCFFFF);
   power_regs[0x3b].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFCFFFF);
 
   memory_pd_regs[0x43].ExpectWrite(0);
   memory_pd_regs[0x44].ExpectWrite(0);
 
+  reset_regs[0x22].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFEFFF);
+  reset_regs[0x22].ExpectRead(0x00000000).ExpectWrite(0x00001000);
+
   hiu_regs[0x72].ExpectRead(0x00000000).ExpectWrite(0x700);
   hiu_regs[0x72].ExpectRead(0x00000000).ExpectWrite(0x7000000);
 
   pdev_protocol_t proto;
-  auto device = std::make_unique<AmlNnaDevice>(fake_ddk::kFakeParent, hiu_mock.GetMmioBuffer(),
-                                               power_mock.GetMmioBuffer(),
-                                               memory_pd_mock.GetMmioBuffer(), proto);
+  auto device = std::make_unique<AmlNnaDevice>(
+      fake_ddk::kFakeParent, hiu_mock.GetMmioBuffer(), power_mock.GetMmioBuffer(),
+      memory_pd_mock.GetMmioBuffer(), reset_mock.GetMmioBuffer(), proto);
   ASSERT_NOT_NULL(device);
   device->Init();
 
   hiu_mock.VerifyAll();
   power_mock.VerifyAll();
   memory_pd_mock.VerifyAll();
+  reset_mock.VerifyAll();
 }
 
 }  // namespace aml_nna

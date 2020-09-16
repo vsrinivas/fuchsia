@@ -34,6 +34,8 @@ constexpr uint32_t kClockAxiEnableShift = 24;
 constexpr uint32_t kHiu = 1;
 constexpr uint32_t kPowerDomain = 2;
 constexpr uint32_t kMemoryDomain = 3;
+// constexpr uint32_t kSram = 4;
+constexpr uint32_t kReset = 5;
 }  // namespace
 
 namespace aml_nna {
@@ -56,14 +58,20 @@ void AmlNnaDevice::Init() {
   // set bit[16-17]=0
   power_mmio_.ClearBits32(1 << kPowerSleepSetPowerOff | 1 << 17, AO_RTI_GEN_PWR_SLEEP0);
 
-  // set bit[16-17]=0
-  power_mmio_.ClearBits32(1 << kPowerIsoSetIsolated | 1 << 17, AO_RTI_GEN_PWR_ISO0);
-
   // MEM_PD_REG0 set 0
   memory_pd_mmio_.Write32(0, HHI_NANOQ_MEM_PD_REG0);
 
   // MEM_PD_REG1 set 0
   memory_pd_mmio_.Write32(0, HHI_NANOQ_MEM_PD_REG1);
+
+  // set bit[12]=0
+  reset_mmio_.ClearBits32(1 << 12, RESET_LEVEL2);
+
+  // set bit[16-17]=0
+  power_mmio_.ClearBits32(1 << kPowerIsoSetIsolated | 1 << 17, AO_RTI_GEN_PWR_ISO0);
+
+  // set bit[12]=1
+  reset_mmio_.SetBits32(1 << 12, RESET_LEVEL2);
 
   // Setup Clocks.
   // Set clocks to 800 MHz (FCLK_DIV2P5 = 3, Divisor = 1)
@@ -108,10 +116,18 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  std::optional<ddk::MmioBuffer> reset_mmio;
+  status = pdev.MapMmio(kReset, &reset_mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    return status;
+  }
+
   fbl::AllocChecker ac;
 
-  auto device = std::unique_ptr<AmlNnaDevice>(new (&ac) AmlNnaDevice(
-      parent, std::move(*hiu_mmio), std::move(*power_mmio), std::move(*memory_pd_mmio), proto));
+  auto device = std::unique_ptr<AmlNnaDevice>(
+      new (&ac) AmlNnaDevice(parent, std::move(*hiu_mmio), std::move(*power_mmio),
+                             std::move(*memory_pd_mmio), std::move(*reset_mmio), proto));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -11,7 +11,7 @@ TEST(Sram, AxiSramSize) {
   ASSERT_TRUE(platform_device);
 
   uint32_t mmio_count = platform_device->GetMmioCount();
-  ASSERT_EQ(mmio_count, 5u);
+  ASSERT_EQ(mmio_count, 6u);
 
   const uint32_t kAxiSramMmioIndex = 4;
   auto buffer = platform_device->GetMmioBuffer(kAxiSramMmioIndex);

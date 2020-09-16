@@ -26,12 +26,14 @@ using AmlNnaDeviceType = ddk::Device<AmlNnaDevice, ddk::GetProtocolable, ddk::Un
 class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_NNA> {
  public:
   explicit AmlNnaDevice(zx_device_t* parent, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer power_mmio,
-                        ddk::MmioBuffer memory_pd_mmio, pdev_protocol_t proto)
+                        ddk::MmioBuffer memory_pd_mmio, ddk::MmioBuffer reset_mmio,
+                        pdev_protocol_t proto)
       : AmlNnaDeviceType(parent),
         pdev_(parent),
         hiu_mmio_(std::move(hiu_mmio)),
         power_mmio_(std::move(power_mmio)),
-        memory_pd_mmio_(std::move(memory_pd_mmio)) {
+        memory_pd_mmio_(std::move(memory_pd_mmio)),
+        reset_mmio_(std::move(reset_mmio)) {
     memcpy(&parent_pdev_, &proto, sizeof(proto));
   }
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -47,6 +49,7 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   ddk::MmioBuffer hiu_mmio_;
   ddk::MmioBuffer power_mmio_;
   ddk::MmioBuffer memory_pd_mmio_;
+  ddk::MmioBuffer reset_mmio_;
 
   pdev_protocol_t parent_pdev_;
 };
