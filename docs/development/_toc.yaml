@@ -4,11 +4,7 @@
 toc:
 - title: "Overview"
   path: /docs/development/README.md
-- heading: "Set up"
-- title: "Get source code"
-  section:
-  - include: /docs/development/source_code/_toc.yaml
-- title: "Set up hardware"
+- heading: "Set up Fuchsia hardware"
   section:
   - include: /docs/development/hardware/_toc.yaml
 - heading: "Build and run"
@@ -72,6 +68,10 @@ toc:
 - title: "Publish prebuilt packages"
   section:
   - include: /docs/development/prebuilt_packages/_toc.yaml
+- heading: "Contribute code"
+- title: "Contribute source code"
+  section:
+  - include: /docs/development/source_code/_toc.yaml
 - heading: "Troubleshooting"
 - title: "Error Codes"
   section:

@@ -292,7 +292,7 @@ the server.
 <!-- xrefs -->
 [fidl-intro]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [products]: /docs/concepts/build_system/boards_and_products.md
-[getting-started]: /docs/getting_started.md
+[getting-started]: /docs/get-started/index.md
 [glossary-url]: /docs/glossary.md#component-url
 [glossary-scheme]: /docs/glossary.md#fuchsia-pkg-url
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md

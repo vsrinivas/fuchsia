@@ -244,7 +244,7 @@ requests is running. The next step will be to write a client for the server.
 [fidl-packages]: /docs/development/languages/fidl/tutorials/dart/basics/using-fidl.md
 [building-components]: /docs/development/components/build.md
 [products]: /docs/concepts/build_system/boards_and_products.md
-[getting-started]: /docs/getting_started.md
+[getting-started]: /docs/get-started/index.md
 [glossary-url]: /docs/glossary.md#component-url
 [glossary-scheme]: /docs/glossary.md#fuchsia-pkg-url
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md

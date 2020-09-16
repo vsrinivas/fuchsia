@@ -32,7 +32,7 @@ at the [HLCPP and LLCPP comparison doc][c-family].
   * [Dart Tutorial][dart]
 
 <!-- xrefs -->
-[getting-started]: /docs/getting_started.md
+[getting-started]: /docs/get-started/index.md
 [fidl-concepts]: /docs/concepts/fidl/overview.md
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [hlcpp]: hlcpp/README.md

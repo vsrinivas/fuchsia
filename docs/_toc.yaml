@@ -4,10 +4,9 @@
 toc:
 - name: "Get started"
   contents:
+  - include: /docs/get-started/_toc.yaml
   - title: "Overview"
     path: /docs
-  - title: "Get started"
-    path: /docs/getting_started.md
   - title: "Glossary"
     path: /docs/glossary.md
 - name: "Concepts"

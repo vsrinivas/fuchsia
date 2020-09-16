@@ -254,7 +254,7 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 --with //sdk/lib/fdio:tests --with //third_party/go:go_stdlib_tests
 ```
 
-[getting_started]: /docs/getting_started.md
+[getting_started]: /docs/get-started/index.md
 [contribute_changes]: /docs/development/source_code/contribute_changes.md
 [spawn]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#30
 [select]: https://docs.rs/futures/0.3.4/futures/macro.select.html

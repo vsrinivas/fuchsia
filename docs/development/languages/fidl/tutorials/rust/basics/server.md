@@ -365,7 +365,7 @@ the server.
 [building-components]: /docs/development/components/build.md
 [products]: /docs/concepts/build_system/boards_and_products.md
 [control-handle]: /docs/reference/fidl/bindings/rust-bindings.md#protocol-control-handle
-[getting-started]: /docs/getting_started.md
+[getting-started]: /docs/get-started/index.md
 [glossary-url]: /docs/glossary.md#component-url
 [glossary-scheme]: /docs/glossary.md#fuchsia-pkg-url
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md

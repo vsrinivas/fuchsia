@@ -3,7 +3,7 @@
 ## Checking out the Zircon source code
 
 Note: The Fuchsia source includes Zircon. See Fuchsia's
-[Getting Started](/docs/getting_started.md) documentation.
+[Getting Started](/docs/get-started/index.md) documentation.
 
 
 This guide assumes that the Fuchsia project is checked out into `$FUCHSIA_DIR`,

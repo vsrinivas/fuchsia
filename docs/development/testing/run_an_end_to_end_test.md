@@ -27,7 +27,7 @@ Also, to run any end-to-end test, see the
 
 Verify the following requirements:
 
-*   [Set up your Fuchsia development environment](/docs/development/source_code/README.md).
+*   [Set up your Fuchsia development environment](/docs/get-started/get_fuchsia_source.md).
 *   [Run the Fuchsia emulator](/docs/development/run/femu.md).
 
 ## Build a Fuchsia image to include the end-to-end test {#build-a-fuchsia-image-to-include-the-end-to-end-test}

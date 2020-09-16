@@ -615,7 +615,7 @@ fidl fmt --library my_library.fidl -i
 [rtl-dart]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/
 [rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
 [rtl-rust]: /src/lib/fidl/rust/fidl/
-[getting_started]: /docs/getting_started.md
+[getting_started]: /docs/get-started/index.md
 [compat_readme]: /src/tests/fidl/compatibility/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc

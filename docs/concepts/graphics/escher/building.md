@@ -46,7 +46,7 @@ Escher can also build on Linux.  In order to do so, you need to:
     fx set terminal.x64 --with='//garnet/packages/examples:escher,//garnet/packages/tests:escher' --args escher_use_null_vulkan_config_on_host=false
     ```
 
-    * See [Getting started](/docs/getting_started.md) for how to set up the `fx` tool.
+    * See [Getting started](/docs/get-started/index.md) for how to set up the `fx` tool.
 
     * The command-line above is just an example.  For example, you can use a different product than `terminal` or use a more inclusive package such as `//garnet/packages/examples:all`.
 

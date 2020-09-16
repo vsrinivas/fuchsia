@@ -62,7 +62,7 @@ the package declaration type.
 ## Executing a build
 
 The simplest way to this is through the `fx` tool, as described in
-[Getting Started](/docs/getting_started.md#Setup-Build-Environment). Read on to see
+[Getting Started](/docs/get-started/index.md#Setup-Build-Environment). Read on to see
 what `fx` does under the hood.
 
 The rest of this document assumes that `gn` and `ninja` commands are

@@ -28,7 +28,9 @@ up-to-date:
 
 Fuchsia's [bootstrap script](/scripts/bootstrap) creates a `fuchsia` directory
 and downloads the content of the Fuchsia source repository to this new
-directory. Downloading Fuchsia may take up to 60 minutes.
+directory.
+
+Note: Downloading Fuchsia may take up to 60 minutes.
 
 To download the Fuchsia source, do the following:
 
@@ -118,6 +120,13 @@ The following steps use a `bash` terminal as an example:
     fx help
     ```
 
+## Next steps
+
+See
+[Configure and build Fuchsia](/docs/get-started/build_fuchsia.md)
+in the Getting started guide for the next steps.
+
+
 ## Troubleshoot
 
 ### Authentication error {#authentication-error}
@@ -176,10 +185,4 @@ Alternatively, run the `fx` tool directly using its path, for example:
 ```
 
 In either case, you need `jiri` in your `PATH`.
-
-## See also
-
-See
-[Configure and build Fuchsia](/docs/getting_started.md#configure-and-build-fuchsia)
-in the Getting started guide for the next steps.
 

@@ -112,7 +112,7 @@ your host, if you don't have a Fuchsia target device, you can start a
 Fuchsia emulator with networking:
 
 Note: For more information on getting started with Fuchsia, see
-[Fuchsia](/docs/getting_started.md). For more information about
+[Fuchsia](/docs/get-started/index.md). For more information about
 [`fx emu`](https://fuchsia.dev/reference/tools/fx/cmd/emu).
 
 ```sh

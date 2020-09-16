@@ -1,73 +1,18 @@
-# Fuchsia Emulator (FEMU)
+# Run Fuchsia Emulator (FEMU)
 
-Fuchsia can [run under emulation](/docs/getting_started.md#set_up_the_emulator)
-using Fuchsia Emulator (FEMU).
+You can run Fuchsia under emulation using the Fuchsia Emulator (FEMU).
 
-## Prebuilt FEMU
-
-FEMU is downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
-
-FEMU is fetched into `//prebuilt/third_party/aemu`. You can run it using `fx emu`
+FEMU is downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`, and
+is fetched into `//prebuilt/third_party/aemu`. You can run FEMU using `fx emu`
 (see section ["Run Fuchsia under FEMU"](#run_fuchsia_under_femu)).
 
-## Network setup
+## Prerequisites
 
-In order to enable FEMU to connect to the local update server, you need to set
-up a persistent TUN/TAP device used by FEMU to create emulator network interface
-in advance.
+In order to run FEMU, you must do the following:
 
-### Linux network setup
-
-On Linux, run the following commands to setup the device and interface:
-
-```
-sudo ip tuntap add dev qemu mode tap user $USER
-sudo ifconfig qemu up
-```
-
-### macOS network setup
-
-macOS does not support TUN/TAP devices out of the box; however, there is a widely
-used set of kernel extensions called
-[tuntaposx](http://tuntaposx.sourceforge.net/download.xhtml){:.external} that allow
-macOS to create virtual network interfaces.
-
-For macOS 10.9 (Mavericks) and 10.10 (Yosemite), install TunTap using this
-[installation package](http://tuntaposx.sourceforge.net/download.xhtml){:.external}.
-
-For macOS 10.13 (High Sierra) and later versions, do the following:
-
-1.  Install [Homebrew](https://brew.sh){:.external}:
-
-    ```posix-terminal
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-    ```
-
-1.  Install TunTap:
-
-    ```posix-terminal
-    brew cask install tuntap
-    ```
-
-The installation of TunTap may fail at first. In that case, do the following:
-
-1.  Open `System Preferences`.
-1.  Open `Security & Privacy` and select the`General` tab.
-1.  Next to the `System software from developer "Mattias Nissler" was blocked
-    from loading.` message, click **Allow** (see Apple's
-    [User-Approved Kernel Extension Loading](https://developer.apple.com/library/archive/technotes/tn2459/_index.html){:.external}
-    for details).
-1.  Run the install command again:
-
-    ```posix-terminal
-    brew cask install tuntap
-    ```
-
-After installing TunTap, run the following command:
-
-```posix-terminal
-sudo chown $USER /dev/tap0
-```
+ * [Installed Fuchsia source and created environment variables](/docs/get-started/get_fuchsia_source.md)
+ * [Configured and built Fuchsia](/docs/get-started/build_fuchsia.md)
+ * [Set up and configured FEMU](/docs/get-started/set_up_femu.md)
 
 ## Run Fuchsia under FEMU
 

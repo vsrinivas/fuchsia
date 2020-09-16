@@ -5,8 +5,7 @@ documentation.
 
  - [Code of conduct](/CODE_OF_CONDUCT.md)
  - [Glossary](glossary.md) - definitions of commonly used terms
- - [Getting started](getting_started.md) - everything you need to get started
-   with Fuchsia
+ - [Getting started](/docs/get-started/index.md) - everything you need to get started with Fuchsia
  - [Development](development/README.md) - instructions for building, running and
    testing Fuchsia and software that runs on Fuchsia
  - [System](/docs/concepts/README.md) - documentation for how Fuchsia works

@@ -27,7 +27,7 @@ When working on this codelab, you may continue adding your solutions to
 
 Set up your development environment.
 
-This codelab assumes you have completed [Getting Started](/docs/getting_started.md) and have:
+This codelab assumes you have completed [Getting Started](/docs/get-started/index.md) and have:
 
 1. A checked out and built Fuchsia tree.
 2. A device or emulator (`fx emu`) that runs Fuchsia.

@@ -161,7 +161,7 @@ a file. Do so!
 #### Fuchsia Setup
 
 Read the Fuchsia Getting Started guide
-[first](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/getting_started.md)
+[first](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/get-started/index.md)
 
 Most of the SWD stack is in the `base` image of fuchsia, so to get a swd stack
 working with tests, your build configuration is quite simple:

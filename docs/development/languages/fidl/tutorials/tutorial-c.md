@@ -12,7 +12,7 @@ using the FIDL InterProcess Communication (**IPC**) system in Fuchsia.
 
 Refer to the [main FIDL page](../README.md) for details on the
 design and implementation of FIDL, as well as the
-[instructions for getting and building Fuchsia](/docs/getting_started.md).
+[instructions for getting and building Fuchsia](/docs/get-started/index.md).
 
 The [reference](#reference) section documents the bindings.
 

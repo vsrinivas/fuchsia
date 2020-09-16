@@ -27,7 +27,7 @@ To run this test component, the steps are:
 
 Verify the following requirements:
 
-*   [Set up the Fuchsia development environment](/docs/development/source_code/README.md).
+*   [Set up the Fuchsia development environment](/docs/get-started/get_fuchsia_source.md).
 *   [Run the Fuchsia emulator](/docs/development/run/femu.md).
 
 ## Build a Fuchsia image {#build-a-fuchsia-image}

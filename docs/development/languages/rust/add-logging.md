@@ -13,7 +13,7 @@ and components that are written to run on Fuchsia.
 
 *   A hardware device that is set up to run Fuchsia.
     *   The device should be paved and running. If you haven't already
-        installed Fuchsia, see [Get Started](/docs/getting_started.md).
+        installed Fuchsia, see [Get Started](/docs/get-started/index.md).
 *   Rust installed on your environment.
     *   The Fuchsia build installs a version of Rust that can be used for
         Fuchsia development. If you have already built Fuchsia, you don't need

@@ -10,7 +10,7 @@ Fuchsia manages commits through
 
 Before you begin, you need to:
 
-*   [Download the Fuchsia source code](/docs/development/source_code/README.md).
+*   [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md).
 
     Note: You can complete the next prerequisite items while downloading the
     Fuchsia source code.
