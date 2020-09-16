@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("arm64") {
   kernel = true
   host = true
@@ -16,4 +18,5 @@ zx_library("arm64") {
     "lib/arch/intrin.h",
     "lib/arch/ticks.h",
   ]
+  sdk_migrated = true
 }

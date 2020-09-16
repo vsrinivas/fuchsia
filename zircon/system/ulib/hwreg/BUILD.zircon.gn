@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("hwreg") {
   sdk = "source"
   sdk_headers = [
@@ -12,6 +14,7 @@ zx_library("hwreg") {
     "hwreg/mmio.h",
     "hwreg/pio.h",
   ]
+  sdk_migrated = true
   kernel = true
   static = true
   host = true
@@ -36,7 +39,17 @@ zx_library("hwreg") {
 zx_library("hwreg-mock") {
   testonly = true
   sdk = "source"
-  sdk_headers = [ "hwreg/mock.h" ]
+  sdk_headers = [
+    "hwreg/asm.h",
+    "hwreg/bitfields.h",
+    "hwreg/indirect.h",
+    "hwreg/internal.h",
+    "hwreg/mmio.h",
+    "hwreg/mock.h",
+    "hwreg/pio.h",
+  ]
+
+  sdk_migrated = true
   kernel = true
   static = true
   host = true

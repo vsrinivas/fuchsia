@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("mock-function") {
   testonly = true
   sdk = "source"
   sdk_headers = [ "lib/mock-function/mock-function.h" ]
+  sdk_migrated = true
   sources = []
   public_deps = [ "$zx/system/ulib/zxtest:headers" ]
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/host_tool_action.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
 
 # Generate a header file for assembly files to #include from hwreg types.
 #
@@ -31,7 +31,7 @@ template("hwreg_asm_header") {
   not_needed([ "tool_target" ])
 
   if (is_host) {
-    host_tool(tool_target) {
+    zx_host_tool(tool_target) {
       visibility = [ ":*" ]
       deps = []
       forward_variables_from(invoker,
@@ -47,7 +47,7 @@ template("hwreg_asm_header") {
   }
 
   if (current_toolchain == default_toolchain) {
-    host_tool_action(gen_target) {
+    zx_host_tool_action(gen_target) {
       forward_variables_from(invoker, [ "testonly" ])
       tool = ":$tool_target"
       outputs = [ "$header_dir/${invoker.output_name}" ]

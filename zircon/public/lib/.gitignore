@@ -2,8 +2,6 @@
 # and should be ignored by Git. Note that others are hand-rolled and should be managed by git.
 abr/
 affine/
-arch/
-arm64/
 async/
 async-cpp/
 bitmap/
@@ -20,9 +18,6 @@ ffl/
 fidl/
 fidl_base/
 fidl-llcpp/
-host/
-hwreg/
-hwreg-mock/
 kcmdline/
 lazy_init/
 ldmsg/
@@ -30,7 +25,6 @@ lockdep/
 lz4/
 mmio-ptr/
 mmio-ptr-fake/
-mock-function/
 ngunwind/
 pretty/
 ram-crashlog/
@@ -40,11 +34,8 @@ safemath/
 smbios/
 sync/
 syscalls-headers/
-uart/
-uart-mock/
 usbhost-static/
 vdso-code-header/
-x86/
 zbitl/
 zircon-headers/
 zstd/

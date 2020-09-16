@@ -5,9 +5,10 @@
 # https://opensource.org/licenses/MIT
 
 import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
 
-if (current_toolchain != default_toolchain) {
-  library("arch") {
+if (zx != "/" || current_toolchain != default_toolchain) {
+  zx_library("arch") {
     kernel = true
     static = true
 
@@ -16,6 +17,7 @@ if (current_toolchain != default_toolchain) {
 
     sdk = "source"
     sdk_headers = [ "lib/arch/asm.h" ]
+    sdk_migrated = true
 
     sources = []
 

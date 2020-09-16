@@ -42,8 +42,8 @@ template("define_common_lib") {
       "//src/lib/ddktl",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/hwreg",
-      "//zircon/public/lib/uart",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/uart",
     ]
     if (invoker.testonly) {
       testonly = true

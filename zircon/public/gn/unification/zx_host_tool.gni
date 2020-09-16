@@ -19,6 +19,12 @@ template("zx_host_tool") {
   }
 }
 
+template("zx_host_tool_action") {
+  host_tool_action(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}
+
 template("zx_host_tool_action_foreach") {
   host_tool_action_foreach(target_name) {
     forward_variables_from(invoker, "*")
