@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {
     anyhow::Error, fuchsia_async as fasync, fuchsia_syslog as syslog, setui_client_lib::*,
     structopt::StructOpt,
