@@ -24,14 +24,14 @@ namespace {
 static constexpr zx_txid_t TXID = 1;
 
 static constexpr bool kEnablePositionNotifications = false;
-// To what extent should position notification messages be logged? If logging level is SPEW, every
-// notification is logged (specified by Spew const). If TRACE, log less frequently, specified by
-// Trace const. If INFO, even less frequently per Info const (INFO is default for DEBUG builds).
+// To what extent should position notification messages be logged? If logging level is TRACE, every
+// notification is logged (specified by Trace const). If DEBUG, log less frequently, specified by
+// Debug const. If INFO, even less frequently per Info const (INFO is default for DEBUG builds).
 // Default for audio_core in NDEBUG builds is WARNING, so by default we do not log any of these
 // messages on Release builds. Set to false to not log at all, even for unsolicited notifications.
 static constexpr bool kLogPositionNotifications = false;
-static constexpr uint16_t kPositionNotificationSpewInterval = 1;
-static constexpr uint16_t kPositionNotificationTraceInterval = 60;
+static constexpr uint16_t kPositionNotificationTraceInterval = 1;
+static constexpr uint16_t kPositionNotificationDebugInterval = 60;
 static constexpr uint16_t kPositionNotificationInfoInterval = 3600;
 
 // TODO(fxbug.dev/39092): Log a cobalt metric for this.
@@ -49,13 +49,6 @@ AudioDriverV1::AudioDriverV1(AudioDevice* owner, DriverTimeoutHandler timeout_ha
       versioned_ref_time_to_frac_presentation_frame__(
           fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
-
-  // We create the clock as a clone of MONOTONIC, but once the driver provides details (such as the
-  // clock domain), this may become a recovered clock, based on DMA progress across the ring buffer.
-  // TODO(mpuryear): Clocks should be per-domain not per-driver; default is the MONO domain's clock.
-  audio_clock_ = AudioClock::CreateAsDeviceStatic(audio::clock::AdjustableCloneOfMonotonic(),
-                                                  AudioClock::kMonotonicDomain);
-  FX_DCHECK(audio_clock_.is_valid()) << "AdjustableCloneOfMonotonic failed";
 }
 
 zx_status_t AudioDriverV1::Init(zx::channel stream_channel) {
@@ -802,6 +795,9 @@ zx_status_t AudioDriverV1::ProcessGetClockDomainResponse(
 
   AUDIO_LOG(DEBUG) << "Received clock domain " << clock_domain_;
 
+  // Now that we have our clock domain, we can establish our audio device clock
+  SetUpClocks();
+
   return OnDriverInfoFetched(kDriverInfoHasClockDomain);
 }
 
@@ -1043,9 +1039,7 @@ zx_status_t AudioDriverV1::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& r
   return ZX_OK;
 }
 
-// Currently we ignore driver-reported position, using the system-internal clock instead. This is
-// benign and can be safely ignored. However, we did not request it, so this may indicate some other
-// problem in the driver state machine. Issue a (debug-only) warning, eat the msg, and continue.
+// This position notification will be used to synthesize a clock for this audio device.
 zx_status_t AudioDriverV1::ProcessPositionNotify(const audio_rb_position_notify_t& notify) {
   TRACE_DURATION("audio", "AudioDriverV1::ProcessPositionNotify");
   if constexpr (kLogPositionNotifications) {
@@ -1056,18 +1050,18 @@ zx_status_t AudioDriverV1::ProcessPositionNotify(const audio_rb_position_notify_
                                 << " (1/" << kPositionNotificationInfoInterval
                                 << ") Time:" << notify.monotonic_time << ", Pos:" << std::setw(6)
                                 << notify.ring_buffer_pos;
-    } else if ((kPositionNotificationTraceInterval > 0) &&
-               (position_notification_count_ % kPositionNotificationTraceInterval == 0)) {
+    } else if ((kPositionNotificationDebugInterval > 0) &&
+               (position_notification_count_ % kPositionNotificationDebugInterval == 0)) {
       AUDIO_LOG_OBJ(DEBUG, this) << (kEnablePositionNotifications ? "Notification"
                                                                   : "Unsolicited notification")
-                                 << " (1/" << kPositionNotificationTraceInterval
+                                 << " (1/" << kPositionNotificationDebugInterval
                                  << ") Time:" << notify.monotonic_time << ",  Pos:" << std::setw(6)
                                  << notify.ring_buffer_pos;
-    } else if ((kPositionNotificationSpewInterval > 0) &&
-               (position_notification_count_ % kPositionNotificationSpewInterval == 0)) {
+    } else if ((kPositionNotificationTraceInterval > 0) &&
+               (position_notification_count_ % kPositionNotificationTraceInterval == 0)) {
       AUDIO_LOG_OBJ(TRACE, this) << (kEnablePositionNotifications ? "Notification"
                                                                   : "Unsolicited notification")
-                                 << " (1/" << kPositionNotificationSpewInterval
+                                 << " (1/" << kPositionNotificationTraceInterval
                                  << ") Time:" << notify.monotonic_time << ", Pos:" << std::setw(6)
                                  << notify.ring_buffer_pos;
     }
@@ -1156,6 +1150,44 @@ zx_status_t AudioDriverV1::OnDriverInfoFetched(uint32_t info) {
   }
 
   return ZX_OK;
+}
+
+void AudioDriverV1::SetUpClocks() {
+  // If we are in the monotonic domain, or if we have problem setting up the mechanism to recover a
+  // clock, then we'll just fall back to using this non-adjustable clone of CLOCK_MONOTONIC.
+  audio_clock_ = AudioClock::CreateAsDeviceStatic(audio::clock::CloneOfMonotonic(),
+                                                  AudioClock::kMonotonicDomain);
+
+  if (clock_domain_ == AudioClock::kMonotonicDomain) {
+    return;
+  }
+
+  // This clock begins as a clone of MONOTONIC, but because the hardware is NOT in the monotonic
+  // clock domain, this clock must eventually diverge. We tune this clock based on notifications
+  // provided by the audio driver, which correlate DMA position with CLOCK_MONOTONIC time.
+  // TODO(60027): Recovered clocks should be per-domain not per-driver.
+  auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
+  auto read_only_clock_result = audio::clock::DuplicateClock(adjustable_clock);
+  if (!read_only_clock_result.is_ok()) {
+    FX_LOGS(ERROR) << "DuplicateClock failed, will not recover a device clock!";
+    return;
+  }
+
+  recovered_clock_ = AudioClock::CreateAsDeviceStatic(std::move(adjustable_clock), clock_domain_);
+  if (!recovered_clock_.is_valid()) {
+    FX_LOGS(ERROR) << "CreateAsDeviceStatic (recovered) failed, will not recover a device clock!";
+    return;
+  }
+
+  // TODO(46648): If this clock domain is discovered to be hardware-tunable, this should be
+  // DeviceAdjustable instead of DeviceStatic, to articulate that it has hardware controls.
+  auto clone = AudioClock::CreateAsDeviceStatic(read_only_clock_result.take_value(), clock_domain_);
+  if (!clone.is_valid()) {
+    FX_LOGS(ERROR) << "CreateAsDeviceStatic (read_only) failed, will not recover a device clock!";
+    recovered_clock_ = AudioClock();
+    return;
+  }
+  audio_clock_ = std::move(clone);
 }
 
 zx_status_t AudioDriverV1::SetGain(const AudioDeviceSettings::GainState& gain_state,

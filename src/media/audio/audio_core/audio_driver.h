@@ -183,8 +183,16 @@ class AudioDriverV1 : public AudioDriver {
                                                 kDriverInfoHasProdStr | kDriverInfoHasGainState |
                                                 kDriverInfoHasFormats | kDriverInfoHasClockDomain;
 
-  // Counter of received position notifications since START.
-  uint32_t position_notification_count_ = 0;
+  // Once the clock domain has been retrieved, set up AudioClock(s) for this driver -- a read-only
+  // AudioClock and PERHAPS also an adjustable AudioClock.
+  //
+  // The read-only AudioClock represents the device timeline when synchronizing clients and devices;
+  // it is passed upward into the output or input mix where that reconciliation is done.
+  //
+  // If this device is NOT in the system monotonic domain, then we must recover its clock, so we
+  // establish an adjustable AudioClock to do so. We will also set our read-only AudioClock (above)
+  // to be a clone of this adjustable clock.
+  void SetUpClocks();
 
   // Dispatchers for messages received over stream and ring buffer channels.
   zx_status_t ReadMessage(const zx::channel& channel, void* buf, uint32_t buf_size,
@@ -342,9 +350,11 @@ class AudioDriverV1 : public AudioDriver {
 
   zx::time driver_last_timeout_ = zx::time::infinite();
 
-  // fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC is not defined for AudioDriverV1 types.
-  uint32_t clock_domain_ = 0;
+  // Counter of received position notifications since START.
+  uint64_t position_notification_count_ = 0;
+  uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
   AudioClock audio_clock_;
+  AudioClock recovered_clock_;
 };
 
 class AudioDriverV2 : public AudioDriver {
@@ -414,8 +424,8 @@ class AudioDriverV2 : public AudioDriver {
                                                 kDriverInfoHasProdStr | kDriverInfoHasGainState |
                                                 kDriverInfoHasFormats | kDriverInfoHasClockDomain;
 
-  // Counter of received position notifications since START.
-  uint32_t position_notification_count_ = 0;
+  void SetUpClocks();
+  void ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositionInfo info);
 
   zx_status_t SetGain(const AudioDeviceSettings::GainState& gain_state);
   // Transition to the Shutdown state and begin the process of shutting down.
@@ -464,8 +474,8 @@ class AudioDriverV2 : public AudioDriver {
   };
 
   void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
-  void RestartWatchPlugState() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
-  void RestartWatchClockRecovery() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
+  void RequestNextPlugStateChange() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
+  void RequestNextClockRecoveryUpdate() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   AudioDevice* const owner_;
   DriverTimeoutHandler timeout_handler_;
@@ -536,8 +546,11 @@ class AudioDriverV2 : public AudioDriver {
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_fidl_;
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
 
-  uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
+  // Counter of received position notifications since START.
+  uint64_t position_notification_count_ = 0;
+  uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
   AudioClock audio_clock_;
+  AudioClock recovered_clock_;
 };
 
 }  // namespace media::audio

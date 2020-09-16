@@ -201,12 +201,24 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
 }
 
+// After only GetDriverInfo, the clock should be available and advancing.
 TYPED_TEST(AudioDriverTest, RefClockIsAdvancing) {
+  this->remote_driver_->Start();
+
+  this->driver_->GetDriverInfo();
+  this->RunLoopUntilIdle();
+
   ASSERT_TRUE(this->driver_->reference_clock().is_valid());
   audio_clock_helper::VerifyAdvances(this->driver_->reference_clock());
 }
 
+// After only GetDriverInfo, the clock should be available. Initially it is a monotonic clone.
 TYPED_TEST(AudioDriverTest, DefaultClockIsClockMono) {
+  this->remote_driver_->Start();
+
+  this->driver_->GetDriverInfo();
+  this->RunLoopUntilIdle();
+
   ASSERT_TRUE(this->driver_->reference_clock().is_valid());
   audio_clock_helper::VerifyIsSystemMonotonic(this->driver_->reference_clock());
 }

@@ -12,8 +12,10 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 
 namespace media::audio {
@@ -30,6 +32,11 @@ class ThrottleOutput : public AudioOutput {
 
   ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix)
       : AudioOutput("throttle", threading_model, registry, link_matrix) {
+    // Establish an audio clock (clone of monotonic) and override the default reference_clock()
+    // implementation that calls into the AudioDriver, because we don't have an associated driver.
+    audio_clock_ = AudioClock::CreateAsDeviceStatic(audio::clock::CloneOfMonotonic(),
+                                                    AudioClock::kMonotonicDomain);
+
     const auto ref_now = reference_clock().Read();
     const auto fps = PipelineConfig::kDefaultMixGroupRate;
     ref_time_to_frac_presentation_frame_ =
@@ -53,6 +60,8 @@ class ThrottleOutput : public AudioOutput {
   }
 
   ~ThrottleOutput() override = default;
+
+  AudioClock& reference_clock() override { return audio_clock_; }
 
  protected:
   // AudioOutput Implementation
@@ -119,6 +128,7 @@ class ThrottleOutput : public AudioOutput {
   bool uninitialized_ = true;
   TimelineFunction ref_time_to_frac_presentation_frame_;
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_;
+  AudioClock audio_clock_;
 };
 
 }  // namespace media::audio

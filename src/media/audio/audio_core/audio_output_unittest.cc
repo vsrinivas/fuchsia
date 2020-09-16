@@ -7,6 +7,7 @@
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
+#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -149,7 +150,9 @@ class TestAudioOutput : public AudioOutput {
   // |AudioDevice|
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override {}
-  void OnWakeup() {}
+  // TestAudioOutput does not implement enough state machine to fully initialize an AudioDriver .
+  // It gets far enough for the AudioDriver to establish and expose its reference AudioClock.
+  void OnWakeup() { driver()->GetDriverInfo(); }
 
  private:
   StartMixDelegate start_mix_delegate_;
@@ -159,6 +162,19 @@ class TestAudioOutput : public AudioOutput {
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
+  void SetUp() override {
+    // Establish and start a remote driver, to respond to a GetDriverInfo request with the clock
+    // domain, so that AudioDriver establishes and passes on an AudioClock for this device.
+    zx::channel c1, c2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
+    remote_driver_ = std::make_unique<testing::FakeAudioDriverV1>(std::move(c1), dispatcher());
+    audio_output_->driver()->Init(std::move(c2));
+    remote_driver_->Start();
+
+    threading_model().FidlDomain().ScheduleTask(audio_output_->Startup());
+    RunLoopUntilIdle();
+  }
+
   void SetupMixTask() {
     audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), StubDriver::kRingBufferFrames,
                                 stub_driver()->ref_time_to_frac_presentation_frame());
@@ -176,6 +192,8 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
       &threading_model(), &context().device_manager(), &context().link_matrix());
+
+  std::unique_ptr<testing::FakeAudioDriverV1> remote_driver_;
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
