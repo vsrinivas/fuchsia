@@ -325,10 +325,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/isolated-ota-tests.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/isolated-ota-integration-tests#meta/isolated-ota-integration-test.cmx",
          "max_severity": "ERROR"
       },

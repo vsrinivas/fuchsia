@@ -18,7 +18,8 @@ use {
     std::sync::Arc,
 };
 
-const RESOLVER_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-resolver-isolated.cmx";
+const RESOLVER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/pkg-resolver-isolated.cmx";
 const SSL_CERTS_PATH: &str = "/config/ssl";
 
 /// A simple implementation of the fuchsia.boot.Arguments protocol,
@@ -104,7 +105,7 @@ impl Resolver {
         });
 
         // We use a salt so the unit tests work as expected.
-        let env = fs.create_salted_nested_environment("isolated-ota-env")?;
+        let env = fs.create_salted_nested_environment("isolated-swd-env")?;
         fasync::Task::spawn(fs.collect()).detach();
 
         let directory =
@@ -120,18 +121,19 @@ impl Resolver {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
+pub mod for_tests {
     use {
         super::*,
-        crate::cache::tests::CacheForTest,
+        crate::cache::for_tests::CacheForTest,
         fidl_fuchsia_io::DirectoryProxy,
         fidl_fuchsia_pkg::{PackageResolverMarker, UpdatePolicy},
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
-        fuchsia_pkg_testing::{
-            serve::ServedRepository, PackageBuilder, Repository, RepositoryBuilder,
-        },
+        fuchsia_pkg_testing::{serve::ServedRepository, Repository},
+        fuchsia_url::pkg_url::RepoUrl,
     };
+
+    const SSL_TEST_CERTS_PATH: &str = "/pkg/data/ssl";
+    pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
     /// This wraps the `Resolver` in order to reduce test boilerplate.
     pub struct ResolverForTest {
@@ -140,13 +142,27 @@ pub mod tests {
         _served_repo: ServedRepository,
     }
 
-    const TEST_REPO_URL: &str = "fuchsia-pkg://test";
-    const SSL_TEST_CERTS_PATH: &str = "/pkg/data/ssl";
-    pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
-
     impl ResolverForTest {
+        #[cfg(test)]
+        pub async fn new(
+            repo: Arc<Repository>,
+            repo_url: RepoUrl,
+            channel: Option<String>,
+        ) -> Result<Self, Error> {
+            Self::new_with_component(
+                repo,
+                repo_url,
+                channel,
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-resolver.cmx",
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache.cmx",
+            )
+            .await
+        }
+
         /// Create a resolver, which will resolve packages using the given Repository.
         /// This will also create the components used by the resolver.
+        /// SSL certificates for use by the served repository should be located at /pkg/data/ssl,
+        /// and the `pkgsvr` binary should be at /pkg/bin/pkgsvr.
         ///
         /// Arguments:
         /// * `repo`: `Repository` object, which will be used as the repo to fetch packages from.
@@ -154,17 +170,20 @@ pub mod tests {
         ///     if you want your packages to be resolved with URLs like
         ///     `fuchsia-pkg://my-package-repository.com/package-name`.
         /// * `channel`: Update channel that the resolver should use.
-        pub async fn new(
+        /// * `resolver_url`: fuchsia-pkg:// URL to use when launching the package resolver.
+        /// * `cache_url`: fuchsia-pkg:// URL to use when launching the package cache.
+        pub async fn new_with_component(
             repo: Arc<Repository>,
-            repo_url: &str,
+            repo_url: RepoUrl,
             channel: Option<String>,
+            resolver_url: &str,
+            cache_url: &str,
         ) -> Result<Self, Error> {
-            let cache = CacheForTest::new().context("launching cache")?;
+            let cache = CacheForTest::new_with_component(cache_url).context("launching cache")?;
 
             // Set up the repository config for pkg-resolver.
             let served_repo = Arc::clone(&repo).server().start()?;
 
-            let repo_url = repo_url.parse()?;
             let repo_config =
                 RepositoryConfigs::Version1(vec![served_repo.make_repo_config(repo_url)]);
             let tempdir = tempfile::tempdir()?;
@@ -188,7 +207,7 @@ pub mod tests {
                 repo_dir,
                 channel,
                 ssl_certs,
-                "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/pkg-resolver.cmx",
+                resolver_url,
             )
             .context("launching resolver")?;
 
@@ -218,6 +237,17 @@ pub mod tests {
             Ok(package)
         }
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::for_tests::{ResolverForTest, EMPTY_REPO_PATH},
+        super::*,
+        fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
+    };
+
+    const TEST_REPO_URL: &str = "fuchsia-pkg://test";
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_resolver() -> Result<(), Error> {
@@ -237,8 +267,9 @@ pub mod tests {
                 .unwrap(),
         );
 
-        let resolver =
-            ResolverForTest::new(repo, TEST_REPO_URL, None).await.context("launching resolver")?;
+        let resolver = ResolverForTest::new(repo, TEST_REPO_URL.parse().unwrap(), None)
+            .await
+            .context("launching resolver")?;
         let root_dir =
             resolver.resolve_package(&format!("{}/{}", TEST_REPO_URL, name)).await.unwrap();
 
@@ -266,7 +297,7 @@ pub mod tests {
 
         let resolver = ResolverForTest::new(
             repo,
-            "fuchsia-pkg://x64.resolver-test-channel.fuchsia.com",
+            "fuchsia-pkg://x64.resolver-test-channel.fuchsia.com".parse().unwrap(),
             Some("resolver-test-channel".to_owned()),
         )
         .await

@@ -74,13 +74,11 @@ impl Pkgfs {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
+pub mod for_tests {
     use {
         super::*,
         blobfs_ramdisk::BlobfsRamdisk,
-        fuchsia_async as fasync,
-        fuchsia_pkg_testing::{Package, PackageBuilder},
+        fuchsia_pkg_testing::Package,
         matches::assert_matches,
         pkgfs::{
             self,
@@ -96,6 +94,7 @@ pub mod tests {
     }
 
     impl PkgfsForTest {
+        /// Launch pkgfs. The pkgsvr binary must be located at /pkg/bin/pkgsvr.
         pub fn new() -> Result<Self, Error> {
             let blobfs = BlobfsRamdisk::start().context("starting blobfs")?;
             let pkgfs = Pkgfs::launch_with_args(
@@ -112,7 +111,7 @@ pub mod tests {
     }
 
     /// Install the given package to pkgfs.
-    async fn install_package(root: &DirectoryProxy, pkg: &Package) -> Result<(), Error> {
+    pub async fn install_package(root: &DirectoryProxy, pkg: &Package) -> Result<(), Error> {
         let installer =
             pkgfs::install::Client::open_from_pkgfs_root(root).context("Opening pkgfs")?;
 
@@ -143,6 +142,17 @@ pub mod tests {
         }
         Ok(())
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    #[cfg(test)]
+    use fuchsia_pkg_testing::PackageBuilder;
+    use {
+        super::for_tests::{install_package, PkgfsForTest},
+        super::*,
+        fuchsia_async as fasync,
+    };
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_pkgfs_install() -> Result<(), Error> {

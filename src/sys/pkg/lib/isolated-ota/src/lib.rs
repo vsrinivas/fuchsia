@@ -1,18 +1,8 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-mod cache;
-mod omaha;
-mod pkgfs;
-mod resolver;
-mod updater;
-
 use {
-    crate::{cache::Cache, pkgfs::Pkgfs, resolver::Resolver, updater::Updater},
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
+    isolated_swd::{cache::Cache, omaha, pkgfs::Pkgfs, resolver::Resolver, updater::Updater},
     std::sync::Arc,
     thiserror::Error,
 };

@@ -20,7 +20,7 @@ use {
 };
 
 pub const UPDATER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system-updater-isolated.cmx";
+    "fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/system-updater-isolated.cmx";
 
 pub struct Updater {}
 
@@ -90,7 +90,7 @@ impl Updater {
             .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request())
             .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request());
 
-        let env = fs.create_salted_nested_environment("isolated-ota-updater-env")?;
+        let env = fs.create_salted_nested_environment("isolated-swd-updater-env")?;
         fasync::Task::spawn(fs.collect()).detach();
 
         let output = updater
@@ -143,33 +143,33 @@ impl Updater {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
+pub mod for_tests {
     use {
         super::*,
-        crate::resolver::tests::{ResolverForTest, EMPTY_REPO_PATH},
-        fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
-        fidl_fuchsia_sys::TerminationReason,
+        crate::resolver::for_tests::{ResolverForTest, EMPTY_REPO_PATH},
+        fidl_fuchsia_paver::PaverRequestStream,
         fuchsia_merkle::Hash,
         fuchsia_pkg_testing::{
             Package, PackageBuilder, Repository, RepositoryBuilder, SystemImageBuilder,
         },
+        fuchsia_url::pkg_url::RepoUrl,
         fuchsia_zircon as zx,
         mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
         pkgfs,
         std::collections::HashMap,
     };
 
-    pub const TEST_UPDATER_URL: &str =
-        "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/system-updater.cmx";
+    #[cfg(test)]
     const TEST_CHANNEL: &str = "test";
-    const TEST_REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
+    pub const TEST_UPDATER_URL: &str =
+        "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/system-updater.cmx";
+    pub const TEST_REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
 
     pub struct UpdaterBuilder {
         paver_builder: MockPaverServiceBuilder,
         packages: Vec<Package>,
         images: HashMap<String, Vec<u8>>,
-        repo_url: String,
+        repo_url: RepoUrl,
     }
 
     impl UpdaterBuilder {
@@ -180,7 +180,7 @@ pub mod tests {
                 paver_builder: MockPaverServiceBuilder::new(),
                 packages: vec![SystemImageBuilder::new().build().await],
                 images: HashMap::new(),
-                repo_url: TEST_REPO_URL.to_owned(),
+                repo_url: TEST_REPO_URL.parse().unwrap(),
             }
         }
 
@@ -206,32 +206,18 @@ pub mod tests {
         }
 
         pub fn repo_url(mut self, url: &str) -> Self {
-            self.repo_url = url.to_owned();
+            self.repo_url = url.parse().expect("Valid URL supplied to repo_url()");
             self
-        }
-
-        fn generate_packages(&self) -> String {
-            let package_urls: Vec<String> = self
-                .packages
-                .iter()
-                .map(|p| {
-                    format!("{}/{}/0?hash={}", self.repo_url, p.name(), p.meta_far_merkle_root())
-                })
-                .collect();
-
-            let packages_json = serde_json::json!({
-                "version": "1",
-                "content": package_urls
-            });
-            serde_json::to_string(&packages_json).unwrap()
         }
 
         /// Create an UpdateForTest from this UpdaterBuilder.
         /// This will construct an update package containing all packages and images added to the
         /// builder, create a repository containing the packages, and create a MockPaver.
         pub async fn build(self) -> UpdaterForTest {
-            let mut update = PackageBuilder::new("update")
-                .add_resource_at("packages.json", self.generate_packages().as_bytes());
+            let mut update = PackageBuilder::new("update").add_resource_at(
+                "packages.json",
+                generate_packages_json(&self.packages, &self.repo_url.to_string()).as_bytes(),
+            );
             for (name, data) in self.images.iter() {
                 update = update.add_resource_at(name, data.as_slice());
             }
@@ -260,9 +246,23 @@ pub mod tests {
             }
         }
 
+        #[cfg(test)]
         pub async fn build_and_run(self) -> UpdaterResult {
             self.build().await.run().await
         }
+    }
+
+    pub fn generate_packages_json(packages: &Vec<Package>, repo_url: &str) -> String {
+        let package_urls: Vec<String> = packages
+            .iter()
+            .map(|p| format!("{}/{}/0?hash={}", repo_url, p.name(), p.meta_far_merkle_root()))
+            .collect();
+
+        let packages_json = serde_json::json!({
+            "version": "1",
+            "content": package_urls
+        });
+        serde_json::to_string(&packages_json).unwrap()
     }
 
     /// This wraps the `Updater` in order to reduce test boilerplate.
@@ -272,13 +272,25 @@ pub mod tests {
         pub paver: Arc<MockPaverService>,
         pub packages: Vec<Package>,
         pub update_merkle_root: Hash,
-        pub repo_url: String,
+        pub repo_url: RepoUrl,
     }
 
     impl UpdaterForTest {
+        #[cfg(test)]
+        pub async fn run(self) -> UpdaterResult {
+            let resolver = ResolverForTest::new(
+                self.repo.clone(),
+                self.repo_url.clone(),
+                Some(TEST_CHANNEL.to_owned()),
+            )
+            .await
+            .expect("Creating resolver");
+            self.run_with_resolver(resolver).await
+        }
+
         /// Run the system update, returning an `UpdaterResult` containing information about the
         /// result of the update.
-        pub async fn run(self) -> UpdaterResult {
+        pub async fn run_with_resolver(self, resolver: ResolverForTest) -> UpdaterResult {
             let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
             let paver_clone = Arc::clone(&self.paver);
             fs.add_fidl_service(move |stream: PaverRequestStream| {
@@ -290,10 +302,6 @@ pub mod tests {
                 .detach();
             });
 
-            let resolver =
-                ResolverForTest::new(self.repo, &self.repo_url, Some(TEST_CHANNEL.to_owned()))
-                    .await
-                    .expect("Creating resolver");
             let (client, server) = zx::Channel::create().expect("creating channel");
             fs.serve_connection(server).expect("Failed to start mock paver");
             fasync::Task::spawn(fs.collect()).detach();
@@ -352,6 +360,18 @@ pub mod tests {
             Ok(())
         }
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::for_tests::UpdaterBuilder,
+        super::*,
+        fidl_fuchsia_paver::{Asset, Configuration},
+        fidl_fuchsia_sys::TerminationReason,
+        fuchsia_pkg_testing::PackageBuilder,
+        mock_paver::PaverEvent,
+    };
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_updater() -> Result<(), Error> {

@@ -9,7 +9,7 @@
         }
     },
     "program": {
-        "binary": "test/isolated-ota-tests"
+        "binary": "test/isolated-swd-tests"
     },
     "sandbox": {
         "dev": [

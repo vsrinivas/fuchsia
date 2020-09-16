@@ -15,7 +15,8 @@ use {
     std::sync::Arc,
 };
 
-const CACHE_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-cache-isolated.cmx";
+const CACHE_URL: &str =
+    "fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/pkg-cache-isolated.cmx";
 
 /// Represents the sandboxed package cache.
 pub struct Cache {
@@ -43,7 +44,7 @@ impl Cache {
             .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
 
         // We use a salt so the unit tests work as expected.
-        let env = fs.create_salted_nested_environment("isolated-ota-env")?;
+        let env = fs.create_salted_nested_environment("isolated-swd-env")?;
         fasync::Task::spawn(fs.collect()).detach();
 
         let directory = pkg_cache.directory_request().context("getting directory request")?.clone();
@@ -57,9 +58,8 @@ impl Cache {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
-    use {super::*, crate::pkgfs::tests::PkgfsForTest};
+pub mod for_tests {
+    use {super::*, crate::pkgfs::for_tests::PkgfsForTest};
 
     /// This wraps the `Cache` to reduce test boilerplate.
     pub struct CacheForTest {
@@ -68,18 +68,28 @@ pub mod tests {
     }
 
     impl CacheForTest {
-        /// Create a new `Cache` and backing `pkgfs`.
+        #[cfg(test)]
+        /// Variant of `new_with_component` for use by isolated-swd tests.
         pub fn new() -> Result<Self, Error> {
-            let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
-            let cache = Cache::launch_with_components(
-                &pkgfs.pkgfs,
-                "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/pkg-cache.cmx",
+            Self::new_with_component(
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache.cmx",
             )
-            .context("launching cache")?;
+        }
+
+        /// Create a new `Cache` and backing `pkgfs`.
+        pub fn new_with_component(url: &str) -> Result<Self, Error> {
+            let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
+            let cache =
+                Cache::launch_with_components(&pkgfs.pkgfs, url).context("launching cache")?;
 
             Ok(CacheForTest { pkgfs, cache: Arc::new(cache) })
         }
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {super::for_tests::CacheForTest, super::*};
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_cache_handles_sync() {

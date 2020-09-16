@@ -6,7 +6,7 @@ system to be installed over the air to a given blobfs and paver from a provided
 TUF repository and channel.
 
 To use it, you need to make sure your image includes the package
-`//src/sys/pkg/lib/isolated-ota:isolated-swd`.
+`//src/sys/pkg/lib/isolated-swd:isolated-swd-components`.
 
 It does this by setting up the software delivery stack:
 1. `pkgfs` is launched against the provided blobfs.

@@ -147,8 +147,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            resolver::tests::ResolverForTest,
-            updater::tests::{UpdaterBuilder, UpdaterForTest, UpdaterResult, TEST_UPDATER_URL},
+            resolver::for_tests::ResolverForTest,
+            updater::for_tests::{UpdaterBuilder, UpdaterForTest, UpdaterResult, TEST_UPDATER_URL},
         },
         anyhow::Context,
         fidl_fuchsia_paver::PaverRequestStream,
@@ -202,7 +202,7 @@ mod tests {
             http.add_response(hyper::Response::new(response.into()));
         }
 
-        let resolver = ResolverForTest::new(updater.repo, TEST_REPO_URL, None)
+        let resolver = ResolverForTest::new(updater.repo, TEST_REPO_URL.parse().unwrap(), None)
             .await
             .expect("Creating resolver");
 

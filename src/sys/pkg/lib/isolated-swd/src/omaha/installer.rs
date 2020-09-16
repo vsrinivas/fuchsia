@@ -16,10 +16,10 @@ use {
     thiserror::Error,
 };
 
-/// An Omaha Installer implementation that uses the `isolated-ota` Updater to perform the OTA
+/// An Omaha Installer implementation that uses the `isolated-swd` Updater to perform the OTA
 /// installation.
 /// This Installer implementation does not reboot when `perform_reboot` is called, as the caller of
-/// `isolated-ota` is expected to do that.
+/// `isolated-swd` is expected to do that.
 pub struct IsolatedInstaller {
     blobfs: Option<ClientEnd<DirectoryMarker>>,
     paver_connector: Option<ClientEnd<DirectoryMarker>>,
@@ -100,7 +100,7 @@ impl Installer for IsolatedInstaller {
     }
 
     fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
-        // We don't actually reboot here. The caller of isolated-ota is responsible for performing
+        // We don't actually reboot here. The caller of isolated-swd is responsible for performing
         // a reboot after the update is installed.
         // Tell Omaha that the reboot was successful so that it finishes the update check
         // and omaha::install_update() can return.
