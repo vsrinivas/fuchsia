@@ -18,7 +18,7 @@ use {
     async_trait::async_trait,
     collector::Moniker,
     diagnostics_data::{self as schema, Data},
-    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format},
+    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format, StreamMode},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::PartialNodeHierarchy,
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy},
@@ -381,6 +381,7 @@ impl ReaderServer {
         formatter::serialize_to_formatted_json_content(inspect_data)
     }
 }
+
 #[async_trait]
 impl DiagnosticsServer for ReaderServer {
     fn stats(&self) -> &Arc<DiagnosticsServerStats> {
@@ -389,6 +390,10 @@ impl DiagnosticsServer for ReaderServer {
 
     fn format(&self) -> &Format {
         &self.format
+    }
+
+    fn mode(&self) -> &StreamMode {
+        &StreamMode::Snapshot
     }
 
     /// Takes a BatchIterator server channel and starts serving snapshotted
@@ -1327,9 +1332,7 @@ mod tests {
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
         ) = create_proxy().unwrap();
 
-        reader_server
-            .spawn(fidl_fuchsia_diagnostics::StreamMode::Snapshot, batch_iterator)
-            .detach();
+        reader_server.spawn(batch_iterator).detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {
@@ -1365,9 +1368,7 @@ mod tests {
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
         ) = create_proxy().unwrap();
 
-        reader_server
-            .spawn(fidl_fuchsia_diagnostics::StreamMode::Snapshot, batch_iterator)
-            .detach();
+        reader_server.spawn(batch_iterator).detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         let mut batch_counts = Vec::new();

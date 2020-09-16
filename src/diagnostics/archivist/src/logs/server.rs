@@ -9,7 +9,9 @@ use crate::{
     server::DiagnosticsServer,
 };
 use anyhow::{ensure, Error};
-use fidl_fuchsia_diagnostics::{BatchIteratorRequest, BatchIteratorRequestStream, Format};
+use fidl_fuchsia_diagnostics::{
+    BatchIteratorRequest, BatchIteratorRequestStream, Format, StreamMode,
+};
 use futures::prelude::*;
 use std::sync::Arc;
 
@@ -23,9 +25,11 @@ impl LogServer {
     // TODO(fxbug.dev/59620) implement selectors
     pub fn new(
         logs: LogManager,
+        mode: StreamMode,
         format: Format,
         stats: Arc<DiagnosticsServerStats>,
     ) -> Result<Self, Error> {
+        ensure!(matches!(mode, StreamMode::Snapshot), "only snapshots supported right now");
         ensure!(matches!(format, Format::Json), "only json supported right now");
         Ok(Self { logs, stats })
     }
@@ -39,6 +43,10 @@ impl DiagnosticsServer for LogServer {
 
     fn format(&self) -> &Format {
         &Format::Json
+    }
+
+    fn mode(&self) -> &StreamMode {
+        &StreamMode::Snapshot
     }
 
     async fn snapshot(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error> {

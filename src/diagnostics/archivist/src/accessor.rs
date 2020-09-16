@@ -9,15 +9,14 @@ use {
     },
     anyhow::{bail, format_err, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_diagnostics::{self, BatchIteratorMarker},
     fidl_fuchsia_diagnostics::{
-        ArchiveAccessorRequest, ArchiveAccessorRequestStream, ClientSelectorConfiguration,
-        DataType, Selector, SelectorArgument,
+        self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorMarker,
+        ClientSelectorConfiguration, DataType, Format, Selector, SelectorArgument, StreamMode,
     },
     fuchsia_async::{self as fasync},
     fuchsia_inspect::NumericProperty,
-    fuchsia_zircon_status as zx_status,
-    futures::{TryFutureExt, TryStreamExt},
+    fuchsia_zircon_status::Status as ZxStatus,
+    futures::TryStreamExt,
     log::{error, warn},
     parking_lot::RwLock,
     selectors,
@@ -55,6 +54,60 @@ fn validate_and_parse_inspect_selectors(
         .collect()
 }
 
+macro_rules! close_stream {
+    ($results:expr, $epitaph:expr, $($tok:tt)+) => {{
+        warn!($($tok)+);
+        $results.close_with_epitaph($epitaph).unwrap_or_else(|e| {
+            error!("Unable to write epitaph to result stream: {:?}", e)
+        });
+        return;
+    }};
+}
+
+macro_rules! ok_or_close {
+    ($e:expr, $results:ident) => {
+        match $e {
+            Ok(v) => v,
+            Err(e) => {
+                close_stream!(
+                    $results,
+                    ZxStatus::INVALID_ARGS,
+                    concat!(stringify!($e), " was {:?}, returning"),
+                    e
+                );
+            }
+        }
+    };
+}
+
+macro_rules! some_or_close {
+    ($e:expr, $results:ident) => {
+        match $e {
+            Some(v) => v,
+            None => {
+                close_stream!(
+                    $results,
+                    ZxStatus::INVALID_ARGS,
+                    concat!(stringify!($e), " was None, returning")
+                );
+            }
+        }
+    };
+}
+
+macro_rules! matches_or_close {
+    ($lhs:expr, $rhs:pat, $results:ident) => {
+        if !matches!($lhs, $rhs) {
+            close_stream!(
+                $results,
+                ZxStatus::INVALID_ARGS,
+                concat!(stringify!($lhs), "={:?} did not match ", stringify!($rhs), ", returning"),
+                $lhs,
+            );
+        }
+    };
+}
+
 impl ArchiveAccessor {
     /// Create a new accessor for interacting with the archivist's data. The inspect_repo
     /// parameter determines which static configurations scope/restrict the visibility of inspect
@@ -68,180 +121,105 @@ impl ArchiveAccessor {
 
     fn handle_stream_inspect(
         &self,
-        result_stream: ServerEnd<BatchIteratorMarker>,
+        results: ServerEnd<BatchIteratorMarker>,
         stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
-    ) -> Result<(), Error> {
+    ) {
         let inspect_reader_server_stats = Arc::new(
             diagnostics::DiagnosticsServerStats::for_inspect(self.archive_accessor_stats.clone()),
         );
 
-        match (
-            stream_parameters.stream_mode,
-            stream_parameters.format,
-            stream_parameters.client_selector_configuration,
-        ) {
-            (None, _, _) | (_, None, _) | (_, _, None) => {
-                warn!("Client was missing required stream parameters.");
+        let format = some_or_close!(stream_parameters.format, results);
+        let selector_config =
+            some_or_close!(stream_parameters.client_selector_configuration, results);
+        let stream_mode = some_or_close!(stream_parameters.stream_mode, results);
+        matches_or_close!(stream_mode, StreamMode::Snapshot, results);
 
-                result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).unwrap_or_else(
-                    |e| error!("Unable to write epitaph to result stream: {:?}", e),
+        match selector_config {
+            ClientSelectorConfiguration::Selectors(selectors) => {
+                let selectors =
+                    ok_or_close!(validate_and_parse_inspect_selectors(selectors), results);
+                let inspect_reader_server = inspect::ReaderServer::new(
+                    self.diagnostics_repo.clone(),
+                    format,
+                    Some(selectors),
+                    inspect_reader_server_stats.clone(),
                 );
-                Ok(())
+
+                inspect_reader_server.spawn(results).detach();
             }
-            (Some(stream_mode), Some(format), Some(selector_config)) => match selector_config {
-                ClientSelectorConfiguration::Selectors(selectors) => {
-                    match validate_and_parse_inspect_selectors(selectors) {
-                        Ok(selectors) => {
-                            let inspect_reader_server = inspect::ReaderServer::new(
-                                self.diagnostics_repo.clone(),
-                                format,
-                                Some(selectors),
-                                inspect_reader_server_stats.clone(),
-                            );
+            ClientSelectorConfiguration::SelectAll(_) => {
+                let inspect_reader_server = inspect::ReaderServer::new(
+                    self.diagnostics_repo.clone(),
+                    format,
+                    None,
+                    inspect_reader_server_stats.clone(),
+                );
 
-                            inspect_reader_server.spawn(stream_mode, result_stream).detach();
-                            Ok(())
-                        }
-                        Err(e) => {
-                            warn!(
-                                "Client provided invalid selectors to diagnostics stream: {:?}",
-                                e
-                            );
-
-                            result_stream
-                                .close_with_epitaph(zx_status::Status::WRONG_TYPE)
-                                .unwrap_or_else(|e| {
-                                    warn!("Unable to write epitaph to result stream: {:?}", e)
-                                });
-
-                            Ok(())
-                        }
-                    }
-                }
-                ClientSelectorConfiguration::SelectAll(_) => {
-                    let inspect_reader_server = inspect::ReaderServer::new(
-                        self.diagnostics_repo.clone(),
-                        format,
-                        None,
-                        inspect_reader_server_stats.clone(),
-                    );
-
-                    inspect_reader_server.spawn(stream_mode, result_stream).detach();
-                    Ok(())
-                }
-                _ => {
-                    warn!("Unable to process requested selector configuration.");
-
-                    result_stream
-                        .close_with_epitaph(zx_status::Status::INVALID_ARGS)
-                        .unwrap_or_else(|e| {
-                            warn!("Unable to write epitaph to result stream: {:?}", e)
-                        });
-
-                    Ok(())
-                }
-            },
+                inspect_reader_server.spawn(results).detach();
+            }
+            _ => {
+                close_stream!(
+                    results,
+                    ZxStatus::INVALID_ARGS,
+                    "Unrecognized selector configuration."
+                );
+            }
         }
     }
 
     fn handle_stream_lifecycle_events(
         &self,
-        result_stream: ServerEnd<BatchIteratorMarker>,
+        results: ServerEnd<BatchIteratorMarker>,
         stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
-    ) -> Result<(), Error> {
+    ) {
         let lifecycle_stats = Arc::new(diagnostics::DiagnosticsServerStats::for_lifecycle(
             self.archive_accessor_stats.clone(),
         ));
 
-        match (
-            stream_parameters.stream_mode,
-            stream_parameters.format,
-            stream_parameters.client_selector_configuration,
-        ) {
-            (None, _, _) | (_, None, _) | (_, _, None) => {
-                warn!("Client was missing required stream parameters.");
+        let format = some_or_close!(stream_parameters.format, results);
+        matches_or_close!(format, Format::Json, results);
+        let selector_config =
+            some_or_close!(stream_parameters.client_selector_configuration, results);
+        let stream_mode = some_or_close!(stream_parameters.stream_mode, results);
+        matches_or_close!(stream_mode, StreamMode::Snapshot, results);
 
-                result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).unwrap_or_else(
-                    |e| error!("Unable to write epitaph to result stream: {:?}", e),
+        match selector_config {
+            ClientSelectorConfiguration::SelectAll(_) => {
+                lifecycle::LifecycleServer::new(
+                    self.diagnostics_repo.clone(),
+                    None,
+                    lifecycle_stats.clone(),
+                )
+                .spawn(results)
+                .detach();
+            }
+            ClientSelectorConfiguration::Selectors(_) => {
+                close_stream!(
+                    results,
+                    ZxStatus::WRONG_TYPE,
+                    "Selectors are not yet supported for lifecycle events."
                 );
-                Ok(())
             }
-            (Some(stream_mode), Some(format), Some(selector_config)) => {
-                if !matches!(format, fidl_fuchsia_diagnostics::Format::Json) {
-                    bail!("Only JSON supported for lifecycle events");
-                }
-
-                match selector_config {
-                    ClientSelectorConfiguration::Selectors(_) => {
-                        warn!("Selectors are not yet supported for lifecycle events.");
-
-                        result_stream
-                            .close_with_epitaph(zx_status::Status::WRONG_TYPE)
-                            .unwrap_or_else(|e| {
-                                warn!("Unable to write epitaph to result stream: {:?}", e)
-                            });
-
-                        Ok(())
-                    }
-                    ClientSelectorConfiguration::SelectAll(_) => {
-                        let lifecycle_reader_server = lifecycle::LifecycleServer::new(
-                            self.diagnostics_repo.clone(),
-                            None,
-                            lifecycle_stats.clone(),
-                        );
-
-                        lifecycle_reader_server.spawn(stream_mode, result_stream).detach();
-                        Ok(())
-                    }
-                    _ => {
-                        warn!("Unable to process requested selector configuration.");
-
-                        result_stream
-                            .close_with_epitaph(zx_status::Status::INVALID_ARGS)
-                            .unwrap_or_else(|e| {
-                                warn!("Unable to write epitaph to result stream: {:?}", e)
-                            });
-
-                        Ok(())
-                    }
-                }
-            }
+            _ => close_stream!(results, ZxStatus::INVALID_ARGS, "Unrecognized selectors option."),
         }
     }
 
     fn handle_stream_logs(
         &self,
-        result_stream: ServerEnd<BatchIteratorMarker>,
+        results: ServerEnd<BatchIteratorMarker>,
         stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
     ) {
-        macro_rules! unwrap_or_warn {
-            ($e:expr) => {
-                match $e {
-                    Some(v) => v,
-                    None => {
-                        warn!(concat!(stringify!($e), " was None, returning"));
-                        return;
-                    }
-                }
-            };
-        }
-
         let manager = self.diagnostics_repo.read().log_manager();
         let logs_stats = Arc::new(diagnostics::DiagnosticsServerStats::for_logs(
             self.archive_accessor_stats.clone(),
         ));
 
-        let stream_mode = unwrap_or_warn!(stream_parameters.stream_mode);
-        let format = unwrap_or_warn!(stream_parameters.format);
+        let stream_mode = some_or_close!(stream_parameters.stream_mode, results);
+        let format = some_or_close!(stream_parameters.format, results);
 
-        match LogServer::new(manager, format, logs_stats) {
-            Ok(server) => server.spawn(stream_mode, result_stream).detach(),
-            Err(e) => {
-                warn!("couldn't stream logs: {:?}", e);
-                // TODO a better epitaph strategy
-                result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).ok();
-            }
-        }
+        let server =
+            ok_or_close!(LogServer::new(manager, stream_mode, format, logs_stats), results);
+        server.spawn(results).detach();
     }
 
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
@@ -249,59 +227,38 @@ impl ArchiveAccessor {
     pub fn spawn_archive_accessor_server(self, mut stream: ArchiveAccessorRequestStream) {
         // Self isn't guaranteed to live into the exception handling of the async block. We need to clone self
         // to have a version that can be referenced in the exception handling.
-        let errorful_archive_accessor_stats = self.archive_accessor_stats.clone();
-        fasync::Task::spawn(
-            async move {
-                self.archive_accessor_stats.global_stats.archive_accessor_connections_opened.add(1);
-                while let Some(req) = stream.try_next().await? {
-                    match req {
-                        ArchiveAccessorRequest::StreamDiagnostics {
-                            result_stream,
-                            stream_parameters,
-                            control_handle: _,
-                        } => {
-                            self.archive_accessor_stats
-                                .global_stats
-                                .stream_diagnostics_requests
-                                .add(1);
-                            match stream_parameters.data_type {
-                                Some(DataType::Inspect) => {
-                                    self.handle_stream_inspect(result_stream, stream_parameters)?
-                                }
-                                Some(DataType::Lifecycle) => self.handle_stream_lifecycle_events(
+        fasync::Task::spawn(async move {
+            self.archive_accessor_stats.global_stats.archive_accessor_connections_opened.add(1);
+            while let Ok(Some(req)) = stream.try_next().await {
+                match req {
+                    ArchiveAccessorRequest::StreamDiagnostics {
+                        result_stream,
+                        stream_parameters,
+                        control_handle: _,
+                    } => {
+                        self.archive_accessor_stats.global_stats.stream_diagnostics_requests.add(1);
+                        match stream_parameters.data_type {
+                            Some(DataType::Inspect) => {
+                                self.handle_stream_inspect(result_stream, stream_parameters)
+                            }
+                            Some(DataType::Lifecycle) => self
+                                .handle_stream_lifecycle_events(result_stream, stream_parameters),
+                            Some(DataType::Logs) => {
+                                self.handle_stream_logs(result_stream, stream_parameters);
+                            }
+                            None => {
+                                close_stream!(
                                     result_stream,
-                                    stream_parameters,
-                                )?,
-                                Some(DataType::Logs) => {
-                                    self.handle_stream_logs(result_stream, stream_parameters);
-                                }
-                                None => {
-                                    warn!("Client failed to specify a valid data type.");
-
-                                    result_stream
-                                        .close_with_epitaph(zx_status::Status::INVALID_ARGS)
-                                        .unwrap_or_else(|e| {
-                                            warn!(
-                                                "Unable to write epitaph to result stream: {:?}",
-                                                e
-                                            )
-                                        });
-                                }
+                                    ZxStatus::INVALID_ARGS,
+                                    "Client failed to specify a valid data type."
+                                );
                             }
                         }
                     }
                 }
-                self.archive_accessor_stats.global_stats.archive_accessor_connections_closed.add(1);
-                Ok(())
             }
-            .unwrap_or_else(move |e: anyhow::Error| {
-                errorful_archive_accessor_stats
-                    .global_stats
-                    .archive_accessor_connections_closed
-                    .add(1);
-                error!("couldn't run archive accessor service: {:?}", e)
-            }),
-        )
+            self.archive_accessor_stats.global_stats.archive_accessor_connections_closed.add(1);
+        })
         .detach();
     }
 }

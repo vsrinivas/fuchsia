@@ -9,7 +9,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     diagnostics_data::Data,
-    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format},
+    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format, StreamMode},
     futures::stream::FusedStream,
     futures::TryStreamExt,
     parking_lot::RwLock,
@@ -91,6 +91,10 @@ impl DiagnosticsServer for LifecycleServer {
 
     fn format(&self) -> &Format {
         &Format::Json
+    }
+
+    fn mode(&self) -> &StreamMode {
+        &StreamMode::Snapshot
     }
 
     /// Takes a BatchIterator server channel and starts serving snapshotted
@@ -300,9 +304,7 @@ mod tests {
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
         ) = create_proxy().unwrap();
 
-        reader_server
-            .spawn(fidl_fuchsia_diagnostics::StreamMode::Snapshot, batch_iterator)
-            .detach();
+        reader_server.spawn(batch_iterator).detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {

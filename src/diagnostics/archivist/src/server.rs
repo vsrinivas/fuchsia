@@ -25,6 +25,9 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
     /// Return the format which was requested by the client.
     fn format(&self) -> &Format;
 
+    /// Return the mode of streaming requested by the client (snapshot, subscribe, or both).
+    fn mode(&self) -> &StreamMode;
+
     /// Serve a snapshot of the buffered diagnostics data.
     async fn snapshot(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error>;
 
@@ -51,19 +54,15 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
         Ok(())
     }
 
-    async fn serve(
-        self,
-        stream_mode: StreamMode,
-        result_stream: ServerEnd<BatchIteratorMarker>,
-    ) -> Result<(), Error> {
+    async fn serve(self, result_stream: ServerEnd<BatchIteratorMarker>) -> Result<(), Error> {
         let result_channel = fasync::Channel::from_channel(result_stream.into_channel())?;
         let mut requests = BatchIteratorRequestStream::from_channel(result_channel);
 
-        if matches!(stream_mode, StreamMode::Snapshot | StreamMode::SnapshotThenSubscribe) {
+        if matches!(self.mode(), StreamMode::Snapshot | StreamMode::SnapshotThenSubscribe) {
             self.snapshot(&mut requests).await?;
         }
 
-        if matches!(stream_mode, StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe) {
+        if matches!(self.mode(), StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe) {
             self.subscribe(&mut requests).await?;
         }
 
@@ -72,15 +71,11 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
     }
 
     /// Spawn a `Task` to serve the request.
-    fn spawn(
-        self,
-        stream_mode: StreamMode,
-        result_stream: ServerEnd<BatchIteratorMarker>,
-    ) -> Task<()> {
+    fn spawn(self, result_stream: ServerEnd<BatchIteratorMarker>) -> Task<()> {
         Task::spawn(async move {
             let stats = self.stats().clone();
             stats.open_connection();
-            if let Err(e) = self.serve(stream_mode, result_stream).await {
+            if let Err(e) = self.serve(result_stream).await {
                 stats.add_error();
                 warn!("Error encountered running diagnostics server: {:?}", e);
             }
