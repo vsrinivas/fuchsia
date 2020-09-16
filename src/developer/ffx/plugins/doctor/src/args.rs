@@ -25,4 +25,10 @@ pub struct DoctorCommand {
         description = "timeout delay when attempting to connect to the daemon or RCS"
     )]
     pub retry_delay: u64,
+
+    #[argh(
+        switch,
+        description = "if true, forces a daemon restart, even if the connection appears to be working"
+    )]
+    pub force_daemon_restart: bool,
 }

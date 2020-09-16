@@ -11,6 +11,8 @@ pub const FAILED_WITH_ERROR: &str = "FAILED. Error was:";
 
 pub const DAEMON_CHECK_INTRO: &str = "First, bringing up a working daemon...";
 pub const DAEMON_RUNNING_CHECK: &str = "Checking for a running daemon...";
+pub const FORCE_DAEMON_RESTART_MESSAGE: &str =
+    "force-daemon-restart is true; killing any running daemons...";
 pub const NONE_RUNNING: &str = "none running.";
 pub const KILLING_ZOMBIE_DAEMONS: &str = "Attempting to kill any zombie daemons...";
 pub const ZOMBIE_KILLED: &str = "killed at least one daemon.";

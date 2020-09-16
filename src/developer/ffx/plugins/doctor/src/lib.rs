@@ -39,7 +39,15 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let target_str = ffx.target.unwrap_or(String::default());
 
-    doctor(&mut writer, &daemon_manager, &target_str, cmd.retry_count, delay).await
+    doctor(
+        &mut writer,
+        &daemon_manager,
+        &target_str,
+        cmd.retry_count,
+        delay,
+        cmd.force_daemon_restart,
+    )
+    .await
 }
 
 async fn doctor<W: Write>(
@@ -48,6 +56,7 @@ async fn doctor<W: Write>(
     target_str: &str,
     retry_count: usize,
     retry_delay: Duration,
+    force_daemon_restart: bool,
 ) -> Result<()> {
     let mut proxy_opt: Option<DaemonProxy> = None;
     let mut targets_opt: Option<Vec<Target>> = None;
@@ -57,6 +66,9 @@ async fn doctor<W: Write>(
         if i > 0 {
             daemon_manager.kill_all().await?;
             writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
+        } else if force_daemon_restart {
+            writeln!(writer, "{}", FORCE_DAEMON_RESTART_MESSAGE).unwrap();
+            daemon_manager.kill_all().await?;
         }
 
         print_status_line(writer, DAEMON_RUNNING_CHECK);
@@ -570,7 +582,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
         }
 
         print_full_output(&output);
@@ -608,7 +620,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
         }
 
         print_full_output(&output);
@@ -644,7 +656,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
         }
 
         print_full_output(&output);
@@ -696,7 +708,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
         }
 
         print_full_output(&output);
@@ -740,7 +752,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
         }
 
         print_full_output(&output);
@@ -787,7 +799,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
         }
 
         print_full_output(&output);
@@ -826,7 +838,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, &NON_EXISTENT_NODENAME, 1, DEFAULT_RETRY_DELAY)
+            doctor(&mut writer, &fake, &NON_EXISTENT_NODENAME, 1, DEFAULT_RETRY_DELAY, false)
                 .await
                 .unwrap();
         }
@@ -846,6 +858,45 @@ mod test {
                 String::from("No targets found"),
                 String::default(),
                 String::from(BUG_URL),
+            ],
+        );
+
+        fake.assert_no_leftover_calls();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_single_try_daemon_running_force_restart() {
+        let fake = FakeDaemonManager::new(
+            vec![false],
+            vec![Ok(true), Ok(false)],
+            vec![Ok(())],
+            vec![Ok(setup_responsive_daemon_server())],
+        );
+
+        let mut output = String::new();
+        {
+            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, true).await.unwrap();
+        }
+
+        print_full_output(&output);
+
+        verify_lines(
+            &output,
+            vec![
+                format!("{}", DAEMON_CHECK_INTRO),
+                String::from(FORCE_DAEMON_RESTART_MESSAGE),
+                format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
+                format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
+                format!("{}{}", SPAWNING_DAEMON, SUCCESS),
+                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
+                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
+                String::from("No targets found"),
+                String::default(),
+                String::from("No targets found"),
+                String::default(),
+                BUG_URL.to_string(),
             ],
         );
 
