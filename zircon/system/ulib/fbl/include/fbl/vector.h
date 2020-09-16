@@ -321,7 +321,12 @@ class __OWNER(T) Vector {
 
   template <typename U = T>
   std::enable_if_t<std::is_pod_v<U>, void> transfer_to(T* newPtr, size_t elements) {
-    memcpy(newPtr, ptr_, elements * sizeof(T));
+    // We must avoid calling memcpy if ptr_ is nullptr -- it's UB to call mempcy
+    // on nullptr, even if the size is 0.
+    // When the vector's size is zero, ptr_ will be nullptr.
+    if (elements > 0) {
+      memcpy(newPtr, ptr_, elements * sizeof(T));
+    }
   }
 
   template <typename U = T>
