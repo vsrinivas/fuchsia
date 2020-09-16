@@ -156,6 +156,20 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
   return result;
 }
 
+void CodecAdapterSbcEncoder::CoreCodecStopStream() {
+  async::PostTask(input_processing_loop_.dispatcher(), [this] {
+    if (output_buffer_) {
+      // If we have an output buffer pending but not sent, return it to the pool. CodecAdapterSW
+      // expects all buffers returned after stream is stopped.
+      auto base = output_buffer_->base();
+      output_buffer_pool_.FreeBuffer(base);
+      output_buffer_ = nullptr;
+    }
+  });
+
+  CodecAdapterSW::CoreCodecStopStream();
+}
+
 CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
     const fuchsia::media::FormatDetails& format_details) {
   if (!format_details.has_domain() || !format_details.domain().is_audio() ||

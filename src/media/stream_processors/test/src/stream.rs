@@ -22,6 +22,7 @@ pub struct StreamOptions {
     pub release_output_buffers_at_end: bool,
     pub input_buffer_collection_constraints: Option<BufferCollectionConstraints>,
     pub output_buffer_collection_constraints: Option<BufferCollectionConstraints>,
+    pub stop_after_first_output: bool,
 }
 
 impl Default for StreamOptions {
@@ -32,6 +33,7 @@ impl Default for StreamOptions {
             release_output_buffers_at_end: false,
             input_buffer_collection_constraints: None,
             output_buffer_collection_constraints: None,
+            stop_after_first_output: false,
         }
     }
 }
@@ -175,6 +177,10 @@ impl<'a: 'b, 'b> Stream<'a> {
                     buffer_lifetime_ordinal: Some(output_packet.header.buffer_lifetime_ordinal),
                     packet_index: Some(output_packet.header.packet_index),
                 })?;
+
+                if self.options.stop_after_first_output {
+                    return Ok(StreamControlFlow::Stop);
+                }
             }
             StreamProcessorEvent::OnOutputEndOfStream {
                 stream_lifetime_ordinal,

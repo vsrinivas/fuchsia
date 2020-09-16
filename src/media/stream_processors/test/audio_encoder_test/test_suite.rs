@@ -38,6 +38,7 @@ pub struct AudioEncoderHashTest {
 impl AudioEncoderTestCase {
     pub async fn run(self) -> Result<()> {
         self.test_termination().await?;
+        self.test_early_termination().await?;
         self.test_timestamps().await?;
         self.test_hashes().await
     }
@@ -100,6 +101,45 @@ impl AudioEncoderTestCase {
             stream,
             validators: vec![eos_validator],
             stream_options: None,
+        };
+
+        let spec = TestSpec {
+            cases: vec![case],
+            relation: CaseRelation::Concurrent,
+            stream_processor_factory: Rc::new(EncoderFactory),
+        };
+
+        spec.run().await
+    }
+
+    async fn test_early_termination(&self) -> Result<()> {
+        let easy_framelength = self.input_framelength;
+        let stream = self.create_test_stream((0..).map(move |_| easy_framelength));
+        let count_validator =
+            Rc::new(OutputPacketCountValidator { expected_output_packet_count: 1 });
+
+        // Pick an output packet size likely not divisible by any output codec frame size, to test
+        // that half filled output packets are cleaned up in the codec without error when the
+        // client disconnects early.
+        const ODD_OUTPUT_PACKET_SIZE: u32 = 4096 - 1;
+
+        let stream_options = Some(StreamOptions {
+            output_buffer_collection_constraints: Some(BufferCollectionConstraints {
+                has_buffer_memory_constraints: true,
+                buffer_memory_constraints: BufferMemoryConstraints {
+                    min_size_bytes: ODD_OUTPUT_PACKET_SIZE,
+                    ..BUFFER_MEMORY_CONSTRAINTS_DEFAULT
+                },
+                ..BUFFER_COLLECTION_CONSTRAINTS_DEFAULT
+            }),
+            stop_after_first_output: true,
+            ..StreamOptions::default()
+        });
+        let case = TestCase {
+            name: "Early termination test",
+            stream,
+            validators: vec![count_validator],
+            stream_options,
         };
 
         let spec = TestSpec {
