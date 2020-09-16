@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/prebuilt.gni")
+import("$zx/public/gn/toolchain/clang.gni")
 
 # All the $current_cpu values that `current_os == "fuchsia"` supports.
 standard_fuchsia_cpus = [
@@ -209,6 +210,13 @@ standard_base_variants = [
 ]
 standard_variants += standard_base_variants
 
+if (clang_tool_dir == "") {
+  _llvm_symbolizer_path = "llvm-symbolizer"
+} else {
+  _llvm_symbolizer_path =
+      rebase_path("$clang_tool_dir/llvm-symbolizer", root_build_dir)
+}
+
 # These are variants that use "sanitizer" instrumentation.
 # They are interesting for e.g. fuzzer environments.
 standard_sanitizer_variants = [
@@ -237,6 +245,12 @@ standard_sanitizer_variants = [
         # the asan runtime includes ubsan but not vice versa, so this set
         # must be used in preference to ubsan when both are enabled.
         runtime_deps_cflags = [ "-fsanitize=address" ]
+
+        # This is picked up by the runtime for host_tool_action() runs.
+        host_run_env = [
+          "/usr/bin/env",
+          "ASAN_SYMBOLIZER_PATH=$_llvm_symbolizer_path",
+        ]
       }
       implicit_deps = [
         {
@@ -267,6 +281,13 @@ standard_sanitizer_variants = [
         # the asan runtime includes ubsan but not vice versa, so this set
         # should be ignored and the asan set used instead.
         runtime_deps_cflags = [ "-fsanitize=undefined" ]
+
+        # This is picked up by the runtime for host_tool_action() runs.
+        # Note this is replaced with asan's setting as mentioned above.
+        host_run_env = [
+          "/usr/bin/env",
+          "UBSAN_SYMBOLIZER_PATH=$_llvm_symbolizer_path",
+        ]
       }
       implicit_deps = [
         {

@@ -1714,7 +1714,9 @@ template("host_tool") {
           run_file,
           "--",
         ]
-        if (defined(toolchain.host_run_env)) {  # TODO: sanitizer case
+        if (defined(toolchain.host_run_env)) {
+          # The variant can specify a wrapper prefix for running the tool,
+          # usually ["/usr/bin/env", "VAR=VAL"].
           host_tool_rspfile += toolchain.host_run_env
         }
         host_tool_rspfile += [ run_file ]
