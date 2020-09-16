@@ -29,8 +29,7 @@ struct WaterMarkInfo {
     uint32 loc_y;
     // Watermark Image Format - must be R8G8B8A8
     zircon.device.sysmem.ImageFormat_2 wm_image_format;
-    // Watermark VMO must have non-premultiplied alpha. The callee takes ownership of the VMO
-    // handle.
+    // Watermark VMO must have non-premultiplied alpha.
     handle<vmo> watermark_vmo;
     // The global alpha is multiplied with the input watermark per-pixel alpha to get the
     // watermark's actual alpha value.

@@ -831,9 +831,7 @@ static void DuplicateWatermarkInfo(const water_mark_info_t& input, const zx::vmo
                                    uint32_t count, std::vector<water_mark_info_t>* output) {
   for (uint32_t i = 0; i < count; i++) {
     output->push_back(input);
-    zx::vmo new_vmo;
-    ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &new_vmo));
-    output->back().watermark_vmo = new_vmo.release();
+    output->back().watermark_vmo = vmo.get();
   }
 }
 
