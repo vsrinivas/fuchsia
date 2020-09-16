@@ -106,6 +106,7 @@ single top-level JSON object, and the following keys are supported:
 * `apps`
 * `optional_services`
 * `update_dependencies`
+* `critical_components`
 
 The contents of all sysmgr config files are read from sysmgr's /config/data
 directory and merged at runtime to form sysmgr's overall configuration.
@@ -249,3 +250,35 @@ The implementation details are subject to change, but as of 2020-04-29
 
 If the `auto_update_packages` GN arg is set to false, `update_dependencies` has
 no effect. It is only relevant for ephemeral package updates.
+
+### `critical_components`
+
+Critical components are a list of components which are automatically re-launched
+if they ever exit. A critical component which exits is relaunched, up to 3 times
+within 60 minutes. If a component crashes a 4th time within its 60 minute
+window, `sysmgr` exits, causing the system to reboot. The primary use-case are
+components are critical to the system's functionality and must always be
+running. Note that a component listed under `critical_components` does not
+mean it will necessarily launch when sysmgr starts; the component may
+initially launch through other means, such as via `startup_services`.
+
+Here is an example configuration snippet:
+```json
+{
+  "startup_services": [
+    "fuchsia.update.Manager"
+  ],
+  "services": {
+    "fuchsia.update.Manager": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
+  },
+  "critical_components": [
+    "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
+  ]
+}
+```
+
+In the example above, `system-update-checker.cmx` is launched when sysmgr starts
+up because it provides a startup service. If system-update-checker.cmx ever
+exits it will be relaunched up to 3 times within a 60 minute window. Note that a
+4th crash does not cause the system to reboot if it is outside the 60 minute
+window.
