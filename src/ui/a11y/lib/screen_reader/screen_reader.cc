@@ -15,6 +15,7 @@
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
 #include "src/ui/a11y/lib/screen_reader/linear_navigation_action.h"
+#include "src/ui/a11y/lib/screen_reader/recover_a11y_focus_action.h"
 #include "src/ui/a11y/lib/screen_reader/three_finger_swipe_action.h"
 
 namespace a11y {
@@ -32,6 +33,7 @@ constexpr char kPreviousSemanticLevelActionLabel[] = "Previous Semantic Level Ac
 constexpr char kNextSemanticLevelActionLabel[] = "Next Semantic Level Action";
 constexpr char kIncrementRangeValueActionLabel[] = "Increment Range Value Action";
 constexpr char kDecrementRangeValueActionLabel[] = "Decrement Range Value Action";
+constexpr char kRecoverA11YFocusActionLabel[] = "Recover A11Y Focus Action";
 
 // Returns the appropriate next action based on the semantic level.
 std::string NextActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
@@ -93,12 +95,13 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                    std::make_unique<ScreenReaderActionRegistryImpl>()) {}
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-                           a11y::SemanticsSource* semantics_source,
-                           a11y::GestureListenerRegistry* gesture_listener_registry,
+                           SemanticsSource* semantics_source,
+                           GestureListenerRegistry* gesture_listener_registry,
                            std::unique_ptr<ScreenReaderActionRegistry> action_registry)
     : context_(std::move(context)),
       gesture_listener_registry_(gesture_listener_registry),
-      action_registry_(std::move(action_registry)) {
+      action_registry_(std::move(action_registry)),
+      weak_ptr_factory_(this) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
   InitializeActions();
@@ -304,6 +307,10 @@ void ScreenReader::InitializeActions() {
                               std::make_unique<a11y::ThreeFingerSwipeAction>(
                                   action_context_.get(), context_.get(), gesture_listener_registry_,
                                   fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_RIGHT));
+
+  action_registry_->AddAction(
+      kRecoverA11YFocusActionLabel,
+      std::make_unique<RecoverA11YFocusAction>(action_context_.get(), context_.get()));
 }
 
 bool ScreenReader::ExecuteAction(const std::string& action_name,
@@ -321,6 +328,25 @@ void ScreenReader::SpeakMessage(fuchsia::intl::l10n::MessageIds message_id) {
   auto promise =
       speaker->SpeakMessageByIdPromise(message_id, {.interrupt = true, .save_utterance = false});
   context_->executor()->schedule_task(std::move(promise));
+}
+
+fxl::WeakPtr<SemanticsEventListener> ScreenReader::GetSemanticsEventListenerWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
+void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
+  switch (event_info.event_type) {
+    case SemanticsEventType::kSemanticTreeUpdated: {
+      ScreenReaderAction::ActionData action_data;
+      if (event_info.view_ref_koid) {
+        action_data.current_view_koid = *event_info.view_ref_koid;
+      }
+      ExecuteAction(kRecoverA11YFocusActionLabel, action_data);
+      break;
+    }
+    case SemanticsEventType::kUnknown:
+      break;
+  }
 }
 
 }  // namespace a11y

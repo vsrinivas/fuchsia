@@ -22,19 +22,22 @@ class MockSemanticsEventManager : public a11y::SemanticsEventManager {
   // |SemanticsEventManager|
   void OnEvent(a11y::SemanticsEventInfo event_info) override {
     events_received_.push_back(event_info);
+    if (listener_) {
+      listener_->OnEvent(event_info);
+    }
   }
 
   // |SemanticsEventManager|
-  // NOTE: The mock event manager is used to test upstream producers of events
-  // (e.g. semantic trees), so we don't need to worry about registering
-  // listeners.
-  void Register(fxl::WeakPtr<a11y::SemanticsEventListener> listener) override {}
+  void Register(fxl::WeakPtr<a11y::SemanticsEventListener> listener) override {
+    listener_ = std::move(listener);
+  }
 
   // Returns a list of events in the order in which they were received.
   std::vector<a11y::SemanticsEventInfo> GetReceivedEvents() { return events_received_; }
 
  private:
   std::vector<a11y::SemanticsEventInfo> events_received_;
+  fxl::WeakPtr<a11y::SemanticsEventListener> listener_;
 };
 
 }  // namespace accessibility_test

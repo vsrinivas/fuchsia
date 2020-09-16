@@ -211,5 +211,14 @@ TEST_F(ScreenReaderTest, NextOrPreviousActionInvokesActionsBasedOnTheSemanticLev
                   StrEq("Increment Range Value Action"), StrEq("Decrement Range Value Action")));
 }
 
+TEST_F(ScreenReaderTest, SemanticEventsTriggerScreenReaderAction) {
+  view_manager_.GetSemanticsEventManager()->Register(
+      screen_reader_->GetSemanticsEventListenerWeakPtr());
+  view_manager_.GetSemanticsEventManager()->OnEvent(
+      {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated});
+  EXPECT_THAT(mock_action_registry_ptr_->invoked_actions(),
+              ElementsAre(StrEq("Recover A11Y Focus Action")));
+}
+
 }  // namespace
 }  // namespace accessibility_test

@@ -9,11 +9,13 @@
 #include <string>
 #include <unordered_map>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
 #include "src/ui/a11y/lib/screen_reader/i18n/messages.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/semantics/semantics_event_listener.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y {
@@ -29,18 +31,16 @@ namespace a11y {
 //   Accessibility APIs. Finally, some output is communicated (via speech, for
 //   example).
 // TODO(MI4-2546): Rename this class once the final screen reader name exists.
-class ScreenReader {
+class ScreenReader : public SemanticsEventListener {
  public:
   // Pointers to Semantics Manager, Gesture Listener Registry and Gesture Manager must
   // outlive screen reader. A11y App is responsible for creating these pointers along with Screen
   // Reader object.
-  ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-               a11y::SemanticsSource* semantics_source,
-               a11y::GestureListenerRegistry* gesture_listener_registry);
+  ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
+               GestureListenerRegistry* gesture_listener_registry);
   // Same as above, but accepts a custom |action_registry|.
-  ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-               a11y::SemanticsSource* semantics_source,
-               a11y::GestureListenerRegistry* gesture_listener_registry,
+  ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
+               GestureListenerRegistry* gesture_listener_registry,
                std::unique_ptr<ScreenReaderActionRegistry> action_registry);
 
   ~ScreenReader();
@@ -49,8 +49,14 @@ class ScreenReader {
 
   ScreenReaderContext* context() { return context_.get(); }
 
+  // Returns a Semantics Event Listener managed by the Screen Reader.
+  fxl::WeakPtr<SemanticsEventListener> GetSemanticsEventListenerWeakPtr();
+
  private:
   class ScreenReaderActionRegistryImpl;
+
+  // |SemanticsEventListener|
+  void OnEvent(SemanticsEventInfo event_info) override;
 
   void InitializeActions();
 
@@ -75,6 +81,8 @@ class ScreenReader {
   // Different triggering methods may invoke the same action. For example, both one finger tap and
   // dragging the finger on the screen invoke the explore action.
   std::unique_ptr<ScreenReaderActionRegistry> action_registry_;
+
+  fxl::WeakPtrFactory<SemanticsEventListener> weak_ptr_factory_;
 };
 
 }  // namespace a11y
