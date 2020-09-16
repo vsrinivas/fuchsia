@@ -12,11 +12,10 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 
 test("stdio-test") {
-  output_name = "stdio-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "stdio.c",
@@ -37,18 +36,27 @@ executable("stdio-test-util") {
   deps = [ "//sdk/lib/fdio" ]
 }
 
-unittest_package("stdio-test-package") {
-  package_name = "stdio-test"
+package("stdio-test-package") {
+  testonly = true
+
   deps = [
     ":stdio-test",
     ":stdio-test-util",
   ]
 
-  tests = [
+  meta = [
     {
-      name = "stdio-test-test"
+      path = "stdio-test.cmx"
+      dest = "stdio-test.cmx"
     },
   ]
+
+  tests = [
+    {
+      name = "stdio-test"
+    },
+  ]
+
   binaries = [
     {
       name = "stdio-test-util"

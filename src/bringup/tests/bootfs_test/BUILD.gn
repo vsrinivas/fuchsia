@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("running_on_bootfs_test") {
   testonly = true
+  output_name = "running-on-bootfs-test"
   sources = [ "running_on_bootfs_test.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -17,12 +18,7 @@ test("running_on_bootfs_test") {
 # Note: this test should end up in /boot, which means the cmx produced here is
 # irrelevant, however, we don't allow bare tests in packages anymore, so the
 # cmx production avoids needing a very specialized exception for this case.
-unittest_package("bootfs_test") {
-  package_name = "bringup-bootfs-test"
+bootfs_test("running-on-bootfs-test") {
+  name = "running-on-bootfs-test"
   deps = [ ":running_on_bootfs_test" ]
-  tests = [
-    {
-      name = "running_on_bootfs_test"
-    },
-  ]
 }

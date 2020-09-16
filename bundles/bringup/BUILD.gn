@@ -14,23 +14,23 @@ group("tests") {
     "//src/bringup/bin/console:bootfs-test",
     "//src/bringup/bin/ptysvc:ptysvc-test-bootfs-test",
     "//src/bringup/bin/svchost:crashsvc-test-bootfs-test",
-    "//src/bringup/bin/sysinfo:sysinfo-test",  # This is a package.
-    "//src/bringup/tests/bootfs_test",  # This is a package.
+    "//src/bringup/bin/sysinfo:sysinfo-bootfs-test",
+    "//src/bringup/tests/bootfs_test:running-on-bootfs-test",
     "//src/devices/block/bin/biotime:biotime-test-bootfs-test",
     "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test-bootfs-test",
-    "//src/devices/nand/drivers/broker/test:nand-broker-package",  # HW-required.
+    "//src/devices/nand/drivers/broker/test:nand-broker-bootfs-test",  # HW-required.
     "//src/devices/nand/drivers/ram-nand:ram-nand-test-bootfs-test",
     "//src/devices/sysmem/tests/sysmem:sysmem-bootfs-test",
 
     # The devcoordinator-namespace-test assumes the root filesystem and can't be
     # migrated as packages are given their own local filesystem.
-    "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
+    "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
     "//src/devices/tests/devfs:devfs-bootfs-test",
-    "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",  # HW-required.
+    "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-bootfs-test",  # HW-required.
     "//src/devices/usb/drivers/usb-bus:usb-device-bootfs-test",
-    "//src/devices/usb/tests/usb:usb-package",  # HW-required.
-    "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # HW-required.
-    "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # HW-required.
+    "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
+    "//src/media/audio/drivers/intel-hda/test:intel-hda-bootfs-test",  # HW-required.
+    "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-bootfs-test",  # HW-required.
     "//src/media/audio/tools/audio-driver-ctl:test-bootfs-test",
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-bootfs-test",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-bootfs-test",
@@ -128,10 +128,10 @@ group("tests") {
     "//zircon/system/ulib/simplehid/test:simplehid-bootfs-test",
     "//zircon/system/ulib/smbios/test:smbios-test-bootfs-test",
     "//zircon/system/ulib/storage-metrics/test:storage-metrics-bootfs-test",
-    "//zircon/system/ulib/syslog/test:syslog-package",
-    "//zircon/system/ulib/syslog/test:syslog-static-package",
-    "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-test-package",
-    "//zircon/system/ulib/sysmem-version/test:sysmem-version-test-package",
+    "//zircon/system/ulib/syslog/test:syslog-bootfs-test",
+    "//zircon/system/ulib/syslog/test:syslog-static-bootfs-test",
+    "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-bootfs-test",
+    "//zircon/system/ulib/sysmem-version/test:sysmem-version-bootfs-test",
     "//zircon/system/ulib/test-exceptions/test:test-exceptions-bootfs-test",
     "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
     "//zircon/system/ulib/tftp/test:tftp-test-bootfs-test",
@@ -150,7 +150,7 @@ group("tests") {
     "//zircon/system/ulib/zx/test:zx-bootfs-test",
     "//zircon/system/ulib/zxtest/test:zxtest-bootfs-test",
     "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-bootfs-test",
-    "//zircon/system/utest/blobfs-bench:blobfs-bench-package",
+    "//zircon/system/utest/blobfs-bench:blobfs-bench-bootfs-test",
     "//zircon/system/utest/channel-fatal:channel-fatal-bootfs-test",
     "//zircon/system/utest/cleanup:cleanup-bootfs-test",
     "//zircon/system/utest/cmdline:cmdline-bootfs-test",
@@ -224,7 +224,6 @@ group("tests") {
     "//zircon/system/utest/qsort:qsort-bootfs-test",
     "//zircon/system/utest/race-tests:race-tests-bootfs-test",
     "//zircon/system/utest/runtests-utils:runtests-utils-bootfs-test",
-    "//zircon/system/utest/stdio:stdio-test-package",
     "//zircon/system/utest/svchost:svchost-bootfs-test",
     "//zircon/system/utest/syscall-generation:syscall-generation-bootfs-test",
     "//zircon/system/utest/sysconf:sysconf-bootfs-test",

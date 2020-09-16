@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("devcoordinator-namespace") {
   output_name = "devcoordinator-namespace-test"
@@ -23,13 +23,7 @@ test("devcoordinator-namespace") {
   ]
 }
 
-unittest_package("devcoordinator-namespace-package") {
-  package_name = "devcoordinator-namespace"
+bootfs_test("devcoordinator-namespace-bootfs-test") {
+  name = "devcoordinator-namespace-test"
   deps = [ ":devcoordinator-namespace" ]
-
-  tests = [
-    {
-      name = "devcoordinator-namespace-test"
-    },
-  ]
 }

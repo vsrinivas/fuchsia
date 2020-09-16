@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 driver_module("mtk-thermal") {
   configs += [
@@ -90,7 +91,7 @@ unittest_package("mtk-thermal-test-package") {
 }
 
 test("mtk-thermal-integration-test") {
-  output_name = "mtk-thermal-integration-test-test"
+  output_name = "mtk-thermal-integration-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "mtk-thermal-integration-test.cc" ]
   deps = [
@@ -104,16 +105,10 @@ test("mtk-thermal-integration-test") {
   ]
 }
 
-unittest_package("mtk-thermal-integration-test-package") {
-  package_name = "mtk-thermal-integration-test"
+bootfs_test("mtk-thermal-integration-bootfs-test") {
+  name = "mtk-thermal-integration-test"
+  environments = basic_envs
   deps = [ ":mtk-thermal-integration-test" ]
-
-  tests = [
-    {
-      name = "mtk-thermal-integration-test-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

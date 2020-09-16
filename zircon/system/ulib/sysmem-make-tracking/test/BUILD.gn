@@ -14,11 +14,11 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":sysmem-make-tracking-test-package" ]
+  deps = [ ":sysmem-make-tracking-bootfs-test" ]
 }
 
 test("sysmem-make-tracking-test") {
@@ -32,15 +32,9 @@ test("sysmem-make-tracking-test") {
   ]
 }
 
-unittest_package("sysmem-make-tracking-test-package") {
-  package_name = "sysmem-make-tracking-test"
+bootfs_test("sysmem-make-tracking-bootfs-test") {
+  name = "sysmem-make-tracking-test"
   deps = [ ":sysmem-make-tracking-test" ]
-
-  tests = [
-    {
-      name = "sysmem-make-tracking-test"
-    },
-  ]
 }
 
 fidl("fidl.types.test") {

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("usb") {
   output_name = "usb-test"
@@ -16,13 +16,7 @@ test("usb") {
   ]
 }
 
-unittest_package("usb-package") {
-  package_name = "usb"
+bootfs_test("usb-bootfs-test") {
+  name = "usb-test"
   deps = [ ":usb" ]
-
-  tests = [
-    {
-      name = "usb-test"
-    },
-  ]
 }

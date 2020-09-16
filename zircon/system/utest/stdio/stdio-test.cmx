@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/stdio-test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp",
+            "shell-commands"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

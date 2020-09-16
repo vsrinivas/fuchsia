@@ -47,7 +47,7 @@ static zx_handle_t handle_from_fd(int fd) {
 }
 
 TEST(StdioTests, stdio_advanced_pipe_test) {
-  const char* file = "/boot/bin/stdio-test-util";
+  const char* file = "/pkg/bin/stdio-test-util";
 
   zx_handle_t fdio_job = zx_job_default();
   ASSERT_NE(fdio_job, ZX_HANDLE_INVALID, "no fdio job object");

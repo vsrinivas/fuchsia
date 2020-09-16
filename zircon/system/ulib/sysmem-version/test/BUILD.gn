@@ -13,11 +13,11 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":sysmem-version-test-package" ]
+  deps = [ ":sysmem-version-bootfs-test" ]
 }
 
 test("sysmem-version-test") {
@@ -31,13 +31,7 @@ test("sysmem-version-test") {
   ]
 }
 
-unittest_package("sysmem-version-test-package") {
-  package_name = "sysmem-version-test"
+bootfs_test("sysmem-version-bootfs-test") {
+  name = "sysmem-version-test"
   deps = [ ":sysmem-version-test" ]
-
-  tests = [
-    {
-      name = "sysmem-version-test"
-    },
-  ]
 }

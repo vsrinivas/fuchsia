@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 source_set("common") {
@@ -63,15 +63,9 @@ test("nandpart-broker") {
   deps = [ ":common" ]
 }
 
-unittest_package("nand-broker-package") {
-  package_name = "nand-broker"
+bootfs_test("nand-broker-bootfs-test") {
+  name = "nand-broker-test"
   deps = [ ":nand-broker" ]
-
-  tests = [
-    {
-      name = "nand-broker-test"
-    },
-  ]
 }
 
 isolated_devmgr_unittest_package("nandpart-broker-test") {
