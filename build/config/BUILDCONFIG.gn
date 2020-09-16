@@ -464,7 +464,6 @@ if (toolchain_variant.with_shared) {
                                  "output_name",
                                  "output_dir",
                                  "output_extension",
-                                 "metadata",
                                  "testonly",
                                  "visibility",
                                ])
@@ -567,7 +566,12 @@ if (toolchain_variant.with_shared) {
         # "*" set works around this problem.  See http://crbug.com/594610
         # for rationale on why this GN behavior is not considered a bug.
         forward_variables_from(invoker, [ "visibility" ])
-        forward_variables_from(invoker, "*", [ "visibility" ])
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "metadata",
+                                 "visibility",
+                               ])
 
         # Restore the original target name.
         target_name = original_target_name
@@ -624,6 +628,13 @@ if (toolchain_variant.with_shared) {
               string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
         }
         metadata = {
+          # Allow metadata to be specified to shared_library instances
+          # that come from a PIC-friendly toolchain too. This is required
+          # for the Zircon VDSO and C library.
+          if (defined(invoker.metadata)) {
+            forward_variables_from(invoker.metadata, "*")
+          }
+
           # Used by link_output_rspfile(), see its documentation for details
           link_output_path = [ rebase_path(link_output_file, root_build_dir) ]
           link_output_barrier = []
