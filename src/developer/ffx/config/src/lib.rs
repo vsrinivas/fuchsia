@@ -535,7 +535,7 @@ pub mod logging {
             CombinedLogger, Config, ConfigBuilder, LevelFilter, SimpleLogger, TermLogger,
             TerminalMode, WriteLogger,
         },
-        std::fs::{create_dir_all, OpenOptions},
+        std::fs::{create_dir_all, File, OpenOptions},
         std::path::PathBuf,
     };
 
@@ -565,22 +565,67 @@ pub mod logging {
     }
 
     pub async fn init(stdio: bool) -> Result<()> {
-        let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> =
-            vec![TermLogger::new(LevelFilter::Error, Config::default(), TerminalMode::Mixed)
-                .context("initializing terminal error logger")?];
+        let mut file: Option<File> = None;
 
-        if is_enabled().await {
-            // The daemon logs to stdio, and is redirected to file by spawn_daemon,
-            // which enables panics and backtraces to also be included.
-            if stdio {
-                loggers.push(SimpleLogger::new(LevelFilter::Debug, config()));
-            } else {
-                let file = log_file("ffx").await?;
-                loggers.push(WriteLogger::new(LevelFilter::Debug, config(), file));
-            }
+        // XXX: The log file selection would ideally be moved up into the ffx startup where we
+        // decide if we're in the daemon or not, which would enable us to cleanup this code path
+        // and enable a "--verbose" flag to the frontend that both logs to stdio and to file.
+        // Currently that is avoided here because stdio implies "don't log to this file".
+        if is_enabled().await && !stdio {
+            file = Some(log_file("ffx").await?);
         }
 
-        CombinedLogger::init(loggers).context("initializing logger")
+        CombinedLogger::init(get_loggers(stdio, file)).context("initializing logger")
+    }
+
+    fn get_loggers(stdio: bool, file: Option<File>) -> Vec<Box<dyn simplelog::SharedLogger>> {
+        let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> = vec![];
+
+        // If TermLogger fails to initialize, give other loggers a chance to keep things working.
+        TermLogger::new(LevelFilter::Error, Config::default(), TerminalMode::Mixed)
+            .map(|l| loggers.push(l));
+
+        // The daemon logs to stdio, and is redirected to file by spawn_daemon, which enables
+        // panics and backtraces to also be included.
+        if stdio {
+            loggers.push(SimpleLogger::new(LevelFilter::Debug, config()));
+        }
+
+        if let Some(file) = file {
+            loggers.push(WriteLogger::new(LevelFilter::Debug, config(), file));
+        }
+
+        loggers
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn test_get_loggers() {
+            // detect if termlogger is expected to be part of the set:
+            let add = TermLogger::new(LevelFilter::Error, Config::default(), TerminalMode::Mixed)
+                .map(|_| 1)
+                .unwrap_or(0);
+
+            // TermLogger (error logs to stderr)
+            let loggers = get_loggers(false, None);
+            // Note: less than two, as in some test environments TermLogger will not initialize.
+            assert!(loggers.len() == 0 + add);
+
+            // TermLogger & SimpleLogger (error logs to stderr, all other levels to stdout)
+            let loggers = get_loggers(true, None);
+            assert!(loggers.len() == 1 + add);
+
+            // TermLogger & WriteLogger (error logs to stderr, all other logs to file)
+            let loggers = get_loggers(false, Some(tempfile::tempfile().unwrap()));
+            assert!(loggers.len() == 1 + add);
+
+            // TermLogger, SimpleLogger & WriteLogger (error logs to stderr, all other levels to stdout and file)
+            let loggers = get_loggers(true, Some(tempfile::tempfile().unwrap()));
+            assert!(loggers.len() == 2 + add);
+        }
     }
 }
 

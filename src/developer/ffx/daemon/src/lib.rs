@@ -175,13 +175,9 @@ fn daemonize(c: &mut Command) -> &mut Command {
             // yet clear, we may want to replace this with a manual double fork
             // setsid, etc.
             #[allow(deprecated)]
-            // XXX(57054): we currently avoid the chdir because we have
-            // not plumbed a way to tell the daemon to open it's log
-            // file (or discover the correct environment) via another
-            // means. Probably the spawn_daemon invocation should be
-            // passing this information down based on the configuration
-            // of the frontend.
-            match libc::daemon(1, 0) {
+            // First argument: chdir(/)
+            // Second argument: do not close stdio (we use stdio to write to the daemon log file)
+            match libc::daemon(0, 1) {
                 0 => Ok(()),
                 x => Err(std::io::Error::from_raw_os_error(x)),
             }
