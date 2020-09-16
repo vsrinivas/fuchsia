@@ -1913,7 +1913,7 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd.get(), (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd.get(), 10), 0) << strerror(errno);
+  ASSERT_EQ(listen(acptfd.get(), 1), 0) << strerror(errno);
 
   fbl::unique_fd connfd;
   ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
@@ -3280,7 +3280,7 @@ TEST(NetStreamTest, MultipleListeningSockets) {
         bind(listenfd[i].get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
 
-    ASSERT_EQ(listen(listenfd[i].get(), 10), 0) << strerror(errno);
+    ASSERT_EQ(listen(listenfd[i].get(), 1), 0) << strerror(errno);
   }
 
   for (int i = 0; i < kListeningSockets; i++) {
