@@ -42,6 +42,7 @@ rustc_binary("bin") {
     "src/rfcomm/frame/mux_commands/dlc_parameter_negotiation.rs",
     "src/rfcomm/frame/mux_commands/flow_control.rs",
     "src/rfcomm/frame/mux_commands/mod.rs",
+    "src/rfcomm/frame/mux_commands/modem_status.rs",
     "src/rfcomm/frame/mux_commands/non_supported.rs",
     "src/rfcomm/frame/mux_commands/test_command.rs",
     "src/rfcomm/mod.rs",

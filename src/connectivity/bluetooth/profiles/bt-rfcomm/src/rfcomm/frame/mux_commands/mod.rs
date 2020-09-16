@@ -11,6 +11,7 @@ use {
 
 mod dlc_parameter_negotiation;
 mod flow_control;
+mod modem_status;
 mod non_supported;
 mod test_command;
 
