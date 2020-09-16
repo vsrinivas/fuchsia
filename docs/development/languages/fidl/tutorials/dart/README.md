@@ -1,4 +1,4 @@
-# Rust tutorials
+# Dart tutorials
 
 This section includes the following tutorials for using the Dart
 FIDL bindings:
