@@ -221,7 +221,7 @@ zx_status_t Vim::ThermalInit() {
   constexpr zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S912},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_THERMAL},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_VIM2_THERMAL},
   };
 
   const composite_device_desc_t comp_desc = {
