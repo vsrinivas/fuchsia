@@ -6,122 +6,21 @@
 
 ![Software Delivery Diagram](doc/overview.png)
 
-### Binaries and their Locations
+### Major Binaries
 
-Updated: November 2019
+Updated: September 2020
 
-<table>
-  <tr>
-   <td><strong>Subsystem</strong>
-   </td>
-   <td><strong>Purpose</strong>
-   </td>
-   <td><strong>Location</strong>
-   </td>
-   <td><strong>Language</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>pkgctl
-   </td>
-   <td>CLI for pkg-resolver
-   </td>
-   <td>`//src/sys/pkg/bin/pkgctl`
-   </td>
-   <td>Rust
-   </td>
-  </tr>
-  <tr>
-   <td>pkg-resolver
-   </td>
-   <td>Main entry point for software delivery stack. Coordinates retrieval and installation of packages.
-   </td>
-   <td>`//src/sys/pkg/bin/pkg-resolver`
-   </td>
-   <td>Rust
-   </td>
-  </tr>
-  <tr>
-   <td>pkg-cache
-   </td>
-   <td>Caches downloaded packages in case they are needed again.
-   </td>
-   <td>`//src/sys/pkg/bin/pkg-cache`
-   </td>
-   <td>Rust
-   </td>
-  </tr>
-  <tr>
-   <td>pkgfs
-   </td>
-   <td>A filesystem for interacting with packages that are stored on a host. It presents a tree of packages that are locally available and a tree that enables a user to add new packages and / or package content to the host.
-   </td>
-   <td>`//src/sys/pkg/bin/pkgfs/pkgfs`
-   </td>
-   <td>Go
-   </td>
-  </tr>
-  <tr>
-   <td>amberctl
-   </td>
-   <td>Deprecated CLI for various components. `amberctl` is deprecated, scheduled to be replaced by `pkgctl`
-   </td>
-   <td>`//src/sys/pkg/bin/amber/amberctl`
-   </td>
-   <td>Go
-   </td>
-  </tr>
-  <tr>
-   <td>system-update-checker
-   </td>
-   <td>Does what it says on the tin, checks for system updates!
-   </td>
-   <td>`//src/sys/pkg/bin/system-update-checker`
-   </td>
-   <td>Rust
-   </td>
-  </tr>
-  <tr>
-   <td>system-updater
-   </td>
-   <td>Actually performs system updates.
-   </td>
-   <td>`//src/sys/pkg/bin/system-updater\
-   </td>
-   <td>Go
-   </td>
-  </tr>
-  <tr>
-   <td>FIDL bindings
-   </td>
-   <td>Language-agnostic interfaces for subsystems.
-   </td>
-   <td>`//sdk/fidl/fuchsia.pkg`
-<p>
-`//sdk/fidl/fuchsia.pkg.rewrite`
-<p>
-`//sdk/fidl/fuchsia.update`
-<p>
-///sdk/fidl/fuchsia.update.channel
-<p>
-//sdk/fidl/fuchsia.update.channelcontrol
-<p>
-//src/sys/pkg/fidl/fuchsia.update.installer
-   </td>
-   <td>FIDL
-   </td>
-  </tr>
-  <tr>
-   <td>system_ota_test
-   </td>
-   <td>An end-to-end test of system over the air updates.
-   </td>
-   <td>//src/sys/pkg/tests/system-ota-tests
-   </td>
-   <td>Go
-   </td>
-  </tr>
-</table>
+| Subsystem             | Purpose                                                                                            | Location                                  | Language |
+|-----------------------|----------------------------------------------------------------------------------------------------|-------------------------------------------|----------|
+| amberctl              | Deprecated CLI for various components. Scheduled to be replaced by `pkgctl`.                       | `//src/sys/pkg/bin/amber/amberctl`        | Go       |
+| pkg-cache             | Caches downloaded packages in case they are needed again.                                          | `//src/sys/pkg/bin/pkg-cache`             | Rust     |
+| pkg-resolver          | Main entry point for software delivery stack. Coordinates retrieval and  installation of packages. | `//src/sys/pkg/bin/pkg-resolver`          | Rust     |
+| omaha-client          | Checks for system updates using the Omaha server infrastructure                                    | `//src/sys/pkg/bin/omaha-client`          | Rust     |
+| pkgctl                | CLI for pkg-resolver                                                                               | `//src/sys/pkg/bin/pkgctl`                | Rust     |
+| pkgfs                 | A filesystem for interacting with packages that are stored on a host.                              | `//src/sys/pkg/bin/pkgfs/pkgfs`           | Go       |
+| system-ota-test       | An end-to-end test of system over the air updates.                                                 | `//src/sys/pkg/tests/system-ota-tests`    | Go       |
+| system-update-checker | Does what it says on the tin, checks for system updates!                                           | `//src/sys/pkg/bin/system-update-checker` | Rust     |
+| system-updater        | Actually performs system updates.                                                                  | `//src/sys/pkg/bin/system-updater`        | Rust     |
 
 #### Key Dependencies
 
