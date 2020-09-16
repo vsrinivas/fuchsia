@@ -4,11 +4,7 @@
 
 use {
     crate::client::{bss::BssInfo, Status as SmeStatus},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_inspect::{
-        BoolProperty, HistogramProperty, IntLinearHistogramProperty, IntProperty,
-        LinearHistogramParams, Node, Property, StringProperty, UintProperty,
-    },
+    fuchsia_inspect::{BoolProperty, IntProperty, Node, Property, StringProperty, UintProperty},
     fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty},
     fuchsia_zircon as zx,
     mundane::{
@@ -49,8 +45,6 @@ pub struct SmeTree {
     /// 2. To show how up-to-date the latest status is (although pulse is logged within SME, it can
     ///    be thought similarly to an external entity periodically checking SME's status).
     pub last_pulse: Mutex<PulseNode>,
-    /// Inspection node to log samples from SignalReport indication
-    pub signal_samples: Mutex<SignalSamplesNode>,
 
     /// Hasher used to hash sensitive information, preserving user privacy.
     pub hasher: InspectHasher,
@@ -64,23 +58,17 @@ impl SmeTree {
         let join_scan_events =
             BoundedListNode::new(node.create_child("join_scan_events"), JOIN_SCAN_EVENTS_LIMIT);
         let pulse = PulseNode::new(node.create_child("last_pulse"));
-        let signal_samples = SignalSamplesNode::new(node.create_child("signal_samples"));
         Self {
             state_events: Mutex::new(state_events),
             rsn_events: Mutex::new(rsn_events),
             join_scan_events: Mutex::new(join_scan_events),
             last_pulse: Mutex::new(pulse),
-            signal_samples: Mutex::new(signal_samples),
             hasher: InspectHasher { hash_key },
         }
     }
 
     pub fn update_pulse(&self, new_status: SmeStatus) {
         self.last_pulse.lock().update(new_status, &self.hasher)
-    }
-
-    pub fn signal_ind(&self, ind: &fidl_mlme::SignalReportIndication) {
-        self.signal_samples.lock().update(ind)
     }
 }
 
@@ -408,25 +396,6 @@ impl ConnectingToNode {
     fn update(&mut self, ssid: &[u8], hasher: &InspectHasher) {
         self.ssid.set(&String::from_utf8_lossy(ssid));
         self.ssid_hash.set(&hasher.hash(ssid));
-    }
-}
-
-pub struct SignalSamplesNode {
-    _node: Node,
-    snr_histogram: IntLinearHistogramProperty,
-}
-
-impl SignalSamplesNode {
-    fn new(node: Node) -> Self {
-        let snr_histogram = node.create_int_linear_histogram(
-            "snr_histogram",
-            LinearHistogramParams { floor: 0, step_size: 1, buckets: 129 },
-        );
-        Self { _node: node, snr_histogram }
-    }
-
-    fn update(&mut self, ind: &fidl_mlme::SignalReportIndication) {
-        self.snr_histogram.insert(ind.snr_db as i64);
     }
 }
 

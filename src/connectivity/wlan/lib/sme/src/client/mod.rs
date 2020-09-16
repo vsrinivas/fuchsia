@@ -435,9 +435,6 @@ impl super::Station for ClientSme {
                 }
             }
             other => {
-                if let MlmeEvent::SignalReport { ind } = &other {
-                    self.context.inspect.signal_ind(ind);
-                }
                 self.state =
                     self.state.take().map(|state| state.on_mlme_event(other, &mut self.context));
             }
