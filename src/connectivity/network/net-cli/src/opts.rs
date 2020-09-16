@@ -4,6 +4,7 @@
 
 use argh::FromArgs;
 use fidl_fuchsia_logger as logger;
+use fidl_fuchsia_net_ext as net_ext;
 
 fn parse_log_level_str(value: &str) -> Result<logger::LogLevelFilter, String> {
     match &value.to_lowercase()[..] {
@@ -31,6 +32,7 @@ pub enum CommandEnum {
     Fwd(Fwd),
     If(If),
     Log(Log),
+    Neigh(Neigh),
     Route(Route),
     Stat(Stat),
     Metric(Metric),
@@ -317,6 +319,64 @@ pub struct LogSetPackets {
     #[argh(positional)]
     pub enabled: bool,
 }
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "neigh")]
+/// commands for neighbor tables
+pub struct Neigh {
+    #[argh(subcommand)]
+    pub neigh_cmd: NeighEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum NeighEnum {
+    Add(NeighAdd),
+    Clear(NeighClear),
+    Del(NeighDel),
+    List(NeighList),
+    Watch(NeighWatch),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "add")]
+/// adds an entry to the neighbor table
+pub struct NeighAdd {
+    #[argh(positional)]
+    pub interface: u64,
+    #[argh(positional)]
+    pub ip: net_ext::IpAddress,
+    #[argh(positional)]
+    pub mac: net_ext::MacAddress,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "clear")]
+/// removes all entries associated with a network interface from the neighbor table
+pub struct NeighClear {
+    #[argh(positional)]
+    pub interface: u64,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "list")]
+/// lists neighbor table entries
+pub struct NeighList {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "del")]
+/// removes an entry from the neighbor table
+pub struct NeighDel {
+    #[argh(positional)]
+    pub interface: u64,
+    #[argh(positional)]
+    pub ip: net_ext::IpAddress,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "watch")]
+/// watches neighbor table entries for state changes
+pub struct NeighWatch {}
 
 #[derive(FromArgs, Clone, Debug)]
 #[argh(subcommand, name = "route")]

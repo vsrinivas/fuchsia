@@ -8,6 +8,8 @@ use fidl_fuchsia_inspect_deprecated as inspect;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_ext as net_ext;
 use fidl_fuchsia_net_filter::{FilterMarker, FilterProxy};
+use fidl_fuchsia_net_neighbor as neighbor;
+use fidl_fuchsia_net_neighbor_ext as neighbor_ext;
 use fidl_fuchsia_net_stack::{
     self as netstack, InterfaceInfo, LogMarker, LogProxy, StackMarker, StackProxy,
 };
@@ -16,6 +18,7 @@ use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
+use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use glob::glob;
 use log::{info, Level, Log, Metadata, Record, SetLoggerError};
 use netfilter::FidlReturn as FilterFidlReturn;
@@ -74,14 +77,33 @@ async fn main() -> Result<(), Error> {
     let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
 
     match command.cmd {
-        CommandEnum::If(If { if_cmd: cmd }) => do_if(cmd, &stack, &netstack).await,
-        CommandEnum::Fwd(Fwd { fwd_cmd: cmd }) => do_fwd(cmd, stack).await,
-        CommandEnum::Route(Route { route_cmd: cmd }) => do_route(cmd, netstack).await,
-        CommandEnum::Filter(Filter { filter_cmd: cmd }) => do_filter(cmd, filter).await,
-        CommandEnum::Log(crate::opts::Log { log_cmd: cmd }) => do_log(cmd, log).await,
-        CommandEnum::Stat(Stat { stat_cmd: cmd }) => do_stat(cmd).await,
-        CommandEnum::Metric(Metric { metric_cmd: cmd }) => do_metric(cmd, netstack).await,
-        CommandEnum::Dhcp(Dhcp { dhcp_cmd: cmd }) => do_dhcp(cmd, netstack).await,
+        CommandEnum::If(If { if_cmd: cmd }) => {
+            do_if(cmd, &stack, &netstack).await.context("failed during if command")
+        }
+        CommandEnum::Fwd(Fwd { fwd_cmd: cmd }) => {
+            do_fwd(cmd, stack).await.context("failed during fwd command")
+        }
+        CommandEnum::Route(Route { route_cmd: cmd }) => {
+            do_route(cmd, netstack).await.context("failed during route command")
+        }
+        CommandEnum::Filter(Filter { filter_cmd: cmd }) => {
+            do_filter(cmd, filter).await.context("failed during filter command")
+        }
+        CommandEnum::Log(crate::opts::Log { log_cmd: cmd }) => {
+            do_log(cmd, log).await.context("failed during log command")
+        }
+        CommandEnum::Stat(Stat { stat_cmd: cmd }) => {
+            do_stat(cmd).await.context("failed during stat command")
+        }
+        CommandEnum::Metric(Metric { metric_cmd: cmd }) => {
+            do_metric(cmd, netstack).await.context("failed during metric command")
+        }
+        CommandEnum::Dhcp(Dhcp { dhcp_cmd: cmd }) => {
+            do_dhcp(cmd, netstack).await.context("failed during dhcp command")
+        }
+        CommandEnum::Neigh(Neigh { neigh_cmd: cmd }) => {
+            do_neigh(cmd).await.context("failed during neigh command")
+        }
     }
 }
 
@@ -527,16 +549,165 @@ fn visit_inspect_object(
     }
 }
 
+async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
+    match cmd {
+        NeighEnum::Add(NeighAdd { interface, ip, mac }) => {
+            let controller = connect_to_service::<neighbor::ControllerMarker>()
+                .context("failed to connect to neighbor controller")?;
+            let () = do_neigh_add(interface, ip.into(), mac.into(), controller)
+                .await
+                .context("failed during neigh add command")?;
+            info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
+        }
+        NeighEnum::Clear(NeighClear { interface }) => {
+            let controller = connect_to_service::<neighbor::ControllerMarker>()
+                .context("failed to connect to neighbor controller")?;
+            let () = do_neigh_clear(interface, controller)
+                .await
+                .context("failed during neigh clear command")?;
+            info!("Cleared entries for interface {}", interface);
+        }
+        NeighEnum::Del(NeighDel { interface, ip }) => {
+            let controller = connect_to_service::<neighbor::ControllerMarker>()
+                .context("failed to connect to neighbor controller")?;
+            let () = do_neigh_del(interface, ip.into(), controller)
+                .await
+                .context("failed during neigh del command")?;
+            info!("Deleted entry {} for interface {}", ip, interface);
+        }
+        NeighEnum::List(NeighList {}) => {
+            let () = print_neigh_entries(false /* watch_for_changes */)
+                .await
+                .context("error listing neighbor entries")?;
+        }
+        NeighEnum::Watch(NeighWatch {}) => {
+            let () = print_neigh_entries(true /* watch_for_changes */)
+                .await
+                .context("error watching for changes to the neighbor table")?;
+        }
+    }
+    Ok(())
+}
+
+async fn do_neigh_add(
+    interface: u64,
+    neighbor: net::IpAddress,
+    mac: net::MacAddress,
+    controller: neighbor::ControllerProxy,
+) -> Result<(), Error> {
+    controller
+        .add_entry(interface, &mut neighbor.into(), &mut mac.into())
+        .await
+        .context("FIDL error adding neighbor entry")?
+        .map_err(zx::Status::from_raw)
+        .context("error adding neighbor entry")
+}
+
+async fn do_neigh_clear(
+    interface: u64,
+    controller: neighbor::ControllerProxy,
+) -> Result<(), Error> {
+    controller
+        .clear_entries(interface)
+        .await
+        .context("FIDL error clearing neighbor table")?
+        .map_err(zx::Status::from_raw)
+        .context("error clearing neighbor table")
+}
+
+async fn do_neigh_del(
+    interface: u64,
+    neighbor: net::IpAddress,
+    controller: neighbor::ControllerProxy,
+) -> Result<(), Error> {
+    controller
+        .remove_entry(interface, &mut neighbor.into())
+        .await
+        .context("FIDL error removing neighbor entry")?
+        .map_err(zx::Status::from_raw)
+        .context("error removing neighbor entry")
+}
+
+async fn print_neigh_entries(watch_for_changes: bool) -> Result<(), Error> {
+    let view = connect_to_service::<neighbor::ViewMarker>()
+        .context("failed to connect to neighbor view")?;
+    let (it_client, it_server) =
+        fidl::endpoints::create_endpoints::<neighbor::EntryIteratorMarker>()
+            .context("error creating channel for entry iterator")?;
+    let it = it_client.into_proxy().context("error creating proxy to entry iterator")?;
+
+    let () = view
+        .open_entry_iterator(it_server, neighbor::EntryIteratorOptions {})
+        .context("error opening a connection to the entry iterator")?;
+
+    neigh_entry_stream(it, watch_for_changes)
+        .map_ok(|item| {
+            write_neigh_entry(&mut std::io::stdout(), item, watch_for_changes)
+                .context("error writing entry")
+        })
+        .try_fold((), |(), r| futures::future::ready(r))
+        .await
+}
+
+fn neigh_entry_stream(
+    iterator: neighbor::EntryIteratorProxy,
+    watch_for_changes: bool,
+) -> impl futures::Stream<Item = Result<neighbor::EntryIteratorItem, Error>> {
+    futures::stream::try_unfold(iterator, |iterator| {
+        iterator
+            .get_next()
+            .map_ok(|items| Some((items, iterator)))
+            .map(|r| r.context("error getting items from iterator"))
+    })
+    .map_ok(|items| futures::stream::iter(items.into_iter().map(Ok)))
+    .try_flatten()
+    .take_while(move |item| {
+        futures::future::ready(item.as_ref().map_or(false, |item| {
+            if let neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}) = item {
+                watch_for_changes
+            } else {
+                true
+            }
+        }))
+    })
+}
+
+fn write_neigh_entry<W: std::io::Write>(
+    f: &mut W,
+    item: neighbor::EntryIteratorItem,
+    watch_for_changes: bool,
+) -> Result<(), std::io::Error> {
+    match item {
+        neighbor::EntryIteratorItem::Existing(entry) => {
+            if watch_for_changes {
+                write!(f, "EXISTING | {}", neighbor_ext::Entry::from(entry))
+            } else {
+                write!(f, "{}", neighbor_ext::Entry::from(entry))
+            }
+        }
+        neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}) => write!(f, "IDLE"),
+        neighbor::EntryIteratorItem::Added(entry) => {
+            write!(f, "ADDED    | {}", neighbor_ext::Entry::from(entry))
+        }
+        neighbor::EntryIteratorItem::Changed(entry) => {
+            write!(f, "CHANGED  | {}", neighbor_ext::Entry::from(entry))
+        }
+        neighbor::EntryIteratorItem::Removed(entry) => {
+            write!(f, "REMOVED  | {}", neighbor_ext::Entry::from(entry))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use fidl_fuchsia_net as net;
-    use fuchsia_async as fasync;
+    use fuchsia_async::{self as fasync, TimeoutExt as _};
     use futures::prelude::*;
     use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
 
     fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
         InterfaceInfo {
-            id: id,
+            id,
             properties: InterfaceProperties {
                 name: name.to_string(),
                 topopath: "loopback".to_string(),
@@ -718,7 +889,9 @@ mod tests {
                 .expect("request should be of type GetDhcpClient");
             let mut dhcp_requests =
                 dhcp_requests.into_stream().expect("should convert to request stream");
-            netstack_responder.send(&mut Ok(())).expect("netstack_responder.send should succeed");
+            let () = netstack_responder
+                .send(&mut Ok(()))
+                .expect("netstack_responder.send should succeed");
             match cmd {
                 DhcpEnum::Start(DhcpStart { id: expected_id }) => {
                     assert_eq!(received_id, expected_id);
@@ -774,7 +947,7 @@ mod tests {
                 .expect("request should be of type StartRouteTableTransaction");
             let mut route_table_requests =
                 route_table_requests.into_stream().expect("should convert to request stream");
-            netstack_responder
+            let () = netstack_responder
                 .send(fuchsia_zircon::Status::OK.into_raw())
                 .expect("netstack_responder.send should succeed");
             let () = match cmd {
@@ -870,5 +1043,297 @@ mod tests {
         let ((), ()) = futures::future::try_join(bridge, bridge_succeeds)
             .await
             .expect("if bridge should succeed");
+    }
+
+    async fn test_get_neigh_entries(
+        watch_for_changes: bool,
+        batches: Vec<Vec<neighbor::EntryIteratorItem>>,
+        want: String,
+    ) {
+        let (it, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<neighbor::EntryIteratorMarker>().unwrap();
+
+        let server = async {
+            for mut items in batches {
+                let responder = requests
+                    .try_next()
+                    .await
+                    .expect("neigh FIDL error")
+                    .expect("request stream should not have ended")
+                    .into_get_next()
+                    .expect("request should be of type GetNext");
+                let () =
+                    responder.send(&mut items.iter_mut()).expect("responder.send should succeed");
+            }
+        }
+        .on_timeout(std::time::Duration::from_secs(60), || panic!("server responder timed out"));
+
+        let client = async {
+            let mut stream = neigh_entry_stream(it, watch_for_changes);
+
+            let item_to_string = |item| {
+                let mut buf = Vec::new();
+                let () = write_neigh_entry(&mut buf, item, watch_for_changes)
+                    .expect("write_neigh_entry should succeed");
+                String::from_utf8(buf).expect("string should be UTF-8")
+            };
+
+            // Check each string sent by get_neigh_entries
+            for want_line in want.lines() {
+                let got = stream
+                    .next()
+                    .await
+                    .map(|item| item_to_string(item.expect("neigh_entry_stream should succeed")));
+                assert_eq!(got, Some(want_line.into()));
+            }
+
+            // When listing entries, the sender should close after sending all existing entries.
+            if !watch_for_changes {
+                match stream.next().await {
+                    Some(Ok(item)) => {
+                        panic!("unexpected item from stream: {}", item_to_string(item))
+                    }
+                    Some(Err(err)) => panic!("unexpected error from stream: {}", err),
+                    None => {}
+                }
+            }
+        };
+
+        let ((), ()) = futures::future::join(client, server).await;
+    }
+
+    async fn test_neigh_none(watch_for_changes: bool, want: String) {
+        test_get_neigh_entries(
+            watch_for_changes,
+            vec![vec![neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {})]],
+            want,
+        )
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_list_none() {
+        test_neigh_none(false /* watch_for_changes */, "".to_string()).await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_watch_none() {
+        test_neigh_none(true /* watch_for_changes */, "IDLE".to_string()).await
+    }
+
+    async fn test_neigh_one(watch_for_changes: bool, want: fn(neighbor_ext::Entry) -> String) {
+        fn new_entry(expires_at: i64, updated_at: i64) -> neighbor::Entry {
+            neighbor::Entry {
+                interface: Some(1),
+                neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] })),
+                state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
+                    expires_at: Some(expires_at),
+                })),
+                mac: Some(net::MacAddress { octets: [1, 2, 3, 4, 5, 6] }),
+                updated_at: Some(updated_at),
+            }
+        }
+
+        let now = zx::Time::get(zx::ClockId::UTC);
+        let expires_at = {
+            let later = now + zx::Duration::from_minutes(3) + zx::Duration::from_seconds(1);
+            later.into_nanos()
+        };
+        let updated_at = {
+            let past = now - zx::Duration::from_minutes(1);
+            past.into_nanos()
+        };
+
+        test_get_neigh_entries(
+            watch_for_changes,
+            vec![vec![
+                neighbor::EntryIteratorItem::Existing(new_entry(expires_at, updated_at)),
+                neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}),
+            ]],
+            want(neighbor_ext::Entry::from(new_entry(expires_at, updated_at))),
+        )
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_list_one() {
+        test_neigh_one(false /* watch_for_changes */, |entry| format!("{}\n", entry)).await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_watch_one() {
+        test_neigh_one(true /* watch_for_changes */, |entry| {
+            format!(
+                "EXISTING | {}\n\
+                 IDLE\n",
+                entry
+            )
+        })
+        .await
+    }
+
+    async fn test_neigh_many(
+        watch_for_changes: bool,
+        want: fn(neighbor_ext::Entry, neighbor_ext::Entry) -> String,
+    ) {
+        fn new_entry(
+            ip: [u8; 4],
+            mac: [u8; 6],
+            expires_at: i64,
+            updated_at: i64,
+        ) -> neighbor::Entry {
+            neighbor::Entry {
+                interface: Some(1),
+                neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: ip })),
+                state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
+                    expires_at: Some(expires_at),
+                })),
+                mac: Some(net::MacAddress { octets: mac }),
+                updated_at: Some(updated_at),
+            }
+        }
+
+        let now = zx::Time::get(zx::ClockId::UTC);
+        let expires_at = {
+            let later = now + zx::Duration::from_minutes(3) + zx::Duration::from_seconds(1);
+            later.into_nanos()
+        };
+        let updated_at = {
+            let past = now - zx::Duration::from_minutes(1);
+            past.into_nanos()
+        };
+        let offset = zx::Duration::from_minutes(1).into_nanos();
+
+        test_get_neigh_entries(
+            watch_for_changes,
+            vec![vec![
+                neighbor::EntryIteratorItem::Existing(new_entry(
+                    [192, 168, 0, 1],
+                    [1, 2, 3, 4, 5, 6],
+                    expires_at,
+                    updated_at,
+                )),
+                neighbor::EntryIteratorItem::Existing(new_entry(
+                    [192, 168, 0, 2],
+                    [2, 3, 4, 5, 6, 7],
+                    expires_at - offset,
+                    updated_at - offset,
+                )),
+                neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}),
+            ]],
+            want(
+                neighbor_ext::Entry::from(new_entry(
+                    [192, 168, 0, 1],
+                    [1, 2, 3, 4, 5, 6],
+                    expires_at,
+                    updated_at,
+                )),
+                neighbor_ext::Entry::from(new_entry(
+                    [192, 168, 0, 2],
+                    [2, 3, 4, 5, 6, 7],
+                    expires_at - offset,
+                    updated_at - offset,
+                )),
+            ),
+        )
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_list_many() {
+        test_neigh_many(false /* watch_for_changes */, |a, b| format!("{}\n{}\n", a, b)).await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_watch_many() {
+        test_neigh_many(true /* watch_for_changes */, |a, b| {
+            format!(
+                "EXISTING | {}\n\
+                 EXISTING | {}\n\
+                 IDLE\n",
+                a, b
+            )
+        })
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_add() {
+        const WANT_INTERFACE: u64 = 1;
+        const WANT_IP: net::IpAddress =
+            net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] });
+        const WANT_MAC: net::MacAddress = net::MacAddress { octets: [1, 2, 3, 4, 5, 6] };
+
+        let (controller, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
+        let neigh = do_neigh_add(WANT_INTERFACE, WANT_IP, WANT_MAC, controller);
+        let neigh_succeeds = async {
+            let (got_interface, got_ip, got_mac, responder) = requests
+                .try_next()
+                .await
+                .expect("neigh FIDL error")
+                .expect("request stream should not have ended")
+                .into_add_entry()
+                .expect("request should be of type AddEntry");
+            assert_eq!(got_interface, WANT_INTERFACE);
+            assert_eq!(got_ip, WANT_IP);
+            assert_eq!(got_mac, WANT_MAC);
+            let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
+            .await
+            .expect("neigh add should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_clear() {
+        const WANT_INTERFACE: u64 = 1;
+
+        let (controller, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
+        let neigh = do_neigh_clear(WANT_INTERFACE, controller);
+        let neigh_succeeds = async {
+            let (got_interface, responder) = requests
+                .try_next()
+                .await
+                .expect("neigh FIDL error")
+                .expect("request stream should not have ended")
+                .into_clear_entries()
+                .expect("request should be of type ClearEntries");
+            assert_eq!(got_interface, WANT_INTERFACE);
+            let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
+            .await
+            .expect("neigh clear should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_del() {
+        const WANT_INTERFACE: u64 = 1;
+        const WANT_IP: net::IpAddress =
+            net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] });
+
+        let (controller, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
+        let neigh = do_neigh_del(WANT_INTERFACE, WANT_IP, controller);
+        let neigh_succeeds = async {
+            let (got_interface, got_ip, responder) = requests
+                .try_next()
+                .await
+                .expect("neigh FIDL error")
+                .expect("request stream should not have ended")
+                .into_remove_entry()
+                .expect("request should be of type RemoveEntry");
+            assert_eq!(got_interface, WANT_INTERFACE);
+            assert_eq!(got_ip, WANT_IP);
+            let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
+            .await
+            .expect("neigh remove should succeed");
     }
 }
