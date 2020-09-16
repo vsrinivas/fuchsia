@@ -17,8 +17,11 @@
 
 set -eu
 
+# The path of the integration repo.
 INTEGRATION="$1"
+# A path to populate with the latest commit date as an ISO 8601 timestamp.
 OUTPUT="$2"
+# A path to populate with the latest commit date as seconds since unix epoch.
 UNIX_OUTPUT="$3"
 
 # Set the following options to make the output as stable as possible:
