@@ -238,16 +238,22 @@ static Binder bind;
 
 TEST_F(SmaysHarness, Usb2Hub) {
   auto dispatcher = StartDispatching();
-  // Enumeration must happen in order of port
+  // Enumeration might not happen in port order.
+  // See USB 2.0 specification revision 2.0 section 9.1.2.
   sync_completion_t enum_complete;
-  uint32_t expected_port = 1;
+  uint8_t port_bitmask = 7;
   usb_speed_t speeds[] = {USB_SPEED_HIGH, USB_SPEED_LOW, USB_SPEED_FULL};
-  SetConnectCallback([&](uint32_t port, usb_speed_t speed) {
-    if ((port != expected_port) || (speed != speeds[port - 1])) {
+  SetConnectCallback([&enum_complete, &speeds, &port_bitmask](uint32_t port, usb_speed_t speed) {
+    ZX_ASSERT((speed - 1) < std::size(speeds));
+    ZX_ASSERT(speed < sizeof(int));
+    if ((speed != speeds[port - 1])) {
       return ZX_ERR_INVALID_ARGS;
     }
-    expected_port++;
-    if (port == 3) {
+    if (!(port_bitmask & (1 << (port - 1)))) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    port_bitmask &= ~(1 << (port - 1));
+    if (!port_bitmask) {
       sync_completion_signal(&enum_complete);
     }
     return ZX_OK;
@@ -260,7 +266,6 @@ TEST_F(SmaysHarness, Usb2Hub) {
   sync_completion_wait(&enum_complete, ZX_TIME_INFINITE);
   sync_completion_t disconnect_complete;
   // Disconnect ordering doesn't matter (can happen in any order).
-  expected_port = 1;
   uint8_t port_remove_bitmask = 7;
   SetConnectCallback([&](uint32_t port, usb_speed_t speed) {
     if ((speed != static_cast<usb_speed_t>(-1))) {
@@ -284,17 +289,19 @@ TEST_F(SmaysHarness, Usb2Hub) {
 }
 
 TEST_F(UnbrandedHarness, Usb3Hub) {
-  // Enumeration must happen in order of port
   auto dispatcher = StartDispatching();
   sync_completion_t enum_complete;
   sync_completion_reset(&enum_complete);
-  uint32_t expected_port = 1;
+  uint8_t port_bitmask = 7;
   SetConnectCallback([&](uint32_t port, usb_speed_t speed) {
-    if ((port != expected_port) || (speed != USB_SPEED_SUPER)) {
+    if (speed != USB_SPEED_SUPER) {
       return ZX_ERR_INVALID_ARGS;
     }
-    expected_port++;
-    if (port == 3) {
+    if (!(port_bitmask & (1 << (port - 1)))) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    port_bitmask &= ~(1 << (port - 1));
+    if (!port_bitmask) {
       sync_completion_signal(&enum_complete);
     }
     return ZX_OK;
@@ -306,7 +313,6 @@ TEST_F(UnbrandedHarness, Usb3Hub) {
   sync_completion_wait(&enum_complete, ZX_TIME_INFINITE);
   sync_completion_t disconnect_complete;
   // Disconnect ordering doesn't matter (can happen in any order).
-  expected_port = 1;
   uint8_t port_remove_bitmask = 7;
   SetConnectCallback([&](uint32_t port, usb_speed_t speed) {
     if ((speed != static_cast<usb_speed_t>(-1))) {
