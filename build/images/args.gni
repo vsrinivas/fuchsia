@@ -69,8 +69,11 @@ declare_args() {
   # specify a partition).
   #
   # If `fvm_partition` is provided, the flash script will flash the full OS,
-  # recovery + Zircon + FVM. Otherwise, it will flash the recovery image to all
-  # slots, which doesn't require the FVM.
+  # recovery + Zircon + FVM + SSH keys. In this case, the bootloader must also
+  # support `fastboot oem add-staged-bootloader-file ssh.authorized_keys`.
+  #
+  # Otherwise, the script will flash the recovery image to all slots, which
+  # doesn't require the FVM or SSH keys.
   zircon_a_partition = ""
   zircon_b_partition = ""
   zircon_r_partition = ""

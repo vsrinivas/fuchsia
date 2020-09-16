@@ -217,13 +217,13 @@ if [[ ! -z "${FVM_PARTITION}" ]]; then
   erase_raw_flash ${FVM_PARTITION}
   echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${FVM_PARTITION}" \"\${DIR}/${FVM_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
   echo "fi" >> "${OUTPUT}"
-fi
 
-# Provision ssh key from fastboot. The key file is specified via --ssh-key arg.
-echo "if [[ ! -z \"\${SSH_KEY}\" ]]; then" >> "${OUTPUT}"
-echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\"" >> "${OUTPUT}"
-echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
-echo "fi" >> "${OUTPUT}"
+  # Provision SSH key from fastboot if --ssh-key was given.
+  echo "if [[ ! -z \"\${SSH_KEY}\" ]]; then" >> "${OUTPUT}"
+  echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\"" >> "${OUTPUT}"
+  echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
+  echo "fi" >> "${OUTPUT}"
+fi
 
 if [[ ! -z "${ACTIVE_PARTITION}" ]]; then
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" set_active "${ACTIVE_PARTITION}" >> "${OUTPUT}"
