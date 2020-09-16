@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Matches QCA988X_2_0",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.ATHEROS",
+      "fuchsia.BIND_PCI_DID": "0x003c"
+    }
+  },
+  {
+    "name": "Aborts unrecognised protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "7",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.ATHEROS",
+      "fuchsia.BIND_PCI_DID": "0x003c"
+    }
+  },
+  {
+    "name": "Aborts unrecognised VID",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+      "fuchsia.BIND_PCI_DID": "0x003c"
+    }
+  },
+  {
+    "name": "Aborts unrecognised VID",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.ATHEROS",
+      "fuchsia.BIND_PCI_DID": "0"
+    }
+  }
+]

@@ -104,7 +104,7 @@ group("all") {
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/telephony:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
-    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_test",
+    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:tests",
     "//src/developer/debug/debug_agent:debug_agent_tests",
     "//src/developer/debug/zxdb:zxdb_tests($host_toolchain)",
     "//src/developer/memory/metrics/tests",

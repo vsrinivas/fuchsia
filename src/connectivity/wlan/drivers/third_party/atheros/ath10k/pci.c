@@ -26,23 +26,23 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/hw/wlan/ieee80211.h>
 #include <ddk/protocol/pci.h>
 #include <wlan/protocol/mac.h>
 
-#include "bmi.h"
-#include "ce.h"
-#include "core.h"
-#include "debug.h"
-#include "hif.h"
-#include "htc.h"
-#include "mac.h"
-#include "macros.h"
-#include "targaddrs.h"
-#include "utils.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/ath10k_pci-bind.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/bmi.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/ce.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/core.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/hif.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/htc.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/mac.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/macros.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/targaddrs.h"
+#include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/utils.h"
 
 enum ath10k_pci_reset_mode {
   ATH10K_PCI_RESET_AUTO = 0,
@@ -3620,15 +3620,5 @@ static zx_driver_ops_t ath10k_pci_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ath10k_pci, ath10k_pci_driver_ops, "zircon", "0.1", 10)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, ATHEROS_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA988X_2_0_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA6174_2_1_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA99X0_2_0_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA6164_2_1_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9377_1_0_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9984_1_0_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9887_1_0_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9888_2_0_DEVICE_ID),
-ZIRCON_DRIVER_END(ath10k_pci)
+ZIRCON_DRIVER(ath10k_pci, ath10k_pci_driver_ops, "zircon", "0.1");
+
