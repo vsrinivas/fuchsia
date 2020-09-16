@@ -10,6 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
+#include "lib/fidl/llcpp/types.h"
 
 namespace goldfish {
 namespace {
@@ -108,8 +109,18 @@ void Pipe::Init() {
 void Pipe::Bind(zx::channel server_request) {
   using PipeInterface = llcpp::fuchsia::hardware::goldfish::Pipe::Interface;
   auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, zx::channel) {
-    if (info.reason != fidl::UnbindInfo::kClose && info.reason != fidl::UnbindInfo::kUnbind) {
-      zxlogf(ERROR, "[%s] Pipe error: %d\n", kTag, info.status);
+    switch (info.reason) {
+      case fidl::UnbindInfo::kUnbind:
+      case fidl::UnbindInfo::kPeerClosed:
+        // Client closed without errors. No-op.
+        break;
+      case fidl::UnbindInfo::kClose:
+        // Client closed with epitaph.
+        zxlogf(DEBUG, "[%s] Pipe closed with epitaph: %d\n", kTag, info.status);
+        break;
+      default:
+        // handle pipe error.
+        zxlogf(ERROR, "[%s] Pipe error: %d\n", kTag, info.status);
     }
     if (on_close_) {
       on_close_(this);
