@@ -8,11 +8,11 @@ if (is_fuchsia) {
 
 config("gtest_private_config") {
   visibility = [ ":*" ]
-  include_dirs = [ "googletest" ]
+  include_dirs = [ "src/googletest" ]
 }
 
 config("gtest_config") {
-  include_dirs = [ "googletest/include" ]
+  include_dirs = [ "src/googletest/include" ]
   # Suppress warnings from upstream code that happen in Fuchsia build
   cflags = [ "-Wno-conversion" ]
 }
@@ -20,44 +20,44 @@ config("gtest_config") {
 static_library("gtest") {
   testonly = true
   public = [
-    "googletest/include/gtest/gtest-spi.h",
-    "googletest/include/gtest/gtest.h",
+    "src/googletest/include/gtest/gtest-spi.h",
+    "src/googletest/include/gtest/gtest.h",
   ]
   sources = [
-    "googletest/include/gtest/gtest-death-test.h",
-    "googletest/include/gtest/gtest-message.h",
-    "googletest/include/gtest/gtest-param-test.h",
-    "googletest/include/gtest/gtest-printers.h",
-    "googletest/include/gtest/gtest-test-part.h",
-    "googletest/include/gtest/gtest-typed-test.h",
-    "googletest/include/gtest/gtest_pred_impl.h",
-    "googletest/include/gtest/gtest_prod.h",
-    "googletest/include/gtest/internal/custom/gtest-port.h",
-    "googletest/include/gtest/internal/custom/gtest-printers.h",
-    "googletest/include/gtest/internal/custom/gtest.h",
-    "googletest/include/gtest/internal/gtest-death-test-internal.h",
-    "googletest/include/gtest/internal/gtest-filepath.h",
-    "googletest/include/gtest/internal/gtest-internal.h",
-    "googletest/include/gtest/internal/gtest-linked_ptr.h",
-    "googletest/include/gtest/internal/gtest-param-util-generated.h",
-    "googletest/include/gtest/internal/gtest-param-util.h",
-    "googletest/include/gtest/internal/gtest-port-arch.h",
-    "googletest/include/gtest/internal/gtest-port.h",
-    "googletest/include/gtest/internal/gtest-string.h",
-    "googletest/include/gtest/internal/gtest-tuple.h",
-    "googletest/include/gtest/internal/gtest-type-util.h",
-    "googletest/src/gtest-all.cc",
-    "googletest/src/gtest-death-test.cc",
-    "googletest/src/gtest-filepath.cc",
-    "googletest/src/gtest-internal-inl.h",
-    "googletest/src/gtest-matchers.cc",
-    "googletest/src/gtest-port.cc",
-    "googletest/src/gtest-printers.cc",
-    "googletest/src/gtest-test-part.cc",
-    "googletest/src/gtest-typed-test.cc",
-    "googletest/src/gtest.cc",
+    "src/googletest/include/gtest/gtest-death-test.h",
+    "src/googletest/include/gtest/gtest-message.h",
+    "src/googletest/include/gtest/gtest-param-test.h",
+    "src/googletest/include/gtest/gtest-printers.h",
+    "src/googletest/include/gtest/gtest-test-part.h",
+    "src/googletest/include/gtest/gtest-typed-test.h",
+    "src/googletest/include/gtest/gtest_pred_impl.h",
+    "src/googletest/include/gtest/gtest_prod.h",
+    "src/googletest/include/gtest/internal/custom/gtest-port.h",
+    "src/googletest/include/gtest/internal/custom/gtest-printers.h",
+    "src/googletest/include/gtest/internal/custom/gtest.h",
+    "src/googletest/include/gtest/internal/gtest-death-test-internal.h",
+    "src/googletest/include/gtest/internal/gtest-filepath.h",
+    "src/googletest/include/gtest/internal/gtest-internal.h",
+    "src/googletest/include/gtest/internal/gtest-linked_ptr.h",
+    "src/googletest/include/gtest/internal/gtest-param-util-generated.h",
+    "src/googletest/include/gtest/internal/gtest-param-util.h",
+    "src/googletest/include/gtest/internal/gtest-port-arch.h",
+    "src/googletest/include/gtest/internal/gtest-port.h",
+    "src/googletest/include/gtest/internal/gtest-string.h",
+    "src/googletest/include/gtest/internal/gtest-tuple.h",
+    "src/googletest/include/gtest/internal/gtest-type-util.h",
+    "src/googletest/src/gtest-all.cc",
+    "src/googletest/src/gtest-death-test.cc",
+    "src/googletest/src/gtest-filepath.cc",
+    "src/googletest/src/gtest-internal-inl.h",
+    "src/googletest/src/gtest-matchers.cc",
+    "src/googletest/src/gtest-port.cc",
+    "src/googletest/src/gtest-printers.cc",
+    "src/googletest/src/gtest-test-part.cc",
+    "src/googletest/src/gtest-typed-test.cc",
+    "src/googletest/src/gtest.cc",
   ]
-  sources -= [ "googletest/src/gtest-all.cc" ]
+  sources -= [ "src/googletest/src/gtest-all.cc" ]
   public_configs = [ ":gtest_config" ]
   configs += [ ":gtest_private_config" ]
 
@@ -84,7 +84,7 @@ static_library("gtest") {
 source_set("gtest_prod") {
   testonly = false
   public = [
-    "googletest/include/gtest/gtest_prod.h",
+    "src/googletest/include/gtest/gtest_prod.h",
   ]
   public_configs = [ ":gtest_config" ]
 }
@@ -92,7 +92,7 @@ source_set("gtest_prod") {
 static_library("gtest_main") {
   testonly = true
   sources = [
-    "googletest/src/gtest_main.cc",
+    "src/googletest/src/gtest_main.cc",
   ]
   public_deps = [
     ":gtest",
@@ -102,23 +102,23 @@ static_library("gtest_main") {
 executable("gtest_all_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest-death-test_test.cc",
-    "googletest/test/gtest-filepath_test.cc",
-    "googletest/test/gtest-linked_ptr_test.cc",
-    "googletest/test/gtest-message_test.cc",
-    "googletest/test/gtest-options_test.cc",
-    "googletest/test/gtest-port_test.cc",
-    "googletest/test/gtest-printers_test.cc",
-    "googletest/test/gtest-test-part_test.cc",
-    "googletest/test/gtest-typed-test2_test.cc",
-    "googletest/test/gtest-typed-test_test.cc",
-    "googletest/test/gtest-typed-test_test.h",
-    "googletest/test/gtest_main_unittest.cc",
-    "googletest/test/gtest_pred_impl_unittest.cc",
-    "googletest/test/gtest_prod_test.cc",
-    "googletest/test/gtest_unittest.cc",
-    "googletest/test/production.cc",
-    "googletest/test/production.h",
+    "src/googletest/test/gtest-death-test_test.cc",
+    "src/googletest/test/gtest-filepath_test.cc",
+    "src/googletest/test/gtest-linked_ptr_test.cc",
+    "src/googletest/test/gtest-message_test.cc",
+    "src/googletest/test/gtest-options_test.cc",
+    "src/googletest/test/gtest-port_test.cc",
+    "src/googletest/test/gtest-printers_test.cc",
+    "src/googletest/test/gtest-test-part_test.cc",
+    "src/googletest/test/gtest-typed-test2_test.cc",
+    "src/googletest/test/gtest-typed-test_test.cc",
+    "src/googletest/test/gtest-typed-test_test.h",
+    "src/googletest/test/gtest_main_unittest.cc",
+    "src/googletest/test/gtest_pred_impl_unittest.cc",
+    "src/googletest/test/gtest_prod_test.cc",
+    "src/googletest/test/gtest_unittest.cc",
+    "src/googletest/test/production.cc",
+    "src/googletest/test/production.h",
   ]
   configs += [ ":gtest_private_config" ]
   deps = [
@@ -130,7 +130,7 @@ executable("gtest_all_test") {
 executable("gtest_environment_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest_environment_test.cc",
+    "src/googletest/test/gtest_environment_test.cc",
   ]
   configs += [ ":gtest_private_config" ]
   deps = [
@@ -141,7 +141,7 @@ executable("gtest_environment_test") {
 executable("gtest_listener_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest-listener_test.cc",
+    "src/googletest/test/gtest-listener_test.cc",
   ]
   deps = [
     ":gtest",
@@ -151,7 +151,7 @@ executable("gtest_listener_test") {
 executable("gtest_no_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest_no_test_unittest.cc",
+    "src/googletest/test/gtest_no_test_unittest.cc",
   ]
   deps = [
     ":gtest",
@@ -161,9 +161,9 @@ executable("gtest_no_test") {
 executable("gtest_param_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest-param-test2_test.cc",
-    "googletest/test/gtest-param-test_test.cc",
-    "googletest/test/gtest-param-test_test.h",
+    "src/googletest/test/gtest-param-test2_test.cc",
+    "src/googletest/test/gtest-param-test_test.cc",
+    "src/googletest/test/gtest-param-test_test.h",
   ]
   configs += [ ":gtest_private_config" ]
   deps = [
@@ -174,7 +174,7 @@ executable("gtest_param_test") {
 executable("gtest_premature_exit_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest_premature_exit_test.cc",
+    "src/googletest/test/gtest_premature_exit_test.cc",
   ]
   deps = [
     ":gtest",
@@ -184,7 +184,7 @@ executable("gtest_premature_exit_test") {
 executable("gtest_repeat_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest_repeat_test.cc",
+    "src/googletest/test/gtest_repeat_test.cc",
   ]
   configs += [ ":gtest_private_config" ]
   deps = [
@@ -195,7 +195,7 @@ executable("gtest_repeat_test") {
 executable("gtest_sole_header_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest_sole_header_test.cc",
+    "src/googletest/test/gtest_sole_header_test.cc",
   ]
   deps = [
     ":gtest",
@@ -206,7 +206,7 @@ executable("gtest_sole_header_test") {
 executable("gtest_stress_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest_stress_test.cc",
+    "src/googletest/test/gtest_stress_test.cc",
   ]
   configs += [ ":gtest_private_config" ]
   deps = [
@@ -217,7 +217,7 @@ executable("gtest_stress_test") {
 executable("gtest_unittest_api_test") {
   testonly = true
   sources = [
-    "googletest/test/gtest-unittest-api_test.cc",
+    "src/googletest/test/gtest-unittest-api_test.cc",
   ]
   deps = [
     ":gtest",
@@ -242,11 +242,11 @@ group("gtest_all_tests") {
 
 config("gmock_private_config") {
   visibility = [ ":*" ]
-  include_dirs = [ "googlemock" ]
+  include_dirs = [ "src/googlemock" ]
 }
 
 config("gmock_config") {
-  include_dirs = [ "googlemock/include" ]
+  include_dirs = [ "src/googlemock/include" ]
 
   cflags_cc = [
     # The MOCK_METHODn() macros do not specify "override", which triggers this
@@ -264,33 +264,33 @@ config("gmock_config") {
 static_library("gmock") {
   testonly = true
   public = [
-    "googlemock/include/gmock/gmock.h",
+    "src/googlemock/include/gmock/gmock.h",
   ]
   sources = [
-    "googlemock/include/gmock/gmock-actions.h",
-    "googlemock/include/gmock/gmock-cardinalities.h",
-    "googlemock/include/gmock/gmock-generated-actions.h",
-    "googlemock/include/gmock/gmock-generated-function-mockers.h",
-    "googlemock/include/gmock/gmock-generated-matchers.h",
-    "googlemock/include/gmock/gmock-generated-nice-strict.h",
-    "googlemock/include/gmock/gmock-matchers.h",
-    "googlemock/include/gmock/gmock-more-actions.h",
-    "googlemock/include/gmock/gmock-more-matchers.h",
-    "googlemock/include/gmock/gmock-spec-builders.h",
-    "googlemock/include/gmock/internal/custom/gmock-generated-actions.h",
-    "googlemock/include/gmock/internal/custom/gmock-matchers.h",
-    "googlemock/include/gmock/internal/custom/gmock-port.h",
-    "googlemock/include/gmock/internal/gmock-generated-internal-utils.h",
-    "googlemock/include/gmock/internal/gmock-internal-utils.h",
-    "googlemock/include/gmock/internal/gmock-port.h",
-    "googlemock/src/gmock-all.cc",
-    "googlemock/src/gmock-cardinalities.cc",
-    "googlemock/src/gmock-internal-utils.cc",
-    "googlemock/src/gmock-matchers.cc",
-    "googlemock/src/gmock-spec-builders.cc",
-    "googlemock/src/gmock.cc",
+    "src/googlemock/include/gmock/gmock-actions.h",
+    "src/googlemock/include/gmock/gmock-cardinalities.h",
+    "src/googlemock/include/gmock/gmock-generated-actions.h",
+    "src/googlemock/include/gmock/gmock-generated-function-mockers.h",
+    "src/googlemock/include/gmock/gmock-generated-matchers.h",
+    "src/googlemock/include/gmock/gmock-generated-nice-strict.h",
+    "src/googlemock/include/gmock/gmock-matchers.h",
+    "src/googlemock/include/gmock/gmock-more-actions.h",
+    "src/googlemock/include/gmock/gmock-more-matchers.h",
+    "src/googlemock/include/gmock/gmock-spec-builders.h",
+    "src/googlemock/include/gmock/internal/custom/gmock-generated-actions.h",
+    "src/googlemock/include/gmock/internal/custom/gmock-matchers.h",
+    "src/googlemock/include/gmock/internal/custom/gmock-port.h",
+    "src/googlemock/include/gmock/internal/gmock-generated-internal-utils.h",
+    "src/googlemock/include/gmock/internal/gmock-internal-utils.h",
+    "src/googlemock/include/gmock/internal/gmock-port.h",
+    "src/googlemock/src/gmock-all.cc",
+    "src/googlemock/src/gmock-cardinalities.cc",
+    "src/googlemock/src/gmock-internal-utils.cc",
+    "src/googlemock/src/gmock-matchers.cc",
+    "src/googlemock/src/gmock-spec-builders.cc",
+    "src/googlemock/src/gmock.cc",
   ]
-  sources -= [ "googlemock/src/gmock-all.cc" ]
+  sources -= [ "src/googlemock/src/gmock-all.cc" ]
   public_configs = [ ":gmock_config" ]
   configs += [ ":gmock_private_config" ]
   deps = [
@@ -301,7 +301,7 @@ static_library("gmock") {
 static_library("gmock_main") {
   testonly = true
   sources = [
-    "googlemock/src/gmock_main.cc",
+    "src/googlemock/src/gmock_main.cc",
   ]
   public_deps = [
     ":gmock",
@@ -312,19 +312,19 @@ static_library("gmock_main") {
 executable("gmock_all_test") {
   testonly = true
   sources = [
-    "googlemock/test/gmock-actions_test.cc",
-    "googlemock/test/gmock-cardinalities_test.cc",
-    "googlemock/test/gmock-generated-actions_test.cc",
-    "googlemock/test/gmock-generated-function-mockers_test.cc",
-    "googlemock/test/gmock-generated-internal-utils_test.cc",
-    "googlemock/test/gmock-generated-matchers_test.cc",
-    "googlemock/test/gmock-internal-utils_test.cc",
-    "googlemock/test/gmock-matchers_test.cc",
-    "googlemock/test/gmock-more-actions_test.cc",
-    "googlemock/test/gmock-nice-strict_test.cc",
-    "googlemock/test/gmock-port_test.cc",
-    "googlemock/test/gmock-spec-builders_test.cc",
-    "googlemock/test/gmock_test.cc",
+    "src/googlemock/test/gmock-actions_test.cc",
+    "src/googlemock/test/gmock-cardinalities_test.cc",
+    "src/googlemock/test/gmock-generated-actions_test.cc",
+    "src/googlemock/test/gmock-generated-function-mockers_test.cc",
+    "src/googlemock/test/gmock-generated-internal-utils_test.cc",
+    "src/googlemock/test/gmock-generated-matchers_test.cc",
+    "src/googlemock/test/gmock-internal-utils_test.cc",
+    "src/googlemock/test/gmock-matchers_test.cc",
+    "src/googlemock/test/gmock-more-actions_test.cc",
+    "src/googlemock/test/gmock-nice-strict_test.cc",
+    "src/googlemock/test/gmock-port_test.cc",
+    "src/googlemock/test/gmock-spec-builders_test.cc",
+    "src/googlemock/test/gmock_test.cc",
   ]
   configs += [
     ":gmock_private_config",
@@ -340,9 +340,9 @@ executable("gmock_all_test") {
 executable("gmock_link_test") {
   testonly = true
   sources = [
-    "googlemock/test/gmock_link2_test.cc",
-    "googlemock/test/gmock_link_test.cc",
-    "googlemock/test/gmock_link_test.h",
+    "src/googlemock/test/gmock_link2_test.cc",
+    "src/googlemock/test/gmock_link_test.cc",
+    "src/googlemock/test/gmock_link_test.h",
   ]
   configs += [ ":gmock_private_config" ]
   deps = [
@@ -355,7 +355,7 @@ executable("gmock_link_test") {
 executable("gmock_stress_test") {
   testonly = true
   sources = [
-    "googlemock/test/gmock_stress_test.cc",
+    "src/googlemock/test/gmock_stress_test.cc",
   ]
   configs += [ ":gmock_private_config" ]
   deps = [
