@@ -267,7 +267,7 @@ where
                     .metrics_reporter
                     .emit_event(ApiEvent::UpdateManagerCheckNowResult(res));
 
-                responder.send(&mut res).context("error sending response")?;
+                responder.send(&mut res).context("error sending CheckNow response")?;
             }
 
             ManagerRequest::PerformPendingReboot { responder } => {
@@ -303,12 +303,14 @@ where
 
                 Self::handle_set_target(server, channel).await;
 
-                responder.send().context("error sending response")?;
+                responder.send().context("error sending SetTarget response from ChannelControl")?;
             }
             ChannelControlRequest::GetTarget { responder } => {
                 let app_set = server.borrow().app_set.clone();
                 let channel = app_set.get_target_channel().await;
-                responder.send(&channel).context("error sending response")?;
+                responder
+                    .send(&channel)
+                    .context("error sending GetTarget response from ChannelControl")?;
             }
             ChannelControlRequest::GetCurrent { responder } => {
                 let (current_channel, app_set) = {
@@ -320,7 +322,9 @@ where
                     None => app_set.get_current_channel().await,
                 };
 
-                responder.send(&channel).context("error sending response")?;
+                responder
+                    .send(&channel)
+                    .context("error sending GetCurrent response from ChannelControl")?;
             }
             ChannelControlRequest::GetTargetList { responder } => {
                 let server = server.borrow();
@@ -332,7 +336,7 @@ where
                 };
                 responder
                     .send(&mut channel_names.iter().copied())
-                    .context("error sending channel list response")?;
+                    .context("error sending channel list response from ChannelControl")?;
             }
         }
         Ok(())
@@ -352,7 +356,9 @@ where
                     Some(channel) => channel.to_string(),
                     None => app_set.get_current_channel().await,
                 };
-                responder.send(&channel).context("error sending response")?;
+                responder
+                    .send(&channel)
+                    .context("error sending GetCurrent response from Provider")?;
             }
         }
         Ok(())
