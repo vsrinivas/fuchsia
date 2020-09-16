@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("fbl") {
   sdk = "source"
   sdk_headers = [
@@ -10,14 +12,16 @@ zx_library("fbl") {
     "fbl/array.h",
     "fbl/auto_call.h",
     "fbl/auto_lock.h",
+    "fbl/bits.h",
     "fbl/conditional_select_nospec.h",
     "fbl/condition_variable.h",
     "fbl/confine_array_index.h",
-    "fbl/deleter.h",
     "fbl/enum_bits.h",
     "fbl/function.h",
+    "fbl/futex.h",
     "fbl/hard_int.h",
     "fbl/inline_array.h",
+    "fbl/intrusive_container_node_utils.h",
     "fbl/intrusive_container_utils.h",
     "fbl/intrusive_double_list.h",
     "fbl/intrusive_hash_table.h",
@@ -33,11 +37,12 @@ zx_library("fbl") {
     "fbl/ref_counted_internal.h",
     "fbl/ref_counted_upgradeable.h",
     "fbl/ref_ptr.h",
+    "fbl/ring_buffer.h",
     "fbl/slab_allocator.h",
     "fbl/slab_malloc.h",
     "fbl/span.h",
-    "fbl/string.h",
     "fbl/string_buffer.h",
+    "fbl/string.h",
     "fbl/string_piece.h",
     "fbl/string_printf.h",
     "fbl/string_traits.h",
@@ -45,6 +50,7 @@ zx_library("fbl") {
     "fbl/unique_fd.h",
     "fbl/vector.h",
   ]
+  sdk_migrated = true
   host = true
   kernel = true
   static = true

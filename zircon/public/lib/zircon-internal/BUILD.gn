@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("zircon-internal") {
+  public_deps = [ "//zircon/system/ulib/zircon-internal" ]
+}
+
+# As a special case, required by //third_party/openssh-portable:fuchsia-compat
+config("zircon-internal.config") {
+  include_dirs = [ "//zircon/system/ulib/zircon-internal/include" ]
+}

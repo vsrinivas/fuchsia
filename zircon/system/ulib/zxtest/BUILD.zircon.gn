@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("zxtest") {
   host = true
   sdk = "source"
@@ -19,6 +21,7 @@ zx_library("zxtest") {
     "zxtest/base/types.h",
     "zxtest/base/runner.h",
   ]
+  sdk_migrated = true
   sources = [
     "assertion.cc",
     "c-wrappers.cc",

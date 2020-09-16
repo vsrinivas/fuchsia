@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("zbi") {
   sdk = "static"
   sdk_headers = [
@@ -9,6 +11,8 @@ zx_library("zbi") {
     "lib/zbi/zbi-zx.h",
     "lib/zbi/zbi.h",
   ]
+  sdk_migrated = true
+
   host = true
   kernel = true
   static = true

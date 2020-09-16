@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+# TODO(54160) Keep in sync with BUILD.gn
+
 zx_library("vm") {
   kernel = true
   sources = [

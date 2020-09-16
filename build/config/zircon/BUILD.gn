@@ -650,6 +650,7 @@ config("static-libc++") {
     # the toolchain, because -lc++ would look for the shared library.
     ldflags = [
       "-nostdlib++",
+
       # NOTE: the path below was relative to toolchain.tool_dir in the Zircon build
       # but the Fuchsia one doesn't support GCC-based host builds at all, so this
       # is assuming Clang is always used instead.
@@ -748,7 +749,7 @@ config("temporarily_disable_ubsan_do_not_use") {
 
     # TODO(41894): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/ulib/zxtest:*",
+    "$zx/system/ulib/zxtest:*",
 
     # TODO(42496): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.

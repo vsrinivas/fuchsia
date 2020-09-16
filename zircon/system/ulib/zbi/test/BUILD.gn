@@ -29,8 +29,8 @@ test("zbi") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zbi",
   ]
   if (is_fuchsia) {
     deps += [

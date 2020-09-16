@@ -36,7 +36,6 @@ test("kernel-mexec-test") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -45,6 +44,7 @@ test("kernel-mexec-test") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/kernel-mexec",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zbi",
   ]
 }
 

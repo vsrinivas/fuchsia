@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_alias.gni")
+
+group("fit") {
+  public_deps = [ "//zircon/system/ulib/fit" ]
+}
+
+sdk_alias("fit_sdk") {
+  target = "//zircon/system/ulib/fit:fit_sdk"
+  type = "atom"
+}

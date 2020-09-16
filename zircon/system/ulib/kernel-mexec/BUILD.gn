@@ -25,11 +25,11 @@ zx_library("kernel-mexec") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zbi",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 

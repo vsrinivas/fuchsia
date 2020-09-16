@@ -16,12 +16,10 @@ devicetree/
 elfload/
 elf-psabi/
 explicit-memory/
-fbl/
 ffl/
 fidl/
 fidl_base/
 fidl-llcpp/
-fit/
 host/
 hwreg/
 hwreg-mock/
@@ -47,10 +45,7 @@ uart-mock/
 usbhost-static/
 vdso-code-header/
 x86/
-zbi/
 zbitl/
 zircon-headers/
-zircon-internal/
 zstd/
 zxc/
-zxtest/
