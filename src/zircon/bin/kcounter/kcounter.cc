@@ -12,6 +12,7 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
@@ -146,12 +147,16 @@ int main(int argc, char** argv) {
   };
 
   size_t times = 1;
-  zx_time_t deadline = 0;
+  zx_time_t deadline = zx_clock_get_monotonic();
   bool match_failed = false;
+
+  if (cmdline.period != 0) {
+    printf("Dumping counters every %d seconds.  Press any key to stop.\n", cmdline.period);
+  }
 
   while (true) {
     if (cmdline.period != 0) {
-      deadline = zx_deadline_after(ZX_SEC(cmdline.period));
+      deadline += ZX_SEC(cmdline.period);
       printf("[%zu]\n", times);
     }
 
@@ -242,7 +247,23 @@ int main(int argc, char** argv) {
       break;
     }
 
-    zx_nanosleep(deadline);
+    zx_time_t now = zx_clock_get_monotonic();
+    zx_duration_t timeout = zx_time_sub_time(deadline, now);
+    if (timeout > 0) {
+      struct pollfd pfd = {.fd = STDIN_FILENO, .events = POLLIN, .revents = 0};
+      int msec_timeout = static_cast<int>(std::min<zx_duration_t>(
+          (timeout + ZX_MSEC(1) - 1) / ZX_MSEC(1), std::numeric_limits<int>::max()));
+
+      int poll_result = poll(&pfd, 1, msec_timeout);
+      if (poll_result > 0) {
+        printf("Shutting down\n");
+        break;
+      }
+    } else {
+      // We are falling behind.   Reset our deadline to catch up
+      deadline = now;
+    }
+
     ++times;
   }  // while
 
