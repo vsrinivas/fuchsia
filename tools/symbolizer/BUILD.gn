@@ -1,0 +1,59 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
+import("//build/test.gni")
+
+if (is_host) {
+  source_set("src") {
+    sources = [
+      "command_line_options.cc",
+      "log_parser.cc",
+      "symbolizer_impl.cc",
+    ]
+    deps = [
+      "//src/lib/fxl",
+      "//zircon/system/ulib/cmdline",
+    ]
+  }
+
+  executable("symbolizer") {
+    sources = [ "main.cc" ]
+    deps = [
+      ":src",
+      "//src/lib/fxl",
+    ]
+  }
+
+  sdk_host_tool("sdk") {
+    category = "partner"
+    deps = [ ":symbolizer" ]
+    output_name = "symbolizer"
+  }
+
+  test("symbolizer_tests") {
+    sources = [
+      "command_line_options_test.cc",
+      "log_parser_test.cc",
+    ]
+    deps = [
+      ":src",
+      "//src/lib/files",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
+    ]
+  }
+}
+
+install_host_tools("host") {
+  deps = [ ":symbolizer" ]
+  outputs = [ "symbolizer" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":symbolizer_tests($host_toolchain)" ]
+}
