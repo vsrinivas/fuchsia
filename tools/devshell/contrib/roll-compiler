@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -96,22 +96,20 @@ before commands are run for any package.
         package_tags = {
             package["pin"]["package"]: PackageTag(package) for package in packages
         }
-        tag_set = set(package_tags.itervalues())
+        tag_set = set(t for t in package_tags)
         if len(tag_set) != 1:
             sys.stderr.write(
-                "Not all packages have matching %s tags at version %s:\n"
-                % (args.tag, args.version)
-            )
+                f"Not all packages have matching {args.tag} tags at version {args.version}:\n")
             json.dump(package_tags, sys.stderr, sort_keys=True, indent=4)
             sys.stderr.write("\n")
             sys.exit(1)
         [tag] = tag_set
 
-        print "Resolved %s (%s) to %s" % (package, args.version, tag)
+        print(f"Resolved {package} ({args.version}) to {tag}")
         return package, tag
 
     def DryRun(args):
-        print args
+        print(args)
 
     run = DryRun if args.dry_run else subprocess.check_call
 
