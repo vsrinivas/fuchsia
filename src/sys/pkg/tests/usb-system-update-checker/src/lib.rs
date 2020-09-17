@@ -107,12 +107,22 @@ impl MockInstaller {
         while let Some(request) = stream.try_next().await.expect("try_next() succeeds") {
             match request {
                 InstallerRequest::StartUpdate {
-                    url: _,
-                    options: _,
+                    url,
+                    options,
                     monitor,
                     reboot_controller,
                     responder,
                 } => {
+                    let package_url =
+                        PkgUrl::parse(&url.url).expect("Installer is passed a valid URL");
+                    assert!(
+                        package_url.package_hash().is_some(),
+                        "Package url {} should have a hash!",
+                        package_url
+                    );
+                    assert_eq!(options.initiator, Some(Initiator::User));
+                    assert_eq!(options.allow_attach_to_existing_attempt, Some(false));
+                    assert_eq!(options.should_write_recovery, Some(true));
                     responder
                         .send(&mut Ok("01234567-89ab-cdef-0123-456789abcdef".to_owned()))
                         .expect("Send response succeeds");
