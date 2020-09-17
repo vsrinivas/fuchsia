@@ -39,6 +39,7 @@
 #include "src/storage/lib/paver/stream-reader.h"
 #include "src/storage/lib/paver/validation.h"
 #include "src/storage/lib/paver/vmo-reader.h"
+#include "sysconfig-fidl.h"
 
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 
@@ -979,6 +980,22 @@ void BootManager::SetActiveConfigurationHealthy(
   LOG("Set active configuration as healthy\n");
 
   completer.Reply(ZX_OK);
+}
+
+void Paver::FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync completer) {
+  FindSysconfig(std::move(sysconfig));
+}
+
+void Paver::FindSysconfig(zx::channel sysconfig) {
+  // Use global devfs if one wasn't injected via set_devfs_root.
+  if (!devfs_root_) {
+    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+  }
+  if (!svc_root_) {
+    svc_root_ = OpenServiceRoot();
+  }
+  Sysconfig::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_), context_,
+                  std::move(sysconfig));
 }
 
 }  // namespace paver

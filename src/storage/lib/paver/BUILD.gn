@@ -22,6 +22,7 @@ source_set("paver-core") {
     "partition-client.cc",
     "paver.cc",
     "stream-reader.cc",
+    "sysconfig-fidl.cc",
     "utils.cc",
     "validation.cc",
   ]

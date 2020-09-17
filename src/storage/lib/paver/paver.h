@@ -33,6 +33,10 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
 
   void FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync completer) override;
 
+  void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync completer) override;
+
+  void FindSysconfig(zx::channel sysconfig);
+
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
   void set_svc_root(zx::channel svc_root) { svc_root_ = std::move(svc_root); }

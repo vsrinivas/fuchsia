@@ -202,6 +202,7 @@ bool AstroPartitioner::SupportsPartition(const PartitionSpec& spec) const {
                                            PartitionSpec(paver::Partition::kVbMetaA),
                                            PartitionSpec(paver::Partition::kVbMetaB),
                                            PartitionSpec(paver::Partition::kVbMetaR),
+                                           PartitionSpec(paver::Partition::kSysconfig),
                                            PartitionSpec(paver::Partition::kAbrMeta),
                                            PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
 
@@ -258,12 +259,15 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
     case Partition::kZirconR:
       return skip_block_->FindPartition(GUID_ZIRCON_R_VALUE);
 
+    case Partition::kSysconfig:
     case Partition::kVbMetaA:
     case Partition::kVbMetaB:
     case Partition::kVbMetaR:
     case Partition::kAbrMeta: {
       const auto type = [&]() {
         switch (spec.partition) {
+          case Partition::kSysconfig:
+            return sysconfig::SyncClient::PartitionType::kSysconfig;
           case Partition::kVbMetaA:
             return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataA;
           case Partition::kVbMetaB:

@@ -88,6 +88,9 @@ class Paver : public PaverInterface {
   // Monitors the vmo progress, and calls into paver service once finished.
   int MonitorBuffer();
 
+  // Clear Sysconfig if the device has one.
+  zx_status_t ClearSysconfig();
+
   tftp_status ProcessAsFirmwareImage(std::string_view host_filename);
 
   std::atomic<bool> in_progress_ = false;

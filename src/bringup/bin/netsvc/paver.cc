@@ -27,43 +27,6 @@
 #include "zircon/errors.h"
 
 namespace netsvc {
-namespace {
-
-zx_status_t ClearSysconfig(const fbl::unique_fd& devfs_root) {
-  std::optional<sysconfig::SyncClient> client;
-  zx_status_t status = sysconfig::SyncClient::Create(devfs_root, &client);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    // We only clear sysconfig on devices with sysconfig partition.
-    return ZX_OK;
-  } else if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Failed to create sysconfig SyncClient.\n");
-    return status;
-  }
-  constexpr auto kPartition = sysconfig::SyncClient::PartitionType::kSysconfig;
-  size_t size;
-  if (auto status_get_size = client->GetPartitionSize(kPartition, &size) != ZX_OK) {
-    fprintf(stderr, "Failed to get partition size. %s\n", zx_status_get_string(status_get_size));
-    return status_get_size;
-  }
-
-  // We assume the vmo is zero initialized.
-  zx::vmo vmo;
-  status = zx::vmo::create(fbl::round_up(size, ZX_PAGE_SIZE), 0, &vmo);
-  if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Failed to create vmo.\n");
-    return status;
-  }
-
-  status = client->WritePartition(kPartition, vmo, 0);
-  if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Failed to write to sysconfig partition.\n");
-    return status;
-  }
-
-  return ZX_OK;
-}
-
-}  // namespace
 
 Paver* Paver::Get() {
   static Paver* instance_ = nullptr;
@@ -332,7 +295,46 @@ zx_status_t Paver::WriteABImage(::llcpp::fuchsia::paver::DataSink::SyncClient da
     }
   }
 
-  return ClearSysconfig(devfs_root_);
+  return ClearSysconfig();
+}
+
+zx_status_t Paver::ClearSysconfig() {
+  zx::channel sysconfig_local, sysconfig_remote;
+  if (auto status = zx::channel::create(0, &sysconfig_local, &sysconfig_remote); status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to create channel\n");
+    return status;
+  }
+
+  auto status_find_sysconfig = paver_svc_->FindSysconfig(std::move(sysconfig_remote));
+  if (status_find_sysconfig.status() != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to find sysconfig\n");
+    return status_find_sysconfig.status();
+  }
+
+  ::llcpp::fuchsia::paver::Sysconfig::SyncClient client(std::move(sysconfig_local));
+
+  auto wipe_result = client.Wipe();
+  auto wipe_status =
+      wipe_result.status() == ZX_OK ? wipe_result.value().status : wipe_result.status();
+  if (wipe_status == ZX_ERR_PEER_CLOSED) {
+    // If the first fidl call after connection returns ZX_ERR_PEER_CLOSED,
+    // consider it as not supported.
+    fprintf(stderr, "netsvc: sysconfig is not supported\n");
+    return ZX_OK;
+  } else if (wipe_status != ZX_OK) {
+    fprintf(stderr, "netsvc: Failed to wipe sysconfig partition.\n");
+    return wipe_status;
+  }
+
+  auto flush_result = client.Flush();
+  auto flush_status =
+      flush_result.status() == ZX_OK ? flush_result.value().status : flush_result.status();
+  if (flush_status != ZX_OK) {
+    fprintf(stderr, "netsvc: Failed to flush sysconfig partition.\n");
+    return flush_status;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t Paver::OpenDataSink(

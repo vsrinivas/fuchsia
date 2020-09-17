@@ -120,6 +120,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);
   }
 
+  void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync _completer) override {}
+
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override {
     AppendCommand(Command::kQueryActiveConfiguration);
     completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);

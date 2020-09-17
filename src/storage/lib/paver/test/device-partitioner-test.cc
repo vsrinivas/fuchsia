@@ -1571,6 +1571,7 @@ TEST(AstroPartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kVbMetaA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kVbMetaB)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kSysconfig)));
 }
 
 TEST(AstroPartitionerTests, FindPartitionTest) {
@@ -1593,6 +1594,7 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kSysconfig)));
 
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
 }
@@ -1616,6 +1618,7 @@ TEST(AstroPartitionerTests, SupportsPartition) {
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaR)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kSysconfig)));
   EXPECT_TRUE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
 

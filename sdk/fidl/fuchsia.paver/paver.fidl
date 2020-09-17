@@ -100,6 +100,9 @@ protocol Paver {
     /// `boot_manager` will be closed on error, with an epitaph provided on failure reason.
     /// ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
     FindBootManager(request<BootManager> boot_manager);
+
+    /// Find Sysconfig service.
+    FindSysconfig(request<Sysconfig> sysconfig);
 };
 
 /// Protocol for reading and writing boot partitions.
@@ -260,4 +263,24 @@ protocol BootManager {
 
     /// Flush all previously buffered writes to persistent storage.
     Flush() -> (zx.status status);
+};
+
+/// Protocol that provides access to sysconfig-data sub-partition in sysconfig partition.
+/// The main user of the protocol are pkg-solver and system update-checker, which need to
+/// read/write sysconfig-data channel.
+protocol Sysconfig {
+    /// Read from the sub-partition
+    Read() -> (fuchsia.mem.Buffer data) error zx.status;
+
+    /// Writes to the sub-partition
+    Write(fuchsia.mem.Buffer payload) -> (zx.status status);
+
+    /// Get sub-partition size.
+    GetPartitionSize() -> (uint64 size) error zx.status;
+
+    /// Flush all previously buffered data to persistent storage.
+    Flush() -> (zx.status status);
+
+    /// Wipe all data in the sub-partition (write 0 to all bytes).
+    Wipe() -> (zx.status status);
 };

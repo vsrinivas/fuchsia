@@ -362,6 +362,15 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     data_sink_.emplace(std::move(local));
   }
 
+  void FindSysconfig() {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    auto result = client_->FindSysconfig(std::move(remote));
+    ASSERT_OK(result.status());
+    sysconfig_.emplace(std::move(local));
+  }
+
   void SetAbr(const AbrData& data) {
     auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
                 (60 * kKilobyte);
@@ -432,8 +441,13 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     memcpy(static_cast<uint8_t*>(device_->mapper().start()) + start, data, num_bytes);
   }
 
+  void TestSysconfigWriteBufferedClient(uint32_t offset_in_pages, uint32_t sysconfig_pages);
+
+  void TestSysconfigWipeBufferedClient(uint32_t offset_in_pages, uint32_t sysconfig_pages);
+
   std::optional<::llcpp::fuchsia::paver::BootManager::SyncClient> boot_manager_;
   std::optional<::llcpp::fuchsia::paver::DataSink::SyncClient> data_sink_;
+  std::optional<::llcpp::fuchsia::paver::Sysconfig::SyncClient> sysconfig_;
 
   std::unique_ptr<SkipBlockDevice> device_;
   fbl::unique_fd fvm_;
@@ -1071,12 +1085,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-  // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
-  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
-
+AbrData GetAbrWearlevelingSupportingLayout() {
   // Unbootable slot a, successful active slot b
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].tries_remaining = 0;
@@ -1086,6 +1095,17 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
   abr_data.slot_data[1].successful_boot = 1;
   abr_data.slot_data[1].priority = 1;
   ComputeCrc(&abr_data);
+  return abr_data;
+}
+
+TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  // Unbootable slot a, successful active slot b
+  auto abr_data = GetAbrWearlevelingSupportingLayout();
   SetAbr(abr_data);
 
   // Layout will be updated. Since A/B state is one successful + one unbootable
@@ -1539,6 +1559,117 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 }
 
+void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset_in_pages,
+                                                                 uint32_t sysconfig_pages) {
+  {
+    auto result = sysconfig_->GetPartitionSize();
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_response());
+    ASSERT_EQ(result->result.response().size, sysconfig_pages * kPageSize);
+  }
+
+  {
+    ::llcpp::fuchsia::mem::Buffer payload;
+    CreatePayload(sysconfig_pages, &payload);
+    auto result = sysconfig_->Write(std::move(payload));
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    // Without flushing, data in the storage should remain unchanged.
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateUnwrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
+  }
+
+  {
+    auto result = sysconfig_->Flush();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateWrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
+  }
+
+  {
+    // Validate read.
+    auto result = sysconfig_->Read();
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_response());
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(result->result.response().data, sysconfig_pages));
+  }
+}
+
+TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutNotUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+
+  ASSERT_NO_FATAL_FAILURES(TestSysconfigWriteBufferedClient(0, 15 * 2));
+}
+
+TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  auto abr_data = GetAbrWearlevelingSupportingLayout();
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+
+  ASSERT_NO_FATAL_FAILURES(TestSysconfigWriteBufferedClient(2, 5 * 2));
+}
+
+void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_in_pages,
+                                                                uint32_t sysconfig_pages) {
+  {
+    auto result = sysconfig_->Wipe();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    // Without flushing, data in the storage should remain unchanged.
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateUnwrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
+  }
+
+  {
+    auto result = sysconfig_->Flush();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    ASSERT_NO_FATAL_FAILURES(AssertContents(14 * kSkipBlockSize + offset_in_pages * kPageSize,
+                                            sysconfig_pages * kPageSize, 0));
+  }
+}
+
+TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutNotUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+
+  ASSERT_NO_FATAL_FAILURES(TestSysconfigWipeBufferedClient(0, 15 * 2));
+}
+
+TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  auto abr_data = GetAbrWearlevelingSupportingLayout();
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+
+  ASSERT_NO_FATAL_FAILURES(TestSysconfigWipeBufferedClient(2, 5 * 2));
+}
+
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
 #if defined(__x86_64__)
@@ -1757,6 +1888,18 @@ TEST_F(PaverServiceLuisTest, CreateAbr) {
   zx::channel svc_root = GetSvcRoot();
   EXPECT_OK(
       abr::ClientFactory::Create(devmgr_.devfs_root().duplicate(), std::move(svc_root), context));
+}
+
+TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
+  ASSERT_NO_FATAL_FAILURES(InitializeLuisGPTPartitions());
+  zx::channel sysconfig_local, sysconfig_remote;
+  ASSERT_OK(zx::channel::create(0, &sysconfig_local, &sysconfig_remote));
+  auto result = client_->FindSysconfig(std::move(sysconfig_remote));
+  ASSERT_OK(result.status());
+
+  ::llcpp::fuchsia::paver::Sysconfig::SyncClient sysconfig(std::move(sysconfig_local));
+  auto wipe_result = sysconfig.Wipe();
+  ASSERT_EQ(wipe_result.status(), ZX_ERR_PEER_CLOSED);
 }
 
 }  // namespace

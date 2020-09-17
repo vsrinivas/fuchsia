@@ -37,6 +37,7 @@ enum class Partition {
   kZirconA,
   kZirconB,
   kZirconR,
+  kSysconfig,
   kVbMetaA,
   kVbMetaB,
   kVbMetaR,
