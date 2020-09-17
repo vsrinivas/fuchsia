@@ -4,7 +4,6 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker};
-use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogInterestSelector, LogListenerSafeMarker, LogRequest, LogRequestStream,
@@ -196,19 +195,13 @@ impl LogManager {
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
-                            let control_handle_arc = Arc::new(control_handle);
-                            self.try_add_interest_listener(&source, control_handle_arc.clone())
-                                .await;
+                            self.try_add_interest_listener(&source, control_handle).await;
                             let fut =
                                 FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
                             let res = sender.unbounded_send(fut);
                             if let Err(e) = res {
                                 warn!("error queuing log message drain: {}", e);
                             }
-                            // ack successful connections with 'empty' interest
-                            // for async clients
-                            let _ = control_handle_arc
-                                .send_on_register_interest(Interest { min_severity: None });
                         }
                         Err(e) => {
                             control_handle.shutdown();
@@ -222,19 +215,13 @@ impl LogManager {
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
-                            let control_handle_arc = Arc::new(control_handle);
-                            self.try_add_interest_listener(&source, control_handle_arc.clone())
-                                .await;
+                            self.try_add_interest_listener(&source, control_handle).await;
                             let fut =
                                 FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
                             let res = sender.unbounded_send(fut);
                             if let Err(e) = res {
                                 warn!("error queuing log message drain: {}", e);
                             }
-                            // ack successful connections with 'empty' interest
-                            // for async clients
-                            let _ = control_handle_arc
-                                .send_on_register_interest(Interest { min_severity: None });
                         }
                         Err(e) => {
                             control_handle.shutdown();
@@ -281,12 +268,13 @@ impl LogManager {
     async fn try_add_interest_listener(
         &self,
         source: &Arc<SourceIdentity>,
-        event_listener: Arc<LogSinkControlHandle>,
+        control_handle: LogSinkControlHandle,
     ) {
         if source.component_name.is_none() {
             return;
         }
 
+        let event_listener = Arc::new(control_handle);
         self.inner
             .lock()
             .await

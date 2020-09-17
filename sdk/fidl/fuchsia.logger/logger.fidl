@@ -148,13 +148,7 @@ protocol LogSink {
 
     /// LogSink implementers emit this event whenever the scope of their
     /// interest changes. Clients are expected to emit messages based on
-    /// the registered Interest. In the event that an empty interest is
-    /// conveyed, clients should emit messages based on their default
-    /// (compile time) configuration.
-    -> OnRegisterInterest(fuchsia.diagnostics.Interest interest);
-
-    /// Use OnRegisterInterest instead.
-    [Deprecated]
+    /// the updated Interest.
     -> OnInterestChanged(fuchsia.diagnostics.Interest interest);
 };
 
