@@ -14,9 +14,9 @@ use {
     fidl_fuchsia_device_test::{DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN},
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::{self as zx, DurationNum},
     futures::TryFutureExt,
+    log::error,
     std::{fs::File, path::PathBuf},
 };
 
@@ -115,7 +115,7 @@ impl Emulator {
 impl Drop for Emulator {
     fn drop(&mut self) {
         if self.dev.is_some() {
-            fx_log_err!("Did not call destroy() on Emulator");
+            error!("Did not call destroy() on Emulator");
         }
     }
 }

@@ -6,11 +6,11 @@ use {
     crate::util::open_rdwr,
     anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    log::{error, info},
     std::{
         fs::File,
         path::{Path, PathBuf},
@@ -134,17 +134,13 @@ impl DeviceWatcher {
                 let dev = match DeviceFile::open(&path) {
                     Ok(d) => d,
                     Err(e) => {
-                        fx_log_err!(
-                            "Failed to open file (path: {}) {:#?}",
-                            path.to_string_lossy(),
-                            e
-                        );
+                        error!("Failed to open file (path: {}) {:#?}", path.to_string_lossy(), e);
                         // Ignore failures potentially triggered by devices we're not interested in.
                         continue;
                     }
                 };
                 if dev.topo_path().starts_with(topo_path) {
-                    fx_log_info!("found device: {:#?}", dev.path());
+                    info!("found device: {:#?}", dev.path());
                     return Ok(dev);
                 }
             }
@@ -187,9 +183,8 @@ mod tests {
     use fidl_fuchsia_device_test::{
         DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
     };
-    fn timeout() -> zx::Duration {
-        zx::Duration::from_seconds(10)
-    }
+
+    const TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
 
     fn create_test_dev(name: &str) -> Result<DeviceFile, Error> {
         let control = open_rdwr(CONTROL_DEVICE)?;
@@ -197,7 +192,7 @@ mod tests {
 
         let (local, remote) = zx::Channel::create()?;
         let (status, path) =
-            root_dev.create_device(name, Some(remote), zx::Time::after(timeout()))?;
+            root_dev.create_device(name, Some(remote), zx::Time::after(TIMEOUT))?;
         zx::Status::ok(status)?;
 
         let path =
@@ -216,12 +211,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_new() {
-        fuchsia_syslog::init_with_tags(&[]).expect("Initializing syslog should not fail");
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
         let dev = create_test_dev("test-watch-new").expect("Failed to create test device");
-        fx_log_err!("created: {:?}", dev.topo_path());
+        error!("created: {:?}", dev.topo_path());
         let found = watcher
             .watch_new(dev.topo_path(), WatchFilter::AddedOnly)
             .await
@@ -230,7 +224,7 @@ mod tests {
         assert_eq!(dev.topo_path(), found.topo_path());
 
         // Calling with the `existing` flag should succeed.
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
         let found = watcher
@@ -248,7 +242,7 @@ mod tests {
     #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_existing() {
         let dev = create_test_dev("test-watch-existing").expect("Failed to create test device");
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
         let found = watcher
@@ -266,7 +260,7 @@ mod tests {
     #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_removed() {
         let dev = create_test_dev("test-watch-removed").expect("Failed to create test device");
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
 
