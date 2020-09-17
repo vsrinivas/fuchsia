@@ -37,7 +37,7 @@
 #define F(BCME_STATUS) X(BCME_STATUS)
 #define X(BCME_STATUS) \
   case BCME_STATUS:    \
-    return "BCME_STATUS";
+    return #BCME_STATUS;
 const char* brcmf_fil_get_errstr(bcme_status_t err) {
   switch (err) { BCME_STATUS_LIST };
   return "(unknown)";
