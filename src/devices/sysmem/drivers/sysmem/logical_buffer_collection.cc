@@ -244,7 +244,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   zx_status_t status =
       get_channel_koids(buffer_collection_token, &token_client_koid, &token_server_koid);
   if (status != ZX_OK) {
-    LogError("Failed to get channel koids");
+    LogErrorStatic("Failed to get channel koids");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -254,7 +254,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   if (!token) {
     // The most likely scenario for why the token was not found is that Sync() was not called on
     // either the BufferCollectionToken or the BufferCollection.
-    LogError("Could not find token by server channel koid");
+    LogErrorStatic("Could not find token by server channel koid");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -498,11 +498,49 @@ void LogicalBufferCollection::LogInfo(const char* format, ...) {
   va_end(args);
 }
 
-void LogicalBufferCollection::LogError(const char* format, ...) {
+void LogicalBufferCollection::LogErrorStatic(const char* format, ...) {
   va_list args;
   va_start(args, format);
   vLog(true, "LogicalBufferCollection", "error", format, args);
   va_end(args);
+}
+
+void LogicalBufferCollection::VLogClientError(const ClientInfo* client_info, const char* format,
+                                              va_list args) {
+  const char* collection_name = name_ ? name_->second.c_str() : "Unknown";
+  fbl::String formatted = fbl::StringVPrintf(format, args);
+  if (client_info && !client_info->name.empty()) {
+    fbl::String client_name =
+        fbl::StringPrintf(" - collection \"%s\" - client \"%s\" id %ld", collection_name,
+                          client_info->name.c_str(), client_info->id);
+
+    formatted = fbl::String::Concat({formatted, client_name});
+  } else {
+    fbl::String client_name = fbl::StringPrintf(" - collection \"%s\"", collection_name);
+
+    formatted = fbl::String::Concat({formatted, client_name});
+  }
+  zxlogf(ERROR, "[LogicalBufferCollection error] %s", formatted.c_str());
+  va_end(args);
+}
+
+void LogicalBufferCollection::LogClientError(const ClientInfo* client_info, const char* format,
+                                             ...) {
+  va_list args;
+  va_start(args, format);
+  VLogClientError(client_info, format, args);
+  va_end(args);
+}
+
+void LogicalBufferCollection::LogError(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  VLogError(format, args);
+  va_end(args);
+}
+
+void LogicalBufferCollection::VLogError(const char* format, va_list args) {
+  VLogClientError(current_client_info_, format, args);
 }
 
 void LogicalBufferCollection::MaybeAllocate() {
@@ -555,7 +593,8 @@ void LogicalBufferCollection::TryAllocate() {
   // constraints_list_.
   for (auto& [key, value] : collection_views_) {
     ZX_DEBUG_ASSERT(key->has_constraints());
-    constraints_list_.emplace_back(key->TakeConstraints());
+    constraints_list_.emplace_back(key->TakeConstraints(),
+                                   ClientInfo{key->debug_name(), key->debug_id()});
     ZX_DEBUG_ASSERT(!key->has_constraints());
   }
 
@@ -710,7 +749,9 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
     // MaybeAllocate() takes care of calling Fail().
 
     if (collection_ptr->has_constraints()) {
-      constraints_list_.emplace_back(collection_ptr->TakeConstraints());
+      constraints_list_.emplace_back(
+          collection_ptr->TakeConstraints(),
+          ClientInfo{collection_ptr->debug_name(), collection_ptr->debug_id()});
     }
 
     auto self = collection_ptr->parent_shared();
@@ -733,7 +774,7 @@ bool LogicalBufferCollection::IsMinBufferSizeSpecifiedByAnyParticipant() {
                   std::find_if(collection_views_.begin(), collection_views_.end(),
                                [](auto& item_pair) { return item_pair.first->has_constraints(); }));
   ZX_DEBUG_ASSERT(!constraints_list_.empty());
-  for (auto& constraints : constraints_list_) {
+  for (auto& [constraints, client_info_unused] : constraints_list_) {
     if (constraints.has_buffer_memory_constraints() &&
         constraints.buffer_memory_constraints().has_min_size_bytes() &&
         constraints.buffer_memory_constraints().min_size_bytes() > 0) {
@@ -797,14 +838,15 @@ bool LogicalBufferCollection::CombineConstraints() {
   ZX_DEBUG_ASSERT(result);
   // Accumulate each participant's constraints.
   while (!constraints_list_.empty()) {
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder constraints_builder =
-        std::move(constraints_list_.front());
+    Constraints constraints_entry = std::move(constraints_list_.front());
     constraints_list_.pop_front();
+    current_client_info_ = &constraints_entry.client;
+    auto defer_reset = fit::defer([this] { current_client_info_ = nullptr; });
     if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kNotAggregated,
-                                                  &constraints_builder)) {
+                                                  &constraints_entry.builder)) {
       return false;
     }
-    auto constraints = constraints_builder.build();
+    auto constraints = constraints_entry.builder.build();
     if (!AccumulateConstraintBufferCollection(&acc, &constraints)) {
       // This is a failure.  The space of permitted settings contains no
       // points.
@@ -929,7 +971,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
   FIELD_DEFAULT(constraints, allow_clear_aux_buffers_for_secure,
                 !IsWriteUsage(constraints->usage()));
   if (!CheckSanitizeBufferUsage(stage, &constraints->get_builder_usage())) {
-    LOG(ERROR, "CheckSanitizeBufferUsage() failed");
+    LogError("CheckSanitizeBufferUsage() failed");
     return false;
   }
   if (constraints->max_buffer_count() == 0) {
@@ -2184,7 +2226,7 @@ zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait(async_dispatche
   ZX_DEBUG_ASSERT(!waiting_);
   zx_status_t status = zero_children_wait_.Begin(dispatcher);
   if (status != ZX_OK) {
-    LogError("zero_children_wait_.Begin() failed - status: %d", status);
+    LogErrorStatic("zero_children_wait_.Begin() failed - status: %d", status);
     return status;
   }
   waiting_ = true;

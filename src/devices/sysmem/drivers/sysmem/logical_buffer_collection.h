@@ -29,6 +29,11 @@ class BufferCollection;
 class MemoryAllocator;
 class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> {
  public:
+  struct ClientInfo {
+    std::string name;
+    zx_koid_t id;
+  };
+
   // In sysmem_tests, the max needed was observed to be 12400 bytes, so if we wanted to avoid heap
   // for allocating FIDL table fields, 32KiB would likely be enough most of the time.  However, the
   // difference isn't even reliably measurable sign out of the ~410us +/- ~10us  it takes to
@@ -79,6 +84,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void SetName(uint32_t priority, std::string name);
   void SetDebugTimeoutLogDeadline(int64_t deadline);
 
+  void LogClientError(const ClientInfo* client_info, const char* format, ...) __PRINTFLIKE(3, 4);
+  void VLogClientError(const ClientInfo* client_info, const char* format, va_list args);
+
   struct AllocationResult {
     const llcpp::fuchsia::sysmem2::BufferCollectionInfo* buffer_collection_info = nullptr;
     const zx_status_t status = ZX_OK;
@@ -98,6 +106,17 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
  private:
   enum class CheckSanitizeStage { kInitial, kNotAggregated, kAggregated };
 
+  struct Constraints {
+    Constraints(const Constraints&) = delete;
+    Constraints(Constraints&&) = default;
+    Constraints(llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder&& builder,
+                ClientInfo&& client)
+        : builder(std::move(builder)), client(std::move(client)) {}
+
+    llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder builder;
+    ClientInfo client;
+  };
+
   LogicalBufferCollection(Device* parent_device);
 
   // If |format| is nonnull, will log an error. This also cleans out a lot of
@@ -105,8 +124,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void Fail(const char* format, ...);
 
   static void LogInfo(const char* format, ...);
+  static void LogErrorStatic(const char* format, ...) __PRINTFLIKE(1, 2);
 
-  static void LogError(const char* format, ...);
+  // Uses the implicit |current_client_info_| to identify which client has an error.
+  void LogError(const char* format, ...) __PRINTFLIKE(2, 3);
+  void VLogError(const char* format, va_list args);
 
   void MaybeAllocate();
 
@@ -194,7 +216,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   CollectionMap collection_views_;
 
-  using ConstraintsList = std::list<llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder>;
+  using ConstraintsList = std::list<Constraints>;
   ConstraintsList constraints_list_;
 
   bool is_allocate_attempted_ = false;
@@ -210,6 +232,10 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   MemoryAllocator* memory_allocator_ = nullptr;
   std::optional<std::pair<uint32_t /*priority*/, std::string>> name_;
+
+  // Information about the current client - only valid while aggregating state for a particular
+  // client.
+  ClientInfo* current_client_info_ = nullptr;
 
   // We keep LogicalBufferCollection alive as long as there are child VMOs
   // outstanding (no revoking of child VMOs for now).

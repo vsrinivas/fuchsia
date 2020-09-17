@@ -74,8 +74,8 @@ class BufferCollection
 
   bool is_done();
 
-  const std::string& debug_name() const { return debug_name_; }
-  uint64_t debug_id() const { return debug_id_; }
+  const std::string& debug_name() const { return debug_info_.name; }
+  uint64_t debug_id() const { return debug_info_.id; }
 
  private:
   using V1CBufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
@@ -92,6 +92,9 @@ class BufferCollection
   uint32_t GetClientVmoRights();
   uint32_t GetClientAuxVmoRights();
   void MaybeCompleteWaitForBuffersAllocated();
+
+  // Hide parent method.
+  void FailAsync(zx_status_t status, const char* format, ...);
 
   fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder> CloneResultForSendingV2(
       const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
@@ -157,8 +160,7 @@ class BufferCollection
 
   bool is_done_ = false;
 
-  std::string debug_name_;
-  uint64_t debug_id_;
+  LogicalBufferCollection::ClientInfo debug_info_;
 
   inspect::Node node_;
   inspect::UintProperty debug_id_property_;

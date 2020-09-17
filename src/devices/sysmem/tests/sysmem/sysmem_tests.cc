@@ -1828,6 +1828,10 @@ TEST(Sysmem, OnlyNoneUsageFails) {
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
 
+  const char* kCollectionName = "TestCollection";
+  fuchsia_sysmem_BufferCollectionSetName(collection_client.get(), 1ul, kCollectionName,
+                                         strlen(kCollectionName));
+
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.none = fuchsia_sysmem_noneUsage;
   constraints->min_buffer_count_for_camping = 3;
@@ -1892,6 +1896,12 @@ TEST(Sysmem, NoneUsageAndOtherUsageFromSingleParticipantFails) {
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
 
+  const char* kClientName = "TestClient";
+  fuchsia_sysmem_BufferCollectionSetDebugClientInfo(collection_client.get(), kClientName,
+                                                    strlen(kClientName), 6u);
+  const char* kCollectionName = "TestCollection";
+  fuchsia_sysmem_BufferCollectionSetName(collection_client.get(), 1ul, kCollectionName,
+                                         strlen(kCollectionName));
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   // Specify both "none" and "cpu" usage from a single participant, which will
   // cause allocation failure.

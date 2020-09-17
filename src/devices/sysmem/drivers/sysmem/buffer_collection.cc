@@ -203,7 +203,7 @@ zx_status_t BufferCollection::SetConstraints(
         &allocator_, local_constraints ? &local_constraints.value() : nullptr,
         constraints_aux_buffers_ ? &constraints_aux_buffers_.value() : nullptr);
     if (!result.is_ok()) {
-      LOG(ERROR, "V2CopyFromV1BufferCollectionConstraints() failed");
+      parent_->LogClientError(&debug_info_, "V2CopyFromV1BufferCollectionConstraints() failed");
       return ZX_ERR_INVALID_ARGS;
     }
     ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
@@ -222,7 +222,7 @@ zx_status_t BufferCollection::SetConstraints(
     }
     auto result = sysmem::V2CopyFromV1BufferUsage(&allocator_, *source_buffer_usage);
     if (!result.is_ok()) {
-      LOG(ERROR, "V2CopyFromV1BufferUsage failed");
+      parent_->LogClientError(&debug_info_, "V2CopyFromV1BufferUsage failed");
       // Not expected given current impl of sysmem-version.
       return ZX_ERR_INTERNAL;
     }
@@ -390,11 +390,20 @@ zx_status_t BufferCollection::SetName(uint32_t priority, const char* name_data, 
 
 zx_status_t BufferCollection::SetDebugClientInfo(const char* name_data, size_t name_size,
                                                  uint64_t id) {
-  debug_name_ = std::string(name_data, name_size);
-  debug_id_ = id;
-  debug_id_property_ = node_.CreateUint("debug_id", debug_id_);
-  debug_name_property_ = node_.CreateString("debug_name", debug_name_);
+  debug_info_.name = std::string(name_data, name_size);
+  debug_info_.id = id;
+  debug_id_property_ = node_.CreateUint("debug_id", debug_info_.id);
+  debug_name_property_ = node_.CreateString("debug_name", debug_info_.name);
   return ZX_OK;
+}
+
+void BufferCollection::FailAsync(zx_status_t status, const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  parent_->VLogClientError(&debug_info_, format, args);
+
+  va_end(args);
+  FidlServer::FailAsync(status, "");
 }
 
 fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder>
