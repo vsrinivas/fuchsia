@@ -24,20 +24,30 @@ fuchsia_unittest_package("nix-unittest-package") {
 test("nix") {
   output_name = "nix-test"
 
-  sources = [ "epoll_unittests.cc" ]
+  sources = [
+    "epoll_unittests.cc",
+    "inotify_unittests.cc",
+  ]
 
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/nix",
   ]
 }
 
 test("nix_hosttests") {
   if (is_linux) {
-    sources = [ "epoll_unittests.cc" ]
+    sources = [
+      "epoll_unittests.cc",
+      "inotify_unittests.cc",
+    ]
   }
 
-  deps = [ "//zircon/public/lib/zxtest" ]
+  deps = [
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
+  ]
 }

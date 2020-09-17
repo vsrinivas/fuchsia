@@ -14,6 +14,12 @@ group("tests") {
 
 zx_library("nix") {
   sdk = "static"
-  sdk_headers = [ "sys/epoll.h" ]
-  sources = [ "epoll.cc" ]
+  sdk_headers = [
+    "sys/epoll.h",
+    "sys/inotify.h",
+  ]
+  sources = [
+    "epoll.cc",
+    "inotify.cc",
+  ]
 }
