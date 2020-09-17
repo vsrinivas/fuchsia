@@ -92,8 +92,7 @@ void Usage() {
          "\n"
          "All of the arguments can also be provided via a response file, denoted as\n"
          "`@responsefile`. The contents of the file at `responsefile` will be interpreted\n"
-         "as a whitespace-delimited list of arguments. Response files cannot be nested,\n"
-         "and must be the only argument.\n"
+         "as a whitespace-delimited list of arguments. Response files cannot be nested.\n"
          "\n"
          "See <https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler>\n"
          "for more information.\n";
@@ -166,35 +165,6 @@ class Arguments {
   virtual bool Remaining() const = 0;
 };
 
-class ArgvArguments : public Arguments {
- public:
-  ArgvArguments(int count, char** arguments)
-      : count_(count), arguments_(const_cast<const char**>(arguments)) {}
-
-  std::string Claim() override {
-    if (count_ < 1) {
-      FailWithUsage("Missing part of an argument\n");
-    }
-    std::string argument = arguments_[0];
-    --count_;
-    ++arguments_;
-    return argument;
-  }
-
-  bool Remaining() const override { return count_ > 0; }
-
-  bool HeadIsResponseFile() {
-    if (count_ == 0) {
-      return false;
-    }
-    return arguments_[0][0] == '@';
-  }
-
- private:
-  int count_;
-  const char** arguments_;
-};
-
 class ResponseFileArguments : public Arguments {
  public:
   ResponseFileArguments(std::string_view filename)
@@ -233,6 +203,46 @@ class ResponseFileArguments : public Arguments {
   }
 
   std::fstream file_;
+};
+
+class ArgvArguments : public Arguments {
+ public:
+  ArgvArguments(int count, char** arguments)
+      : count_(count), arguments_(const_cast<const char**>(arguments)) {}
+
+  std::string Claim() override {
+    if (response_file_.get()) {
+      if (response_file_->Remaining()) {
+        return response_file_->Claim();
+      }
+      response_file_.reset();
+    }
+    if (count_ < 1) {
+      FailWithUsage("Missing part of an argument\n");
+    }
+    std::string argument = arguments_[0];
+    --count_;
+    ++arguments_;
+    if (argument.size() == 0 || argument[0] != '@') {
+      return argument;
+    }
+
+    std::string_view rsp_file = argument.data() + 1;
+    response_file_ = std::make_unique<ResponseFileArguments>(rsp_file);
+    return Claim();
+  }
+
+  bool Remaining() const override {
+    if (response_file_.get() && response_file_->Remaining())
+      return true;
+
+    return count_ > 0;
+  }
+
+ private:
+  int count_;
+  const char** arguments_;
+  std::unique_ptr<ResponseFileArguments> response_file_;
 };
 
 enum struct Behavior {
@@ -276,30 +286,13 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
             fidl::ExperimentalFlags experimental_flags);
 
 int main(int argc, char* argv[]) {
-  auto argv_args = std::make_unique<ArgvArguments>(argc, argv);
+  auto args = std::make_unique<ArgvArguments>(argc, argv);
 
   // Parse the program name.
-  argv_args->Claim();
-
-  if (!argv_args->Remaining()) {
+  args->Claim();
+  if (!args->Remaining()) {
     Usage();
     exit(0);
-  }
-
-  // Check for a response file. After this, |args| is either argv or
-  // the response file contents.
-  Arguments* args = argv_args.get();
-  std::unique_ptr<ResponseFileArguments> response_file_args;
-  if (argv_args->HeadIsResponseFile()) {
-    std::string response = args->Claim();
-    if (argv_args->Remaining()) {
-      // Response file must be the only argument.
-      FailWithUsage("Response files must be the only argument to %s.\n", argv[0]);
-    }
-    // Drop the leading '@'.
-    std::string_view response_file = response.data() + 1;
-    response_file_args = std::make_unique<ResponseFileArguments>(response_file);
-    args = response_file_args.get();
   }
 
   std::string library_name;
