@@ -75,6 +75,39 @@ table CreateColorBuffer2Params {
     5: uint64 physical_address;
 };
 
+/// Input arguments of `ControlDevice.CreateBuffer2()` method.
+/// Includes necessary properties of a Vulkan-backed data buffer.
+table CreateBuffer2Params {
+    /// Size of the buffer (unit: byte).
+    ///
+    /// This argument is mandatory. `CreateBuffer2()` method returns
+    /// `ZX_ERR_INVALID_ARGS` if `size` is missing.
+    1: uint64 size;
+
+    /// Memory property flags the buffer should support. Only bits
+    /// from `fuchsia.hardware.goldfish.MEMORY_PROPERTY_*` are allowed.
+    ///
+    /// This argument is mandatory. `CreateBuffer2()` method returns
+    /// `ZX_ERR_INVALID_ARGS` if `memory_property` is missing.
+    2: uint32 memory_property;
+
+    /// Goldfish address space device allocates a physical memory address
+    /// for each host-visible buffer. This address is mapped to a
+    /// corresponding hardware address when that host-visible buffer is
+    /// created, and is unmapped when the buffer is torn down.
+    ///
+    /// This field stores the physical memory address allocated by address
+    /// space device.
+    ///
+    /// If `memory_property` has the bit `MEMORY_PROPERTY_HOST_VISIBLE` set,
+    /// this argument is mandatory. If `physical_address` is missing,
+    /// `CreateBuffer2()` returns `ZX_ERR_INVALID_ARGS`.
+    ///
+    /// If `memory_property` doesn't have the `MEMORY_PROPERTY_HOST_VISIBLE`
+    /// bit, this argument is ignored.
+    3: uint64 physical_address;
+};
+
 /// Interface for the Goldfish control driver providing color buffers and
 /// data buffers.
 protocol ControlDevice {
@@ -104,8 +137,32 @@ protocol ControlDevice {
     /// all references to `vmo` have been closed. Fails if VMO is not
     /// associated with goldfish heap memory.
     ///
+    /// Arguments
+    ///     Refer to `CreateBuffer2Params` for input arguments.
+    ///
+    /// Return value
+    ///     Error:
+    ///       - `ZX_ERR_ALREADY_EXISTS` if a buffer or color buffer has
+    ///         already been created for this VMO.
+    ///       - `ZX_ERR_INVALID_ARGS` if arguments are invalid.
+    ///         (see `CreateBuffer2Params`)
+    ///
+    ///     `hw_address_page_offset`:
+    ///         Memory page offset of the buffer's hardware-mapped memory.
+    ///         For buffers with HOST_VISIBLE memory property bits, this
+    ///         value is a non-negative integer in [0, 4095]. For
+    ///         non-HOST_VISIBLE memory, this value is negative.
+    [Transitional]
+    CreateBuffer2(zx.handle:VMO vmo, CreateBuffer2Params create_params)
+        -> (int32 hw_address_page_offset) error zx.status;
+
+    /// Create shared data buffer. Buffer is automatically freed when
+    /// all references to `vmo` have been closed. Fails if VMO is not
+    /// associated with goldfish heap memory.
+    ///
     /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
     /// already been created for this VMO.
+    [Transitional, Deprecated]
     CreateBuffer(zx.handle:VMO vmo, uint32 size) -> (zx.status res);
 
     /// Get a buffer handle for VMO and the type of the handle.

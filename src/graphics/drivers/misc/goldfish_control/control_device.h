@@ -55,6 +55,18 @@ class Control : public ControlType,
       zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
       CreateColorBuffer2Completer::Sync completer) override;
 
+  using CreateBuffer2Result =
+      fit::result<llcpp::fuchsia::hardware::goldfish::ControlDevice_CreateBuffer2_Result,
+                  zx_status_t>;
+
+  CreateBuffer2Result CreateBuffer2(
+      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params);
+
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void CreateBuffer2(zx::vmo vmo,
+                     llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params,
+                     CreateBuffer2Completer::Sync completer) override;
+
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) override;
 
@@ -92,6 +104,8 @@ class Control : public ControlType,
   zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
   zx_status_t CreateBufferLocked(uint32_t size, uint32_t* id) TA_REQ(lock_);
+  zx_status_t CreateBuffer2Locked(uint64_t size, uint32_t memory_property, uint32_t* id)
+      TA_REQ(lock_);
   zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
                                       uint32_t* id) TA_REQ(lock_);
   void CloseBufferOrColorBufferLocked(uint32_t id) TA_REQ(lock_);
