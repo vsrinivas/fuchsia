@@ -9,7 +9,4 @@ group("pc") {
     "$zx/kernel/dev/hw_rng/intel_rng",
     "$zx/kernel/platform/pc",
   ]
-
-  # Also build the Multiboot trampoline to support legacy boot loaders.
-  data_deps = [ "multiboot" ]
 }

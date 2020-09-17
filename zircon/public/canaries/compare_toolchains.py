@@ -110,31 +110,6 @@ _ALL_TOOLCHAINS = [
         },
     },
     {
-        'name': 'multiboot',
-        'gn':
-            {
-                'toolchain':
-                    '//zircon/kernel/target/pc/multiboot:zircon_multiboot',
-            },
-        'zn': {
-            'toolchain': '//kernel/target/pc/multiboot:multiboot-x64-clang',
-        },
-        'no_shared': True,
-    },
-    {
-        'name': 'multiboot-gcc',
-        'variants': ['gcc'],
-        'gn':
-            {
-                'toolchain':
-                    '//zircon/kernel/target/pc/multiboot:zircon_multiboot-gcc',
-            },
-        'zn': {
-            'toolchain': '//kernel/target/pc/multiboot:multiboot-x64-gcc',
-        },
-        'no_shared': True,
-    },
-    {
         'name': 'physmem_arm64',
         'gn': {
             'toolchain': '//zircon/kernel/arch/arm64:physmem_arm64',

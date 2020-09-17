@@ -64,30 +64,10 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "multiboot") {
   # implicitly strips executables, so `multiboot.bin` is a lean, fully
   # stripped ELF/Multiboot image.
 
-  # TODO(digit): Rename to 'multiboot' after complete move to Fuchsia build.
-  executable("multiboot-gn") {
+  executable("multiboot") {
     output_extension = "bin"
-    output_dir = root_build_dir
-    output_path = rebase_path("$output_dir/$target_name.$output_extension",
-                              root_build_dir)
-    metadata = {
-      # For the //:images build_api_module().
-      images = []
-      foreach(name,
-              [
-                "multiboot-kernel",
-                "qemu-kernel",
-              ]) {
-        images += [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = name
-            type = "kernel"
-            path = output_path
-            cpu = current_cpu
-          },
-        ]
-      }
+    if (toolchain_variant.name == "") {
+      output_dir = root_build_dir
     }
     sources = [
       "multiboot-main.c",
@@ -107,7 +87,7 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "multiboot") {
 
   not_needed([ "multiboot_toolchain" ])
 } else {
-  group("multiboot-gn") {
+  group("multiboot") {
     public_deps = [
       ":$target_name(//zircon/kernel/target/pc/multiboot:$multiboot_toolchain)",
     ]
