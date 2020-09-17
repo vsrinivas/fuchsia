@@ -86,7 +86,7 @@ impl InterestDispatcher {
         });
         if let Some(i) = interest {
             self.notify_listeners_for_component(component, |l| {
-                let _ = l.send_on_interest_changed(Interest { min_severity: i.min_severity });
+                let _ = l.send_on_register_interest(Interest { min_severity: i.min_severity });
             });
         }
     }
@@ -108,7 +108,7 @@ impl InterestDispatcher {
                             self.notify_listeners_for_component(
                                 Component { name: name.to_string() },
                                 |l| {
-                                    let _ = l.send_on_interest_changed(Interest {
+                                    let _ = l.send_on_register_interest(Interest {
                                         min_severity: s.interest.min_severity,
                                     });
                                 },
@@ -181,7 +181,7 @@ mod tests {
                 }
                 // notify checks the channel/retains
                 dispatcher.notify_listeners_for_component(c.clone(), |listener| {
-                    let _ = listener.send_on_interest_changed(Interest { min_severity: None });
+                    let _ = listener.send_on_register_interest(Interest { min_severity: None });
                 });
 
                 // check that the listener is no longer active.
