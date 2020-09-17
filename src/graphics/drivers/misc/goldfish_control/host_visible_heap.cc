@@ -11,6 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/function.h>
+#include <lib/fit/result.h>
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 #include <zircon/rights.h>
@@ -51,6 +52,105 @@ llcpp::fuchsia::sysmem2::HeapProperties GetHeapProperties() {
       // work for sysmem to clear the VMO contents, instead we do map-and-clear
       // in the end of |CreateResource()|.
       .set_need_clear(std::make_unique<bool>(false))
+      .build();
+}
+
+zx_status_t CheckSingleBufferSettings(
+    const llcpp::fuchsia::sysmem2::SingleBufferSettings& single_buffer_settings) {
+  bool has_image_format_constraints = single_buffer_settings.has_image_format_constraints();
+  bool has_buffer_settings = single_buffer_settings.has_buffer_settings();
+
+  if (!has_buffer_settings && !has_image_format_constraints) {
+    zxlogf(ERROR,
+           "[%s][%s] Both buffer_settings and image_format_constraints "
+           "are missing, SingleBufferSettings is invalid.",
+           kTag, __func__);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (has_image_format_constraints) {
+    const auto& image_constraints = single_buffer_settings.image_format_constraints();
+    if (!image_constraints.has_pixel_format() || !image_constraints.pixel_format().has_type() ||
+        !image_constraints.has_min_coded_width() || !image_constraints.has_min_coded_height()) {
+      zxlogf(ERROR,
+             "[%s][%s] image_constraints missing arguments: pixel_format %d width %d height %d",
+             kTag, __func__, image_constraints.has_pixel_format(),
+             image_constraints.has_min_coded_width(), image_constraints.has_min_coded_height());
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  if (has_buffer_settings) {
+    const auto& buffer_settings = single_buffer_settings.buffer_settings();
+    if (!buffer_settings.has_size_bytes()) {
+      zxlogf(ERROR, "[%s][%s] buffer_settings missing arguments: size %d", kTag, __func__,
+             buffer_settings.has_size_bytes());
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  return ZX_OK;
+}
+
+fit::result<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params, zx_status_t>
+GetCreateColorBuffer2Params(const llcpp::fuchsia::sysmem2::SingleBufferSettings& buffer_settings,
+                            uint64_t paddr) {
+  using llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType;
+  using llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params;
+  using llcpp::fuchsia::sysmem2::PixelFormatType;
+
+  ZX_DEBUG_ASSERT(buffer_settings.has_image_format_constraints());
+  const auto& image_constraints = buffer_settings.image_format_constraints();
+
+  ZX_DEBUG_ASSERT(
+      image_constraints.has_pixel_format() && image_constraints.pixel_format().has_type() &&
+      image_constraints.has_min_coded_width() && image_constraints.has_min_coded_height());
+
+  // TODO(59804): Support other pixel formats.
+  const auto& pixel_format_type = image_constraints.pixel_format().type();
+  ColorBufferFormatType color_buffer_format;
+  switch (pixel_format_type) {
+    case PixelFormatType::BGRA32:
+      color_buffer_format = ColorBufferFormatType::BGRA;
+      break;
+    case PixelFormatType::R8G8B8A8:
+      color_buffer_format = ColorBufferFormatType::RGBA;
+      break;
+    default:
+      zxlogf(ERROR, "[%s][%s] pixel_format_type unsupported: type %u", __func__, kTag,
+             pixel_format_type);
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  uint32_t width = image_constraints.min_coded_width();
+  uint32_t height = image_constraints.min_coded_height();
+  return fit::ok(
+      CreateColorBuffer2Params::Builder(std::make_unique<CreateColorBuffer2Params::Frame>())
+          .set_width(std::make_unique<uint32_t>(width))
+          .set_height(std::make_unique<uint32_t>(height))
+          .set_memory_property(std::make_unique<uint32_t>(
+              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
+          .set_physical_address(std::make_unique<uint64_t>(paddr))
+          .set_format(std::make_unique<ColorBufferFormatType>(color_buffer_format))
+          .build());
+}
+
+llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params GetCreateBuffer2Params(
+    const llcpp::fuchsia::sysmem2::SingleBufferSettings& single_buffer_settings, uint64_t paddr) {
+  using llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params;
+  using llcpp::fuchsia::sysmem2::PixelFormatType;
+
+  ZX_DEBUG_ASSERT(single_buffer_settings.has_buffer_settings());
+
+  const auto& buffer_settings = single_buffer_settings.buffer_settings();
+
+  ZX_DEBUG_ASSERT(buffer_settings.has_size_bytes());
+  uint64_t size_bytes = buffer_settings.size_bytes();
+  return CreateBuffer2Params::Builder(std::make_unique<CreateBuffer2Params::Frame>())
+      .set_size(std::make_unique<uint64_t>(size_bytes))
+      .set_memory_property(std::make_unique<uint32_t>(
+          llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
+      .set_physical_address(std::make_unique<uint64_t>(paddr))
       .build();
 }
 
@@ -155,48 +255,26 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
 
   ZX_DEBUG_ASSERT(vmo.is_valid());
 
-  // Argument validation.
-
-  // TODO(59805): Support data buffers.
-  if (!buffer_settings.has_image_format_constraints()) {
-    zxlogf(ERROR, "[%s] Currently only image allocation is supported", kTag);
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, 0u);
+  zx_status_t status = CheckSingleBufferSettings(buffer_settings);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "[%s] Invalid single buffer settings", kTag);
+    completer.Reply(status, 0u);
     return;
   }
 
-  const auto& image_constraints = buffer_settings.image_format_constraints();
-  if (!image_constraints.has_pixel_format() || !image_constraints.pixel_format().has_type() ||
-      !image_constraints.has_min_coded_width() || !image_constraints.has_min_coded_height()) {
-    zxlogf(ERROR, "[%s] image_constraints missing arguments: pixel_format %d width %d height %d",
-           kTag, image_constraints.has_pixel_format(), image_constraints.has_min_coded_width(),
-           image_constraints.has_min_coded_height());
-    completer.Reply(ZX_ERR_INVALID_ARGS, 0u);
-    return;
-  }
+  bool is_image = buffer_settings.has_image_format_constraints();
+  TRACE_DURATION(
+      "gfx", "HostVisibleHeap::CreateResource", "type", is_image ? "image" : "buffer",
+      "image:width", is_image ? buffer_settings.image_format_constraints().min_coded_width() : 0,
+      "image:height", is_image ? buffer_settings.image_format_constraints().min_coded_height() : 0,
+      "image:format",
+      is_image ? static_cast<int>(buffer_settings.image_format_constraints().pixel_format().type())
+               : 0,
+      "buffer:size", is_image ? 0 : buffer_settings.buffer_settings().size_bytes());
 
-  // TODO(59804): Support other pixel formats.
-  const auto& pixel_format_type = image_constraints.pixel_format().type();
-  ColorBufferFormatType color_buffer_format;
-  switch (pixel_format_type) {
-    case PixelFormatType::BGRA32:
-      color_buffer_format = ColorBufferFormatType::BGRA;
-      break;
-    case PixelFormatType::R8G8B8A8:
-      color_buffer_format = ColorBufferFormatType::RGBA;
-      break;
-    default:
-      zxlogf(ERROR, "[%s] pixel_format_type unsupported: type %u", kTag, pixel_format_type);
-      completer.Reply(ZX_ERR_NOT_SUPPORTED, 0u);
-      return;
-  }
-
-  TRACE_DURATION("gfx", "HostVisibleHeap::CreateResource", "width",
-                 image_constraints.min_coded_width(), "height",
-                 image_constraints.min_coded_height(), "format",
-                 static_cast<uint32_t>(pixel_format_type));
-
+  // Get |paddr| of the |Block| to use in Buffer create params.
   zx_info_vmo_t vmo_info;
-  zx_status_t status = vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
+  status = vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] zx_object_get_info failed: status %d", kTag, status);
     completer.Close(status);
@@ -212,30 +290,9 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
-
-  uint64_t id = control()->RegisterBufferHandle(vmo);
-  if (id == ZX_KOID_INVALID) {
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  // If the following method fails, we need to free the color buffer handle so
-  // that there is no handle/resource leakage.
-  auto cleanup_handle = fbl::MakeAutoCall([this, id] { control()->FreeBufferHandle(id); });
-
-  uint32_t width = image_constraints.min_coded_width();
-  uint32_t height = image_constraints.min_coded_height();
   uint64_t paddr = blocks_.at(vmo_parent_koid).paddr;
-  auto create_params =
-      CreateColorBuffer2Params::Builder(std::make_unique<CreateColorBuffer2Params::Frame>())
-          .set_width(std::make_unique<uint32_t>(width))
-          .set_height(std::make_unique<uint32_t>(height))
-          .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
-          .set_physical_address(std::make_unique<uint64_t>(paddr))
-          .set_format(std::make_unique<ColorBufferFormatType>(color_buffer_format))
-          .build();
 
+  // Duplicate VMO to create ColorBuffer/Buffer.
   zx::vmo vmo_dup;
   status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
   if (status != ZX_OK) {
@@ -244,23 +301,66 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
     return;
   }
 
-  // Create actual color buffer and map guest physical address |paddr| to
-  // host memory.
-  auto result = control()->CreateColorBuffer2(std::move(vmo_dup), std::move(create_params));
-  if (result.is_error()) {
-    zxlogf(ERROR, "[%s] CreateColorBuffer error: status %d", kTag, status);
-    completer.Close(result.error());
-    return;
-  }
-  if (result.value().res != ZX_OK) {
-    zxlogf(ERROR, "[%s] CreateColorBuffer2 failed: res = %d", kTag, result.value().res);
-    completer.Reply(result.value().res, 0u);
+  // Register buffer handle for VMO.
+  uint64_t id = control()->RegisterBufferHandle(vmo);
+  if (id == ZX_KOID_INVALID) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  // Host visible ColorBuffer should have page offset of zero, otherwise
-  // part of the host page can be leaked to guest.
-  ZX_DEBUG_ASSERT(result.value().hw_address_page_offset == 0u);
+  // If the following part fails, we need to free the ColorBuffer/Buffer
+  // handle so that there is no handle/resource leakage.
+  auto cleanup_handle = fbl::MakeAutoCall([this, id] { control()->FreeBufferHandle(id); });
+
+  if (is_image) {
+    // ColorBuffer creation.
+    auto create_params = GetCreateColorBuffer2Params(buffer_settings, paddr);
+    if (create_params.is_error()) {
+      completer.Reply(create_params.error(), 0u);
+      return;
+    }
+
+    // Create actual ColorBuffer and map physical address |paddr| to
+    // address of the ColorBuffer's host memory.
+    auto result = control()->CreateColorBuffer2(std::move(vmo_dup), create_params.take_value());
+    if (result.is_error()) {
+      zxlogf(ERROR, "[%s] CreateColorBuffer error: status %d", kTag, status);
+      completer.Close(result.error());
+      return;
+    }
+    if (result.value().res != ZX_OK) {
+      zxlogf(ERROR, "[%s] CreateColorBuffer2 failed: res = %d", kTag, result.value().res);
+      completer.Reply(result.value().res, 0u);
+      return;
+    }
+
+    // Host visible ColorBuffer should have page offset of zero, otherwise
+    // part of the page mapped from address space device not used for the
+    // ColorBuffer can be leaked.
+    ZX_DEBUG_ASSERT(result.value().hw_address_page_offset == 0u);
+  } else {
+    // Data buffer creation.
+    auto create_params = GetCreateBuffer2Params(buffer_settings, paddr);
+
+    // Create actual data buffer and map physical address |paddr| to
+    // address of the buffer's host memory.
+    auto result = control()->CreateBuffer2(std::move(vmo_dup), std::move(create_params));
+    if (result.is_error()) {
+      zxlogf(ERROR, "[%s] CreateBuffer2 error: status %d", kTag, status);
+      completer.Close(result.error());
+      return;
+    }
+    if (result.value().is_err()) {
+      zxlogf(ERROR, "[%s] CreateBuffer2 failed: res = %d", kTag, result.value().err());
+      completer.Reply(result.value().err(), 0u);
+      return;
+    }
+
+    // Host visible Buffer should have page offset of zero, otherwise
+    // part of the page mapped from address space device not used for
+    // the buffer can be leaked.
+    ZX_DEBUG_ASSERT(result.value().response().hw_address_page_offset == 0u);
+  }
 
   // Heap should fill VMO with zeroes before returning it to clients.
   // Since VMOs allocated by address space device are physical VMOs not
