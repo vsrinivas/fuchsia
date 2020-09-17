@@ -470,23 +470,20 @@ zx_status_t Ft8201Device::Init() {
 }
 
 zx_status_t Ft8201Device::FirmwareDownloadIfNeeded() {
-  const char kPrambootPath[] = "ft8201/FT8006_Pramboot_V1.6_20180426_le.bin";
-  const char kFirmwarePath[] = "ft8201/LQ_T800_FT8201_BOE_8.0inch_TP0x05_Lcd0x08_20190921_all.bin";
-
   zx::vmo pramboot_vmo;
   zx::vmo firmware_vmo;
 
   size_t pramboot_size = 0;
-  zx_status_t status =
-      load_firmware(parent(), kPrambootPath, pramboot_vmo.reset_and_get_address(), &pramboot_size);
+  zx_status_t status = load_firmware(parent(), FT8201_PRAMBOOT_PATH,
+                                     pramboot_vmo.reset_and_get_address(), &pramboot_size);
   if (status != ZX_OK) {
     zxlogf(WARNING, "Ft8201: Failed to load pramboot binary, skipping firmware download");
     return ZX_OK;
   }
 
   size_t firmware_size = 0;
-  status =
-      load_firmware(parent(), kFirmwarePath, firmware_vmo.reset_and_get_address(), &firmware_size);
+  status = load_firmware(parent(), FT8201_FIRMWARE_PATH, firmware_vmo.reset_and_get_address(),
+                         &firmware_size);
   if (status != ZX_OK) {
     zxlogf(WARNING, "Ft8201: Failed to load firmware binary, skipping firmware download");
     return ZX_OK;

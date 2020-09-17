@@ -10,15 +10,10 @@
 #include <lib/zx/clock.h>
 
 #include <ddk/protocol/composite.h>
-#include <ddktl/metadata/light-sensor.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
-
-zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
-  return ZX_ERR_NOT_FOUND;
-}
 
 namespace touch {
 
@@ -49,15 +44,21 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
     write_buffer++;
     write_buffer_size--;
 
-    if (address == 2) {
+    if (address == 0x02) {
       read_buffer[0] = 4;
       *read_buffer_size = 1;
-    } else if (address == 3) {
+    } else if (address == 0x03) {
       // The interrupt or timeout has been received and the driver is reading out the data
       // registers.
       memcpy(read_buffer, kTouchData, sizeof(kTouchData));
       *read_buffer_size = sizeof(kTouchData);
       sync_completion_signal(&read_completion_);
+    } else if (address == 0xa3) {
+      read_buffer[0] = 0x82;  // Indicate that the firmware on the IC is valid.
+      *read_buffer_size = 1;
+    } else if (address == 0xa6) {
+      read_buffer[0] = 0x05;  // Current firmware version is 0x05, this skips the firmware download.
+      *read_buffer_size = 1;
     }
 
     return ZX_OK;
@@ -66,6 +67,7 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
  private:
   sync_completion_t read_completion_;
 };
+
 class Ft8201Test : public zxtest::Test {
  public:
   void SetUp() override {

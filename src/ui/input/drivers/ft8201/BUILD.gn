@@ -2,86 +2,144 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-driver_module("ft8201") {
+pramboot_path = "ft8201/FT8006_Pramboot_V1.6_20180426_le.bin"
+firmware_path =
+    "ft8201/LQ_T800_FT8201_BOE_8.0inch_TP0x05_Lcd0x08_20190921_all.bin"
+
+driver_package("ft8201") {
+  deps = [ ":ft8201-module" ]
+
+  drivers = [
+    {
+      name = "ft8201.so"
+    },
+  ]
+
+  libraries = []
+
+  if (internal_access) {
+    deps += [
+      ":firmware-copy($shlib_toolchain)",
+      ":pramboot-copy($shlib_toolchain)",
+    ]
+
+    libraries += [
+      {
+        name = "firmware/$firmware_path"
+      },
+      {
+        name = "firmware/$pramboot_path"
+      },
+    ]
+  }
+}
+
+if (internal_access) {
+  copy("firmware-copy") {
+    sources = [ "//prebuilt/touch/$firmware_path" ]
+    outputs = [ "$root_out_dir/firmware/$firmware_path" ]
+  }
+
+  copy("pramboot-copy") {
+    sources = [ "//prebuilt/touch/$pramboot_path" ]
+    outputs = [ "$root_out_dir/firmware/$pramboot_path" ]
+  }
+}
+
+source_set("common") {
+  public_deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/hid",
+  ]
+}
+
+driver_module("ft8201-module") {
+  output_name = "ft8201"
+  sources = [ "ft8201.cc" ]
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  sources = [ "ft8201.cc" ]
-  deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
-    "//src/devices/i2c/lib/device-protocol-i2c-channel",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/hid",
+  deps = [ ":common" ]
+  defines = [
+    "FT8201_FIRMWARE_PATH=\"$firmware_path\"",
+    "FT8201_PRAMBOOT_PATH=\"$pramboot_path\"",
   ]
 }
 
-test("ft8201-test") {
-  configs += [ "//build/config:all_source" ]
+executable("ft8201-test-bin") {
+  testonly = true
   output_name = "ft8201-test"
+  configs += [ "//build/config:all_source" ]
   sources = [
+    "ft8201-firmware-test.cc",
     "ft8201-test.cc",
     "ft8201.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
+    ":common",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
-    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/fake-i2c",
-    "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/hid",
+  ]
+  defines = [
+    "FT8201_FIRMWARE_PATH=\"$firmware_path\"",
+    "FT8201_PRAMBOOT_PATH=\"$pramboot_path\"",
   ]
 }
 
-unittest_package("ft8201-test-package") {
-  package_name = "ft8201-test"
-  deps = [ ":ft8201-test" ]
-
-  tests = [
-    {
-      name = "ft8201-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("ft8201-test") {
+  executable_path = "bin/ft8201-test"
+  deps = [ ":ft8201-test-bin" ]
+  if (internal_access) {
+    deps += [
+      ":test-firmware",
+      ":test-pramboot",
+    ]
+  }
 }
+
+if (internal_access) {
+  resource("test-firmware") {
+    sources = [ "//prebuilt/touch/$firmware_path" ]
+    outputs = [ "data/firmware/$firmware_path" ]
+  }
+
+  resource("test-pramboot") {
+    sources = [ "//prebuilt/touch/$pramboot_path" ]
+    outputs = [ "data/firmware/$pramboot_path" ]
+  }
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":ft8201-test-package" ]
+  deps = [ ":ft8201-test" ]
 }
