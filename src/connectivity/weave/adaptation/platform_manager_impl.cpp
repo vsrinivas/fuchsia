@@ -48,6 +48,7 @@ void PlatformManagerImpl::SetDispatcher(async_dispatcher_t *dispatcher) {
 void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
   ZX_ASSERT(dispatcher_ != NULL);
   async::PostTask(dispatcher_, [ev = *event] { PlatformMgr().DispatchEvent(&ev); });
+  GetSystemLayer().WakeSelect();
 }
 
 void PlatformManagerImpl::ShutdownWeaveStack(void) {

@@ -16,7 +16,9 @@ using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 }  // namespace
 
-constexpr struct timeval MAX_SELECT_SLEEP_TIME = {.tv_sec = 10};
+// TODO(fxbug.dev/59699): Implement system/platform timer in openweave
+// and revert this to 10 seconds.
+constexpr struct timeval MAX_SELECT_SLEEP_TIME = {.tv_sec = 1};
 
 App::App()
     : stack_impl_(std::make_unique<StackImpl>(PlatformMgrImpl().GetComponentContextForProcess())) {}
