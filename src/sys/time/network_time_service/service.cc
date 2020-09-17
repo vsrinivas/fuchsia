@@ -22,8 +22,6 @@ TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
       dispatcher_(dispatcher),
       consecutive_poll_failures_(0),
       retry_config_(retry_config) {
-  context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
-
   push_source_binding_.set_error_handler([&](zx_status_t error) {
     // Clean up client state for the next client.
     ResetPushSourceClient(error);
@@ -43,35 +41,6 @@ TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
 }
 
 TimeServiceImpl::~TimeServiceImpl() = default;
-
-void TimeServiceImpl::Update(uint8_t num_retries, UpdateCallback callback) {
-  std::optional<zx::time_utc> result = std::nullopt;
-  for (uint8_t i = 0; i < num_retries; i++) {
-    result = UpdateSystemTime();
-    if (result) {
-      break;
-    }
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
-  }
-  if (!result) {
-    FX_LOGS(WARNING) << "Failed to update system time after " << static_cast<int>(num_retries)
-                     << " attempts";
-  }
-  std::unique_ptr<fuchsia::deprecatedtimezone::UpdatedTime> update = nullptr;
-  if (result) {
-    update = fuchsia::deprecatedtimezone::UpdatedTime::New();
-    update->utc_time = result->get();
-  }
-  callback(std::move(update));
-}
-
-std::optional<zx::time_utc> TimeServiceImpl::UpdateSystemTime() {
-  auto ret = rough_time_server_.GetTimeFromServer();
-  if (ret.first != time_server::OK) {
-    return std::nullopt;
-  }
-  return ret.second;
-}
 
 void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                        zx_status_t zx_status) {

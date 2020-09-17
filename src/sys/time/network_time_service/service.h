@@ -5,7 +5,6 @@
 #ifndef SRC_SYS_TIME_NETWORK_TIME_SERVICE_SERVICE_H_
 #define SRC_SYS_TIME_NETWORK_TIME_SERVICE_SERVICE_H_
 
-#include <fuchsia/deprecatedtimezone/cpp/fidl.h>
 #include <fuchsia/time/external/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
@@ -59,20 +58,13 @@ class RetryConfig {
 // multiple clients, this needs to retain per-client state so that it understands when
 // a value hasn't been returned yet to a particular client, and so that it can close
 // channels to only a single client as needed.
-class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
-                        public time_external::PushSource {
-  // The type of the callback is identical between the two namespaces.
-  using fuchsia::deprecatedtimezone::TimeService::UpdateCallback;
-
+class TimeServiceImpl : public time_external::PushSource {
  public:
   // Constructs the time service with a caller-owned application context.
   TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
                   time_server::RoughTimeServer rough_time_server, async_dispatcher_t* dispatcher,
                   RetryConfig retry_config = RetryConfig());
   ~TimeServiceImpl();
-
-  // |TimeService|:
-  void Update(uint8_t num_retries, UpdateCallback callback) override;
 
   // |PushSource|:
   void UpdateDeviceProperties(time_external::Properties properties) override;
@@ -84,9 +76,6 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
   void WatchStatus(WatchStatusCallback callback) override;
 
  private:
-  // Attempt to retrieve UTC and update system time without retries.
-  std::optional<zx::time_utc> UpdateSystemTime();
-
   // Polls for new time samples and post changes to the time source status.
   void AsyncPollSamples(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
 
@@ -97,7 +86,6 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
   void ResetPushSourceClient(zx_status_t epitaph);
 
   std::unique_ptr<sys::ComponentContext> context_;
-  fidl::BindingSet<fuchsia::deprecatedtimezone::TimeService> deprecated_bindings_;
   time_server::RoughTimeServer rough_time_server_;
 
   fidl::Binding<time_external::PushSource> push_source_binding_;

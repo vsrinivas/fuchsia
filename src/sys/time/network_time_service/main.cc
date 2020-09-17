@@ -34,18 +34,10 @@ int main(int argc, char** argv) {
   // Currently this only supports one roughtime server.
   time_server::RoughTimeServer server = server_config.ServerList()[0];
 
-  bool immediate = command_line.HasOption("immediate");
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   network_time_service::TimeServiceImpl svc(
       sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(server),
       loop.dispatcher());
-  if (immediate) {
-    svc.Update(3, fuchsia::deprecatedtimezone::TimeService::UpdateCallback([&loop](auto result) {
-                 FX_LOGS(INFO) << "time sync result " << (result ? "succeeded" : "failed");
-                 loop.Shutdown();
-               }));
-  }
   loop.Run();
   return 0;
 }
