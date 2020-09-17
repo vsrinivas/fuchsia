@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# NOTE: Keep in sync with //build/toolchain/runtime/toolchain_runtime_deps.gni
+# until build unification completes.
+
 import("clang.gni")
 import("rustc.gni")
 
@@ -88,11 +91,6 @@ rustc_toolchain_spec = {
 #     every flag in toolchain_spec.flag_vars.
 #   - Example: `cflags = [] ldflags = [ "-static-libstdc++" ]`
 #   - Type: list(string)
-#
-# * zx_publish
-#   - Optional: Whether to publish a zx_manifest for this runtime.
-#   - Type: bool
-#   - Default: false
 #
 # ## runtime.json
 #
@@ -247,40 +245,6 @@ template("toolchain_runtime_deps") {
         metadata.manifest_lines +=
             [ "lib/${toolchain.libprefix}${soname}=" +
               rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir) ]
-
-        # Make the manifest describing this library available to the build
-        # API module for unification.
-        # The manifest is not published for fuzzer variants.
-        if (defined(invoker.zx_publish) && invoker.zx_publish &&
-            string_replace(toolchain_label, "fuzzer", "") == toolchain_label) {
-          if (defined(lib.name)) {
-            lib_name = lib.name
-          } else {
-            lib_name = soname
-          }
-          zx_manifest_name = "$target_gen_dir/$lib_name.zx_manifest.txt"
-          write_file(zx_manifest_name,
-                     [ "lib/${toolchain.libprefix}${soname}=" +
-                           rebase_path(lib.dist,
-                                       root_build_dir,
-                                       toolchain_spec.lib_dir) ],
-                     "list lines")
-          metadata.zx_manifest += [
-            {
-              label = get_label_info(":$target_name", "label_with_toolchain")
-              name = "lib.$lib_name"
-              if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
-                  toolchain.tags) {
-                name += toolchain.variant_suffix
-              }
-              name = string_replace(name, "+", "x")
-              toolchain = toolchain_label
-              path = rebase_path(zx_manifest_name, root_build_dir)
-              cpu = current_cpu
-              os = current_os
-            },
-          ]
-        }
       }
     } else {
       public_deps = [ ":$target_name(${toolchain.shlib})" ]

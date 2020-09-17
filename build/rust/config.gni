@@ -32,6 +32,12 @@ declare_args() {
   # prebuilt is used.
   rustc_version_string = default_rustc_version_string
 
+  # Human-readable identifier for the toolchain version.
+  #
+  # TODO(tmandry): Make this the same repo/revision info from `rustc --version`.
+  # e.g., clang_version_description = read_file("$_rustc_lib_dir/VERSION")
+  rustc_version_description = ""
+
   # Sets a custom base directory for where rust tooling
   # looks for the standard library
   rust_sysroot = default_rust_sysroot

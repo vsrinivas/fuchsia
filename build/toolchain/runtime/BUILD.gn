@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("toolchain_runtime_deps.gni")
+
+_toolchain_runtime_deps_cflags = []
+
+if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] !=
+    toolchain_variant.tags) {
+  _toolchain_runtime_deps_cflags += [ "-fsanitize=address" ]
+}
+if (toolchain_variant.tags + [ "ubsan" ] - [ "ubsan" ] !=
+    toolchain_variant.tags) {
+  _toolchain_runtime_deps_cflags += [ "-fsanitize=address" ]
+}
+
+toolchain_runtime_deps("static-libc++-deps") {
+  toolchain_spec = clang_toolchain_spec
+  cflags = _toolchain_runtime_deps_cflags
+  ldflags = [ "-static-libstdc++" ]
+}
+
+toolchain_runtime_deps("shared-libc++-deps") {
+  toolchain_spec = clang_toolchain_spec
+  cflags = _toolchain_runtime_deps_cflags
+  ldflags = []
+}
+
+toolchain_runtime_deps("static-rust-libstd-deps") {
+  toolchain_spec = rustc_toolchain_spec
+  rustflags = []
+  libraries = [ "libstd" ]
+}
+
+toolchain_runtime_deps("shared-rust-libstd-deps") {
+  toolchain_spec = rustc_toolchain_spec
+  rustflags = [ "-Cprefer-dynamic" ]
+  libraries = [ "libstd" ]
+}
+
+toolchain_runtime_deps("static-rust-libtest-deps") {
+  toolchain_spec = rustc_toolchain_spec
+  rustflags = []
+  libraries = [ "libtest" ]
+}
+
+toolchain_runtime_deps("shared-rust-libtest-deps") {
+  toolchain_spec = rustc_toolchain_spec
+  rustflags = [ "-Cprefer-dynamic" ]
+  libraries = [ "libtest" ]
+}

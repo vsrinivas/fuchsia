@@ -7,6 +7,14 @@ assert(is_fuchsia, "Zircon libraries only available for Fuchsia targets")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/unification/images/artifacts.gni")
 
+# Creates a group with distribution_entries metadata that looks like:
+#
+#   {
+#     destination = "lib/libtest-xxxxx.so"
+#     label = '//build/unification/lib/toolchain:libtest"
+#     source = "../../prebuilt/third_party/..../libtest-xxxxx.so"
+#   }
+#
 # Exposes a library provided by the ZN build to the manifest metadata collection
 # scheme.
 #
@@ -20,21 +28,18 @@ import("//build/unification/images/artifacts.gni")
 template("zircon_runtime_library") {
   assert(defined(invoker.library), "Must provide a library")
 
-  name = "lib.${invoker.library}"
+  _variant_suffix = ""
   if (toolchain_variant.instrumented && toolchain_variant.name != "") {
     # Fuzzers just use the base variant.
-    name += "." + string_replace(toolchain_variant.name, "-fuzzer", "")
+    _variant_suffix +=
+        "." + string_replace(toolchain_variant.name, "-fuzzer", "")
   }
+  name = "lib.${invoker.library}" + _variant_suffix
 
   # TODO(tmandry): Remove fallback logic once clang toolchain rolls.
   fallback_name = false
   if (defined(invoker.fallback)) {
-    fallback_name = "lib.${invoker.fallback}"
-    if (toolchain_variant.instrumented && toolchain_variant.name != "") {
-      # Fuzzers just use the base variant.
-      fallback_name +=
-          "." + string_replace(toolchain_variant.name, "-fuzzer", "")
-    }
+    fallback_name = "lib.${invoker.fallback}" + _variant_suffix
   }
 
   artifact = false

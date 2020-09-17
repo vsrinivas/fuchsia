@@ -1465,38 +1465,47 @@ template("variant_target") {
       # These dependencies need to be attached here rather than higher up in the
       # dependency tree in order to correctly capture the active toolchain
       # variant.
-      if (is_fuchsia && zircon_toolchain == false) {
+      if (is_fuchsia) {
         if (!defined(data_deps)) {
           data_deps = []
         }
-        data_deps += [ "//build/unification/lib/sysroot" ]
-        should_add_cpp_runtime = true
-        if (defined(configs)) {
-          # Do not add runtime dependencies if compiling statically.
-          static_cpp_config =
-              [ "//build/config/fuchsia:static_cpp_standard_library" ]
-          if (configs + static_cpp_config - static_cpp_config != configs) {
-            should_add_cpp_runtime = false
-          }
-        }
-        if (should_add_cpp_runtime) {
-          data_deps += [ "//build/unification/lib/toolchain:cpp" ]
+        if (zircon_toolchain == false) {
+          data_deps += [ "//build/unification/lib/sysroot" ]
         }
 
-        should_add_rust_runtime = false
-        if (defined(invoker.crate_root)) {
-          should_add_rust_runtime = true
+        # NOTE: invoker.crate_root will be defined when building a Rust crate
+        # instead of a C++ binary.
+        should_add_shared_cpp_runtime = true
+        if (defined(configs)) {
+          # Do not add runtime dependencies if compiling statically.
+          static_cpp_configs = [
+            "//build/config/fuchsia:static_cpp_standard_library",
+            "//build/config/zircon:static-libc++",
+          ]
+          if (configs + static_cpp_configs - static_cpp_configs != configs) {
+            should_add_shared_cpp_runtime = false
+          }
         }
+        if (should_add_shared_cpp_runtime) {
+          data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
+        } else if (!defined(invoker.crate_root)) {
+          # Even when compiling statically, some runtime dependencies might
+          # be needed when performing instrumented builds, because the
+          # compiler-generated machine code will contain imports to
+          # instrumentation-runtime-specific libraries.
+          data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+        }
+        should_add_shared_rust_runtime = true
         dynamic_rust_config =
             [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
         if (!defined(configs) ||
             configs + dynamic_rust_config - dynamic_rust_config == configs) {
           # For rustc, static linking is the default. So we only add a runtime if
           # the dynamic linking config is present.
-          should_add_rust_runtime = false
+          should_add_shared_rust_runtime = false
         }
-        if (should_add_rust_runtime) {
-          data_deps += [ "//build/unification/lib/toolchain:rust" ]
+        if (should_add_shared_rust_runtime) {
+          data_deps += [ "//build/toolchain/runtime:shared-rust-libstd-deps" ]
         }
       }
     }

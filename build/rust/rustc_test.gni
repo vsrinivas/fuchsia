@@ -182,7 +182,9 @@ template("rustc_test") {
       _dynamic_rust_config =
           [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
       if (configs + _dynamic_rust_config - _dynamic_rust_config != configs) {
-        data_deps += [ "//build/unification/lib/toolchain:libtest" ]
+        data_deps += [ "//build/toolchain/runtime:shared-rust-libtest-deps" ]
+      } else {
+        data_deps += [ "//build/toolchain/runtime:static-rust-libtest-deps" ]
       }
     }
 
