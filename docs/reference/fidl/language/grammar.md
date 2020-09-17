@@ -82,21 +82,21 @@ declaration = bits-declaration | const-declaration | enum-declaration | protocol
             | struct-declaration | table-declaration | union-declaration
             | type-alias-declaration | resource-declaration | service-declaration ;
 
-declaration-modifiers = "flexible" | "strict" | "resource";
+declaration-modifiers = "flexible" | "strict" | "resource"; [NOTE 1]
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
 enum-declaration = ( attribute-list ) , ( declaration-modifiers )* , "enum" , IDENTIFIER ,
                    ( ":" , type-constructor ) , "{" , ( bits-or-enum-member , ";" )+ ,
-                   "}" ; [NOTE 1]
+                   "}" ; [NOTE 2]
 
 bits-declaration = ( attribute-list ) , ( declaration-modifiers )* , "bits" , IDENTIFIER ,
                    ( ":" , type-constructor ) , "{" , ( bits-or-enum-member , ";" )+ ,
-                   "}" ; [NOTE 2]
+                   "}" ; [NOTE 3]
 
 bits-or-enum-member = ( attribute-list ) , IDENTIFIER , "=" , bits-or-enum-member-value ;
 
-bits-or-enum-member-value = IDENTIFIER | literal ; [NOTE 3]
+bits-or-enum-member-value = IDENTIFIER | literal ; [NOTE 4]
 
 protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
                        "{" , ( protocol-member , ";" )*  , "}" ;
@@ -104,7 +104,7 @@ protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
 protocol-member = protocol-method | protocol-event | protocol-compose ;
 
 protocol-method = ( attribute-list ) , IDENTIFIER , parameter-list,
-                  ( "->" , parameter-list , ( "error" type-constructor ) ) ; [NOTE 4]
+                  ( "->" , parameter-list , ( "error" type-constructor ) ) ; [NOTE 5]
 
 protocol-event = ( attribute-list ) , "->" , IDENTIFIER , parameter-list ;
 
@@ -125,21 +125,21 @@ table-declaration = ( attribute-list ) , ( declaration-modifiers )* , "table" , 
 
 member-field = ( attribute-list ) , type-constructor , IDENTIFIER , ( "=" , constant ) ;
 
-ordinal-member-field = ( attribute-list ) , ordinal , ":" , ordinal-member-field-body ; [NOTE 5]
+ordinal-member-field = ( attribute-list ) , ordinal , ":" , ordinal-member-field-body ; [NOTE 6]
 
 ordinal-member-field-body = member-field | "reserved";
 
 type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
 
 resource-declaration = ( attribute-list ) , "resource_definition" , IDENTIFIER , ":",
-                       "uint32" , "{" , resource-properties ,  "}" ; [NOTE 7]
+                       "uint32" , "{" , resource-properties ,  "}" ;
 
 resource-properties = "properties" , "{" , ( type-constructor , IDENTIFIER  , ";" )* , "}" , ";"
 
 service-declaration = ( attribute-list ) , "service" , IDENTIFIER , "{" ,
                       ( service-member , ";" )* , "}" ;
 
-service-member = ( attribute-list ) , type-constructor , IDENTIFIER ; [NOTE 6]
+service-member = ( attribute-list ) , type-constructor , IDENTIFIER ; [NOTE 7]
 
 attribute-list = "[" , attributes , "]" ;
 
@@ -169,34 +169,40 @@ literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 ----------
 
 ### NOTE 1
+The grammar allows `( declaration-modifiers )*` on all declarations, but the
+compiler limits this as follows:
+
+* A modifier cannot occur twice on the same declaration.
+* The `flexible` and `strict` modifiers cannot be used together.
+* The `flexible` and `strict` modifiers can only be used on `bits`, `enum`, and `union`.
+* The `resource` modifier can only be used on `struct`, `table`, and `union`.
+
+### NOTE 2
 The `enum-declaration` allows the more liberal `type-constructor` in the
 grammar, but the compiler limits this to signed or unsigned integer types,
 see [primitives].
 
-### NOTE 2
+### NOTE 3
 The `bits-declaration` allows the more liberal `type-constructor` in the grammar, but the compiler
 limits this to unsigned integer types, see [primitives].
 
-### NOTE 3
+### NOTE 4
 The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar, but the compiler limits this to:
 
 * A `NUMERIC-LITERAL` in the context of an `enum`;
 * A `NUMERIC-LITERAL` which must be a power of two, in the context of a `bits`.
 
-### NOTE 4
+### NOTE 5
 The `protocol-method` error stanza allows the more liberal `type-constructor`
 in the grammar, but the compiler limits this to an `int32`, `uint32`, or
 an enum thereof.
 
-### NOTE 5
+### NOTE 6
 Attributes cannot be placed on a reserved member.
 
-### NOTE 6
+### NOTE 7
 The `service-member` allows the more liberal `type-constructor` in the grammar, but the compiler
 limits this to protocols.
-
-### NOTE 7
-Resource declaration is an experimental feature.
 
 
 <!-- xrefs -->
