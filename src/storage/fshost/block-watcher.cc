@@ -24,10 +24,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <fstream>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -42,10 +44,10 @@
 #include <minfs/minfs.h>
 #include <zxcrypt/fdio-volume.h>
 
-#include "block-device.h"
-#include "fs-manager.h"
-#include "pkgfs-launcher.h"
-#include "zircon/errors.h"
+#include "src/storage/fshost/block-device-manager.h"
+#include "src/storage/fshost/block-device.h"
+#include "src/storage/fshost/fs-manager.h"
+#include "src/storage/fshost/pkgfs-launcher.h"
 
 namespace devmgr {
 namespace {
@@ -53,12 +55,32 @@ namespace {
 constexpr char kPathBlockDeviceRoot[] = "/dev/class/block";
 
 // Class used to pause/resume the block watcher.
-class BlockWatcherStatus {
+class Watcher {
  public:
-  // Get the BlockWatcherStatus instance.
-  static BlockWatcherStatus* Get() {
-    std::call_once(init_flag, []() { singleton = new BlockWatcherStatus(); });
-    return singleton;
+  static BlockDeviceManager::Options GetDeviceManagerOptions(bool netboot) {
+    std::ifstream file("/boot/config/fshost");
+    auto options =
+        file ? BlockDeviceManager::ReadOptions(file) : BlockDeviceManager::DefaultOptions();
+    if (netboot) {
+      options.options.emplace(BlockDeviceManager::Options::kNetboot);
+    }
+    return options;
+  }
+
+  Watcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options)
+      : mounter_(std::move(fshost), options),
+        device_manager_(GetDeviceManagerOptions(options.netboot)) {}
+
+  void Run() {
+    fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
+    if (dirfd) {
+      fdio_watch_directory(
+          dirfd.get(),
+          +[](int dirfd, int event, const char* name, void* arg) {
+            return reinterpret_cast<Watcher*>(arg)->Callback(dirfd, event, name);
+          },
+          ZX_TIME_INFINITE, this);
+    }
   }
 
   // Increment the pause count for the block watcher.
@@ -84,68 +106,52 @@ class BlockWatcherStatus {
     return ZX_OK;
   }
 
-  // Acquire the lock. Used by |BlockDeviceCallback| to indicate
-  // it is doing work.
-  void Lock() TA_ACQ(lock_) { lock_.lock(); }
-
-  // Release the lock.
-  void Unlock() TA_REL(lock_) { lock_.unlock(); }
-
-  // Returns true if the block watcher is paused.
-  bool Paused() TA_REQ(lock_) { return pause_count_ > 0; }
-
  private:
-  static std::once_flag init_flag;
-  static BlockWatcherStatus* singleton;
+  zx_status_t Callback(int dirfd, int event, const char* name) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+      return ZX_OK;
+    }
+
+    // Lock the block watcher, so any pause operations wait until after we're done.
+    std::lock_guard guard(lock_);
+    if (pause_count_ > 0) {
+      return ZX_OK;
+    }
+
+    fbl::unique_fd device_fd(openat(dirfd, name, O_RDWR));
+    if (!device_fd) {
+      return ZX_OK;
+    }
+
+    BlockDevice device(&mounter_, std::move(device_fd));
+    zx_status_t status = device_manager_.AddDevice(device);
+    if (status != ZX_OK) {
+      // This callback has to return ZX_OK for resiliency reasons, or we'll
+      // stop getting subsequent callbacks, but we should log loudly that we
+      // tried to do something and that failed.
+      fprintf(stderr, "fshost: (%s/%s) failed: %s\n", kPathBlockDeviceRoot, name,
+              zx_status_get_string(status));
+    }
+    return ZX_OK;
+  }
+
   std::mutex lock_;
-  unsigned int pause_count_ TA_GUARDED(lock_);
+  unsigned int pause_count_ TA_GUARDED(lock_) = 0;
+  FilesystemMounter mounter_;
+  BlockDeviceManager device_manager_;
 };
-
-std::once_flag BlockWatcherStatus::init_flag;
-BlockWatcherStatus* BlockWatcherStatus::singleton;
-
-zx_status_t BlockDeviceCallback(int dirfd, int event, const char* name, void* cookie) {
-  if (event != WATCH_EVENT_ADD_FILE) {
-    return ZX_OK;
-  }
-
-  // Lock the block watcher, so any pause operations wait until after we're done.
-  auto watcher = BlockWatcherStatus::Get();
-  watcher->Lock();
-  if (watcher->Paused()) {
-    watcher->Unlock();
-    return ZX_OK;
-  }
-
-  fbl::unique_fd device_fd(openat(dirfd, name, O_RDWR));
-  if (!device_fd) {
-    watcher->Unlock();
-    return ZX_OK;
-  }
-
-  auto mounter = static_cast<FilesystemMounter*>(cookie);
-  BlockDevice device(mounter, std::move(device_fd));
-  zx_status_t rc = device.Add();
-  if (rc != ZX_OK) {
-    // This callback has to return ZX_OK for resiliency reasons, or we'll
-    // stop getting subsequent callbacks, but we should log loudly that we
-    // tried to do something and that failed.
-    fprintf(stderr, "fshost: (%s/%s) failed: %s\n", kPathBlockDeviceRoot, name,
-            zx_status_get_string(rc));
-  }
-  watcher->Unlock();
-  return ZX_OK;
-}
 
 }  // namespace
 
-void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options) {
-  FilesystemMounter mounter(std::move(fshost), options);
+// Ideally, we'd pass the watcher directly to the server.
+static Watcher* watcher = nullptr;
 
-  fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
-  if (dirfd) {
-    fdio_watch_directory(dirfd.get(), BlockDeviceCallback, ZX_TIME_INFINITE, &mounter);
-  }
+void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options) {
+  ZX_ASSERT(watcher == nullptr);
+  Watcher w(std::move(fshost), options);
+  watcher = &w;
+  w.Run();
+  watcher = nullptr;
 }
 
 fbl::RefPtr<fs::Service> BlockWatcherServer::Create(devmgr::FsManager* fs_manager,
@@ -170,12 +176,11 @@ fbl::RefPtr<fs::Service> BlockWatcherServer::Create(devmgr::FsManager* fs_manage
 }
 
 void BlockWatcherServer::Pause(PauseCompleter::Sync completer) {
-  auto status = BlockWatcherStatus::Get()->Pause();
-  completer.Reply(status);
+  completer.Reply(watcher->Pause());
 }
 
 void BlockWatcherServer::Resume(ResumeCompleter::Sync completer) {
-  auto status = BlockWatcherStatus::Get()->Resume();
-  completer.Reply(status);
+  completer.Reply(watcher->Resume());
 }
+
 }  // namespace devmgr

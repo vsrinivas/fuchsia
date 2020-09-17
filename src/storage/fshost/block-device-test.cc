@@ -10,6 +10,8 @@
 #include <zircon/assert.h>
 #include <zircon/hw/gpt.h>
 
+#include <sstream>
+
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <cobalt-client/cpp/metric_options.h>
@@ -18,9 +20,10 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "filesystem-mounter.h"
-#include "fs-manager.h"
-#include "metrics.h"
+#include "src/storage/fshost/block-device-manager.h"
+#include "src/storage/fshost/filesystem-mounter.h"
+#include "src/storage/fshost/fs-manager.h"
+#include "src/storage/fshost/metrics.h"
 
 namespace devmgr {
 namespace {
@@ -119,12 +122,11 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
   FilesystemMounter mounter(std::move(manager), options);
   fbl::unique_fd fd;
   BlockDevice device(&mounter, GetRamdiskFd());
-  EXPECT_EQ(device.Netbooting(), options.netboot);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
-  fuchsia_hardware_block_partition_GUID guid;
-  EXPECT_EQ(device.GetTypeGUID(&guid), ZX_ERR_BAD_HANDLE);
+  fuchsia_hardware_block_partition_GUID null_guid{};
+  EXPECT_EQ(memcmp(&device.GetTypeGuid(), &null_guid, sizeof(null_guid)), 0);
   EXPECT_EQ(device.AttachDriver("/foobar"), ZX_ERR_BAD_HANDLE);
 
   // Returns ZX_OK because zxcrypt currently passes the empty fd to a background
@@ -144,10 +146,9 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
   FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk.
-  ASSERT_NO_FAILURES(CreateRamdisk());
+  ASSERT_NO_FAILURES(CreateRamdisk(/*use_ramdisk=*/true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
-  EXPECT_EQ(device.Netbooting(), options.netboot);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_OK(device.GetInfo(&info));
@@ -161,8 +162,8 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
   EXPECT_EQ(info.block_count, kBlockCount);
   EXPECT_EQ(info.block_size, kBlockSize);
 
-  fuchsia_hardware_block_partition_GUID guid;
-  EXPECT_OK(device.GetTypeGUID(&guid));
+  static constexpr fuchsia_hardware_block_partition_GUID expected_guid = GUID_DATA_VALUE;
+  EXPECT_EQ(memcmp(&device.GetTypeGuid(), &expected_guid, sizeof(expected_guid)), 0);
 
   EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_NOT_SUPPORTED);
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_NOT_SUPPORTED);
@@ -291,6 +292,20 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   metric_options.component = {};
   ASSERT_NE(logger_->counters().find(metric_options), logger_->counters().end());
   ASSERT_EQ(logger_->counters().at(metric_options), 1);
+}
+
+TEST(BlockDeviceManager, ReadOptions) {
+  std::stringstream stream;
+  stream << "# A comment" << std::endl
+         << BlockDeviceManager::Options::kDefault << std::endl
+         << BlockDeviceManager::Options::kNoZxcrypt << std::endl
+         << "-" << BlockDeviceManager::Options::kBlobfs;
+  const auto options = BlockDeviceManager::ReadOptions(stream);
+  auto expected_options = BlockDeviceManager::DefaultOptions();
+  expected_options.options.emplace(BlockDeviceManager::Options::kDefault);
+  expected_options.options.emplace(BlockDeviceManager::Options::kNoZxcrypt);
+  expected_options.options.erase(BlockDeviceManager::Options::kBlobfs);
+  EXPECT_EQ(expected_options.options, options.options);
 }
 
 // TODO: Add tests for Zxcrypt binding.

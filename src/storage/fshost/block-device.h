@@ -28,16 +28,15 @@ namespace devmgr {
 class BlockDevice final : public BlockDeviceInterface {
  public:
   BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd);
+  BlockDevice(const BlockDevice&) = delete;
+  BlockDevice& operator=(const BlockDevice&) = delete;
 
   disk_format_t GetFormat() final;
   void SetFormat(disk_format_t format) final;
-  bool Netbooting() final;
-  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) final;
-  zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final;
+  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
+  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final;
   zx_status_t AttachDriver(const std::string_view& driver) final;
   zx_status_t UnsealZxcrypt() final;
-  zx_status_t IsTopologicalPathSuffix(const std::string_view& path, bool* is_path) final;
-  zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final;
   zx_status_t FormatZxcrypt() final;
   bool ShouldCheckFilesystems() final;
   zx_status_t CheckFilesystem() final;
@@ -47,11 +46,19 @@ class BlockDevice final : public BlockDeviceInterface {
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final;
   bool ShouldAllowAuthoringFactory() final;
 
+  disk_format_t content_format() const final;
+  const std::string& topological_path() const final { return topological_path_; }
+  const std::string& partition_name() const final;
+
  private:
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
-  std::optional<fuchsia_hardware_block_BlockInfo> info_ = {};
+  mutable std::optional<fuchsia_hardware_block_BlockInfo> info_ = {};
+  mutable std::optional<disk_format_t> content_format_;
   disk_format_t format_ = DISK_FORMAT_UNKNOWN;
+  std::string topological_path_;
+  mutable std::string partition_name_;
+  mutable std::optional<fuchsia_hardware_block_partition_GUID> type_guid_;
 };
 
 }  // namespace devmgr

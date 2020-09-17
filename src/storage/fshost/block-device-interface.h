@@ -34,7 +34,16 @@ class BlockDeviceInterface {
 
   zx_status_t Add();
 
- private:
+  // Returns the format that the content appears to be.  Avoid using this unless
+  // there is no other way to determine the format of the device.
+  virtual disk_format_t content_format() const = 0;
+
+  // The topological path for the device.
+  virtual const std::string& topological_path() const = 0;
+
+  // The partition name for this device (if it happens to be part of a partiiton scheme).
+  virtual const std::string& partition_name() const = 0;
+
   // Returns the expected on-disk format of the underlying device.
   //
   // If unknown or unreadable, DISK_FORMAT_UNKNOWN should be returned.
@@ -46,16 +55,11 @@ class BlockDeviceInterface {
   // to force a new format based on external information.
   virtual void SetFormat(disk_format_t format) = 0;
 
-  // Returns "true" if the device is booted from in-memory partitions,
-  // and expects that filesystems and encrypted partitions will not be
-  // automatically mounted.
-  virtual bool Netbooting() = 0;
-
   // Queries (using the block interface) for info about the underlying device.
-  virtual zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) = 0;
+  virtual zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
 
   // Queries (using the partition interface) for the GUID of the underlying device.
-  virtual zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) = 0;
+  virtual const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const = 0;
 
   // Attempts to directly bind a driver to the device. This is typically used
   // by partition drivers, which may be loaded on top of a device exposing the
@@ -67,13 +71,6 @@ class BlockDeviceInterface {
 
   // Creates the zxcrypt partition.
   virtual zx_status_t FormatZxcrypt() = 0;
-
-  // Determines if the underlying volumes topological path ends with a particular string.
-  virtual zx_status_t IsTopologicalPathSuffix(const std::string_view& path, bool* is_path) = 0;
-
-  // Determines if the underlying volume is unsealed zxcrypt. Assumes the device
-  // has the data GUID.
-  virtual zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) = 0;
 
   // Returns true if the consistency of filesystems should be validated before
   // mounting.
