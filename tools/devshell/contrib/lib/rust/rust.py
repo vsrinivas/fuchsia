@@ -31,7 +31,7 @@ class GnTarget:
         match = re.match(
             r"([\w/.-]*)" + r"(:([\w-]+))?" + r"(\(([\w/:-]+)\))?$", gn_target)
         if match is None:
-            print "Invalid GN label '%s'" % gn_target
+            print(f"Invalid GN label '{gen_target}'")
             raise ValueError(gn_target)
         path, name, toolchain = match.group(1, 3, 5)
 
@@ -106,7 +106,7 @@ def get_rust_target_from_file(file):
         ninja_query_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     if p.returncode:
-        print err
+        print(err)
         raise None
 
     # Expected Ninja query output is:
@@ -115,7 +115,7 @@ def get_rust_target_from_file(file):
     #     rust_crates/binary
     lines = out.splitlines()
     if len(lines) < 3:
-        print "Unexpected Ninja output: %s" % out
+        print(f"Unexpected Ninja output: {out}")
         return None
 
     output_files = [
@@ -137,7 +137,7 @@ def get_rust_target_from_file(file):
             gn_refs_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         if p.returncode:
-            print err
+            print(err)
             raise None
 
         # Expected GN refs output is:
@@ -149,5 +149,5 @@ def get_rust_target_from_file(file):
             if line.endswith("_build"):
                 return GnTarget(line.rstrip("_build"))
 
-    print "Unable to find Rust build target for %s" % file
+    print(f"Unable to find Rust build target for {file}")
     return None

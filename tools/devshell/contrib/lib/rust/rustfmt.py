@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -59,9 +59,7 @@ def main():
         if 'bin' in cargo_toml:
             bins = cargo_toml['bin']
             if len(bins) != 1:
-                print(
-                    "Expected a single bin target for {gn_target}, found {n}".
-                    format(gn_target=gn_target, n=len(bins)))
+                print(f"Expected a single bin target for {gn_target}, found {len(bins)}")
                 return 1
             main_files.append((gn_target, bins[0]['path']))
         elif 'lib' in cargo_toml:
@@ -74,9 +72,7 @@ def main():
 
     for gn_target, main_file in main_files:
         if not main_file or not os.path.exists(main_file):
-            print(
-                "No source root (typically lib.rs or main.rs) found for {gn_target}"
-                .format(gn_target=gn_target))
+            print(f"No source root (typically lib.rs or main.rs) found for {gn_target}")
             return 1
 
     host_platform = "%s-%s" % (

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -43,14 +43,14 @@ def main():
             os.remove(output)
         except OSError:
             pass
-        print "Linking '{}' for target '{}'".format(output, args.gn_target)
+        print(f"Linking '{output}' for target '{args.gn_target}'")
         rel_path = os.path.relpath(manifest_path, os.path.dirname(output))
         os.symlink(rel_path, output)
     else:
-        print "Could not find a Cargo.toml file at '{}'".format(manifest_path)
-        print
-        print "Is '{}' an existing Rust target?".format(args.gn_target)
-        print "If so, make sure it is included in your build configuration and that you have run 'fx build'."
+        print(f"Could not find a Cargo.toml file at '{manifest_path}'")
+        print("")
+        print(f"Is '{args.gn_target}' an existing Rust target?")
+        print("If so, make sure it is included in your build configuration and that you have run 'fx build'.")
         return 1
 
 
