@@ -1,0 +1,9 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Path to the breakpad 'dump_syms' prebuilt binary.
+breakpad_dump_syms =
+    rebase_path(
+        "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
+        root_build_dir)

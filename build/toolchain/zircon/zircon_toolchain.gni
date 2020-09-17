@@ -5,6 +5,7 @@
 import("//build/config/clang/clang.gni")
 import("//build/config/compiler.gni")
 import("//build/config/zircon/levels.gni")
+import("//build/toolchain/breakpad.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
@@ -363,14 +364,10 @@ template("zircon_toolchain") {
   # self-targetting Breakpad dump_syms tool on hand.
   use_breakpad = output_breakpad_syms && is_elf && use_buildidtool
   if (use_breakpad) {
-    dump_syms = rebase_path(breakpad_dump_syms, root_build_dir)
-    foreach(arg, breakpad_args) {
-      dump_syms += " \"$arg\""
-    }
+    dump_syms = breakpad_dump_syms
+    dump_syms += " -r "
     if (invoker.os == "fuchsia") {
-      foreach(arg, breakpad_fuchsia_args) {
-        dump_syms += " \"$arg\""
-      }
+      dump_syms += " -n \"<_>\" -o Fuchsia"
     } else {
       # Use what's probably installation name, not the ".debug" name.
       dump_syms += " -n \"{{target_output_name}}{{output_extension}}\""

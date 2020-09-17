@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/rust/config.gni")
+import("//build/toolchain/breakpad.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
@@ -96,9 +97,7 @@ template("clang_toolchain") {
                 "//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
                 root_build_dir)
         if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
-          dump_syms = rebase_path(
-                  "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
-                  root_build_dir)
+          dump_syms = breakpad_dump_syms
 
           # The breakpad module name for executables and loadable modules.
           breakpad_name = "<_>"

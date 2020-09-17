@@ -7,6 +7,7 @@ import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/config/sysroot.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
+import("//build/toolchain/breakpad.gni")
 
 declare_args() {
   #   gocache_dir
@@ -305,9 +306,7 @@ template("go_build") {
         if (!carchive && output_breakpad_syms && host_os != "mac") {
           args += [
             "--dump-syms",
-            rebase_path(
-                "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
-                root_build_dir),
+            breakpad_dump_syms,
           ]
         }
 
