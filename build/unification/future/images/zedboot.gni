@@ -29,7 +29,6 @@ zedboot_deps += [
 # Needed for installer runs.
 zedboot_deps += [
   "//src/storage/bin/disk-pave:install-disk-image",
-  "//src/storage/bin/minfs",
   "//src/storage/bin/mount:mount",
 ]
 
@@ -39,8 +38,6 @@ zedboot_deps += [
   "//src/devices/nand/bin/nand-util",
   "//src/security/bin/syscall-check",
   "//src/storage/bin/dd",
-  "//src/storage/bin/fsck",
-  "//src/storage/bin/mkfs",
   "//src/storage/bin/umount",
   "//src/sys/bin/psutils:killall",
   "//src/sys/bin/psutils:ps",
