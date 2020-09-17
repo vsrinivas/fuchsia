@@ -8,6 +8,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <pow2.h>
 #include <sys/types.h>
+#include <trace.h>
 
 #include <fbl/ref_counted.h>
 #include <ktl/move.h>
@@ -16,6 +17,8 @@
 
 KCOUNTER(msi_create_count, "msi.create")
 KCOUNTER(msi_destroy_count, "msi.destroy")
+
+#define LOCAL_TRACE 0
 
 zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* obj,
                                   MsiAllocFn msi_alloc_fn, MsiFreeFn msi_free_fn,
@@ -43,6 +46,9 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
   if (st != ZX_OK) {
     return st;
   }
+
+  LTRACEF("MSI Allocation: { tgr_addr = 0x%lx, tgt_data = 0x%08x, base_irq_id = %u }\n",
+          block.tgt_addr, block.tgt_data, block.base_irq_id);
 
   ktl::array<char, ZX_MAX_NAME_LEN> name;
   if (block.num_irq == 1) {

@@ -246,16 +246,21 @@ MsixDispatcherImpl::MsixDispatcherImpl(fbl::RefPtr<MsiAllocation>&& alloc, uint3
                                        zx_off_t table_offset, RegisterIntFn register_int_fn)
     : MsiDispatcher(ktl::move(alloc), ktl::move(mapping), base_irq_id, msi_id, register_int_fn),
       table_entries_(reinterpret_cast<MsixTableEntry*>(this->mapping()->base() + table_offset)) {
-  // Disable the vector, set up the address and data registers, then re-enable it for our given
-  // msi_id. Per PCI Local Bus Spec v3 section 6.8.2 implementation notes, all accesses to these
-  // registers must be DWORD or QWORD only. We write upper and lower halves of the address
-  // unconditionally because if the address is 32 bits then we want to write zeroes to the upper
-  // half regardless.
+  // Disable the vector, set up the address and data registers, then re-enable
+  // it for our given msi_id. Per PCI Local Bus Spec v3 section 6.8.2
+  // implementation notes, all accesses to these registers must be DWORD or
+  // QWORD only. We write upper and lower halves of the address unconditionally
+  // because if the address is 32 bits then we want to write zeroes to the upper
+  // half regardless. The msg_data field is incremented by msi_id because unlike
+  // MSI, MSI-X does not adjust the data payload. This allows us to point
+  // multiple table entries at the same vector, but requires us to specify the
+  // vector in the data field.
   MaskInterrupt();
   writel(allocation()->block().tgt_addr & UINT32_MAX, &table_entries_[msi_id].msg_addr);
   writel(static_cast<uint32_t>(allocation()->block().tgt_addr >> 32),
          &table_entries_[msi_id].msg_upper_addr);
-  writel(allocation()->block().tgt_data, &table_entries_[msi_id].msg_data);
+  writel(allocation()->block().tgt_data + msi_id, &table_entries_[msi_id].msg_data);
+  arch::DeviceMemoryBarrier();
 }
 
 void MsixDispatcherImpl::MaskInterrupt() {
@@ -275,4 +280,5 @@ MsixDispatcherImpl::~MsixDispatcherImpl() {
   writel(0, &table_entries_[msi_id()].msg_addr);
   writel(0, &table_entries_[msi_id()].msg_upper_addr);
   writel(0, &table_entries_[msi_id()].msg_data);
+  arch::DeviceMemoryBarrier();
 }

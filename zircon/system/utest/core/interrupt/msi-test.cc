@@ -249,7 +249,7 @@ TEST_F(MsiTest, Msix) {
       ASSERT_OK(zx::msi::create(msi, ZX_MSI_MODE_MSI_X, id, vmo, 0, &interrupt));
       EXPECT_EQ(static_cast<uint32_t>(msi_info.target_addr), msix_table[id].msg_addr);
       EXPECT_EQ(static_cast<uint32_t>(msi_info.target_addr >> 32), msix_table[id].msg_upper_addr);
-      EXPECT_EQ(msi_info.target_data, msix_table[id].msg_data);
+      EXPECT_EQ(msi_info.target_data + id, msix_table[id].msg_data);
       EXPECT_EQ(0, msix_table[id].vector_control & FakeMsi::kVectorControlMasked);
     }
 
