@@ -7,7 +7,6 @@ package dart
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"text/template"
 
@@ -193,7 +192,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Value:       valueStr,
 				ValueType:   valueType,
 				Bytes:       buildBytes(encoding.Bytes),
-				HandleDefs:  buildHandles(encodeSuccess.HandleDefs),
+				HandleDefs:  buildHandleDefs(encodeSuccess.HandleDefs),
 				Handles:     toDartIntList(encoding.Handles),
 			})
 		}
@@ -220,7 +219,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				Value:         valueStr,
 				ValueType:     valueType,
 				Bytes:         buildBytes(encoding.Bytes),
-				HandleDefs:    buildHandles(decodeSuccess.HandleDefs),
+				HandleDefs:    buildHandleDefs(decodeSuccess.HandleDefs),
 				Handles:       toDartIntList(encoding.Handles),
 				UnusedHandles: toDartIntList(gidlir.GetUnusedHandles(decodeSuccess.Value, encoding.Handles)),
 			})
@@ -255,7 +254,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				Value:       valueStr,
 				ValueType:   valueType,
 				ErrorCode:   errorCode,
-				HandleDefs:  buildHandles(encodeFailure.HandleDefs),
+				HandleDefs:  buildHandleDefs(encodeFailure.HandleDefs),
 			})
 		}
 	}
@@ -284,7 +283,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				ValueType:   valueType,
 				Bytes:       buildBytes(encoding.Bytes),
 				ErrorCode:   errorCode,
-				HandleDefs:  buildHandles(decodeFailure.HandleDefs),
+				HandleDefs:  buildHandleDefs(decodeFailure.HandleDefs),
 				Handles:     toDartIntList(encoding.Handles),
 			})
 		}
@@ -324,28 +323,6 @@ func buildBytes(bytes []byte) string {
 		}
 	}
 	builder.WriteString("])")
-	return builder.String()
-}
-
-func buildHandles(defs []gidlir.HandleDef) string {
-	if len(defs) == 0 {
-		return ""
-	}
-	var builder strings.Builder
-	builder.WriteString("[\n")
-	for i, d := range defs {
-		switch d.Subtype {
-		case fidlir.Channel:
-			builder.WriteString(fmt.Sprint("HandleSubtype.event,"))
-		case fidlir.Event:
-			builder.WriteString(fmt.Sprint("HandleSubtype.channel,"))
-		default:
-			log.Fatal("unsupported handle subtype ", d.Subtype)
-		}
-		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
-	}
-	builder.WriteString("]")
 	return builder.String()
 }
 

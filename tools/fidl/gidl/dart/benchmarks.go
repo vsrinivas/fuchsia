@@ -31,6 +31,9 @@ import 'dart:typed_data';
 import 'package:fuchsia/fuchsia.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
+{{- if .UsesHandles }}
+import 'package:topaz.lib.gidl/handles.dart';
+{{- end }}
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_benchmarkfidl/fidl_async.dart';
@@ -107,14 +110,26 @@ class BenchmarkGroup {
 
 {{ range .Benchmarks }}
 void encode{{ .Name }}Benchmark(run, teardown) {
+{{- if .HandleDefs }}
+  final handleDefs = createHandles({{ .HandleDefs }});
+  teardown(() {
+    closeHandles(handleDefs);
+  });
+{{- end }}
 	final value = {{ .Value }};
 	run(() {
 		final Encoder encoder = Encoder()
 			..alloc({{ .ValueType}}.inlineSize);
 		{{ .ValueType }}.encode(encoder, value, 0);
-	});
+  });
 }
 void decode{{ .Name }}Benchmark(run, teardown) {
+{{- if .HandleDefs }}
+  final handleDefs = createHandles({{ .HandleDefs }});
+  teardown(() {
+    closeHandles(handleDefs);
+  });
+{{- end }}
 	final value = {{ .Value }};
 	final Encoder encoder = Encoder()..alloc({{ .ValueType}}.inlineSize);
 	{{ .ValueType }}.encode(encoder, value, 0);
@@ -122,7 +137,7 @@ void decode{{ .Name }}Benchmark(run, teardown) {
 		final Decoder decoder = Decoder(encoder.message)
 			..claimMemory({{ .ValueType}}.inlineSize);
 			{{ .ValueType }}.decode(decoder, 0);
-	});
+  });
 }
 {{ end }}
 
@@ -153,17 +168,19 @@ void main() async {
 `))
 
 type benchmarkTmplInput struct {
-	Benchmarks []benchmark
+	UsesHandles bool
+	Benchmarks  []benchmark
 }
 
 type benchmark struct {
-	Name, ChromeperfPath, Value, ValueType string
+	Name, ChromeperfPath, Value, ValueType, HandleDefs string
 }
 
 // GenerateBenchmarks generates Dart benchmarks.
 func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
+	usesHandles := false
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
@@ -176,10 +193,15 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 			ChromeperfPath: gidlBenchmark.Name,
 			Value:          value,
 			ValueType:      valueType,
+			HandleDefs:     buildHandleDefs(gidlBenchmark.HandleDefs),
 		})
+		if len(gidlBenchmark.HandleDefs) > 0 {
+			usesHandles = true
+		}
 	}
 	input := benchmarkTmplInput{
-		Benchmarks: benchmarks,
+		UsesHandles: usesHandles,
+		Benchmarks:  benchmarks,
 	}
 	var buf bytes.Buffer
 	err := benchmarkTmpl.Execute(&buf, input)

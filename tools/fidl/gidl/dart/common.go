@@ -16,6 +16,28 @@ import (
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
+func buildHandleDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for i, d := range defs {
+		switch d.Subtype {
+		case fidlir.Channel:
+			builder.WriteString(fmt.Sprint("HandleSubtype.event,"))
+		case fidlir.Event:
+			builder.WriteString(fmt.Sprint("HandleSubtype.channel,"))
+		default:
+			log.Fatal("unsupported handle subtype ", d.Subtype)
+		}
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:

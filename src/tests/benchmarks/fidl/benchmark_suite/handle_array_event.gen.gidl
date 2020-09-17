@@ -6,7 +6,7 @@
 
 // 64 event handle array in a struct
 benchmark("HandleArray/Event/64") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [dart, rust],
     enable_send_event_benchmark = true,
     enable_echo_call_benchmark = true,
     handle_defs = {
