@@ -216,7 +216,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
             return Ok(());
         }
 
-        self.set_target_channel(target_channel)
+        self.set_target_channel(target_channel).await
     }
 
     async fn lookup_target_channel(&self) -> Result<String, anyhow::Error> {
@@ -235,7 +235,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         self.target_channel.lock().clone()
     }
 
-    pub fn set_target_channel(&self, channel: String) -> Result<(), anyhow::Error> {
+    pub async fn set_target_channel(&self, channel: String) -> Result<(), anyhow::Error> {
         // Write to target_channel.json
         write_channel(&self.path, &channel)?;
 
@@ -245,7 +245,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
 
         // Write to sysconfig
         let config = OtaUpdateChannelConfig::new(&channel, &channel)?;
-        write_channel_config(&config)?;
+        write_channel_config(&config).await?;
         Ok(())
     }
 
@@ -318,7 +318,7 @@ mod mock_sysconfig {
 
     thread_local!(static LAST_CONFIG: Mutex<Option<OtaUpdateChannelConfig>> = Mutex::new(None));
 
-    pub fn write_channel_config(config: &OtaUpdateChannelConfig) -> Result<(), Error> {
+    pub async fn write_channel_config(config: &OtaUpdateChannelConfig) -> Result<(), Error> {
         LAST_CONFIG.with(|last_config| *last_config.lock() = Some(config.clone()));
         Ok(())
     }
@@ -767,7 +767,7 @@ mod tests {
 
         let connector = RewriteServiceConnector::new("fuchsia-pkg://devhost/update/0");
         let channel_manager = TargetChannelManager::new(connector, dir.path());
-        channel_manager.set_target_channel("target-channel".to_string()).unwrap();
+        channel_manager.set_target_channel("target-channel".to_string()).await.unwrap();
         assert_eq!(channel_manager.get_target_channel(), Some("target-channel".to_string()));
         assert_eq!(read_channel(&target_channel_path).unwrap(), "target-channel");
         assert_eq!(

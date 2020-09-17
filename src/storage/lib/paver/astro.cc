@@ -140,35 +140,28 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
     return status.take_error();
   }
 
-  // TODO(fxbug.dev/47505): Removed this condition and always enabled buffered client when
-  // http://fxb/40952 is fixed.
-  bool enabled_buffered_client =
-      boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.buffered-client", false);
+  // Enable abr wear-leveling only when we see an explicitly defined boot argument
+  // "astro.sysconfig.abr-wear-leveling".
+  // TODO(fxbug.dev/47505): Find a proper place to document the parameter.
+  AbrWearLevelingOption option =
+      boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.abr-wear-leveling", false)
+          ? AbrWearLevelingOption::ON
+          : AbrWearLevelingOption::OFF;
 
-  if (enabled_buffered_client) {
-    // Enable abr wear-leveling only when we see an explicitly defined boot argument
-    // "astro.sysconfig.abr-wear-leveling".
-    // TODO(fxbug.dev/47505): Find a proper place to document the parameter.
-    AbrWearLevelingOption option =
-        boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.abr-wear-leveling", false)
-            ? AbrWearLevelingOption::ON
-            : AbrWearLevelingOption::OFF;
+  if (auto status = InitializeContext(devfs_root, option, context); status.is_error()) {
+    ERROR("Failed to initialize context. %s\n", status.status_string());
+    return status.take_error();
+  }
 
-    if (auto status = InitializeContext(devfs_root, option, context); status.is_error()) {
-      ERROR("Failed to initialize context. %s\n", status.status_string());
+  // CanSafelyUpdateLayout internally acquires the context.lock_. Thus we don't put it in
+  // context.Call() or InitializeContext to avoid dead lock.
+  if (option == AbrWearLevelingOption::ON && CanSafelyUpdateLayout(context)) {
+    if (auto status = context->Call<AstroPartitionerContext>([](auto* ctx) {
+          return zx::make_status(ctx->client_->UpdateLayout(
+              ::sysconfig::SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout()));
+        });
+        status.is_error()) {
       return status.take_error();
-    }
-
-    // CanSafelyUpdateLayout internally acquires the context.lock_. Thus we don't put it in
-    // context.Call() or InitializeContext to avoid dead lock.
-    if (option == AbrWearLevelingOption::ON && CanSafelyUpdateLayout(context)) {
-      if (auto status = context->Call<AstroPartitionerContext>([](auto* ctx) {
-            return zx::make_status(ctx->client_->UpdateLayout(
-                ::sysconfig::SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout()));
-          });
-          status.is_error()) {
-        return status.take_error();
-      }
     }
   }
 
@@ -176,8 +169,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
   std::unique_ptr<SkipBlockDevicePartitioner> skip_block(
       new SkipBlockDevicePartitioner(std::move(devfs_root)));
 
-  return zx::ok(
-      new AstroPartitioner(std::move(skip_block), enabled_buffered_client ? context : nullptr));
+  return zx::ok(new AstroPartitioner(std::move(skip_block), context));
 }
 
 // Astro bootloader types:
@@ -281,18 +273,8 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
         }
         ZX_ASSERT(false);
       }();
-      // TODO(fxbug.dev/47505): Remove the following check and always use buffered client when
-      // http://fxb/40952 is fixed.
-      if (context_) {
-        return zx::ok(new AstroSysconfigPartitionClientBuffered(context_, type));
-      } else {
-        std::optional<sysconfig::SyncClient> client;
-        zx_status_t status = sysconfig::SyncClient::Create(skip_block_->devfs_root(), &client);
-        if (status != ZX_OK) {
-          return zx::error(status);
-        }
-        return zx::ok(new SysconfigPartitionClient(*std::move(client), type));
-      }
+      ZX_ASSERT(context_);
+      return zx::ok(new AstroSysconfigPartitionClientBuffered(context_, type));
     }
     case Partition::kFuchsiaVolumeManager: {
       return skip_block_->FindFvmPartition();

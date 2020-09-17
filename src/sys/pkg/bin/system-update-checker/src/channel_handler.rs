@@ -79,7 +79,7 @@ impl ChannelHandler {
                         .context("sending GetTargetList response")?;
                 }
                 ChannelControlRequest::SetTarget { channel, responder } => {
-                    self.target_channel_manager.set_target_channel(channel)?;
+                    self.target_channel_manager.set_target_channel(channel).await?;
                     responder.send().context("sending SetTarget response")?;
                 }
             }

@@ -23,6 +23,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
+            "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageCache",
             "fuchsia.posix.socket.Provider",
             "fuchsia.tracing.provider.Registry"

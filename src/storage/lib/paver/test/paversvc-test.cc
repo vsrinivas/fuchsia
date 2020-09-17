@@ -195,9 +195,6 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
     if (strncmp(name.data(), "astro.sysconfig.abr-wear-leveling",
                 sizeof("astro.sysconfig.abr-wear-leveling")) == 0) {
       completer.Reply(astro_sysconfig_abr_wear_leveling_);
-    } else if (strncmp(name.data(), "astro.sysconfig.buffered-client",
-                       sizeof("astro.sysconfig.buffered-client")) == 0) {
-      completer.Reply(astro_sysconfig_buffered_client_);
     } else {
       completer.Reply(defaultval);
     }
@@ -208,13 +205,10 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
 
   void SetAstroSysConfigAbrWearLeveling(bool opt) { astro_sysconfig_abr_wear_leveling_ = opt; }
 
-  void SetAstroSysConfigBufferedClient(bool opt) { astro_sysconfig_buffered_client_ = opt; }
-
   void SetArgResponse(std::string arg_response) { arg_response_ = arg_response; }
 
  private:
   bool astro_sysconfig_abr_wear_leveling_ = false;
-  bool astro_sysconfig_buffered_client_ = false;
   std::string arg_response_ = "-a";
 };
 
@@ -852,7 +846,6 @@ TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthyBothPriorityZero)
 
 TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   AbrData abr_data = kAbrData;
   // Successful slot b, active slot a. Like what happen after a reboot following an OTA.
   abr_data.slot_data[0].tries_remaining = 3;
@@ -1014,7 +1007,6 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
 TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
   // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
   // Active slot b
@@ -1101,7 +1093,6 @@ AbrData GetAbrWearlevelingSupportingLayout() {
 TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
   // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
   // Unbootable slot a, successful active slot b
@@ -1161,7 +1152,6 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   ::llcpp::fuchsia::paver::Configuration configs[] = {
@@ -1600,7 +1590,6 @@ TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutNotUpda
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
   ASSERT_NO_FATAL_FAILURES(FindSysconfig());
@@ -1612,7 +1601,6 @@ TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutUpdated
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
   auto abr_data = GetAbrWearlevelingSupportingLayout();
@@ -1647,7 +1635,6 @@ TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutNotUpdat
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
   ASSERT_NO_FATAL_FAILURES(FindSysconfig());
@@ -1659,7 +1646,6 @@ TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutUpdated)
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
-  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
   auto abr_data = GetAbrWearlevelingSupportingLayout();

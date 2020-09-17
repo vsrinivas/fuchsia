@@ -2,155 +2,183 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, AsHandleRef, Vmo};
-use std::fs;
-use std::os::unix::io::AsRawFd;
-
-#[allow(bad_style)]
-#[cfg_attr(test, allow(dead_code))]
-mod sys;
-/// The list of sysconfig sub partitions.
-pub use sys::SysconfigPartition;
+use fidl::Error as FidlError;
+use fidl_fuchsia_mem::Buffer;
 #[cfg(not(test))]
-use sys::*;
-
-#[cfg(test)]
-mod sys_mock;
-#[cfg(test)]
-use sys_mock::*;
+use fidl_fuchsia_paver::PaverMarker;
+use fidl_fuchsia_paver::{SysconfigMarker, SysconfigProxy};
+#[cfg(not(test))]
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon::Status;
+use thiserror::Error;
 
 pub mod channel;
 
-struct SysconfigSyncClient(*mut sysconfig_sync_client_t);
+#[derive(Debug, Error)]
+pub enum SysconfigError {
+    #[error("Out of range: {}", _0)]
+    OutOfRange(usize),
 
-impl SysconfigSyncClient {
-    fn new(fd: std::os::unix::io::RawFd) -> Result<Self, zx::Status> {
-        let mut sync_client: *mut sysconfig_sync_client_t = std::ptr::null_mut();
-        // Caller is responsible for closing the fd.
-        // On success, `sync_client` will be pointing to a `sysconfig_sync_client` struct, and must
-        // be freed with `sysconfig_sync_client_free`.
-        zx::ok(unsafe {
-            sysconfig_sync_client_create(fd, &mut sync_client as *mut *mut sysconfig_sync_client_t)
-        })?;
-        Ok(SysconfigSyncClient(sync_client))
-    }
+    #[error("Sysconfig Fidl Error: {:?}", _0)]
+    SysconfigFidl(FidlError),
 
-    fn read_partition(&self, partition: SysconfigPartition) -> Result<Vec<u8>, zx::Status> {
-        let size = self.get_partition_size(partition)?;
-        let vmo = Vmo::create(size as u64)?;
-        assert!(!self.0.is_null());
-        // Requires that `self.0` is pointing to a valid `sysconfig_sync_client_t`.
-        // Does not take ownership of the vmo handle.
-        zx::ok(unsafe { sysconfig_read_partition(self.0, partition, vmo.raw_handle(), 0) })?;
+    #[error("Zircon Error: {:?}", _0)]
+    Zircon(Status),
 
-        let mut result = vec![0u8; size];
-        vmo.read(result.as_mut_slice(), 0)?;
-        Ok(result)
-    }
+    #[error("Service Connection")]
+    ServiceConnection,
 
-    fn write_partition(
-        &self,
-        partition: SysconfigPartition,
-        data: &[u8],
-    ) -> Result<(), zx::Status> {
-        let size = self.get_partition_size(partition)?;
-        if data.len() > size {
-            return Err(zx::Status::OUT_OF_RANGE);
-        }
-        let vmo = Vmo::create(size as u64)?;
-        vmo.write(data, 0)?;
-        assert!(!self.0.is_null());
-        // Requires that `self.0` is pointing to a valid `sysconfig_sync_client_t`.
-        // Does not take ownership of the vmo handle.
-        zx::ok(unsafe { sysconfig_write_partition(self.0, partition, vmo.raw_handle(), 0) })?;
-        Ok(())
-    }
+    #[error("Sysconfig Proxy Creation")]
+    SysconfigProxy,
+}
 
-    fn get_partition_size(&self, partition: SysconfigPartition) -> Result<usize, zx::Status> {
-        assert!(!self.0.is_null());
-        let mut out: usize = 0;
-        // Requires that `self.0` is pointing to a valid `sysconfig_sync_client_t`.
-        zx::ok(unsafe { sysconfig_get_partition_size(self.0, partition, &mut out) })?;
-        Ok(out)
+impl From<FidlError> for SysconfigError {
+    fn from(e: FidlError) -> Self {
+        SysconfigError::SysconfigFidl(e)
     }
 }
 
-impl Drop for SysconfigSyncClient {
-    fn drop(&mut self) {
-        assert!(!self.0.is_null());
-        // Requires that `self.0` is pointing to a valid `sysconfig_sync_client_t`.
-        unsafe {
-            sysconfig_sync_client_free(self.0);
-        }
+impl From<Status> for SysconfigError {
+    fn from(e: Status) -> Self {
+        SysconfigError::Zircon(e)
     }
 }
 
-/// Read an entire sysconfig sub partition into a Vec<u8>.
-pub fn read_partition(partition: SysconfigPartition) -> Result<Vec<u8>, std::io::Error> {
-    let dev = fs::File::open("/dev")?;
-    let client = SysconfigSyncClient::new(dev.as_raw_fd())?;
+#[cfg(not(test))]
+pub fn get_sysconfig_proxy() -> Result<SysconfigProxy, SysconfigError> {
+    let paver =
+        connect_to_service::<PaverMarker>().map_err(|_| SysconfigError::ServiceConnection)?;
+    let (sysconfig, server_end) = fidl::endpoints::create_proxy::<SysconfigMarker>()
+        .map_err(|_| SysconfigError::SysconfigProxy)?;
+    let () = paver.find_sysconfig(server_end)?;
 
-    Ok(client.read_partition(partition)?)
+    Ok(sysconfig)
 }
 
-/// Write `data` to a sysconfig sub partition, if the length of `data` is smaller than the
-/// partition size, the rest of the partition is filled with 0s.
-pub fn write_partition(partition: SysconfigPartition, data: &[u8]) -> Result<(), std::io::Error> {
-    let dev = fs::OpenOptions::new().read(true).write(true).open("/dev")?;
-    let client = SysconfigSyncClient::new(dev.as_raw_fd())?;
+#[cfg(test)]
+use sysconfig_mock::get_sysconfig_proxy;
 
-    client.write_partition(partition, data)?;
+pub async fn read_sysconfig_partition() -> Result<Vec<u8>, SysconfigError> {
+    let sysconfig = get_sysconfig_proxy()?;
+    let read_result = sysconfig.read().await?;
+    let buffer = read_result.map_err(|status| Status::from_raw(status))?;
+    let get_size_result = sysconfig.get_partition_size().await?;
+    let ptn_size = get_size_result.map_err(|status| Status::from_raw(status))?;
+    let mut ret = vec![0u8; ptn_size as usize];
+    buffer.vmo.read(ret.as_mut_slice(), 0)?;
+    Ok(ret)
+}
+
+pub async fn write_sysconfig_partition(data: &[u8]) -> Result<(), SysconfigError> {
+    let sysconfig = get_sysconfig_proxy()?;
+    let get_size_result = sysconfig.get_partition_size().await?;
+    let ptn_size = get_size_result.map_err(|status| Status::from_raw(status))?;
+
+    if data.len() > ptn_size as usize {
+        return Err(SysconfigError::OutOfRange(data.len()));
+    }
+
+    let mut buf =
+        Buffer { vmo: fuchsia_zircon::Vmo::create(ptn_size as u64)?, size: ptn_size as u64 };
+    buf.vmo.write(data, 0)?;
+    let write_result = sysconfig.write(&mut buf).await?;
+    Status::ok(write_result)?;
+    let flush_result = sysconfig.flush().await?;
+    Status::ok(flush_result)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod sysconfig_mock {
+    use super::*;
+    use fasync::futures::TryStreamExt;
+    use fidl_fuchsia_paver::SysconfigRequest;
+    use fuchsia_async as fasync;
+    use std::cell::RefCell;
+    pub const SYSCONFIG_PARTITION_SIZE: usize = 4096;
+
+    thread_local!(pub static DATA: RefCell<Vec<u8>> = RefCell::new(vec![0; SYSCONFIG_PARTITION_SIZE]));
+
+    pub fn get_data() -> Vec<u8> {
+        DATA.with(|data| data.borrow().clone())
+    }
+
+    pub fn set_data(new_data: Vec<u8>) {
+        DATA.with(|data| *data.borrow_mut() = new_data);
+    }
+
+    pub fn spawn_sysconfig_service() -> SysconfigProxy {
+        let (sysconfig_proxy, mut sysconfig_stream) =
+            fidl::endpoints::create_proxy_and_stream::<SysconfigMarker>().unwrap();
+        fasync::Task::spawn(async move {
+            while let Some(req) = sysconfig_stream.try_next().await.unwrap() {
+                #[allow(unreachable_patterns)]
+                match req {
+                    SysconfigRequest::Read { responder } => {
+                        let buf = Buffer {
+                            vmo: fuchsia_zircon::Vmo::create(SYSCONFIG_PARTITION_SIZE as u64)
+                                .unwrap(),
+                            size: SYSCONFIG_PARTITION_SIZE as u64,
+                        };
+                        buf.vmo.write(get_data().as_mut_slice(), 0).unwrap();
+                        responder.send(&mut Ok(buf)).expect("sysconfig response to send");
+                    }
+                    SysconfigRequest::Write { payload, responder } => {
+                        assert_eq!(payload.size as usize, SYSCONFIG_PARTITION_SIZE);
+                        let mut temp: Vec<u8> = vec![0; SYSCONFIG_PARTITION_SIZE];
+                        payload.vmo.read(temp.as_mut_slice(), 0).unwrap();
+                        set_data(temp);
+                        responder.send(Status::OK.into_raw()).expect("sysconfig response to send");
+                    }
+                    SysconfigRequest::GetPartitionSize { responder } => {
+                        responder
+                            .send(&mut Ok(SYSCONFIG_PARTITION_SIZE as u64))
+                            .expect("sysconfig response to send");
+                    }
+                    SysconfigRequest::Flush { responder } => {
+                        responder.send(Status::OK.into_raw()).expect("sysconfig response to send");
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .detach();
+        sysconfig_proxy
+    }
+
+    pub fn get_sysconfig_proxy() -> Result<SysconfigProxy, SysconfigError> {
+        Ok(spawn_sysconfig_service())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_async as fasync;
+    use matches::assert_matches;
+    use sysconfig_mock::*;
 
-    #[test]
-    fn test_get_partition_size() {
-        let fd = 42;
-        let client = SysconfigSyncClient::new(fd).unwrap();
-        unsafe {
-            assert_eq!((*client.0).devfs_root, fd);
-            let part_size = client.get_partition_size(SysconfigPartition::VerifiedBootMetadataA);
-            assert_eq!((*client.0).partition_size, part_size.unwrap());
-            assert_eq!((*client.0).partition, SysconfigPartition::VerifiedBootMetadataA);
-        }
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_sysconfig_partition() {
+        let expected: Vec<u8> = vec![0x4a; SYSCONFIG_PARTITION_SIZE];
+        set_data(expected.clone());
+        assert_eq!(read_sysconfig_partition().await.unwrap(), expected)
     }
 
-    #[test]
-    fn test_read_partition() {
-        let fd = 42;
-        let client = SysconfigSyncClient::new(fd).unwrap();
-        unsafe {
-            assert_eq!((*client.0).devfs_root, fd);
-            let data = vec![7; 4096];
-            sys_mock::set_data(data.clone());
-            assert_eq!(
-                data,
-                client
-                    .read_partition(SysconfigPartition::VerifiedBootMetadataB,)
-                    .expect("read_partition")
-            );
-            assert_eq!((*client.0).partition, SysconfigPartition::VerifiedBootMetadataB);
-            assert_eq!((*client.0).vmo_offset, 0);
-        }
+    #[fasync::run_singlethreaded(test)]
+    async fn test_write_sysconfig_partition_out_of_range() {
+        const LEN: usize = SYSCONFIG_PARTITION_SIZE * 2;
+        let data: [u8; LEN] = [0; LEN];
+        assert_matches!(
+            write_sysconfig_partition(&data).await,
+            Err(SysconfigError::OutOfRange(LEN))
+        )
     }
 
-    #[test]
-    fn test_write_partition() {
-        let fd = 42;
-        let client = SysconfigSyncClient::new(fd).unwrap();
-        unsafe {
-            assert_eq!((*client.0).devfs_root, fd);
-            let mut data = vec![1, 2, 3, 4];
-            client.write_partition(SysconfigPartition::Config, &data).expect("write_partition");
-            assert_eq!((*client.0).partition, SysconfigPartition::Config);
-            assert_eq!((*client.0).vmo_offset, 0);
-
-            data.resize((*client.0).partition_size as usize, 0);
-            assert_eq!(sys_mock::get_data(), data);
-        }
+    #[fasync::run_singlethreaded(test)]
+    async fn test_write_sysconfig_partition() {
+        let mut expected: Vec<u8> = vec![0x4a; SYSCONFIG_PARTITION_SIZE];
+        write_sysconfig_partition(&expected.as_mut_slice()).await.unwrap();
+        assert_eq!(expected, get_data().to_vec())
     }
 }

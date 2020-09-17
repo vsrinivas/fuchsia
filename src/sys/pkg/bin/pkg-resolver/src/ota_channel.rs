@@ -109,7 +109,7 @@ where
     };
 
     // If we don't find channel info in vbmeta, try looking sysconfig
-    let channel_config = match read_channel_config() {
+    let channel_config = match read_channel_config().await {
         Ok(channel_config) => channel_config,
         Err(e) => {
             fx_log_info!("Unable to load channel from sysconfig: {:#}", anyhow!(e));
@@ -183,7 +183,8 @@ mod sysconfig_mock {
         static READ_COUNT: AtomicU8 = AtomicU8::new(0);
     }
 
-    pub(super) fn read_channel_config() -> Result<OtaUpdateChannelConfig, ChannelConfigError> {
+    pub(super) async fn read_channel_config() -> Result<OtaUpdateChannelConfig, ChannelConfigError>
+    {
         if READ_COUNT.with(|i| i.fetch_add(1, Ordering::SeqCst)) > 0 {
             panic!("Should only call read_channel_config once");
         }
