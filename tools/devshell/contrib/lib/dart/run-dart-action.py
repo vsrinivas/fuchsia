@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -144,16 +144,16 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
         if returncode != 0:
             failed_scripts.append(script)
         if args.verbose or returncode != 0:
-            print '\r----------------------------------------------------------'
-            print script
-            print output
+            print('\r----------------------------------------------------------')
+            print(script)
+            print(output)
 
-    print ''
+    print('')
     if len(failed_scripts):
         failed_scripts.sort()
-        print 'Failures in:'
+        print('Failures in:')
         for script in failed_scripts:
-            print '  %s' % script
+            print(f'  {script}')
         exit(1)
 
 
