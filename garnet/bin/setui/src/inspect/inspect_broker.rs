@@ -15,7 +15,7 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 
 use crate::clock;
-use crate::handler::base::Command;
+use crate::handler::base::{Command, Event};
 use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
 use crate::internal::handler::Payload;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
@@ -84,18 +84,14 @@ impl InspectBroker {
                         }
                         // Whenever we see a setting handler tell the proxy it changed, we ask it
                         // for its value again.
-                        Payload::Changed(setting_type) => {
+                        Payload::Event(Event::Changed) => {
                             broker
                                 .lock()
                                 .await
                                 .request_and_write_to_inspect(client.get_author())
                                 .await
                                 .map_err(|err| {
-                                    fx_log_err!(
-                                        "Failed to request value on change for {:?}: {:?}",
-                                        setting_type,
-                                        err
-                                    )
+                                    fx_log_err!("Failed to request value on change: {:?}", err)
                                 })
                                 .ok();
                         }
@@ -178,7 +174,7 @@ mod tests {
 
     use crate::internal::handler::message::{create_hub, Receptor};
     use crate::internal::handler::Address;
-    use crate::switchboard::base::{SettingResponse, SettingType};
+    use crate::switchboard::base::SettingResponse;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
 
     use super::*;
@@ -285,7 +281,7 @@ mod tests {
         // Setting handler notifies proxy of setting changed.
         setting_handler
             .message(
-                Payload::Changed(SettingType::Intl),
+                Payload::Event(Event::Changed),
                 Audience::Messenger(proxy_messenger_client.get_signature()),
             )
             .send();

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::handler::base::{
-    Command, Context, ControllerGenerateResult, SettingHandlerResult, State,
+    Command, Context, ControllerGenerateResult, Event, SettingHandlerResult, State,
 };
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::handler::{message, reply, Payload};
@@ -88,8 +88,8 @@ impl ClientProxy {
         self.client_handle.lock().await.get_service_context().await
     }
 
-    pub async fn notify(&self) {
-        self.client_handle.lock().await.notify().await;
+    pub async fn notify(&self, event: Event) {
+        self.client_handle.lock().await.notify(event).await;
     }
 }
 
@@ -200,13 +200,10 @@ impl ClientImpl {
         self.service_context.clone()
     }
 
-    async fn notify(&self) {
+    async fn notify(&self, event: Event) {
         if self.notify {
             self.messenger
-                .message(
-                    Payload::Changed(self.setting_type),
-                    Audience::Messenger(self.notifier_signature),
-                )
+                .message(Payload::Event(event), Audience::Messenger(self.notifier_signature))
                 .send()
                 .ack();
         }
@@ -285,8 +282,8 @@ pub mod persist {
             self.base.get_service_context().await
         }
 
-        pub async fn notify(&self) {
-            self.base.notify().await;
+        pub async fn notify(&self, event: Event) {
+            self.base.notify(event).await;
         }
 
         pub async fn read(&self) -> S {
@@ -308,7 +305,7 @@ pub mod persist {
 
             match self.storage.lock().await.write(&value, write_through).await {
                 Ok(_) => {
-                    self.notify().await;
+                    self.notify(Event::Changed).await;
                     Ok(UpdateState::Updated)
                 }
                 Err(_) => Err(ControllerError::WriteFailure(self.setting_type)),

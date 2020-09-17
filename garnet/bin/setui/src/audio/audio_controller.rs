@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::handler::base::{SettingHandlerResult, State};
+use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -92,7 +92,7 @@ impl VolumeController {
         }
 
         if !(self.update_volume_streams(&volume, true).await?) {
-            self.client.notify().await;
+            self.client.notify(Event::Changed).await;
         }
 
         Ok(None)

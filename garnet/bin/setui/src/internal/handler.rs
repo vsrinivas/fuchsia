@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::base::{Command, SettingHandlerResult};
+use crate::handler::base::{Command, Event, SettingHandlerResult};
 use crate::message_hub_definition;
-use crate::switchboard::base::SettingType;
 use std::fmt::Debug;
 
 // Proxy addresses senders by the type they service.
@@ -17,7 +16,7 @@ pub enum Address {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Payload {
     Command(Command),
-    Changed(SettingType),
+    Event(Event),
     Result(SettingHandlerResult),
 }
 

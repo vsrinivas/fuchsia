@@ -34,6 +34,18 @@ pub enum Command {
     ChangeState(State),
 }
 
+/// Events are sent from the setting handler back to the parent
+/// proxy to indicate changes that happen out-of-band (happening
+/// outside of response to a Command above). They indicate a
+/// change in the handler that should potentially be handled by
+/// the proxy.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Event {
+    // Sent when the publicly perceived values of the setting
+    // handler have been changed.
+    Changed,
+}
+
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum State {
     /// State of a controller immediately after it is created. Intended

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::base::{Command, SettingHandlerFactory, SettingHandlerResult, State};
+use crate::handler::base::{Command, Event, SettingHandlerFactory, SettingHandlerResult, State};
 use crate::handler::setting_handler::ControllerError;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
 use crate::internal::core;
-use crate::internal::event::{self, Event};
+use crate::internal::event::{self};
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::switchboard::base::{
@@ -73,6 +73,13 @@ pub struct SettingProxy {
     max_attempts: u64,
     request_timeout: Option<Duration>,
     retry_on_timeout: bool,
+}
+
+/// Publishes an event to the event_publisher.
+macro_rules! publish {
+    ($self:ident, $event:expr) => {
+        $self.event_publisher.send_event(event::Event::Handler($event));
+    };
 }
 
 impl SettingProxy {
@@ -144,9 +151,13 @@ impl SettingProxy {
                     // Handle top level message from controllers.
                     controller_event = controller_fuse => {
                         if let Some(
-                            MessageEvent::Message(handler::Payload::Changed(setting), _)
+                            MessageEvent::Message(handler::Payload::Event(event), _)
                         ) = controller_event {
-                            proxy.notify(setting);
+                            match event {
+                                Event::Changed => {
+                                    proxy.notify();
+                                }
+                            }
                         }
                     }
 
@@ -277,16 +288,14 @@ impl SettingProxy {
 
     /// Called by the receiver task when a sink has reported a change to its
     /// setting type.
-    fn notify(&self, setting_type: SettingType) {
-        debug_assert!(self.setting_type == setting_type);
-
+    fn notify(&self) {
         if !self.has_active_listener {
             return;
         }
 
         self.messenger_client
             .message(
-                core::Payload::Event(SettingEvent::Changed(setting_type)),
+                core::Payload::Event(SettingEvent::Changed(self.setting_type)),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();
@@ -353,7 +362,7 @@ impl SettingProxy {
             result = Err(ControllerError::IrrecoverableError);
             retry = true;
         } else if matches!(result, Err(ControllerError::TimeoutError)) {
-            self.event_publisher.send_event(Event::Handler(event::handler::Event::Timeout(
+            self.event_publisher.send_event(event::Event::Handler(event::handler::Event::Timeout(
                 self.setting_type,
                 request.request.clone(),
             )));
@@ -426,15 +435,12 @@ impl SettingProxy {
         // If we have exceeded the maximum number of attempts, remove this
         // request from the queue.
         if current_attempts > self.max_attempts {
-            self.event_publisher.send_event(Event::Handler(
-                event::handler::Event::AttemptsExceeded(self.setting_type, request),
-            ));
+            publish!(self, event::handler::Event::AttemptsExceeded(self.setting_type, request));
             self.request(ActiveControllerRequest::RemoveActive(id));
             return;
         }
 
-        self.event_publisher
-            .send_event(Event::Handler(event::handler::Event::Execute(self.setting_type, id)));
+        publish!(self, event::handler::Event::Execute(self.setting_type, id));
 
         let mut receptor = self
             .controller_messenger_client
@@ -481,10 +487,17 @@ impl SettingProxy {
             id == self.active_requests.front().expect("active request should be present").id
         );
 
-        self.event_publisher.send_event(Event::Handler(event::handler::Event::Retry(
-            self.setting_type,
-            self.active_requests.front().expect("active request should be present").request.clone(),
-        )));
+        publish!(
+            self,
+            event::handler::Event::Retry(
+                self.setting_type,
+                self.active_requests
+                    .front()
+                    .expect("active request should be present")
+                    .request
+                    .clone(),
+            )
+        );
 
         self.request(ActiveControllerRequest::Execute(true));
     }
@@ -518,7 +531,6 @@ impl SettingProxy {
         // properly stopped. Without this, the client event loop will run forever.
         self.controller_messenger_factory.delete(signature);
 
-        self.event_publisher
-            .send_event(Event::Handler(event::handler::Event::Teardown(self.setting_type)));
+        publish!(self, event::handler::Event::Teardown(self.setting_type));
     }
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
-use crate::handler::base::{SettingHandlerResult, State};
+use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::switchboard::base::{ControllerStateResult, LightData, SettingRequest, SettingResponse};
 use async_trait::async_trait;
@@ -113,7 +113,7 @@ impl ClientNotifier {
 #[async_trait]
 impl LightNotifier for ClientNotifier {
     async fn notify(&self) {
-        self.client.notify().await;
+        self.client.notify(Event::Changed).await;
     }
 }
 

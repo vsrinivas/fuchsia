@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::call,
+    crate::handler::base::Event,
     crate::handler::device_storage::DeviceStorageCompatible,
     crate::handler::setting_handler::persist::ClientProxy,
     crate::internal::event::Publisher,
@@ -103,7 +104,7 @@ where
             self.volume_button_event = volume;
         }
 
-        self.client.notify().await;
+        self.client.notify(Event::Changed).await;
     }
 
     /// Ensure that the service is monitoring the media buttons.
