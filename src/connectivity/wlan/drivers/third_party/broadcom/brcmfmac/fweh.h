@@ -300,6 +300,34 @@ struct brcmf_if_event {
   uint8_t role;
 };
 
+enum event_msgs_ext_command {
+  EVENTMSGS_NONE = 0,
+  EVENTMSGS_SET_BIT = 1,
+  EVENTMSGS_RESET_BIT = 2,
+  EVENTMSGS_SET_MASK = 3
+};
+
+#define EVENTMSGS_VERSION 1
+#define EVENTMSGS_EXT_STRUCT_SIZE offsetof(brcmf_eventmsgs_ext, event_mask)
+
+/**
+ * struct brcmf_eventmsgs - firmware event message.
+ *
+ * @version: version information.
+ * @command: the command of this iovar.
+ * @length: the length of the event mask being set to firmware.
+ * @max_get_size: only for iovar get, indicating the max mask length of the event mask.
+ * @event_mask: the event mask bits.
+ */
+
+struct brcmf_eventmsgs_ext {
+  uint8_t version;
+  uint8_t command;
+  uint8_t length;
+  uint8_t max_get_size;
+  uint8_t event_mask[BRCMF_EVENTING_MASK_LEN];
+};
+
 typedef zx_status_t (*brcmf_fweh_handler_t)(struct brcmf_if* ifp,
                                             const struct brcmf_event_msg* evtmsg, void* data);
 
