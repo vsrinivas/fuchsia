@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
@@ -55,6 +56,10 @@ constexpr zx_bind_inst_t sysmem_match[] = {
 constexpr zx_bind_inst_t canvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
+const zx_bind_inst_t dos_gclk0_hcodec_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS_GCLK_HCODEC),
+};
 constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
@@ -63,9 +68,14 @@ constexpr device_fragment_part_t canvas_fragment[] = {
     {countof(root_match), root_match},
     {countof(canvas_match), canvas_match},
 };
+constexpr device_fragment_part_t dos_gclk0_hcodec_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(dos_gclk0_hcodec_match), dos_gclk0_hcodec_match},
+};
 constexpr device_fragment_t fragments[] = {
     {countof(sysmem_fragment), sysmem_fragment},
     {countof(canvas_fragment), canvas_fragment},
+    {countof(dos_gclk0_hcodec_fragment), dos_gclk0_hcodec_fragment},
 };
 
 static pbus_dev_t video_enc_dev = []() {

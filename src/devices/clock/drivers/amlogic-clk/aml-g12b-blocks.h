@@ -44,7 +44,9 @@ static constexpr meson_clk_gate_t g12b_clk_gates[] = {
      .bit = 0,
      .register_set = kMesonRegisterSetDos,
      .mask = 0x3ff},  // G12B_CLK_DOS_GCLK_VDEC
-
+    {.reg = kG12bDosGclkEn0,
+     .register_set = kMesonRegisterSetDos,
+     .mask = 0x7fff << 12},  // G12B_CLK_DOS_GCLK_HCODEC
 };
 
 static_assert(g12b_clk::CLK_G12B_COUNT == countof(g12b_clk_gates),
