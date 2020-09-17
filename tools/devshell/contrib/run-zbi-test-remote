@@ -1,0 +1,115 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Remotely build a ZBI test, fetch and run it
+
+## usage: fx run-zbi-test-remote --name NAME [--cmdline CMDLINE_ARG] HOST [DIR]
+##
+## Fetch a remote ZBI test and run it locally on a device. QEMU ZBI tests are
+## not supported.
+##
+##  --name        name of the ZBI test to fetch and run
+##  --cmdline     kernel command-line argument
+##
+##  HOST          the hostname to connect to
+##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
+##
+## HOST and DIR are persisted in the file //.fx-remote-config and are reused as
+## defaults in future invocations of any 'fx *-remote' tools.
+
+set -o errexit
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$SCRIPT_DIR/../lib/vars.sh"
+source "$SCRIPT_DIR/../lib/fx-remote.sh"
+fx-config-read
+
+host=""
+dir=""
+name=""
+cmdline_args=()
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  --help|-h)
+      fx-command-help
+      exit 0
+      ;;
+  --name)
+    shift
+    name="$1"
+    ;;
+  --cmdline)
+    shift
+    cmdline_args+=("$1")
+    ;;
+  -*)
+    fx-error "Unknown flag: $1"
+    fx-command-help
+    exit 1
+    ;;
+  *)
+    if [[ -z "${host}" ]]; then
+      host="$1"
+    elif [[ -z "${dir}" ]]; then
+      dir="$1"
+    else
+      fx-error "unexpected argument: '$1'"
+      exit 1
+    fi
+    ;;
+  esac
+  shift
+done
+
+if cached=( $(load_remote_info "$host") ); then
+  host="${cached[0]}"
+  dir="${cached[1]}"
+fi
+
+if [[ -z "${host}" ]]; then
+  fx-error "HOST must be specified"
+  fx-command-help
+  exit 1
+fi
+
+if [[ -z "${dir}" ]]; then
+  if ssh "$host" 'ls \~/fuchsia/.jiri_root/bin/fx' > /dev/null 2>&1; then
+    dir="~/fuchsia"
+  else
+    fx-error "failed to find ~/fuchsia on $host, please specify DIR"
+    fx-command-help
+    exit 1
+  fi
+fi
+
+if [[ -z "${name}" ]]; then
+  fx-error "--name must be specified"
+  fx-command-help
+  exit 1
+fi
+
+save_remote_info "$host" "$dir"
+
+zbi_test="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx get-build-artifacts --expect-one --name ${name} zbi-tests")"
+
+remote_build_dir="$(get_remote_build_dir "${host}" "${dir}")"
+artifact_dir="${FUCHSIA_DIR}/out/fetched"
+mkdir -p "${artifact_dir}"
+# --relative ensures that the ZBI is copied to out/fetched relative to the
+# '/./' (i.e., the build directory).
+rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./${zbi_test}" "${artifact_dir}" || exit $?
+
+args=()
+if [[ -n "$(get-device-name)" ]]; then
+  args+=(-n $(get-device-name))
+fi
+for arg in "${cmdline_args[@]}" ; do
+  args+=(-c "$arg")
+done
+
+bootserver="$(fetch_or_build_tool ${host} ${dir} ${artifact_dir} bootserver)"
+cd "${artifact_dir}"
+exec "${bootserver}" --boot "${zbi_test}" -- "${args[@]}"
