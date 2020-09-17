@@ -121,6 +121,10 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
   if (block_stats_.IsFull()) {
     block_stats_.Reset();
     encoder_->Reset();
+    // We reset the last message pushed and its count so that we don't have a block starting with a
+    // repeated message without the actual message.
+    last_pushed_message_ = "";
+    last_pushed_message_count_ = 0;
     *end_of_block = true;
   } else {
     *end_of_block = false;

@@ -133,6 +133,86 @@ TEST(LogMessageStoreTest, VerifyRepetitionMessage_AtConsume) {
   EXPECT_FALSE(end_of_block);
 }
 
+TEST(LogMessageStoreTest, VerifyRepetition_DoNotResetRepeatedWarningOnConsume) {
+  bool end_of_block;
+  // Test that we only write repeated warning messages when repeated messages span over 2 buffers.
+  // Block capacity: very large (unlimited for this example)
+  // Buffer capacity: 1 log message
+  //
+  // __________________
+  // |input   |output |
+  // |________|_______| _
+  // |line 0  |line 0 |  |
+  // |line 0  |x2     |  |---- Consume 1
+  // |line 0  |       |  |
+  // |________|_______| _|
+  // |line 0  |x2     |  |
+  // |line 0  |       |  |---- Consume 2
+  // |________|_______| _|
+  //
+  // Note: xN = last message repeated N times
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize, MakeIdentityEncoder());
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"(!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+
+  EXPECT_FALSE(end_of_block);
+}
+
+TEST(LogMessageStoreTest, VerifyRepetition_ResetRepeatedWarningOnConsume) {
+  bool end_of_block;
+  // Test that the first log of a block should not be a repeated warning message.
+  // Block capacity: 1 log message
+  // Buffer capacity: 1 log message
+  //
+  // __________________
+  // |input   |output |
+  // |________|_______| _
+  // |line 0  |line 0 |  |
+  // |line 0  |x2     |  |---- Consume 1
+  // |line 0  |       |  |
+  // |________|_______| _|
+  // |  End of Block  |
+  // |----------------| _
+  // |line 0  |line 0 |  |
+  // |line 0  |x1     |  |---- Consume 2
+  // |________|_______| _|
+  // |  End of Block  |
+  // -----------------
+  // Note: xN = last message repeated N times
+  LogMessageStore store(kMaxLogLineSize, kMaxLogLineSize, MakeIdentityEncoder());
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+
+  EXPECT_TRUE(end_of_block);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  EXPECT_TRUE(end_of_block);
+}
+
 TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenMessageChanges) {
   bool end_of_block;
   // Set up the store to hold 3 log line. Verify that a repetition message appears after input
