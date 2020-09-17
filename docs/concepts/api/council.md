@@ -131,7 +131,7 @@ Members are appointed by each functional area of the project:
 | Auth              | jsankey@google.com       |
 | Bluetooth         | jamuraa@google.com       |
 | Component Runtime | geb@google.com           |
-| DDK               | teisenbe@google.com      |
+| DDK               | jocelyndang@google.com   |
 | Developer         | dschulyer@google.com     |
 | Diagnostics       | crjohns@google.com       |
 | Drivers           | ravoorir@google.com      |
