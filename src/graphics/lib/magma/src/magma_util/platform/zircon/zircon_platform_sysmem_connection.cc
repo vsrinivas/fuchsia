@@ -520,16 +520,18 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
     const uint8_t* image_data, uint64_t image_data_size,
     std::unique_ptr<PlatformBufferDescription>* buffer_description_out) {
   std::vector<uint8_t> copy_message(image_data, image_data + image_data_size);
+  const char* error = nullptr;
+  static_assert(llcpp::fuchsia::sysmem::SingleBufferSettings::MaxNumHandles == 0,
+                "Can't decode a buffer with handles");
+  zx_status_t status = fidl_decode(llcpp::fuchsia::sysmem::SingleBufferSettings::Type,
+                                   copy_message.data(), copy_message.size(), nullptr, 0, &error);
 
-  auto encoded_message = fidl::EncodedMessage<llcpp::fuchsia::sysmem::SingleBufferSettings>(
-      fidl::BytePart(copy_message.data(), image_data_size, image_data_size));
+  if (status != ZX_OK)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid SingleBufferSettings: %d %s", status,
+                    error);
 
-  auto result = fidl::Decode(std::move(encoded_message));
-  if (result.status != ZX_OK)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid SingleBufferSettings: %d %s", result.status,
-                    result.error);
-
-  const llcpp::fuchsia::sysmem::SingleBufferSettings& buffer_settings = *result.Unwrap();
+  const auto& buffer_settings =
+      *reinterpret_cast<const llcpp::fuchsia::sysmem::SingleBufferSettings*>(copy_message.data());
 
   if (!buffer_settings.has_image_format_constraints) {
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer is not image");
