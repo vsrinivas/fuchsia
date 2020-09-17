@@ -12,26 +12,12 @@ group("tests") {
   deps = [ ":elf_runner_lifecycle_test" ]
 }
 
-rustc_library("elf_test_helper") {
-  edition = 2018
-  source_root = "helpers.rs"
-
-  deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:test_utils_lib",
-    "//third_party/rust_crates:regex",
-  ]
-  sources = [ "helpers.rs" ]
-}
-
 rustc_test("lifecycle") {
   source_root = "lifecycle.rs"
   name = "lifecycle_integration_test"
   edition = "2018"
 
   deps = [
-    ":elf_test_helper",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -109,7 +95,6 @@ rustc_test("lifecycle_timeout") {
   edition = "2018"
 
   deps = [
-    ":elf_test_helper",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -132,7 +117,6 @@ rustc_test("lifecycle_timeout_unresponsive") {
   edition = "2018"
 
   deps = [
-    ":elf_test_helper",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

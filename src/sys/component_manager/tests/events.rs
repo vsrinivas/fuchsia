@@ -16,6 +16,7 @@ use {
         lock::Mutex,
         StreamExt,
     },
+    regex::RegexSet,
     std::{convert::TryFrom, sync::Arc},
     thiserror::Error,
 };
@@ -544,18 +545,59 @@ pub trait RoutingProtocol {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Ord, PartialOrd)]
+/// Used for matching against events. If the matcher doesn't crash the exit code
+/// then `AnyCrash` can be used to match against any Stopped event caused by a crash.
+/// that indicate failure are crushed into `Crash`.
+pub enum ExitStatusMatcher {
+    Clean,
+    AnyCrash,
+    Crash(i32),
+}
+
+impl ExitStatusMatcher {
+    fn matches(&self, other: &ExitStatus) -> bool {
+        match (self, other) {
+            (ExitStatusMatcher::Clean, ExitStatus::Clean) => true,
+            (ExitStatusMatcher::AnyCrash, ExitStatus::Crash(_)) => true,
+            (ExitStatusMatcher::Crash(exit_code), ExitStatus::Crash(other_exit_code)) => {
+                exit_code == other_exit_code
+            }
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Ord, PartialOrd)]
+/// Simplifies the exit status represented by an Event. All stop status values
+/// that indicate failure are crushed into `Crash`.
+pub enum ExitStatus {
+    Clean,
+    Crash(i32),
+}
+
+impl From<i32> for ExitStatus {
+    fn from(exit_status: i32) -> Self {
+        match exit_status {
+            0 => ExitStatus::Clean,
+            _ => ExitStatus::Crash(exit_status),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct EventMatcher {
     event_type: Option<fsys::EventType>,
     capability_id: Option<String>,
-    target_moniker: Option<String>,
+    target_moniker: Option<RegexSet>,
+    exit_status: Option<ExitStatusMatcher>,
 }
 
 impl EventMatcher {
     /// Creates a new `EventDescriptor` with the given `event_type`.
     /// The rest of the fields are unset.
     pub fn new() -> Self {
-        Self { event_type: None, target_moniker: None, capability_id: None }
+        Self { event_type: None, target_moniker: None, capability_id: None, exit_status: None }
     }
 
     pub fn expect_type<T: Event>(mut self) -> Self {
@@ -563,15 +605,30 @@ impl EventMatcher {
         self
     }
 
-    /// The expected target moniker.
-    pub fn expect_moniker(mut self, moniker: impl Into<String>) -> Self {
-        self.target_moniker = Some(moniker.into());
-        self
+    /// The expected target moniker as a regular expression.
+    pub fn expect_moniker(self, moniker: impl Into<String>) -> Self {
+        self.expect_monikers(&[moniker.into()])
     }
 
+    /// The expected target monikers as a regular expressions.
+    pub fn expect_monikers<I, S>(mut self, monikers: I) -> Self
+    where
+        S: AsRef<str>,
+        I: IntoIterator<Item = S>,
+    {
+        self.target_moniker = Some(RegexSet::new(monikers).unwrap());
+        self
+    }
     /// The expected capability id.
     pub fn expect_capability_id(mut self, capability_id: impl Into<String>) -> Self {
         self.capability_id = Some(capability_id.into());
+        self
+    }
+
+    /// The expected exit status. Only applies to the Stop event.
+    pub fn expect_stop(mut self, exit_status: Option<ExitStatusMatcher>) -> Self {
+        self.event_type = Some(fsys::EventType::Stopped);
+        self.exit_status = exit_status;
         self
     }
 
@@ -583,15 +640,7 @@ impl EventMatcher {
         };
 
         let matches_moniker = match (&self.target_moniker, &other.target_moniker) {
-            (Some(moniker), Some(other_moniker)) => {
-                if moniker.ends_with("*") {
-                    let index = moniker.rfind('*').unwrap();
-                    let prefix = &moniker[..index];
-                    other_moniker.starts_with(prefix)
-                } else {
-                    moniker == other_moniker
-                }
-            }
+            (Some(moniker), Some(other_moniker)) => moniker.is_match(other_moniker),
             (Some(_), None) => false,
             (None, _) => true,
         };
@@ -605,7 +654,13 @@ impl EventMatcher {
             (None, _) => true,
         };
 
-        matches_event_type && matches_moniker && matches_capability_id
+        let matches_exit_status = match (&self.exit_status, &other.exit_status) {
+            (Some(exit_status), Some(other_exit_status)) => exit_status.matches(other_exit_status),
+            (Some(_), None) => false,
+            (None, _) => true,
+        };
+
+        matches_event_type && matches_moniker && matches_capability_id && matches_exit_status
     }
 }
 
@@ -614,6 +669,7 @@ pub struct EventDescriptor {
     event_type: Option<fsys::EventType>,
     capability_id: Option<String>,
     pub target_moniker: Option<String>,
+    exit_status: Option<ExitStatus>,
 }
 
 /// This implementation of PartialEq allows comparison between `EventDescriptor`s when the order in
@@ -719,8 +775,14 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             })) => capability_id.clone(),
             _ => None,
         };
+        let exit_status = match &event.event_result {
+            Some(fsys::EventResult::Payload(fsys::EventPayload::Stopped(
+                fsys::StoppedPayload { status, .. },
+            ))) => status.map(|val| val.into()),
+            _ => None,
+        };
 
-        Ok(EventDescriptor { event_type, target_moniker, capability_id })
+        Ok(EventDescriptor { event_type, target_moniker, capability_id, exit_status })
     }
 }
 
@@ -729,22 +791,6 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
 pub struct EventLog {
     recorded_events: Arc<Mutex<Vec<EventDescriptor>>>,
     abort_handle: AbortHandle,
-}
-
-trait Convert<T> {
-    fn conv(i: T) -> Self;
-}
-
-impl<A> Convert<A> for A {
-    fn conv(i: A) -> A {
-        i
-    }
-}
-
-impl Convert<i32> for zx::Status {
-    fn conv(i: i32) -> Self {
-        zx::Status::from_raw(i)
-    }
 }
 
 impl EventLog {
@@ -933,9 +979,9 @@ macro_rules! create_event {
 
                             // Extract the additional data from the Payload object.
                             $(
-                                let $data_name: $data_ty = $data_ty::conv(payload.$data_name.ok_or(
+                                let $data_name: $data_ty = payload.$data_name.ok_or(
                                     format_err!("Missing $data_name from $event_type object")
-                                )?);
+                                )?.into();
                             )*
 
                             // Extract the additional protocols from the Payload object.
@@ -1052,7 +1098,7 @@ create_event!(
         data: {
             {
                 name: status,
-                ty: zx::Status,
+                ty: ExitStatus,
             }
         },
         client_protocols: {},

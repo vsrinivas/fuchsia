@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    elf_test_helper::{self as test_helper, ExitStatus},
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_syslog::{self as fxlog},
-    regex::Regex,
-    test_utils_lib::events::{Destroyed, Event, EventMatcher, EventSource, Stopped},
+    test_utils_lib::events::{
+        Destroyed, Event, EventMatcher, EventSource, ExitStatusMatcher, Ordering, Stopped,
+    },
 };
 
 /// Test that a component tree which contains a root component with no program
@@ -46,28 +46,23 @@ async fn test_stop_timeouts() {
     // is no contract around this and the validation logic does not accept
     // generic regexes.
     let moniker_stem = format!("./{}:{}:", collection_name, child_name);
-    let target_moniker = format!("{}*", moniker_stem);
-    let custom_child_regex =
-        Regex::new(&format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem)).unwrap();
-    let inherited_child_regex =
-        Regex::new(&format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem)).unwrap();
-    let mut expected_events = vec![
-        EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
-        EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
-        EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
-        EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
-        EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
-        EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
+    let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
+    let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
+    let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
+    let expected_events = vec![
+        EventMatcher::new()
+            .expect_monikers(&target_monikers)
+            .expect_stop(Some(ExitStatusMatcher::Clean)),
+        EventMatcher::new()
+            .expect_monikers(&target_monikers)
+            .expect_stop(Some(ExitStatusMatcher::Clean)),
+        EventMatcher::new()
+            .expect_monikers(&target_monikers)
+            .expect_stop(Some(ExitStatusMatcher::AnyCrash)),
+        EventMatcher::new().expect_type::<Destroyed>().expect_monikers(&target_monikers),
+        EventMatcher::new().expect_type::<Destroyed>().expect_monikers(&target_monikers),
+        EventMatcher::new().expect_type::<Destroyed>().expect_monikers(&target_monikers),
     ];
 
-    let rxs = vec![inherited_child_regex, custom_child_regex];
-    // Each child we expect to hit its stop timeout and be killed, which should
-    // be reported as a non-zero status code.I
-    test_helper::validate_exit(&mut event_stream, &mut expected_events, rxs, ExitStatus::Clean)
-        .await;
-
-    assert!(
-        expected_events.is_empty(),
-        format!("Some expected events were not received: {:?}", expected_events)
-    );
+    event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
 }

@@ -52,6 +52,7 @@ rustc_library("test_utils_lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:thiserror",
   ]
 
