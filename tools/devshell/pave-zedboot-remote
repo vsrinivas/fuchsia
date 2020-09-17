@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Other
-### Remotely build, fetch and pave
+### Remotely build, fetch and pave zedboot
 
 ## usage: fx pave-remote HOST [DIR] [--no-pave] [--no-build] [-- PAVE_ARGS]
 ##
@@ -13,19 +13,20 @@
 ##
 ##  --no-build    do not build, just pull artifacts already present
 ##  --no-pave     do not start the paver, just pull the artifacts
-##  --            pass any arguments after the -- to the fx pave command
+##  --            pass any arguments after the -- to the fx pave-zedboot
+##                command
 ##
 ##  HOST          the hostname to connect to
 ##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
-##  PAVE_ARGS     arguments for the fx pave command
+##  PAVE_ARGS     arguments for the fx pave-zeboot command
 ##
 ## HOST and DIR are persisted in the file //.fx-remote-config and are reused as
 ## defaults in future invocations of any 'fx *-remote' tools.
 
 set -o errexit
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh
 fx-config-read
 
 build=true
@@ -69,11 +70,6 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-authkeys_path="$(get-ssh-authkeys)" || {
-  fx-error "Cannot continue without a valid authorized keys file."
-  exit 1
-}
-
 if cached=( $(load_remote_info "$host") ); then
   host="${cached[0]}"
   dir="${cached[1]}"
@@ -98,7 +94,7 @@ fi
 save_remote_info "$host" "$dir"
 
 artifact_dir="${FUCHSIA_DIR}/out/fetched"
-fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" pave $build
+fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" pave-zedboot $build
 
 if "${pave}"; then
   if [[ -n "$(get-device-name)" ]]; then
@@ -107,5 +103,5 @@ if "${pave}"; then
 
   fetch_or_build_tool "${host}" "${dir}" "${artifact_dir}" bootserver
   cd "${artifact_dir}"
-  ./pave.sh --authorized-keys "${authkeys_path}" "${args[@]}"
+  ./pave-zedboot.sh "${args[@]}"
 fi
