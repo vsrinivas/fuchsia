@@ -1913,14 +1913,14 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:48
+From //build/rust/config.gni:54
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:40
+From //build/rust/config.gni:46
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -1929,7 +1929,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:58
+From //build/rust/config.gni:64
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1938,7 +1938,7 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:53
+From //build/rust/config.gni:59
 
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
@@ -1946,14 +1946,14 @@ looks for the standard library
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64"`
 
-From //build/rust/config.gni:37
+From //build/rust/config.gni:43
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:43
+From //build/rust/config.gni:49
 
 ### rust_v0_symbol_mangling
 Controls whether the rust compiler uses v0 symbol mangling scheme
@@ -1980,6 +1980,16 @@ This can be used to test custom Rust toolchains.
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
 
 From //build/rust/config.gni:25
+
+### rustc_version_description
+Human-readable identifier for the toolchain version.
+
+TODO(tmandry): Make this the same repo/revision info from `rustc --version`.
+e.g., clang_version_description = read_file("$_rustc_lib_dir/VERSION")
+
+**Current value (from the default):** `""`
+
+From //build/rust/config.gni:39
 
 ### rustc_version_string
 This is a string identifying the particular toolchain version in use.  Its
