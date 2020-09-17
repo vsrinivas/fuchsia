@@ -72,6 +72,9 @@ class MBufChain {
  private:
   // An MBuf is a small fixed-size chainable memory buffer.
   struct MBuf : public fbl::SinglyLinkedListable<MBuf*> {
+    MBuf();
+    ~MBuf();
+
     // 8 for the linked list and 4 for the explicit uint32_t fields.
     static constexpr size_t kHeaderSize = 8 + (4 * 4);
     // 16 is for the malloc header.

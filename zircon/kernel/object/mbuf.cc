@@ -6,6 +6,7 @@
 
 #include "object/mbuf.h"
 
+#include <lib/counters.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <fbl/algorithm.h>
@@ -20,13 +21,22 @@ constexpr size_t MBufChain::MBuf::kMallocSize;
 constexpr size_t MBufChain::MBuf::kPayloadSize;
 constexpr size_t MBufChain::kSizeMax;
 
+// Total amount of memory occupied by MBuf objects.
+KCOUNTER(mbuf_total_bytes_count, "mbuf.total_bytes")
+
+// Amount of memory occupied by MBuf objects on free lists.
+KCOUNTER(mbuf_free_list_bytes_count, "mbuf.free_list_bytes")
+
 size_t MBufChain::MBuf::rem() const { return kPayloadSize - (off_ + len_); }
 
 MBufChain::~MBufChain() {
-  while (!tail_.is_empty())
+  while (!tail_.is_empty()) {
     delete tail_.pop_front();
-  while (!freelist_.is_empty())
+  }
+  while (!freelist_.is_empty()) {
+    kcounter_add(mbuf_free_list_bytes_count, -sizeof(MBufChain::MBuf));
     delete freelist_.pop_front();
+  }
 }
 
 bool MBufChain::is_full() const { return size_ >= kSizeMax; }
@@ -207,6 +217,7 @@ MBufChain::MBuf* MBufChain::AllocMBuf() {
     MBuf* buf = new (&ac) MBuf();
     return (!ac.check()) ? nullptr : buf;
   }
+  kcounter_add(mbuf_free_list_bytes_count, -sizeof(MBufChain::MBuf));
   return freelist_.pop_front();
 }
 
@@ -214,4 +225,9 @@ void MBufChain::FreeMBuf(MBuf* buf) {
   buf->off_ = 0u;
   buf->len_ = 0u;
   freelist_.push_front(buf);
+  kcounter_add(mbuf_free_list_bytes_count, sizeof(MBufChain::MBuf));
 }
+
+MBufChain::MBuf::MBuf() { kcounter_add(mbuf_total_bytes_count, sizeof(MBufChain::MBuf)); }
+
+MBufChain::MBuf::~MBuf() { kcounter_add(mbuf_total_bytes_count, -sizeof(MBufChain::MBuf)); }
