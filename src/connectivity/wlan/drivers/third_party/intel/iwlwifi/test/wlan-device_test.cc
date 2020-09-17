@@ -603,7 +603,8 @@ class MacInterfaceTest : public WlanDeviceTest {
 //
 TEST_F(MacInterfaceTest, TestSetChannel) {
   ExpectSendCmd(expected_cmd_id_list({
-      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for add_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for change_chanctx
       MockCommand(WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD)),
       MockCommand(WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE)),
   }));
@@ -617,7 +618,8 @@ TEST_F(MacInterfaceTest, TestSetChannel) {
 //
 TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
   ExpectSendCmd(expected_cmd_id_list({
-      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for add_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for change_chanctx
   }));
 
   mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_AP;
@@ -627,6 +629,8 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
 // Test ConfigureBss()
 //
 TEST_F(MacInterfaceTest, TestConfigureBss) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+
   ExpectSendCmd(expected_cmd_id_list({
       MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
       MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
@@ -642,6 +646,7 @@ TEST_F(MacInterfaceTest, TestConfigureBss) {
 // Test duplicate BSS config.
 //
 TEST_F(MacInterfaceTest, DuplicateConfigureBss) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, ConfigureBss(&kBssConfig));
 }
@@ -660,6 +665,8 @@ TEST_F(MacInterfaceTest, UnsupportedBssType) {
 // Test failed ADD_STA command.
 //
 TEST_F(MacInterfaceTest, TestFailedAddSta) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+
   ExpectSendCmd(expected_cmd_id_list({
       MockCommand(WIDE_ID(LONG_GROUP, ADD_STA), kSimMvmReturnWithStatus,
                   ZX_ERR_BUFFER_TOO_SMALL /* an arbitrary error */),
@@ -671,6 +678,8 @@ TEST_F(MacInterfaceTest, TestFailedAddSta) {
 // Test exception handling in driver.
 //
 TEST_F(MacInterfaceTest, TestExceptionHandling) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+
   // Test the beacon interval checking.
   mvmvif_sta_.bss_conf.beacon_int = 0;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, ConfigureBss(&kBssConfig));

@@ -198,15 +198,6 @@ static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
     return ret;
   }
 
-  // Add PHY context with default value.
-  uint16_t phy_ctxt_id;
-  ret = iwl_mvm_add_chanctx(mvmvif->mvm, &default_channel, &phy_ctxt_id);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "Cannot add channel context: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-  mvmvif->phy_ctxt = &mvmvif->mvm->phy_ctxts[phy_ctxt_id];
-
   return ret;
 }
 
@@ -224,11 +215,38 @@ static zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* p
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+// This function will ensure the mvmvif->phy_ctxt is valid (either get a free one from pool
+// or use the assigned one).
+//
+static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
+  if (!mvmvif->phy_ctxt) {
+    // Add PHY context with default value.
+    uint16_t phy_ctxt_id;
+    zx_status_t ret = iwl_mvm_add_chanctx(mvmvif->mvm, &default_channel, &phy_ctxt_id);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "Cannot add channel context: %s\n", zx_status_get_string(ret));
+      return ret;
+    }
+    mvmvif->phy_ctxt = &mvmvif->mvm->phy_ctxts[phy_ctxt_id];
+  }
+
+  return ZX_OK;
+}
+
 static zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
   struct iwl_mvm_vif* mvmvif = ctx;
+  zx_status_t ret;
+
+  // Before we do anything, ensure the PHY context had been assigned to the mvmvif.
+  ret = mac_ensure_phyctxt_valid(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot get an available chanctx: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
   mvmvif->phy_ctxt->chandef = *chan;
 
-  zx_status_t ret = iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, chan);
+  ret = iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, chan);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "Cannot change chanctx: %s\n", zx_status_get_string(ret));
     return ret;
