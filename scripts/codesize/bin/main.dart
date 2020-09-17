@@ -11,7 +11,6 @@ import 'dart:core';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' show sha256;
-import 'package:crypto/src/digest.dart';
 import 'package:pool/pool.dart';
 import 'package:path/path.dart' as path;
 import 'package:googleapis/discovery/v1.dart' as discovery;
@@ -42,7 +41,8 @@ Future<void> mainImpl(List<String> args) async {
 
     AnalysisRequest allBloatyReportFiles = await ensureReportFiles(cs,
         cachingBehavior: parsedArgs.cachingBehavior,
-        heatmap: parsedArgs.heatmap);
+        heatmap: parsedArgs.heatmap,
+        heatmapFrameSize: parsedArgs.heatmapFrameSize);
 
     List<Query> populatedQueries = await runQueriesOnReports(
         parsedArgs.selectedQueries,
@@ -441,7 +441,9 @@ class CodeSize {
 }
 
 Future<AnalysisRequest> ensureReportFiles(CodeSize cs,
-    {cli.CachingBehavior cachingBehavior, File heatmap}) async {
+    {cli.CachingBehavior cachingBehavior,
+    File heatmap,
+    int heatmapFrameSize}) async {
   AnalysisRequest allBloatyReportFiles;
   final bloatyStamp = cs.build.openFile('codesize_bloaty_report.stamp');
   if (bloatyStamp.existsSync()) {
@@ -503,8 +505,8 @@ Future<AnalysisRequest> ensureReportFiles(CodeSize cs,
 
   // Rerun bloaty and save the report file index as a stamp.
   try {
-    allBloatyReportFiles =
-        await generateBloatyReportsFromBuild(cs, heatmap: heatmap);
+    allBloatyReportFiles = await generateBloatyReportsFromBuild(cs,
+        heatmap: heatmap, heatmapFrameSize: heatmapFrameSize);
     await bloatyStamp.writeAsString(json.encode(allBloatyReportFiles.toJson()));
   } finally {
     await GoogleApiClient.close();
@@ -568,7 +570,7 @@ Future<void> presentResults(cli.OutputFormat outputFormat, IOSink output,
 }
 
 Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
-    {File heatmap}) async {
+    {File heatmap, int heatmapFrameSize}) async {
   final allBloatyReportFiles = AnalysisRequest(
       items: [], heatmapContentSha: await flatMap(heatmap, _hashFile));
   final io = Io.get();
@@ -640,6 +642,7 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
     final HashMap<String, String> merkleToAccessPattern =
         HashMap<String, String>();
     for (final line in await heatmap.readAsLines()) {
+      if (line.trim().isEmpty) continue;
       final firstComma = line.indexOf(',');
       final merkle = line.substring(0, firstComma);
       final accessPattern = line.substring(firstComma + 1);
@@ -656,8 +659,7 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
           // as to which language this ELF is written in due to lack of symbols.
           final int elfSize =
               cs.build.openFile(artifact.buildPath).statSync().size;
-          const int frameSize = 32 * 1024;
-          final int numFrames = (elfSize / frameSize).ceil();
+          final int numFrames = (elfSize / heatmapFrameSize).ceil();
           final isFrameHot = List<bool>.generate(numFrames, (i) => false);
           for (final part in accessPattern.split(',')) {
             final frameAndCount = part.split(':').toList();
@@ -699,6 +701,7 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
         debugBinaries: cs.debugBinaries,
         buildIdToLinkMapFile: cs.buildIdToLinkMapFile,
         buildIdToAccessPattern: buildIdToAccessPattern,
+        heatmapFrameSize: heatmapFrameSize,
         jobInitCallback: cs.jobInitCallback,
         jobIterationCallback: cs.jobIterationCallback,
         jobCompleteCallback: cs.jobCompleteCallback,

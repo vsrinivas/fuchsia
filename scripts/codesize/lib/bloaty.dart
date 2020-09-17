@@ -23,6 +23,7 @@ class RunBloatyOptions {
   final HashMap<String, SplayTreeSet<File>> debugBinaries;
   final HashMap<String, File> buildIdToLinkMapFile;
   final HashMap<String, String> buildIdToAccessPattern;
+  final int heatmapFrameSize;
 
   final void Function(int) jobInitCallback;
   final void Function() jobIterationCallback;
@@ -34,6 +35,7 @@ class RunBloatyOptions {
       this.debugBinaries,
       this.buildIdToLinkMapFile,
       this.buildIdToAccessPattern,
+      this.heatmapFrameSize,
       this.jobInitCallback,
       this.jobIterationCallback,
       this.jobCompleteCallback});
@@ -109,6 +111,8 @@ Future<void> runBloatyOnMatchedBinaries(Set<String> buildIds,
         ..add(pool.withResource(() => _bloaty(dataSourceArgs: [
               '--cold-bytes-filter',
               options.buildIdToAccessPattern[buildId],
+              '--access-pattern-frame-size',
+              options.heatmapFrameSize.toString(),
               '-d',
               'accesspattern,compileunits,symbols',
             ], reportSuffix: '.filtered.bloaty_report_pb')));

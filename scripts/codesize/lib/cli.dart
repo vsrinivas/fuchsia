@@ -61,10 +61,13 @@ ParsedArgs parseArgs(List<String> args) {
         help: 'Optionally specify a blob access heatmap to only show symbols '
             'that have never been used at run-time.\n'
             'The heatmap is a CSV in [merkle],[[frame index]:[frequency],...] '
-            'format, where each frame is 32 KiB.\n'
+            'format, where each frame is 8 KiB by default.\n'
             'See the detailed explanation of `cold_bytes_filter` in '
             'https://fuchsia.googlesource.com/third_party/bloaty/+/refs/heads/fuchsia/src/bloaty.proto\n'
             '')
+    ..addOption(heatmapFrameSize,
+        help: 'When a heatmap is used, specify the size of a frame in bytes',
+        defaultsTo: '8192')
     ..addSeparator('Output controls:\n')
     ..addOption(outputFile,
         help: 'The destination for writing stats. If absent, assumes stdout.',
@@ -181,7 +184,8 @@ fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: tr
       // ignore: avoid_as
       onlyLang: flatMap(argResults[onlyLang] as String, toSourceLang),
       // ignore: avoid_as
-      heatmap: flatMap(argResults[heatmap] as String, (x) => File(x)));
+      heatmap: flatMap(argResults[heatmap] as String, (x) => File(x)),
+      heatmapFrameSize: int.parse(argResults[heatmapFrameSize]));
 }
 
 enum OutputFormat { terminal, basic, html, tsv }
@@ -272,6 +276,7 @@ const outputFile = 'output';
 const format = 'format';
 const concurrency = 'concurrency';
 const heatmap = 'heatmap';
+const heatmapFrameSize = 'heatmap-frame-size';
 
 class ParsedArgs {
   final CachingBehavior cachingBehavior;
@@ -283,6 +288,7 @@ class ParsedArgs {
   final int concurrency;
   final List<QueryThunk> selectedQueries;
   final File heatmap;
+  final int heatmapFrameSize;
 
   ParsedArgs(
       {this.cachingBehavior,
@@ -293,5 +299,6 @@ class ParsedArgs {
       this.format,
       this.concurrency,
       this.selectedQueries,
-      this.heatmap});
+      this.heatmap,
+      this.heatmapFrameSize});
 }
