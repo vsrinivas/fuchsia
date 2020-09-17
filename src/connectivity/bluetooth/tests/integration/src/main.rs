@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, fuchsia_bluetooth::util::CollectExt, fuchsia_syslog as syslog};
+use {anyhow::Error, fuchsia_bluetooth::util::CollectExt};
 
 #[macro_use]
 mod harness;
@@ -10,7 +10,7 @@ mod harness;
 mod tests;
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&[]).expect("Initializing syslog should not fail");
+    fuchsia_syslog::init_with_tags(&[]).expect("Initializing syslog should not fail");
 
     // TODO(BT-805): Add test cases for LE privacy
     // TODO(BT-806): Add test cases for LE auto-connect/background-scan

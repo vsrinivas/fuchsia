@@ -5,9 +5,9 @@
 use {
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::future::BoxFuture,
     futures::{future, select, stream::TryStreamExt, Future, FutureExt},
+    log::{error, info},
     pin_utils::pin_mut,
 };
 
@@ -84,12 +84,12 @@ where
     H: TestHarness,
 {
     let mut executor = fasync::Executor::new().context("error creating event loop")?;
-    fx_log_info!("[ RUN      ] {}...", name);
+    info!("[ RUN      ] {}...", name);
     let result = executor.run_singlethreaded(run_with_harness(test));
     if let Err(err) = &result {
-        fx_log_err!("[   \x1b[31mFAILED\x1b[0m ] {}: Error running test: {:?}", name, err);
+        error!("[   \x1b[31mFAILED\x1b[0m ] {}: Error running test: {:?}", name, err);
     } else {
-        fx_log_info!("[   \x1b[32mPASSED\x1b[0m ] {}", name);
+        info!("[   \x1b[32mPASSED\x1b[0m ] {}", name);
     }
     result
 }
@@ -119,7 +119,7 @@ macro_rules! run_test {
 
 macro_rules! run_suite {
     ($name:tt, [$($test:ident),+]) => {{
-        fuchsia_syslog::fx_log_info!(">>> Running {} tests:", $name);
+        log::info!(">>> Running {} tests:", $name);
         {
             use fuchsia_bluetooth::util::CollectExt;
             vec![$( run_test!($test), )*].into_iter().collect_results()?;

@@ -15,11 +15,11 @@ use {
         hci_emulator::Emulator,
         util::{clone_host_info, clone_remote_device},
     },
-    fuchsia_syslog::fx_log_err,
     futures::{
         future::{self, BoxFuture},
         FutureExt, TryFutureExt, TryStreamExt,
     },
+    log::error,
     std::collections::HashMap,
 };
 
@@ -230,7 +230,7 @@ impl ActivatedFakeHost {
         let control = new_control_harness().await?;
         fasync::Task::spawn(
             handle_control_events(control.clone())
-                .unwrap_or_else(|e| fx_log_err!("Error handling control events: {:?}", e)),
+                .unwrap_or_else(|e| error!("Error handling control events: {:?}", e)),
         )
         .detach();
         let (host, hci) = activate_fake_host(control.clone(), name).await?;
