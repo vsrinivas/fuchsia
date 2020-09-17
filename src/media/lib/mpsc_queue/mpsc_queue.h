@@ -14,8 +14,6 @@
 #include <queue>
 #include <stack>
 
-#include "src/lib/fxl/macros.h"
-
 // A lock free queue for multiple producers and a single consumer.
 template <typename T>
 class MpscQueue {
@@ -23,6 +21,12 @@ class MpscQueue {
   MpscQueue() : cache_(nullptr), head_(nullptr) {}
 
   ~MpscQueue() { Clear(); }
+
+  // Disallow copy, assign, and move.
+  MpscQueue(MpscQueue&&) = delete;
+  MpscQueue(const MpscQueue&) = delete;
+  MpscQueue& operator=(MpscQueue&&) = delete;
+  MpscQueue& operator=(const MpscQueue&) = delete;
 
   // Pushes a new element onto the queue.
   //
@@ -95,8 +99,6 @@ class MpscQueue {
 
   Cell* cache_;
   std::atomic<Cell*> head_;
-
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(MpscQueue);
 };
 
 // A multiproducer single consumer queue which blocks for the consumer.

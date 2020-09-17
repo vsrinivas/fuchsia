@@ -22,6 +22,7 @@ executable("client") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+    "//src/lib/fxl",
     "//src/lib/ui/base_view",
     "//src/ui/examples/shadertoy/service",
     "//src/ui/examples/shadertoy/service/services",

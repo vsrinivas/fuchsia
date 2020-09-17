@@ -7,7 +7,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/syslog/cpp/macros.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -21,7 +20,10 @@ namespace files {
 
 std::string GetCurrentDirectory() {
   char buffer[PATH_MAX];
-  FX_CHECK(getcwd(buffer, sizeof(buffer)));
+  if (!getcwd(buffer, sizeof(buffer))) {
+    // Failed to get cwd
+    abort();
+  }
   return std::string(buffer);
 }
 

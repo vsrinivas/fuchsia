@@ -21,7 +21,9 @@ source_set("vmo") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
-    "//src/lib/fxl",
+    "//src/lib/files",
+    "//src/lib/fxl:memory",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
 

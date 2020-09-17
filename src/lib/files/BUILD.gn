@@ -22,7 +22,7 @@ source_set("files") {
 
   public_deps = [
     "//src/lib/fxl:strings",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [

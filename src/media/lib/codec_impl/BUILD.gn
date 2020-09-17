@@ -45,6 +45,7 @@ source_set("codec_impl") {
     ":fourcc",
     "//sdk/fidl/fuchsia.media.drm",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/lib/syslog/cpp",
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -59,7 +60,6 @@ source_set("codec_impl") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
 
     # Only for <ddk/debug.h>'s severity levels.

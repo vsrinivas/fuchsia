@@ -61,6 +61,7 @@ source_set("system_metrics_daemon_lib") {
     "//src/cobalt/bin/utils:clock",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
+    "//src/lib/fxl",
     "//third_party/cobalt/src/registry:buckets_config",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",

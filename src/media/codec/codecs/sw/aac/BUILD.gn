@@ -25,6 +25,7 @@ executable("codec_runner_sw_aac") {
 
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
+    "//src/lib/fxl",
     "//src/media/codec/codecs:chunk_input_stream",
     "//src/media/codec/codecs:output_sink",
     "//src/media/codec/codecs/sw:codec_runner_sw",

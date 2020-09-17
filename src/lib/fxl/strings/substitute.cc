@@ -4,14 +4,18 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <array>
 #include <cassert>
+#include <iostream>
 #include <tuple>
 #include <utility>
 
-#include "src/lib/fxl/macros.h"
+// Macro for aborting only if we are in debug mode.
+#ifndef NDEBUG
+#define ABORT_DEBUG() abort()
+#else
+#define ABORT_DEBUG()
+#endif
 
 namespace fxl {
 
@@ -102,7 +106,10 @@ inline static std::pair<CharType, size_t> GetCharInfo(std::string_view str, size
 
 std::string SubstituteWithArray(std::string_view format, std::string_view* args, size_t nargs) {
   static constexpr size_t kMaxArgs = 10;
-  FX_CHECK(nargs <= kMaxArgs) << "More than " << kMaxArgs << "args: " << nargs;
+  if (nargs > kMaxArgs) {
+    std::cerr << "More than " << kMaxArgs << "args: " << nargs << std::endl;
+    abort();
+  };
 
   int out_size = 0;
   size_t pos = 0;
@@ -114,15 +121,17 @@ std::string SubstituteWithArray(std::string_view format, std::string_view* args,
       case CharType::kPositionalId:
         if (positional_id >= nargs) {
           // Error: missing argument.
-          FX_LOGS(DFATAL) << "fxl::Substitute missing argument for $" << positional_id << ": \""
-                          << format << "\"";
+          std::cerr << "fxl::Substitute missing argument for $" << positional_id << ": \"" << format
+                    << "\"" << std::endl;
+          ABORT_DEBUG();
           return "";
         }
         out_size += args[positional_id].size();
         pos += 2;
         break;
       case CharType::kMissingId:
-        FX_LOGS(DFATAL) << "fxl::Substitute encountered trailing '$': \"" << format << "\"";
+        std::cerr << "fxl::Substitute encountered trailing '$': \"" << format << "\"" << std::endl;
+        ABORT_DEBUG();
         return "";
       case CharType::kRegularChar:
         ++out_size;

@@ -4,6 +4,7 @@
 
 #include "src/lib/files/file.h"
 
+#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -11,8 +12,6 @@
 
 #define FILE_CREATE_MODE 0666
 #define BINARY_MODE 0
-
-#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/eintr_wrapper.h"
 #include "src/lib/files/file_descriptor.h"
@@ -24,7 +23,7 @@ namespace {
 
 template <typename T>
 bool ReadFileDescriptor(int fd, T* result) {
-  FX_DCHECK(result);
+  assert(result);
   result->clear();
 
   if (fd < 0)

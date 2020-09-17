@@ -14,7 +14,8 @@ source_set("tasks") {
 
   public_deps = [
     "//sdk/lib/fdio",
-    "//src/lib/fxl",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl:common",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-default",
   ]

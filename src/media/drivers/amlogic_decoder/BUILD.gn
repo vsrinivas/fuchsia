@@ -190,6 +190,7 @@ if (target_cpu == "arm64") {
       ":sources",
       ":test_support",
       "//sdk/fidl/fuchsia.mediacodec",
+      "//sdk/lib/syslog/cpp",
       "//src/media/lib/codec_impl",
       "//third_party/boringssl:crypto",
       "//third_party/googletest:gtest",

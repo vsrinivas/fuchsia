@@ -4,7 +4,7 @@
 
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
-#include <lib/syslog/cpp/macros.h>
+#include <assert.h>
 #include <stdint.h>
 
 #include <limits>
@@ -15,7 +15,7 @@ namespace {
 
 template <typename NumberType>
 bool GetDigitValue(const char s, Base base, NumberType* out_digit) {
-  FX_DCHECK(out_digit);
+  assert(out_digit);
 
   if (s < '0')
     return false;
@@ -48,9 +48,9 @@ bool StringToPositiveNumberWithError(const char* s, size_t length, Base base, Nu
   const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMaxAllowed = std::numeric_limits<NumberType>::max();
 
-  FX_DCHECK(s);
-  FX_DCHECK(length > 0u);
-  FX_DCHECK(number);
+  assert(s);
+  assert(length > 0u);
+  assert(number);
 
   *number = 0;
   for (size_t i = 0; i < length; i++) {
@@ -75,9 +75,9 @@ bool StringToNegativeNumberWithError(const char* s, size_t length, Base base, Nu
   const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMinAllowed = std::numeric_limits<NumberType>::min();
 
-  FX_DCHECK(s);
-  FX_DCHECK(length > 0u);
-  FX_DCHECK(number);
+  assert(s);
+  assert(length > 0u);
+  assert(number);
 
   *number = 0;
   for (size_t i = 0; i < length; i++) {
@@ -134,7 +134,7 @@ std::string NumberToString(NumberType number, Base base) {
 
 template <typename NumberType>
 bool StringToNumberWithError(std::string_view string, NumberType* number, Base base) {
-  FX_DCHECK(number);
+  assert(number);
 
   if (string.empty())
     return false;

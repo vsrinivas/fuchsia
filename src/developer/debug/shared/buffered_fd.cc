@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/shared/buffered_fd.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <algorithm>

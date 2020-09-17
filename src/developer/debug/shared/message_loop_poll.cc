@@ -5,6 +5,7 @@
 #include "src/developer/debug/shared/message_loop_poll.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 #include <string.h>
 #include <time.h>

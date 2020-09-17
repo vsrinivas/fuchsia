@@ -8,6 +8,10 @@ source_set("common") {
   visibility = [
     ":*",
     "//src/lib/files:*",
+    "//src/lib/fsl/handles:*",
+    "//src/lib/fsl/io:*",
+    "//src/lib/fsl/socket:*",
+    "//src/lib/fsl/tasks:*",
   ]
 
   sources = [
@@ -21,6 +25,8 @@ source_set("memory") {
   visibility = [
     ":*",
     "//src/lib/files:*",
+    "//src/lib/fsl/io:*",
+    "//src/lib/fsl/vmo:*",
   ]
 
   sources = [
@@ -49,6 +55,7 @@ source_set("strings") {
   visibility = [
     ":*",
     "//src/lib/files:*",
+    "//src/lib/uuid:*",
   ]
 
   sources = [
