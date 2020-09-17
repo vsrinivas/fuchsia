@@ -58,8 +58,7 @@ To run a Fuchsia test out of your build, execute:
 <code class="devsite-terminal">fx test <var>TEST_NAME</var></code>
 </pre>
 
-For more information on running Fuchsia tests, see
-[Run tests as components][executing-tests].
+For more information, see [Run Fuchsia tests][executing-tests].
 
 ## Isolated Storage
 
@@ -282,8 +281,8 @@ system versions of these services by mentioning these services in
 Test can only list allowlisted system services under `"system-services"` as
 demonstrated above.
 
-[executing-tests]: /docs/development/testing/run_tests_as_components.md
-[run-test-component]: /docs/development/testing/run_tests_as_components.md#running_tests_legacy
+[executing-tests]: /docs/development/testing/run_fuchsia_tests.md
+[run-test-component]: /docs/development/testing/run_fuchsia_tests.md
 [syslogs]: /docs/development/logs/concepts.md
 [test-packages]: /docs/development/components/build.md#test-packages
 [legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity

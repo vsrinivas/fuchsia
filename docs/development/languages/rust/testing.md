@@ -1,8 +1,8 @@
 # Testing Rust code
 
 This document describes best practices for writing tests for Rust code, and
-paired with ["Run tests as components"][component_tests] describes how to
-component-ize, package, and run these tests.
+paired with the [Tests as components][component_tests] concept guide, it
+also describes how to component-ize, package, and run these tests.
 
 This document is targeted towards developers working inside of `fuchsia.git`,
 and the workflow described is unlikely to work for IDK consumers.
@@ -164,8 +164,8 @@ Note: that in order to use `fx test`, you can't override
 issue is tracked by BLD-338.
 
 
-For information on packaging and running tests, please refer to the
-[documentation on running tests as components][component_tests].
+For information on packaging and running tests, see
+[Tests as components][component_tests].
 
 ### Helpful crates
 
@@ -190,7 +190,7 @@ rustc_binary("bin") {
 }
 ```
 
-[component_tests]:/docs/development/testing/run_tests_as_components.md
+[component_tests]:/docs/concepts/testing/tests_as_components.md
 [example-src]: /examples/hello_world/rust
 [`matches`]: https://fuchsia-docs.firebaseapp.com/rust/matches/index.html
 [`pretty_assertions`]: https://fuchsia-docs.firebaseapp.com/rust/pretty_assertions/index.html

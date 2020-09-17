@@ -255,4 +255,4 @@ The set of currently known features are as follows:
 See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
 
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
-[test-components]: /docs/development/testing/run_tests_as_components.md
+[test-components]: /docs/concepts/testing/tests_as_components.md
