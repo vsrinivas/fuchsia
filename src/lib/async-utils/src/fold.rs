@@ -65,11 +65,11 @@ impl<F> FoldResult<F, F> {
 pub fn try_fold_while<S, T, D, F, Fut>(
     s: S,
     init: T,
-    f: F,
+    mut f: F,
 ) -> impl Future<Output = Result<FoldResult<T, D>, S::Error>>
 where
     S: TryStream,
-    F: Fn(T, S::Ok) -> Fut,
+    F: FnMut(T, S::Ok) -> Fut,
     Fut: Future<Output = Result<FoldWhile<T, D>, S::Error>>,
 {
     s.map_err(Err)
@@ -93,10 +93,14 @@ where
 /// Returns [`FoldResult::StreamEnded`] with the current folded value when the
 /// stream ends. Returns [`FoldResult::ShortCircuited`] with the value of
 /// [`FoldWhile::Done`] if `f` short-circuits the operation.
-pub fn fold_while<S, T, D, F, Fut>(s: S, init: T, f: F) -> impl Future<Output = FoldResult<T, D>>
+pub fn fold_while<S, T, D, F, Fut>(
+    s: S,
+    init: T,
+    mut f: F,
+) -> impl Future<Output = FoldResult<T, D>>
 where
     S: Stream,
-    F: Fn(T, S::Item) -> Fut,
+    F: FnMut(T, S::Item) -> Fut,
     Fut: Future<Output = FoldWhile<T, D>>,
 {
     s.map(Ok)
