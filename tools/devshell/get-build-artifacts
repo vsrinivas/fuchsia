@@ -6,7 +6,7 @@
 #### CATEGORY=Internal API
 ### Builds and returns a list of a desired set of build artifacts
 
-## usage: fx get-build-artifacts [--no-build] [--name NAME] MODE
+## usage: fx get-build-artifacts [--no-build] [--allow-empty | --expect-one] [FILTERS...] MODE
 ##
 ## Builds and returns a list of paths to special sets of build artifacts within
 ## the GN graph relative to the build directory.
@@ -23,6 +23,7 @@
 ##  --cpu         filter the set of artifacts by intended architecture: one of
 ##                `x64` or `arm64`. Defaults to $HOST_CPU when the mode is
 ##                `tools`.
+##  --type         filter the set of artifacts by type.
 ##
 ##  MODE          One of the following:
 ##                `images` -- returns the list of images
@@ -51,6 +52,7 @@ mode=""
 name=""
 os=""
 cpu=""
+type=""
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -78,6 +80,10 @@ while [[ $# -ne 0 ]]; do
     shift
     cpu="$1"
     ;;
+  --type)
+    shift
+    type="$1"
+    ;;
   -*)
     fx-error "Unknown flag: $1"
     fx-command-help
@@ -102,7 +108,7 @@ if [[ -z "${mode}" ]]; then
 fi
 
 if $allow_empty && $expect_one ; then
-  fx-error "cannot set both `--allow-empty` and `--expect-one`"
+  fx-error "cannot set both --allow-empty and --expect-one"
   fx-command-help
   exit 1
 fi
@@ -155,6 +161,9 @@ fi
 if [[ ! -z "${cpu}" ]]; then
   jq_filter+=" | select(.cpu == \"${cpu}\")"
 fi
+if [[ ! -z "${type}" ]]; then
+  jq_filter+=" | select(.type == \"${type}\")"
+fi
 jq_filter+=" | .path"
 
 paths+=($(fx-command-run jq --raw-output "${jq_filter}" "${FUCHSIA_BUILD_DIR}/${manifest}"))
@@ -169,7 +178,7 @@ if $build && [[ ${#paths[@]} -ne 0 ]] ; then
 fi
 
 if [[ ${#paths[@]} -eq 0 ]] && (! $allow_empty || $expect_one) ; then
-  fx-error "found no artifacts in the GN graph of type \"${mode}\" with (name, os, cpu) == (\"${name:-*}\", \"${os:-*}\", \"${cpu:-*}\")"
+  fx-error "found no artifacts in the GN graph of type \"${mode}\" with (name, os, cpu, type) == (\"${name:-*}\", \"${os:-*}\", \"${cpu:-*}\", \"${type:-*}\")"
   exit 1
 fi
 
