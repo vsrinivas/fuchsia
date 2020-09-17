@@ -1,0 +1,38 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of 'fx codesize'
+
+BT_LINKED_DEPS=(
+  "prebuilt/third_party/dart"
+  "scripts/codesize"
+  "scripts/third_party"
+  "third_party"
+)
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/contrib/codesize"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+)
+
+BT_MOCKED_TOOLS=(
+)
+
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+}
+
+# ensure that "fx codesize --help" runs
+TEST_codesize_help() {
+  BT_EXPECT ${fx} codesize --help &> /dev/null
+}
+
+BT_RUN_TESTS "$@"

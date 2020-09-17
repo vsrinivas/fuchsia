@@ -41,6 +41,7 @@ test_scripts = [
   # tests that currently can't be included in automation.
   # use 'fx self-test' to run them manually:
   # "tests/subcommands/fx_blobstats_test",  # disabled because it depends on dart prebuilt
+  # "tests/subcommands/fx_codesize_test",  # disabled because it depends on dart prebuilt
   # "tests/subcommands/fx_emu_test",   # disabled because stty call fails
   # "tests/subcommands/fx_serve_update_test",  # disabled because it depends on pm
   # "tests/subcommands/fx_test_test",  # disabled because it depends on dart prebuilt
@@ -99,6 +100,7 @@ host_script_test_data("fx_bash_tests") {
 
       files = [
         "//tools/devshell/contrib/blobstats",
+        "//tools/devshell/contrib/codesize",
         "//tools/devshell/contrib/lib/symbol-index.sh",
         "//tools/devshell/cp",
         "//tools/devshell/emu",
