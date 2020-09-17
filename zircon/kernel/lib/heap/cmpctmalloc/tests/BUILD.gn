@@ -28,5 +28,8 @@ if (is_host) {
       "//zircon/public/lib/zxtest",
     ]
     include_dirs = [ "//zircon/kernel/lib/heap/cmpctmalloc/include/lib" ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }

@@ -25,5 +25,8 @@ if (is_host) {
       "//zircon/public/lib/hwreg-mock",
       "//zircon/public/lib/zxtest",
     ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }

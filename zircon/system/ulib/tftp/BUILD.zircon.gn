@@ -23,7 +23,7 @@ zx_library("tftp") {
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  public_configs = [ "$zx_build_config:Wno-conversion" ]
 }
 
 if (!is_kernel) {

@@ -8,6 +8,9 @@ zx_library("usbhost") {
   host = true
   static = false
   sources = [ "usbhost.c" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 zx_library("usbhost-static") {
@@ -16,4 +19,7 @@ zx_library("usbhost-static") {
   sdk = "static"
   sdk_headers = [ "usbhost/usbhost.h" ]
   sources = [ "usbhost.c" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

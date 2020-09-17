@@ -26,4 +26,7 @@ zx_library("cksum") {
     # of bootloader is sorted out.
     deps = [ "$zx/kernel/lib/libc" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
