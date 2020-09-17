@@ -151,16 +151,28 @@ async fn maintain_utc<C: CobaltDiagnostics, R: Rtc, T: TimeSource>(
                 cobalt.log_rtc_event(RtcEventType::ReadFailed);
             }
             Ok(time) => {
-                info!("initial RTC time: {}", Utc.timestamp_nanos(time.into_nanos()));
                 let backstop =
                     utc_clock.get_details().expect("failed to get UTC clock details").backstop;
-                let status = if time < backstop {
+                let utc_chrono = Utc.timestamp_nanos(time.into_nanos());
+                let rtc_status = if time < backstop {
+                    warn!("initial RTC time before backstop: {}", utc_chrono);
                     RtcEventType::ReadInvalidBeforeBackstop
                 } else {
+                    if let Err(update_status) = utc_clock.update(zx::ClockUpdate::new().value(time))
+                    {
+                        warn!(
+                            "failed to start UTC clock from RTC at time {}: {}",
+                            utc_chrono, update_status
+                        );
+                    } else {
+                        inspect.lock().update_clock();
+                        cobalt.log_lifecycle_event(LifecycleEventType::StartedUtcFromRtc);
+                        info!("started UTC clock from RTC at time: {}", utc_chrono);
+                    }
                     RtcEventType::ReadSucceeded
                 };
-                inspect.lock().rtc_initialize(status, Some(time));
-                cobalt.log_rtc_event(status);
+                inspect.lock().rtc_initialize(rtc_status, Some(time));
+                cobalt.log_rtc_event(rtc_status);
             }
         }
     }
@@ -236,6 +248,10 @@ async fn maintain_utc<C: CobaltDiagnostics, R: Rtc, T: TimeSource>(
                     monotonic_before, utc_now, monotonic_after,
                 );
                 if notifs.0.lock().set_source(ftime::UtcSource::External, monotonic_before) {
+                    // TODO(60074): Currently starting from RTC does not change the reported time
+                    // source and so StartedUtcFromRtc and StartedUtcFromTimeSource are both
+                    // reported. This will be corrected naturally when we have an appropriate
+                    // source enum that can be used when consuming the RTC.
                     cobalt.log_lifecycle_event(LifecycleEventType::StartedUtcFromTimeSource);
                 }
                 received_valid_update = true;
@@ -340,10 +356,11 @@ mod tests {
     };
 
     lazy_static! {
-        static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(111111);
-        static ref RTC_TIME: zx::Time = zx::Time::from_nanos(222222);
-        static ref UPDATE_TIME: zx::Time = zx::Time::from_nanos(333333);
-        static ref UPDATE_TIME_2: zx::Time = zx::Time::from_nanos(444444);
+        static ref INVALID_RTC_TIME: zx::Time = zx::Time::from_nanos(111111);
+        static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222);
+        static ref VALID_RTC_TIME: zx::Time = zx::Time::from_nanos(333333);
+        static ref UPDATE_TIME: zx::Time = zx::Time::from_nanos(444444);
+        static ref UPDATE_TIME_2: zx::Time = zx::Time::from_nanos(555555);
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
     }
 
@@ -353,7 +370,7 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
-        let rtc = Arc::new(FakeRtc::valid(*RTC_TIME));
+        let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
 
         let inspector = Inspector::new();
         let inspect_diagnostics = Arc::new(Mutex::new(diagnostics::InspectDiagnostics::new(
@@ -397,18 +414,20 @@ mod tests {
             LifecycleEventType::InitializedBeforeUtcStart,
             LifecycleEventType::StartedUtcFromTimeSource,
         ]);
-        cobalt_monitor
-            .assert_rtc_events(&[RtcEventType::ReadSucceeded, RtcEventType::WriteSucceeded]);
+        cobalt_monitor.assert_rtc_events(&[
+            RtcEventType::ReadInvalidBeforeBackstop,
+            RtcEventType::WriteSucceeded,
+        ]);
     }
 
     #[test]
-    fn no_update_single_notify_client() {
+    fn no_update_invalid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
         let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
-        let rtc = Arc::new(FakeRtc::valid(*RTC_TIME));
+        let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
 
         let inspector = Inspector::new();
         let inspect_diagnostics = Arc::new(Mutex::new(diagnostics::InspectDiagnostics::new(
@@ -454,6 +473,65 @@ mod tests {
 
         // Checking that correct events were logged to Cobalt
         cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
+        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadInvalidBeforeBackstop]);
+    }
+
+    #[test]
+    fn no_update_valid_rtc_single_notify_client() {
+        let mut executor = fasync::Executor::new().unwrap();
+        let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
+        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
+        let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
+
+        let rtc = Arc::new(FakeRtc::valid(*VALID_RTC_TIME));
+
+        let inspector = Inspector::new();
+        let inspect_diagnostics = Arc::new(Mutex::new(diagnostics::InspectDiagnostics::new(
+            inspector.root(),
+            Arc::clone(&clock),
+        )));
+        let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
+
+        let (utc, utc_requests) =
+            fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
+        let time_source = FakeTimeSource::events_then_pending(vec![Event::StatusChange {
+            status: ftexternal::Status::Network,
+        }]);
+
+        let netstack_service = network::create_event_service_with_valid_interface();
+
+        // Spawning test notifier and verifying the initial state
+        let notifier = Notifier::new(ftime::UtcSource::Backstop);
+        notifier.handle_request_stream(utc_requests);
+        let mut fut1 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
+        assert_eq!(executor.run_until_stalled(&mut fut1), Poll::Ready(ftime::UtcSource::Backstop));
+
+        // Maintain UTC until no more work remains
+        let mut fut2 = maintain_utc(
+            Arc::clone(&clock),
+            Some(Arc::clone(&rtc)),
+            notifier.clone(),
+            time_source,
+            netstack_service,
+            Arc::clone(&inspect_diagnostics),
+            cobalt_diagnostics,
+        )
+        .boxed();
+        let _ = executor.run_until_stalled(&mut fut2);
+
+        // Checking that the reported time source has not been updated but that the clock was
+        // updated to use the Valid RTC time.
+        let mut fut3 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
+        assert_eq!(executor.run_until_stalled(&mut fut3), Poll::Pending);
+        assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
+        assert!(clock.read().unwrap() >= *VALID_RTC_TIME);
+        assert_eq!(rtc.last_set(), None);
+
+        // Checking that correct events were logged to Cobalt
+        cobalt_monitor.assert_lifecycle_events(&[
+            LifecycleEventType::InitializedBeforeUtcStart,
+            LifecycleEventType::StartedUtcFromRtc,
+        ]);
         cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadSucceeded]);
     }
 
@@ -463,7 +541,7 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
-        let rtc = Arc::new(FakeRtc::valid(*RTC_TIME));
+        let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
 
         let inspector = Inspector::new();
         let inspect_diagnostics = Arc::new(Mutex::new(diagnostics::InspectDiagnostics::new(
@@ -497,7 +575,7 @@ mod tests {
 
         // Checking that correct events were logged to Cobalt
         cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
-        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadSucceeded]);
+        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadInvalidBeforeBackstop]);
 
         // Checking the inspect data is available and unhealthy
         assert_inspect_tree!(
@@ -516,7 +594,7 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
-        let rtc = Arc::new(FakeRtc::valid(*RTC_TIME));
+        let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
 
         let inspector = Inspector::new();
         let inspect_diagnostics = Arc::new(Mutex::new(diagnostics::InspectDiagnostics::new(
@@ -546,7 +624,7 @@ mod tests {
 
         // Checking that correct events were logged to Cobalt
         cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
-        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadSucceeded]);
+        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadInvalidBeforeBackstop]);
 
         // Checking the inspect data is available and unhealthy
         assert_inspect_tree!(
