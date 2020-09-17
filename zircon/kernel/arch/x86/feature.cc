@@ -898,7 +898,16 @@ static const x86_microarch_config_t goldmont_plus_config{
     .has_ssb = true,
     .idle_states =
         {
-            .states = {X86_CSTATE_C1(0)},
+            .states = {
+              // TODO(fxb/35457): Read C6 and deeper latency from IRTL registers
+              {.name = "C10", .mwait_hint = 0x60, .exit_latency = 10000, .flushes_tlb = true},
+              {.name = "C9", .mwait_hint = 0x50, .exit_latency = 2000, .flushes_tlb = true},
+              {.name = "C8", .mwait_hint = 0x40, .exit_latency = 1000, .flushes_tlb = true},
+              {.name = "C7s", .mwait_hint = 0x31, .exit_latency = 155, .flushes_tlb = true},
+              {.name = "C6", .mwait_hint = 0x20, .exit_latency = 133, .flushes_tlb = true},
+              {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
+              X86_CSTATE_C1(0),
+            },
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
