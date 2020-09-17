@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -33,7 +33,7 @@ class PackageConfig:
         '''Converts the package config to a dictionary'''
         return {
             'configVersion': self.VERSION,
-            'packages': sorted(p._asdict() for p in self.packages),
+            'packages': [p._asdict() for p in sorted(self.packages)],
             'generator': self.GENERATOR_NAME,
         }
 
@@ -105,7 +105,7 @@ def main():
     parser.add_argument('--root', help='Path to fuchsia root', required=True)
     args = parser.parse_args()
 
-    sys.path += [os.path.join(args.root, 'third_party', 'pyyaml', 'lib')]
+    sys.path += [os.path.join(args.root, 'third_party', 'pyyaml', 'lib3')]
 
     with open(args.input, 'r') as input_file:
         contents = json.load(input_file)

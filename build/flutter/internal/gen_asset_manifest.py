@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -21,7 +21,7 @@ def fini_to_json(input, output):
 
     with open(output, 'w') as output_file:
         json.dump(
-            sorted(e for e in entries),
+            sorted(entries, key=lambda x: (x['destination'], x['source'])),
             output_file,
             indent=2,
             sort_keys=True,

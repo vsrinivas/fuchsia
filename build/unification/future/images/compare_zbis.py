@@ -1,10 +1,8 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 '''Compares the contents of two zbi files, erroring if they differ.'''
-
-from __future__ import print_function
 
 import argparse
 import collections
