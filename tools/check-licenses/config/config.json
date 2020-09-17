@@ -2,12 +2,21 @@
   "filesRegex": [],
   "skipFiles": [
     ".gitignore",
-    "build-changelist.txt"
+    "build-changelist.txt",
+    "CONTRIBUTING.md",
+    "API_EVOLUTION.md",
+    "CODE_OF_CONDUCT.md",
+    "TESTING.md",
+    "getting_started.md",
+    "glossary.md",
+    "navbar.md",
+    "SYNTAX.md"
   ],
   "skipDirs": [
     ".git",
     "out",
-    ".cipd"
+    ".cipd",
+    "testdata"
   ],
   "textExtensionList": [
     "ac",

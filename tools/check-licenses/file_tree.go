@@ -43,7 +43,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 				return nil
 			} else {
 				for _, skipFile := range config.SkipFiles {
-					if info.Name() == skipFile {
+					if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
 						fmt.Printf("skipping a file without errors: %+v \n", info.Name())
 						return nil
 					}
