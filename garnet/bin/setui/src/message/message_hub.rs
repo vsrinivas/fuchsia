@@ -77,7 +77,18 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             let _scope_fuse = fuse;
 
             loop {
-                futures::select! {
+                // We must prioritize the action futures. Exit actions
+                // take absolute priority. Message actions are ordered before
+                // messenger in case the messenger is subsequently deleted.
+                futures::select_biased! {
+                    exit_action = exit_rx.next() => {
+                        break;
+                    }
+                    message_action = action_rx.next() => {
+                        if let Some((fingerprint, action, beacon)) = message_action {
+                            hub.process_request(fingerprint, action, beacon).await;
+                        }
+                    }
                     messenger_action = messenger_rx.next() => {
                         match messenger_action {
                             Some(action) => {
@@ -88,14 +99,6 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                                 hub.check_exit();
                             }
                         }
-                    }
-                    message_action = action_rx.next() => {
-                        if let Some((fingerprint, action, beacon)) = message_action {
-                            hub.process_request(fingerprint, action, beacon).await;
-                        }
-                    }
-                    exit_action = exit_rx.next() => {
-                        break;
                     }
                 }
             }

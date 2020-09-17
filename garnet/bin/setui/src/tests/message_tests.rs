@@ -370,6 +370,27 @@ async fn test_delivery_status() {
     }
 }
 
+/// Verifies message is delivered even if messenger is deleted right
+/// after.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_send_delete() {
+    let messenger_factory = test::message::create_hub();
+    let (_, mut receptor_2) = messenger_factory
+        .create(MessengerType::Addressable(TestAddress::Foo(2)))
+        .await
+        .expect("client should be created");
+    {
+        let (messenger_client_1, _) = messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("client should be created");
+        messenger_client_1.message(ORIGINAL, Audience::Broadcast).send().ack();
+    }
+
+    // Ensure observer gets payload and then do nothing with message.
+    verify_payload(ORIGINAL, &mut receptor_2, None).await;
+}
+
 /// Verifies beacon returns error when receptor goes out of scope.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_beacon_error() {
