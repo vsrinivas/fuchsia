@@ -9,6 +9,7 @@ use {
     anyhow::{format_err, Error},
     byteorder::{ByteOrder, LittleEndian},
     fidl_fuchsia_bluetooth as fidl, fidl_fuchsia_bluetooth_bredr as fidlbredr,
+    serde::{Deserialize, Serialize},
     std::{
         convert::{TryFrom, TryInto},
         fmt,
@@ -19,7 +20,7 @@ use {
 
 use crate::inspect::ToProperty;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Uuid(uuid::Uuid);
 
 fn base_uuid() -> Uuid {

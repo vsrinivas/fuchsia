@@ -333,7 +333,6 @@ struct BredrDataDef {
     pub role_preference: Option<bt::ConnectionRole>,
     #[serde(with = "OptionPeerKeyDef")]
     pub link_key: Option<sys::PeerKey>,
-    #[serde(skip)]
     pub services: Vec<Uuid>,
 }
 option_encoding!(OptionBredrDataDef, BredrData, "BredrDataDef");
@@ -474,7 +473,7 @@ mod tests {
                 },
                 BredrData {
                     role_preference: Some(bt::ConnectionRole::Follower),
-                    services: vec![],
+                    services: vec![Uuid::new16(0x110a), Uuid::new16(0x110b)],
                     link_key: Some(sys::PeerKey {
                         security: sys::SecurityProperties {
                             authenticated: true,
@@ -555,7 +554,11 @@ mod tests {
                         \"encryptionKeySize\":16\
                     },\
                     \"value\":[9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]\
-                }\
+                },\
+                \"services\":[\
+                    \"0000110a-0000-1000-8000-00805f9b34fb\",\
+                    \"0000110b-0000-1000-8000-00805f9b34fb\"\
+                ]\
             }\
         }";
         assert_eq!(expected, serialized);
@@ -623,7 +626,11 @@ mod tests {
                          "encryptionKeySize": 16
                      },
                      "value": [9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]
-                 }
+                 },
+                 "services":[
+                    "0000110a-0000-1000-8000-00805f9b34fb",
+                    "0000110b-0000-1000-8000-00805f9b34fb"
+                 ]
              }
         }"#;
 
