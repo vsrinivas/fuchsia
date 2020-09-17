@@ -1266,7 +1266,9 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
     let len = len as usize;
     decoder.read_out_of_line(len, |decoder, offset| {
         let bytes = &decoder.buf[offset..offset + len];
-        *string = str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?.to_string();
+        let utf8 = str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?;
+        let boxed_utf8: Box<str> = utf8.into();
+        *string = boxed_utf8.into_string();
         Ok(true)
     })
 }
