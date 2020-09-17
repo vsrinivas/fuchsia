@@ -16,6 +16,7 @@
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/types.h>
 
@@ -161,7 +162,10 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {
-  return RpcReply(ch, EnableBusMaster(request_.enable));
+  zx_status_t status = EnableBusMaster(request_.enable);
+  zxlogf(DEBUG, "[%s] EnableBusMaster { enabled = %u, status = %s }", cfg_->addr(), request_.enable,
+         zx_status_get_string(status));
+  return RpcReply(ch, status);
 }
 
 zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
