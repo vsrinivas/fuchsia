@@ -24,29 +24,18 @@ BaseView::BaseView(scenic::ViewContext context, const std::string& debug_name, u
     : scenic::BaseView(std::move(context), debug_name),
       width_(width),
       height_(height),
+      material_(session()),
       next_color_offset_(height / 2),
       node_(session()) {
-  // Create an ImagePipe and use it.
-  const uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipe2Cmd(image_pipe_id, image_pipe_.NewRequest()));
-  // Make sure that |image_pipe_| is created by flushing the enqueued calls.
-  session()->Present(0, [](fuchsia::images::PresentationInfo info) {});
-
-  // Create a material that has our image pipe mapped onto it:
-  scenic::Material material(session());
-  material.SetTexture(image_pipe_id);
-  session()->ReleaseResource(image_pipe_id);
-
   // Create a rectangle shape to display on.
   scenic::Rectangle shape(session(), width_, height_);
 
   node_.SetShape(shape);
-  node_.SetMaterial(material);
+  node_.SetMaterial(material_);
   root_node().AddChild(node_);
 
   // Translation of 0, 0 is the middle of the screen
   node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, -kDisplayHeight);
-  InvalidateScene();
 }
 
 uint32_t BaseView::GetNextImageIndex() {
@@ -61,11 +50,13 @@ uint32_t BaseView::GetNextColorOffset() {
   return rv;
 }
 
-void BaseView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size()) {
-    return;
-  }
+uint32_t BaseView::GetNextFrameNumber() {
+  const auto rv = next_frame_number_;
+  next_frame_number_ = next_frame_number_ + 1;
+  return rv;
+}
 
+void BaseView::Animate(fuchsia::images::PresentationInfo presentation_info) {
   // Compute the amount of time that has elapsed since the view was created.
   double seconds = static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
 
@@ -73,14 +64,8 @@ void BaseView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation
   const float kHalfHeight = logical_size().y * 0.5f;
 
   // Compute the translation for the window to swirl around the screen.
-  // Why do this?  Well, this is an example of what a View can do, and it helps
-  // debug to know if scenic is still running.
   node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
                        kHalfHeight * (1. + .1 * sin(seconds * 0.6)), -kDisplayHeight);
-
-  // The rectangle is constantly animating; invoke InvalidateScene() to guarantee
-  // that OnSceneInvalidated() will be called again.
-  InvalidateScene();
 }
 
 }  // namespace frame_compression

@@ -32,27 +32,25 @@ class BaseView : public scenic::BaseView {
 
   const uint32_t width_;
   const uint32_t height_;
-  uint32_t next_image_pipe_id_ = 1;
-  fidl::InterfacePtr<fuchsia::images::ImagePipe2> image_pipe_;
+  scenic::Material material_;
 
   uint32_t GetNextImageIndex();
   // Returns the color offset used for the producing contents for the next frame.
   // The color offset determines at what Y offset we should switch from first
   // to second color.
   uint32_t GetNextColorOffset();
+  uint32_t GetNextFrameNumber();
+
+  // Animate the translation for the shape node to swirl around the screen.
+  void Animate(fuchsia::images::PresentationInfo presentation_info);
 
  private:
-  // |scenic::BaseView|
-  // Called when the scene is "invalidated". Invalidation happens when surface
-  // dimensions or metrics change, but not necessarily when surface contents
-  // change.
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
-
   // |scenic::SessionListener|
   void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   uint32_t next_color_offset_ = 0;
   uint32_t next_image_index_ = 0;
+  uint32_t next_frame_number_ = 1;
   scenic::ShapeNode node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BaseView);

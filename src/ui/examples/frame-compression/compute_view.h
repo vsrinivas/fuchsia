@@ -28,7 +28,7 @@ class ComputeView : public BaseView {
     escher::SemaphorePtr release_semaphore;
     zx::event acquire_fence;
     zx::event release_fence;
-    uint32_t image_pipe_id = 0;
+    uint32_t image_id = 0;
     escher::TexturePtr texture;
     escher::BufferPtr buffer;
     uint32_t base_y = 0;
@@ -36,7 +36,10 @@ class ComputeView : public BaseView {
     uint32_t height_in_tiles = 0;
   };
 
-  void PaintAndPresentImage(const Image& image, uint32_t color_offset);
+  // |scenic::BaseView|
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+
+  void RenderFrame(const Image& image, uint32_t color_offset, uint32_t frame_number);
 
   const escher::EscherWeakPtr escher_;
   const uint64_t modifier_;

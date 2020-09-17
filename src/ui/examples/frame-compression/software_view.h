@@ -20,14 +20,16 @@ class SoftwareView : public BaseView {
 
  private:
   struct Image {
-    uint32_t image_pipe_id;
+    uint32_t image_id;
     uint8_t* vmo_ptr;
     size_t image_bytes;
     uint32_t stride;
     bool needs_flush;
   };
 
-  void PaintAndPresentImage(const Image& image, uint32_t color_offset);
+  // |scenic::BaseView|
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+
   void SetPixels(const Image& image, uint32_t color_offset);
   void SetAfbcPixels(const Image& image, uint32_t color_offset);
   void SetLinearPixels(const Image& image, uint32_t color_offset);

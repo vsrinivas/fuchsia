@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
 #include "src//ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"
@@ -280,7 +281,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
   FX_CHECK(status == ZX_OK);
 
   const uint32_t kBufferId = 1;
-  image_pipe_->AddBufferCollection(kBufferId, std::move(scenic_token));
+  session()->RegisterBufferCollection(kBufferId, std::move(scenic_token));
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
@@ -358,14 +359,11 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     image.release_semaphore = std::move(release_semaphore_pair.first);
     image.acquire_fence = std::move(acquire_semaphore_pair.second);
     image.release_fence = std::move(release_semaphore_pair.second);
-    image.image_pipe_id = next_image_pipe_id_++;
-
-    // Add image to |image_pipe_|.
+    image.image_id = session()->AllocResourceId();
     fuchsia::sysmem::ImageFormat_2 image_format = {};
     image_format.coded_width = width_;
     image_format.coded_height = height_;
-    image_pipe_->AddImage(image.image_pipe_id, kBufferId, i, image_format);
-    FX_CHECK(allocation_status == ZX_OK);
+    session()->Enqueue(scenic::NewCreateImage2Cmd(image.image_id, width_, height_, kBufferId, 0));
 
     FX_CHECK(buffer_collection_info.buffers[i].vmo != ZX_HANDLE_INVALID);
     zx::vmo& image_vmo = buffer_collection_info.buffers[i].vmo;
@@ -536,13 +534,6 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
   }
 
   vk_device.destroyShaderModule(module);
-
-  //
-  // Paint and present first frame.
-  //
-
-  auto& image = images_[GetNextImageIndex()];
-  PaintAndPresentImage(image, GetNextColorOffset());
 }
 
 ComputeView::~ComputeView() {
@@ -551,14 +542,33 @@ ComputeView::~ComputeView() {
   vk_device.destroyPipelineLayout(pipeline_layout_);
 }
 
-void ComputeView::PaintAndPresentImage(const Image& image, uint32_t color_offset) {
-  zx::event acquire_fence(DuplicateEvent(image.acquire_fence));
-  zx::event release_fence(DuplicateEvent(image.release_fence));
-  FX_CHECK(acquire_fence && release_fence);
+void ComputeView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
+  if (!has_logical_size()) {
+    return;
+  }
 
-  static int frame_number = 0;
+  uint32_t frame_number = GetNextFrameNumber();
+  if (!paint_once_ || frame_number == 1) {
+    auto& image = images_[GetNextImageIndex()];
+    zx::event acquire_fence(DuplicateEvent(image.acquire_fence));
+    zx::event release_fence(DuplicateEvent(image.release_fence));
+    FX_CHECK(acquire_fence && release_fence);
+    session()->EnqueueAcquireFence(std::move(acquire_fence));
+    session()->EnqueueReleaseFence(std::move(release_fence));
+    RenderFrame(image, GetNextColorOffset(), frame_number);
+    material_.SetTexture(image.image_id);
+  }
+
+  Animate(presentation_info);
+
+  // The rectangle is constantly animating; invoke InvalidateScene() to guarantee
+  // that OnSceneInvalidated() will be called again.
+  InvalidateScene();
+}
+
+void ComputeView::RenderFrame(const Image& image, uint32_t color_offset, uint32_t frame_number) {
   auto frame =
-      escher_->NewFrame("Compute Renderer", ++frame_number,
+      escher_->NewFrame("Compute Renderer", frame_number,
                         /* enable_gpu_logging */ false, escher::CommandBuffer::Type::kCompute,
                         /* use_protected_memory */ false);
   auto command_buffer = frame->cmds()->impl();
@@ -622,20 +632,6 @@ void ComputeView::PaintAndPresentImage(const Image& image, uint32_t color_offset
   }
 
   frame->EndFrame(image.acquire_semaphore, nullptr);
-
-  std::vector<zx::event> acquire_fences;
-  acquire_fences.push_back(std::move(acquire_fence));
-  std::vector<zx::event> release_fences;
-  release_fences.push_back(std::move(release_fence));
-  uint64_t now_ns = zx_clock_get_monotonic();
-  image_pipe_->PresentImage(image.image_pipe_id, now_ns, std::move(acquire_fences),
-                            std::move(release_fences),
-                            [this](fuchsia::images::PresentationInfo presentation_info) {
-                              if (paint_once_)
-                                return;
-                              auto& image = images_[GetNextImageIndex()];
-                              PaintAndPresentImage(image, GetNextColorOffset());
-                            });
 }
 
 }  // namespace frame_compression

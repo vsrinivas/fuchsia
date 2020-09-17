@@ -5,6 +5,7 @@
 #include "software_view.h"
 
 #include <lib/trace/event.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
 namespace frame_compression {
 namespace {
@@ -33,7 +34,7 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
   FX_CHECK(status == ZX_OK);
 
   const uint32_t kBufferId = 1;
-  image_pipe_->AddBufferCollection(kBufferId, std::move(scenic_token));
+  session()->RegisterBufferCollection(kBufferId, std::move(scenic_token));
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
@@ -100,14 +101,11 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
   for (size_t i = 0; i < kNumImages; ++i) {
     auto& image = images_[i];
 
-    image.image_pipe_id = next_image_pipe_id_++;
-
-    // Add image to |image_pipe_|.
+    image.image_id = session()->AllocResourceId();
     fuchsia::sysmem::ImageFormat_2 image_format = {};
     image_format.coded_width = width_;
     image_format.coded_height = height_;
-    image_pipe_->AddImage(image.image_pipe_id, kBufferId, i, image_format);
-    FX_CHECK(allocation_status == ZX_OK);
+    session()->Enqueue(scenic::NewCreateImage2Cmd(image.image_id, width_, height_, kBufferId, 0));
 
     uint8_t* vmo_base;
     FX_CHECK(buffer_collection_info.buffers[i].vmo != ZX_HANDLE_INVALID);
@@ -126,27 +124,25 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
   }
 
   buffer_collection->Close();
-
-  auto& image = images_[GetNextImageIndex()];
-  PaintAndPresentImage(image, GetNextColorOffset());
 }
 
-void SoftwareView::PaintAndPresentImage(const Image& image, uint32_t color_offset) {
-  TRACE_DURATION("gfx", "SoftwareView::PaintAndPresentImage");
+void SoftwareView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
+  if (!has_logical_size()) {
+    return;
+  }
 
-  SetPixels(image, color_offset);
+  uint32_t frame_number = GetNextFrameNumber();
+  if (!paint_once_ || frame_number == 1) {
+    auto& image = images_[GetNextImageIndex()];
+    SetPixels(image, GetNextColorOffset());
+    material_.SetTexture(image.image_id);
+  }
 
-  std::vector<zx::event> acquire_fences;
-  std::vector<zx::event> release_fences;
-  uint64_t now_ns = zx_clock_get_monotonic();
-  image_pipe_->PresentImage(image.image_pipe_id, now_ns, std::move(acquire_fences),
-                            std::move(release_fences),
-                            [this](fuchsia::images::PresentationInfo presentation_info) {
-                              if (paint_once_)
-                                return;
-                              auto& image = images_[GetNextImageIndex()];
-                              PaintAndPresentImage(image, GetNextColorOffset());
-                            });
+  Animate(presentation_info);
+
+  // The rectangle is constantly animating; invoke InvalidateScene() to guarantee
+  // that OnSceneInvalidated() will be called again.
+  InvalidateScene();
 }
 
 void SoftwareView::SetPixels(const Image& image, uint32_t color_offset) {
