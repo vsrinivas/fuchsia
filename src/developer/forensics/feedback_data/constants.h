@@ -115,6 +115,9 @@ constexpr char kRepeatedStrPrefix[] = "!!! MESSAGE REPEATED ";
 constexpr char kRepeatedOnceFormatStr[] = "!!! MESSAGE REPEATED 1 MORE TIME !!!\n";
 constexpr char kRepeatedFormatStr[] = "!!! MESSAGE REPEATED %lu MORE TIMES !!!\n";
 
+// One repeated message can occupy up to "kMaxRepeatedBuffers" buffers.
+constexpr size_t kMaxRepeatedBuffers = 30;
+
 }  // namespace feedback_data
 }  // namespace forensics
 

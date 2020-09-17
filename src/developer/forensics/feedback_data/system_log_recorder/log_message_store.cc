@@ -56,7 +56,9 @@ bool LogMessageStore::Add(fuchsia::logger::LogMessage log) {
     last_pushed_message_count_++;
     return true;
   }
+  // received new message, clear repeat variables.
   last_pushed_message_ = "";
+  repeat_buffer_count_ = 0;
 
   // 2. Push the repeated message if any.
   if (last_pushed_message_count_ > 1) {
@@ -97,10 +99,12 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
 
   std::lock_guard<std::mutex> lk(mtx_);
 
-  // Optionally log whether the last message was repeated.
-  if (last_pushed_message_count_ > 1) {
+  // Optionally log whether the last message was repeated. Stop logging if this warning message has
+  // been logged consecutively for more than kRepeatedBuffers times.
+  if (last_pushed_message_count_ > 1 && repeat_buffer_count_ < kMaxRepeatedBuffers) {
     AddToBuffer(MakeRepeatedWarning(last_pushed_message_count_));
     last_pushed_message_count_ = 1;
+    repeat_buffer_count_++;
   }
 
   // Optionally log whether some messages were dropped.

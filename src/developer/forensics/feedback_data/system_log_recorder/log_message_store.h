@@ -78,6 +78,7 @@ class LogMessageStore {
   size_t num_messages_dropped_ = 0;
   size_t last_pushed_message_count_ = 0;
   std::string last_pushed_message_;
+  size_t repeat_buffer_count_ = 0;
 
   std::unique_ptr<Encoder> encoder_;
 };

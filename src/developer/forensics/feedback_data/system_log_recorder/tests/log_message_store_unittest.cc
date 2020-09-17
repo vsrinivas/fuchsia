@@ -9,6 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
 #include "src/developer/forensics/testing/stubs/logger.h"
@@ -211,6 +212,57 @@ TEST(LogMessageStoreTest, VerifyRepetition_ResetRepeatedWarningOnConsume) {
 )");
 
   EXPECT_TRUE(end_of_block);
+}
+
+TEST(LogMessageStoreTest, VerifyRepetition_LimitRepetitionBuffers) {
+  bool end_of_block;
+  // Test that repeated messages do not extend over more than kMaxRepeatedBuffers.
+  // Block capacity: 2 * kMaxRepeatedBuffer log message (test only uses one block)
+  // Buffer capacity: 2 log messages
+  // __________________
+  // |input   |output |
+  // |________|_______| _
+  // |line 0  |line 0 |  |
+  // |line 0  |x1     |  |---- Consume 1 time
+  // |________|_______| _|
+  // |line 0  |x1     |  |
+  // |        |       |  |---- Consume (kMaxRepeatedBuffers - 1) times
+  // |________|_______| _|
+  // |line 0  |       |  |
+  // |        |       |  |---- Consume kMaxRepeatedBuffers times
+  // |________|_______| _|
+  // |line 1  |xRep   |  |
+  // |        |line 1 |  |---- Consume 1 time
+  // |________|_______| _|
+  //
+  // Note: xN = last message repeated N times, Rep = kMaxRepeatedBuffers.
+  LogMessageStore store(2 * kMaxRepeatedBuffers * kMaxLogLineSize, 2 * kMaxLogLineSize,
+                        MakeIdentityEncoder());
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  for (size_t i = 1; i < kMaxRepeatedBuffers; i++) {
+    EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+    EXPECT_EQ(store.Consume(&end_of_block), R"(!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+  }
+
+  for (size_t i = 0; i < kMaxRepeatedBuffers; i++) {
+    EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+    EXPECT_EQ(store.Consume(&end_of_block), "");
+  }
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_EQ(store.Consume(&end_of_block),
+            "!!! MESSAGE REPEATED " + std::to_string(kMaxRepeatedBuffers) + " MORE TIMES !!!\n" +
+                "[15604.000][07559][07687][] INFO: line 1\n");
+
+  EXPECT_FALSE(end_of_block);
 }
 
 TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenMessageChanges) {
