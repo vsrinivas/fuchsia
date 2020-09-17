@@ -2848,7 +2848,12 @@ macro_rules! fidl_xunion {
                         }
                     )?
                     // Strict xunion: reject unknown ordinals.
-                    _ => return Err($crate::Error::UnknownUnionTag),
+                    _ => {
+                        for _ in 0..num_handles {
+                            decoder.take_next_handle()?;
+                        }
+                        return Err($crate::Error::UnknownUnionTag);
+                    },
                 };
 
                 decoder.read_out_of_line(member_inline_size, |decoder, offset| {

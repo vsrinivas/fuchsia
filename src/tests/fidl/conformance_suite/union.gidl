@@ -94,7 +94,7 @@ success("FlexibleUnionUnknownValue") {
 }
 
 success("FlexibleUnionUnknownValueWithHandles") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [go,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -137,7 +137,7 @@ decode_failure("StrictUnionUnknownValue") {
 }
 
 decode_failure("StrictUnionUnknownValueWithHandles") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [go,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),

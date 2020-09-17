@@ -149,7 +149,10 @@ pub fn get_info_handle_valid(handle: &Handle) -> Result<(), Status> {
 #[cfg(not(target_os = "fuchsia"))]
 pub fn get_info_handle_valid(handle: &Handle) -> Result<(), Status> {
     use fidl::EmulatedHandleRef;
-    if handle.is_dangling() {
+    // Match the behavior of the syscall, returning BAD_HANDLE if the handle is
+    // the special "never a valid handle" ZX_HANDLE_INVALID, or if it is invalid
+    // because it was closed or never assigned in the first place (dangling).
+    if handle.is_invalid() || handle.is_dangling() {
         Err(Status::BAD_HANDLE)
     } else {
         Ok(())

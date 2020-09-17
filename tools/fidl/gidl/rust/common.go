@@ -57,6 +57,16 @@ func buildHandles(handles []gidlir.Handle) string {
 	return builder.String()
 }
 
+func buildHandleValues(handles []gidlir.Handle) string {
+	var builder strings.Builder
+	builder.WriteString("vec![\n")
+	for _, h := range handles {
+		builder.WriteString(fmt.Sprintf("%s,", buildHandleValue(h)))
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
 func escapeStr(value string) string {
 	var (
 		buf    bytes.Buffer
@@ -98,7 +108,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 		return wrapNullable(decl, expr)
 	case gidlir.Handle:
-		expr := fmt.Sprintf("unsafe { copy_handle(&handle_defs[%d]) }", value)
+		expr := buildHandleValue(value)
 		return wrapNullable(decl, expr)
 	case gidlir.Record:
 		switch decl := decl.(type) {
@@ -260,7 +270,12 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	var valueStr string
 	if field.Key.IsUnknown() {
 		unknownData := field.Value.(gidlir.UnknownData)
-		valueStr = fmt.Sprintf("%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: Vec::new() }", declName(decl), field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes))
+		valueStr = fmt.Sprintf(
+			"%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: %s }",
+			declName(decl),
+			field.Key.UnknownOrdinal,
+			buildBytes(unknownData.Bytes),
+			buildHandleValues(unknownData.Handles))
 	} else {
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
@@ -287,4 +302,8 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 		return fmt.Sprintf("vec![%s]", elementsStr)
 	}
 	panic(fmt.Sprintf("unexpected decl %v", decl))
+}
+
+func buildHandleValue(handle gidlir.Handle) string {
+	return fmt.Sprintf("unsafe { copy_handle(&handle_defs[%d]) }", handle)
 }
