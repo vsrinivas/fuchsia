@@ -11,6 +11,15 @@ declare_args() {
   clang_tool_dir = ""
 }
 
+# This is a string identifying the particular toolchain version in use.  Its
+# only purpose is to be unique enough that it changes when switching to a new
+# toolchain, so that recompilations with the new compiler can be triggered.
+#
+# When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
+# When not using the prebuilt, there isn't a quick way to extract the compiler
+# version.  But at least changing the setting to a different compiler will
+# change the string.
+clang_version_string = ""
 if (clang_tool_dir == "") {
   if (clang_prefix == default_clang_prefix) {
     _prebuilt_clang_dir = "//prebuilt/third_party/clang/$host_platform"
