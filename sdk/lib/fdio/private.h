@@ -86,7 +86,8 @@ typedef struct fdio_ops {
   zx_status_t (*connect)(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                          int16_t* out_code);
   zx_status_t (*listen)(fdio_t* io, int backlog, int16_t* out_code);
-  zx_status_t (*accept)(fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code);
+  zx_status_t (*accept)(fdio_t* io, int flags, struct sockaddr* addr, socklen_t* addrlen,
+                        zx_handle_t* out_handle, int16_t* out_code);
   zx_status_t (*getsockname)(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                              int16_t* out_code);
   zx_status_t (*getpeername)(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
@@ -364,7 +365,6 @@ zx_status_t fdio_default_bind(fdio_t* io, const struct sockaddr* addr, socklen_t
 zx_status_t fdio_default_connect(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                                  int16_t* out_code);
 zx_status_t fdio_default_listen(fdio_t* io, int backlog, int16_t* out_code);
-zx_status_t fdio_default_accept(fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code);
 zx_status_t fdio_default_getsockname(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                      int16_t* out_code);
 zx_status_t fdio_default_getpeername(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,

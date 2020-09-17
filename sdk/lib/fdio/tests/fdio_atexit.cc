@@ -73,7 +73,7 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Accept(int16_t flags, AcceptCompleter::Sync completer) override {
+  void Accept(bool want_addr, AcceptCompleter::Sync completer) override {
     zx_status_t status = zx_object_signal_peer(channel_, 0, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
       return completer.Close(status);

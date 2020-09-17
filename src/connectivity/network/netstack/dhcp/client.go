@@ -425,8 +425,9 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 			return Config{}, fmt.Errorf("stack.NewEndpoint(%d, %d, _): %s", header.UDPProtocolNumber, header.IPv4ProtocolNumber, err)
 		}
 		defer sendEP.Close()
-		if err := sendEP.SetSockOpt(tcpip.BindToDeviceOption(info.NICID)); err != nil {
-			return Config{}, fmt.Errorf("send ep SetSockOpt(BindToDeviceOption(%d)): %s", info.NICID, err)
+		opt := tcpip.BindToDeviceOption(info.NICID)
+		if err := sendEP.SetSockOpt(&opt); err != nil {
+			return Config{}, fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
 		}
 		sendBindAddress := bindAddress
 		sendBindAddress.Addr = header.IPv4Any
@@ -453,8 +454,9 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 
 	// BindToDevice allows us to have multiple DHCP clients listening to the same
 	// IP address and port at the same time so long as the nic is unique.
-	if err := ep.SetSockOpt(tcpip.BindToDeviceOption(info.NICID)); err != nil {
-		return Config{}, fmt.Errorf("SetSockOpt(BindToDeviceOption(%d)): %s", info.NICID, err)
+	opt := tcpip.BindToDeviceOption(info.NICID)
+	if err := ep.SetSockOpt(&opt); err != nil {
+		return Config{}, fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
 	}
 	if writeOpts.To.Addr == header.IPv4Broadcast {
 		if err := sendEP.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {

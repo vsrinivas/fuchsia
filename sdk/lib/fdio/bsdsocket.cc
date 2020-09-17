@@ -234,11 +234,11 @@ int listen(int fd, int backlog) {
 }
 
 __EXPORT
-int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len, int flags) {
+int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addrlen, int flags) {
   if (flags & ~SOCK_NONBLOCK) {
     return ERRNO(EINVAL);
   }
-  if ((addr == nullptr) != (len == nullptr)) {
+  if ((addr == nullptr) != (addrlen == nullptr)) {
     return ERRNO(EINVAL);
   }
 
@@ -263,8 +263,9 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
       // provider for a non-blocking socket.
-      if ((status = fdio_get_ops(io)->accept(
-               io, flags | SOCK_NONBLOCK, accepted.reset_and_get_address(), &out_code)) != ZX_OK) {
+      if ((status = fdio_get_ops(io)->accept(io, flags | SOCK_NONBLOCK, addr, addrlen,
+                                             accepted.reset_and_get_address(), &out_code)) !=
+          ZX_OK) {
         break;
       }
 
@@ -297,23 +298,6 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
   if (status != ZX_OK) {
     fdio_release_reserved(nfd);
     return ERROR(status);
-  }
-
-  if (len) {
-    int16_t out_code;
-    if ((status = fdio_get_ops(accepted_io)->getpeername(accepted_io, addr, len, &out_code)) !=
-        ZX_OK) {
-      fdio_release_reserved(nfd);
-      fdio_get_ops(accepted_io)->close(accepted_io);
-      fdio_release(accepted_io);
-      return ERROR(status);
-    }
-    if (out_code) {
-      fdio_release_reserved(nfd);
-      fdio_get_ops(accepted_io)->close(accepted_io);
-      fdio_release(accepted_io);
-      return ERRNO(out_code);
-    }
   }
 
   // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.

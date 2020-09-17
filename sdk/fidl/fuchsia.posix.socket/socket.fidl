@@ -153,11 +153,11 @@ protocol StreamSocket {
     /// buffered.
     Listen(int16 backlog) -> () error fuchsia.posix.Errno;
     /// Accepts a buffered incoming connection.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use Accept2"]
-    Accept(int16 flags) -> (StreamSocket s) error fuchsia.posix.Errno;
+    Accept(bool want_addr) -> (fuchsia.net.SocketAddress? addr, StreamSocket s) error fuchsia.posix.Errno;
 
     /// Accepts a buffered incoming connection.
+    // TODO(fxbug.dev/44347): Remove after soft transition.
+    [Deprecated = "Use Accept"]
     Accept2() -> (StreamSocket s) error fuchsia.posix.Errno;
 };
 

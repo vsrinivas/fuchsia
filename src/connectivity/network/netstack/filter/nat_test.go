@@ -415,7 +415,7 @@ func TestNATLANToWANTCP(t *testing.T) {
 		t.Fatalf("Accept timeout")
 	}
 
-	epWANTCP, wqWAN, err := epWANTCPMaster.Accept()
+	epWANTCP, wqWAN, err := epWANTCPMaster.Accept(nil)
 	if err != nil {
 		t.Fatalf("Accept error: %s", err)
 	}

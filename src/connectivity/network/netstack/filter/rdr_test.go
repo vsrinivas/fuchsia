@@ -278,7 +278,7 @@ func TestRDRWANToLANTCP(t *testing.T) {
 		t.Fatalf("Accept timeout")
 	}
 
-	epLANTCP, wqLAN, err := epLANTCPMaster.Accept()
+	epLANTCP, wqLAN, err := epLANTCPMaster.Accept(nil)
 	if err != nil {
 		t.Fatalf("Accept error: %s", err)
 	}

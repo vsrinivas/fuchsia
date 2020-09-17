@@ -264,10 +264,13 @@ func Main() {
 		TempIIDSeed: tempIIDSeed,
 	})
 
-	for _, opt := range []interface{}{
-		tcp.DelayEnabled(true),
-		tcp.SACKEnabled(true),
-		tcpip.ModerateReceiveBufferOption(true),
+	delayEnabled := tcpip.TCPDelayEnabled(true)
+	sackEnabled := tcpip.TCPSACKEnabled(true)
+	moderateReceiveBufferOption := tcpip.TCPModerateReceiveBufferOption(true)
+	for _, opt := range []tcpip.SettableTransportProtocolOption{
+		&delayEnabled,
+		&sackEnabled,
+		&moderateReceiveBufferOption,
 	} {
 		if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, opt); err != nil {
 			syslog.Fatalf("SetTransportProtocolOption(%d, %#v) failed: %s", tcp.ProtocolNumber, opt, err)

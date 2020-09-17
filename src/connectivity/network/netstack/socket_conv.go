@@ -137,7 +137,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 
 	case C.SO_ERROR:
 		// Get the last error and convert it.
-		err := ep.GetSockOpt(tcpip.ErrorOption{})
+		err := ep.LastError()
 		if err == nil {
 			return int32(0), nil
 		}
@@ -605,13 +605,15 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 			n = len(optVal)
 		}
 		if n == 0 {
-			return ep.SetSockOpt(tcpip.BindToDeviceOption(0))
+			var opt tcpip.BindToDeviceOption
+			return ep.SetSockOpt(&opt)
 		}
 		name := string(optVal[:n])
 		nicInfos := ns.stack.NICInfo()
 		for id, info := range nicInfos {
 			if name == info.Name {
-				return ep.SetSockOpt(tcpip.BindToDeviceOption(id))
+				opt := tcpip.BindToDeviceOption(id)
+				return ep.SetSockOpt(&opt)
 			}
 		}
 		return tcpip.ErrUnknownDevice
@@ -645,7 +647,7 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		if err := linger.Unmarshal(optVal); err != nil {
 			return tcpip.ErrInvalidOptionValue
 		}
-		return ep.SetSockOpt(tcpip.LingerOption{
+		return ep.SetSockOpt(&tcpip.LingerOption{
 			Enabled: linger.l_onoff != 0,
 			Timeout: time.Second * time.Duration(linger.l_linger),
 		})
@@ -661,8 +663,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 			return tcpip.ErrInvalidOptionValue
 		}
 
-		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOpt(tcpip.OutOfBandInlineOption(v))
+		opt := tcpip.OutOfBandInlineOption(binary.LittleEndian.Uint32(optVal))
+		return ep.SetSockOpt(&opt)
 
 	case C.SO_NO_CHECK:
 		if len(optVal) < sizeOfInt32 {
@@ -724,7 +726,8 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		if v < 1 || v > maxTCPKeepIdle {
 			return tcpip.ErrInvalidOptionValue
 		}
-		return ep.SetSockOpt(tcpip.KeepaliveIdleOption(time.Second * time.Duration(v)))
+		opt := tcpip.KeepaliveIdleOption(time.Second * time.Duration(v))
+		return ep.SetSockOpt(&opt)
 
 	case C.TCP_KEEPINTVL:
 		if len(optVal) < sizeOfInt32 {
@@ -736,7 +739,8 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		if v < 1 || v > maxTCPKeepIntvl {
 			return tcpip.ErrInvalidOptionValue
 		}
-		return ep.SetSockOpt(tcpip.KeepaliveIntervalOption(time.Second * time.Duration(v)))
+		opt := tcpip.KeepaliveIntervalOption(time.Second * time.Duration(v))
+		return ep.SetSockOpt(&opt)
 
 	case C.TCP_KEEPCNT:
 		if len(optVal) < sizeOfInt32 {
@@ -759,10 +763,12 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		if v < 0 {
 			return tcpip.ErrInvalidOptionValue
 		}
-		return ep.SetSockOpt(tcpip.TCPUserTimeoutOption(time.Millisecond * time.Duration(v)))
+		opt := tcpip.TCPUserTimeoutOption(time.Millisecond * time.Duration(v))
+		return ep.SetSockOpt(&opt)
 
 	case C.TCP_CONGESTION:
-		return ep.SetSockOpt(tcpip.CongestionControlOption(optVal))
+		opt := tcpip.CongestionControlOption(optVal)
+		return ep.SetSockOpt(&opt)
 
 	case C.TCP_DEFER_ACCEPT:
 		if len(optVal) < sizeOfInt32 {
@@ -775,7 +781,8 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		if v < 0 {
 			v = 0
 		}
-		return ep.SetSockOpt(tcpip.TCPDeferAcceptOption(time.Second * time.Duration(v)))
+		opt := tcpip.TCPDeferAcceptOption(time.Second * time.Duration(v))
+		return ep.SetSockOpt(&opt)
 
 	case C.TCP_SYNCNT:
 		if len(optVal) < sizeOfInt32 {
@@ -797,9 +804,10 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		// seconds.
 		//
 		// See the man page for details: https://man7.org/linux/man-pages/man7/tcp.7.html
-		return ep.SetSockOpt(tcpip.TCPLingerTimeoutOption(time.Second * time.Duration(
+		opt := tcpip.TCPLingerTimeoutOption(time.Second * time.Duration(
 			int32(binary.LittleEndian.Uint32(optVal)),
-		)))
+		))
+		return ep.SetSockOpt(&opt)
 
 	case C.TCP_REPAIR_OPTIONS:
 
@@ -833,9 +841,11 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 		switch name {
 		case C.IPV6_ADD_MEMBERSHIP:
-			return ep.SetSockOpt(tcpip.AddMembershipOption(o))
+			opt := tcpip.AddMembershipOption(o)
+			return ep.SetSockOpt(&opt)
 		case C.IPV6_DROP_MEMBERSHIP:
-			return ep.SetSockOpt(tcpip.RemoveMembershipOption(o))
+			opt := tcpip.RemoveMembershipOption(o)
+			return ep.SetSockOpt(&opt)
 		default:
 			panic("unreachable")
 		}
@@ -845,9 +855,10 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		if err != nil {
 			return err
 		}
-		return ep.SetSockOpt(tcpip.MulticastInterfaceOption{
+		opt := tcpip.MulticastInterfaceOption{
 			NIC: tcpip.NICID(v),
-		})
+		}
+		return ep.SetSockOpt(&opt)
 
 	case C.IPV6_MULTICAST_HOPS:
 		if len(optVal) < sizeOfInt32 {
@@ -1004,10 +1015,12 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 			switch name {
 			case C.IP_ADD_MEMBERSHIP:
-				return ep.SetSockOpt(tcpip.AddMembershipOption(o))
+				opt := tcpip.AddMembershipOption(o)
+				return ep.SetSockOpt(&opt)
 
 			case C.IP_DROP_MEMBERSHIP:
-				return ep.SetSockOpt(tcpip.RemoveMembershipOption(o))
+				opt := tcpip.RemoveMembershipOption(o)
+				return ep.SetSockOpt(&opt)
 
 			default:
 				panic("unreachable")
@@ -1019,7 +1032,7 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 				interfaceAddr = nil
 			}
 
-			return ep.SetSockOpt(tcpip.MulticastInterfaceOption{
+			return ep.SetSockOpt(&tcpip.MulticastInterfaceOption{
 				NIC:           tcpip.NICID(mreqn.imr_ifindex),
 				InterfaceAddr: tcpip.Address(interfaceAddr),
 			})

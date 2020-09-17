@@ -624,10 +624,14 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
 
-func (eps *endpointWithSocket) Accept(fidl.Context) (posix.Errno, *endpointWithSocket, error) {
-	ep, wq, err := eps.endpoint.ep.Accept()
+func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAddress, *endpointWithSocket, error) {
+	var addr *tcpip.FullAddress
+	if wantAddr {
+		addr = new(tcpip.FullAddress)
+	}
+	ep, wq, err := eps.endpoint.ep.Accept(addr)
 	if err != nil {
-		return tcpipErrorToCode(err), nil, nil
+		return tcpipErrorToCode(err), nil, nil, nil
 	}
 	{
 		var err error
@@ -641,7 +645,7 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (posix.Errno, *endpointWithS
 		eps.incoming.mu.Unlock()
 		if err != nil {
 			ep.Close()
-			return 0, nil, err
+			return 0, nil, nil, err
 		}
 	}
 
@@ -670,7 +674,7 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (posix.Errno, *endpointWithS
 	}
 	{
 		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.ns)
-		return 0, ep, err
+		return 0, addr, ep, err
 	}
 }
 
@@ -1338,34 +1342,41 @@ func (s *streamSocketImpl) Describe(fidl.Context) (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (s *streamSocketImpl) Accept2(ctx fidl.Context) (socket.StreamSocketAccept2Result, error) {
-	code, eps, err := s.endpointWithSocket.Accept(ctx)
-	if err != nil {
-		return socket.StreamSocketAccept2Result{}, err
-	}
-	if code != 0 {
-		return socket.StreamSocketAccept2ResultWithErr(code), nil
-	}
-	streamSocketInterface, err := newStreamSocket(eps)
-	if err != nil {
-		return socket.StreamSocketAccept2Result{}, err
-	}
-	return socket.StreamSocketAccept2ResultWithResponse(socket.StreamSocketAccept2Response{S: streamSocketInterface}), nil
-}
-
-// TODO(fxbug.dev/44347) Remove after soft transition.
-func (s *streamSocketImpl) Accept(ctx fidl.Context, flags int16) (socket.StreamSocketAcceptResult, error) {
-	result, err := s.Accept2(ctx)
+func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamSocketAcceptResult, error) {
+	code, addr, eps, err := s.endpointWithSocket.Accept(wantAddr)
 	if err != nil {
 		return socket.StreamSocketAcceptResult{}, err
 	}
+	if code != 0 {
+		return socket.StreamSocketAcceptResultWithErr(code), nil
+	}
+	streamSocketInterface, err := newStreamSocket(eps)
+	if err != nil {
+		return socket.StreamSocketAcceptResult{}, err
+	}
+	response := socket.StreamSocketAcceptResponse{
+		S: streamSocketInterface,
+	}
+	if addr != nil {
+		sockaddr := toNetSocketAddress(s.netProto, *addr)
+		response.Addr = &sockaddr
+	}
+	return socket.StreamSocketAcceptResultWithResponse(response), nil
+}
+
+// TODO(fxbug.dev/44347) Remove after soft transition.
+func (s *streamSocketImpl) Accept2(ctx fidl.Context) (socket.StreamSocketAccept2Result, error) {
+	result, err := s.Accept(ctx, false)
+	if err != nil {
+		return socket.StreamSocketAccept2Result{}, err
+	}
 	switch result.Which() {
-	case socket.StreamSocketAccept2ResultResponse:
-		return socket.StreamSocketAcceptResultWithResponse(socket.StreamSocketAcceptResponse{S: result.Response.S}), nil
-	case socket.StreamSocketAccept2ResultErr:
-		return socket.StreamSocketAcceptResultWithErr(result.Err), nil
+	case socket.StreamSocketAcceptResultResponse:
+		return socket.StreamSocketAccept2ResultWithResponse(socket.StreamSocketAccept2Response{S: result.Response.S}), nil
+	case socket.StreamSocketAcceptResultErr:
+		return socket.StreamSocketAccept2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("Unexpected socket.StreamSocketAccept2Result result ordinal %x", result.Which()))
+		panic(fmt.Sprintf("Unexpected socket.StreamSocketAcceptResult result ordinal %x", result.Which()))
 	}
 }
 

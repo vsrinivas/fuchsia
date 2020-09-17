@@ -968,7 +968,7 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocol stac
 			return nil, fmt.Errorf("connect failed: %s\n\n%+v\n\n%+v", err, fromStack.Stats(), toStack.Stats())
 		}
 
-		ep, wq, err := receiver.Accept()
+		ep, wq, err := receiver.Accept(nil)
 		if err != nil {
 			return nil, fmt.Errorf("accept failed: %s", err)
 		}

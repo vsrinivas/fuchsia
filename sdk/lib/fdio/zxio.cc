@@ -169,6 +169,13 @@ static void fdio_zxio_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t
 
 // Generic ---------------------------------------------------------------------
 
+static zx_status_t fdio_default_accept(fdio_t* io, int flags, struct sockaddr* addr,
+                                       socklen_t* addrlen, zx_handle_t* out_handle,
+                                       int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
 static constexpr fdio_ops_t fdio_zxio_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,

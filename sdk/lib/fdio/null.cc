@@ -101,11 +101,6 @@ zx_status_t fdio_default_listen(fdio_t* io, int backlog, int16_t* out_code) {
   return ZX_OK;
 }
 
-zx_status_t fdio_default_accept(fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code) {
-  *out_code = EBADF;
-  return ZX_OK;
-}
-
 zx_status_t fdio_default_getsockname(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                      int16_t* out_code) {
   *out_code = EBADF;

@@ -574,8 +574,8 @@ static fdio_ops_t fdio_datagram_socket_ops = {
           return base_connect(fdio_datagram_socket_get_channel(io), addr, addrlen, out_code);
         },
     .listen = [](fdio_t* io, int backlog, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; },
-    .accept = [](fdio_t* io, int flags, zx_handle_t* out_handle,
-                 int16_t* out_code) { return ZX_ERR_WRONG_TYPE; },
+    .accept = [](fdio_t* io, int flags, struct sockaddr* addr, socklen_t* addrlen,
+                 zx_handle_t* out_handle, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; },
     .getsockname =
         [](fdio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
           return base_getsockname(fdio_datagram_socket_get_channel(io), addr, addrlen, out_code);
@@ -604,9 +604,9 @@ static fdio_ops_t fdio_datagram_socket_ops = {
             datalen += msg->msg_iov[i].iov_len;
           }
 
-          auto response =
-              sio->client.RecvMsg2(msg->msg_namelen != 0 && msg->msg_name != nullptr,
-                                   static_cast<uint32_t>(datalen), false, to_recvmsg_flags(flags));
+          bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
+          auto response = sio->client.RecvMsg2(want_addr, static_cast<uint32_t>(datalen), false,
+                                               to_recvmsg_flags(flags));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
@@ -623,7 +623,7 @@ static fdio_ops_t fdio_datagram_socket_ops = {
             // Result address has invalid tag when it's not provided by the server (when want_addr
             // is false).
             // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
-            if (msg->msg_namelen != 0 && msg->msg_name != nullptr && !out.has_invalid_tag()) {
+            if (want_addr && !out.has_invalid_tag()) {
               msg->msg_namelen = static_cast<socklen_t>(fidl_to_sockaddr(
                   out, static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen));
             }
@@ -880,9 +880,11 @@ static fdio_ops_t fdio_stream_socket_ops = {
           return ZX_OK;
         },
     .accept =
-        [](fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code) {
+        [](fdio_t* io, int flags, struct sockaddr* addr, socklen_t* addrlen,
+           zx_handle_t* out_handle, int16_t* out_code) {
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
-          auto response = sio->client.Accept2();
+          bool want_addr = addr != nullptr && addrlen != nullptr;
+          auto response = sio->client.Accept(want_addr);
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
@@ -894,6 +896,13 @@ static fdio_ops_t fdio_stream_socket_ops = {
           }
           *out_code = 0;
           *out_handle = result.mutable_response().s.release();
+          auto const& out = result.response().addr;
+          // Result address has invalid tag when it's not provided by the server (when want_addr
+          // is false).
+          // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
+          if (want_addr && !out.has_invalid_tag()) {
+            *addrlen = static_cast<socklen_t>(fidl_to_sockaddr(out, addr, *addrlen));
+          }
           return ZX_OK;
         },
     .getsockname =
