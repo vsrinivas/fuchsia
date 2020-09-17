@@ -235,7 +235,8 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
 // buffer_collection_request to essentially convert itself into.
 void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
                                                    zx::channel buffer_collection_token,
-                                                   zx::channel buffer_collection_request) {
+                                                   zx::channel buffer_collection_request,
+                                                   const ClientInfo* client_info) {
   ZX_DEBUG_ASSERT(buffer_collection_token);
   ZX_DEBUG_ASSERT(buffer_collection_request);
 
@@ -263,6 +264,11 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   // This will token->FailAsync() if the token has already got one, or if the
   // token already saw token->Close().
   token->SetBufferCollectionRequest(std::move(buffer_collection_request));
+
+  if (client_info) {
+    // The info will be propagated into the logcial buffer collection when the token closes.
+    token->SetDebugClientInfo(client_info->name.data(), client_info->name.size(), client_info->id);
+  }
 
   // At this point, the token will process the rest of its previously queued
   // messages (from client to server), and then will convert the token into

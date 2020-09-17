@@ -62,7 +62,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // to be served by the LogicalBufferCollection associated with
   // buffer_collection_token.
   static void BindSharedCollection(Device* parent_device, zx::channel buffer_collection_token,
-                                   zx::channel buffer_collection_request);
+                                   zx::channel buffer_collection_request,
+                                   const ClientInfo* client_info);
 
   // ZX_OK if the token is known to the server.
   // ZX_ERR_NOT_FOUND if the token isn't known to the server.

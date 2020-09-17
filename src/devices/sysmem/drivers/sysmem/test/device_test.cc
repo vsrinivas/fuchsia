@@ -199,5 +199,55 @@ TEST_F(FakeDdkSysmem, NamedClient) {
   }
 }
 
+// Check that the allocator name overrides the collection name.
+TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
+  zx::channel allocator_server, allocator_client;
+  ASSERT_OK(zx::channel::create(0u, &allocator_server, &allocator_client));
+  EXPECT_OK(
+      fuchsia_sysmem_DriverConnectorConnect(ddk_.FidlClient().get(), allocator_server.release()));
+
+  zx::channel token_server, token_client;
+  ASSERT_OK(zx::channel::create(0u, &token_server, &token_client));
+
+  // Queue up something that would be processed on the FIDL thread, so we can try to detect a
+  // use-after-free if the FidlServer outlives the sysmem device.
+  EXPECT_OK(fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                             token_server.release()));
+
+  EXPECT_OK(
+      fuchsia_sysmem_BufferCollectionTokenSetDebugClientInfo(token_client.get(), "bad", 3, 6));
+
+  EXPECT_OK(fuchsia_sysmem_AllocatorSetDebugClientInfo(allocator_client.get(), "a", 1, 5));
+
+  zx::channel collection_server, collection_client;
+  ASSERT_OK(zx::channel::create(0u, &collection_server, &collection_client));
+
+  EXPECT_OK(fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator_client.get(), token_client.release(), collection_server.release()));
+
+  // Poll until a matching buffer collection is found.
+  while (true) {
+    bool found_collection = false;
+    sync_completion_t completion;
+    async::PostTask(sysmem_.dispatcher(), [&] {
+      if (sysmem_.logical_buffer_collections().size() == 1) {
+        const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
+        if (logical_collection->collection_views().size() == 1) {
+          const auto& collection = logical_collection->collection_views().begin()->second;
+          if (collection->debug_name() == "a") {
+            EXPECT_EQ(5u, collection->debug_id());
+            found_collection = true;
+          }
+        }
+      }
+      sync_completion_signal(&completion);
+    });
+
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    if (found_collection)
+      break;
+  }
+}
+
 }  // namespace
 }  // namespace sysmem_driver

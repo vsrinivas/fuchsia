@@ -28,6 +28,7 @@ const fuchsia_sysmem_Allocator_ops_t Allocator::kOps = {
     fidl::Binder<Allocator>::BindMember<&Allocator::AllocateSharedCollection>,
     fidl::Binder<Allocator>::BindMember<&Allocator::BindSharedCollection>,
     fidl::Binder<Allocator>::BindMember<&Allocator::ValidateBufferCollectionToken>,
+    fidl::Binder<Allocator>::BindMember<&Allocator::SetDebugClientInfo>,
 };
 
 Allocator::Allocator(Device* parent_device)
@@ -78,7 +79,8 @@ zx_status_t Allocator::AllocateNonSharedCollection(zx_handle_t buffer_collection
   // out which token we're talking about based on the koid(s), as usual.
   LogicalBufferCollection::Create(std::move(token_server), parent_device_);
   LogicalBufferCollection::BindSharedCollection(parent_device_, std::move(token_client),
-                                                std::move(buffer_collection_request));
+                                                std::move(buffer_collection_request),
+                                                client_info_ ? &*client_info_ : nullptr);
 
   // Now the client can SetConstraints() on the BufferCollection, etc.  The
   // client didn't have to hassle with the BufferCollectionToken, which is the
@@ -119,7 +121,8 @@ zx_status_t Allocator::BindSharedCollection(zx_handle_t token_param,
   // we have to look it up by koid.  The koid table is held by
   // BufferCollection, so delegate over to BufferCollection for this request.
   LogicalBufferCollection::BindSharedCollection(parent_device_, std::move(token),
-                                                std::move(buffer_collection_request));
+                                                std::move(buffer_collection_request),
+                                                client_info_ ? &*client_info_ : nullptr);
   return ZX_OK;
 }
 
@@ -129,6 +132,13 @@ zx_status_t Allocator::ValidateBufferCollectionToken(zx_koid_t token_server_koid
       LogicalBufferCollection::ValidateBufferCollectionToken(parent_device_, token_server_koid);
   ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
   return fuchsia_sysmem_AllocatorValidateBufferCollectionToken_reply(txn, status == ZX_OK);
+}
+
+zx_status_t Allocator::SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id) {
+  client_info_.emplace();
+  client_info_->name = std::string(name_data, name_size);
+  client_info_->id = id;
+  return ZX_OK;
 }
 
 }  // namespace sysmem_driver

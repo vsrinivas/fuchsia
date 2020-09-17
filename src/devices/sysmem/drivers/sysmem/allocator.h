@@ -10,6 +10,7 @@
 #include "lib/fidl-async-2/fidl_server.h"
 #include "lib/fidl-async-2/simple_binding.h"
 #include "logging.h"
+#include "logical_buffer_collection.h"
 
 namespace sysmem_driver {
 
@@ -36,8 +37,11 @@ class Allocator : public FidlServer<Allocator,
   zx_status_t AllocateSharedCollection(zx_handle_t token_request);
   zx_status_t BindSharedCollection(zx_handle_t token, zx_handle_t buffer_collection);
   zx_status_t ValidateBufferCollectionToken(zx_koid_t token_server_koid, fidl_txn_t* txn);
+  zx_status_t SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id);
 
   Device* parent_device_ = nullptr;
+
+  std::optional<LogicalBufferCollection::ClientInfo> client_info_;
 };
 
 }  // namespace sysmem_driver

@@ -122,6 +122,7 @@ class FakeServiceProvider : public ServiceProvider, public fuchsia::sysmem::Allo
   void ValidateBufferCollectionToken(
       uint64_t token_server_koid,
       fuchsia::sysmem::Allocator::ValidateBufferCollectionTokenCallback callback) override;
+  void SetDebugClientInfo(std::string name, uint64_t id) override {}
 
   FakeBufferCollection* FindOrCreateCollectionForToken(zx::channel client_channel);
 

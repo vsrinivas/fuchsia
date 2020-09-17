@@ -109,4 +109,17 @@ protocol Allocator {
     /// be a BufferCollectionToken channel.  This can be obtained from
     /// zx_object_get_info() ZX_INFO_HANDLE_BASIC related_koid.
     ValidateBufferCollectionToken(zx.koid token_server_koid) -> (bool is_known);
+
+    /// Set information about the current client that can be used by sysmem to
+    /// help debug leaking memory and hangs waiting for constraints. |name| can
+    /// be an arbitrary string, but the current process name (see
+    /// fsl::GetCurrentProcessName()) is a good default. |id| can be an arbitrary
+    /// id, but the current process ID (see fsl::GetCurrentProcessKoid()) is a
+    /// good default.
+    /// This information is propagated to all BufferCollections created using
+    /// BindSharedCollection() or AllocateNonSharedCollection() from this
+    /// allocator. It does not affect BufferCollectionTokens, since they are
+    /// often passed cross-process and should have their names managed manually.
+    [Transitional]
+    SetDebugClientInfo(string:64 name, uint64 id);
 };
