@@ -39,6 +39,7 @@ pub(crate) struct TestTransport {
     rx: AsyncReceiver<IncomingPacket>,
     tx: AsyncSender<OwnedOutgoingPacket>,
     next_packet: Option<IncomingPacket>,
+    pub unbound: async_utils::event::Event,
 }
 
 impl TestTransport {
@@ -46,7 +47,12 @@ impl TestTransport {
     ) -> (Box<TestTransport>, AsyncSender<IncomingPacket>, AsyncReceiver<OwnedOutgoingPacket>) {
         let (in_tx, in_rx) = futures::channel::mpsc::unbounded();
         let (out_tx, out_rx) = futures::channel::mpsc::unbounded();
-        (Box::new(TestTransport { rx: in_rx, tx: out_tx, next_packet: None }), in_tx, out_rx)
+        let unbound = async_utils::event::Event::new();
+        (
+            Box::new(TestTransport { rx: in_rx, tx: out_tx, next_packet: None, unbound }),
+            in_tx,
+            out_rx,
+        )
     }
 }
 
@@ -100,7 +106,9 @@ impl HwTransport for TestTransport {
     fn take_incoming(&mut self, _proof: IncomingPacketToken, _buffer: Vec<u8>) -> IncomingPacket {
         self.next_packet.take().expect("packet should be ready in test transport")
     }
-    unsafe fn unbind(&mut self) {}
+    unsafe fn unbind(&mut self) {
+        self.unbound.signal();
+    }
 }
 
 /// Store all snoop messages for later inspection.

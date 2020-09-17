@@ -14,6 +14,8 @@ rustc_staticlib("bt-hci") {
 
   deps = [
     "//src/connectivity/bluetooth/hci/lib:serial_impl_async_wrapper",
+    "//src/connectivity/bluetooth/lib/async-helpers",
+    "//src/lib/async-utils",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/trace/rust:trace",

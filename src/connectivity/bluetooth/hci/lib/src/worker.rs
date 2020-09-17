@@ -180,8 +180,20 @@ impl Worker {
                 (Message::OpenSnoop(c), responder) => {
                     try_open_channel(c, &mut snoop.channel, responder).await;
                 }
-                (Message::Unbind, _) => {
-                    unimplemented!("cleanly unbinding worker is not yet implemented")
+                (Message::Unbind, mut responder) => {
+                    // Close all open resources before responding to Unbind message
+                    drop(host_cmd);
+                    drop(host_acl);
+                    drop(snoop);
+                    if let Some(mut t) = transport {
+                        unsafe {
+                            t.unbind();
+                        }
+                    }
+
+                    responder.send(zx::Status::OK).await.unwrap_or_else(log_responder_error);
+
+                    return None;
                 }
             }
         }
@@ -260,9 +272,18 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                                 try_open_channel(c, &mut worker.snoop.channel, responder).await;
                             }
                         }
-                        (Message::Unbind, _) =>
-                            // TODO (49096): implement unbinding
-                            unimplemented!("cleanly unbinding worker is not yet implemented"),
+                        (Message::Unbind, mut responder) => {
+                            // Signal unbind to transport and close all worker resources before
+                            // responding.
+                            unsafe { worker.transport.unbind(); }
+                            drop(worker);
+
+                            responder
+                                .send(zx::Status::OK)
+                                .await
+                                .unwrap_or_else(log_responder_error);
+                            return;
+                        }
                     }
                 } else {
                     // driver has dropped the sender so we should close
@@ -380,6 +401,7 @@ fn log_responder_error<E: std::fmt::Debug>(e: E) {
 mod tests {
     use super::*;
     use crate::{test_utils::*, transport::IncomingPacket};
+    use async_helpers::traits::PollExt;
     use futures::future;
 
     #[fasync::run_until_stalled(test)]
@@ -415,6 +437,70 @@ mod tests {
             control_plane.async_send(Message::OpenAcl(acl_)).await,
             zx::Status::ALREADY_BOUND
         );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn build_worker_not_yet_complete_then_unbind_and_check_host_resources() {
+        let (mut control_plane, mut receiver) = ControlPlane::new();
+        let worker = async move {
+            let res = Worker::build(&mut receiver).await;
+            // Worker should never be built in this test since unbind is called before worker
+            // finishes building
+            assert!(res.is_none());
+        }
+        .fuse();
+
+        // Handle worker requests in the background.
+        fasync::Task::local(worker).detach();
+
+        // Create channels from host to check that all host side resources are cleaned up on unbind
+        // Do not create Transport yet so that the worker does not complete the "build" function.
+        let (cmd, cmd_) = zx::Channel::create().unwrap();
+        assert_eq!(control_plane.async_send(Message::OpenCmd(cmd)).await, zx::Status::OK);
+        let (snoop, snoop_) = zx::Channel::create().unwrap();
+        assert_eq!(control_plane.async_send(Message::OpenSnoop(snoop)).await, zx::Status::OK);
+        let (acl, acl_) = zx::Channel::create().unwrap();
+        assert_eq!(control_plane.async_send(Message::OpenAcl(acl)).await, zx::Status::OK);
+
+        // Send an unbind message
+        assert_eq!(control_plane.async_send(Message::Unbind).await, zx::Status::OK);
+
+        // All peer channels must be closed here
+        assert_eq!(cmd_.write(b"", &mut vec![]), Err(zx::Status::PEER_CLOSED));
+        assert_eq!(snoop_.write(b"", &mut vec![]), Err(zx::Status::PEER_CLOSED));
+        assert_eq!(acl_.write(b"", &mut vec![]), Err(zx::Status::PEER_CLOSED));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn build_worker_not_yet_complete_then_unbind_and_check_transport_resources() {
+        let (mut control_plane, mut receiver) = ControlPlane::new();
+        let worker = async move {
+            let res = Worker::build(&mut receiver).await;
+            // Worker should never be built in this test since unbind is called before worker
+            // finishes building
+            assert!(res.is_none());
+        }
+        .fuse();
+
+        // Handle worker requests in the background.
+        fasync::Task::local(worker).detach();
+
+        // Create transport resource to check that it is cleaned up on unbind message
+        let (transport, _, _) = TestTransport::new();
+        // Future that will complete once `HwTransport::unbind` is called.
+        let unbound = transport.unbound.wait_or_dropped();
+
+        assert_eq!(
+            control_plane.async_send(Message::OpenTransport(transport)).await,
+            zx::Status::OK
+        );
+
+        // Send an unbind message
+        assert_eq!(control_plane.async_send(Message::Unbind).await, zx::Status::OK);
+
+        // Check that the `HwTransport` received the unbind method call.
+        let _ = futures::poll!(unbound)
+            .expect("unbound event to be signaled after unbind message is handled");
     }
 
     #[fasync::run_until_stalled(test)]
@@ -597,5 +683,41 @@ mod tests {
         assert_eq!(snoop_output.len(), 2);
         assert_eq!(snoop_output[0], vec![2, 1, 2, 3]);
         assert_eq!(snoop_output[1], vec![6, 4, 5, 6]);
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn worker_unbind_then_resources_are_closed() {
+        let (mut control_plane, receiver) = ControlPlane::new();
+        fasync::Task::local(run(receiver)).detach();
+
+        // Create transport resource to check that it is cleaned up on unbind message
+        let (transport, _transport_in, _transport_out) = TestTransport::new();
+        // Future that will complete once `HwTransport::unbind` is called.
+        let unbound = transport.unbound.wait();
+
+        assert_eq!(
+            control_plane.async_send(Message::OpenTransport(transport)).await,
+            zx::Status::OK
+        );
+
+        // Create channels from host to check that all host side resources are cleaned up on unbind
+        let (cmd, cmd_) = zx::Channel::create().unwrap();
+        assert_eq!(control_plane.async_send(Message::OpenCmd(cmd)).await, zx::Status::OK);
+        let (snoop, snoop_) = zx::Channel::create().unwrap();
+        assert_eq!(control_plane.async_send(Message::OpenSnoop(snoop)).await, zx::Status::OK);
+        let (acl, acl_) = zx::Channel::create().unwrap();
+        assert_eq!(control_plane.async_send(Message::OpenAcl(acl)).await, zx::Status::OK);
+
+        // Send an unbind message
+        assert_eq!(control_plane.async_send(Message::Unbind).await, zx::Status::OK);
+
+        // All peer channels must be closed here
+        assert_eq!(cmd_.write(b"", &mut vec![]), Err(zx::Status::PEER_CLOSED));
+        assert_eq!(snoop_.write(b"", &mut vec![]), Err(zx::Status::PEER_CLOSED));
+        assert_eq!(acl_.write(b"", &mut vec![]), Err(zx::Status::PEER_CLOSED));
+
+        // Check that the `HwTransport` received the unbind method call.
+        let _ = futures::poll!(unbound)
+            .expect("unbound event to be signaled after unbind message is handled");
     }
 }
