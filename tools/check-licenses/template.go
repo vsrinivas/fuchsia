@@ -62,8 +62,10 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 			unused = append(unused, license)
 		} else {
 			used = append(used, license)
-			for _, file := range license.matches[0].files {
-				table_of_contents[file] = append(table_of_contents[file], license)
+			for _, author := range license.matches {
+				for _, file := range author.files {
+					table_of_contents[file] = append(table_of_contents[file], license)
+				}
 			}
 		}
 	}
@@ -92,24 +94,29 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 	}
 	tmpl := template.Must(template.New("name").Funcs(template.FuncMap{
 		"getPattern": func(license *License) string { return (*license).pattern.String() },
-		"getText":    func(license *License) string { return string((*license).matches[0].value) },
-		"getHTMLText": func(license *License) string {
-			return strings.Replace(string((*license).matches[0].value), "\n", "<br />", -1)
+		"getText":    func(license *License, author string) string { return string((*license).matches[author].value) },
+		"getHTMLText": func(license *License, author string) string {
+			return strings.Replace(string((*license).matches[author].value), "\n", "<br />", -1)
 		},
-		"getEscapedText": func(license *License) string {
-			return strings.Replace(string((*license).matches[0].value), "\"", "\\\"", -1)
+		"getEscapedText": func(license *License, author string) string {
+			return strings.Replace(string((*license).matches[author].value), "\"", "\\\"", -1)
 		},
 		"getCategory": func(license *License) string {
 			return strings.TrimSuffix(string((*license).category), ".lic")
 		},
-		"getFiles": func(license *License) *[]string {
+		"getFiles": func(license *License, author string) *[]string {
 			var files []string
-			for _, match := range license.matches {
-				for _, file := range match.files {
-					files = append(files, file)
-				}
+			for _, file := range license.matches[author].files {
+				files = append(files, file)
 			}
 			return &files
+		},
+		"getAuthors": func(license *License) *[]string {
+			var authors []string
+			for author := range license.matches {
+				authors = append(authors, author)
+			}
+			return &authors
 		},
 	}).Parse(templateStr))
 	if err := tmpl.Execute(file, object); err != nil {

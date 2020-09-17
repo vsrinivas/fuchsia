@@ -23,7 +23,7 @@ func TestLicenseAppend(t *testing.T) {
 	if len(license.matches) != want {
 		t.Errorf("%v(): got %v, want %v", t.Name(), len(license.matches), want)
 	}
-	if len(license.matches[0].files) != want {
-		t.Errorf("%v(): got %v, want %v", t.Name(), len(license.matches[0].files), want)
+	if len(license.matches[""].files) != want {
+		t.Errorf("%v(): got %v, want %v", t.Name(), len(license.matches[""].files), want)
 	}
 }

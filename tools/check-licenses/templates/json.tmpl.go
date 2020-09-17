@@ -14,12 +14,14 @@ const TemplateJson = `{
     "used": {
 			"license": [
 				{{ range $_, $license := .Used }}{
+				{{ range $author := (getAuthors $license) }}
+				"authors": "{{ $author }}",
 				"category": "{{ (getCategory $license) }}",
-				"files": [{{ range $file := (getFiles $license) }}
+				"files": [{{ range $file := (getFiles $license $author) }}
 					"{{ $file }}",{{ end }}
 				],
-				"text": "{{ (getEscapedText $license) }}",
-				},{{ end }}
+				"text": "{{ (getEscapedText $license $author) }}",
+				},{{ end }}{{ end }}
       ]
     }
 	},

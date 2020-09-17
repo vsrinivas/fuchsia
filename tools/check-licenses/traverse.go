@@ -72,7 +72,7 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, config *Conf
 					}
 					fmt.Printf("project license: %s\n", license.category)
 					metrics.increment("num_one_file_matched_to_multiple_single_licenses")
-					license.append(path)
+					licenses.MatchAuthors([]byte(license.pattern.String()), path, license)
 				}
 			}
 			fmt.Printf("File license: missing. Project license: exists. path: %s\n", path)

@@ -11,13 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // Licenses is an object that facilitates operations on each License object in bulk
 type Licenses struct {
 	licenses []*License
+}
+
+type copyrightRegex struct {
+	regex      string
+	multi_line bool
+	group      int
 }
 
 // NewLicenses returns a Licenses object with each license pattern loaded from the .lic folder location specified in Config
@@ -99,6 +107,84 @@ func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metri
 	}
 }
 
+var copyrightRegexs = []copyrightRegex{{
+	regex:      `(?i)Copyright( ©| \((C)\))? [\d]{4}(\s|,|-|[\d]{4})*[\s\\#\*\/]*(.*)( -)? All Rights Reserved`,
+	multi_line: true,
+	group:      4,
+}, {
+	regex:      `(?i)Copyright( ©| \((C)\))? [\d]{4}(\s|,|-|[\d]{4})*(.*)( -)? All Rights Reserved`,
+	multi_line: false,
+	group:      4,
+}, {
+	regex:      `(?i)Copyright( ©| \((C)\))? [\d]{4}(\s|,|-|[\d]{4})*(.*)(All rights reserved)?`,
+	multi_line: false,
+	group:      4,
+}, {
+	regex:      `(?i)( ©| \((C)\)) [\d]{4}(\s|,|-|[\d]{4})*[\s\\#\*\/]*(.*)(-)?`,
+	multi_line: false,
+	group:      4,
+}, {
+	regex:      `(?i)Copyright( ©| \((C)\))? (.*?) [\d]{4}(\s|,|-|[\d]{4})*`,
+	multi_line: false,
+	group:      3,
+}, {
+	regex:      `(?i)Copyright( ©| \((C)\))? by (.*) `,
+	multi_line: false,
+	group:      3,
+}}
+
+var authorsRegexs = []copyrightRegex{{
+	regex:      `(?i)(Contributed|Written|Authored) by (.*) [\d]{4}(\s|,|-|[\d]{4})*`,
+	multi_line: false,
+	group:      2,
+}}
+
+// Get all contributors and authors for a specific license.
+func (license *Licenses) GetAuthorMatches(data []byte, regexs []copyrightRegex, set map[string]bool) map[string]bool {
+	for _, regex := range regexs {
+		re := regex.regex
+		if regex.multi_line {
+			re = strings.ReplaceAll(re, " ", `[\s\\#\*\/]*`)
+		}
+		regCompiled := regexp.MustCompile(re)
+		authors := regCompiled.FindAllStringSubmatch(string(data), -1)
+		if len(authors) > 0 {
+			for i := range authors {
+				trimAuthor := strings.TrimFunc(authors[i][regex.group], func(r rune) bool {
+					// Remove nonletters or '>' from the beggining and end of string.
+					return !(unicode.IsLetter(r) || r == 62)
+				})
+				set[trimAuthor] = true
+			}
+			return set
+		}
+	}
+	return set
+}
+
+func (licenses *Licenses) MatchAuthors(data []byte, path string, lic *License) {
+	// Use a set so that we don't have duplicate authors.
+	set := make(map[string]bool)
+	set = licenses.GetAuthorMatches(data, copyrightRegexs, set)
+	set = licenses.GetAuthorMatches(data, authorsRegexs, set)
+	output := make([]string, 0, len(set))
+	for key := range set {
+		output = append(output, key)
+	}
+	// Sort the authors alphabetically and join them as one string.
+	sort.Strings(output)
+	authors := strings.Join(output, ", ")
+
+	if len(lic.matches) == 0 {
+		lic.matches = make(map[string]*Match)
+	}
+	_, f := lic.matches[authors]
+	if !f {
+		lic.matches[authors] = &Match{value: data}
+	}
+	lic.matches[authors].files = append(lic.matches[authors].files, path)
+}
+
 // MatchFile returns true if any License matches input data
 func (licenses *Licenses) MatchFile(data []byte, path string, metrics *Metrics) bool {
 	is_matched := false
@@ -118,11 +204,7 @@ func (licenses *Licenses) MatchFile(data []byte, path string, metrics *Metrics) 
 		if matched := result.([]byte); matched != nil {
 			is_matched = true
 			metrics.increment("num_licensed")
-			if len(license.matches) == 0 {
-				license.matches = append(license.matches, Match{
-					value: matched})
-			}
-			license.matches[0].files = append(license.matches[0].files, path)
+			licenses.MatchAuthors(data, path, license)
 		}
 	}
 	return is_matched

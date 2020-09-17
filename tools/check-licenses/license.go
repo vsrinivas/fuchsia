@@ -12,7 +12,7 @@ import (
 // License contains a searchable regex pattern for finding file matches in tree. The category field is the .lic name
 type License struct {
 	pattern  *regexp.Regexp
-	matches  []Match
+	matches  map[string]*Match
 	category string
 }
 
@@ -32,9 +32,21 @@ func (license *License) LicenseFindMatch(index int, data []byte, sm *sync.Map, w
 func (license *License) append(path string) {
 	// TODO(solomonkinard) use first license match (durign single license file check) instead of pattern
 	// TODO(solomonkinard) once the above is done, delete the len() check here since it will be impossible
-	if len(license.matches) == 0 {
-		license.matches = append(license.matches, Match{
-			value: []byte(license.pattern.String())})
+	regAuthor := `(?i)Copyright( ©| \((C)\))? [\d]{4}(\s|,|-|[\d]{4})*(.*)(All rights reserved)?`
+	// The capture group for the author name is 4.
+	captureGroup := 4
+	re := regexp.MustCompile(regAuthor)
+	finalAuthors := re.FindStringSubmatch(license.pattern.String())
+	authorName := ""
+	if len(finalAuthors) >= captureGroup && finalAuthors[captureGroup] != "" {
+		authorName = finalAuthors[captureGroup]
 	}
-	license.matches[0].files = append(license.matches[0].files, path)
+	if len(license.matches) == 0 {
+		license.matches = make(map[string]*Match)
+	}
+	_, f := license.matches[authorName]
+	if !f {
+		license.matches[authorName] = &Match{value: []byte(license.pattern.String())}
+	}
+	license.matches[authorName].files = append(license.matches[authorName].files, path)
 }

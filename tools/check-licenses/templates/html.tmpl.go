@@ -14,11 +14,14 @@ Table of Contents:
 {{ range $_, $license := .Used }}<br />
 <div id="{{ (getCategory $license) }}" style="background-color: #eeeeee">
 Notices for file(s), reference: {{ (getCategory $license) }}:<ul>
-{{ range $file := (getFiles $license) }}<li>{{ $file }}</li>
+{{ range $author := (getAuthors $license) }}<li>Authors/Contributors: {{ $author }}</li>
+<li> License Category: {{ (getCategory $license) }} </li>
+{{ range $files := (getFiles $license $author) }}<li>{{ $files }}</li>
 {{ end }}
 </ul>
-{{ (getHTMLText $license) }}<br />
+{{ (getHTMLText $license $author) }}<br />
 </div>
+{{ end }}
 {{ end }}
 </div>
 

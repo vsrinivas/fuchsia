@@ -1,6 +1,6 @@
 (?i)\s*Copyright \(C\) .* Free Software Foundation, Inc.
 \s*This file is part of the GNU C Library.
-(Written by .*)?
+((Written|Contributed) by .*)?
 \s*The GNU C Library is free software; you can redistribute it and\/or
 \s*modify it under the terms of the GNU Lesser General Public
 \s*License as published by the Free Software Foundation; either

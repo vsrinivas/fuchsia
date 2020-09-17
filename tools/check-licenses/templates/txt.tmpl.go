@@ -21,10 +21,11 @@ USED LICENSES:
 {{ range $_, $license := .Used }}
 ================================================================================
 Category: {{ (getCategory $license) }}
-{{ range $file := (getFiles $license) }}FILE: {{ $file }}
+{{ range $author := (getAuthors $license ) }}Authors/Contributors: {{ $author }}
+{{ range $file := (getFiles $license $author) }}FILE: {{ $file }}
 {{ end }}--------------------------------------------------------------------------------
 License:
-{{ (getText $license) }}
+{{ (getText $license $author) }} {{ end }}
 ================================================================================
 {{ end }}
 `
