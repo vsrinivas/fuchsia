@@ -3,24 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:developer';
 import 'dart:ui' as ui;
 
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_policy/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-
-import 'package:flutter/scheduler.dart';
-
-import 'pointer_data_resampler.dart';
-
-/// The default sampling offset.
-///
-/// Sampling offset is relative to presentation time. If we produce frames
-/// 16.667 ms before presentation and input rate is ~60hz, worst case latency
-/// is 33.334 ms. This however assumes zero latency from the input driver.
-/// 4.666 ms margin is added for this.
-const _defaultSamplingOffset = Duration(milliseconds: -38);
 
 /// Listens for pointer events through the updated API and injects them into Flutter input pipeline.
 class PointerEventsListener2 extends PointerCaptureListener {
@@ -31,14 +18,9 @@ class PointerEventsListener2 extends PointerCaptureListener {
   PointerEventsListener _pointerEventsListener;
 
   PointerEventsListener2({
-    SchedulerBinding scheduler,
     ui.PointerDataPacketCallback callback,
-    Duration samplingOffset,
   }) {
-    _pointerEventsListener = PointerEventsListener(
-        scheduler: scheduler,
-        callback: callback,
-        samplingOffset: samplingOffset);
+    _pointerEventsListener = PointerEventsListener(callback: callback);
   }
 
   /// Starts listening to pointer events. Also overrides the original
@@ -79,30 +61,12 @@ class PointerEventsListener extends PointerCaptureListenerHack {
   // TODO(sanjayc): Should really convert to a FSM for PointerEvent.
   final _downEvent = <int, bool>{};
 
-  // Scheduler used for frame callbacks.
-  SchedulerBinding _scheduler;
-
   // [onPointerDataCallback] used to dispatch pointer data callbacks.
   ui.PointerDataPacketCallback _callback;
 
-  // Offset used for resampling.
-  final Duration _samplingOffset;
-
-  // Flag to track if a frame callback has been scheduled.
-  var _frameCallbackScheduled = false;
-
-  // Current sample time for resampling.
-  var _sampleTime = Duration();
-
-  // Resamplers used to filter incoming touch events.
-  final _resamplers = <int, PointerDataResampler>{};
-
   PointerEventsListener({
-    SchedulerBinding scheduler,
     ui.PointerDataPacketCallback callback,
-    Duration samplingOffset,
-  })  : _scheduler = scheduler,
-        _samplingOffset = samplingOffset ?? _defaultSamplingOffset {
+  }) {
     _callback = callback;
   }
 
@@ -117,7 +81,6 @@ class PointerEventsListener extends PointerCaptureListenerHack {
   }
 
   void setCallbackState() {
-    _scheduler ??= SchedulerBinding.instance;
     _callback = ui.window.onPointerDataPacket;
     ui.window.onPointerDataPacket = (ui.PointerDataPacket packet) {};
   }
@@ -173,69 +136,10 @@ class PointerEventsListener extends PointerCaptureListenerHack {
       return;
     }
 
-    final eventArguments = <String, int>{
-      'eventTimeUs': event.eventTime ~/ 1000,
-    };
-    Timeline.timeSync('PointerEventsListener.onPointerEvent', () {
-      if (_kindFromPointerEvent(event) != ui.PointerDeviceKind.touch) {
-        final packet = _getPacket(event);
-        if (packet != null) {
-          _callback(ui.PointerDataPacket(data: [packet]));
-        }
-        return;
-      }
-      final frameTime =
-          _scheduler.currentSystemFrameTimeStamp.inMicroseconds * 1000;
-      // Sanity check event time by clamping to frameTime.
-      final eventTime =
-          event.eventTime < frameTime ? event.eventTime : frameTime;
-      final packet =
-          _getPacket(_clone(event, event.phase, event.x, event.y, eventTime));
-      if (packet != null) {
-        _resamplers
-            .putIfAbsent(packet.device, () => PointerDataResampler())
-            .addData(packet);
-        _dispatchEvents();
-      }
-    }, arguments: eventArguments);
-  }
-
-  void _dispatchEvents() {
-    for (var resampler in _resamplers.values) {
-      final packets = resampler.sample(_sampleTime);
-      if (packets.isNotEmpty) {
-        Timeline.timeSync('PointerEventsListener.dispatchPackets', () {
-          _callback(ui.PointerDataPacket(data: packets));
-        });
-      }
-
-      // Schedule frame callback if another call to `sample` is needed.
-      // We need the frame callback to determine sample time. This
-      // however makes us produce frames whenever touch points are
-      // present. Probably OK as we'll likely receive an update to
-      // the touch point location each frame that will result in us
-      // actually having to produce a frame.
-      if (resampler.hasPendingData() || _downEvent.containsValue(true)) {
-        _scheduleFrameCallback();
-      }
+    final packet = _getPacket(event);
+    if (packet != null) {
+      _callback(ui.PointerDataPacket(data: [packet]));
     }
-  }
-
-  void _scheduleFrameCallback() {
-    if (_frameCallbackScheduled) {
-      return;
-    }
-    Timeline.timeSync('PointerEventsListener.scheduleFrameCallback', () {
-      _frameCallbackScheduled = true;
-      _scheduler.scheduleFrameCallback((_) {
-        Timeline.timeSync('PointerEventsListener.onFrameCallback', () {
-          _frameCallbackScheduled = false;
-          _sampleTime =
-              _scheduler.currentSystemFrameTimeStamp + _samplingOffset;
-          _dispatchEvents();
-        });
-      });
-    });
   }
 
   ui.PointerChange _changeFromPointerEvent(PointerEvent event) {

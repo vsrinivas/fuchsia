@@ -20,7 +20,6 @@ dart_library("widgets") {
     "src/utils/change_notifiers.dart",
     "src/utils/deprecate.dart",
     "src/utils/frame_rate_tracer.dart",
-    "src/utils/pointer_data_resampler.dart",
     "src/utils/pointer_events_listener.dart",
     "src/widgets/alphatar.dart",
     "src/widgets/conditional_builder.dart",
@@ -58,8 +57,6 @@ dart_library("widgets") {
 flutter_test("dart_widget_tests") {
   sources = [
     "alphatar_test.dart",
-    "pointer_data_resampler_test.dart",
-    "pointer_events_listener_test.dart",
     "providers_test.dart",
     "rk4_spring_simulation_test.dart",
   ]
