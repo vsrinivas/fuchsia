@@ -8,6 +8,7 @@ source_set("common") {
   testonly = true
 
   sources = [
+    "//src/graphics/tests/common/utils.cc",
     "//src/graphics/tests/common/vulkan_context.cc",
     "//src/graphics/tests/common/vulkan_context.h",
   ]

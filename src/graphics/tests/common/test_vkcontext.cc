@@ -48,6 +48,11 @@ void vkfree(void *user_data, void *ptr) {
   (*allocations)--;
 }
 
+struct CallbackUserData {
+  explicit CallbackUserData(std::string msg_in = "Msg") : msg(std::move(msg_in)) {}
+  std::string msg;
+};
+
 }  // namespace
 
 TEST(VkContext, Unique) {
@@ -99,6 +104,77 @@ TEST(VkContext, Queue) {
 
   int queue_family_index = ctx->queue_family_index();
   EXPECT_GT(queue_family_index, VulkanContext::kInvalidQueueFamily);
+}
+
+static VkBool32 DebugUtilsErrorCallback(VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
+                                        VkDebugUtilsMessageTypeFlagsEXT msg_types,
+                                        const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+                                        void *user_data) {
+  auto context_with_data = reinterpret_cast<VulkanContext::ContextWithUserData *>(user_data);
+  EXPECT_TRUE(context_with_data->context()->validation_errors_ignored());
+  EXPECT_TRUE(msg_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT);
+
+  std::shared_ptr<void> string_void = context_with_data->user_data();
+  std::string *string_ptr = static_cast<std::string *>(string_void.get());
+  EXPECT_EQ(*string_ptr, "void user_data - error");
+  fprintf(stderr, "%s: %s\n", __FUNCTION__, callback_data->pMessage);
+  return VK_FALSE;
+}
+
+TEST(VkContext, Callback) {
+  vk::DebugUtilsMessengerCreateInfoEXT debug_info(
+      {} /* create flags */, vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+      vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+          vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
+      DebugUtilsErrorCallback);
+  std::shared_ptr<void> shared_void = std::make_shared<std::string>("void user_data - error");
+  VulkanContext::ContextWithUserData user_data(shared_void);
+
+  // Create the device with a bad extension name to force a VK_ERROR_EXTENSION_NOT_PRESENT error.
+  vk::DeviceCreateInfo device_info;
+  device_info.enabledExtensionCount = 1;
+  std::vector<const char *> extensions = {"BOGUS_vk_extension_name"};
+  device_info.ppEnabledExtensionNames = extensions.data();
+
+  std::unique_ptr<VulkanContext> ctx = VulkanContext::Builder{}
+                                           .set_device_info(device_info)
+                                           .set_validation_errors_ignored(true)
+                                           .set_debug_utils_messenger(debug_info, user_data)
+                                           .Unique();
+}
+
+static VkBool32 DebugUtilsUserDataCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity, VkDebugUtilsMessageTypeFlagsEXT msg_types,
+    const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data) {
+  auto context_with_data = reinterpret_cast<VulkanContext::ContextWithUserData *>(user_data);
+  std::shared_ptr<void> test_user_data_void = context_with_data->user_data();
+  CallbackUserData *test_user_data_ptr = static_cast<CallbackUserData *>(test_user_data_void.get());
+  EXPECT_EQ(test_user_data_ptr->msg, "User Data Message");
+  fprintf(stderr, "%s: %s\n", __FUNCTION__, callback_data->pMessage);
+  return VK_FALSE;
+}
+
+TEST(VkContext, UserData) {
+  vk::DebugUtilsMessengerCreateInfoEXT debug_info(
+      {} /* create flags */, vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+      vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+          vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
+      DebugUtilsUserDataCallback);
+
+  std::shared_ptr<void> shared_void =
+      std::make_shared<CallbackUserData>(std::string("User Data Message"));
+  VulkanContext::ContextWithUserData user_data(shared_void);
+
+  // Create the device with a bad extension name to force a VK_ERROR_EXTENSION_NOT_PRESENT error.
+  vk::DeviceCreateInfo device_info;
+  device_info.enabledExtensionCount = 1;
+  std::vector<const char *> extensions = {"BOGUS_vk_extension_name"};
+  device_info.ppEnabledExtensionNames = extensions.data();
+
+  std::unique_ptr<VulkanContext> ctx = VulkanContext::Builder{}
+                                           .set_device_info(device_info)
+                                           .set_debug_utils_messenger(debug_info, user_data)
+                                           .Unique();
 }
 
 int main(int argc, char **argv) {
