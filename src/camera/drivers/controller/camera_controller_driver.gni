@@ -52,7 +52,10 @@ template("camera_controller_driver") {
 
   driver_module(driver_target) {
     output_name = package_name
-    deps = [ "//src/camera/drivers/controller:source" ]
+    deps = [
+      "//sdk/lib/syslog/cpp:backend_legacy",
+      "//src/camera/drivers/controller:source",
+    ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

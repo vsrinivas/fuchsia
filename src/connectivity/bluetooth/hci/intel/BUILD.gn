@@ -40,6 +40,7 @@ driver_module("driver") {
     ":bt_hci_intel_bind",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/bluetooth/core/bt-host/gap",
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//src/devices/lib/driver",

@@ -25,6 +25,7 @@ driver_module("gpt") {
   deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/cksum",
