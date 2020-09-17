@@ -118,7 +118,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From //third_party/lib/acpica/BUILD.zircon.gn:9
+From //third_party/lib/acpica/BUILD.zircon.gn:11
 
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
@@ -356,7 +356,7 @@ Path to Mac SDK.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/standard.gni:41
+From //public/gn/config/standard.gni:42
 
 ### malloc
 

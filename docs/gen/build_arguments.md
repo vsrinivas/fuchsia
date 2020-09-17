@@ -6,7 +6,7 @@
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:81
+From //build/images/args.gni:84
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -14,7 +14,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:87
+From //build/images/args.gni:90
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -24,7 +24,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:93
+From //build/images/args.gni:96
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -40,14 +40,14 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1090
+From //build/config/BUILDCONFIG.gn:1101
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:105
+From //build/images/args.gni:108
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -306,7 +306,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:135
+From //build/images/args.gni:138
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -492,7 +492,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:99
+From //build/images/args.gni:102
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -533,7 +533,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:102
+From //build/images/args.gni:105
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -809,13 +809,13 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:853
+From //build/config/BUILDCONFIG.gn:864
 
 ### fastboot_product
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:82
+From //build/images/args.gni:85
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -986,7 +986,7 @@ From //build/images/fvm.gni:30
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:83
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -1154,16 +1154,16 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:11](https://fuchsia.googlesource.com/third_party/icu/+/3c9e6d2e43ce7c41527b9d59b0a753803be5c3c1/config.gni#11)
+From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/1be04b01dad80e4d77ddf711b2942288039f56b6/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
-need different configuration based on the library version.  Currently this
+need different configuration based on the library version. Currently this
 is only useful in Fuchsia.
 
 **Current value (from the default):** `"67"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/3c9e6d2e43ce7c41527b9d59b0a753803be5c3c1/version.gni#9)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/1be04b01dad80e4d77ddf711b2942288039f56b6/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1171,7 +1171,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/3c9e6d2e43ce7c41527b9d59b0a753803be5c3c1/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/1be04b01dad80e4d77ddf711b2942288039f56b6/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1186,7 +1186,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:112
+From //build/images/args.gni:115
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1430,7 +1430,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:765
+From //build/config/BUILDCONFIG.gn:776
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1782,7 +1782,7 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:124
+From //build/images/args.gni:127
 
 ### persist_logs
 
@@ -1794,7 +1794,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:109
+From //build/images/args.gni:112
 
 ### platform_enable_user_pci
 
@@ -1806,7 +1806,7 @@ From //src/devices/bus/drivers/pci/pci.gni:10
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:86
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -1897,7 +1897,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:121
+From //build/images/args.gni:124
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -2110,7 +2110,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1080
+From //build/config/BUILDCONFIG.gn:1091
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2119,7 +2119,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1085
+From //build/config/BUILDCONFIG.gn:1096
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2157,7 +2157,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:899
+From //build/config/BUILDCONFIG.gn:910
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2411,7 +2411,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:873
+From //build/config/BUILDCONFIG.gn:884
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2588,19 +2588,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:77
+From //build/images/args.gni:80
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:78
+From //build/images/args.gni:81
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:79
+From //build/images/args.gni:82
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -2736,12 +2736,15 @@ Arguments to `fx flash` script (along with any `firmware_prebuilts` which
 specify a partition).
 
 If `fvm_partition` is provided, the flash script will flash the full OS,
-recovery + Zircon + FVM. Otherwise, it will flash the recovery image to all
-slots, which doesn't require the FVM.
+recovery + Zircon + FVM + SSH keys. In this case, the bootloader must also
+support `fastboot oem add-staged-bootloader-file ssh.authorized_keys`.
+
+Otherwise, the script will flash the recovery image to all slots, which
+doesn't require the FVM or SSH keys.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:74
+From //build/images/args.gni:77
 
 ### zircon_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2782,7 +2785,7 @@ From //build/config/fuchsia/BUILD.gn:198
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:75
+From //build/images/args.gni:78
 
 ### zircon_build_root
 
@@ -2834,7 +2837,7 @@ From //build/config/zircon/levels.gni:18
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:76
+From //build/images/args.gni:79
 
 ### zircon_toolchain
 *This should never be set as a build argument.*
