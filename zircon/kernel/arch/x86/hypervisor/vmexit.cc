@@ -850,6 +850,10 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case X86_MSR_PP0_POWER_LIMIT:
     case X86_MSR_PP1_POWER_LIMIT:
     case X86_MSR_PLATFORM_POWER_LIMIT:
+    // We disable the associated CPUID bits, but Linux still writes to these
+    // MSRs. Just ignore it.
+    case X86_MSR_IA32_SPEC_CTRL:
+    case X86_MSR_IA32_PRED_CMD:
     // From AMD64 Volume 2, Section 6.1.1: CSTAR is unused, but Linux likes to
     // set a null handler, even when not in compatibility mode. Just ignore it.
     case X86_MSR_IA32_CSTAR:
