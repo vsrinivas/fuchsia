@@ -22,9 +22,5 @@ table PlayerRegistration {
 /// controlled by clients who have permission to do so.
 [Discoverable]
 protocol Publisher {
-    [Deprecated, Transitional]
-    PublishPlayer(Player player, PlayerRegistration registration);
-
-    [Transitional]
     Publish(Player player, PlayerRegistration registration) -> (SessionId session_id);
 };

@@ -86,17 +86,18 @@ async fn main() -> Result<()> {
     let (player_client_end, player_server_end) =
         create_endpoints::<PlayerMarker>().context("Creating session channels.")?;
 
-    component::client::connect_to_service::<PublisherMarker>()
+    let session_id = component::client::connect_to_service::<PublisherMarker>()
         .context("Connecting to publisher.")?
-        .publish_player(
+        .publish(
             player_client_end,
             PlayerRegistration {
                 domain: Some("domain://example".to_string()),
                 ..Decodable::new_empty()
             },
         )
+        .await
         .context("Publishing our player client end.")?;
-    println!("Registered with Fuchsia Media Session service");
+    println!("Registered with Fuchsia Media Session service. ID {}", session_id);
 
     let mut player = Player::new();
     let mut requests = player_server_end.into_stream()?;

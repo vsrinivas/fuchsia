@@ -25,9 +25,6 @@ impl Publisher {
     pub async fn serve(mut self, mut request_stream: PublisherRequestStream) -> Result<()> {
         while let Some(request) = request_stream.try_next().await.context("Publisher requests")? {
             let (player, registration, responder) = match request {
-                PublisherRequest::PublishPlayer { player, registration, .. } => {
-                    (player, registration, None)
-                }
                 PublisherRequest::Publish { player, registration, responder } => {
                     (player, registration, Some(responder))
                 }
