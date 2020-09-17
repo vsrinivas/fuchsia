@@ -426,7 +426,7 @@ fi
 
 if [[ -f "${fvm_initial}" ]] ; then
   fvm_extended="${img_dir}/fvm.blk"
-  fx-fvm-extend-image "${fvm_initial}" "${fvm_extended}"
+  fx-fvm-extend-image "${fvm_initial}" "${fvm_extended}" "${IMAGE_SIZE}"
   ARGS+=("-drive" "file=${fvm_extended},format=raw,if=none,id=vdisk")
   ARGS+=("-device" "virtio-blk-pci,drive=vdisk")
 fi
