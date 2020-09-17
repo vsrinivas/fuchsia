@@ -245,7 +245,7 @@ static bool test_interrupt_with_preempt_disable() {
   preemption_state.PreemptDisable();
   ktl::atomic<bool> timer_ran(false);
   Timer timer;
-  const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
+  const Deadline deadline = Deadline::after(ZX_USEC(100));
   timer.Set(deadline, timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
   // Spin until timer_ran is set by the interrupt handler.
   while (!timer_ran.load()) {
@@ -269,7 +269,7 @@ static bool test_interrupt_with_resched_disable() {
   preemption_state.ReschedDisable();
   ktl::atomic<bool> timer_ran(false);
   Timer timer;
-  const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
+  const Deadline deadline = Deadline::after(ZX_USEC(100));
   timer.Set(deadline, timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
   // Spin until timer_ran is set by the interrupt handler.
   while (!timer_ran.load()) {

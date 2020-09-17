@@ -181,7 +181,7 @@ void RecurringCallback::Toggle() {
   Guard<SpinLock, IrqSave> guard{&lock_};
 
   if (!started_) {
-    const Deadline deadline(zx_time_add_duration(current_time(), ZX_SEC(1)), kSlack);
+    const Deadline deadline = Deadline::after(ZX_SEC(1), kSlack);
     // start the timer
     timer_.Set(deadline, CallbackWrapper, static_cast<void*>(this));
     started_ = true;

@@ -177,8 +177,8 @@ void update_uptime_locked() TA_REQ(uptime_updater_lock::Get()) {
 
     default_platform_stow_crashlog(ZirconCrashReason::Unknown, nullptr, 0);
 
-    Deadline next_update_time{current_time() + kDefaultUpdateInterval,
-                              {kDefaultUpdateInterval / 2, TIMER_SLACK_CENTER}};
+    Deadline next_update_time =
+        Deadline::after(kDefaultUpdateInterval, {kDefaultUpdateInterval / 2, TIMER_SLACK_CENTER});
     uptime_updater_timer.Set(
         next_update_time,
         [](Timer*, zx_time_t now, void* arg) {

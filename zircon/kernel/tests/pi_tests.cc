@@ -589,9 +589,8 @@ bool pi_test_basic() {
       // and declare the blocking thread to be the owner of the queue at the
       // same time.  Then check to be sure that the effective priority of the
       // blocking thread matches what we expect to see.
-      Deadline timeout = (rel_method == ReleaseMethod::TIMEOUT)
-                             ? Deadline::no_slack(current_time() + ZX_MSEC(20))
-                             : Deadline::infinite();
+      Deadline timeout = (rel_method == ReleaseMethod::TIMEOUT) ? Deadline::after(ZX_MSEC(20))
+                                                                : Deadline::infinite();
       ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread, timeout));
       ASSERT_EQ(expected_prio, blocking_thread.effective_priority());
 

@@ -188,7 +188,7 @@ static void platform_debug_start_uart_timer() {
 
   if (!started) {
     started = true;
-    const Deadline deadline(zx_time_add_duration(current_time(), ZX_MSEC(10)), kSlack);
+    const Deadline deadline = Deadline::after(ZX_MSEC(10), kSlack);
     uart_rx_poll_timer.Set(deadline, uart_rx_poll, NULL);
   }
 }

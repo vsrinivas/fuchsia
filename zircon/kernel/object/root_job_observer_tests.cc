@@ -14,11 +14,6 @@
 
 namespace {
 
-// Return a deadline the given time in the future.
-Deadline DeadlineAfter(zx_duration_t duration) {
-  return Deadline::no_slack(zx_time_add_duration(current_time(), duration));
-}
-
 // Create a suspended thread inside the given process.
 KernelHandle<ThreadDispatcher> CreateThread(fbl::RefPtr<ProcessDispatcher> parent_process) {
   fbl::RefPtr<ThreadDispatcher> child_thread;
@@ -72,7 +67,7 @@ bool TestCallbackFiresOnRootJobDeath() {
   RootJobObserver observer{root_job, nullptr, [&root_job_killed]() { root_job_killed.Signal(); }};
 
   // Shouldn't be signalled yet.
-  EXPECT_EQ(root_job_killed.Wait(DeadlineAfter(ZX_MSEC(1))), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(root_job_killed.Wait(Deadline::after(ZX_MSEC(1))), ZX_ERR_TIMED_OUT);
 
   // Kill the root job.
   ASSERT_TRUE(root_job->Kill(1));

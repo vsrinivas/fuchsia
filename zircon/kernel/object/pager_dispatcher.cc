@@ -275,8 +275,7 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
     if (pager_overtime_wait_seconds == 0) {
       return Deadline::infinite();
     } else {
-      return Deadline(zx_time_add_duration(current_time(), ZX_SEC(pager_overtime_wait_seconds)),
-                      TimerSlack::none());
+      return Deadline::after(ZX_SEC(pager_overtime_wait_seconds));
     }
   };
   zx_status_t result;

@@ -65,7 +65,7 @@ static bool smoke_test() {
 static bool timeout_test() {
   BEGIN_TEST;
 
-  auto dealine = Deadline::no_slack(current_time() + ZX_USEC(10));
+  auto dealine = Deadline::after(ZX_USEC(10));
 
   Semaphore sema;
   ASSERT_EQ(0u, sema.count());

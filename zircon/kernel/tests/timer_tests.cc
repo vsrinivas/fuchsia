@@ -39,7 +39,7 @@ static int timer_do_one_thread(void* arg) {
   Event event;
   Timer timer;
 
-  const Deadline deadline = Deadline::no_slack(current_time() + ZX_MSEC(10));
+  const Deadline deadline = Deadline::after(ZX_MSEC(10));
   timer.Set(deadline, timer_diag_cb, &event);
   event.Wait();
 
@@ -219,7 +219,7 @@ static int timer_stress_worker(void* void_arg) {
 
     interrupt_saved_state_t int_state = arch_interrupt_save();
     cpu_num_t timer_cpu = arch_curr_cpu_num();
-    const Deadline deadline = Deadline::no_slack(current_time() + timer_duration);
+    const Deadline deadline = Deadline::after(timer_duration);
     t.Set(deadline, timer_stress_cb, void_arg);
     Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
     DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
@@ -303,7 +303,7 @@ static bool cancel_before_deadline() {
   BEGIN_TEST;
   timer_args arg{};
   Timer t;
-  const Deadline deadline = Deadline::no_slack(current_time() + ZX_HOUR(5));
+  const Deadline deadline = Deadline::after(ZX_HOUR(5));
   t.Set(deadline, timer_cb, &arg);
   ASSERT_TRUE(t.Cancel());
   ASSERT_FALSE(atomic_load(&arg.timer_fired));
@@ -347,7 +347,7 @@ static bool cancel_from_callback() {
 static void timer_set_cb(Timer* t, zx_time_t now, void* void_arg) {
   timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
   if (atomic_add(&arg->remaining, -1) >= 1) {
-    const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(10));
+    const Deadline deadline = Deadline::after(ZX_USEC(10));
     t->Set(deadline, timer_set_cb, void_arg);
   }
 }
@@ -403,7 +403,7 @@ static bool trylock_or_cancel_canceled() {
   interrupt_saved_state_t int_state = arch_interrupt_save();
 
   cpu_num_t timer_cpu = arch_curr_cpu_num();
-  const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
+  const Deadline deadline = Deadline::after(ZX_USEC(100));
   t.Set(deadline, timer_trylock_cb, &arg);
 
   // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
@@ -451,7 +451,7 @@ static bool trylock_or_cancel_get_lock() {
   interrupt_saved_state_t int_state = arch_interrupt_save();
 
   cpu_num_t timer_cpu = arch_curr_cpu_num();
-  const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
+  const Deadline deadline = Deadline::after(ZX_USEC(100));
   t.Set(deadline, timer_trylock_cb, &arg);
 
   // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
