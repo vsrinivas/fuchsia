@@ -165,6 +165,10 @@ class HostTestCase(object):
         choice = self.host.choose(prompt, choices)
         self.assertEqual(choice, 'bear')
 
+        self.set_input('0')
+        with self.assertRaises(SystemExit):
+            self.host.choose(prompt, choices)
+
     def test_isdir(self):
         pathname = os.path.join(self.temp_dir, 'test_isdir')
         self.assertFalse(self.host.isdir(pathname))

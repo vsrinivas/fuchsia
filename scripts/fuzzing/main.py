@@ -11,8 +11,7 @@ from lib.factory import Factory
 def main():
     """Main entry point for "fx fuzz"."""
     factory = Factory()
-    parser = factory.create_parser()
-    args = parser.parse_args()
+    args = factory.parser.parse_args()
     factory.host.tracing = args.verbose
     args.command(args, factory)
 

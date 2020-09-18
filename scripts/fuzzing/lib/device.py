@@ -27,10 +27,10 @@ class Device(object):
          ssh_verbosity:    How verbose SSH processes are, from 0 to 3.
     """
 
-    def __init__(self, buildenv, addr):
-        assert buildenv, 'Build environment for device not set.'
+    def __init__(self, factory, addr):
+        assert factory, 'Factory for device not set.'
         assert addr, 'Device address not set.'
-        self._buildenv = buildenv
+        self._factory = factory
         self._addr = addr
         self._ssh_options = {}
         self._ssh_config_options = []
@@ -41,12 +41,12 @@ class Device(object):
     @property
     def buildenv(self):
         """The associated BuildEnv object for this device."""
-        return self._buildenv
+        return self._factory.buildenv
 
     @property
     def host(self):
         """Alias for buildenv.host."""
-        return self.buildenv.host
+        return self._factory.host
 
     @property
     def addr(self):

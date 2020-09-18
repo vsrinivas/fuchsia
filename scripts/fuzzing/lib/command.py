@@ -16,14 +16,40 @@ from fuzzer import Fuzzer
 
 def list_fuzzers(args, factory):
     """Implementation of "fx fuzz list"."""
-    buildenv = factory.create_buildenv()
+    buildenv = factory.buildenv
+    fuzzer_tests = buildenv.fuzzer_tests(args.name)
+    match_prefix = ' matching' if args.name else ''
+    match_suffix = ' for "{}"'.format(args.name) if args.name else ''
+    if fuzzer_tests:
+        plural = 's' if len(fuzzer_tests) != 1 else ''
+        factory.host.echo(
+            'Found {}{} fuzzer test{}{}:'.format(
+                len(fuzzer_tests), match_prefix, plural, match_suffix))
+        for fuzzer_test in fuzzer_tests:
+            factory.host.echo('  ' + str(fuzzer_test) + '_test')
+
+        if plural:
+            target_was_not_selected = 'These tests correspond to fuzzers, but were not selected by the build arguments'
+        else:
+            target_was_not_selected = 'This test corresponds to a fuzzer, but was not selected by the build arguments'
+        factory.host.echo(
+            '', target_was_not_selected,
+            'to be built with a fuzzer toolchain variant.', '',
+            'To select them, you can use `fx set ... --fuzz-with <sanitizer>`.',
+            'See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/build-a-fuzzer',
+            'for additional details.', '')
+
     fuzzers = buildenv.fuzzers(args.name)
-    if len(fuzzers) == 0:
-        factory.host.echo('No matching fuzzers.')
+    if fuzzers:
+        plural = 's' if len(fuzzers) != 1 else ''
+        factory.host.echo(
+            'Found {}{} fuzzer{}{}:'.format(
+                len(fuzzers), match_prefix, plural, match_suffix))
+        for fuzzer in fuzzers:
+            factory.host.echo('  ' + str(fuzzer))
     else:
-        factory.host.echo('Found {} matching fuzzers:'.format(len(fuzzers)))
-        for package, executable in fuzzers:
-            factory.host.echo('  {}/{}'.format(package, executable))
+        factory.host.echo(
+            'No{} fuzzers found{}.'.format(match_prefix, match_suffix))
 
 
 def start_fuzzer(args, factory):
@@ -53,10 +79,8 @@ def start_fuzzer(args, factory):
 
 def check_fuzzer(args, factory):
     """Implementation of "fx fuzz check"."""
-    device = factory.create_device()
     blank = True
-    for package, executable in device.buildenv.fuzzers(args.name):
-        fuzzer = Fuzzer(device, package, executable)
+    for fuzzer in factory.buildenv.fuzzers(args.name):
         if not args.name and not fuzzer.is_running():
             continue
         if not fuzzer.is_resolved():

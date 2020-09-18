@@ -31,12 +31,18 @@ class IntegrationTest(TestCaseWithIO):
 
             # (Re-)parse the command line arguments, a la main.py.
             factory = Factory(host=host)
-            parser = factory.create_parser()
+            parser = factory.parser
             args = parser.parse_args()
+
+            # Ensure exactly 1 fuzzer is selected.
+            fuzzer = factory.create_fuzzer(args)
+            self.assertNoErrors()
+            args.name = str(fuzzer)
 
             list_args = parser.parse_args(['list', args.name])
             list_args.command(list_args, factory)
-            self.assertOut(['Found 1 matching fuzzers:'], n=1)
+            self.assertOut(
+                ['Found 1 matching fuzzer for "{}":'.format(str(fuzzer))], n=1)
             self.assertNoErrors()
 
             start_args = parser.parse_args(

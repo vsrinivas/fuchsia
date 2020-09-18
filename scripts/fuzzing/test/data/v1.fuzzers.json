@@ -1,0 +1,18 @@
+[
+  {
+    "fuzzers": [
+      "fake-target1",
+      "fake-target2",
+      "fake-target3"
+    ],
+    "fuzzers_package": "fake-package1"
+  },
+  {
+    "fuzzers": [
+      "an-extremely-verbose-target-name",
+      "fake-target1",
+      "fake-target11"
+    ],
+    "fuzzers_package": "fake-package2"
+  }
+]

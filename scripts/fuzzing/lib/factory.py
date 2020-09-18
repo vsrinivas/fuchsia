@@ -22,34 +22,41 @@ class Factory(object):
     Factory-constructed BuildEnv.
 
     Attributes:
-        host:   System interface object for user interactions.
+        host:           System interface object for user interactions.
+        buildenv:       The associated BuildEnv object.
+        device:         The associated Device object.
     """
 
     def __init__(self, host=None):
         if not host:
             host = Host()
+        self._parser = None
         self._host = host
+        self._buildenv = None
+        self._device = None
 
     @property
     def host(self):
         """System interface object for user interactions."""
         return self._host
 
-    def create_parser(self):
-        """Returns an argument parser."""
+    @property
+    def parser(self):
+        """The associated ArgParser object."""
+        if self._parser:
+            return self._parser
         parser = ArgParser()
         parser.host = self.host
         parser.add_parsers()
-        return parser
+        self._parser = parser
+        return self._parser
 
-    def create_buildenv(self, fuchsia_dir=None):
-        """Constructs a BuildEnv from a local build directory."""
-        if not fuchsia_dir:
-            fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
-        if not fuchsia_dir:
-            self.host.error(
-                'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
-        buildenv = BuildEnv(self.host, fuchsia_dir)
+    @property
+    def buildenv(self):
+        """The associated BuildEnv object."""
+        if self._buildenv:
+            return self._buildenv
+        buildenv = BuildEnv(self)
         pathname = buildenv.path('.fx-build-dir')
         build_dir = self.host.readfile(
             pathname,
@@ -59,47 +66,37 @@ class Factory(object):
             ])
         buildenv.configure(build_dir)
         buildenv.read_fuzzers(buildenv.path(build_dir, 'fuzzers.json'))
-        return buildenv
+        self._buildenv = buildenv
+        return self._buildenv
 
-    def create_device(self, buildenv=None):
-        """Constructs a Device from the build environment"""
-        if not buildenv:
-            buildenv = self.create_buildenv()
-        pathname = '{}.device'.format(buildenv.build_dir)
+    @property
+    def device(self):
+        """The associated Device object."""
+        if self._device:
+            return self._device
+        pathname = '{}.device'.format(self.buildenv.build_dir)
         device_name = self.host.readfile(pathname, missing_ok=True)
-        addr = buildenv.find_device(device_name)
-        device = Device(buildenv, addr)
+        addr = self.buildenv.find_device(device_name)
+        device = Device(self, addr)
         device.configure()
-        return device
+        self._device = device
+        return self._device
 
-    def _resolve_fuzzer(self, buildenv, name):
-        """Matches a fuzzer name pattern to a fuzzer."""
-        matches = buildenv.fuzzers(name)
+    def create_fuzzer(self, args):
+        """Constructs a Fuzzer from command line arguments, showing a
+        disambiguation menu if specified name matches more than one fuzzer."""
+        matches = self.buildenv.fuzzers(args.name)
         if not matches:
             self.host.error('No matching fuzzers found.', 'Try "fx fuzz list".')
         if len(matches) > 1:
-            choices = ["/".join(m) for m in matches]
+            choices = {}
+            for fuzzer in matches:
+                choices[str(fuzzer)] = fuzzer
             self.host.echo('More than one match found.')
-            prompt = 'Please pick one from the list:'
-            return self.host.choose(prompt, choices).split('/')
+            prompt = 'Please pick one from the list'
+            choice = self.host.choose(prompt, sorted(choices.keys()))
+            fuzzer = choices[choice]
         else:
-            return matches[0]
-
-    def create_fuzzer(self, args, device=None):
-        """Constructs a Fuzzer from command line arguments, showing a
-        disambiguation menu if specified name matches more than one fuzzer."""
-        if not device:
-            device = self.create_device()
-
-        package, executable = self._resolve_fuzzer(device.buildenv, args.name)
-        fuzzer = Fuzzer(device, package, executable)
-
-        keys = [
-            key for key, val in vars(Fuzzer).items()
-            if isinstance(val, property) and val.fset
-        ]
-        for key, val in vars(args).items():
-            if key in keys and val is not None:
-                setattr(fuzzer, key, val)
-
+            fuzzer = matches[0]
+        fuzzer.update(args)
         return fuzzer

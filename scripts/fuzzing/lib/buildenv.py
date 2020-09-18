@@ -8,7 +8,9 @@ import json
 import os
 import re
 import subprocess
+from collections import defaultdict
 
+from fuzzer import Fuzzer
 from process import Process
 
 
@@ -27,13 +29,14 @@ class BuildEnv(object):
       gsutil:           Path to the Google Cloud Storage utility.
   """
 
-    def __init__(self, host, fuchsia_dir):
-        assert host, 'Host not set.'
+    def __init__(self, factory):
+        assert factory, 'Factory not set.'
+        self._factory = factory
+        fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
         if not fuchsia_dir:
-            host.error(
+            self.host.error(
                 'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
         self._fuchsia_dir = fuchsia_dir
-        self._host = host
         self._build_dir = None
         self._symbolizer_exec = None
         self._llvm_symbolizer = None
@@ -47,7 +50,7 @@ class BuildEnv(object):
 
     @property
     def host(self):
-        return self._host
+        return self._factory.host
 
     @property
     def build_dir(self):
@@ -124,52 +127,98 @@ class BuildEnv(object):
             self.path(build_dir + '.zircon', '.build-id'),
         ]
 
-    def add_fuzzer(self, package, executable):
-        self._fuzzers.append((package, executable))
-
     def read_fuzzers(self, pathname):
         """Parses the available fuzzers from an fuzzers.json pathname."""
         with self.host.open(pathname, on_error=[
                 'Failed to read fuzzers from {}.'.format(pathname),
                 'Have you run "fx set ... --fuzz-with <sanitizer>"?'
         ]) as opened:
-            fuzz_specs = json.load(opened)
-        for fuzz_spec in fuzz_specs:
-            package = fuzz_spec['fuzzers_package']
-            for executable in fuzz_spec['fuzzers']:
-                self._fuzzers.append((package, executable))
+            metadata = json.load(opened)
 
-    def fuzzers(self, name=None):
-        """Returns a (possibly filtered) list of fuzzer names.
+        fuzz_specs = []
+        by_label = defaultdict(dict)
+        for entry in metadata:
+            # Try v2 metadata first.
+            label = entry.get('label')
+            if label:
+                by_label[label].update(entry)
+                continue
+            # Fallback to v1 metadata.
+            package = entry['fuzzers_package']
+            package_url = 'fuchsia-pkg://fuchsia.com/{}'.format(package)
+            for fuzzer in entry['fuzzers']:
+                fuzz_specs.append(
+                    {
+                        'package': package,
+                        'package_url': package_url,
+                        'fuzzer': fuzzer,
+                        'manifest': '{}.cmx'.format(fuzzer),
+                        'label': '//generated/{}:{}'.format(package, fuzzer),
+                    })
+        fuzz_specs += by_label.values()
+        self._fuzzers = [
+            Fuzzer(self._factory, fuzz_spec) for fuzz_spec in fuzz_specs
+        ]
+        self._fuzzers.sort()
 
-        Takes a list of fuzzer names in the form `package`/`executable` and a name to filter
-        on.  If the name is of the form 'x/y', the filtered list will include all
-        the fuzzer names where 'x' is a substring of `package` and y is a substring
-        of `executable`; otherwise it includes all the fuzzer names where `name` is a
-        substring of either `package` or `executable`.
+    def fuzzers(self, name=None, include_tests=False):
+        """Returns a (possibly filtered) list of fuzzers.
+
+        Matches the given name against the fuzzers previously instantiated by `read_fuzzers`.
+
+        Parameters:
+            name            A name to filter on. If the name is an exact match, it will return a
+                            list containing the matching fuzzer. If the name is of the form 'x/y',
+                            the filtered list will include all the fuzzers where 'x' is a substring
+                            of `package` and y is a substring of `executable`; otherwise it includes
+                            all the fuzzers where `name` is a substring of either `package` or
+                            `executable`. If blank or omitted, all fuzzers are returned.
+            include_tests   A boolean flag indicating whether to include fuzzer tests as fuzzers.
+                            This can be useful for commands which only act on the source tree
+                            without regard to a fuzzer being deployed on a device.
 
         Returns:
-            A list of fuzzer names matching the given name.
+            A list of fuzzers matching the given name.
 
         Raises:
             ValueError: Name is malformed, e.g. of the form 'x/y/z'.
     """
-        if not name or name == '':
-            return self._fuzzers
-        names = name.split('/')
-        if len(names) == 2 and (names[0], names[1]) in self._fuzzers:
-            return [(names[0], names[1])]
-        if len(names) == 1:
-            as_package = set(self.fuzzers(name + '/'))
-            as_executable = set(self.fuzzers('/' + name))
-            return sorted(list(as_package | as_executable))
-        elif len(names) != 2:
-            raise ValueError('Malformed fuzzer name: ' + name)
-        filtered = []
-        for package, executable in self._fuzzers:
-            if names[0] in package and names[1] in executable:
-                filtered.append((package, executable))
-        return sorted(filtered)
+        fuzzers = [
+            fuzzer for fuzzer in self._fuzzers
+            if fuzzer.matches(name) and (include_tests or not fuzzer.is_test)
+        ]
+        for fuzzer in fuzzers:
+            if name == str(fuzzer):
+                return [fuzzer]
+        return fuzzers
+
+    def fuzzer_tests(self, name=None):
+        """Returns a (possibly filtered) list of fuzzer tests.
+
+        Like fuzzers(), but returns uninstrumented fuzzer_tests instead of instrumented fuzzers.
+
+        Parameters:
+            name    A name to filter on. If the name is an exact match, it will return a list
+                    containing the matching fuzzer test. If the name is of the form 'x/y', the
+                    filtered list will include all the fuzzer tests where 'x' is a substring of
+                    `package` and y is a substring of `executable` + '_test'; otherwise it includes
+                    all the fuzzer tests where `name` is a substring of either `package` or
+                    `executable` + '_test'. If blank or omitted, all fuzzer tests are returned.
+
+        Returns:
+            A list of fuzzer tests matching the given name.
+
+        Raises:
+            ValueError: Name is malformed, e.g. of the form 'x/y/z'.
+    """
+        fuzzer_tests = [
+            fuzzer for fuzzer in self._fuzzers
+            if fuzzer.matches(name) and fuzzer.is_test
+        ]
+        for fuzzer in fuzzer_tests:
+            if name == str(fuzzer):
+                return [fuzzer]
+        return fuzzer_tests
 
     # Other routines
 

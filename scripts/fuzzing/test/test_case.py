@@ -3,8 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import unittest
 import sys
+import unittest
 
 import test_env
 import lib.args
@@ -230,8 +230,9 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
 
     @property
     def fuzzer(self):
-        """The most recently created FakeFuzzer object."""
-        return self.factory.fuzzer
+        """The most recently created Fuzzer object."""
+        assert self._fuzzer, 'No fuzzer created.'
+        return self._fuzzer
 
     @property
     def corpus(self):
@@ -251,7 +252,7 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
         resolve = kwargs.pop('resolve', True)
         assert not kwargs, 'Unexpected keyword argument(s): {}'.format(kwarg)
         args = self.parse_args(*args)
-        self._fuzzer = self.factory.create_fuzzer(args, device=self.device)
+        self._fuzzer = self.factory.create_fuzzer(args)
         if resolve:
             self.resolve_fuzzer()
         else:

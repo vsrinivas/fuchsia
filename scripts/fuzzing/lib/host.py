@@ -100,14 +100,18 @@ class Host(object):
 
     def choose(self, prompt, choices, preselected=None):
         """Displays a simple interactive menu."""
-        self.echo(prompt)
+        self.echo(prompt + ' (or enter 0 to cancel):')
         for i, choice in enumerate(choices, 1):
             self.echo("  {}) {}".format(i, choice))
         choice = preselected
         while not choice:
             self.echo("Choose 1-{}: ".format(len(choices)), end='')
             try:
-                choice = choices[int(raw_input()) - 1]
+                raw_choice = int(raw_input())
+                if raw_choice == 0:
+                    self.echo("User canceled.")
+                    sys.exit(0)
+                choice = choices[raw_choice - 1]
             except ValueError, IndexError:
                 self.echo("Invalid selection.")
         return choice

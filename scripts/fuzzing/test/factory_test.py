@@ -15,13 +15,13 @@ from test_case import TestCaseWithFactory
 class FactoryTest(TestCaseWithFactory):
 
     def test_create_buildenv(self):
-        # Clear $FUCHSIA_DIR
+        # FUCHSIA_DIR isn't set
         factory = Factory(host=self.host)
+        self.assertError(
+            lambda: factory.buildenv, 'FUCHSIA_DIR not set.',
+            'Have you sourced "scripts/fx-env.sh"?')
         fuchsia_dir = self.buildenv.fuchsia_dir
         self.host.setenv('FUCHSIA_DIR', None)
-        self.assertError(
-            lambda: factory.create_buildenv(), 'FUCHSIA_DIR not set.',
-            'Have you sourced "scripts/fx-env.sh"?')
         self.host.mkdir(fuchsia_dir)
         self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
 
@@ -29,7 +29,7 @@ class FactoryTest(TestCaseWithFactory):
         build_dir = self.buildenv.build_dir
         fx_build_dir = self.buildenv.path('.fx-build-dir')
         self.assertError(
-            lambda: factory.create_buildenv(),
+            lambda: factory.buildenv,
             'Failed to read build directory from {}.'.format(fx_build_dir),
             'Have you run "fx set ... --fuzz-with <sanitizer>"?')
         with self.host.open(fx_build_dir, 'w') as opened:
@@ -38,7 +38,7 @@ class FactoryTest(TestCaseWithFactory):
         # No $FUCHSIA_DIR/out/default/fuzzer.json
         fuzzers_json = self.buildenv.path(build_dir, 'fuzzers.json')
         self.assertError(
-            lambda: factory.create_buildenv(),
+            lambda: factory.buildenv,
             'Failed to read fuzzers from fuchsia_dir/build_dir/fuzzers.json.',
             'Have you run "fx set ... --fuzz-with <sanitizer>"?',
         )
@@ -46,15 +46,22 @@ class FactoryTest(TestCaseWithFactory):
         # Minimally valid
         with self.host.open(fuzzers_json, 'w') as opened:
             json.dump([], opened)
-        buildenv = factory.create_buildenv()
+        buildenv = factory.buildenv
         self.assertEqual(buildenv.build_dir, buildenv.path(build_dir))
         self.assertEqual(buildenv.fuzzers(), [])
 
     def test_create_device(self):
         factory = Factory(host=self.host)
-        build_dir = self.buildenv.build_dir
+        # Can't create buildenv, FUCHSIA_DIR isn't set
+        self.assertError(
+            lambda: factory.device, 'FUCHSIA_DIR not set.',
+            'Have you sourced "scripts/fx-env.sh"?')
+
+        # Use the fake BuildEnv.
+        factory._buildenv = self.buildenv
 
         # No $FUCHSIA_DIR/out/default.device
+        build_dir = self.buildenv.build_dir
         device_addr = '::1'
         cmd = [
             self.buildenv.path('.jiri_root', 'bin', 'fx'), 'device-finder',
@@ -62,8 +69,10 @@ class FactoryTest(TestCaseWithFactory):
         ]
         self.set_outputs(cmd, [device_addr])
         self.host.touch(self.buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
-        device = factory.create_device(buildenv=self.buildenv)
-        self.assertEqual(device.addr, device_addr)
+        self.assertEqual(factory.device.addr, device_addr)
+
+        # Clear the device to force re-initialization.
+        factory._device = None
 
         # $FUCHSIA_DIR/out/default.device present
         device_file = self.buildenv.path('{}.device'.format(build_dir))
@@ -76,11 +85,14 @@ class FactoryTest(TestCaseWithFactory):
             'resolve', '-device-limit', '1', device_name
         ]
         self.set_outputs(cmd, [device_addr])
-        device = factory.create_device(buildenv=self.buildenv)
-        self.assertEqual(device.addr, device_addr)
+        self.assertEqual(factory.device.addr, device_addr)
 
     def test_create_fuzzer(self):
         factory = Factory(host=self.host)
+
+        # Use the fake BuildEnv and Device.
+        factory._buildenv = self.buildenv
+        factory._device = self.device
 
         self.host.mkdir(
             os.path.join('fuchsia_dir', 'local', 'fake-package2_fake-target1'))
@@ -91,7 +103,7 @@ class FactoryTest(TestCaseWithFactory):
         # No match
         args = self.parse_args('check', 'no/match')
         self.assertError(
-            lambda: factory.create_fuzzer(args, device=self.device),
+            lambda: factory.create_fuzzer(args),
             'No matching fuzzers found.',
             'Try "fx fuzz list".',
         )
@@ -99,19 +111,26 @@ class FactoryTest(TestCaseWithFactory):
         # Multiple matches
         self.set_input('1')
         args = self.parse_args('check', '2/1')
-        fuzzer = factory.create_fuzzer(args, device=self.device)
+        fuzzer = factory.create_fuzzer(args)
         self.assertLogged(
-            'More than one match found.', 'Please pick one from the list:',
+            'More than one match found.',
+            'Please pick one from the list (or enter 0 to cancel):',
             '  1) fake-package2/fake-target1',
             '  2) fake-package2/fake-target11')
         self.assertEqual(fuzzer.package, 'fake-package2')
         self.assertEqual(fuzzer.executable, 'fake-target1')
+        self.assertEqual(
+            fuzzer.executable_url,
+            'fuchsia-pkg://fuchsia.com/fake-package2#meta/fake-target1.cmx')
 
         # Exact match
         args = self.parse_args('check', '2/11')
-        fuzzer = factory.create_fuzzer(args, device=self.device)
+        fuzzer = factory.create_fuzzer(args)
         self.assertEqual(fuzzer.package, 'fake-package2')
         self.assertEqual(fuzzer.executable, 'fake-target11')
+        self.assertEqual(
+            fuzzer.executable_url,
+            'fuchsia-pkg://fuchsia.com/fake-package2#meta/fake-target11.cmx')
 
         # Fuzzer properties get set by args
         args = self.parse_args(
@@ -127,9 +146,12 @@ class FactoryTest(TestCaseWithFactory):
             'sub1',
             'sub2',
         )
-        fuzzer = factory.create_fuzzer(args, device=self.device)
+        fuzzer = factory.create_fuzzer(args)
         self.assertEqual(fuzzer.package, 'fake-package2')
         self.assertEqual(fuzzer.executable, 'fake-target11')
+        self.assertEqual(
+            fuzzer.executable_url,
+            'fuchsia-pkg://fuchsia.com/fake-package2#meta/fake-target11.cmx')
         self.assertTrue(fuzzer.debug)
         self.assertTrue(fuzzer.foreground)
         self.assertTrue(fuzzer.monitor)

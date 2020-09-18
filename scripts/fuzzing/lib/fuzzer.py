@@ -52,14 +52,25 @@ class Fuzzer(object):
     # limitations).
     LOG_PATTERN = 'fuzz-[0-9].log'
 
-    def __init__(self, device, package, executable):
-        assert device, 'Fuzzer device not set.'
-        assert package, 'Fuzzer package name not set.'
-        assert executable, 'Fuzzer executable name not set.'
-        self._device = device
-        self._package = package
+    def __init__(self, factory, fuzz_spec):
+        assert factory, 'Factory not set.'
+        self._factory = factory
+        self._package = fuzz_spec['package']
+        self._package_url = fuzz_spec['package_url']
         self._package_path = None
-        self._executable = executable
+
+        if 'fuzzer' in fuzz_spec:
+            self._executable = fuzz_spec['fuzzer']
+            manifest = fuzz_spec['manifest']
+            self._is_test = False
+        elif 'fuzzer_test' in fuzz_spec:
+            # Infer the associated fuzzer metadata if it is currently being built as a fuzzer test.
+            self._executable = re.sub(r'_test$', '', fuzz_spec['fuzzer_test'])
+            manifest = re.sub(
+                r'_test\.cmx$', '.cmx', fuzz_spec['test_manifest'])
+            self._is_test = True
+
+        self._executable_url = '{}#meta/{}'.format(self._package_url, manifest)
         self._ns = Namespace(self)
         self._corpus = Corpus(self)
         self._dictionary = Dictionary(self)
@@ -69,27 +80,29 @@ class Fuzzer(object):
         self._subprocess_args = []
         self._debug = False
         self._foreground = False
-        self._output = self.buildenv.path(
-            'local', '{}_{}'.format(package, executable))
+        self._output = None
         self._logbase = None
 
     def __str__(self):
         return '{}/{}'.format(self.package, self.executable)
 
+    def __lt__(self, other):
+        return str(self) < str(other)
+
     @property
     def device(self):
         """The associated Device object."""
-        return self._device
+        return self._factory.device
 
     @property
     def buildenv(self):
         """Alias for device.buildenv."""
-        return self.device.buildenv
+        return self._factory.buildenv
 
     @property
     def host(self):
         """Alias for device.buildenv.host."""
-        return self.device.buildenv.host
+        return self._factory.host
 
     @property
     def package(self):
@@ -98,7 +111,7 @@ class Fuzzer(object):
 
     @property
     def package_url(self):
-        return 'fuchsia-pkg://fuchsia.com/{}'.format(self.package)
+        return self._package_url
 
     @property
     def package_path(self):
@@ -113,7 +126,11 @@ class Fuzzer(object):
 
     @property
     def executable_url(self):
-        return '{}#meta/{}.cmx'.format(self.package_url, self.executable)
+        return self._executable_url
+
+    @property
+    def is_test(self):
+        return self._is_test
 
     @property
     def libfuzzer_opts(self):
@@ -157,6 +174,9 @@ class Fuzzer(object):
     @property
     def output(self):
         """Path under which to write the results of fuzzing."""
+        if not self._output:
+            self._output = self.buildenv.path(
+                'local', '{}_{}'.format(self._package, self._executable))
         return self._output
 
     @output.setter
@@ -183,10 +203,41 @@ class Fuzzer(object):
     def debug(self, debug):
         self._debug = debug
 
-    def update(self, items):
-        for key, val in vars(Fuzzer).items():
-            if key in items and isinstance(val, property):
-                setattr(self, key, items[key])
+    def update(self, args):
+        """Updates the properties of this fuzzer from matching arguments."""
+        keys = [
+            key for key, val in vars(Fuzzer).items()
+            if isinstance(val, property) and val.fset
+        ]
+        for key, val in vars(args).items():
+            if key in keys and val is not None:
+                setattr(self, key, val)
+
+    def matches(self, name):
+        """Indicates if the given name matches part or all of this fuzzer's name.
+
+        Parameters:
+            name    The name to match. If the name is of the form 'x/y', it will match if 'x' is a
+                    substring of `package` and y is a substring of `executable`. It will also
+                    match if this is a fuzzer test, and y is a substring of `executable` + '_test'.
+                    Otherwise it will match if name is a substring of either `package` or
+                    `executable` (or again, `executable` + '_test' if a fuzzer test). A blank or
+                    empty name always matches.
+
+        Returns:
+            A boolean indicating if the name matches this instance.
+        """
+        if not name or name == '':
+            return True
+
+        # If this object is currently built as a fuzzer test, check against that, too.
+        executable = self.executable + '_test' if self.is_test else self.executable
+        if '/' not in name:
+            return name in self.package or name in executable
+        names = name.split('/')
+        if len(names) == 2:
+            return names[0] in self.package and names[1] in executable
+        raise ValueError('Malformed fuzzer name: ' + name)
 
     def is_resolved(self):
         if not self.device.reachable:
@@ -287,7 +338,7 @@ class Fuzzer(object):
             now = datetime.datetime.now().replace(microsecond=0)
             self._logbase = now.strftime('%Y-%m-%d-%H%M')
         logfile = 'fuzz-{}-{}.log'.format(self._logbase, job_num)
-        return os.path.join(self._output, logfile)
+        return os.path.join(self.output, logfile)
 
     def start(self):
         """Runs the fuzzer.

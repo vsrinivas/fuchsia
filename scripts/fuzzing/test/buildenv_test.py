@@ -16,13 +16,16 @@ class BuildEnvTest(TestCaseWithFactory):
 
     def test_fuchsia_dir(self):
         self.assertError(
-            lambda: BuildEnv(self.host, None), 'FUCHSIA_DIR not set.',
+            lambda: BuildEnv(self.factory), 'FUCHSIA_DIR not set.',
             'Have you sourced "scripts/fx-env.sh"?')
 
     def test_configure(self):
-        # Fails due to missing paths
         fuchsia_dir = 'test_configure'
-        buildenv = BuildEnv(self.host, fuchsia_dir)
+        self.host.mkdir(fuchsia_dir)
+        self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
+
+        # Fails due to missing paths
+        buildenv = BuildEnv(self.factory)
         build_dir = os.path.join(fuchsia_dir, 'build_dir')
         self.host.mkdir(build_dir)
 
@@ -76,33 +79,52 @@ class BuildEnvTest(TestCaseWithFactory):
     # Unit tests
 
     def test_read_fuzzers(self):
-        buildenv = self.factory.create_buildenv()
+        fuchsia_dir = 'test_read_fuzzers'
+        self.host.mkdir(fuchsia_dir)
+        self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
+        buildenv = BuildEnv(self.factory)
 
-        # Construct and parse both fuchsia and zircon style fuzzer metadata.
-        data = [
-            {
-                'fuzz_host': False,
-                'fuzzers': ['foo_fuzzer'],
-                'fuzzers_package': 'foo_fuzzers'
-            },
-            {
-                'fuzz_host': False,
-                'fuzzers': ['zx_fuzzer.asan', 'zx_fuzzer.ubsan'],
-                'fuzzers_package': 'zircon_fuzzers'
-            },
+        expected_fuzzers = [
+            'fake-package1/fake-target1',
+            'fake-package1/fake-target2',
+            'fake-package1/fake-target3',
+            'fake-package2/an-extremely-verbose-target-name',
+            'fake-package2/fake-target1',
+            'fake-package2/fake-target11',
+        ]
+        expected_fuzzer_tests = [
+            'fake-package1/fake-target4',
+            'fake-package1/fake-target5',
         ]
 
-        fuzzers_json = buildenv.path(buildenv.build_dir, 'fuzzers.json')
-        with self.host.open(fuzzers_json, 'w') as opened:
-            json.dump(data, opened)
+        # v1 doesn't include fuzzer tests
+        golden = 'data/v1.fuzzers.json'
+        self.host.add_golden(golden)
+        buildenv.read_fuzzers(golden)
+        fuzzers = [str(fuzzer) for fuzzer in buildenv.fuzzers()]
+        self.assertEqual(fuzzers, expected_fuzzers)
+        self.assertFalse(buildenv.fuzzer_tests())
 
-        buildenv.read_fuzzers(fuzzers_json)
-        self.assertIn(('foo_fuzzers', 'foo_fuzzer'), buildenv.fuzzers())
-        self.assertIn(('zircon_fuzzers', 'zx_fuzzer.asan'), buildenv.fuzzers())
-        self.assertIn(('zircon_fuzzers', 'zx_fuzzer.ubsan'), buildenv.fuzzers())
+        # v2 can select fuzzers...
+        golden = 'data/v2.fuzzers.json'
+        self.host.add_golden(golden)
+        buildenv.read_fuzzers(golden)
+
+        fuzzers = [str(fuzzer) for fuzzer in buildenv.fuzzers()]
+        self.assertEqual(fuzzers, expected_fuzzers)
+
+        # ...or fuzzer tests...
+        fuzzer_tests = [str(fuzzer) for fuzzer in buildenv.fuzzer_tests()]
+        self.assertEqual(fuzzer_tests, expected_fuzzer_tests)
+
+        # ...or both!
+        fuzzers = [
+            str(fuzzer) for fuzzer in buildenv.fuzzers(include_tests=True)
+        ]
+        self.assertEqual(
+            fuzzers, sorted(expected_fuzzers + expected_fuzzer_tests))
 
     def test_fuzzers(self):
-        self.assertEqual(len(self.buildenv.fuzzers('')), 6)
         self.assertEqual(len(self.buildenv.fuzzers('/')), 6)
         self.assertEqual(len(self.buildenv.fuzzers('fake')), 6)
         self.assertEqual(len(self.buildenv.fuzzers('package1')), 3)
@@ -115,8 +137,21 @@ class BuildEnvTest(TestCaseWithFactory):
         with self.assertRaises(ValueError):
             self.buildenv.fuzzers('a/b/c')
 
+    def test_fuzzer_tests(self):
+        self.assertEqual(len(self.buildenv.fuzzer_tests('/')), 2)
+        self.assertEqual(len(self.buildenv.fuzzer_tests('fake')), 2)
+        self.assertEqual(len(self.buildenv.fuzzer_tests('package1')), 2)
+        self.assertEqual(len(self.buildenv.fuzzer_tests('target1')), 0)
+        self.assertEqual(len(self.buildenv.fuzzer_tests('package2/target1')), 0)
+        self.assertEqual(
+            len(self.buildenv.fuzzer_tests('fake-package1/fake-target5')), 1)
+        self.assertEqual(len(self.buildenv.fuzzer_tests('1/5')), 1)
+        self.assertEqual(len(self.buildenv.fuzzer_tests('target4')), 1)
+        with self.assertRaises(ValueError):
+            self.buildenv.fuzzer_tests('a/b/c')
+
     def test_path(self):
-        fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
+        fuchsia_dir = 'fuchsia_dir'
         self.assertEqual(
             self.buildenv.path('bar', 'baz'),
             os.path.join(fuchsia_dir, 'bar', 'baz'))

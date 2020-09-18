@@ -23,7 +23,7 @@ class FakeHost(Host):
          selection:     Pre-selected option for a future call to choose().
     """
 
-    ENVVARS = {'FUCHSIA_DIR': 'fuchsia_dir'}
+    ENVVARS = {}
 
     def __init__(self):
         super(FakeHost, self).__init__()
@@ -141,6 +141,15 @@ class FakeHost(Host):
         temp_dir = 'temp_dir'
         self.mkdir(temp_dir)
         return temp_dir
+
+    def add_golden(self, name):
+        """Add a 'real' golden file in the test directory to the fake filesystem."""
+        pathname = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), name)
+        with open(pathname) as f:
+            golden = f.read()
+        with self.open(name, 'w') as f:
+            f.write(golden)
 
     # Other routines
 

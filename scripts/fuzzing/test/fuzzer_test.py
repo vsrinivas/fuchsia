@@ -252,7 +252,7 @@ class FuzzerTest(TestCaseWithFuzzer):
             self.set_outputs(cmd, [FuzzerTest.SYMBOLIZER_OUTPUT])
 
         # Ensure the output directory exists, but the log file doesn't
-        self.host.mkdir(self.fuzzer._output)
+        self.host.mkdir(self.fuzzer.output)
         self.assertFalse(
             self.host.isfile(
                 os.path.join(self.fuzzer.output, 'fuzz-latest.log')))

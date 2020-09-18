@@ -1,0 +1,100 @@
+[
+    {
+        "_COMMENT": "Simulate fuzzer('target1') in //src/fake/package1/BUILD.gn",
+        "label": "//src/fake/package1:target1",
+        "fuzzer": "fake-target1",
+        "manifest": "fake-target1.cmx"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('target2') in //src/fake/package1/BUILD.gn",
+        "label": "//src/fake/package1:target2",
+        "fuzzer": "fake-target2",
+        "manifest": "fake-target2.cmx"
+    },
+    {
+        "label": "//src/fake/package1:target2",
+        "corpus": "//src/fake/package1/target2-corpus"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('target3') in //src/fake/package1/BUILD.gn",
+        "label": "//src/fake/package1:target3",
+        "fuzzer": "fake-target3",
+        "manifest": "fake-target3.cmx"
+    },
+    {
+        "label": "//src/fake/package1:target3",
+        "corpus": "//src/fake/package1/target3-corpus"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('target1') in //src/fake/package2/BUILD.gn",
+        "label": "//src/fake/package2:target1",
+        "fuzzer": "fake-target1",
+        "manifest": "fake-target1.cmx"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('target11') in //src/fake/package2/BUILD.gn",
+        "label": "//src/fake/package2:target11",
+        "fuzzer": "fake-target11",
+        "manifest": "fake-target11.cmx"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('an-extremely-verbose-target-name') in //src/fake/package2/BUILD.gn",
+        "label": "//src/fake/package2:an-extremely-verbose-target-name",
+        "fuzzer": "an-extremely-verbose-target-name",
+        "manifest": "an-extremely-verbose-target-name.cmx"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('target4') in //src/fake/package1/BUILD.gn that is NOT instrumented",
+        "label": "//src/fake/package1:target4",
+        "fuzzer_test": "fake-target4_test",
+        "test_manifest": "fake-target4_test.cmx"
+    },
+    {
+        "_COMMENT": "Simulate fuzzer('target5') in //src/fake/package1/BUILD.gn that is NOT instrumented",
+        "label": "//src/fake/package1:target5",
+        "fuzzer_test": "fake-target5_test",
+        "test_manifest": "fake-target5_test.cmx"
+    },
+    {
+        "_COMMENT": "Simulate fuzzers_package('package1') in //src/fake/package1/BUILD.gn",
+        "label": "//src/fake/package1:target1",
+        "package": "fake-package1",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
+    },
+    {
+        "label": "//src/fake/package1:target2",
+        "package": "fake-package1",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
+    },
+    {
+        "label": "//src/fake/package1:target3",
+        "package": "fake-package1",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
+    },
+    {
+        "label": "//src/fake/package1:target4",
+        "package": "fake-package1",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
+    },
+    {
+        "label": "//src/fake/package1:target5",
+        "package": "fake-package1",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
+    },
+    {
+        "_COMMENT": "Simulate fuzzers_package('package2') in //src/fake/package2/BUILD.gn",
+        "label": "//src/fake/package2:target1",
+        "package": "fake-package2",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package2"
+    },
+    {
+        "label": "//src/fake/package2:an-extremely-verbose-target-name",
+        "package": "fake-package2",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package2"
+    },
+    {
+        "label": "//src/fake/package2:target11",
+        "package": "fake-package2",
+        "package_url": "fuchsia-pkg://fuchsia.com/fake-package2"
+    }
+]

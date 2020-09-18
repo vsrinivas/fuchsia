@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import errno
 import subprocess
 
 
@@ -73,6 +74,13 @@ class Corpus(object):
             cmd = ['gsutil', '-m', 'cp', gcs_url, temp_dir.pathname]
             try:
                 self.host.create_process(cmd).check_call()
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+                self.host.error(
+                    'Unable to find "gsutil", which is needed to download the corpus from GCS.',
+                    'You can skip downloading from GCS with the "--local" flag.'
+                )
             except subprocess.CalledProcessError:
                 self.host.error(
                     'Failed to download corpus from GCS.',

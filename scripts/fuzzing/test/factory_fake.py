@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import sys
+import json
 
 import test_env
 from lib.factory import Factory
@@ -27,47 +28,18 @@ class FakeFactory(Factory):
 
     def __init__(self):
         super(FakeFactory, self).__init__(host=FakeHost())
-        self._parser = None
-        self._buildenv = None
-        self._device = None
-        self._fuzzer = None
 
     # Factory created objects, lazily instantiated.
 
     @property
-    def parser(self):
-        """The associated ArgParser object."""
-        if not self._parser:
-            self._parser = self.create_parser()
-        return self._parser
-
-    @property
     def buildenv(self):
         """The associated BuildEnv object."""
-        if not self._buildenv:
-            self._buildenv = self.create_buildenv()
-        return self._buildenv
-
-    @property
-    def device(self):
-        """The associated Device object."""
-        if not self._device:
-            self._device = self.create_device()
-        return self._device
-
-    @property
-    def fuzzer(self):
-        """The most recently created Fuzzer object."""
-        assert self._fuzzer, 'No fuzzer created.'
-        return self._fuzzer
-
-    # Methods to create objects.
-
-    def create_buildenv(self):
-        """Returns the factory's build environment, creating it if needed."""
-        fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
+        if self._buildenv:
+            return self._buildenv
+        fuchsia_dir = 'fuchsia_dir'
         self.host.mkdir(fuchsia_dir)
-        buildenv = BuildEnv(self.host, fuchsia_dir)
+        self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
+        buildenv = BuildEnv(self)
         build_dir = 'build_dir'
         self.host.mkdir(buildenv.path(build_dir))
         self.host.touch(buildenv.path(build_dir, 'host_x64', 'symbolize'))
@@ -83,21 +55,18 @@ class FakeFactory(Factory):
         self.host.mkdir(buildenv.path(build_dir + '.zircon', '.build-id'))
         self.host.touch(buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
         buildenv.configure(build_dir)
-        buildenv.add_fuzzer('fake-package1', 'fake-target1')
-        buildenv.add_fuzzer('fake-package1', 'fake-target2')
-        buildenv.add_fuzzer('fake-package1', 'fake-target3')
-        buildenv.add_fuzzer('fake-package2', 'fake-target1')
-        buildenv.add_fuzzer('fake-package2', 'fake-target11')
-        buildenv.add_fuzzer('fake-package2', 'an-extremely-verbose-target-name')
-        return buildenv
+        golden = 'data/v2.fuzzers.json'
+        self.host.add_golden(golden)
+        buildenv.read_fuzzers(golden)
+        self._buildenv = buildenv
+        return self._buildenv
 
-    def create_device(self):
-        """Returns the factory's device, creating it if needed."""
-        device = Device(self.create_buildenv(), '::1')
+    @property
+    def device(self):
+        """The associated Device object."""
+        if self._device:
+            return self._device
+        device = Device(self, '::1')
         device.configure()
-        return device
-
-    def create_fuzzer(self, args, device=None):
-        self._fuzzer = super(FakeFactory, self).create_fuzzer(
-            args, device=device)
-        return self.fuzzer
+        self._device = device
+        return self._device

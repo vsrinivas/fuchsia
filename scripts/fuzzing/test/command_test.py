@@ -20,25 +20,59 @@ class CommandTest(TestCaseWithFuzzer):
         # No match
         args = self.parse_args('list', 'no/match')
         command.list_fuzzers(args, self.factory)
-        self.assertLogged('No matching fuzzers.')
+        self.assertLogged('No matching fuzzers found for "no/match".')
 
         # Multiple matches
+        args = self.parse_args('list', 'fake-package2')
+        command.list_fuzzers(args, self.factory)
+        self.assertLogged(
+            'Found 3 matching fuzzers for "fake-package2":',
+            '  fake-package2/an-extremely-verbose-target-name',
+            '  fake-package2/fake-target1',
+            '  fake-package2/fake-target11',
+        )
+
+        # Multiple matches, with fuzzer tests.
         args = self.parse_args('list', 'fake-package1')
         command.list_fuzzers(args, self.factory)
         self.assertLogged(
-            'Found 3 matching fuzzers:',
+            'Found 2 matching fuzzer tests for "fake-package1":',
+            '  fake-package1/fake-target4_test',
+            '  fake-package1/fake-target5_test',
+            '',
+            'These tests correspond to fuzzers, but were not selected by the build arguments',
+            'to be built with a fuzzer toolchain variant.',
+            '',
+            'To select them, you can use `fx set ... --fuzz-with <sanitizer>`.',
+            'See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/build-a-fuzzer',
+            'for additional details.',
+            '',
+            'Found 3 matching fuzzers for "fake-package1":',
             '  fake-package1/fake-target1',
             '  fake-package1/fake-target2',
             '  fake-package1/fake-target3',
         )
 
-        # Exact match
+        # Exact match of a fuzzer
         args = self.parse_args('list', 'fake-package1/fake-target1')
         command.list_fuzzers(args, self.factory)
         self.assertLogged(
-            'Found 1 matching fuzzers:',
+            'Found 1 matching fuzzer for "fake-package1/fake-target1":',
             '  fake-package1/fake-target1',
         )
+
+        # Exact match of a fuzzer test
+        args = self.parse_args('list', 'fake-package1/fake-target4')
+        command.list_fuzzers(args, self.factory)
+        self.assertLogged(
+            'Found 1 matching fuzzer test for "fake-package1/fake-target4":',
+            '  fake-package1/fake-target4_test', '',
+            'This test corresponds to a fuzzer, but was not selected by the build arguments',
+            'to be built with a fuzzer toolchain variant.', '',
+            'To select them, you can use `fx set ... --fuzz-with <sanitizer>`.',
+            'See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/build-a-fuzzer',
+            'for additional details.', '',
+            'No matching fuzzers found for "fake-package1/fake-target4".')
 
     def test_start_fuzzer(self):
         name = str(self.fuzzer)
