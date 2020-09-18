@@ -147,6 +147,21 @@ impl FrameTypeMarker {
             3
         }
     }
+
+    /// Returns true if the `frame_type` is expected to contain a credit octet.
+    ///
+    /// `credit_based_flow` indicates whether credit flow control is enabled for the session.
+    /// `poll_final` is the P/F bit associated with the Control Field of the frame.
+    /// `dlci` is the DLCI associated with the frame.
+    ///
+    /// RFCOMM 6.5.2 describes the RFCOMM specifics for credit-based flow control. Namely,
+    /// "...It does not apply to DLCI 0 or to non-UIH frames."
+    fn has_credit_octet(&self, credit_based_flow: bool, poll_final: bool, dlci: DLCI) -> bool {
+        *self == FrameTypeMarker::UnnumberedInfoHeaderCheck
+            && !dlci.is_mux_control()
+            && credit_based_flow
+            && poll_final
+    }
 }
 
 /// A UIH Frame that contains user data.
@@ -358,12 +373,18 @@ pub struct Frame {
     poll_final: bool,
     /// Whether this frame is a Command or Response frame.
     command_response: CommandResponse,
+    /// The credits associated with this frame. Credits are only applicable to UIH frames
+    /// when credit-based flow control is enabled. See RFCOMM 6.5.
+    credits: Option<u8>,
 }
 
 impl Frame {
     /// Attempts to parse the provided `buf` into a Frame.
-    // TODO(58668): Take Credit Based Flow into account when parsing UIH frames.
-    pub fn parse(role: Role, buf: &[u8]) -> Result<Self, FrameParseError> {
+    ///
+    /// `role` is the current Role of the RFCOMM Session.
+    /// `credit_based_flow` indicates whether credit-based flow control is turned on for this
+    /// Session.
+    pub fn parse(role: Role, credit_based_flow: bool, buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() < MIN_FRAME_SIZE {
             return Err(FrameParseError::BufferTooSmall);
         }
@@ -400,12 +421,17 @@ impl Frame {
         }
         trace!("Frame InformationLength is {:?}", length);
 
-        // TODO(58668): Check for credits.
-
-        // The header size depends on the Information Length size and the Credit Based Flow.
+        // The header size depends on the Information Length size and the (optional) credits octet.
         // Address (1) + Control (1) + Length (1 or 2)
-        // TODO(58668): Factor in credits for this calculation.
-        let header_size = 2 + if is_two_octet_length { 2 } else { 1 };
+        let mut header_size = 2 + if is_two_octet_length { 2 } else { 1 };
+        let mut credits = None;
+        if frame_type.has_credit_octet(credit_based_flow, poll_final, dlci) {
+            if buf.len() < header_size {
+                return Err(FrameParseError::BufferTooSmall);
+            }
+            credits = Some(buf[header_size]);
+            header_size += 1;
+        }
 
         // Check the FCS before parsing the body of the packet.
         let fcs_index = header_size + usize::from(length);
@@ -420,14 +446,15 @@ impl Frame {
         let data = &buf[header_size..fcs_index];
         let data = FrameData::decode(&frame_type, &dlci, data)?;
 
-        Ok(Self { role, dlci, data, poll_final, command_response })
+        Ok(Self { role, dlci, data, poll_final, command_response, credits })
     }
 }
 
 impl Encodable for Frame {
     fn encoded_len(&self) -> usize {
-        // Address + Control + FCS + 1 or 2 octets for Length + Frame data + FCS.
-        3 + if is_two_octet_length(self.data.encoded_len()) { 2 } else { 1 }
+        // Address + Control + FCS + (optional) Credits + 1 or 2 octets for Length + Frame data.
+        3 + self.credits.map_or(0, |_| 1)
+            + if is_two_octet_length(self.data.encoded_len()) { 2 } else { 1 }
             + self.data.encoded_len()
     }
 
@@ -482,7 +509,15 @@ impl Encodable for Frame {
         }
 
         // Address + Control + Information.
-        let header_size = 2 + if is_two_octet_length { 2 } else { 1 };
+        let mut header_size = 2 + if is_two_octet_length { 2 } else { 1 };
+
+        // Encode the credits for this frame, if applicable.
+        let credit_based_flow = self.credits.is_some();
+        if self.data.marker().has_credit_octet(credit_based_flow, self.poll_final, self.dlci) {
+            buf[header_size] = self.credits.unwrap();
+            header_size += 1;
+        }
+
         let fcs_idx = header_size + data_length as usize;
 
         // Frame data.
@@ -518,10 +553,42 @@ mod tests {
     }
 
     #[test]
+    fn test_has_credit_octet() {
+        let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
+        let pf = true;
+        let credit_based_flow = true;
+        let dlci = DLCI::try_from(3).unwrap();
+        assert!(frame_type.has_credit_octet(credit_based_flow, pf, dlci));
+
+        let pf = false;
+        let credit_based_flow = true;
+        assert!(!frame_type.has_credit_octet(credit_based_flow, pf, dlci));
+
+        let pf = true;
+        let credit_based_flow = false;
+        assert!(!frame_type.has_credit_octet(credit_based_flow, pf, dlci));
+
+        let pf = true;
+        let credit_based_flow = true;
+        let dlci = DLCI::try_from(0).unwrap(); // Mux DLCI.
+        assert!(!frame_type.has_credit_octet(credit_based_flow, pf, dlci));
+
+        let pf = false;
+        let credit_based_flow = false;
+        assert!(!frame_type.has_credit_octet(credit_based_flow, pf, dlci));
+
+        let frame_type = FrameTypeMarker::SetAsynchronousBalancedMode;
+        let pf = true;
+        let credit_based_flow = true;
+        let dlci = DLCI::try_from(5).unwrap();
+        assert!(!frame_type.has_credit_octet(credit_based_flow, pf, dlci));
+    }
+
+    #[test]
     fn test_parse_too_small_frame() {
         let role = Role::Unassigned;
         let buf: &[u8] = &[0x00];
-        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(Frame::parse(role, false, buf), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -533,7 +600,7 @@ mod tests {
             0b00000001, // Length Field - Bit0 = 1: Indicates one octet length.
             0x00,       // Random FCS.
         ];
-        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::InvalidDLCI(1)));
+        assert_matches!(Frame::parse(role, false, buf), Err(FrameParseError::InvalidDLCI(1)));
     }
 
     /// It's possible that a remote device sends a packet with an invalid frame.
@@ -547,7 +614,7 @@ mod tests {
             0b00000001, // Length Field - Bit1 = 0 indicates 1 octet length.
             0x00,       // Random FCS.
         ];
-        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::UnsupportedFrameType));
+        assert_matches!(Frame::parse(role, false, buf), Err(FrameParseError::UnsupportedFrameType));
     }
 
     /// It's possible that the remote peer sends a packet for a valid frame, but the session
@@ -561,7 +628,7 @@ mod tests {
             0b00000001, // Length Field - Bit1 = 0 indicates 1 octet length.
             0x00,       // Random FCS.
         ];
-        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::InvalidFrame));
+        assert_matches!(Frame::parse(role, false, buf), Err(FrameParseError::InvalidFrame));
     }
 
     #[test]
@@ -574,7 +641,7 @@ mod tests {
             0b00000001, // Second octet of length.
                         // Missing FCS.
         ];
-        assert_matches!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(Frame::parse(role, false, buf), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -590,13 +657,14 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         buf.push(fcs);
 
-        let res = Frame::parse(role, &buf[..]).unwrap();
+        let res = Frame::parse(role, false, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(0).unwrap(),
             data: FrameData::SetAsynchronousBalancedMode,
             poll_final: false,
             command_response: CommandResponse::Command,
+            credits: None,
         };
         assert_eq!(res, expected_frame);
     }
@@ -614,13 +682,14 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         buf.push(fcs);
 
-        let res = Frame::parse(role, &buf[..]).unwrap();
+        let res = Frame::parse(role, false, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
             data: FrameData::SetAsynchronousBalancedMode,
             poll_final: false,
             command_response: CommandResponse::Response,
+            credits: None,
         };
         assert_eq!(res, expected_frame);
     }
@@ -639,7 +708,7 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         buf.push(fcs);
 
-        assert_matches!(Frame::parse(role, &buf[..]), Err(FrameParseError::BufferTooSmall));
+        assert_matches!(Frame::parse(role, false, &buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
@@ -657,7 +726,7 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         buf.push(fcs);
 
-        let res = Frame::parse(role, &buf[..]).unwrap();
+        let res = Frame::parse(role, false, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
@@ -669,6 +738,7 @@ mod tests {
             })),
             poll_final: false,
             command_response: CommandResponse::Response,
+            credits: None,
         };
         assert_eq!(res, expected_frame);
     }
@@ -691,7 +761,7 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         let buf = [buf, length_data.clone(), vec![fcs]].concat();
 
-        let res = Frame::parse(role, &buf[..]).unwrap();
+        let res = Frame::parse(role, false, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
@@ -700,6 +770,7 @@ mod tests {
             })),
             poll_final: false,
             command_response: CommandResponse::Response,
+            credits: None,
         };
         assert_eq!(res, expected_frame);
     }
@@ -710,7 +781,7 @@ mod tests {
         let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
         let mut buf = vec![
             0b00000011, // Address Field - EA = 1, C/R = 1, Mux DLCI = 0.
-            0b11111111, // Control Field - UIH command with P/F = 0.
+            0b11111111, // Control Field - UIH command with P/F = 1.
             0b00000111, // Length Field - Bit1 = 1 Indicates one octet length = 3.
             0b10010001, // Data octet #1 - RPN command.
             0b00000011, // Data octet #2 - RPN Command length = 1.
@@ -720,7 +791,7 @@ mod tests {
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
         buf.push(fcs);
 
-        let res = Frame::parse(role, &buf[..]).unwrap();
+        let res = Frame::parse(role, false, &buf[..]).unwrap();
         let expected_mux_command = MuxCommand {
             params: MuxCommandParams::RemotePortNegotiation(RemotePortNegotiationParams {
                 dlci: DLCI::try_from(7).unwrap(),
@@ -734,6 +805,38 @@ mod tests {
             data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(expected_mux_command)),
             poll_final: true,
             command_response: CommandResponse::Response,
+            credits: None,
+        };
+        assert_eq!(res, expected_frame);
+    }
+
+    #[test]
+    fn test_parse_uih_frame_with_credits() {
+        let role = Role::Responder;
+        let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
+        let credit_based_flow = true;
+        let mut buf = vec![
+            0b00011111, // Address Field - EA = 1, C/R = 1, User DLCI = 7.
+            0b11111111, // Control Field - UIH command with P/F = 1.
+            0b00000111, // Length Field - Bit1 = 1 Indicates one octet length = 3.
+            0b00000101, // Credits Field = 5.
+            0b00000000, // UserData octet #1.
+            0b00000001, // UserData octet #2.
+            0b00000010, // UserData octet #3.
+        ];
+        // Calculate the FCS for the first two bytes, since UIH frame.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        buf.push(fcs);
+
+        let res = Frame::parse(role, credit_based_flow, &buf[..]).unwrap();
+        let expected_user_data = UserData { information: vec![0x00, 0x01, 0x02] };
+        let expected_frame = Frame {
+            role,
+            dlci: DLCI::try_from(7).unwrap(),
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(expected_user_data)),
+            poll_final: true,
+            command_response: CommandResponse::Response,
+            credits: Some(5),
         };
         assert_eq!(res, expected_frame);
     }
@@ -746,6 +849,7 @@ mod tests {
             data: FrameData::SetAsynchronousBalancedMode,
             poll_final: false,
             command_response: CommandResponse::Command,
+            credits: None,
         };
         let mut buf = [];
         assert_matches!(frame.encode(&mut buf[..]), Err(FrameParseError::BufferTooSmall));
@@ -760,6 +864,7 @@ mod tests {
             data: FrameData::SetAsynchronousBalancedMode,
             poll_final: false,
             command_response: CommandResponse::Command,
+            credits: None,
         };
         let mut buf = vec![0; frame.encoded_len()];
         assert_matches!(frame.encode(&mut buf[..]), Err(FrameParseError::InvalidFrame));
@@ -773,6 +878,7 @@ mod tests {
             data: FrameData::SetAsynchronousBalancedMode,
             poll_final: true,
             command_response: CommandResponse::Command,
+            credits: None,
         };
         let mut buf = vec![0; frame.encoded_len()];
         assert!(frame.encode(&mut buf[..]).is_ok());
@@ -798,6 +904,7 @@ mod tests {
             })),
             poll_final: true,
             command_response: CommandResponse::Command,
+            credits: Some(8),
         };
         let mut buf = vec![0; frame.encoded_len()];
         assert!(frame.encode(&mut buf[..]).is_ok());
@@ -805,6 +912,7 @@ mod tests {
             0b00001111, // Address Field: DLCI = 3, C/R = 1, E/A = 1.
             0b11111111, // Control Field - UIH command with P/F = 1.
             0b00000101, // Length Field - Bit1 = 1 Indicates one octet length = 2.
+            0b00001000, // Credit Field - Credits = 8.
             0b00000001, // Data octet #1.
             0b00000010, // Data octet #2.
             0b11110011, // FCS - precomputed.
@@ -827,6 +935,7 @@ mod tests {
             data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_command)),
             poll_final: false,
             command_response: CommandResponse::Command,
+            credits: None,
         };
         let mut buf = vec![0; frame.encoded_len()];
         assert!(frame.encode(&mut buf[..]).is_ok());
