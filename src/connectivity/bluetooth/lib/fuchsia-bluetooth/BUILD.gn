@@ -42,6 +42,7 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:pretty",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",

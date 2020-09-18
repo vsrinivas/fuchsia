@@ -333,7 +333,7 @@ struct BredrDataDef {
     pub role_preference: Option<bt::ConnectionRole>,
     #[serde(with = "OptionPeerKeyDef")]
     pub link_key: Option<sys::PeerKey>,
-    #[serde(skip)]
+    #[serde(default)] // Accept legacy stores that didn't serialize `services`.
     pub services: Vec<Uuid>,
 }
 option_encoding!(OptionBredrDataDef, BredrData, "BredrDataDef");
@@ -474,7 +474,7 @@ mod tests {
                 },
                 BredrData {
                     role_preference: Some(bt::ConnectionRole::Follower),
-                    services: vec![],
+                    services: vec![Uuid::new16(0x110a), Uuid::new16(0x110b)],
                     link_key: Some(sys::PeerKey {
                         security: sys::SecurityProperties {
                             authenticated: true,
@@ -555,7 +555,11 @@ mod tests {
                         \"encryptionKeySize\":16\
                     },\
                     \"value\":[9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]\
-                }\
+                },\
+                \"services\":[\
+                    \"0000110a-0000-1000-8000-00805f9b34fb\",\
+                    \"0000110b-0000-1000-8000-00805f9b34fb\"\
+                ]\
             }\
         }";
         assert_eq!(expected, serialized);
@@ -623,7 +627,11 @@ mod tests {
                          "encryptionKeySize": 16
                      },
                      "value": [9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]
-                 }
+                 },
+                 "services":[
+                    "0000110a-0000-1000-8000-00805f9b34fb",
+                    "0000110b-0000-1000-8000-00805f9b34fb"
+                 ]
              }
         }"#;
 
@@ -654,6 +662,39 @@ mod tests {
             Err(format!("transport specific bonding data required")),
             deserialized.map_err(|e| format!("{:?}", e))
         );
+    }
+
+    #[test]
+    fn deserialize_omitted_bredr_services() {
+        // bredr.services was not serialized in past versions, so this tests that deserializing
+        // JSON that completely omits the field is OK.
+        let json_input = r#"{
+             "identifier": 1234,
+             "address":{
+                "type": "public",
+                "value": [6,5,4,3,2,1]
+             },
+             "hostAddress":{
+                "type": "public",
+                "value": [255,238,221,204,187,170]
+             },
+             "name": "Device Name",
+             "le": null,
+             "bredr": {
+                 "rolePreference": "follower",
+                 "linkKey": {
+                     "security": {
+                         "authenticated": true,
+                         "secureConnections": true,
+                         "encryptionKeySize": 16
+                     },
+                     "value": [9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]
+                 }
+             }
+        }"#;
+
+        let deserialized = BondingDataDeserializer::from_json(json_input).unwrap();
+        assert!(deserialized.bredr().unwrap().services.is_empty());
     }
 
     #[test]
