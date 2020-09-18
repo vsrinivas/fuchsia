@@ -16,10 +16,7 @@ group("controller") {
 # All test targets.
 group("test") {
   testonly = true
-  deps = [
-    ":controller_test",
-    ":nhlt-fuzzer",
-  ]
+  deps = [ ":controller_test" ]
 }
 
 source_set("src") {
