@@ -167,6 +167,17 @@ class ArgParser(argparse.ArgumentParser):
         analyze_parser._add_libfuzzer_extras()
         analyze_parser.set_defaults(command=command.analyze_fuzzer)
 
+        update_parser = self._add_parser('update')
+        update_parser.description = [
+            'Update the BUILD.gn file for a fuzzer corpus.'
+        ]
+
+        update_parser.help = 'Update the BUILD.gn file for a fuzzer corpus.'
+        update_parser._add_output_option()
+        update_parser._add_verbose_flag()
+        update_parser._add_name_argument(required=True)
+        update_parser.set_defaults(command=command.update_corpus)
+
         unittest_parser = self._add_parser('unittest')
         unittest_parser.description = [
             'Run the unittests for this tool. This runs all tests from all test cases. To run',

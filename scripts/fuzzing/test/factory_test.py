@@ -132,6 +132,17 @@ class FactoryTest(TestCaseWithFactory):
             fuzzer.executable_url,
             'fuchsia-pkg://fuchsia.com/fake-package2#meta/fake-target11.cmx')
 
+        # Infer from test
+        args = self.parse_args('check', '1/4')
+        self.assertError(
+            lambda: factory.create_fuzzer(args),
+            'No matching fuzzers found.',
+            'Try "fx fuzz list".',
+        )
+        fuzzer = factory.create_fuzzer(args, include_tests=True)
+        self.assertEqual(fuzzer.package, 'fake-package1')
+        self.assertEqual(fuzzer.executable, 'fake-target4')
+
         # Fuzzer properties get set by args
         args = self.parse_args(
             'start',

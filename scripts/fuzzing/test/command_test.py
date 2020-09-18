@@ -253,6 +253,57 @@ class CommandTest(TestCaseWithFuzzer):
         self.assertEqual(
             self.dictionary.nspath, self.fuzzer.ns.data(local_dict))
 
+    def test_update_corpus(self):
+        # This test relies on data from "test/data/v2.fuzzers.json".
+        # Fuzzer without corpus directory specified in its metadata.
+        args = self.parse_args('update', '1/1')
+        fuzzer = self.create_fuzzer('1/1')
+        self.assertError(
+            lambda: command.update_corpus(args, self.factory),
+            'No corpus set for {}.'.format(str(fuzzer)))
+
+        # Fuzzer with empty corpus
+
+        args = self.parse_args('update', '1/2')
+        fuzzer = self.create_fuzzer('1/2')
+        corpus_dir = self.buildenv.path(fuzzer.corpus.srcdir)
+        build_gn = self.buildenv.path(corpus_dir, 'BUILD.gn')
+        self.host.mkdir(corpus_dir)
+
+        self.assertFalse(self.host.isfile(build_gn))
+        command.update_corpus(args, self.factory)
+        self.assertLogged(
+            'Empty corpus added.', '',
+            '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
+        self.assertTrue(self.host.isfile(build_gn))
+
+        # Fuzzer with explicit GN file.
+        build_gn = '//src/fake/new.gn'
+        args = self.parse_args('update', '-o', build_gn, '1/3')
+        fuzzer = self.create_fuzzer('1/3')
+        corpus_dir = self.buildenv.path(fuzzer.corpus.srcdir)
+        build_gn = self.buildenv.path(build_gn)
+        self.host.mkdir(corpus_dir)
+        self.host.touch(self.buildenv.path(corpus_dir, 'foo'))
+
+        self.assertFalse(self.host.isfile(build_gn))
+        command.update_corpus(args, self.factory)
+        self.assertLogged(
+            'Added:', '  package1/target3-corpus/foo', '',
+            '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
+        self.assertTrue(self.host.isfile(build_gn))
+
+        # Fuzzer not currently built as fuzzer
+        args = self.parse_args('update', '1/5')
+        fuzzer = self.create_fuzzer('1/5', include_tests=True)
+        corpus_dir = self.buildenv.path(fuzzer.corpus.srcdir)
+        self.host.mkdir(corpus_dir)
+        self.host.touch(self.buildenv.path(corpus_dir, 'bar'))
+        command.update_corpus(args, self.factory)
+        self.assertLogged(
+            'Added:', '  bar', '',
+            '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,7 +18,7 @@ class DeviceTest(TestCaseWithFactory):
     # This to avoid having the factory add SSH options.
 
     def test_ssh_config(self):
-        device = Device(self.factory, '::1')
+        device = Device(self.factory, addr='::1')
         self.assertFalse(device.ssh_config)
 
         with self.assertRaises(ValueError):
@@ -29,7 +29,7 @@ class DeviceTest(TestCaseWithFactory):
         self.assertEqual(['-F', ssh_config], device.ssh_opts())
 
     def test_ssh_identity(self):
-        device = Device(self.factory, '::1')
+        device = Device(self.factory, addr='::1')
         self.assertFalse(device.ssh_identity)
 
         with self.assertRaises(ValueError):
@@ -40,7 +40,7 @@ class DeviceTest(TestCaseWithFactory):
         self.assertEqual(['-i', ssh_identity], device.ssh_opts())
 
     def test_ssh_option(self):
-        device = Device(self.factory, '::1')
+        device = Device(self.factory, addr='::1')
         self.assertEqual(device.ssh_options, [])
 
         device.ssh_options = ['StrictHostKeyChecking no']
@@ -54,7 +54,7 @@ class DeviceTest(TestCaseWithFactory):
             ], device.ssh_opts())
 
     def test_ssh_verbosity(self):
-        device = Device(self.factory, '::1')
+        device = Device(self.factory, addr='::1')
         self.assertEqual(device.ssh_verbosity, 0)
 
         with self.assertRaises(ValueError):
@@ -88,7 +88,7 @@ class DeviceTest(TestCaseWithFactory):
         self.assertSsh(*cmd)
 
     def test_configure(self):
-        device = Device(self.factory, '::1')
+        device = Device(self.factory, addr='::1')
         device.configure()
         self.assertEqual(
             device.ssh_config,

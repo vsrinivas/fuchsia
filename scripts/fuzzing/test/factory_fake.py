@@ -66,7 +66,7 @@ class FakeFactory(Factory):
         """The associated Device object."""
         if self._device:
             return self._device
-        device = Device(self, '::1')
+        device = Device(self, addr='::1')
         device.configure()
         self._device = device
         return self._device

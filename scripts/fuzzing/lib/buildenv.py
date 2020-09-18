@@ -224,8 +224,11 @@ class BuildEnv(object):
 
     def path(self, *segments):
         """Returns absolute path to a path in the build environment."""
+        assert segments, 'No path segments provided.'
         joined = os.path.join(*segments)
-        if not joined.startswith(self.fuchsia_dir):
+        if joined.startswith('//'):
+            joined = os.path.join(self.fuchsia_dir, joined[2:])
+        elif not joined.startswith(self.fuchsia_dir):
             joined = os.path.join(self.fuchsia_dir, joined)
         return joined
 

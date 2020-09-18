@@ -56,6 +56,10 @@
         "test_manifest": "fake-target5_test.cmx"
     },
     {
+        "label": "//src/fake/package1:target5",
+        "corpus": "//src/fake/package1/target5-corpus"
+    },
+    {
         "_COMMENT": "Simulate fuzzers_package('package1') in //src/fake/package1/BUILD.gn",
         "label": "//src/fake/package1:target1",
         "package": "fake-package1",

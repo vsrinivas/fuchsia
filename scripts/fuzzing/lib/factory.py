@@ -76,27 +76,26 @@ class Factory(object):
             return self._device
         pathname = '{}.device'.format(self.buildenv.build_dir)
         device_name = self.host.readfile(pathname, missing_ok=True)
-        addr = self.buildenv.find_device(device_name)
-        device = Device(self, addr)
+        device = Device(self, name=device_name)
         device.configure()
         self._device = device
         return self._device
 
-    def create_fuzzer(self, args):
+    def create_fuzzer(self, args, include_tests=False):
         """Constructs a Fuzzer from command line arguments, showing a
         disambiguation menu if specified name matches more than one fuzzer."""
-        matches = self.buildenv.fuzzers(args.name)
-        if not matches:
+        fuzzers = self.buildenv.fuzzers(args.name, include_tests=include_tests)
+        if not fuzzers:
             self.host.error('No matching fuzzers found.', 'Try "fx fuzz list".')
-        if len(matches) > 1:
+        if len(fuzzers) > 1:
             choices = {}
-            for fuzzer in matches:
+            for fuzzer in fuzzers:
                 choices[str(fuzzer)] = fuzzer
             self.host.echo('More than one match found.')
             prompt = 'Please pick one from the list'
             choice = self.host.choose(prompt, sorted(choices.keys()))
             fuzzer = choices[choice]
         else:
-            fuzzer = matches[0]
+            fuzzer = fuzzers[0]
         fuzzer.update(args)
         return fuzzer

@@ -138,6 +138,23 @@ def analyze_fuzzer(args, factory):
     fuzzer.analyze()
 
 
+def update_corpus(args, factory):
+    """Implementation of "fx fuzz update"."""
+    # Factory.create_fuzzer interprets args.output as the place to store logs, which is not what we
+    # want here.
+    build_gn = args.output
+    args.output = None
+    fuzzer = factory.create_fuzzer(args, include_tests=True)
+    elems = fuzzer.corpus.generate_buildfile(build_gn=build_gn)
+    if len(elems) == 0:
+        factory.host.echo('Empty corpus added.')
+    else:
+        factory.host.echo('Added:')
+        for elem in elems:
+            factory.host.echo('  ' + elem)
+    factory.host.echo('', '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
+
+
 def _run_tests(pattern, factory):
     lib_dir = os.path.dirname(os.path.abspath(__file__))
     test_dir = os.path.join(os.path.dirname(lib_dir), 'test')

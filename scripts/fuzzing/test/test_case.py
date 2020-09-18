@@ -250,9 +250,11 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
 
     def create_fuzzer(self, *args, **kwargs):
         resolve = kwargs.pop('resolve', True)
+        include_tests = kwargs.pop('include_tests', False)
         assert not kwargs, 'Unexpected keyword argument(s): {}'.format(kwarg)
         args = self.parse_args(*args)
-        self._fuzzer = self.factory.create_fuzzer(args)
+        self._fuzzer = self.factory.create_fuzzer(
+            args, include_tests=include_tests)
         if resolve:
             self.resolve_fuzzer()
         else:

@@ -19,6 +19,7 @@ class Device(object):
 
        Attributes:
          buildenv:         The associated BuildEnv object for this device.
+         name:             The device's name, as in `fx list-devices`.
          addr:             The device's IPv6 address.
          port:             TCP port number that sshd is listening on.
          ssh_config:       Path to an SSH configuration file.
@@ -27,10 +28,10 @@ class Device(object):
          ssh_verbosity:    How verbose SSH processes are, from 0 to 3.
     """
 
-    def __init__(self, factory, addr):
+    def __init__(self, factory, name=None, addr=None):
         assert factory, 'Factory for device not set.'
-        assert addr, 'Device address not set.'
         self._factory = factory
+        self._name = name
         self._addr = addr
         self._ssh_options = {}
         self._ssh_config_options = []
@@ -51,6 +52,8 @@ class Device(object):
     @property
     def addr(self):
         """IPv6 address of the device."""
+        if not self._addr:
+            self._addr = self.buildenv.find_device(self._name)
         return self._addr
 
     @property

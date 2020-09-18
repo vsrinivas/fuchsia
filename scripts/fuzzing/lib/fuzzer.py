@@ -72,7 +72,7 @@ class Fuzzer(object):
 
         self._executable_url = '{}#meta/{}'.format(self._package_url, manifest)
         self._ns = Namespace(self)
-        self._corpus = Corpus(self)
+        self._corpus = Corpus(self, fuzz_spec.get('corpus'))
         self._dictionary = Dictionary(self)
         self._options = {'artifact_prefix': self.ns.data()}
         self._libfuzzer_opts = {}

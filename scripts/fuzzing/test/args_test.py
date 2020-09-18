@@ -49,6 +49,7 @@ class ArgsTest(TestCaseWithFactory):
             '  start               Start a specific fuzzer.',
             '  stop                Stop a specific fuzzer.',
             '  unittest            Run the unittests for this tool.',
+            '  update              Update the BUILD.gn file for a fuzzer corpus.',
             '',
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
             'See also "fx help fuzz" for global "fx" options.',

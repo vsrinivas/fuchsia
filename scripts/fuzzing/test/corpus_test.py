@@ -74,6 +74,119 @@ class CorpusTest(TestCaseWithFuzzer):
         sizes = self.corpus.measure()
         self.assertEqual(sizes, (2, 1 + 1728))
 
+    def test_generate_buildfile(self):
+        # Fuzzer without corpus directory specified in its metadata.
+        fuzzer1 = self.create_fuzzer('fake-package1/fake-target1')
+        self.assertError(
+            lambda: fuzzer1.corpus.generate_buildfile(),
+            'No corpus set for {}.'.format(str(fuzzer1)))
+
+        # Missing directory
+        fuzzer2 = self.create_fuzzer('fake-package1/fake-target2')
+        corpus_dir = self.buildenv.path(fuzzer2.corpus.srcdir)
+        self.assertError(
+            lambda: fuzzer2.corpus.generate_buildfile(),
+            'No such directory: {}'.format(corpus_dir))
+
+        # Fuzzer with empty corpus
+        build_gn = self.buildenv.path(corpus_dir, 'BUILD.gn')
+        self.host.mkdir(corpus_dir)
+        self.assertFalse(self.host.isfile(build_gn))
+        self.assertEqual(fuzzer2.corpus.generate_buildfile(), [])
+        self.assertTrue(self.host.isfile(build_gn))
+
+        with self.host.open(build_gn) as f:
+            contents = f.read()
+        self.assertNotIn('foo,', contents)
+        self.assertNotIn('bar,', contents)
+        self.assertNotIn('baz,', contents)
+        self.assertIn('sources = []', contents)
+        self.assertIn(
+            'outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(
+                fuzzer2.executable), contents)
+
+        # Add elements to corpus and update
+        self.host.touch(self.buildenv.path(corpus_dir, 'foo'))
+        self.host.touch(self.buildenv.path(corpus_dir, 'bar'))
+        self.assertEqual(fuzzer2.corpus.generate_buildfile(), ['bar', 'foo'])
+        self.assertTrue(self.host.isfile(build_gn))
+        with self.host.open(build_gn) as f:
+            contents = f.read()
+        self.assertIn('"foo",', contents)
+        self.assertIn('"bar",', contents)
+        self.assertNotIn('baz,', contents)
+        self.assertIn(
+            'outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(
+                fuzzer2.executable), contents)
+
+        # Use an existing GN file in a different location.
+        self.host.remove(build_gn)
+        build_gn_dir = self.buildenv.path('src', 'fake')
+        build_gn = os.path.join(build_gn_dir, 'new.gn')
+        corpus_relpath2 = os.path.relpath(corpus_dir, build_gn_dir)
+        with self.host.open(build_gn, 'w') as f:
+            f.write('some existing data\n')
+            f.write('more existing data\n')
+        self.assertEqual(
+            fuzzer2.corpus.generate_buildfile(build_gn=build_gn), [
+                '{}/bar'.format(corpus_relpath2),
+                '{}/foo'.format(corpus_relpath2),
+            ])
+        with self.host.open(build_gn) as f:
+            contents = f.readlines()
+        self.assertEqual(
+            contents, [
+                'some existing data\n',
+                'more existing data\n',
+                '\n',
+                '# Generated using `fx fuzz update {} -o {}`.\n'.format(
+                    str(fuzzer2), build_gn),
+                'resource("{}_corpus") {{\n'.format(fuzzer2.executable),
+                '  sources = [\n',
+                '    "{}/bar",\n'.format(corpus_relpath2),
+                '    "{}/foo",\n'.format(corpus_relpath2),
+                '  ]\n',
+                '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]\n'.format(
+                    fuzzer2.executable),
+                '}\n',
+            ])
+
+        # Add another corpus to the same GN file. The existing one shouldn't be touched.
+        fuzzer3 = self.create_fuzzer('fake-package1/fake-target3')
+        corpus_dir = self.buildenv.path(fuzzer3.corpus.srcdir)
+        corpus_relpath3 = os.path.relpath(corpus_dir, build_gn_dir)
+        self.host.mkdir(corpus_dir)
+        self.host.touch(self.buildenv.path(corpus_dir, 'baz'))
+        self.assertEqual(
+            fuzzer3.corpus.generate_buildfile(build_gn=build_gn),
+            ['{}/baz'.format(corpus_relpath3)])
+        with self.host.open(build_gn) as f:
+            contents = f.readlines()
+        self.assertEqual(
+            contents, [
+                'some existing data\n',
+                'more existing data\n',
+                '\n',
+                '# Generated using `fx fuzz update {} -o {}`.\n'.format(
+                    str(fuzzer2), build_gn),
+                'resource("{}_corpus") {{\n'.format(fuzzer2.executable),
+                '  sources = [\n',
+                '    "{}/bar",\n'.format(corpus_relpath2),
+                '    "{}/foo",\n'.format(corpus_relpath2),
+                '  ]\n',
+                '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]\n'.format(
+                    fuzzer2.executable),
+                '}\n',
+                '\n',
+                '# Generated using `fx fuzz update {} -o {}`.\n'.format(
+                    str(fuzzer3), build_gn),
+                'resource("{}_corpus") {{\n'.format(fuzzer3.executable),
+                '  sources = [ "{}/baz" ]\n'.format(corpus_relpath3),
+                '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]\n'.format(
+                    fuzzer3.executable),
+                '}\n',
+            ])
+
 
 if __name__ == '__main__':
     unittest.main()
