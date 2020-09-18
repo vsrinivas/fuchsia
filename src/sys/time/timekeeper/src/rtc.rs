@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
-use parking_lot::Mutex;
 use {
     anyhow::{anyhow, Error},
     async_trait::async_trait,
@@ -152,24 +150,24 @@ pub struct FakeRtc {
     /// The response used for get requests.
     value: Result<zx::Time, String>,
     /// The most recent value received in a set request.
-    last_set: Mutex<Option<zx::Time>>,
+    last_set: futures::lock::Mutex<Option<zx::Time>>,
 }
 
 #[cfg(test)]
 impl FakeRtc {
     /// Returns a new `FakeRtc` that always returns the supplied time.
     pub fn valid(time: zx::Time) -> FakeRtc {
-        FakeRtc { value: Ok(time), last_set: Mutex::new(None) }
+        FakeRtc { value: Ok(time), last_set: futures::lock::Mutex::new(None) }
     }
 
     /// Returns a new `FakeRtc` that always returns the supplied error message.
     pub fn invalid(error: String) -> FakeRtc {
-        FakeRtc { value: Err(error), last_set: Mutex::new(None) }
+        FakeRtc { value: Err(error), last_set: futures::lock::Mutex::new(None) }
     }
 
     /// Returns the last time set on this clock, or none if the clock has never been set.
-    pub fn last_set(&self) -> Option<zx::Time> {
-        self.last_set.lock().map(|time| time.clone())
+    pub async fn last_set(&self) -> Option<zx::Time> {
+        self.last_set.lock().await.map(|time| time.clone())
     }
 }
 
@@ -181,7 +179,7 @@ impl Rtc for FakeRtc {
     }
 
     async fn set(&self, value: zx::Time) -> Result<(), Error> {
-        let mut last_set = self.last_set.lock();
+        let mut last_set = self.last_set.lock().await;
         last_set.replace(value);
         Ok(())
     }
@@ -216,11 +214,11 @@ mod test {
     async fn valid_fake() {
         let fake = FakeRtc::valid(*TEST_ZX_TIME);
         assert_eq!(fake.get().await.unwrap(), *TEST_ZX_TIME);
-        assert_eq!(fake.last_set(), None);
+        assert_eq!(fake.last_set().await, None);
 
         // Set a new time, this should be recorded but get should still return the original time.
         assert!(fake.set(*DIFFERENT_ZX_TIME).await.is_ok());
-        assert_eq!(fake.last_set(), Some(*DIFFERENT_ZX_TIME));
+        assert_eq!(fake.last_set().await, Some(*DIFFERENT_ZX_TIME));
         assert_eq!(fake.get().await.unwrap(), *TEST_ZX_TIME);
     }
 
@@ -229,11 +227,11 @@ mod test {
         let message = "I'm designed to fail".to_string();
         let fake = FakeRtc::invalid(message.clone());
         assert_eq!(&fake.get().await.unwrap_err().to_string(), &message);
-        assert_eq!(fake.last_set(), None);
+        assert_eq!(fake.last_set().await, None);
 
         // Setting a new time should still succeed and be recorded but it won't make get valid.
         assert!(fake.set(*DIFFERENT_ZX_TIME).await.is_ok());
-        assert_eq!(fake.last_set(), Some(*DIFFERENT_ZX_TIME));
+        assert_eq!(fake.last_set().await, Some(*DIFFERENT_ZX_TIME));
         assert_eq!(&fake.get().await.unwrap_err().to_string(), &message);
     }
 }

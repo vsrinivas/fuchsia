@@ -38,7 +38,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
 
