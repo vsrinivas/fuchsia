@@ -25,6 +25,12 @@ path to an executable file in the package the manifest comes from, and the
 `args` field holds any additional string arguments that should be provided to
 the process when it is created.
 
+The `main_process_critical` field may be used to mark the component's first
+process as [critical to component manager's job][job-set-critical], which will
+cause component manager (and all components) to be terminated if the process
+exits with a non-zero code. An allowlist is used to control which components may
+use this field.
+
 This is an example manifest that launches `bin/echo` with the arguments `Hello`
 and `world!`. It assumes that the ELF runner capability has been offered to the
 component under the name `elf`:
@@ -76,6 +82,7 @@ execution context, which includes the component's job and all subprocesses.
 [lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl
 [lifecycle]: lifecycle.md
 [program-loading]: /docs/concepts/booting/program_loading.md
+[job-set-critical]: /docs/reference/syscalls/job_set_critical.md
 
 <!-- TODO: the component manifest link describes v1 manifests -->
 [glossary-component-manifests]: /docs/glossary.md#component-manifest
