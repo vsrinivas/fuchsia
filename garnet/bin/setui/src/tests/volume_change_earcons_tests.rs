@@ -15,7 +15,7 @@ use {
     crate::switchboard::base::{
         AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
-    crate::tests::fakes::audio_core_service::AudioCoreService,
+    crate::tests::fakes::audio_core_service,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
@@ -207,7 +207,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     let service_registry = ServiceRegistry::create();
 
     // Used for some functions inside the audio_controller and other dependencies.
-    let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
+    let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
     let input_device_registry_service_handle =

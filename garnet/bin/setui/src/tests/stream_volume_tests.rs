@@ -4,24 +4,21 @@
 
 #[cfg(test)]
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
-use crate::handler::device_storage::testing::*;
 use crate::internal::event;
 use crate::message::base::{MessageEvent, MessengerType};
-use crate::service_context::ExternalServiceProxy;
+use crate::service_context::ServiceContext;
 use crate::switchboard::base::AudioStreamType;
-use crate::tests::fakes::audio_core_service::AudioCoreService;
+use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
-use crate::EnvironmentBuilder;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::Arc;
 
-const ENV_NAME: &str = "settings_service_event_test_environment";
-
 // Returns a registry populated with the AudioCore service.
 async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
     let service_registry = ServiceRegistry::create();
-    let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
+    let audio_core_service_handle =
+        audio_core_service::Builder::new().set_suppress_client_errors(true).build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
     service_registry
 }
@@ -29,12 +26,6 @@ async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
 // Tests that the volume event stream thread exits when the StreamVolumeControl is deleted.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_drop_thread() {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
-        .service(ServiceRegistry::serve(create_service().await))
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
-
     let factory = event::message::create_hub();
 
     let (_, mut receptor) =
@@ -42,12 +33,20 @@ async fn test_drop_thread() {
 
     let publisher = event::Publisher::create(&factory, MessengerType::Unbound).await;
 
-    let audio_proxy = env.connect_to_service::<fidl_fuchsia_media::AudioCoreMarker>().unwrap();
+    let service_context =
+        ServiceContext::create(Some(ServiceRegistry::serve(create_service().await)), None);
+
+    let audio_proxy = service_context
+        .lock()
+        .await
+        .connect::<fidl_fuchsia_media::AudioCoreMarker>()
+        .await
+        .expect("service should be present");
 
     // Scoped to cause the object to be dropped.
     {
         StreamVolumeControl::create(
-            &ExternalServiceProxy::new(audio_proxy, None),
+            &audio_proxy,
             create_default_audio_stream(AudioStreamType::Media),
             Some(publisher),
         )
@@ -57,6 +56,7 @@ async fn test_drop_thread() {
 
     let received_event =
         receptor.next().await.expect("First message should have been the closed event");
+
     match received_event {
         MessageEvent::Message(event::Payload::Event(broadcasted_event), _) => {
             assert_eq!(broadcasted_event, event::Event::Closed("volume_control_events"));

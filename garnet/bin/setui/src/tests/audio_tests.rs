@@ -12,7 +12,7 @@ use {
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
-    crate::tests::fakes::audio_core_service::AudioCoreService,
+    crate::tests::fakes::audio_core_service::{self, AudioCoreService},
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
@@ -134,7 +134,7 @@ fn verify_contains_stream(streams: &[AudioStream; 5], stream: &AudioStream) {
 // Returns a registry and audio related services it is populated with
 async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     let service_registry = ServiceRegistry::create();
-    let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
+    let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
     let input_device_registry_service_handle =
@@ -385,7 +385,7 @@ async fn test_volume_restore() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_input_registry() {
     let service_registry = ServiceRegistry::create();
-    let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
+    let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
     let (env, _) = create_environment(service_registry).await;
