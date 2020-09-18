@@ -82,6 +82,7 @@ bits ContextFeatureFlags : uint64 {
 
     /// Enables Widevine CDM modules for EME API. `VULKAN` feature must be enabled as well.
     /// Requires [`fuchsia.media.drm.Widevine`] service.
+    /// Requires that a [`fuchsia.web.CreateContextParams/cdm_data_directory`] be specified.
     WIDEVINE_CDM = 0x20;
 
     /// Allows embedders to render web content without graphical output or Scenic.
@@ -143,8 +144,9 @@ resource table CreateContextParams {
 
     /// Enables PlayReady CDM for the Context using the specified string as a key system
     /// string. The string should be a reverse domain name, as required by
-    /// [EME API](https://www.w3.org/TR/encrypted-media/#key-system). Requires
-    /// [`fuchsia.media.drm.PlayReady`] service.
+    /// [EME API](https://www.w3.org/TR/encrypted-media/#key-system).
+    /// Requires [`fuchsia.media.drm.PlayReady`] service.
+    /// Requires that a [`fuchsia.web.CreateContextParams/cdm_data_directory`] be specified.
     8: string:128 playready_key_system;
 
     /// Treat given insecure origins as secure origins. For the definition of secure contexts, see
