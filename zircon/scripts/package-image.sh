@@ -12,7 +12,8 @@ SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR="${SCRIPTS_DIR}/.."
 
 BOARD=
-BUILD_DIR=
+ZIRCON_BUILD_DIR=
+ROOT_BUILD_DIR=
 CMDLINE=
 MKBOOTIMG_CMDLINE=
 MEXEC=
@@ -32,6 +33,7 @@ function HELP {
     echo "help:"
     echo "-b <board>                        : board name"
     echo "-B <build-dir>                    : path to zircon build directory"
+    echo "-R <build-dir>                    : path to Fuchsia build directory"
     echo "-c <cmd line>                     : Extra command line options for the ZBI"
     echo "-C <cmd line>                     : Extra command line options for mkbootimg"
     echo "-d <dtb-path>                     : path to device tree binary"
@@ -56,7 +58,8 @@ BOOT_PARTITION_SIZE=33554432
 while getopts "ab:B:c:C::d:D:ghK:lmM:o:r:v:z:" FLAG; do
     case $FLAG in
         b) BOARD="${OPTARG}";;
-        B) BUILD_DIR="${OPTARG}";;
+        B) ZIRCON_BUILD_DIR="${OPTARG}";;
+        R) ROOT_BUILD_DIR="${OPTARG}";;
         c) CMDLINE+="${OPTARG}";;
         C) MKBOOTIMG_CMDLINE+="${OPTARG}";;
         d) DTB_PATH="${OPTARG}";;
@@ -84,9 +87,13 @@ if [[ -z "${BOARD}" ]]; then
     HELP
 fi
 
-if [[ -z "${BUILD_DIR}" ]]; then
+if [[ -z "${ZIRCON_BUILD_DIR}" ]]; then
     echo must specify a Zircon build directory
     HELP
+fi
+
+if [[ -z "${ROOT_BUILD_DIR}" ]]; then
+    ROOT_BUILD_DIR="${ZIRCON_BUILD_DIR%%.zircon}"
 fi
 
 if [[ -n "${DTB_PATH}" ]] &&
@@ -105,25 +112,24 @@ if [[ "${RAMDISK_TYPE}" != "none" ]] &&
 fi
 
 # Some tools we use
-LZ4="${BUILD_DIR}/tools/lz4"
+LZ4="${ZIRCON_BUILD_DIR}/tools/lz4"
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
-MKKDTB="${BUILD_DIR}/tools/mkkdtb"
-ZBI="${BUILD_DIR}/tools/zbi"
+ZBI="${ZIRCON_BUILD_DIR}/tools/zbi"
 
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
-    ZIRCON_BOOTIMAGE="${BUILD_DIR}/arm64.zbi"
+    ZIRCON_BOOTIMAGE="${ZIRCON_BUILD_DIR}/arm64.zbi"
 fi
 
 # boot shim for our board
-BOOT_SHIM="${BUILD_DIR}/${BOARD}-boot-shim.bin"
+BOOT_SHIM="${ZIRCON_BUILD_DIR}/${BOARD}-boot-shim.bin"
 
 # zircon ZBI image with prepended boot shim
 SHIMMED_ZIRCON_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.shim"
 
 # Final packaged Android style boot.img
 if [[ -z "${BOOT_IMG}" ]]; then
-    BOOT_IMG="${BUILD_DIR}/${BOARD}-boot.img"
+    BOOT_IMG="${ZIRCON_BUILD_DIR}/${BOARD}-boot.img"
 fi
 
 # PACKAGING STEPS BEGIN HERE
@@ -162,9 +168,6 @@ fi
 if [[ -n "${DTB_PATH}" ]] && [[ "${DTB_DEST}" == "append" ]]; then
     COMPRESSED_BOOTIMAGE_DTB="${COMPRESSED_BOOTIMAGE}.dtb"
     cat "${COMPRESSED_BOOTIMAGE}" "${DTB_PATH}" > "${COMPRESSED_BOOTIMAGE_DTB}"
-elif [[ -n "${DTB_PATH}" ]] && [[ "${DTB_DEST}" == "kdtb" ]]; then
-    COMPRESSED_BOOTIMAGE_DTB="${COMPRESSED_BOOTIMAGE}.kdtb"
-    "${MKKDTB}" "${COMPRESSED_BOOTIMAGE}" "${DTB_PATH}" "${COMPRESSED_BOOTIMAGE_DTB}"
 elif [[ -n "${DTB_PATH}" ]] && [[ "${DTB_DEST}" == "mkbootimg" ]]; then
     COMPRESSED_BOOTIMAGE_DTB="${COMPRESSED_BOOTIMAGE}"
     MKBOOTIMG_ARGS+=" --second ${DTB_PATH} --second_offset ${DTB_OFFSET}"
@@ -178,7 +181,7 @@ if [[ "${RAMDISK_TYPE}" == "zbi" ]]; then
 elif [[ "${RAMDISK_TYPE}" == "none" ]]; then
     RAMDISK_OPTION=""
 else
-    RAMDISK="${BUILD_DIR}/dummy-ramdisk"
+    RAMDISK="${ZIRCON_BUILD_DIR}/dummy-ramdisk"
     echo "foo" > "${RAMDISK}"
     RAMDISK_OPTION="--ramdisk ${RAMDISK}"
 fi
