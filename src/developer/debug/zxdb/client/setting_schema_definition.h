@@ -47,6 +47,8 @@ struct ClientSettings {
     static const char* kIdsTxts;
     static const char* kSymbolServers;
     static const char* kSymbolCache;
+
+    static const char* kEnableAnalytics;
   };
 
   struct Job {};

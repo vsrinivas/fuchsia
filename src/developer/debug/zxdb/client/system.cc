@@ -128,6 +128,9 @@ static const char* kSymbolCacheDescription =
   specified, downloaded symbols will be stored in this directory. The directory
   structure will be the same as a .build-id directory.)";
 
+const char* ClientSettings::System::kEnableAnalytics = "enable-analytics";
+static const char* kEnableAnalyticsDescription = R"(  Whether collection of analytics is enabled.)";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -171,6 +174,9 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
   schema->AddList(ClientSettings::Thread::kDisplay, ClientSettings::Thread::kDisplayDescription);
+
+  // The code that handles opt-in/out will set this explicitly.
+  schema->AddBool(ClientSettings::System::kEnableAnalytics, kEnableAnalyticsDescription, false);
 
   return schema;
 }
