@@ -173,6 +173,9 @@ async fn manager_server(
                 let was_handled = store.handle_key_event(event).await?;
                 responder.send(was_handled).context("error sending response")?;
             }
+            ui_shortcut::ManagerRequest::HandleKey3Event { .. } => {
+                unimplemented!();
+            }
         }
     }
     Ok(())

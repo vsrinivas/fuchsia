@@ -13,7 +13,9 @@ fidl("fuchsia.ui.shortcut") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.ui.input2",
+    "//sdk/fidl/fuchsia.ui.input3",
     "//sdk/fidl/fuchsia.ui.views",
   ]
 }

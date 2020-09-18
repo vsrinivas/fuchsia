@@ -4,19 +4,26 @@
 
 library fuchsia.ui.shortcut;
 
+using fuchsia.input;
 using fuchsia.ui.input2;
 using fuchsia.ui.views;
 
-/// Service to receive and handle shortcut activations.
-///
+/// The maximum number of shortcut keys, excluding the trigger key, that is required
+/// to activate a shortcut.
+/// Currently a low bound based on current use-cases.
+const uint64 MAX_REQUIRED_KEYS = 2;
+
 /// Components may request this service from their namespace to
-/// use shortcuts.
+/// register and be notified of shortcuts.
+/// Registry supports multiple registrations simultaneously.
 [Discoverable]
 protocol Registry {
     /// Set shortcut activation listener.
     SetView(fuchsia.ui.views.ViewRef view_ref, Listener listener);
 
-    /// Register new shortcut activation listener.
+    /// Register new shortcut. Upon activation, `Listener` is invoked.
+    /// Only focused ViewRefs will be notified of matching shortcut activations.
+    /// For the full disambiguation procedure, see package-level documentation.
     RegisterShortcut(Shortcut shortcut) -> ();
 };
 
@@ -26,10 +33,12 @@ table Shortcut {
     1: uint32 id;
 
     /// Modifier keys to be enabled for the shortcut activation.
+    /// @deprecated
     2: fuchsia.ui.input2.Modifiers modifiers;
 
     /// Optional: Key to be pressed to activate the shortcut.
     /// If not set, shortcut is interpreted as a modifiers-only shortcut.
+    /// @deprecated
     3: fuchsia.ui.input2.Key key;
 
     /// Optional: When set to true, parent's shortcuts take priority
@@ -44,11 +53,26 @@ table Shortcut {
     ///
     /// Example:
     ///   Shortcuts registered for:
-    ///     1. Modifiers.META + Key.Q with with Trigger.KEY_PRESSED
-    ///     2. Modifiers.META with Trigger.KEY_PRESSED_AND_RELEASED
-    ///   In this case, pressing Meta + Q will activate only shortcut (1), while
+    ///     1. Key.LEFT_META + Key.Q with with Trigger.KEY_PRESSED
+    ///     2. Key.LEFT_META with Trigger.KEY_PRESSED_AND_RELEASED
+    ///   In this case, pressing Left Meta + Q will activate only shortcut (1), while
     ///   pressing and releasing Meta key alone will activate shortcut (2).
     5: Trigger trigger;
+
+    /// Key to be pressed to activate the shortcut.
+    6: fuchsia.input.Key key3;
+
+    /// Keys that should be pressed to activate the shortcut.
+    ///
+    /// Example:
+    ///  `Shift` + `Alt` + `Tab`:
+    ///    Setup:
+    ///     - `Shift` and `Alt` are the prerequisite for the shortcut activation,
+    ///       therefore `keys_required = [ Key.LEFT_SHIFT, Key.LEFT_ALT ]`
+    ///     - `Tab` is the trigger key, therefore `key3 = Key.TAB`
+    ///    Result:
+    ///     Shortcut is activated on Tab key press if Left Alt and Left Shift are held down.
+    7: vector<fuchsia.input.Key>:MAX_REQUIRED_KEYS keys_required;
 };
 
 /// Shortcut activation variations.
@@ -66,6 +90,8 @@ enum Trigger {
 };
 
 /// Client should implement this protocol to get notified of shortcut activation.
+/// Only focused ViewRefs will be notified of matching shortcut activations.
+/// For the full disambiguation procedure, see package-level documentation.
 protocol Listener {
     OnShortcut(uint32 id) -> (bool handled);
 };

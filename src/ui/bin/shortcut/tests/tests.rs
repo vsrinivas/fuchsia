@@ -110,6 +110,8 @@ async fn test_as_client() -> Result<(), Error> {
         key: Some(ui_input::Key::A),
         use_priority: None,
         trigger: None,
+        key3: None,
+        keys_required: None,
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut shift");
 
@@ -120,6 +122,8 @@ async fn test_as_client() -> Result<(), Error> {
         key: Some(ui_input::Key::B),
         use_priority: None,
         trigger: None,
+        key3: None,
+        keys_required: None,
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut right_control");
 
@@ -187,6 +191,8 @@ async fn test_modifiers_not_activated_on_release() -> Result<(), Error> {
         key: None,
         use_priority: None,
         trigger: Some(ui_shortcut::Trigger::KeyPressedAndReleased),
+        key3: None,
+        keys_required: None,
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_shift");
 
@@ -197,6 +203,8 @@ async fn test_modifiers_not_activated_on_release() -> Result<(), Error> {
         key: Some(ui_input::Key::C),
         use_priority: None,
         trigger: None,
+        key3: None,
+        keys_required: None,
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_shift+c");
 
@@ -247,6 +255,8 @@ async fn test_modifiers_activated_on_release() -> Result<(), Error> {
         key: None,
         use_priority: None,
         trigger: Some(ui_shortcut::Trigger::KeyPressedAndReleased),
+        key3: None,
+        keys_required: None,
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_meta");
 
@@ -257,6 +267,8 @@ async fn test_modifiers_activated_on_release() -> Result<(), Error> {
         key: Some(ui_input::Key::Q),
         use_priority: None,
         trigger: None,
+        key3: None,
+        keys_required: None,
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_meta+q");
 
