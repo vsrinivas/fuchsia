@@ -6,10 +6,6 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
 dart_test("experiences_ermine_session_shell_e2e_test") {
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [
     "ermine_driver.dart",
 
@@ -24,6 +20,7 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
   deps = [
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/test",
   ]
 

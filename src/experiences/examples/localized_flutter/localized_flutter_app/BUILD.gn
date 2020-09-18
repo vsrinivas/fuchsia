@@ -10,11 +10,11 @@ import("//topaz/runtime/dart/flutter_test.gni")
 dart_library("lib") {
   package_name = "localized_flutter_app"
   sources = [
+    "localized_mod_localizations_delegate.dart",
+    "localized_mod_strings.dart",
     "main.dart",
     "provider.dart",
     "supported_locales.dart",
-    "localized_mod_localizations_delegate.dart",
-    "localized_mod_strings.dart",
   ]
   deps = [
     "//src/experiences/examples/localized_flutter/localized_flutter_localization:localized-flutter-localization",
@@ -27,22 +27,14 @@ dart_library("lib") {
 flutter_component("component") {
   component_name = "localized-flutter-app"
   manifest = "meta/localized_flutter_app.cmx"
-  deps = [
-    ":lib"
-  ]
+  deps = [ ":lib" ]
 }
 
 fuchsia_package("localized-flutter-app") {
-  deps = [
-    ":component"
-  ]
+  deps = [ ":component" ]
 }
 
 flutter_test("localized_flutter_app_unittests") {
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [ "sample_test.dart" ]
 
   deps = [ "//third_party/dart-pkg/pub/test" ]

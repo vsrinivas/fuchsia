@@ -14,10 +14,6 @@ flutter_app("simple_browser") {
   main_dart = "lib/main.dart"
   package_name = "simple_browser"
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   meta = [
     {
       path = rebase_path("meta/simple_browser.cmx")
@@ -52,17 +48,24 @@ flutter_app("simple_browser") {
 
   deps = [
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.ui.shortcut",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.web",
     "//src/experiences/bin/simple_browser_internationalization:internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/html_unescape",
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/meta",
+    "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia_internationalization_flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/zircon",
   ]
 
   resources = [
@@ -89,10 +92,6 @@ flutter_test("simple_browser_unittests") {
     "widgets/tabs_widget_test.dart",
   ]
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   deps = [
     ":simple_browser_dart_library",
     "//sdk/fidl/fuchsia.web",
@@ -110,10 +109,6 @@ dart_fuchsia_test("simple_browser_target_test") {
       dest = "simple_browser_target_test.cmx"
     },
   ]
-
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
 
   sources = [ "simple_browser_target_test.dart" ]
 

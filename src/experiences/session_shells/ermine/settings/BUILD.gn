@@ -8,10 +8,6 @@ import("//topaz/runtime/dart/flutter_test.gni")
 dart_library("settings") {
   package_name = "settings"
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [
     "settings.dart",
     "src/battery.dart",
@@ -31,9 +27,12 @@ dart_library("settings") {
     "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.brightness",
+    "//sdk/fidl/fuchsia.ui.remotewidgets",
     "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_services",
   ]
 }
@@ -49,13 +48,20 @@ flutter_test("ermine_settings_unittests") {
     "volume_test.dart",
   ]
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   deps = [
     ":settings",
+    "//sdk/fidl/fuchsia.bluetooth.control",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.memory",
+    "//sdk/fidl/fuchsia.power",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.ui.brightness",
+    "//sdk/fidl/fuchsia.ui.remotewidgets",
+    "//src/experiences/lib/quickui",
+    "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
+    "//topaz/public/dart/fidl",
   ]
 }

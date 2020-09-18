@@ -22,10 +22,6 @@ tz_ids_path = "${target_gen_dir}/tz_ids.txt"
 flutter_app("ermine") {
   main_dart = "lib/main.dart"
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   fuchsia_package_name = "ermine"
   package_name = "ermine"
 
@@ -93,9 +89,11 @@ flutter_app("ermine") {
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.session",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
@@ -115,11 +113,16 @@ flutter_app("ermine") {
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/flutter_svg",
     "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/uuid",
+    "//third_party/dart-pkg/pub/vector_math",
+    "//topaz/public/dart/fidl",
     "//topaz/public/dart/fuchsia_inspect",
+    "//topaz/public/dart/fuchsia_internationalization_flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/zircon",
   ]
 
   non_dart_deps = [ ":time_zone_list" ]
@@ -183,15 +186,25 @@ flutter_test("ermine_unittests") {
     "topbar_model_test.dart",
   ]
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   deps = [
     ":ermine_dart_library",
+    "//sdk/fidl/fuchsia.device.manager",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/experiences/lib/quickui",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/intl",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
+    "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia_internationalization_flutter",
+    "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/zircon",
   ]
 }
 
