@@ -6,6 +6,7 @@
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <optional>
@@ -16,10 +17,16 @@ namespace a11y {
 
 A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
                                    AccessibilityFocusChainRegistry* registry,
-                                   FocusHighlightManager* focus_highlight_manager)
+                                   FocusHighlightManager* focus_highlight_manager,
+                                   inspect::Node inspect_node)
     : focus_chain_requester_(focus_chain_requester),
       focus_highlight_manager_(focus_highlight_manager),
-      weak_ptr_factory_(this) {
+      weak_ptr_factory_(this),
+      inspect_node_(std::move(inspect_node)),
+      inspect_property_current_focus_koid_(
+          inspect_node_.CreateUint(kCurrentlyFocusedKoidInspectNodeName, 0)),
+      inspect_property_current_focus_node_id_(
+          inspect_node_.CreateUint(kCurrentlyFocusedNodeIdInspectNodeName, 0)) {
   FX_DCHECK(registry);
   FX_DCHECK(focus_highlight_manager_);
   registry->Register(weak_ptr_factory_.GetWeakPtr());
@@ -48,6 +55,7 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
     focused_node_in_view_map_[koid] = node_id;
     UpdateHighlights();
     set_focus_callback(true);
+    UpdateInspectProperties();
     return;
   }
   // Different view, a Focus Chain Update is necessary.
@@ -60,6 +68,7 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
           focused_node_in_view_map_[koid] = node_id;
           currently_focused_view_ = koid;
           UpdateHighlights();
+          UpdateInspectProperties();
           callback(true);
         }
       });
@@ -74,6 +83,18 @@ void A11yFocusManager::OnViewFocus(zx_koid_t view_ref_koid) {
   currently_focused_view_ = view_ref_koid;
   focused_node_in_view_map_[currently_focused_view_] = newly_focused_node_id;
   UpdateHighlights();
+  UpdateInspectProperties();
+}
+
+void A11yFocusManager::UpdateInspectProperties() {
+  // It's possible that the inspector could attempt to read these properties
+  // while we are updating them. By setting inspect_property_current_focus_koid_
+  // to a nonsense value of UINT64_MAX prior to updating, we ensure that we can
+  // recognize instances in which the inspector reads the properties during an
+  // update.
+  inspect_property_current_focus_koid_.Set(UINT64_MAX);
+  inspect_property_current_focus_node_id_.Set(focused_node_in_view_map_[currently_focused_view_]);
+  inspect_property_current_focus_koid_.Set(currently_focused_view_);
 }
 
 void A11yFocusManager::UpdateHighlights() {

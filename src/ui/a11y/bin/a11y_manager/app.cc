@@ -16,11 +16,12 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
          a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
-         a11y::GestureListenerRegistry* gesture_listener_registry)
+         a11y::GestureListenerRegistry* gesture_listener_registry, inspect::Node inspect_node)
     : view_manager_(view_manager),
       tts_manager_(tts_manager),
       color_transform_manager_(color_transform_manager),
-      gesture_listener_registry_(gesture_listener_registry) {
+      gesture_listener_registry_(gesture_listener_registry),
+      inspect_node_(std::move(inspect_node)) {
   FX_DCHECK(context);
   FX_DCHECK(view_manager);
   FX_DCHECK(tts_manager);
@@ -232,7 +233,8 @@ A11yManagerState A11yManagerState::withSettings(
 
 std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(
-      focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_);
+      focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_,
+      inspect_node_.CreateChild("focus_manager"));
   std::string locale_id = "en-US";
   if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {
     locale_id = i18n_profile_->locales()[0].id;

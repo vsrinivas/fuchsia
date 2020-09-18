@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_LIB_SCREEN_READER_FOCUS_A11Y_FOCUS_MANAGER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/inspect/cpp/inspect.h>
 
 #include <unordered_map>
 
@@ -45,7 +46,8 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // |focus_chain_requester| and |registry| must outlive this object.
   explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
                             AccessibilityFocusChainRegistry* registry,
-                            FocusHighlightManager* focus_highlight_manager);
+                            FocusHighlightManager* focus_highlight_manager,
+                            inspect::Node inspect_node = inspect::Node());
   virtual ~A11yFocusManager();
 
   // Returns the current a11y focus if it exists.
@@ -61,6 +63,9 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // clears existing a11y focus.
   virtual void ClearA11yFocus();
 
+  static constexpr char kCurrentlyFocusedKoidInspectNodeName[] = "currently_focused_koid";
+  static constexpr char kCurrentlyFocusedNodeIdInspectNodeName[] = "currently_focused_node_id";
+
  protected:
   // For mocks only.
   A11yFocusManager();
@@ -68,6 +73,9 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
  private:
   // |AccessibilityFocusChainListener|
   void OnViewFocus(zx_koid_t view_ref_koid) override;
+
+  // Helper function to update inspect info.
+  void UpdateInspectProperties();
 
   // Removes current highlights (if any), and highlights node specified by identifier |{koid,
   // node_id}|.
@@ -88,6 +96,13 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   FocusHighlightManager* const focus_highlight_manager_ = nullptr;
 
   fxl::WeakPtrFactory<AccessibilityFocusChainListener> weak_ptr_factory_;
+
+  // Inspect node to which to publish debug info.
+  inspect::Node inspect_node_;
+
+  // Inspect properties to store current a11y focus.
+  inspect::UintProperty inspect_property_current_focus_koid_;
+  inspect::UintProperty inspect_property_current_focus_node_id_;
 };
 
 }  // namespace a11y

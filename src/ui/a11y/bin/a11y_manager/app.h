@@ -15,6 +15,7 @@
 #include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
@@ -87,7 +88,8 @@ class App {
   // passed in the constructor.
   explicit App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
                a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
-               a11y::GestureListenerRegistry* gesture_listener_registry);
+               a11y::GestureListenerRegistry* gesture_listener_registry,
+               inspect::Node inspect_node = inspect::Node());
   ~App();
 
   // Sets the a11y manager to the given configuration. Visible for testing.
@@ -183,6 +185,9 @@ class App {
 
   // Interface used to retrieve the current locale and watch when it changes.
   fuchsia::intl::PropertyProviderPtr property_provider_;
+
+  // Inspect node to which to publish debug info.
+  inspect::Node inspect_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
@@ -18,6 +19,10 @@ int main(int argc, const char** argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
+  inspector->Health().StartingUp();
+  inspector->Health().Ok();
+
   a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                                  std::make_unique<a11y::A11yViewSemanticsFactory>(),
                                  std::make_unique<a11y::AnnotationViewFactory>(),
@@ -28,7 +33,8 @@ int main(int argc, const char** argv) {
   a11y::GestureListenerRegistry gesture_listener_registry;
 
   a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager,
-                        &gesture_listener_registry);
+                        &gesture_listener_registry, inspector->root().CreateChild("A11y Manager"));
+
   loop.Run();
   return 0;
 }
