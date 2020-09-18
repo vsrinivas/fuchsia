@@ -21,7 +21,8 @@ use {
     regex::Regex,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
     std::{
-        collections::HashMap, convert::TryFrom, fmt::Write, iter::FromIterator, sync::Arc, thread,
+        cmp::Ordering, collections::HashMap, convert::TryFrom, fmt::Write, iter::FromIterator,
+        sync::Arc, thread,
     },
 };
 
@@ -120,6 +121,12 @@ fn match_peer<'a>(pattern: &'a str, peer: &Peer) -> bool {
         || peer.name.as_ref().map_or(false, |p| p.contains(pattern))
 }
 
+/// Order connected peers as greater than unconnected peers and bonded peers greater than unbonded
+/// peers.
+fn cmp_peers(a: &Peer, b: &Peer) -> Ordering {
+    (a.connected, a.bonded).cmp(&(b.connected, b.bonded))
+}
+
 fn get_peers<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
     let find = match args.len() {
         0 => "",
@@ -130,7 +137,8 @@ fn get_peers<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
     if state.peers.is_empty() {
         return String::from("No known peers");
     }
-    let peers: Vec<&Peer> = state.peers.values().filter(|p| match_peer(&find, p)).collect();
+    let mut peers: Vec<&Peer> = state.peers.values().filter(|p| match_peer(&find, p)).collect();
+    peers.sort_by(|a, b| cmp_peers(&*a, &*b));
     let matched = format!("Showing {}/{} peers\n", peers.len(), state.peers.len());
     String::from_iter(std::iter::once(matched).chain(peers.iter().map(|p| p.to_string())))
 }
@@ -632,7 +640,13 @@ mod tests {
         }
     }
 
-    fn custom_peer(id: PeerId, address: Address, connected: bool, bonded: bool) -> Peer {
+    fn custom_peer(
+        id: PeerId,
+        address: Address,
+        connected: bool,
+        bonded: bool,
+        rssi: Option<i8>,
+    ) -> Peer {
         Peer {
             id,
             address,
@@ -642,7 +656,7 @@ mod tests {
             name: None,
             appearance: Some(fbt::Appearance::Phone),
             device_class: None,
-            rssi: None,
+            rssi,
             tx_power: None,
             services: vec![],
         }
@@ -712,6 +726,23 @@ mod tests {
         assert!(get_peers(&["01:23"], &state).contains("01:23:45"));
         assert!(get_peers(&["abcd"], &state).contains("1/2 peers"));
         assert!(get_peers(&["beef"], &state).contains("AD:DE:7E"));
+    }
+
+    #[test]
+    fn cmp_peers_correctly_orders_peers() {
+        // Sorts connected correctly
+        let peer_a =
+            custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), false, false, None);
+        let peer_b =
+            custom_peer(PeerId(0xbaaf), Address::Public([2, 0, 0, 0, 0, 0]), true, false, None);
+        assert_eq!(cmp_peers(&peer_a, &peer_b), Ordering::Less);
+
+        // Sorts bonded correctly
+        let peer_a =
+            custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), false, false, None);
+        let peer_b =
+            custom_peer(PeerId(0xbaaf), Address::Public([2, 0, 0, 0, 0, 0]), false, true, None);
+        assert_eq!(cmp_peers(&peer_a, &peer_b), Ordering::Less);
     }
 
     #[test]
@@ -843,6 +874,7 @@ mod tests {
             Address::Public([1, 0, 0, 0, 0, 0]),
             true,
             false,
+            None,
         )));
         let cases = vec![
             // valid peer id
@@ -969,7 +1001,8 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_pair() {
-        let peer = custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false);
+        let peer =
+            custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false, None);
         let peer_id: FidlPeerId = peer.id.into();
         let peer_id_string = peer.id.to_string();
         let pairing_options = PairingOptions {
@@ -992,7 +1025,8 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_pair_error() {
-        let peer = custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false);
+        let peer =
+            custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false, None);
         let peer_id: FidlPeerId = peer.id.into();
         let peer_id_string = peer.id.to_string();
         let pairing_options = PairingOptions {
