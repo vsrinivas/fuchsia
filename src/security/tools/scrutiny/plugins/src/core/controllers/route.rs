@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::controllers::utils::DefaultComponentRequest,
     anyhow::{Error, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},
@@ -46,42 +47,19 @@ impl DataController for RoutesGraphController {
 pub struct ComponentUsesGraphController {}
 
 #[derive(Deserialize, Serialize)]
-struct ComponentUsesRequest {
-    component_id: i32,
-}
-
-#[derive(Deserialize, Serialize)]
 struct ComponentUsesResponse {
     uses: Vec<i32>,
 }
 
 impl DataController for ComponentUsesGraphController {
     fn query(&self, model: Arc<DataModel>, value: Value) -> Result<Value> {
-        let req: ComponentUsesRequest = serde_json::from_value(value)?;
-
-        // Check if the component id exists.
-        // FIXME: Since we actually don't have any indexing in the model, this is pretty slow.
-        {
-            let mut found = false;
-            let components = model.components().read().unwrap();
-            for component in components.iter() {
-                if req.component_id == component.id {
-                    found = true;
-                }
-            }
-
-            if !found {
-                return Err(Error::new(io::Error::new(
-                    ErrorKind::Other,
-                    format!("Could not find a component with component_id {}.", req.component_id),
-                )));
-            }
-        }
+        let req: DefaultComponentRequest = serde_json::from_value(value)?;
+        let component_id = req.component_id(model.clone())?;
 
         let routes = model.routes().read().unwrap();
         let mut resp = ComponentUsesResponse { uses: Vec::new() };
         for route in routes.iter() {
-            if req.component_id == route.src_id {
+            if component_id == route.src_id as i64 {
                 resp.uses.push(route.dst_id);
             }
         }
@@ -96,26 +74,23 @@ impl DataController for ComponentUsesGraphController {
     fn usage(&self) -> String {
         UsageBuilder::new()
             .name("component.uses - Shows all the services a component uses.")
-            .summary("component.uses --component_id 123")
-            .description(
-                "Lists every component that this component uses. See \
-            component.from_uri to retrieve the component_id.",
-            )
+            .summary("component.uses --url [COMPONENT_URL] --component_id [COMPONENT_ID]")
+            .description("Lists every component that this component uses. Provide either the url or the component_id.")
+            .arg("--component_id", "The component id for the component")
+            .arg("--url", "The url for the component")
             .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
-        vec![("--component_id".to_string(), HintDataType::NoType)]
+        vec![
+            ("--url".to_string(), HintDataType::NoType),
+            ("--component_id".to_string(), HintDataType::NoType),
+        ]
     }
 }
 
 #[derive(Default)]
 pub struct ComponentUsedGraphController {}
-
-#[derive(Deserialize, Serialize)]
-struct ComponentUsedRequest {
-    component_id: i32,
-}
 
 #[derive(Deserialize, Serialize)]
 struct ComponentUsedResponse {
@@ -124,15 +99,14 @@ struct ComponentUsedResponse {
 
 impl DataController for ComponentUsedGraphController {
     fn query(&self, model: Arc<DataModel>, value: Value) -> Result<Value> {
-        let req: ComponentUsedRequest = serde_json::from_value(value)?;
+        let req: DefaultComponentRequest = serde_json::from_value(value)?;
+        let component_id = req.component_id(model.clone())?;
 
-        // Check if the component id exists.
-        // FIXME: Since we actually don't have any indexing in the model, this is pretty slow.
         {
             let mut found = false;
             let components = model.components().read().unwrap();
             for component in components.iter() {
-                if req.component_id == component.id {
+                if component_id == component.id as i64 {
                     found = true;
                 }
             }
@@ -140,7 +114,7 @@ impl DataController for ComponentUsedGraphController {
             if !found {
                 return Err(Error::new(io::Error::new(
                     ErrorKind::Other,
-                    format!("Could not find a component with component_id {}.", req.component_id),
+                    format!("Could not find a component with component_id {}.", component_id),
                 )));
             }
         }
@@ -148,7 +122,7 @@ impl DataController for ComponentUsedGraphController {
         let routes = model.routes().read().unwrap();
         let mut resp = ComponentUsedResponse { used_by: Vec::new() };
         for route in routes.iter() {
-            if req.component_id == route.dst_id {
+            if component_id == route.dst_id as i64 {
                 resp.used_by.push(route.src_id);
             }
         }
@@ -163,16 +137,18 @@ impl DataController for ComponentUsedGraphController {
     fn usage(&self) -> String {
         UsageBuilder::new()
             .name("component.used - Shows all the services a component is used by.")
-            .summary("component.used --component_id 123")
-            .description(
-                "Lists every component that this component is used by. See \
-            component.from_uri to retrieve the component_id.",
-            )
+            .summary("component.used --url [COMPONENT_URL] --component_id [COMPONENT_ID]")
+            .description("Lists every component that this component is used by. Provide the url or the component_id")
+            .arg("--component_id", "The component id for the component")
+            .arg("--url", "The url for the component")
             .build()
     }
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
-        vec![("--component_id".to_string(), HintDataType::NoType)]
+        vec![
+            ("--url".to_string(), HintDataType::NoType),
+            ("--component_id".to_string(), HintDataType::NoType),
+        ]
     }
 }
 
@@ -251,7 +227,7 @@ mod tests {
 
         let controller = ComponentUsesGraphController::default();
         let json_body = json!({
-            "component_id": 2
+            "url": "fake_url_2",
         });
         let val = controller.query(model, json_body).unwrap();
         let response: ComponentUsesResponse = serde_json::from_value(val).unwrap();
@@ -287,7 +263,7 @@ mod tests {
 
         let controller = ComponentUsesGraphController::default();
         let json_body = json!({
-            "component_id": 4
+            "component_id": "4"
         });
         assert!(controller.query(model, json_body).is_err());
     }
@@ -352,7 +328,7 @@ mod tests {
 
         let controller = ComponentUsedGraphController::default();
         let json_body = json!({
-            "component_id": 2
+            "url": "fake_url_2",
         });
         let val = controller.query(model, json_body).unwrap();
         let response: ComponentUsedResponse = serde_json::from_value(val).unwrap();
@@ -419,7 +395,7 @@ mod tests {
 
         let controller = ComponentUsedGraphController::default();
         let json_body = json!({
-            "component_id": 2
+            "component_id": "2"
         });
         let val = controller.query(model, json_body).unwrap();
         let response: ComponentUsedResponse = serde_json::from_value(val).unwrap();

@@ -40,6 +40,7 @@ if (!is_fuchsia) {
       "src/core/controllers/mod.rs",
       "src/core/controllers/package.rs",
       "src/core/controllers/route.rs",
+      "src/core/controllers/utils.rs",
       "src/core/controllers/zbi.rs",
       "src/core/core.rs",
       "src/core/jsons.rs",

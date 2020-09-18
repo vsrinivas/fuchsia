@@ -26,7 +26,7 @@ class ManifestView {
     this.components.forEach((component) => {
       if (component.url.includes(query) && !component.inferred) {
         // Populate with new manifest search tiles.
-        let api = location.origin + '/api/component/raw_manifest';
+        let api = location.origin + '/api/component/manifest';
         let query = JSON.stringify({'component_id': component.id});
         requests.push(post_request(api, query));
         urls.push(component.url);

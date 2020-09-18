@@ -32,7 +32,7 @@ impl DataController for BootfsPathsController {
             .name("zbi.bootfs - Lists all the BootFS files found in the ZBI.")
             .summary("zbi.bootfs")
             .description(
-                "Lists all the BootFS ZBI files found in the ZBI.\"
+                "Lists all the BootFS ZBI files found in the ZBI.\
             More specifically it is looking at the ZBI found in the \
             fuchsia-pkg://fuchsia.com/update package.",
             )

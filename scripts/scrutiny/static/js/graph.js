@@ -40,7 +40,7 @@ class ComponentMapperApi {
 
     this.routesUrl = baseUrl + "api/routes";
     this.componentsUrl = baseUrl + "api/components";
-    this.manifestUrl = baseUrl + "api/component/raw_manifest";
+    this.manifestUrl = baseUrl + "api/component/manifest";
   }
 
   /**
