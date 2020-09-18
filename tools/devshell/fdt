@@ -48,12 +48,8 @@ fi
 # Use prebuilt version if no arguments are passed.
 if [[ $# == 0 ]]; then
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
-    # On the mac if we have already unzipped the prebuilt then open it.
-    if [[ -e "$PREBUILT" ]]; then
-      open "$PREBUILT"
-      exit 0
-    # On the mac if we have not unzipped the prebuilt then unzip first.
-    elif [[ -e "$PREBUILT_ZIP" ]]; then
+    # On the mac if we have a prebuilt zip then we are good to go.
+    if [[ -e "$PREBUILT_ZIP" ]]; then
       rm -rf "${PREBUILT_UNZIP_DIR}"
       if ! unzip -qq "${PREBUILT_ZIP}" -d "${PREBUILT_UNZIP_DIR}-temp"; then
         rm -rf "${PREBUILT_UNZIP_DIR}-temp"
