@@ -34,3 +34,10 @@ group("zedboot") {
     "//src/bringup/bin/waitfor",
   ]
 }
+
+group("debugging") {
+  deps = [
+    "//src/bringup/bin/trace-benchmark",
+    "//src/bringup/bin/virtcon:virtual-console",
+  ]
+}

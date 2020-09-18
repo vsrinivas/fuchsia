@@ -14,11 +14,12 @@
 # See fxb/58349 for more details.
 
 # This list will eventually be migrated to a product file, likely
-# `//products/bringup.gni`. It should only contained elements which have been
+# `//products/bringup.gni`. It should only contain elements which have been
 # vetted and properly structured.
 _common_image_deps = [
   "//build/info:bootfs",
   "//bundles:bootstrap",
+  "//bundles:debugging",
   "//bundles/bringup:manual_testing",
   "//bundles/drivers:bootstrap",
   "//bundles/drivers:usb-host-stack",
@@ -29,35 +30,6 @@ _common_image_deps = [
 # TODO(56988): We shouldn't need runtests, but right now it's used by profile
 # builders, so include it here until we remove that dependency.
 _common_image_deps += [ "//src/testing/runtests" ]
-
-# This is the legacy list of stuff that needs to be sorted out.
-_common_image_deps += [
-  "//src/bringup/bin/trace-benchmark",
-  "//src/bringup/bin/virtcon:virtual-console",
-  "//src/connectivity/network/bin/ping",
-  "//src/developer/forensics/crasher/cpp:crasher_exe",
-  "//src/devices/block/bin/disk-inspect",
-  "//src/devices/block/bin/fvm-check",
-  "//src/devices/nand/bin/nand-loader",
-  "//src/devices/nand/bin/nand-util",
-  "//src/devices/nand/drivers/broker:nand-broker",
-  "//src/diagnostics/dlog",
-  "//src/storage/bin/dd",
-  "//src/storage/bin/df",
-  "//src/storage/bin/disk-pave:install-disk-image",
-  "//src/storage/bin/mount",
-  "//src/storage/bin/umount",
-  "//src/sys/bin/psutils",
-  "//src/zircon/bin/kcounter",
-  "//src/zircon/bin/kstress",
-  "//src/zircon/bin/ktrace",
-  "//src/zircon/bin/loadgen",
-  "//zircon/system/ulib/driver-info/app:driverinfo",
-  "//zircon/third_party/uapp/dash",
-  "//zircon/third_party/uapp/fsck-msdosfs",
-  "//zircon/third_party/uapp/kilo",
-  "//zircon/third_party/uapp/mkfs-msdosfs",
-]
 
 # At this point you are puzzled: why use two variables? The `_deps` suffix
 # signals to GN that the list should be sorted, whereas the

@@ -9,10 +9,6 @@
 # the objects that we want in that ZBI. If multiple ZBI's need a common
 # denominator, it needs to be factored out to a proper GN variable.
 
-# TODO(36888): This could be made smaller by removing drivers that are not
-# needed, but we don't currently have a good way to determine the
-# subset that is useful to Zedboot.
-
 zedboot_deps = []
 
 # The elements in this section have been vetted and will later be migrated to
@@ -29,13 +25,17 @@ zedboot_deps += [
 # Needed for installer runs.
 zedboot_deps += [
   "//src/storage/bin/disk-pave:install-disk-image",
-  "//src/storage/bin/mount:mount",
+  "//src/storage/bin/mount",
+  "//src/sys/installer:bin",
 ]
 
 # For debugging.
 zedboot_deps += [
+  "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/network/bin/ping",
   "//src/devices/nand/bin/nand-util",
+  "//src/devices/nand/drivers/broker:nand-broker",
+  "//src/diagnostics/dlog",
   "//src/security/bin/syscall-check",
   "//src/storage/bin/dd",
   "//src/storage/bin/umount",
@@ -44,14 +44,4 @@ zedboot_deps += [
   "//src/sys/bin/psutils:threads",
   "//src/zircon/bin/ktrace",
   "//zircon/third_party/uapp/dash",
-]
-
-# Finally, everything which used to come from the Zircon build as a monolith.
-zedboot_deps += [
-  "//src/bringup/bin/virtcon:virtual-console",
-  "//src/devices/nand/drivers/broker:nand-broker",
-  "//src/diagnostics/dlog",
-  "//src/media/audio/drivers/alc5663",
-  "//src/sys/installer:bin",
-  "//src/ui/input/drivers/hid-input-report",
 ]

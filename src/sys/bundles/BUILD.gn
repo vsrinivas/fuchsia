@@ -10,3 +10,7 @@ group("bootstrap") {
     "//src/sys/component_manager:bootfs",
   ]
 }
+
+group("debugging") {
+  deps = [ "//src/sys/bin/psutils" ]
+}

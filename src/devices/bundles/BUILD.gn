@@ -78,6 +78,7 @@ group("utils") {
     "//src/devices/power/bin/lspwr",
     "//src/devices/spi/bin/spiutil",
     "//src/devices/thermal/bin/thermal-cli",
+    "//zircon/system/ulib/driver-info/app:driverinfo",
   ]
 }
 
@@ -98,5 +99,15 @@ group("manual_testing") {
     "//src/devices/usb/bin/xdc-test",
     "//src/devices/usb/drivers/usb-peripheral-test",
     "//src/devices/usb/drivers/usb-test/flash-programmer",
+  ]
+}
+
+group("debugging") {
+  deps = [
+    "//src/devices/block/bin/disk-inspect",
+    "//src/devices/block/bin/fvm-check",
+    "//src/devices/nand/bin/nand-loader",
+    "//src/devices/nand/bin/nand-util",
+    "//src/devices/nand/drivers/broker:nand-broker",
   ]
 }

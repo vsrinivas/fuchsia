@@ -137,3 +137,17 @@ group("bootstrap-zedboot") {
     "//src/sys/bundles:bootstrap",
   ]
 }
+
+# Debugging tools installed on the boot image.
+group("debugging") {
+  deps = [
+    "//src/bringup/bundles:debugging",
+    "//src/connectivity/bundles:debugging",
+    "//src/developer/bundles:debugging",
+    "//src/devices/bundles:debugging",
+    "//src/diagnostics/bundles:debugging",
+    "//src/storage/bundles:debugging",
+    "//src/sys/bundles:debugging",
+    "//src/zircon/bundles:debugging",
+  ]
+}
