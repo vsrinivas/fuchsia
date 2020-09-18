@@ -13,7 +13,6 @@ group("all") {
   testonly = true
   public_deps = [
     ":scenic",
-    ":zircon",
     "//build/tools/json_merge:json_merge_test($host_toolchain)",
     "//examples/intl/tz_version_parrot:tests",
     "//garnet/bin/catapult_converter:catapult_converter_tests($host_toolchain)",
@@ -182,9 +181,4 @@ group("scenic") {
     "//src/ui/bin/hardware_display_controller_provider",
     "//src/ui/scenic:tests",
   ]
-}
-
-group("zircon") {
-  testonly = true
-  public_deps = [ "//garnet/tests/zircon:zircon_fuzzers" ]
 }

@@ -81,6 +81,10 @@ source_set("src") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+firmware("firmware") {
+  sources = [ "intel-adsp-sst/dsp_fw_kbl_v3420.bin" ]
+}
+
 driver_module("intel-hda") {
   configs += [
     "//build/config:all_source",
@@ -122,6 +126,17 @@ test("controller_test") {
   ]
 }
 
+unittest_package("intel-hda-controller-test") {
+  deps = [ ":controller_test" ]
+
+  tests = [
+    {
+      name = "intel-hda-controller-test"
+      environments = basic_envs
+    },
+  ]
+}
+
 # Fuzz testing for NHLT parsing.
 #
 # Name needs to end with "-fuzzer" to be included in the Zircon fuzz test package.
@@ -136,22 +151,14 @@ fuzzer("nhlt-fuzzer") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-firmware("firmware") {
-  sources = [ "intel-adsp-sst/dsp_fw_kbl_v3420.bin" ]
-}
-
-unittest_package("intel-hda-controller-test") {
-  deps = [ ":controller_test" ]
-
-  tests = [
-    {
-      name = "intel-hda-controller-test"
-      environments = basic_envs
-    },
-  ]
+fuzzers_package("intel-hda-controller-fuzzers") {
+  cpp_fuzzers = [ ":nhlt-fuzzer" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":intel-hda-controller-test" ]
+  deps = [
+    ":intel-hda-controller-fuzzers",
+    ":intel-hda-controller-test",
+  ]
 }

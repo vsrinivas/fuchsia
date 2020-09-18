@@ -73,6 +73,7 @@ group("tests") {
     "tests",
     "ui:tests",
     "virtualization:tests",
+    "zircon:tests",
 
     # These targets should be removed when the tests are moved to
     # //src.

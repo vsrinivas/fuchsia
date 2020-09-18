@@ -7,9 +7,12 @@
 # When a migration happens, the test needs to be removed from this list and
 # placed within the proper `tests` target under //src.
 
+import("//build/fuzzing/fuzzer.gni")
+
 group("tests") {
   testonly = true
   deps = [
+    ":fuzzers",
     "edid:tests",
     "fs/journal/test",
     "ftl/test:tests",
@@ -22,5 +25,28 @@ group("tests") {
     "sysconfig-client:tests",
     "zbitl/test",
     "zxio:tests",
+  ]
+}
+
+fuzzers_package("fuzzers") {
+  package_name = "zircon-fuzzers"
+  cpp_fuzzers = [
+    "affine/test:affine-fuzzer",
+    "bitmap/test:raw-bitmap-fuzzer",
+    "elfload/test:elfload-fuzzer",
+    "fs/journal/test:journal-entry-fuzzer",
+    "fs/journal/test:journal-fuzzer",
+    "fs/journal/test:journal-replay-fuzzer",
+    "fs/test:vmo_file-fuzzer",
+    "gfx/test:gfx-fuzzer",
+    "hid-parser/test:hid-parser-fuzzer",
+    "ldmsg/test:ldmsg-fuzzer",
+    "minfs/test:minfs-fuzzer",
+    "tftp/test:tftp-fuzzer",
+    "utf_conversion/test:utf_conversion-fuzzer",
+    "zbi-bootfs/test:zbi-bootfs-fuzzer",
+    "zircon-crypto/test:hmac-fuzzer",
+    "//zircon/third_party/ulib/lz4/test:lz4-decompress-fuzzer",
+    "//zircon/third_party/ulib/lz4/test:lz4-roundtrip-fuzzer",
   ]
 }

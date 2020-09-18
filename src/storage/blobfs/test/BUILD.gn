@@ -10,6 +10,7 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 group("test") {
   testonly = true
   deps = [
+    ":blobfs-fuzzers",
     ":blobfs-integration-package",
     ":blobfs-unittest",
   ]
@@ -434,6 +435,14 @@ fuzzer("zstd-seekable-fuzzer") {
 
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/zstd:zstdseek",
+  ]
+}
+
+fuzzers_package("blobfs-fuzzers") {
+  cpp_fuzzers = [
+    ":zstd-fuzzer",
+    ":zstd-seekable-fuzzer",
+    ":zstd-seekable-symmetric-fuzzer",
   ]
 }
 

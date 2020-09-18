@@ -24,7 +24,10 @@ source_set("shared") {
 
 group("tests") {
   testonly = true
-  deps = [ ":ftl-package" ]
+  deps = [
+    ":ftl-fuzzers",
+    ":ftl-package",
+  ]
 }
 
 test("ftl") {
@@ -96,6 +99,10 @@ fuzzer("ftl-read-write-fuzzer") {
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuzzers_package("ftl-fuzzers") {
+  cpp_fuzzers = [ ":ftl-read-write-fuzzer" ]
 }
 
 isolated_devmgr_unittest_package("ftl-integration-package") {
