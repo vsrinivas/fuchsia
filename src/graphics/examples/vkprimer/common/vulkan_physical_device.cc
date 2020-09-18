@@ -23,7 +23,7 @@ static const std::vector<const char *> s_required_phys_device_props = {
 
 bool ChooseGraphicsDevice(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
                           vk::PhysicalDevice *phys_device_out) {
-  if (FindMatchingProperties(s_required_phys_device_props, vkp::PHYS_DEVICE_EXT_PROP, &phys_device,
+  if (FindMatchingProperties(s_required_phys_device_props, vkp::PHYS_DEVICE_EXT_PROP, phys_device,
                              kMagmaLayer, nullptr /* missing_props */)) {
     return false;
   }

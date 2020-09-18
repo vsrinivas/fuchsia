@@ -49,7 +49,7 @@ std::vector<const char *> GetExtensions_Private(std::vector<const char *> *layer
   std::vector<const char *> extensions;
   std::vector<std::string> missing_props;
 
-  if (!FindMatchingProperties(s_required_props, vkp::INSTANCE_EXT_PROP, nullptr /* device */,
+  if (!FindMatchingProperties(s_required_props, vkp::INSTANCE_EXT_PROP, nullptr /* phys_device */,
                               kMagmaLayer, &missing_props)) {
     extensions.insert(extensions.end(), s_required_props.begin(), s_required_props.end());
   }

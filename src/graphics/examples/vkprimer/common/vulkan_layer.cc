@@ -103,6 +103,7 @@ void VulkanLayer::AppendRequiredDeviceLayers(std::vector<const char *> *layers) 
 
 bool VulkanLayer::CheckValidationLayerSupport() {
   const std::vector<const char *> validation_layers(1, s_instance_validation_layer_name);
-  return !FindMatchingProperties(validation_layers, vkp::INSTANCE_LAYER_PROP, nullptr /* device */,
-                                 nullptr /* layer */, nullptr /* missing_props */);
+  return !FindMatchingProperties(validation_layers, vkp::INSTANCE_LAYER_PROP,
+                                 nullptr /* phys_device */, nullptr /* layer */,
+                                 nullptr /* missing_props */);
 }

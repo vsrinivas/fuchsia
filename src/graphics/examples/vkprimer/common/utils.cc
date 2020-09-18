@@ -4,6 +4,7 @@
 
 #include "utils.h"
 
+#include <cassert>
 #include <optional>
 #include <unordered_set>
 
@@ -24,7 +25,7 @@ namespace vkp {
 // Enumerate properties categorically using |search_prop| and populate |props_found_set|
 // with the results.  Returns false if no properties are enumerated.
 //
-static bool EnumerateProperties(SearchProp search_prop, const vk::PhysicalDevice &phys_device,
+static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_device,
                                 const char *layer,
                                 std::unordered_set<std::string> *props_found_set) {
   std::optional<vk::ResultValue<std::vector<vk::ExtensionProperties>>> rv_ext;
@@ -52,6 +53,7 @@ static bool EnumerateProperties(SearchProp search_prop, const vk::PhysicalDevice
       layer_props = rv_layer->value;
       break;
     case PHYS_DEVICE_EXT_PROP:
+      assert(phys_device && "Null phys device used for phys device property query.");
       if (layer) {
         rv_ext = phys_device.enumerateDeviceExtensionProperties(std::string(layer));
       } else {
@@ -78,13 +80,13 @@ static bool EnumerateProperties(SearchProp search_prop, const vk::PhysicalDevice
 }
 
 bool FindMatchingProperties(const std::vector<const char *> &desired_props, SearchProp search_prop,
-                            const vk::PhysicalDevice *phys_device, const char *layer,
+                            vk::PhysicalDevice phys_device, const char *layer,
                             std::vector<std::string> *missing_props_out) {
   std::unordered_set<std::string> props_found_set;
 
   // Match Vulkan properties.  "Vulkan properties" are those
   // found when the layer argument is set to null.
-  bool success = EnumerateProperties(search_prop, *phys_device, nullptr, &props_found_set);
+  bool success = EnumerateProperties(search_prop, phys_device, nullptr, &props_found_set);
 
   if (!success) {
     if (missing_props_out) {
@@ -97,7 +99,7 @@ bool FindMatchingProperties(const std::vector<const char *> &desired_props, Sear
   // Match layer properties.
   if (search_prop != INSTANCE_LAYER_PROP && layer &&
       props_found_set.size() != desired_props.size()) {
-    success = EnumerateProperties(search_prop, *phys_device, layer, &props_found_set);
+    success = EnumerateProperties(search_prop, phys_device, layer, &props_found_set);
   }
 
   if (missing_props_out) {

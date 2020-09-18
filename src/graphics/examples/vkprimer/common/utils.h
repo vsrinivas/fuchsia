@@ -36,7 +36,7 @@ enum SearchProp { INSTANCE_EXT_PROP, INSTANCE_LAYER_PROP, PHYS_DEVICE_EXT_PROP }
 //   vk::enumerateDeviceExtensionProperties
 //
 bool FindMatchingProperties(const std::vector<const char *> &desired_props, SearchProp search_prop,
-                            const vk::PhysicalDevice *phys_device, const char *layer,
+                            vk::PhysicalDevice phys_device, const char *layer,
                             std::vector<std::string> *missing_propss_out);
 
 // Find graphics queue families for |surface|.  Populate |queue_family_indices|
