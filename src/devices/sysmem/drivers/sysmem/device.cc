@@ -427,7 +427,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
     auto heap_client_ptr = heap_client.get();
     status = heap_client_ptr->Bind(
         std::move(heap_connection), loop_.dispatcher(),
-        [this, heap](fidl::UnbindInfo info, zx::channel channel) {
+        [this, heap](fidl::UnbindInfo info) {
           if (info.reason != fidl::UnbindInfo::Reason::kPeerClosed &&
               info.reason != fidl::UnbindInfo::Reason::kClose) {
             DRIVER_ERROR("Heap failed: reason %d status %d\n", static_cast<int>(info.reason),

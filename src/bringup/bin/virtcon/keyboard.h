@@ -59,7 +59,7 @@ class Keyboard {
 
   // This is the callback if reader_client_ is unbound. This tries to reconnect and
   // will delete Keyboard if reconnecting fails.
-  void InputReaderUnbound(fidl::UnbindInfo info, zx::channel chan);
+  void InputReaderUnbound(fidl::UnbindInfo info);
 
   // Attempt to connect to an InputReportsReader and start a ReadInputReports call.
   zx_status_t StartReading();

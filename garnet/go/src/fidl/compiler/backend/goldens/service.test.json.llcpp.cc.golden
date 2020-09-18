@@ -26,8 +26,8 @@ SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
 }
 
 ::fidl::Result SecondProtocol::ClientImpl::MethodOnSecond() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::MethodOnSecond(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::MethodOnSecond(_channel->handle());
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -105,8 +105,8 @@ FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
 }
 
 ::fidl::Result FirstProtocol::ClientImpl::MethodOnFirst() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::MethodOnFirst(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::MethodOnFirst(_channel->handle());
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

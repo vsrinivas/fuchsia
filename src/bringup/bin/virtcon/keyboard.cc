@@ -219,12 +219,11 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  status =
-      reader_client_.Bind(std::move(client), dispatcher_,
-                          [this](fidl::UnbindInfo info, zx::channel chan) {
-                            printf("vc: Keyboard Reader unbound.\n");
-                            InputReaderUnbound(info, std::move(chan));
-                          });
+  status = reader_client_.Bind(std::move(client), dispatcher_,
+                               [this](fidl::UnbindInfo info) {
+                                 printf("vc: Keyboard Reader unbound.\n");
+                                 InputReaderUnbound(info);
+                               });
   if (status != ZX_OK) {
     return status;
   }
@@ -237,7 +236,7 @@ zx_status_t Keyboard::StartReading() {
   return ZX_OK;
 };
 
-void Keyboard::InputReaderUnbound(fidl::UnbindInfo info, zx::channel chan) {
+void Keyboard::InputReaderUnbound(fidl::UnbindInfo info) {
   zx_status_t status = StartReading();
   if (status != ZX_OK) {
     delete this;

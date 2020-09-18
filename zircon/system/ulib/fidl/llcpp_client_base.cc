@@ -18,18 +18,21 @@ zx_status_t ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel cha
                              async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
+  channel_tracker_.Init(std::move(channel));
+  auto channel_ref = channel_tracker_.Get();
   auto binding = AsyncBinding::CreateClientBinding(
-      dispatcher, std::move(channel), this,
+      dispatcher, channel_ref->handle(), this,
       [client = std::weak_ptr(client)](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*) {
         if (auto _client = client.lock())
           return _client->Dispatch(std::move(_client), msg);
         return std::optional<UnbindInfo>({UnbindInfo::kUnbind, ZX_OK});
       },
-      [on_unbound = std::move(on_unbound), client](
-          void*, UnbindInfo info, zx::channel channel) mutable {
+      [on_unbound = std::move(on_unbound), client, channel_ref](
+          void*, UnbindInfo info, zx::channel) mutable {
+        channel_ref = nullptr;  // Release the binding's implicit reference to the channel.
         client->ReleaseResponseContextsWithError();
-        client = nullptr;
-        on_unbound(info, std::move(channel));
+        client = nullptr;  // Release the binding's implicit reference to the ClientBase.
+        on_unbound(info);
       });
   auto status = binding->BeginWait();
   binding_ = std::move(binding);
@@ -39,6 +42,13 @@ zx_status_t ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel cha
 void ClientBase::Unbind() {
   if (auto binding = binding_.lock())
     binding->Unbind(std::move(binding));
+}
+
+zx::channel ClientBase::WaitForChannel() {
+  // Unbind to release the AsyncBinding's reference to the channel.
+  Unbind();
+  // Wait for all references to be released.
+  return channel_tracker_.WaitForChannel();
 }
 
 void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
@@ -127,6 +137,29 @@ std::optional<UnbindInfo> ClientBase::Dispatch(std::shared_ptr<ClientBase>&& cal
   client = nullptr;  // Release the reference to `this` before invoking user code.
   // Dispatch events (received messages with no txid).
   return DispatchEvent(msg);
+}
+
+void ChannelRefTracker::Init(zx::channel channel) {
+  std::scoped_lock lock(lock_);
+  channel_weak_ = channel_ = std::make_shared<ChannelRef>(std::move(channel));
+}
+
+zx::channel ChannelRefTracker::WaitForChannel() {
+  zx::channel channel;
+  sync_completion_t on_delete;
+  {
+    std::scoped_lock lock(lock_);
+    // Ensure that only one thread receives the channel.
+    if (!channel_) return channel;
+    channel.reset(channel_->SyncOnDelete(&on_delete));
+    channel_ = nullptr;  // Allow the ChannelRef to be destroyed.
+  }
+
+  // Wait for all ChannelRefs to be released.
+  auto status = sync_completion_wait(&on_delete, ZX_TIME_INFINITE);
+  ZX_ASSERT_MSG(status == ZX_OK,
+                "%s: Error waiting for channel to be released: %u.\n", __func__, status);
+  return channel;
 }
 
 }  // namespace internal

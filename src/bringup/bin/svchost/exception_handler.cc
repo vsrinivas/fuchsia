@@ -21,11 +21,12 @@ ExceptionHandler::ExceptionHandler(async_dispatcher_t* dispatcher,
   ConnectToServer();
 }
 
-void ExceptionHandler::SetUpClient(zx::channel client_endpoint) {
+void ExceptionHandler::SetUpClient() {
   if (drop_exceptions_) {
     return;
   }
 
+  zx::channel client_endpoint;
   if (const zx_status_t status = zx::channel::create(0u, &server_endpoint_, &client_endpoint)) {
     LogError("Failed to create channel for fuchsia.exception.Handler", status);
     drop_exceptions_ = true;
@@ -34,12 +35,10 @@ void ExceptionHandler::SetUpClient(zx::channel client_endpoint) {
 
   connection_ = fidl::Client<llcpp::fuchsia::exception::Handler>();
   connection_.Bind(std::move(client_endpoint), dispatcher_,
-                   [this](fidl::UnbindInfo info, zx::channel client_endpoint) {
-                     OnUnbind(info, std::move(client_endpoint));
-                   });
+                   [this](fidl::UnbindInfo info) { OnUnbind(info); });
 }
 
-void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info, zx::channel client_endpoint) {
+void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info) {
   // If the unbind was not an error, don't reconnect and stop sending exceptions to
   // fuchsia.exception.Handler. This should only happen in tests.
   if (info.status == ZX_OK || info.status == ZX_ERR_CANCELED) {
@@ -55,7 +54,7 @@ void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info, zx::channel client_
   // immediately is because the server could have been shut down by the system or (2) with a backoff
   // is because we don't want to be queueing up exceptions which underlying processes need to be
   // terminated.
-  SetUpClient(std::move(client_endpoint));
+  SetUpClient();
 }
 
 void ExceptionHandler::ConnectToServer() {

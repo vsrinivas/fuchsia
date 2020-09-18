@@ -35,8 +35,8 @@ ExampleProtocol::UnownedResultOf::Method::Method(
 
 ::fidl::Result ExampleProtocol::ClientImpl::Method(
     ::llcpp::exampleusing::Empty arg) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Method(_binding->handle(), arg);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::Method(_channel->handle(), arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -44,9 +44,9 @@ ExampleProtocol::UnownedResultOf::Method::Method(
 
 ::fidl::Result ExampleProtocol::ClientImpl::Method(
     ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
-        UnownedResultOf::Method(_binding->handle(), _request_buffer.data(),
+        UnownedResultOf::Method(_channel->handle(), _request_buffer.data(),
                                 _request_buffer.capacity(), arg);
     return ::fidl::Result(_res.status(), _res.error());
   }

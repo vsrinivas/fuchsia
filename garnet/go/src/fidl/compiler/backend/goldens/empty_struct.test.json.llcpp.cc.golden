@@ -84,8 +84,8 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 
 ::fidl::Result EmptyProtocol::ClientImpl::Send(
     ::llcpp::fidl::test::json::Empty e) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Send(_binding->handle(), e);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::Send(_channel->handle(), e);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -93,9 +93,9 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 
 ::fidl::Result EmptyProtocol::ClientImpl::Send(
     ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
-        UnownedResultOf::Send(_binding->handle(), _request_buffer.data(),
+        UnownedResultOf::Send(_channel->handle(), _request_buffer.data(),
                               _request_buffer.capacity(), e);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -105,8 +105,8 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 EmptyProtocol::ResultOf::SendAndReceive
 EmptyProtocol::ClientImpl::SendAndReceive_Sync(
     ::llcpp::fidl::test::json::Empty e) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::SendAndReceive(_binding->handle(), e);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::SendAndReceive(_channel->handle(), e);
   }
   return EmptyProtocol::ResultOf::SendAndReceive(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -116,9 +116,9 @@ EmptyProtocol::UnownedResultOf::SendAndReceive
 EmptyProtocol::ClientImpl::SendAndReceive_Sync(
     ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e,
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::SendAndReceive(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         e, _response_buffer.data(), _response_buffer.capacity());
   }
   return EmptyProtocol::UnownedResultOf::SendAndReceive(

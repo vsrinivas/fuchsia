@@ -11,6 +11,7 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -55,8 +56,8 @@ class TestProtocol {
       }
     }
 
-    std::shared_ptr<internal::AsyncBinding> GetBinding() {
-      return internal::ClientBase::GetBinding();
+    std::shared_ptr<internal::ChannelRefTracker::ChannelRef> GetChannel() {
+      return internal::ClientBase::GetChannel();
     }
 
     uint32_t GetEventCount() {
@@ -110,14 +111,12 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     EXPECT_EQ(0, client->GetTxidCount());
     sync_completion_signal(&unbound);
   };
@@ -143,14 +142,12 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     EXPECT_EQ(0, client->GetTxidCount());
     sync_completion_signal(&unbound);
   };
@@ -203,14 +200,12 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
     EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     EXPECT_EQ(0, client->GetTxidCount());
     sync_completion_signal(&unbound);
   };
@@ -232,14 +227,12 @@ TEST(ClientBindingTestCase, Events) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
     sync_completion_signal(&unbound);
   };
@@ -268,13 +261,11 @@ TEST(ClientBindingTestCase, Unbind) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
     EXPECT_OK(info.status);
-    EXPECT_EQ(local_handle, channel.get());
     sync_completion_signal(&unbound);
   };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
@@ -290,13 +281,11 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
     EXPECT_OK(info.status);
-    EXPECT_EQ(local_handle, channel.get());
     sync_completion_signal(&unbound);
   };
   auto* client =
@@ -307,32 +296,31 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
-TEST(ClientBindingTestCase, BindingRefPreventsUnbind) {
+TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
     EXPECT_OK(info.status);
-    EXPECT_EQ(local_handle, channel.get());
     sync_completion_signal(&unbound);
   };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
-  // Create a strong reference to the binding.
-  auto binding = client->GetBinding();
+  // Create a strong reference to the channel.
+  auto channel = client->GetChannel();
 
-  client.Unbind();  // Unbind() should not be blocked by the strong reference.
-
-  // unbound should not be signaled until the strong reference is released.
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&unbound, 0));
-  binding.reset();
+  // Unbind() and the unbound handler should not be blocked by the channel reference.
+  client.Unbind();
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+
+  // Check that the channel handle is still valid.
+  EXPECT_OK(
+      zx_object_get_info(channel->handle(), ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
 class ReleaseTestResponseContext : public internal::ResponseContext {
@@ -390,13 +378,11 @@ TEST(ClientBindingTestCase, Epitaph) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
     EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     sync_completion_signal(&unbound);
   };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
@@ -412,14 +398,12 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
     // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     sync_completion_signal(&unbound);
   };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
@@ -427,6 +411,69 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
   // Close the server end and wait for on_unbound to run.
   remote.reset();
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+TEST(ChannelRefTrackerTestCase, NoWaitNoHandleLeak) {
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  // Pass ownership of local end of the channel to the ChannelRefTracker.
+  auto channel_tracker = new internal::ChannelRefTracker();
+  channel_tracker->Init(std::move(local));
+
+  // Destroy the ChannelRefTracker. ZX_SIGNAL_PEER_CLOSED should be asserted on remote.
+  delete channel_tracker;
+  EXPECT_OK(remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), nullptr));
+}
+
+TEST(ChannelRefTrackerTestCase, WaitForChannelWithoutRefs) {
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto local_handle = local.get();
+
+  // Pass ownership of local end of the channel to the ChannelRefTracker.
+  internal::ChannelRefTracker channel_tracker;
+  channel_tracker.Init(std::move(local));
+
+  // Retrieve the channel. Check the validity of the handle.
+  local = channel_tracker.WaitForChannel();
+  ASSERT_EQ(local_handle, local.get());
+  ASSERT_OK(local.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+
+  // Ensure that no new references can be created.
+  EXPECT_FALSE(channel_tracker.Get());
+}
+
+TEST(ChannelRefTrackerTestCase, WaitForChannelWithRefs) {
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto local_handle = local.get();
+
+  // Pass ownership of local end of the channel to the ChannelRefTracker.
+  internal::ChannelRefTracker channel_tracker;
+  channel_tracker.Init(std::move(local));
+
+  // Get a new reference.
+  auto channel_ref = channel_tracker.Get();
+  ASSERT_EQ(local_handle, channel_ref->handle());
+
+  // Pass the reference to another thread, then wait for it to be released.
+  // NOTE: This is inherently racy but should never fail regardless of the particular state.
+  sync_completion_t running;
+  std::thread([&running, channel_ref = std::move(channel_ref)]() mutable {
+    sync_completion_signal(&running);  // Let the main thread continue.
+    channel_ref = nullptr;  // Release this reference.
+  }).detach();
+
+  ASSERT_OK(sync_completion_wait(&running, ZX_TIME_INFINITE));
+
+  // Retrieve the channel. Check the validity of the handle.
+  local = channel_tracker.WaitForChannel();
+  ASSERT_EQ(local_handle, local.get());
+  ASSERT_OK(local.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+
+  // Ensure that no new references can be created.
+  EXPECT_FALSE(channel_tracker.Get());
 }
 
 }  // namespace

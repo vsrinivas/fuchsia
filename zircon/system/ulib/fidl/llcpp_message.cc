@@ -81,8 +81,8 @@ void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, ui
 
 ::fidl::Result FidlMessage::Write(::fidl::internal::ClientBase* client,
                                   ::fidl::internal::ResponseContext* context) {
-  if (auto binding = client->GetBinding()) {
-    Write(binding->handle());
+  if (auto channel = client->GetChannel()) {
+    Write(channel->handle());
   } else {
     status_ = ZX_ERR_CANCELED;
     error_ = ::fidl::kErrorChannelUnbound;

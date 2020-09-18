@@ -24,12 +24,12 @@ class ExceptionHandler {
   bool ConnectedToServer() const;
 
  private:
-  void SetUpClient(zx::channel client_endpoint = zx::channel{});
+  void SetUpClient();
 
   // Send |server_endpoit_| to the server of fuchsia.exception.Handler.
   void ConnectToServer();
 
-  void OnUnbind(fidl::UnbindInfo info, zx::channel channel);
+  void OnUnbind(fidl::UnbindInfo info);
 
   async_dispatcher_t* dispatcher_;
   zx_handle_t exception_handler_svc_;

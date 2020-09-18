@@ -142,7 +142,7 @@ TEST(GenAPITestCase, EventNotHandled) {
   ASSERT_OK(loop.StartThread());
 
   sync_completion_t done;
-  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info, zx::channel) {
+  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, info.status);
     sync_completion_signal(&done);
@@ -169,13 +169,11 @@ TEST(GenAPITestCase, Epitaph) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  fidl::OnClientUnboundFn on_unbound = [&](fidl::UnbindInfo info, zx::channel channel) {
+  fidl::OnClientUnboundFn on_unbound = [&](fidl::UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
     EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
-    EXPECT_EQ(local_handle, channel.get());
     sync_completion_signal(&unbound);
   };
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
@@ -241,7 +239,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
     FAIL();
     sync_completion_signal(&done);
   }};
-  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info, zx::channel) {
+  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info) {
     EXPECT_EQ(fidl::UnbindInfo::kDecodeError, info.reason);
     sync_completion_signal(&done);
   };

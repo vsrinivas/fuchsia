@@ -45,8 +45,8 @@ Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
 }
 
 Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::GetFoo(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::GetFoo(_channel->handle());
   }
   return Top::ResultOf::GetFoo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -54,8 +54,8 @@ Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
 
 Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::GetFoo(_binding->handle(), _response_buffer.data(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::GetFoo(_channel->handle(), _response_buffer.data(),
                                    _response_buffer.capacity());
   }
   return Top::UnownedResultOf::GetFoo(

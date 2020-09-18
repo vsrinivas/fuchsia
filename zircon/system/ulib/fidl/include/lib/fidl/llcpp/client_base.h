@@ -71,6 +71,54 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   zx_txid_t txid_ = 0;             // Zircon txid of outstanding transaction.
 };
 
+// ChannelRefTracker takes ownership of a channel handle and is used to create and track strong
+// references to it. On destruction, ChannelRefTracker can be configured to transfer ownership.
+// Otherwise, the channel handle is closed.
+class ChannelRefTracker {
+ public:
+  class ChannelRef {
+   public:
+    explicit ChannelRef(zx::channel channel) : handle_(channel.release()) {}
+    ~ChannelRef() {
+      if (on_delete_) {
+        sync_completion_signal(on_delete_);
+      } else {
+        // If there is no waiter, the channel will be discarded, so close the handle.
+        zx_handle_close(handle_);
+      }
+    }
+
+    zx_handle_t handle() const { return handle_; }
+
+    zx_handle_t SyncOnDelete(sync_completion_t* on_delete) {
+      on_delete_ = on_delete;
+      return handle_;
+    }
+
+   private:
+    sync_completion_t* on_delete_ = nullptr;
+    const zx_handle_t handle_;
+  };
+
+  // Set the given channel as the owned channel.
+  void Init(zx::channel channel);
+
+  // If the ChannelRef is still alive, returns a strong reference to it.
+  std::shared_ptr<ChannelRef> Get() { return channel_weak_.lock(); }
+
+  // Blocks on the release of any outstanding strong references to the channel and returns it. Only
+  // one caller will be able to retrieve the channel. Other calls will return immediately with a
+  // null channel.
+  zx::channel WaitForChannel();
+
+ private:
+  std::mutex lock_;
+  std::shared_ptr<ChannelRef> channel_ __TA_GUARDED(lock_);
+
+  // Weak reference used to access channel without taking locks.
+  std::weak_ptr<ChannelRef> channel_weak_;
+};
+
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
 // handling and unbinding, and asynchronous transaction tracking. Users should not directly interact
 // with this class. ClientBase objects are expected to be managed via std::shared_ptr.
@@ -78,10 +126,6 @@ class ClientBase {
  public:
   // Creates an unbound ClientBase. Bind() must be called before any other APIs are invoked.
   ClientBase() = default;
-
-  // If the binding is not already unbound or in the process of being unbound, unbinds the channel
-  // from the dispatcher, invoking on_unbound if provided. Note that this object will have been
-  // destroyed prior to on_unbound being invoked.
   virtual ~ClientBase() = default;
 
   // Neither copyable nor movable.
@@ -99,6 +143,12 @@ class ClientBase {
   // dispatcher thread if provided.
   void Unbind();
 
+  // Waits for all strong references to the channel to be released, then returns it. This
+  // necessarily triggers unbinding in order to release the binding's reference.
+  // NOTE: As this returns a zx::channel which owns the handle, only a single call is expected to
+  // succeed. Additional calls will simply return an empty zx::channel.
+  zx::channel WaitForChannel();
+
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);
 
@@ -108,9 +158,9 @@ class ClientBase {
   // Releases all outstanding `ResponseContext`s. Invoked after the ClientBase is unbound.
   void ReleaseResponseContextsWithError();
 
-  // Returns a strong reference to binding to prevent channel deletion during a zx_channel_call() or
+  // Returns a strong reference to the channel to prevent destruction during a zx_channel_call() or
   // zx_channel_write(). The caller is responsible for releasing the reference.
-  std::shared_ptr<AsyncBinding> GetBinding() { return binding_.lock(); }
+  std::shared_ptr<ChannelRefTracker::ChannelRef> GetChannel() { return channel_tracker_.Get(); }
 
   // For debugging.
   size_t GetTransactionCount() {
@@ -125,6 +175,8 @@ class ClientBase {
   // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual
   // DispatchEvent().
   std::optional<UnbindInfo> Dispatch(std::shared_ptr<ClientBase>&& calling_ref, fidl_msg_t* msg);
+
+  ChannelRefTracker channel_tracker_;
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncBinding> binding_;

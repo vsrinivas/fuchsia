@@ -127,8 +127,8 @@ Parent::UnownedResultOf::TakeChildRequest::TakeChildRequest(
 }
 
 Parent::ResultOf::GetChild Parent::ClientImpl::GetChild_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::GetChild(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::GetChild(_channel->handle());
   }
   return Parent::ResultOf::GetChild(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -136,8 +136,8 @@ Parent::ResultOf::GetChild Parent::ClientImpl::GetChild_Sync() {
 
 Parent::UnownedResultOf::GetChild Parent::ClientImpl::GetChild_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::GetChild(_binding->handle(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::GetChild(_channel->handle(),
                                      _response_buffer.data(),
                                      _response_buffer.capacity());
   }
@@ -188,8 +188,8 @@ void Parent::GetChildResponseContext::OnReply(uint8_t* reply) {
 }
 
 Parent::ResultOf::GetChildRequest Parent::ClientImpl::GetChildRequest_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::GetChildRequest(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::GetChildRequest(_channel->handle());
   }
   return Parent::ResultOf::GetChildRequest(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -197,8 +197,8 @@ Parent::ResultOf::GetChildRequest Parent::ClientImpl::GetChildRequest_Sync() {
 
 Parent::UnownedResultOf::GetChildRequest
 Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::GetChildRequest(_binding->handle(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::GetChildRequest(_channel->handle(),
                                             _response_buffer.data(),
                                             _response_buffer.capacity());
   }
@@ -250,8 +250,8 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Parent::ClientImpl::TakeChild(::zx::channel c) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::TakeChild(_binding->handle(), c);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::TakeChild(_channel->handle(), c);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -259,9 +259,9 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result Parent::ClientImpl::TakeChild(::fidl::BytePart _request_buffer,
                                              ::zx::channel c) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
-        UnownedResultOf::TakeChild(_binding->handle(), _request_buffer.data(),
+        UnownedResultOf::TakeChild(_channel->handle(), _request_buffer.data(),
                                    _request_buffer.capacity(), c);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -269,8 +269,8 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Parent::ClientImpl::TakeChildRequest(::zx::channel r) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::TakeChildRequest(_binding->handle(), r);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::TakeChildRequest(_channel->handle(), r);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -278,9 +278,9 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result Parent::ClientImpl::TakeChildRequest(
     ::fidl::BytePart _request_buffer, ::zx::channel r) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::TakeChildRequest(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         r);
     return ::fidl::Result(_res.status(), _res.error());
   }

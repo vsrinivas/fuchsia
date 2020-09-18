@@ -42,8 +42,8 @@ Interface::ResultOf::Method::Method(zx_handle_t _client) {
 }
 
 ::fidl::Result Interface::ClientImpl::Method() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Method(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::Method(_channel->handle());
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

@@ -113,9 +113,8 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 
   bool unbound = false;
   ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher(),
-                        [&](fidl::UnbindInfo, zx::channel chan) {
+                        [&](fidl::UnbindInfo) {
                           unbound = true;
-                          chan.reset();
                           conn_ref->UnboundDone();
                         }));
 

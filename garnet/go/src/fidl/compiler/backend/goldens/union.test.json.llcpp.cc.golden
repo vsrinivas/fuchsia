@@ -248,9 +248,9 @@ TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
 
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
 TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-        _binding->handle());
+        _channel->handle());
   }
   return TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -259,9 +259,9 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync() {
 TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
 TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-        _binding->handle(), _response_buffer.data(),
+        _channel->handle(), _response_buffer.data(),
         _response_buffer.capacity());
   }
   return TestProtocol::UnownedResultOf::
@@ -328,9 +328,9 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
 TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
 TestProtocol::ClientImpl::
     FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        _binding->handle());
+        _channel->handle());
   }
   return TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -339,9 +339,9 @@ TestProtocol::ClientImpl::
 TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
 TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        _binding->handle(), _response_buffer.data(),
+        _channel->handle(), _response_buffer.data(),
         _response_buffer.capacity());
   }
   return TestProtocol::UnownedResultOf::

@@ -54,7 +54,7 @@ template <typename Interface>
 using OnUnboundFn = fit::callback<void(Interface*, UnbindInfo, zx::channel)>;
 
 // Invoked from a dispatcher thread after the client end of a channel is unbound.
-using OnClientUnboundFn = fit::callback<void(UnbindInfo, zx::channel)>;
+using OnClientUnboundFn = fit::callback<void(UnbindInfo)>;
 
 }  // fidl
 

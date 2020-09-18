@@ -9,8 +9,8 @@ const fragmentClientSyncMethodsTmpl = `
   {{- if .HasResponse }}
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::{{ .Name }}(_binding->handle()
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::{{ .Name }}(_channel->handle()
     {{- if .Request -}}
       , _request_buffer.data(), _request_buffer.capacity()
     {{- end -}}
@@ -22,8 +22,8 @@ const fragmentClientSyncMethodsTmpl = `
 }
   {{- else }}{{ if .Request }}
 ::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = UnownedResultOf::{{ .Name }}(_binding->handle()
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = UnownedResultOf::{{ .Name }}(_channel->handle()
     {{- if .Request -}}
       , _request_buffer.data(), _request_buffer.capacity()
     {{- end }}
@@ -39,8 +39,8 @@ const fragmentClientSyncMethodsTmpl = `
   {{- if .HasResponse }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::{{ .Name }}(_binding->handle()
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::{{ .Name }}(_channel->handle()
       {{- template "CommaPassthroughMessageParams" .Request -}}
     );
   }
@@ -50,8 +50,8 @@ const fragmentClientSyncMethodsTmpl = `
   {{- else }}
 ::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::{{ .Name }}(_binding->handle()
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::{{ .Name }}(_channel->handle()
       {{- template "CommaPassthroughMessageParams" .Request -}}
     );
     return ::fidl::Result(_res.status(), _res.error());

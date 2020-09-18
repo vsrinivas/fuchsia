@@ -38,15 +38,22 @@ class AsyncBinding : private async_wait_t {
   // a peer close is received in the channel from the remote end, or all transactions generated
   // from it are destructed and an error occurred (either Close() is called from a transaction or
   // an internal error like not being able to write to the channel occur).
+  //
   // The binding is destroyed once no more references are held, including the one returned by
   // this static method.
+  //
+  // NOTE: AsyncBinding takes sole ownership of the channel.
   static std::shared_ptr<AsyncBinding> CreateServerBinding(async_dispatcher_t* dispatcher,
-                                                           zx::channel channel, void* impl,
+                                                           zx_handle_t channel, void* impl,
                                                            TypeErasedServerDispatchFn dispatch_fn,
                                                            TypeErasedOnUnboundFn on_unbound_fn);
 
+  // Creates a client binding which differs from a server binding in the following:
+  // * AsyncBinding borrows ownership of the channel from a higher-level client class
+  //     - The borrow is returned implicitly via on_unbound_fn
+  // * Close() is invoked on receipt of epitaph rather than itself sending an epitaph
   static std::shared_ptr<AsyncBinding> CreateClientBinding(async_dispatcher_t* dispatcher,
-                                                           zx::channel channel, void* impl,
+                                                           zx_handle_t channel, void* impl,
                                                            DispatchFn dispatch_fn,
                                                            TypeErasedOnUnboundFn on_unbound_fn);
 
@@ -76,10 +83,10 @@ class AsyncBinding : private async_wait_t {
   }
 
   zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
-  zx_handle_t handle() const { return channel_.get(); }
+  zx_handle_t handle() const { return channel_; }
 
  protected:
-  AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl, bool is_server,
+  AsyncBinding(async_dispatcher_t* dispatcher, zx_handle_t channel, void* impl, bool is_server,
                TypeErasedOnUnboundFn on_unbound_fn, DispatchFn dispatch_fn);
 
  private:
@@ -100,7 +107,7 @@ class AsyncBinding : private async_wait_t {
     static_assert(offsetof(UnbindTask, task) == 0, "Cast async_task_t* to UnbindTask*.");
     auto* unbind_task = reinterpret_cast<UnbindTask*>(task);
     if (auto binding = unbind_task->binding.lock())
-      binding->OnUnbind(std::move(binding), {UnbindInfo::kUnbind, ZX_OK});
+      binding->OnUnbind(std::move(binding), {UnbindInfo::kUnbind, ZX_OK}, true);
     delete unbind_task;
   }
 
@@ -114,17 +121,19 @@ class AsyncBinding : private async_wait_t {
   // context of a dispatcher thread with exclusive ownership of the internal binding reference. If
   // the binding is still bound, waits for all other references to be released, sends the epitaph
   // (except for Unbind()), and invokes the error handler if specified. `calling_ref` is released.
-  void OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) __TA_EXCLUDES(lock_);
+  void OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info,
+                bool is_unbind_task = false) __TA_EXCLUDES(lock_);
 
   async_dispatcher_t* dispatcher_ = nullptr;
-  zx::channel channel_ = {};
+  // If is_server_, channel_ is owned by AsyncBinding. Otherwise, it is shared with an external
+  // entity (ChannelRefTracker).
+  zx_handle_t channel_ = ZX_HANDLE_INVALID;
   void* interface_ = nullptr;
   TypeErasedOnUnboundFn on_unbound_fn_ = {};
   const DispatchFn dispatch_fn_;
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
   const bool is_server_;
   sync_completion_t* on_delete_ = nullptr;
-  zx::channel* out_channel_ = nullptr;
 
   std::mutex lock_;
   UnbindInfo unbind_info_ __TA_GUARDED(lock_) = {UnbindInfo::kUnbind, ZX_OK};

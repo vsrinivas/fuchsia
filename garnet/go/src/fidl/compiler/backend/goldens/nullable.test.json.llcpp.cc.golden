@@ -67,8 +67,8 @@ SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
 
 SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,
                                                                    int32_t b) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::Add(_binding->handle(), a, b);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::Add(_channel->handle(), a, b);
   }
   return SimpleProtocol::ResultOf::Add(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -77,9 +77,9 @@ SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,
 SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(
     ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::Add(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         a, b, _response_buffer.data(), _response_buffer.capacity());
   }
   return SimpleProtocol::UnownedResultOf::Add(

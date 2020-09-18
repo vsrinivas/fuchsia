@@ -105,8 +105,8 @@ Transitional::UnownedResultOf::OneWay::OneWay(zx_handle_t _client,
 
 Transitional::ResultOf::Request Transitional::ClientImpl::Request_Sync(
     int64_t x) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::Request(_binding->handle(), x);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::Request(_channel->handle(), x);
   }
   return Transitional::ResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -115,9 +115,9 @@ Transitional::ResultOf::Request Transitional::ClientImpl::Request_Sync(
 Transitional::UnownedResultOf::Request Transitional::ClientImpl::Request_Sync(
     ::fidl::BytePart _request_buffer, int64_t x,
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::Request(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         x, _response_buffer.data(), _response_buffer.capacity());
   }
   return Transitional::UnownedResultOf::Request(
@@ -167,8 +167,8 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Transitional::ClientImpl::OneWay(int64_t x) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::OneWay(_binding->handle(), x);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::OneWay(_channel->handle(), x);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -176,9 +176,9 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result Transitional::ClientImpl::OneWay(
     ::fidl::BytePart _request_buffer, int64_t x) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
-        UnownedResultOf::OneWay(_binding->handle(), _request_buffer.data(),
+        UnownedResultOf::OneWay(_channel->handle(), _request_buffer.data(),
                                 _request_buffer.capacity(), x);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -487,8 +487,8 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
 }
 
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(int64_t a, int64_t b) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::MethodA(_binding->handle(), a, b);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::MethodA(_channel->handle(), a, b);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -496,9 +496,9 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
 
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(
     ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
-        UnownedResultOf::MethodA(_binding->handle(), _request_buffer.data(),
+        UnownedResultOf::MethodA(_channel->handle(), _request_buffer.data(),
                                  _request_buffer.capacity(), a, b);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -507,8 +507,8 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
 
 ChannelProtocol::ResultOf::MethodB ChannelProtocol::ClientImpl::MethodB_Sync(
     int64_t a, int64_t b) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::MethodB(_binding->handle(), a, b);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::MethodB(_channel->handle(), a, b);
   }
   return ChannelProtocol::ResultOf::MethodB(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -518,9 +518,9 @@ ChannelProtocol::UnownedResultOf::MethodB
 ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BytePart _request_buffer,
                                           int64_t a, int64_t b,
                                           ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::MethodB(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         a, b, _response_buffer.data(), _response_buffer.capacity());
   }
   return ChannelProtocol::UnownedResultOf::MethodB(
@@ -573,8 +573,8 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
 
 ChannelProtocol::ResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(::zx::socket a) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::MutateSocket(_binding->handle(), a);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::MutateSocket(_channel->handle(), a);
   }
   return ChannelProtocol::ResultOf::MutateSocket(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -584,9 +584,9 @@ ChannelProtocol::UnownedResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(
     ::fidl::BytePart _request_buffer, ::zx::socket a,
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::MutateSocket(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         a, _response_buffer.data(), _response_buffer.capacity());
   }
   return ChannelProtocol::UnownedResultOf::MutateSocket(
@@ -1095,8 +1095,8 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
 
 ::fidl::Result
 WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::NoRequestNoResponse(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::NoRequestNoResponse(_channel->handle());
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -1104,8 +1104,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse
 WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::NoRequestEmptyResponse(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::NoRequestEmptyResponse(_channel->handle());
   }
   return WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -1158,8 +1158,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse
 WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::NoRequestWithResponse(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::NoRequestWithResponse(_channel->handle());
   }
   return WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -1168,8 +1168,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync() {
 WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
 WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::NoRequestWithResponse(_binding->handle(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::NoRequestWithResponse(_channel->handle(),
                                                   _response_buffer.data(),
                                                   _response_buffer.capacity());
   }
@@ -1223,8 +1223,8 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
 
 ::fidl::Result WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
     ::fidl::StringView arg) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::WithRequestNoResponse(_binding->handle(), arg);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ResultOf::WithRequestNoResponse(_channel->handle(), arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -1232,9 +1232,9 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
 
 ::fidl::Result WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::WithRequestNoResponse(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -1244,8 +1244,8 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
 WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
     ::fidl::StringView arg) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::WithRequestEmptyResponse(_binding->handle(), arg);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::WithRequestEmptyResponse(_channel->handle(), arg);
   }
   return WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -1255,9 +1255,9 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
 WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::WithRequestEmptyResponse(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         arg, _response_buffer.data(), _response_buffer.capacity());
   }
   return WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1316,8 +1316,8 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
 WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
 WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
     ::fidl::StringView arg) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::WithRequestWithResponse(_binding->handle(), arg);
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::WithRequestWithResponse(_channel->handle(), arg);
   }
   return WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -1327,9 +1327,9 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
 WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::WithRequestWithResponse(
-        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
         arg, _response_buffer.data(), _response_buffer.capacity());
   }
   return WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1903,8 +1903,8 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
 
 WithErrorSyntax::ResultOf::ResponseAsStruct
 WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::ResponseAsStruct(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::ResponseAsStruct(_channel->handle());
   }
   return WithErrorSyntax::ResultOf::ResponseAsStruct(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -1913,8 +1913,8 @@ WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
 WithErrorSyntax::UnownedResultOf::ResponseAsStruct
 WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::ResponseAsStruct(_binding->handle(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::ResponseAsStruct(_channel->handle(),
                                              _response_buffer.data(),
                                              _response_buffer.capacity());
   }
@@ -1975,8 +1975,8 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
 
 WithErrorSyntax::ResultOf::ErrorAsPrimitive
 WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::ErrorAsPrimitive(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::ErrorAsPrimitive(_channel->handle());
   }
   return WithErrorSyntax::ResultOf::ErrorAsPrimitive(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -1985,8 +1985,8 @@ WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
 WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
 WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::ErrorAsPrimitive(_binding->handle(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::ErrorAsPrimitive(_channel->handle(),
                                              _response_buffer.data(),
                                              _response_buffer.capacity());
   }
@@ -2047,8 +2047,8 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
 
 WithErrorSyntax::ResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync() {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::ErrorAsEnum(_binding->handle());
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::ErrorAsEnum(_channel->handle());
   }
   return WithErrorSyntax::ResultOf::ErrorAsEnum(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -2057,8 +2057,8 @@ WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync() {
 WithErrorSyntax::UnownedResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
     ::fidl::BytePart _response_buffer) {
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::ErrorAsEnum(_binding->handle(),
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::ErrorAsEnum(_channel->handle(),
                                         _response_buffer.data(),
                                         _response_buffer.capacity());
   }
