@@ -38,6 +38,16 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	return builder.String()
 }
 
+func buildHandleValues(handles []gidlir.Handle) string {
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for _, h := range handles {
+		builder.WriteString(fmt.Sprintf("%s,", buildHandleValue(h)))
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
@@ -52,7 +62,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case string:
 		return toDartStr(value)
 	case gidlir.Handle:
-		rawHandle := fmt.Sprintf("handleDefs[%d]", value)
+		rawHandle := buildHandleValue(value)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
 		case fidlir.Handle:
@@ -112,10 +122,11 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 		if field.Key.IsUnknown() {
 			unknownData := field.Value.(gidlir.UnknownData)
 			return fmt.Sprintf(
-				"%s.with$UnknownData(%d, fidl.UnknownRawData(%s, []))",
+				"%s.with$UnknownData(%d, fidl.UnknownRawData(%s, %s))",
 				value.Name,
 				field.Key.UnknownOrdinal,
-				buildBytes(unknownData.Bytes))
+				buildBytes(unknownData.Bytes),
+				buildHandleValues(unknownData.Handles))
 		}
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
@@ -149,4 +160,8 @@ func typeName(decl gidlmixer.NamedDeclaration) string {
 	parts := strings.Split(decl.Name(), "/")
 	lastPart := parts[len(parts)-1]
 	return dartTypeName(lastPart)
+}
+
+func buildHandleValue(handle gidlir.Handle) string {
+	return fmt.Sprintf("handleDefs[%d]", handle)
 }
