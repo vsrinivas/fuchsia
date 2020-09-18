@@ -45,6 +45,8 @@ ImagePipe2::ImagePipe2(Session* session, ResourceId id,
     sysmem_allocator_.Unbind();
     error_reporter_->ERROR() << __func__ << ": Could not connect to sysmem";
   }
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + "-pipe",
+                                        fsl::GetCurrentProcessKoid());
 }
 
 ImagePipe2::~ImagePipe2() { CloseConnectionAndCleanUp(); }

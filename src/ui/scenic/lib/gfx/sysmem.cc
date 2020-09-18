@@ -7,6 +7,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -17,6 +19,7 @@ Sysmem::Sysmem() {
     sysmem_allocator_.Unbind();
     FX_LOGS(ERROR) << "Unable to connect to sysmem: " << status;
   }
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 }
 
 fuchsia::sysmem::BufferCollectionTokenSyncPtr Sysmem::CreateBufferCollection() {
