@@ -6,16 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.deprecatedtimezone") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "protocol-name-includes-service",
-    "string-bounds-not-specified",
-  ]
+  excluded_checks = [ "string-bounds-not-specified" ]
 
   sdk_category = "partner"
-  sources = [
-    "deprecated_time_service.fidl",
-    "deprecated_time_zone.fidl",
-  ]
-
-  public_deps = [ "//zircon/vdso/zx" ]
+  sources = [ "deprecated_time_zone.fidl" ]
 }

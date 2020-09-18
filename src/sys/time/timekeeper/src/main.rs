@@ -121,8 +121,7 @@ fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
 ///
 /// Checks for network connectivity before attempting any time updates.
 ///
-/// Actual updates are performed by calls to  `fuchsia.deprecatedtimezone.TimeService` which we
-/// plan to deprecate.
+/// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
 async fn maintain_utc<C: CobaltDiagnostics, R: Rtc, T: TimeSource>(
     utc_clock: Arc<zx::Clock>,
     mut optional_rtc: Option<Arc<R>>,

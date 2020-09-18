@@ -8,7 +8,6 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.deprecatedtimezone.TimeService",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
