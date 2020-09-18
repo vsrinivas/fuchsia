@@ -22,6 +22,7 @@ use {
 
 pub type SettingHandlerResult = Result<Option<SettingResponse>, ControllerError>;
 pub type ControllerGenerateResult = Result<(), Error>;
+pub type ExitResult = Result<(), ControllerError>;
 
 pub type GenerateHandler<T> =
     Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
@@ -44,6 +45,7 @@ pub enum Event {
     // Sent when the publicly perceived values of the setting
     // handler have been changed.
     Changed,
+    Exited(ExitResult),
 }
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]

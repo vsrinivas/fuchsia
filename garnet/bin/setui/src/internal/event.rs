@@ -45,10 +45,12 @@ pub mod earcon {
 }
 
 pub mod handler {
+    use crate::handler::base::ExitResult;
     use crate::switchboard::base::SettingRequest;
 
     #[derive(PartialEq, Clone, Debug)]
     pub enum Event {
+        Exit(ExitResult),
         Retry(SettingRequest),
         Timeout(SettingRequest),
         AttemptsExceeded(SettingRequest),

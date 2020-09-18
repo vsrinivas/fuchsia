@@ -16,7 +16,8 @@ use futures::StreamExt;
 use async_trait::async_trait;
 
 use crate::handler::base::{
-    Command, Event, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
+    Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerFactoryError,
+    SettingHandlerResult, State,
 };
 use crate::handler::setting_handler::ControllerError;
 use crate::handler::setting_proxy::SettingProxy;
@@ -39,9 +40,15 @@ struct SettingHandler {
     setting_type: SettingType,
     messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
-    responses: Vec<(SettingRequest, Option<SettingHandlerResult>)>,
+    responses: Vec<(SettingRequest, HandlerAction)>,
     done_tx: Option<oneshot::Sender<()>>,
     proxy_signature: handler::message::Signature,
+}
+
+enum HandlerAction {
+    Ignore,
+    Exit(ExitResult),
+    Respond(SettingHandlerResult),
 }
 
 impl SettingHandler {
@@ -50,12 +57,8 @@ impl SettingHandler {
         Ok(None)
     }
 
-    pub fn queue_response(
-        &mut self,
-        request: SettingRequest,
-        response: Option<SettingHandlerResult>,
-    ) {
-        self.responses.push((request, response));
+    pub fn queue_action(&mut self, request: SettingRequest, action: HandlerAction) {
+        self.responses.push((request, action))
     }
 
     pub fn notify(&self) {
@@ -69,9 +72,26 @@ impl SettingHandler {
     }
 
     fn process_request(&mut self, request: SettingRequest) -> Option<SettingHandlerResult> {
-        if let Some((match_request, result)) = self.responses.pop() {
+        if let Some((match_request, action)) = self.responses.pop() {
             if request == match_request {
-                return result;
+                match action {
+                    HandlerAction::Respond(result) => {
+                        return Some(result);
+                    }
+                    HandlerAction::Ignore => {
+                        return None;
+                    }
+                    HandlerAction::Exit(result) => {
+                        self.messenger
+                            .message(
+                                handler::Payload::Event(Event::Exited(result)),
+                                Audience::Messenger(self.proxy_signature),
+                            )
+                            .send()
+                            .ack();
+                        return None;
+                    }
+                }
             }
         }
 
@@ -362,7 +382,11 @@ async fn test_request() {
     let request_id = 42;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Some(Ok(None)));
+    environment
+        .setting_handler
+        .lock()
+        .await
+        .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
 
     // Send initial request.
     let mut receptor = environment
@@ -398,7 +422,11 @@ async fn test_request_order() {
     let request_id_2 = 43;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Some(Ok(None)));
+    environment
+        .setting_handler
+        .lock()
+        .await
+        .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
 
     // Send multiple requests.
     let receptor_1 = environment
@@ -434,7 +462,7 @@ async fn test_request_order() {
             .setting_handler
             .lock()
             .await
-            .queue_response(SettingRequest::Get, Some(Ok(None)));
+            .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
                 if let Some(MessageEvent::Message(
@@ -622,11 +650,11 @@ async fn test_retry() {
 
     // Queue up external failure responses in the handler.
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
-        environment.setting_handler.lock().await.queue_response(
+        environment.setting_handler.lock().await.queue_action(
             SettingRequest::Get,
-            Some(Err(ControllerError::ExternalFailure(
+            HandlerAction::Respond(Err(ControllerError::ExternalFailure(
                 setting_type,
-                "test_commponent".into(),
+                "test_component".into(),
                 "connect".into(),
             ))),
         );
@@ -687,7 +715,11 @@ async fn test_retry() {
     environment.regenerate_handler(None).await;
 
     // Queue successful response
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Some(Ok(None)));
+    environment
+        .setting_handler
+        .lock()
+        .await
+        .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
 
     // Ensure subsequent request succeeds
     assert!(get_response(
@@ -716,6 +748,85 @@ async fn test_retry() {
     );
 }
 
+/// Ensures early exit triggers retry flow.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_early_exit() {
+    let exit_result = Ok(());
+    let setting_type = SettingType::Unknown;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    let (_, mut event_receptor) = environment
+        .event_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("Should be able to retrieve receptor");
+
+    // Queue up external failure responses in the handler.
+    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+        environment
+            .setting_handler
+            .lock()
+            .await
+            .queue_action(SettingRequest::Get, HandlerAction::Exit(exit_result.clone()));
+    }
+
+    let request_id = 2;
+    let request = SettingRequest::Get;
+
+    // Send request.
+    let (returned_request_id, handler_result) = get_response(
+        environment
+            .messenger_client
+            .message(
+                Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type,
+                    data: SettingActionData::Request(request.clone()),
+                }),
+                Audience::Messenger(environment.proxy_signature),
+            )
+            .send(),
+    )
+    .await
+    .expect("result should be present");
+
+    // Ensure returned request id matches the outgoing id
+    assert_eq!(request_id, returned_request_id);
+
+    // Make sure the result is an `ControllerError::IrrecoverableError`
+    if let Err(error) = handler_result {
+        assert_eq!(error, ControllerError::IrrecoverableError);
+    } else {
+        panic!("error should have been encountered");
+    }
+
+    //For each failed attempt, make sure a retry event was broadcasted
+    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Execute(request_id),
+        );
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Exit(exit_result.clone()),
+        );
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Retry(request.clone()),
+        );
+    }
+
+    // Ensure that the final event reports that attempts were exceeded
+    verify_handler_event(
+        setting_type,
+        event_receptor.next().await.expect("should be notified of external failure"),
+        event::handler::Event::AttemptsExceeded(request.clone()),
+    );
+}
+
 /// Ensures timeouts trigger retry flow.
 #[test]
 fn test_timeout() {
@@ -737,7 +848,11 @@ fn test_timeout() {
 
         // Queue up to ignore resquests
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
-            environment.setting_handler.lock().await.queue_response(SettingRequest::Get, None);
+            environment
+                .setting_handler
+                .lock()
+                .await
+                .queue_action(SettingRequest::Get, HandlerAction::Ignore);
         }
 
         let request_id = 2;
@@ -833,7 +948,11 @@ fn test_timeout_no_retry() {
             .expect("Should be able to retrieve receptor");
 
         // Queue up to ignore resquests
-        environment.setting_handler.lock().await.queue_response(SettingRequest::Get, None);
+        environment
+            .setting_handler
+            .lock()
+            .await
+            .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
 
         let request_id = 2;
         let request = SettingRequest::Get;

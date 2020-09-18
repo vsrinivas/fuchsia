@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::base::{Command, Event, SettingHandlerFactory, SettingHandlerResult, State};
+use crate::handler::base::{
+    Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerResult, State,
+};
 use crate::handler::setting_handler::ControllerError;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -48,6 +50,14 @@ enum ActiveControllerRequest {
     Teardown,
     /// Request to retry the current request.
     Retry(u64),
+    /// Requests listen
+    Listen(ListenEvent),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum ListenEvent {
+    Restart,
+    ListenerCount(u64),
 }
 
 pub struct SettingProxy {
@@ -151,11 +161,19 @@ impl SettingProxy {
                     // Handle top level message from controllers.
                     controller_event = controller_fuse => {
                         if let Some(
-                            MessageEvent::Message(handler::Payload::Event(event), _)
+                            MessageEvent::Message(handler::Payload::Event(event), client)
                         ) = controller_event {
+                            // Messages received after the client signature
+                            // has been changed will be ignored.
+                            if Some(client.get_author()) != proxy.client_signature {
+                                continue;
+                            }
                             match event {
                                 Event::Changed => {
                                     proxy.notify();
+                                }
+                                Event::Exited(result) => {
+                                    proxy.process_exit(result);
                                 }
                             }
                         }
@@ -192,6 +210,9 @@ impl SettingProxy {
                                 ActiveControllerRequest::HandleResult(id, result) => {
                                     proxy.handle_result(id, result);
                                 }
+                                ActiveControllerRequest::Listen(event) => {
+                                    proxy.handle_listen(event).await;
+                                }
                             }
                         }
                     }
@@ -223,7 +244,7 @@ impl SettingProxy {
                 self.process_request(action.id, request, message_client).await;
             }
             SettingActionData::Listen(size) => {
-                self.process_listen(size).await;
+                self.request(ActiveControllerRequest::Listen(ListenEvent::ListenerCount(size)));
                 // Inform client that the request has been processed, regardless
                 // of whether a result was produced.
                 message_client.acknowledge().await;
@@ -252,40 +273,6 @@ impl SettingProxy {
         self.client_signature
     }
 
-    /// Notifies handler in the case the notification listener count is
-    /// non-zero and we aren't already listening for changes or there
-    /// are no more listeners and we are actively listening.
-    async fn process_listen(&mut self, size: u64) {
-        let no_more_listeners = size == 0;
-        if no_more_listeners ^ self.has_active_listener {
-            return;
-        }
-
-        self.has_active_listener = size > 0;
-
-        let optional_handler_signature = self.get_handler_signature(false).await;
-        if optional_handler_signature.is_none() {
-            return;
-        }
-
-        let handler_signature =
-            optional_handler_signature.expect("handler signature should be present");
-
-        self.controller_messenger_client
-            .message(
-                handler::Payload::Command(Command::ChangeState(if self.has_active_listener {
-                    State::Listen
-                } else {
-                    State::EndListen
-                })),
-                Audience::Messenger(handler_signature),
-            )
-            .send()
-            .ack();
-
-        self.request(ActiveControllerRequest::Teardown);
-    }
-
     /// Called by the receiver task when a sink has reported a change to its
     /// setting type.
     fn notify(&self) {
@@ -299,6 +286,32 @@ impl SettingProxy {
                 Audience::Address(core::Address::Switchboard),
             )
             .send();
+    }
+
+    fn process_exit(&mut self, result: ExitResult) {
+        // Log the exit
+        self.event_publisher.send_event(event::Event::Handler(
+            self.setting_type,
+            event::handler::Event::Exit(result),
+        ));
+
+        // Clear the setting handler client signature
+        self.client_signature = None;
+
+        // If there is an active request, process the error
+        if !self.active_requests.is_empty() {
+            self.active_controller_sender
+                .unbounded_send(ActiveControllerRequest::HandleResult(
+                    self.active_requests.front().expect("active request should be present").id,
+                    Err(ControllerError::ExitError),
+                ))
+                .ok();
+        }
+
+        // If there is an active listener, forefully refetch
+        if self.has_active_listener {
+            self.request(ActiveControllerRequest::Listen(ListenEvent::Restart));
+        }
     }
 
     /// Forwards request to proper sink. A new task is spawned in order to receive
@@ -349,16 +362,54 @@ impl SettingProxy {
         self.active_controller_sender.unbounded_send(request).ok();
     }
 
+    /// Notifies handler in the case the notification listener count is
+    /// non-zero and we aren't already listening for changes or there
+    /// are no more listeners and we are actively listening.
+    async fn handle_listen(&mut self, event: ListenEvent) {
+        if let ListenEvent::ListenerCount(size) = event {
+            let no_more_listeners = size == 0;
+            if no_more_listeners ^ self.has_active_listener {
+                return;
+            }
+
+            self.has_active_listener = size > 0;
+        }
+
+        let optional_handler_signature =
+            self.get_handler_signature(ListenEvent::Restart == event).await;
+        if optional_handler_signature.is_none() {
+            return;
+        }
+
+        let handler_signature =
+            optional_handler_signature.expect("handler signature should be present");
+
+        self.controller_messenger_client
+            .message(
+                handler::Payload::Command(Command::ChangeState(if self.has_active_listener {
+                    State::Listen
+                } else {
+                    State::EndListen
+                })),
+                Audience::Messenger(handler_signature),
+            )
+            .send()
+            .ack();
+
+        self.request(ActiveControllerRequest::Teardown);
+    }
+
     fn handle_result(&mut self, id: u64, mut result: SettingHandlerResult) {
         let request_index = self.active_requests.iter().position(|r| r.id == id);
         let request = self
             .active_requests
             .get_mut(request_index.expect("request ID not found"))
             .expect("request should be present");
-
         let mut retry = false;
 
-        if matches!(result, Err(ControllerError::ExternalFailure(..))) {
+        if matches!(result, Err(ControllerError::ExternalFailure(..)))
+            || matches!(result, Err(ControllerError::ExitError))
+        {
             result = Err(ControllerError::IrrecoverableError);
             retry = true;
         } else if matches!(result, Err(ControllerError::TimeoutError)) {

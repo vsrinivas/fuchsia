@@ -100,6 +100,7 @@ impl From<ControllerError> for SwitchboardError {
             }
             ControllerError::IrrecoverableError => SwitchboardError::IrrecoverableError,
             ControllerError::TimeoutError => SwitchboardError::TimeoutError,
+            ControllerError::ExitError => SwitchboardError::IrrecoverableError,
         }
     }
 }
