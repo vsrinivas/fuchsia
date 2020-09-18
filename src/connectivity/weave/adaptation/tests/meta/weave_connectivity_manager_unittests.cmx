@@ -3,6 +3,9 @@
         "binary": "test/weave_connectivity_manager_unittests"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink"
         ]

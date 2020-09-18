@@ -29,6 +29,9 @@ test_package("adaptation_tests") {
       name = "weave_config_manager_unittests"
     },
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "weave_connectivity_manager_unittests"
     },
     {

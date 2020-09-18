@@ -4,6 +4,10 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONNECTIVITY_MANAGER_DELEGATE_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONNECTIVITY_MANAGER_DELEGATE_IMPL_H_
 
+#include <fuchsia/net/interfaces/cpp/fidl.h>
+
+#include <unordered_set>
+
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 
 namespace nl::Weave::DeviceLayer {
@@ -25,6 +29,9 @@ class ConnectivityManagerDelegateImpl : public ConnectivityManagerImpl::Delegate
   // exists to allow unittests to override its behavior.
   virtual WEAVE_ERROR InitServiceTunnelAgent();
 
+  // Handle events from fuchsia.net.interfaces to maintain connectivity state.
+  void OnInterfaceEvent(fuchsia::net::interfaces::Event event);
+
   // Handle service tunnel notifications, where |reason| specifies the
   // reason type for this event, |err| indicates errors during the TUN
   // operation, and |app_ctx| holds any application-specific context.
@@ -34,12 +41,16 @@ class ConnectivityManagerDelegateImpl : public ConnectivityManagerImpl::Delegate
 
   // Start the service tunnel.
   void StartServiceTunnel();
-  // Stop the service tunnel.
-  void StopServiceTunnel();
   // Stop the service tunnel with the given error code.
-  void StopServiceTunnel(WEAVE_ERROR err);
-  // Returns whether the tunnel should be started.
-  bool ShouldStartServiceTunnel();
+  void StopServiceTunnel(WEAVE_ERROR err = WEAVE_NO_ERROR);
+  // Drives service tunnel state.
+  void DriveServiceTunnelState();
+
+  fuchsia::net::interfaces::StatePtr state_;
+  fuchsia::net::interfaces::WatcherPtr watcher_;
+
+  std::unordered_set<int> routable_v4_interfaces;
+  std::unordered_set<int> routable_v6_interfaces;
 };
 
 }  // namespace nl::Weave::DeviceLayer
