@@ -210,6 +210,9 @@ if [[ ! -z "${VBMETA_R_PARTITION}" ]]; then
   erase_raw_flash ${VBMETA_R_PARTITION}
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${VBMETA_R_PARTITION}" \"\${DIR}/\${RECOVERY_VBMETA}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
+if [[ ! -z "${ACTIVE_PARTITION}" ]]; then
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" set_active "${ACTIVE_PARTITION}" >> "${OUTPUT}"
+fi
 if [[ ! -z "${FVM_PARTITION}" ]]; then
   # The FVM partition takes a significant amount of time to flash (40s+), so
   # it's worth skipping if we're only flashing recovery and don't need it.
@@ -223,11 +226,13 @@ if [[ ! -z "${FVM_PARTITION}" ]]; then
   echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\"" >> "${OUTPUT}"
   echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
   echo "fi" >> "${OUTPUT}"
-fi
 
-if [[ ! -z "${ACTIVE_PARTITION}" ]]; then
-  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" set_active "${ACTIVE_PARTITION}" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" continue >> "${OUTPUT}"
+else
+  # TODO(60172): switch back to `fastboot continue` everywhere once all boards
+  # support it. For now we can only assume boards that support FVM + keys know
+  # how to continue.
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" reboot >> "${OUTPUT}"
 fi
-echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" continue >> "${OUTPUT}"
 
 chmod +x "${OUTPUT}"
