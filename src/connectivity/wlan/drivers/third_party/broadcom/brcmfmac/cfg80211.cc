@@ -301,8 +301,7 @@ static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp) {
   mac_addr[0] &= 0xfe;  // bit 0: 0 = unicast
   mac_addr[0] |= 0x02;  // bit 1: 1 = locally-administered
   mac_addr[5]++;
-  BRCMF_INFO("mac address for AP IF: %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0], mac_addr[1],
-             mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  BRCMF_INFO("mac address for AP IF: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
 
   // Update the mac address of the interface in firmware
   err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
@@ -533,11 +532,8 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
         const uint8_t* mac_addr = req->init_mac_addr;
         err = brcmf_set_iface_macaddr(true, ndev, mac_addr);
         if (err != ZX_OK) {
-          BRCMF_ERR(
-              "Failed to set custom MAC address %02x:%02x:%02x:%02x:%02x:%02x for AP iface "
-              "netdev:%s",
-              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
-              ndev->name);
+          BRCMF_ERR("Failed to set custom MAC address " MAC_FMT_STR " for AP iface netdev:%s",
+                    MAC_FMT_ARGS(mac_addr), ndev->name);
           return err;
         }
       }
@@ -612,22 +608,18 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
             BRCMF_ERR("Failed to generate random MAC address.");
             return err;
           }
-          BRCMF_ERR("Falling back to random mac address: %02x:%02x:%02x:%02x:%02x:%02x",
-                    bootloader_macaddr[0], bootloader_macaddr[1], bootloader_macaddr[2],
-                    bootloader_macaddr[3], bootloader_macaddr[4], bootloader_macaddr[5]);
+          BRCMF_ERR("Falling back to random mac address: " MAC_FMT_STR,
+                    MAC_FMT_ARGS(bootloader_macaddr));
         }
-        BRCMF_DBG(WLANIF, "Retrieved bootloader wifi MAC addresss: %02x:%02x:%02x:%02x:%02x:%02x",
-                  bootloader_macaddr[0], bootloader_macaddr[1], bootloader_macaddr[2],
-                  bootloader_macaddr[3], bootloader_macaddr[4], bootloader_macaddr[5]);
+        BRCMF_DBG(WLANIF, "Retrieved bootloader wifi MAC addresss: " MAC_FMT_STR,
+                  MAC_FMT_ARGS(bootloader_macaddr));
         mac_addr = bootloader_macaddr;
       }
 
       err = brcmf_set_iface_macaddr(false, ndev, mac_addr);
       if (err != ZX_OK) {
-        BRCMF_ERR(
-            "Failed to set MAC address %02x:%02x:%02x:%02x:%02x:%02x for client iface netdev:%s",
-            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
-            ndev->name);
+        BRCMF_ERR("Failed to set MAC address " MAC_FMT_STR " for client iface netdev:%s",
+                  MAC_FMT_ARGS(mac_addr), ndev->name);
         return err;
       }
 
@@ -638,9 +630,8 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
   // Log the new iface's role, name, and MAC address
   const uint8_t* mac_addr = ndev_to_if(ndev)->mac_addr;
-  BRCMF_DBG(WLANIF, "Created %s iface netdev:%s with MAC address %02x:%02x:%02x:%02x:%02x:%02x",
-            iface_role_name, ndev->name, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
-            mac_addr[4], mac_addr[5]);
+  BRCMF_DBG(WLANIF, "Created %s iface netdev:%s with MAC address " MAC_FMT_STR, iface_role_name,
+            ndev->name, MAC_FMT_ARGS(mac_addr));
 
   *wdev_out = wdev;
   return ZX_OK;
@@ -1493,8 +1484,7 @@ static zx_status_t brcmf_cfg80211_get_station(struct net_device* ndev, const uin
   struct brcmf_if* ifp = ndev_to_if(ndev);
   zx_status_t err = ZX_OK;
 
-  BRCMF_DBG(TRACE, "Enter, MAC %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3],
-            mac[4], mac[5]);
+  BRCMF_DBG(TRACE, "Enter, MAC " MAC_FMT_STR, MAC_FMT_ARGS(mac));
   if (!check_vif_up(ifp->vif)) {
     return ZX_ERR_IO;
   }
@@ -1962,8 +1952,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
   if (mac_addr && !address_is_multicast(mac_addr) &&
       (req->cipher_suite_type != WPA_CIPHER_WEP_40) &&
       (req->cipher_suite_type != WPA_CIPHER_WEP_104)) {
-    BRCMF_DBG(TRACE, "Ext key, mac %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0], mac_addr[1],
-              mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    BRCMF_DBG(TRACE, "Ext key, mac " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
     ext_key = true;
   }
 
@@ -2280,10 +2269,9 @@ static zx_status_t brcmf_inform_single_bss(struct net_device* ndev, struct brcmf
   notify_rssi_dbm = (int16_t)bi->RSSI;
 
   BRCMF_DBG(CONN,
-            "Scan result received  BSS: %02x:%02x:%02x:%02x:%02x:%02x"
+            "Scan result received  BSS: " MAC_FMT_STR
             "  Channel: %3d  Capability: %#6x  Beacon interval: %5d  Signal: %4d",
-            bi->BSSID[0], bi->BSSID[1], bi->BSSID[2], bi->BSSID[3], bi->BSSID[4], bi->BSSID[5],
-            channel, notify_capability, notify_interval, notify_rssi_dbm);
+            MAC_FMT_ARGS(bi->BSSID), channel, notify_capability, notify_interval, notify_rssi_dbm);
   if (BRCMF_IS_ON(CONN) && BRCMF_IS_ON(BYTES)) {
     brcmf_iedump(notify_ie, notify_ielen);
   }
@@ -3168,11 +3156,10 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
   if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
     const uint8_t* old_mac = ifp->bss.bssid;
     const uint8_t* new_mac = req->peer_sta_address;
-    BRCMF_ERR(
-        "Auth MAC (%02x:%02x:%02x:%02x:%02x:%02x) != "
-        "join MAC (%02x:%02x:%02x:%02x:%02x:%02x).",
-        new_mac[0], new_mac[1], new_mac[2], new_mac[3], new_mac[4], new_mac[5], old_mac[0],
-        old_mac[1], old_mac[2], old_mac[3], old_mac[4], old_mac[5]);
+    BRCMF_ERR("Auth MAC (" MAC_FMT_STR
+              ") != "
+              "join MAC (" MAC_FMT_STR ").",
+              MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
 
     // In debug builds, we should investigate why the MLME is giving us inconsitent
     // requests.
@@ -3228,8 +3215,7 @@ void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
 
   if (ind->result_code == WLAN_AUTH_RESULT_SUCCESS) {
     const uint8_t* mac = ind->peer_sta_address;
-    BRCMF_DBG(CONN, "Successfully authenticated client %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0],
-              mac[1], mac[2], mac[3], mac[4], mac[5]);
+    BRCMF_DBG(CONN, "Successfully authenticated client " MAC_FMT_STR "\n", MAC_FMT_ARGS(mac));
     return;
   }
 
@@ -3297,11 +3283,10 @@ void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req) {
   if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
     const uint8_t* old_mac = ifp->bss.bssid;
     const uint8_t* new_mac = req->peer_sta_address;
-    BRCMF_ERR(
-        "Requested MAC %02x:%02x:%02x:%02x:%02x:%02x != "
-        "connected MAC %02x:%02x:%02x:%02x:%02x:%02x",
-        new_mac[0], new_mac[1], new_mac[2], new_mac[3], new_mac[4], new_mac[5], old_mac[0],
-        old_mac[1], old_mac[2], old_mac[3], old_mac[4], old_mac[5]);
+    BRCMF_ERR("Requested MAC " MAC_FMT_STR
+              " != "
+              "connected MAC " MAC_FMT_STR,
+              MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   } else {
     brcmf_cfg80211_connect(ndev, req);
@@ -3324,8 +3309,7 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
 
   if (ind->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
     const uint8_t* mac = ind->peer_sta_address;
-    BRCMF_DBG(CONN, "Successfully associated client %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1],
-              mac[2], mac[3], mac[4], mac[5]);
+    BRCMF_DBG(CONN, "Successfully associated client " MAC_FMT_STR, MAC_FMT_ARGS(mac));
     return;
   }
 
@@ -3781,8 +3765,7 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
 
 static void brcmf_dump_query_info(wlanif_query_info_t* info) {
   BRCMF_INFO(" Device capabilities as reported to wlanif:");
-  BRCMF_INFO("   mac_addr: %02x:%02x:%02x:%02x:%02x:%02x", info->mac_addr[0], info->mac_addr[1],
-             info->mac_addr[2], info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
+  BRCMF_INFO("   mac_addr: " MAC_FMT_STR, MAC_FMT_ARGS(info->mac_addr));
   BRCMF_INFO("   role(s): %s%s%s", info->role & WLAN_INFO_MAC_ROLE_CLIENT ? "client " : "",
              info->role & WLAN_INFO_MAC_ROLE_AP ? "ap " : "",
              info->role & WLAN_INFO_MAC_ROLE_MESH ? "mesh " : "");

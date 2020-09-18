@@ -36,6 +36,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwsignal.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 
 namespace wlan::brcmfmac {
@@ -599,10 +600,7 @@ zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
       return status;
     }
 
-    BRCMF_INFO("Generated random mac address: %02x:%02x:%02x:%02x:%02x:%02x",
-               fixed_random_macaddr[0], fixed_random_macaddr[1], fixed_random_macaddr[2],
-               fixed_random_macaddr[3], fixed_random_macaddr[4], fixed_random_macaddr[5]);
-
+    BRCMF_INFO("Generated random mac address: " MAC_FMT_STR, MAC_FMT_ARGS(fixed_random_macaddr));
     memoized = true;
   }
 
@@ -1923,8 +1921,7 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
 // If setting for the first time, save it as system mac address as well
 zx_status_t SimFirmware::SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr) {
   if (mac_addr_set_ == false) {
-    BRCMF_DBG(SIM, "Setting system mac addr: %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0],
-              mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    BRCMF_DBG(SIM, "Setting system mac addr: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
     memcpy(mac_addr_.data(), mac_addr, ETH_ALEN);
     memcpy(pfn_mac_addr_.byte, mac_addr, ETH_ALEN);
     mac_addr_set_ = true;
@@ -1932,8 +1929,7 @@ zx_status_t SimFirmware::SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr) {
   memcpy(iface_tbl_[ifidx].mac_addr.byte, mac_addr, ETH_ALEN);
   iface_tbl_[ifidx].mac_addr_set = true;
 
-  BRCMF_DBG(SIM, "Setting mac addr ifidx: %d: %02x:%02x:%02x:%02x:%02x:%02x", ifidx, mac_addr[0],
-            mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  BRCMF_DBG(SIM, "Setting mac addr ifidx: %d: " MAC_FMT_STR, ifidx, MAC_FMT_ARGS(mac_addr));
   return ZX_OK;
 }
 
@@ -1998,10 +1994,8 @@ void SimFirmware::ScanNextChannel() {
       if (scan_state_.channel_index >= scan_state_.opts->channels.size()) {
         // Scanning complete
         if (scan_state_.opts->is_active) {
-          BRCMF_DBG(SIM,
-                    "Resetting pfn_mac_addr_ to system mac addr: %02x:%02x:%02x:%02x:%02x:%02x",
-                    mac_addr_.data()[0], mac_addr_.data()[1], mac_addr_.data()[2],
-                    mac_addr_.data()[3], mac_addr_.data()[4], mac_addr_.data()[5]);
+          BRCMF_DBG(SIM, "Resetting pfn_mac_addr_ to system mac addr: " MAC_FMT_STR,
+                    MAC_FMT_ARGS(mac_addr_.data()));
           memcpy(pfn_mac_addr_.byte, mac_addr_.data(), ETH_ALEN);
         }
         hw_.DisableRx();

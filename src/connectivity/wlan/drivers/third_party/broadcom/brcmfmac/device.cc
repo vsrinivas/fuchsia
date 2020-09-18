@@ -21,6 +21,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
 namespace wlan {
@@ -113,9 +114,8 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
                                                             : "unknown type";
 
   if (req->has_init_mac_addr) {
-    BRCMF_DBG(WLANPHY, "Creating %s interface (mac: %02x:%02x:%02x:%02x:%02x:%02x)", role,
-              req->init_mac_addr[0], req->init_mac_addr[1], req->init_mac_addr[2],
-              req->init_mac_addr[3], req->init_mac_addr[4], req->init_mac_addr[5]);
+    BRCMF_DBG(WLANPHY, "Creating %s interface (mac: " MAC_FMT_STR ")", role,
+              MAC_FMT_ARGS(req->init_mac_addr));
   } else {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);
   }
