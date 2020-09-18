@@ -11,10 +11,18 @@
 namespace a11y {
 
 bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) {
-  return node &&
-         ((node->has_attributes() && node->attributes().has_label() &&
-           !node->attributes().label().empty()) ||
-          (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON));
+  if (!node) {
+    return false;
+  }
+  if (node->has_states() && node->states().has_hidden() && node->states().hidden()) {
+    return false;
+  }
+
+  bool contains_text = node->has_attributes() && node->attributes().has_label() &&
+                       !node->attributes().label().empty();
+  bool is_actionable =
+      node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON;
+  return contains_text || is_actionable;
 }
 
 std::string FormatFloat(float input) {

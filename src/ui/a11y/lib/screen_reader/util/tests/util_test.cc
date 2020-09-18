@@ -4,10 +4,11 @@
 
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
 
-#include <gtest/gtest.h>
+#include <fuchsia/accessibility/semantics/cpp/fidl.h>
+
 #include <memory>
 
-#include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <gtest/gtest.h>
 
 namespace accessibility_test {
 namespace {
@@ -44,6 +45,14 @@ TEST(ScreenReaderUtilTest, NodeIsDescribableEmptyLabel) {
 TEST(ScreenReaderUtilTest, NodeIsDescribableNoLabel) {
   fuchsia::accessibility::semantics::Node node;
   node.set_node_id(0u);
+  EXPECT_FALSE(a11y::NodeIsDescribable(&node));
+}
+
+TEST(ScreenReaderUtilTest, HiddenNodesAreNotDescribable) {
+  fuchsia::accessibility::semantics::Node node;
+  node.set_node_id(0u);
+  node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
+  node.mutable_states()->set_hidden(true);
   EXPECT_FALSE(a11y::NodeIsDescribable(&node));
 }
 
