@@ -50,12 +50,13 @@ impl PartialEq for RlsError {
 /// It is used whenever the port settings change.
 /// Defined in GSM 5.4.6.3.10, with RFCOMM specifics in RFCOMM 5.5.2.
 #[derive(Debug, PartialEq)]
-struct RemoteLineStatusCommand {
-    dlci: DLCI,
-    status: RlsError,
+pub struct RemoteLineStatusParams {
+    pub dlci: DLCI,
+    /// The status associated with the remote port line.
+    pub status: RlsError,
 }
 
-impl Decodable for RemoteLineStatusCommand {
+impl Decodable for RemoteLineStatusParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != REMOTE_LINE_STATUS_COMMAND_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
@@ -71,11 +72,11 @@ impl Decodable for RemoteLineStatusCommand {
         // Status field.
         let status = RlsError(buf[1]);
 
-        Ok(RemoteLineStatusCommand { dlci, status })
+        Ok(RemoteLineStatusParams { dlci, status })
     }
 }
 
-impl Encodable for RemoteLineStatusCommand {
+impl Encodable for RemoteLineStatusParams {
     fn encoded_len(&self) -> usize {
         REMOTE_LINE_STATUS_COMMAND_LENGTH
     }
@@ -107,7 +108,7 @@ mod tests {
     fn test_decode_rls_invalid_buf() {
         let buf = [0x00, 0x01, 0x02]; // Length = 3, invalid.
         assert_matches!(
-            RemoteLineStatusCommand::decode(&buf[..]),
+            RemoteLineStatusParams::decode(&buf[..]),
             Err(FrameParseError::InvalidBufferLength(REMOTE_LINE_STATUS_COMMAND_LENGTH, 3))
         );
     }
@@ -119,7 +120,7 @@ mod tests {
             0b00000000, // Bit1 = 0 -> No status.
         ];
         assert_matches!(
-            RemoteLineStatusCommand::decode(&buf[..]),
+            RemoteLineStatusParams::decode(&buf[..]),
             Err(FrameParseError::InvalidDLCI(1))
         );
     }
@@ -131,8 +132,8 @@ mod tests {
             0b00000000, // Bit1 = 0 -> No status.
         ];
         let expected =
-            RemoteLineStatusCommand { dlci: DLCI::try_from(2).unwrap(), status: RlsError(0) };
-        let res = RemoteLineStatusCommand::decode(&buf[..]).unwrap();
+            RemoteLineStatusParams { dlci: DLCI::try_from(2).unwrap(), status: RlsError(0) };
+        let res = RemoteLineStatusParams::decode(&buf[..]).unwrap();
         assert_eq!(res, expected);
         assert_eq!(res.status.error_occurred(), false);
     }
@@ -144,8 +145,8 @@ mod tests {
             0b00000101, // Bit1 = 1 -> Status. Status = 010 (Parity Error).
         ];
         let expected =
-            RemoteLineStatusCommand { dlci: DLCI::try_from(2).unwrap(), status: RlsError(5) };
-        let res = RemoteLineStatusCommand::decode(&buf[..]).unwrap();
+            RemoteLineStatusParams { dlci: DLCI::try_from(2).unwrap(), status: RlsError(5) };
+        let res = RemoteLineStatusParams::decode(&buf[..]).unwrap();
         assert_eq!(res, expected);
         assert_eq!(res.status.error_occurred(), true);
         assert_eq!(res.status.error(), 0b010);
@@ -154,7 +155,7 @@ mod tests {
     #[test]
     fn test_encode_rls_invalid_buf() {
         let command =
-            RemoteLineStatusCommand { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0) };
+            RemoteLineStatusParams { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0) };
         let mut buf = [0x01]; // Too small.
         assert_matches!(command.encode(&mut buf), Err(FrameParseError::BufferTooSmall));
     }
@@ -162,7 +163,7 @@ mod tests {
     #[test]
     fn test_encode_rls_with_no_status() {
         let command =
-            RemoteLineStatusCommand { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0b0000) };
+            RemoteLineStatusParams { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0b0000) };
         let mut buf = vec![0; command.encoded_len()];
         assert!(command.encode(&mut buf).is_ok());
         let expected = [
@@ -175,7 +176,7 @@ mod tests {
     #[test]
     fn test_encode_rls_with_status() {
         let command =
-            RemoteLineStatusCommand { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0b0011) };
+            RemoteLineStatusParams { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0b0011) };
         let mut buf = vec![0; command.encoded_len()];
         assert!(command.encode(&mut buf).is_ok());
         let expected = [

@@ -43,7 +43,7 @@ impl RPNAddressField {
 // beneficial to add better accessors & strong types for some of these fields if we plan on
 // supporting these customizations in the future.
 bitfield! {
-    struct PortValues([u8]);
+    pub struct PortValues([u8]);
     impl Debug;
     pub u8, baud_rate, _: 7, 0;
     pub u8, data_bits, _: 9, 8;
@@ -65,13 +65,13 @@ impl PartialEq for PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]> {
 /// The Remote Port Negotiation (RPN) command is used whenever the port settings change.
 /// Defined in GSM 5.4.6.3.9, with RFCOMM notes in RFCOMM 5.5.1.
 #[derive(Debug, PartialEq)]
-struct RemotePortNegotiationCommand {
-    dlci: DLCI,
+pub struct RemotePortNegotiationParams {
+    pub dlci: DLCI,
     /// The optional port values to be used when negotiation the parameters.
-    port_values: Option<PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]>>,
+    pub port_values: Option<PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]>>,
 }
 
-impl Decodable for RemotePortNegotiationCommand {
+impl Decodable for RemotePortNegotiationParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != REMOTE_PORT_NEGOTIATION_SHORT_LENGTH
             && buf.len() != REMOTE_PORT_NEGOTIATION_LONG_LENGTH
@@ -95,11 +95,11 @@ impl Decodable for RemotePortNegotiationCommand {
             Some(PortValues(b))
         };
 
-        Ok(RemotePortNegotiationCommand { dlci, port_values })
+        Ok(RemotePortNegotiationParams { dlci, port_values })
     }
 }
 
-impl Encodable for RemotePortNegotiationCommand {
+impl Encodable for RemotePortNegotiationParams {
     fn encoded_len(&self) -> usize {
         if self.port_values.is_some() {
             REMOTE_PORT_NEGOTIATION_LONG_LENGTH
@@ -138,7 +138,7 @@ mod tests {
     fn test_decode_rpn_invalid_buf() {
         let buf = [0x00, 0x01, 0x02]; // Length = 3, invalid.
         assert_matches!(
-            RemotePortNegotiationCommand::decode(&buf[..]),
+            RemotePortNegotiationParams::decode(&buf[..]),
             Err(FrameParseError::InvalidBufferLength(REMOTE_PORT_NEGOTIATION_SHORT_LENGTH, 3))
         );
     }
@@ -149,7 +149,7 @@ mod tests {
             0b00000111, // DLCI = 1 is invalid, E/A = 1, Bit2 = 1 always.
         ];
         assert_matches!(
-            RemotePortNegotiationCommand::decode(&buf[..]),
+            RemotePortNegotiationParams::decode(&buf[..]),
             Err(FrameParseError::InvalidDLCI(1))
         );
     }
@@ -160,8 +160,8 @@ mod tests {
             0b00011111, // DLCI = 7 is OK, E/A = 1, Bit2 = 1 always.
         ];
         let expected =
-            RemotePortNegotiationCommand { dlci: DLCI::try_from(7).unwrap(), port_values: None };
-        assert_eq!(RemotePortNegotiationCommand::decode(&buf[..]).unwrap(), expected);
+            RemotePortNegotiationParams { dlci: DLCI::try_from(7).unwrap(), port_values: None };
+        assert_eq!(RemotePortNegotiationParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -179,11 +179,11 @@ mod tests {
             0b00011111, // DLCI = 7 is OK, E/A = 1, Bit2 = 1 always.
         ];
         let buf = [buf, port_values_buf.to_vec()].concat();
-        let expected = RemotePortNegotiationCommand {
+        let expected = RemotePortNegotiationParams {
             dlci: DLCI::try_from(7).unwrap(),
             port_values: Some(PortValues(port_values_buf)),
         };
-        let decoded = RemotePortNegotiationCommand::decode(&buf[..]).unwrap();
+        let decoded = RemotePortNegotiationParams::decode(&buf[..]).unwrap();
         assert_eq!(decoded, expected);
 
         let decoded_port_values = decoded.port_values.unwrap();
@@ -202,7 +202,7 @@ mod tests {
     fn test_encode_rpn_invalid_buf() {
         let port_values_buf: [u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH] =
             [0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000];
-        let command = RemotePortNegotiationCommand {
+        let command = RemotePortNegotiationParams {
             dlci: DLCI::try_from(7).unwrap(),
             port_values: Some(PortValues(port_values_buf)),
         };
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn test_encode_rpn_short_command() {
         let command =
-            RemotePortNegotiationCommand { dlci: DLCI::try_from(2).unwrap(), port_values: None };
+            RemotePortNegotiationParams { dlci: DLCI::try_from(2).unwrap(), port_values: None };
         let mut buf = vec![0; command.encoded_len()];
         let expected = [0b00001011]; // DLCI = 2.
         assert!(command.encode(&mut buf).is_ok());
@@ -231,7 +231,7 @@ mod tests {
             0b00000000, // Octet 6: Mask = 0 (Octet1 = 0).
             0b00000000, // Octet 7: Mask = 0 (Octet2 = 0).
         ];
-        let command = RemotePortNegotiationCommand {
+        let command = RemotePortNegotiationParams {
             dlci: DLCI::try_from(9).unwrap(),
             port_values: Some(PortValues(port_values_buf)),
         };

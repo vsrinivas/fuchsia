@@ -20,11 +20,11 @@ const TEST_COMMAND_MAX_PATTERN_LENGTH: usize = Channel::DEFAULT_MAX_TX;
 /// back.
 /// See GSM 5.4.6.3.4.
 #[derive(Debug, PartialEq)]
-pub struct TestCommand {
-    test_pattern: Vec<u8>,
+pub struct TestCommandParams {
+    pub test_pattern: Vec<u8>,
 }
 
-impl Decodable for TestCommand {
+impl Decodable for TestCommandParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() > TEST_COMMAND_MAX_PATTERN_LENGTH {
             return Err(FrameParseError::InvalidFrame);
@@ -33,7 +33,7 @@ impl Decodable for TestCommand {
     }
 }
 
-impl Encodable for TestCommand {
+impl Encodable for TestCommandParams {
     fn encoded_len(&self) -> usize {
         self.test_pattern.len()
     }
@@ -56,28 +56,28 @@ mod tests {
     #[test]
     fn test_decode_test_command_with_empty_buf() {
         let buf = [];
-        let expected = TestCommand { test_pattern: vec![] };
-        assert_eq!(TestCommand::decode(&buf[..]).unwrap(), expected);
+        let expected = TestCommandParams { test_pattern: vec![] };
+        assert_eq!(TestCommandParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
     fn test_decode_test_command_with_nonempty_buf() {
         let buf = [0x00, 0x01, 0x02, 0x03];
-        let expected = TestCommand { test_pattern: buf.to_vec() };
-        assert_eq!(TestCommand::decode(&buf[..]).unwrap(), expected);
+        let expected = TestCommandParams { test_pattern: buf.to_vec() };
+        assert_eq!(TestCommandParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
     fn test_encode_buf_too_small() {
         let mut small_buf = [];
-        let command = TestCommand { test_pattern: vec![0x01, 0x02] };
+        let command = TestCommandParams { test_pattern: vec![0x01, 0x02] };
         assert_matches!(command.encode(&mut small_buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
     fn test_encode_larger_buf_is_ok() {
         let mut buf = [0; 3];
-        let command = TestCommand { test_pattern: vec![0x01, 0x02] };
+        let command = TestCommandParams { test_pattern: vec![0x01, 0x02] };
         assert!(command.encode(&mut buf[..]).is_ok());
         let expected = [0x01, 0x02, 0x00];
         assert_eq!(buf, expected);
@@ -88,7 +88,7 @@ mod tests {
         let test_pattern = vec![0x01, 0x02, 0x03];
 
         let mut buf = [0; 3];
-        let command = TestCommand { test_pattern: test_pattern.clone() };
+        let command = TestCommandParams { test_pattern: test_pattern.clone() };
         assert!(command.encode(&mut buf[..]).is_ok());
         assert_eq!(test_pattern, buf);
     }

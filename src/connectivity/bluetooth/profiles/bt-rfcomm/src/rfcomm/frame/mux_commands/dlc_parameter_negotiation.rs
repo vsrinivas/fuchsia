@@ -53,7 +53,7 @@ impl DLCParameterNegotiationFields<[u8; DLC_PARAMETER_NEGOTIATION_LENGTH]> {
 /// The DLC Parameter Negotiation command - used to negotiate parameters for a given DLC.
 /// See GSM 5.4.6.3.1 for the fields and RFCOMM 5.5.3 for modifications.
 #[derive(Clone, Debug, PartialEq)]
-pub struct DLCParameterNegotiationCommand {
+pub struct ParameterNegotiationParams {
     pub dlci: DLCI,
     pub credit_based_flow_handshake: CreditBasedFlowHandshake,
     pub priority: u8,
@@ -62,7 +62,7 @@ pub struct DLCParameterNegotiationCommand {
     pub initial_credits: u8,
 }
 
-impl Decodable for DLCParameterNegotiationCommand {
+impl Decodable for ParameterNegotiationParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != DLC_PARAMETER_NEGOTIATION_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
@@ -82,7 +82,7 @@ impl Decodable for DLCParameterNegotiationCommand {
         let max_frame_size = parameters.max_frame_size();
         let initial_credits = parameters.initial_credits();
 
-        Ok(DLCParameterNegotiationCommand {
+        Ok(ParameterNegotiationParams {
             dlci,
             credit_based_flow_handshake,
             priority,
@@ -92,7 +92,7 @@ impl Decodable for DLCParameterNegotiationCommand {
     }
 }
 
-impl Encodable for DLCParameterNegotiationCommand {
+impl Encodable for ParameterNegotiationParams {
     fn encoded_len(&self) -> usize {
         DLC_PARAMETER_NEGOTIATION_LENGTH
     }
@@ -126,7 +126,7 @@ mod tests {
     fn test_parse_too_small_buf() {
         let buf = [0x00, 0x00, 0x00]; // Too small.
         assert_matches!(
-            DLCParameterNegotiationCommand::decode(&buf[..]),
+            ParameterNegotiationParams::decode(&buf[..]),
             Err(FrameParseError::InvalidBufferLength(DLC_PARAMETER_NEGOTIATION_LENGTH, 3))
         );
     }
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn test_parse_too_large_buf() {
         let buf = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]; // Too large.
-        assert!(DLCParameterNegotiationCommand::decode(&buf[..]).is_err());
+        assert!(ParameterNegotiationParams::decode(&buf[..]).is_err());
     }
 
     #[test]
@@ -150,7 +150,7 @@ mod tests {
             0b00000001, // Initial Credits = 1.
         ];
         assert_matches!(
-            DLCParameterNegotiationCommand::decode(&buf[..]),
+            ParameterNegotiationParams::decode(&buf[..]),
             Err(FrameParseError::InvalidDLCI(1))
         );
     }
@@ -168,7 +168,7 @@ mod tests {
             0b00000001, // Initial Credits = 1.
         ];
         assert_matches!(
-            DLCParameterNegotiationCommand::decode(&buf[..]),
+            ParameterNegotiationParams::decode(&buf[..]),
             Err(FrameParseError::InvalidFrame)
         );
     }
@@ -186,14 +186,14 @@ mod tests {
             0b00000001, // Initial Credits = 1.
         ];
 
-        let expected = DLCParameterNegotiationCommand {
+        let expected = ParameterNegotiationParams {
             dlci: DLCI::try_from(0).unwrap(),
             credit_based_flow_handshake: CreditBasedFlowHandshake::SupportedRequest,
             priority: 8,
             max_frame_size: 4,
             initial_credits: 1,
         };
-        assert_eq!(DLCParameterNegotiationCommand::decode(&buf[..]).unwrap(), expected);
+        assert_eq!(ParameterNegotiationParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -209,20 +209,20 @@ mod tests {
             0b00001100, // Initial Credits = 4, stray bit should be ignored.
         ];
 
-        let expected = DLCParameterNegotiationCommand {
+        let expected = ParameterNegotiationParams {
             dlci: DLCI::try_from(0).unwrap(),
             credit_based_flow_handshake: CreditBasedFlowHandshake::SupportedRequest,
             priority: 8,
             max_frame_size: 388,
             initial_credits: 4,
         };
-        assert_eq!(DLCParameterNegotiationCommand::decode(&buf[..]).unwrap(), expected);
+        assert_eq!(ParameterNegotiationParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
     fn test_encode_invalid_buf_error() {
         let mut small_buf = [];
-        let dlc_pn_command = DLCParameterNegotiationCommand {
+        let dlc_pn_command = ParameterNegotiationParams {
             dlci: DLCI::try_from(0).unwrap(),
             credit_based_flow_handshake: CreditBasedFlowHandshake::SupportedRequest,
             priority: 8,
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn test_encode_command_success() {
-        let dlc_pn_command = DLCParameterNegotiationCommand {
+        let dlc_pn_command = ParameterNegotiationParams {
             dlci: DLCI::try_from(5).unwrap(),
             credit_based_flow_handshake: CreditBasedFlowHandshake::SupportedRequest,
             priority: 8,

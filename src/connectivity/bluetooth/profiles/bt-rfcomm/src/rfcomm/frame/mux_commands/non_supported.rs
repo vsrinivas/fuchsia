@@ -23,14 +23,14 @@ bitfield! {
 /// This response is sent whenever a command type is not supported by the device.
 /// Defined in GSM 5.4.6.3.8.
 #[derive(Debug, PartialEq)]
-struct NonSupportedCommandResponse {
+pub struct NonSupportedCommandParams {
     /// The C/R bit is set to the same value as the C/R bit in the non-supported command.
-    cr_bit: bool,
+    pub cr_bit: bool,
     /// The non_supported command.
-    non_supported_command: u8,
+    pub non_supported_command: u8,
 }
 
-impl Decodable for NonSupportedCommandResponse {
+impl Decodable for NonSupportedCommandParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != NON_SUPPORTED_COMMAND_RESPONSE_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
@@ -47,7 +47,7 @@ impl Decodable for NonSupportedCommandResponse {
     }
 }
 
-impl Encodable for NonSupportedCommandResponse {
+impl Encodable for NonSupportedCommandParams {
     fn encoded_len(&self) -> usize {
         NON_SUPPORTED_COMMAND_RESPONSE_LENGTH
     }
@@ -79,7 +79,7 @@ mod tests {
     fn test_decode_invalid_buf() {
         let empty_buf = [];
         assert_matches!(
-            NonSupportedCommandResponse::decode(&empty_buf[..]),
+            NonSupportedCommandParams::decode(&empty_buf[..]),
             Err(FrameParseError::InvalidBufferLength(NON_SUPPORTED_COMMAND_RESPONSE_LENGTH, 0))
         );
     }
@@ -89,21 +89,21 @@ mod tests {
         let buf = [
             0b10101011, // C/R Bit = 1, Random Command pattern = 42.
         ];
-        let expected = NonSupportedCommandResponse { cr_bit: true, non_supported_command: 42 };
-        assert_eq!(NonSupportedCommandResponse::decode(&buf[..]).unwrap(), expected);
+        let expected = NonSupportedCommandParams { cr_bit: true, non_supported_command: 42 };
+        assert_eq!(NonSupportedCommandParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
     fn test_encode_buffer_too_small() {
         let mut buf = [];
-        let response = NonSupportedCommandResponse { cr_bit: false, non_supported_command: 8 };
+        let response = NonSupportedCommandParams { cr_bit: false, non_supported_command: 8 };
         assert_matches!(response.encode(&mut buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
     fn test_encode_response() {
         let mut buf = [0; 1];
-        let response = NonSupportedCommandResponse { cr_bit: true, non_supported_command: 8 };
+        let response = NonSupportedCommandParams { cr_bit: true, non_supported_command: 8 };
         let expected = [
             0b00100011, // Command = 8, C/R = 1, E/A = 1.
         ];
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_encode_command() {
         let mut buf = [0; 1];
-        let response = NonSupportedCommandResponse { cr_bit: false, non_supported_command: 10 };
+        let response = NonSupportedCommandParams { cr_bit: false, non_supported_command: 10 };
         let expected = [
             0b00101001, // Command = 10, C/R = 0, E/A = 1.
         ];

@@ -66,14 +66,14 @@ impl PartialEq for ModemStatusSignals {
 /// Modem Status Command is used to convey V .24 control signals to the DLC.
 /// Defined in GSM 6.4.6.3.7.
 #[derive(Debug, PartialEq)]
-pub struct ModemStatusCommand {
-    dlci: DLCI,
-    signals: ModemStatusSignals,
-    /// Break signal in data stream. In units of 200ms as defined in GSM 5.4.6.3.7.
-    break_value: Option<u8>,
+pub struct ModemStatusParams {
+    pub dlci: DLCI,
+    pub signals: ModemStatusSignals,
+    // Break signal in data stream. In units of 200ms as defined in GSM 5.4.6.3.7.
+    pub break_value: Option<u8>,
 }
 
-impl Decodable for ModemStatusCommand {
+impl Decodable for ModemStatusParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != MODEM_STATUS_COMMAND_WITH_BREAK_LENGTH
             && buf.len() != MODEM_STATUS_COMMAND_WITHOUT_BREAK_LENGTH
@@ -104,7 +104,7 @@ impl Decodable for ModemStatusCommand {
     }
 }
 
-impl Encodable for ModemStatusCommand {
+impl Encodable for ModemStatusParams {
     fn encoded_len(&self) -> usize {
         if self.break_value.is_some() {
             MODEM_STATUS_COMMAND_WITH_BREAK_LENGTH
@@ -154,7 +154,7 @@ mod tests {
     fn test_decode_modem_status_invalid_buf() {
         let buf = [];
         assert_matches!(
-            ModemStatusCommand::decode(&buf[..]),
+            ModemStatusParams::decode(&buf[..]),
             Err(FrameParseError::InvalidBufferLength(MODEM_STATUS_COMMAND_WITH_BREAK_LENGTH, 0))
         );
     }
@@ -165,7 +165,7 @@ mod tests {
             0b00000111, // DLCI = 1 is invalid, E/A = 1, Bit2 = 1 always.
             0b00000001, // Signals = 0, E/A = 1 -> No break.
         ];
-        assert_matches!(ModemStatusCommand::decode(&buf[..]), Err(FrameParseError::InvalidDLCI(1)));
+        assert_matches!(ModemStatusParams::decode(&buf[..]), Err(FrameParseError::InvalidDLCI(1)));
     }
 
     #[test]
@@ -174,12 +174,12 @@ mod tests {
             0b00001111, // DLCI = 3, E/A = 1, Bit2 = 1 always.
             0b00000001, // Signals = 0, E/A = 1 -> No break.
         ];
-        let expected = ModemStatusCommand {
+        let expected = ModemStatusParams {
             dlci: DLCI::try_from(3).unwrap(),
             signals: ModemStatusSignals(1),
             break_value: None,
         };
-        assert_eq!(ModemStatusCommand::decode(&buf[..]).unwrap(), expected);
+        assert_eq!(ModemStatusParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -189,12 +189,12 @@ mod tests {
             0b00000000, // Signals = 0, E/A = 0 -> Break.
             0b00000001, // E/A = 1, B1 = 0 -> no break.
         ];
-        let expected = ModemStatusCommand {
+        let expected = ModemStatusParams {
             dlci: DLCI::try_from(3).unwrap(),
             signals: ModemStatusSignals(0),
             break_value: None,
         };
-        assert_eq!(ModemStatusCommand::decode(&buf[..]).unwrap(), expected);
+        assert_eq!(ModemStatusParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
@@ -204,18 +204,18 @@ mod tests {
             0b11000011, // Signals set, E/A = 0 -> Break.
             0b10100011, // E/A = 1, B1 = 1 -> Break = 10.
         ];
-        let expected = ModemStatusCommand {
+        let expected = ModemStatusParams {
             dlci: DLCI::try_from(7).unwrap(),
             signals: ModemStatusSignals(195),
             break_value: Some(10),
         };
-        assert_eq!(ModemStatusCommand::decode(&buf[..]).unwrap(), expected);
+        assert_eq!(ModemStatusParams::decode(&buf[..]).unwrap(), expected);
     }
 
     #[test]
     fn test_encode_modem_status_invalid_buf() {
         let mut buf = [];
-        let command = ModemStatusCommand {
+        let command = ModemStatusParams {
             dlci: DLCI::try_from(5).unwrap(),
             signals: ModemStatusSignals(100),
             break_value: Some(11),
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn test_encode_modem_status_no_break_signal() {
         let mut buf = [0; 2];
-        let command = ModemStatusCommand {
+        let command = ModemStatusParams {
             dlci: DLCI::try_from(5).unwrap(),
             signals: ModemStatusSignals(1),
             break_value: None,
@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn test_encode_modem_status_with_break_signal() {
         let mut buf = [0; 3];
-        let command = ModemStatusCommand {
+        let command = ModemStatusParams {
             dlci: DLCI::try_from(6).unwrap(),
             signals: ModemStatusSignals(201),
             break_value: Some(3),

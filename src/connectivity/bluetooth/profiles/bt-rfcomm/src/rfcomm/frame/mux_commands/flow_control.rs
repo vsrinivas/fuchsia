@@ -7,25 +7,22 @@ use crate::rfcomm::frame::{
     FrameParseError,
 };
 
-/// The length (in bytes) of a Flow Control On Command.
-/// Defined in GSM 5.4.6.3.5.
-const FLOW_CONTROL_ON_COMMAND_LENGTH: usize = 0;
+/// The length (in bytes) of a Flow Control Command. Both Flow Control On and Off commands
+/// contain no parameters.
+/// Defined in GSM 5.4.6.3.5 & 5.4.6.3.6.
+const FLOW_CONTROL_COMMAND_LENGTH: usize = 0;
 
-/// The length (in bytes) of a Flow Control Off Command.
-/// Defined in GSM 5.4.6.3.6.
-const FLOW_CONTROL_OFF_COMMAND_LENGTH: usize = 0;
-
-/// The Flow Control On Command used enable aggregate flow.
+/// The Flow Control Command is used to enable/disable aggregate flow.
 /// The command contains no parameters.
-/// Defined in GSM 5.4.6.3.5.
+/// Defined in GSM 5.4.6.3.5 & 5.4.6.3.6.
 #[derive(Debug, PartialEq)]
-struct FlowControlOnCommand {}
+pub struct FlowControlParams {}
 
-impl Decodable for FlowControlOnCommand {
+impl Decodable for FlowControlParams {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
-        if buf.len() != FLOW_CONTROL_ON_COMMAND_LENGTH {
+        if buf.len() != FLOW_CONTROL_COMMAND_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
-                FLOW_CONTROL_ON_COMMAND_LENGTH,
+                FLOW_CONTROL_COMMAND_LENGTH,
                 buf.len(),
             ));
         }
@@ -33,40 +30,9 @@ impl Decodable for FlowControlOnCommand {
     }
 }
 
-impl Encodable for FlowControlOnCommand {
+impl Encodable for FlowControlParams {
     fn encoded_len(&self) -> usize {
-        FLOW_CONTROL_ON_COMMAND_LENGTH
-    }
-
-    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError> {
-        if buf.len() < self.encoded_len() {
-            return Err(FrameParseError::BufferTooSmall);
-        }
-        Ok(())
-    }
-}
-
-/// The Flow Control On Command used disable aggregate flow.
-/// The command contains no parameters.
-/// Defined in GSM 5.4.6.3.5.
-#[derive(Debug, PartialEq)]
-struct FlowControlOffCommand {}
-
-impl Decodable for FlowControlOffCommand {
-    fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
-        if buf.len() != FLOW_CONTROL_OFF_COMMAND_LENGTH {
-            return Err(FrameParseError::InvalidBufferLength(
-                FLOW_CONTROL_OFF_COMMAND_LENGTH,
-                buf.len(),
-            ));
-        }
-        Ok(Self {})
-    }
-}
-
-impl Encodable for FlowControlOffCommand {
-    fn encoded_len(&self) -> usize {
-        FLOW_CONTROL_OFF_COMMAND_LENGTH
+        FLOW_CONTROL_COMMAND_LENGTH
     }
 
     fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError> {
@@ -84,49 +50,25 @@ mod tests {
     use matches::assert_matches;
 
     #[test]
-    fn test_decode_flow_control_on_invalid_buf() {
+    fn test_decode_flow_control_invalid_buf() {
         let buf = [0x00, 0x01, 0x02];
         assert_matches!(
-            FlowControlOnCommand::decode(&buf[..]),
-            Err(FrameParseError::InvalidBufferLength(FLOW_CONTROL_ON_COMMAND_LENGTH, 3))
+            FlowControlParams::decode(&buf[..]),
+            Err(FrameParseError::InvalidBufferLength(FLOW_CONTROL_COMMAND_LENGTH, 3))
         );
     }
 
     #[test]
-    fn test_decode_flow_control_on() {
+    fn test_decode_flow_control() {
         let buf = [];
-        assert_eq!(FlowControlOnCommand::decode(&buf[..]).unwrap(), FlowControlOnCommand {});
+        assert_eq!(FlowControlParams::decode(&buf[..]).unwrap(), FlowControlParams {});
     }
 
     #[test]
-    fn test_encode_flow_control_on() {
+    fn test_encode_flow_control() {
         let mut buf = [];
         let expected: [u8; 0] = [];
-        let command = FlowControlOnCommand {};
-        assert!(command.encode(&mut buf[..]).is_ok());
-        assert_eq!(buf, expected);
-    }
-
-    #[test]
-    fn test_decode_flow_control_off_invalid_buf() {
-        let buf = [0x00, 0x01];
-        assert_matches!(
-            FlowControlOnCommand::decode(&buf[..]),
-            Err(FrameParseError::InvalidBufferLength(FLOW_CONTROL_OFF_COMMAND_LENGTH, 2))
-        );
-    }
-
-    #[test]
-    fn test_decode_flow_control_off() {
-        let buf = [];
-        assert_eq!(FlowControlOffCommand::decode(&buf[..]).unwrap(), FlowControlOffCommand {});
-    }
-
-    #[test]
-    fn test_encode_flow_control_off() {
-        let mut buf = [];
-        let expected: [u8; 0] = [];
-        let command = FlowControlOffCommand {};
+        let command = FlowControlParams {};
         assert!(command.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, expected);
     }
