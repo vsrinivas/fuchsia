@@ -4,3 +4,4 @@
 /third_party/lz4
 /third_party/zstd
 /third_party/rapidjson
+/third_party/scudo/src
