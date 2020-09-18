@@ -69,29 +69,16 @@ async fn run_test(
     .await
     .context("running test")?;
 
-    let mut test_events = vec![];
+    let mut test_events = test_runners_test_lib::process_events(events, false);
 
-    // break logs as they can be grouped in any way.
-    for event in events {
+    for event in test_events.iter_mut() {
         match event {
-            TestEvent::LogMessage { test_case_name, mut msg } => {
-                if msg.ends_with("\n") {
-                    msg.truncate(msg.len() - 1);
-                }
-                let logs = msg.split("\n");
-                for log in logs {
-                    // flaky to compare time taken in sub-tests. Remove those bits.
-                    let log = time_taken.replace(log, "");
-                    test_events.push(TestEvent::LogMessage {
-                        test_case_name: test_case_name.clone(),
-                        msg: log.to_string(),
-                    });
-                }
+            TestEvent::LogMessage { test_case_name, msg } => {
+                let log = time_taken.replace(&msg, "");
+                *event = TestEvent::log_message(test_case_name, &log);
             }
-            event => {
-                test_events.push(event);
-            }
-        };
+            _ => {}
+        }
     }
 
     Ok(test_events)

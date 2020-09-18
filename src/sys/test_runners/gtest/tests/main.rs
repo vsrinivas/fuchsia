@@ -69,30 +69,7 @@ async fn run_test(
     .await
     .context("running test")?;
 
-    let mut test_events = vec![];
-
-    // break logs as they can be grouped in any way.
-    for event in events {
-        match event {
-            TestEvent::LogMessage { test_case_name, mut msg } => {
-                if msg.ends_with("\n") {
-                    msg.truncate(msg.len() - 1);
-                }
-                let logs = msg.split("\n");
-                for log in logs {
-                    test_events.push(TestEvent::LogMessage {
-                        test_case_name: test_case_name.clone(),
-                        msg: log.to_string(),
-                    });
-                }
-            }
-            event => {
-                test_events.push(event);
-            }
-        };
-    }
-
-    Ok(test_events)
+    Ok(test_runners_test_lib::process_events(events, false))
 }
 
 /// Helper for comparing grouped test events. Produces more readable diffs than diffing the entire

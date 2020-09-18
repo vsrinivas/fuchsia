@@ -10,6 +10,7 @@ use {
         RunListenerRequestStream,
     },
     std::collections::HashMap,
+    test_executor::TestEvent,
     {anyhow::Error, futures::prelude::*},
 };
 
@@ -145,6 +146,59 @@ pub async fn collect_listener_event(
 /// Helper method to convert names to `Invocation`.
 pub fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
     names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
+}
+
+// process events by parsing and normalizing logs
+pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<TestEvent> {
+    let mut test_events = vec![];
+    // map to buffer incomplete logs(that did not end in newline) by test case.
+    let mut buffered_logs = HashMap::new();
+    // break logs as they can be grouped in any way.
+    for event in events {
+        match event {
+            TestEvent::LogMessage { test_case_name, msg } => {
+                let logs = msg.split("\n");
+                let mut logs = logs.collect::<Vec<&str>>();
+                // discard last empty log(if it ended in newline, or  store im-complete line)
+                let mut last_incomplete_line = logs.pop();
+                if msg.as_bytes().last() == Some(&b'\n') {
+                    last_incomplete_line = None;
+                }
+
+                for log in logs {
+                    if exclude_empty_logs && log.len() == 0 {
+                        continue;
+                    }
+                    let mut msg = log.to_owned();
+                    // This is only executed for first log line and used to concat previous
+                    // buffered line.
+                    if let Some(prev_log) = buffered_logs.remove(&test_case_name) {
+                        msg = format!("{}{}", prev_log, msg);
+                    }
+                    test_events.push(TestEvent::LogMessage {
+                        test_case_name: test_case_name.clone(),
+                        msg: msg,
+                    });
+                }
+                if let Some(log) = last_incomplete_line {
+                    let mut log = log.to_owned();
+                    if let Some(prev_log) = buffered_logs.remove(&test_case_name) {
+                        log = format!("{}{}", prev_log, log);
+                    }
+                    buffered_logs.insert(test_case_name.clone(), log);
+                }
+            }
+            event => {
+                test_events.push(event);
+            }
+        };
+    }
+
+    for (test_case_name, log) in buffered_logs {
+        test_events.push(TestEvent::LogMessage { test_case_name: test_case_name, msg: log });
+    }
+
+    test_events
 }
 
 #[cfg(test)]

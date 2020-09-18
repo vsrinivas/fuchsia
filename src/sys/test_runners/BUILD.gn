@@ -73,6 +73,7 @@ rustc_library("test_lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//src/lib/test_executor/rust:test_executor",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
