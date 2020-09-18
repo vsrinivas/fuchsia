@@ -67,7 +67,7 @@ pub mod expectation {
     use crate::harness::{access::AccessState, host_watcher::HostWatcherState};
     use fuchsia_bluetooth::{
         expectation::Predicate,
-        types::{Address, HostId, HostInfo, Peer, PeerId},
+        types::{Address, HostId, HostInfo, Peer, PeerId, Uuid},
     };
 
     mod peer {
@@ -97,6 +97,11 @@ pub mod expectation {
                 move |d| d.connected == connected,
                 &format!("connected == {}", connected),
             )
+        }
+
+        pub(crate) fn with_bredr_service(service_uuid: Uuid) -> Predicate<Peer> {
+            let msg = format!("bredr_services.contains({})", service_uuid.to_string());
+            Predicate::<Peer>::predicate(move |d| d.bredr_services.contains(&service_uuid), &msg)
         }
     }
 
@@ -143,6 +148,10 @@ pub mod expectation {
 
     pub fn host_with_name<S: ToString>(name: S) -> Predicate<HostWatcherState> {
         host::exists(host::with_name(name))
+    }
+
+    pub fn peer_bredr_service_discovered(id: PeerId, service_uuid: Uuid) -> Predicate<AccessState> {
+        peer::exists(peer::with_identifier(id).and(peer::with_bredr_service(service_uuid)))
     }
 
     pub fn host_discovering(id: HostId, is_discovering: bool) -> Predicate<HostWatcherState> {

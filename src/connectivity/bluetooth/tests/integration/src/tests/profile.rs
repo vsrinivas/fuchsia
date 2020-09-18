@@ -174,29 +174,41 @@ async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error>
 async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> Result<(), Error> {
     let emulator = profile.aux().emulator().clone();
     let peer_address = default_address();
-    let mut search_result = add_search(&profile, ServiceClassProfileIdentifier::AudioSink).await?;
-    let _peer = create_bredr_peer(&emulator, peer_address).await?;
+    let profile_id = ServiceClassProfileIdentifier::AudioSink;
+    let mut search_result = add_search(&profile, profile_id).await?;
+    let _test_peer = create_bredr_peer(&emulator, peer_address).await?;
     let _discovery_result = start_discovery(&access).await?;
 
     let state = access
         .when_satisfied(expectation::peer_with_address(peer_address), timeout_duration())
         .await?;
 
-    let conected_peer_id = state.peers.values().find(|p| p.address == peer_address).unwrap().id;
+    let connected_peer_id = state.peers.values().find(|p| p.address == peer_address).unwrap().id;
 
-    let fidl_response = access.aux().connect(&mut conected_peer_id.into());
+    let fidl_response = access.aux().connect(&mut connected_peer_id.into());
     fidl_response
         .await?
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
     access
-        .when_satisfied(expectation::peer_connected(conected_peer_id, true), timeout_duration())
+        .when_satisfied(expectation::peer_connected(connected_peer_id, true), timeout_duration())
         .await?;
 
     // The SDP search result conducted following connection should contain the
     // peer ID of the created peer.
     let service_found_fut = search_result.select_next_some().map_err(|e| format_err!("{:?}", e));
     let SearchResultsRequest::ServiceFound { peer_id, .. } = service_found_fut.await?;
-    assert_eq!(conected_peer_id, peer_id.into());
+    assert_eq!(connected_peer_id, peer_id.into());
+
+    // Peer should be updated with discovered service.
+    access
+        .when_satisfied(
+            expectation::peer_bredr_service_discovered(
+                connected_peer_id,
+                Uuid::new16(profile_id.into_primitive()),
+            ),
+            timeout_duration(),
+        )
+        .await?;
 
     Ok(())
 }
