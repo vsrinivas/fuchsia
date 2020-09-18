@@ -190,13 +190,13 @@ class PackageManagerRepo {
         randomize: true);
   }
 
-  /// Get the named component from the repo using `amberctl get_up`.
+  /// Get the named component from the repo using `pkgctl resolve`.
   ///
   /// Uses this command:
-  /// `amberctl get_up -n <component name>`
-  Future<ProcessResult> amberctlGetupN(
-      String msg, String name, int retCode) async {
-    return _sl4fRun(msg, 'amberctl get_up', ['-n $name'], retCode);
+  /// `pkgctl resolve <component URL>`
+  Future<ProcessResult> pkgctlResolve(
+      String msg, String url, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl resolve', [url], retCode);
   }
 
   /// List repo sources using `pkgctl repo`.

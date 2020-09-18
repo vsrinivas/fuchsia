@@ -372,5 +372,37 @@ void main() {
       expect(listRulesOutput.contains(repoName), isFalse);
       expect(listRulesOutput, originalRuleList);
     });
+    test('Test `pkgctl resolve` base case.', () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // pkgctl resolve fuchsia-pkg://fuchsia.com/<name>
+      var resolveOutput = (await repoServer.pkgctlResolve(
+              'Confirm that `$testPackageName` does not exist.',
+              'fuchsia-pkg://fuchsia.com/$testPackageName',
+              1))
+          .stdout
+          .toString();
+      expect(resolveOutput.contains('package contents:'), isFalse);
+
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
+
+      await repoServer.amberctlAddSrcNF(
+          'Adding the new repository as an update source with http://$hostAddress:$port',
+          repoServer.getRepoPath(),
+          'http://$hostAddress:$port/config.json',
+          0);
+
+      resolveOutput = (await repoServer.pkgctlResolve(
+              'Confirm that `$testPackageName` now exists.',
+              'fuchsia-pkg://fuchsia.com/$testPackageName',
+              0))
+          .stdout
+          .toString();
+      expect(resolveOutput.contains('package contents:'), isTrue);
+    });
   }, timeout: _timeout);
 }
