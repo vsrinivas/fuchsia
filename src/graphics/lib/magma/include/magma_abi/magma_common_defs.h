@@ -108,6 +108,19 @@ enum {
   MAGMA_FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE = 0x0800000000001071,
 };
 
+// Must match fuchsia.sysmem.ColorSpaceType values.
+enum {
+  MAGMA_COLORSPACE_INVALID = 0,
+  MAGMA_COLORSPACE_SRGB = 1,
+  MAGMA_COLORSPACE_REC601_NTSC = 2,
+  MAGMA_COLORSPACE_REC601_NTSC_FULL_RANGE = 3,
+  MAGMA_COLORSPACE_REC601_PAL = 4,
+  MAGMA_COLORSPACE_REC601_PAL_FULL_RANGE = 5,
+  MAGMA_COLORSPACE_REC709 = 6,
+  MAGMA_COLORSPACE_REC2020 = 7,
+  MAGMA_COLORSPACE_REC2100 = 8,
+};
+
 enum {
   MAGMA_COHERENCY_DOMAIN_CPU = 0,
   MAGMA_COHERENCY_DOMAIN_RAM = 1,
@@ -236,6 +249,7 @@ typedef struct {
 } magma_image_format_constraints_t;
 
 typedef struct {
+  // min_buffer_count
   uint32_t count;
   uint32_t usage;
   magma_bool_t secure_permitted;
@@ -244,6 +258,12 @@ typedef struct {
   magma_bool_t cpu_domain_supported;
   uint32_t min_size_bytes;
 } magma_buffer_format_constraints_t;
+
+typedef struct {
+  uint32_t min_buffer_count_for_camping;
+  uint32_t min_buffer_count_for_dedicated_slack;
+  uint32_t min_buffer_count_for_shared_slack;
+} magma_buffer_format_additional_constraints_t;
 
 #if defined(__cplusplus)
 }

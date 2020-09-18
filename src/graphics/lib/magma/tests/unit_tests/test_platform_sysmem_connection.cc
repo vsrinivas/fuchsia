@@ -84,9 +84,9 @@ class TestPlatformSysmemConnection {
     uint32_t handle;
     uint32_t offset;
     EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferHandle(0u, &handle, &offset).get());
-    magma_sysmem::PlatformBufferDescription::ColorSpace color_space;
+    uint32_t color_space;
     EXPECT_TRUE(description->GetColorSpace(&color_space));
-    EXPECT_EQ(magma_sysmem::PlatformBufferDescription::kColorSpaceSrgb, color_space);
+    EXPECT_EQ(MAGMA_COLORSPACE_SRGB, color_space);
 
     auto platform_handle = magma::PlatformHandle::Create(handle);
     EXPECT_NE(nullptr, platform_handle);
@@ -109,6 +109,9 @@ class TestPlatformSysmemConnection {
     EXPECT_EQ(MAGMA_STATUS_OK,
               connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
 
+    uint32_t in_color_space = MAGMA_COLORSPACE_REC709;
+    EXPECT_NE(MAGMA_STATUS_OK, constraints->SetColorSpaces(0, 1, &in_color_space).get());
+
     magma_image_format_constraints_t image_constraints{};
     image_constraints.image_format = MAGMA_FORMAT_I420;
     image_constraints.has_format_modifier = false;
@@ -120,6 +123,8 @@ class TestPlatformSysmemConnection {
     image_constraints.min_bytes_per_row = 0;
 
     EXPECT_EQ(MAGMA_STATUS_OK, constraints->SetImageFormatConstraints(0, &image_constraints).get());
+
+    EXPECT_EQ(MAGMA_STATUS_OK, constraints->SetColorSpaces(0, 1, &in_color_space).get());
     EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
 
     std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
@@ -143,10 +148,10 @@ class TestPlatformSysmemConnection {
     auto platform_handle = magma::PlatformHandle::Create(handle);
     EXPECT_NE(nullptr, platform_handle);
 
-    magma_sysmem::PlatformBufferDescription::ColorSpace color_space;
+    uint32_t color_space;
     EXPECT_TRUE(description->GetColorSpace(&color_space));
     // Could be one of a variety of color spaces.
-    EXPECT_NE(magma_sysmem::PlatformBufferDescription::kColorSpaceSrgb, color_space);
+    EXPECT_EQ(in_color_space, color_space);
   }
 
   static void TestIntelTiling() {
@@ -218,6 +223,7 @@ class TestPlatformSysmemConnection {
 
     EXPECT_FALSE(description->has_format_modifier());
     EXPECT_EQ(2u, description->count());
+    EXPECT_EQ(MAGMA_FORMAT_INVALID, description->format());
   }
 
   static void TestProtectedBuffer() {

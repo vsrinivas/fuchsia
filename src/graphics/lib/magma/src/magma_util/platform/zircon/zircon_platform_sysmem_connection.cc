@@ -18,6 +18,14 @@ using magma::Status;
 
 namespace magma_sysmem {
 
+namespace {
+uint32_t SysmemToMagmaFormat(llcpp::fuchsia::sysmem::PixelFormatType format) {
+  // The values are required to be identical.
+  return static_cast<uint32_t>(format);
+}
+
+}  // namespace
+
 class ZirconPlatformBufferDescription : public PlatformBufferDescription {
  public:
   ZirconPlatformBufferDescription(uint32_t buffer_count,
@@ -42,6 +50,11 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
   bool is_secure() const override { return settings_.buffer_settings.is_secure; }
 
   uint32_t count() const override { return buffer_count_; }
+  uint32_t format() const override {
+    return settings_.has_image_format_constraints
+               ? SysmemToMagmaFormat(settings_.image_format_constraints.pixel_format.type)
+               : MAGMA_FORMAT_INVALID;
+  }
   bool has_format_modifier() const override {
     return settings_.image_format_constraints.pixel_format.has_format_modifier;
   }
@@ -66,38 +79,16 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
     }
   }
 
-  bool GetColorSpace(ColorSpace* color_space_out) override {
+  bool GetColorSpace(uint32_t* color_space_out) override {
     if (!settings_.has_image_format_constraints) {
       return false;
     }
     // Only report first colorspace for now.
     if (settings_.image_format_constraints.color_spaces_count < 1)
       return false;
-    switch (settings_.image_format_constraints.color_space[0].type) {
-      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC:
-        *color_space_out = kColorSpaceRec601Ntsc;
-        return true;
-      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE:
-        *color_space_out = kColorSpaceRec601NtscFullRange;
-        return true;
-      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL:
-        *color_space_out = kColorSpaceRec601Pal;
-        return true;
-      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE:
-        *color_space_out = kColorSpaceRec601PalFullRange;
-        return true;
-      case llcpp::fuchsia::sysmem::ColorSpaceType::REC709:
-        *color_space_out = kColorSpaceRec709;
-        return true;
-      case llcpp::fuchsia::sysmem::ColorSpaceType::REC2020:
-        *color_space_out = kColorSpaceRec2020;
-        return true;
-      case llcpp::fuchsia::sysmem::ColorSpaceType::SRGB:
-        *color_space_out = kColorSpaceSrgb;
-        return true;
-      default:
-        return false;
-    }
+    *color_space_out =
+        static_cast<uint32_t>(settings_.image_format_constraints.color_space[0].type);
+    return true;
   }
 
   bool GetPlanes(uint64_t width, uint64_t height, magma_image_plane_t* planes_out) const override {
@@ -246,6 +237,34 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     constraints.bytes_per_row_divisor = format_constraints->bytes_per_row_divisor;
     return MAGMA_STATUS_OK;
   }
+
+  magma::Status SetColorSpaces(uint32_t index, uint32_t color_space_count,
+                               const uint32_t* color_spaces) override {
+    if (index >= constraints_.image_format_constraints_count) {
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraints must be set first");
+    }
+    if (color_space_count >
+        llcpp::fuchsia::sysmem::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Too many color spaces: %d", color_space_count);
+    }
+    auto& constraints = constraints_.image_format_constraints[index];
+    for (uint32_t i = 0; i < color_space_count; i++) {
+      constraints.color_space[i].type =
+          static_cast<llcpp::fuchsia::sysmem::ColorSpaceType>(color_spaces[i]);
+    }
+    constraints.color_spaces_count = color_space_count;
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status AddAdditionalConstraints(
+      const magma_buffer_format_additional_constraints_t* additional) override {
+    constraints_.min_buffer_count_for_camping = additional->min_buffer_count_for_camping;
+    constraints_.min_buffer_count_for_dedicated_slack =
+        additional->min_buffer_count_for_dedicated_slack;
+    constraints_.min_buffer_count_for_shared_slack = additional->min_buffer_count_for_shared_slack;
+    return MAGMA_STATUS_OK;
+  }
+
   llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints() { return constraints_; }
 
  private:

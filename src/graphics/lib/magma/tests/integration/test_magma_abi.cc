@@ -622,6 +622,13 @@ class TestConnection {
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_buffer_constraints_create(connection, &buffer_constraints, &constraints));
 
+    magma_buffer_format_additional_constraints_t additional{
+        .min_buffer_count_for_camping = 1,
+        .min_buffer_count_for_dedicated_slack = 1,
+        .min_buffer_count_for_shared_slack = 1};
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_buffer_constraints_add_additional(connection, constraints, &additional));
+
     // Create a set of basic 512x512 RGBA image constraints.
     magma_image_format_constraints_t image_constraints{};
     image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
@@ -636,6 +643,10 @@ class TestConnection {
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_buffer_constraints_set_format(connection, constraints, 0, &image_constraints));
 
+    uint32_t color_space_in = MAGMA_COLORSPACE_SRGB;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_constraints_set_colorspaces(connection, constraints, 0,
+                                                                        1, &color_space_in));
+
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_buffer_collection_set_constraints(connection, collection, constraints));
 
@@ -644,12 +655,22 @@ class TestConnection {
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_sysmem_get_description_from_collection(connection, collection, &description));
 
+    uint32_t expected_buffer_count = additional.min_buffer_count_for_camping +
+                                     additional.min_buffer_count_for_dedicated_slack +
+                                     additional.min_buffer_count_for_shared_slack;
     uint32_t buffer_count;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_count(description, &buffer_count));
-    EXPECT_EQ(1u, buffer_count);
+    EXPECT_EQ(expected_buffer_count, buffer_count);
     magma_bool_t is_secure;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_is_secure(description, &is_secure));
     EXPECT_FALSE(is_secure);
+
+    uint32_t format;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format(description, &format));
+    EXPECT_EQ(MAGMA_FORMAT_R8G8B8A8, format);
+    uint32_t color_space = 0;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_color_space(description, &color_space));
+    EXPECT_EQ(MAGMA_COLORSPACE_SRGB, color_space);
 
     magma_bool_t has_format_modifier;
     uint64_t format_modifier;

@@ -267,6 +267,12 @@ magma_status_t magma_buffer_constraints_set_format(
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
+magma_status_t magma_buffer_constraints_set_colorspaces(
+    magma_sysmem_connection_t connection, magma_sysmem_buffer_constraints_t constraints,
+    uint32_t index, uint32_t color_space_count, const uint32_t* color_spaces) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 void magma_buffer_constraints_release(magma_sysmem_connection_t connection,
                                       magma_sysmem_buffer_constraints_t constraints) {}
 
@@ -300,9 +306,25 @@ magma_status_t magma_get_buffer_format_plane_info_with_size(
 
 void magma_buffer_format_description_release(magma_buffer_format_description_t description) {}
 
+magma_status_t magma_get_buffer_format(magma_buffer_format_description_t description,
+                                       uint32_t* format_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_t description,
                                                 magma_bool_t* has_format_modifier_out,
                                                 uint64_t* format_modifier_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_get_buffer_color_space(magma_buffer_format_description_t description,
+                                            uint32_t* color_space_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_buffer_constraints_add_additional(
+    magma_sysmem_connection_t connection, magma_sysmem_buffer_constraints_t constraints,
+    const magma_buffer_format_additional_constraints_t* additional) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 

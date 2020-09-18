@@ -48,7 +48,7 @@ static constexpr bool kMagmaDretEnable = kDebug;
 #define DRET(ret)                                                                              \
   (magma::kMagmaDretEnable && ret != 0                                                         \
    ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, "%s:%d Returning error %ld", \
-                                __FILE__, __LINE__, (int64_t)ret),                             \
+                                __FILE__, __LINE__, (int64_t)(ret)),                           \
    ret : ret)
 
 #define DRET_MSG(ret, format, ...)                                                        \

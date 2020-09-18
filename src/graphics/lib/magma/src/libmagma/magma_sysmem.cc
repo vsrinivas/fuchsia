@@ -56,6 +56,16 @@ magma_status_t magma_get_buffer_format_plane_info_with_size(
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_get_buffer_format(magma_buffer_format_description_t description,
+                                       uint32_t* format_out) {
+  if (!description) {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
+  }
+  auto buffer_description = reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
+  *format_out = buffer_description->format();
+  return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_t description,
                                                 magma_bool_t* has_format_modifier_out,
                                                 uint64_t* format_modifier_out) {
@@ -66,6 +76,13 @@ magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_
   *has_format_modifier_out = buffer_description->has_format_modifier();
   *format_modifier_out = buffer_description->format_modifier();
   return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_get_buffer_color_space(magma_buffer_format_description_t description,
+                                            uint32_t* color_space_out) {
+  auto buffer_description = reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
+  auto result = buffer_description->GetColorSpace(color_space_out);
+  return DRET(result ? MAGMA_STATUS_OK : MAGMA_STATUS_INVALID_ARGS);
 }
 
 magma_status_t magma_get_buffer_coherency_domain(magma_buffer_format_description_t description,
@@ -135,11 +152,25 @@ magma_status_t magma_buffer_constraints_create(
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_buffer_constraints_add_additional(
+    magma_sysmem_connection_t connection, magma_sysmem_buffer_constraints_t constraints,
+    const magma_buffer_format_additional_constraints_t* additional) {
+  auto buffer_constraints = reinterpret_cast<magma_sysmem::PlatformBufferConstraints*>(constraints);
+  return buffer_constraints->AddAdditionalConstraints(additional).get();
+}
+
 magma_status_t magma_buffer_constraints_set_format(
     magma_sysmem_connection_t connection, magma_sysmem_buffer_constraints_t constraints,
     uint32_t index, const magma_image_format_constraints_t* format_constraints) {
   auto buffer_constraints = reinterpret_cast<magma_sysmem::PlatformBufferConstraints*>(constraints);
   return buffer_constraints->SetImageFormatConstraints(index, format_constraints).get();
+}
+
+magma_status_t magma_buffer_constraints_set_colorspaces(
+    magma_sysmem_connection_t connection, magma_sysmem_buffer_constraints_t constraints,
+    uint32_t index, uint32_t color_space_count, const uint32_t* color_spaces) {
+  auto buffer_constraints = reinterpret_cast<magma_sysmem::PlatformBufferConstraints*>(constraints);
+  return buffer_constraints->SetColorSpaces(index, color_space_count, color_spaces).get();
 }
 
 void magma_buffer_constraints_release(magma_sysmem_connection_t connection,

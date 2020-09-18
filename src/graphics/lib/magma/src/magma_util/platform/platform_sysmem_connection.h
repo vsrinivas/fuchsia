@@ -15,25 +15,16 @@
 namespace magma_sysmem {
 class PlatformBufferDescription {
  public:
-  enum ColorSpace {
-    kColorSpaceSrgb,
-    kColorSpaceRec601Ntsc,
-    kColorSpaceRec601NtscFullRange,
-    kColorSpaceRec601Pal,
-    kColorSpaceRec601PalFullRange,
-    kColorSpaceRec709,
-    kColorSpaceRec2020,
-  };
-
   virtual ~PlatformBufferDescription() = default;
   virtual bool is_secure() const = 0;
   virtual uint32_t count() const = 0;
+  virtual uint32_t format() const = 0;
   virtual bool has_format_modifier() const = 0;
   virtual uint64_t format_modifier() const = 0;
   virtual uint32_t coherency_domain() const = 0;
   virtual bool GetPlanes(uint64_t width, uint64_t height,
                          magma_image_plane_t* planes_out) const = 0;
-  virtual bool GetColorSpace(ColorSpace* color_space_out) = 0;
+  virtual bool GetColorSpace(uint32_t* color_space_out) = 0;
 };
 
 class PlatformBufferConstraints {
@@ -42,6 +33,11 @@ class PlatformBufferConstraints {
 
   virtual magma::Status SetImageFormatConstraints(
       uint32_t index, const magma_image_format_constraints_t* format_constraints) = 0;
+
+  virtual magma::Status SetColorSpaces(uint32_t index, uint32_t color_space_count,
+                                       const uint32_t* color_spaces) = 0;
+  virtual magma::Status AddAdditionalConstraints(
+      const magma_buffer_format_additional_constraints_t* additional) = 0;
 };
 
 class PlatformBufferCollection {
