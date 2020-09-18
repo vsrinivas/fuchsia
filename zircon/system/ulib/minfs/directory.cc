@@ -24,7 +24,6 @@
 #include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__
-#include <lib/fdio/vfs.h>
 #include <lib/fidl-utils/bind.h>
 #include <zircon/syscalls.h>
 

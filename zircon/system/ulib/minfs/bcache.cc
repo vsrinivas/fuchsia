@@ -6,7 +6,6 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -148,12 +147,8 @@ zx_status_t Bcache::VerifyDeviceInfo() {
   return ZX_OK;
 }
 
-void Bcache::Pause() {
-  mutex_.lock();
-}
+void Bcache::Pause() { mutex_.lock(); }
 
-void Bcache::Resume() {
-  mutex_.unlock();
-}
+void Bcache::Resume() { mutex_.unlock(); }
 
 }  // namespace minfs

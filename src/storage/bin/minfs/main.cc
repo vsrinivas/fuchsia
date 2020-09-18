@@ -9,8 +9,6 @@
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/vfs.h>
 #include <lib/trace-provider/provider.h>
 #include <libgen.h>
 #include <stdarg.h>

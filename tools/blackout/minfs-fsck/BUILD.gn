@@ -24,7 +24,6 @@ rustc_binary("minfs-fsck-target-bin") {
   testonly = true
   edition = "2018"
   deps = [
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/storage/fs_management",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
