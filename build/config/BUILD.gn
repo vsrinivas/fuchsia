@@ -142,18 +142,21 @@ config("time-trace") {
 }
 
 config("compiler") {
+  cflags = []
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
   cflags_objcc = [ "-fvisibility-inlines-hidden" ]
   configs = [
+    ":clang_defaults",
     ":color_diagnostics",
-    ":toolchain_version_stamp",
+    ":crash-diagnostics-dir",
     ":rust_panic_cfg",
+    ":time-trace",
+    ":toolchain_version_stamp",
   ]
 
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
   } else {
-    cflags_cc += [ "-stdlib=libc++" ]
     if (current_os == "linux") {
       configs += [ "//build/config/linux:compiler" ]
     } else if (current_os == "mac") {
@@ -161,10 +164,18 @@ config("compiler") {
     }
   }
 
-  configs += [
-    ":crash-diagnostics-dir",
-    ":time-trace",
-  ]
+  asmflags = cflags
+}
+
+# These flags are enabled by default in Fuchsia's Clang toolchain, but we set
+# them explicitly to support other Clang toolchains and Clang-based tools.
+config("clang_defaults") {
+  cflags = [ "-fexperimental-new-pass-manager" ]
+  asmflags = cflags
+  ldflags = cflags
+  if (current_cpu == "x64") {
+    asmflags += [ "-Wa,--mrelax-relocations=yes" ]
+  }
 }
 
 # We want to force a recompile and relink of the world whenever our toolchain

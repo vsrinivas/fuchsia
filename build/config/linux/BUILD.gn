@@ -8,41 +8,27 @@ import("//build/rust/config.gni")
 
 config("compiler") {
   cflags = []
-  cflags_c = []
-  cflags_cc = []
   ldflags = [
+    # Use static C++ standard library.
     "-static-libstdc++",
-
-    # Generate build ID for all binaries so we can use the .build-id directory
-    # scheme for debugging information. This flag is enabled by default for our
-    # toolchain and many native host toolchains, but we set it explicitly to
-    # support arbitrary host toolchains.
-    "-Wl,--build-id",
 
     # Set rpath to find dynamically linked libraries placed next to executables
     # in the host build directory.
     "-Wl,-rpath=\$ORIGIN/",
   ]
-  if (host_os == "mac") {
-    # TODO(TC-325): When building binaries for Linux on macOS, we need to use
-    # lld as a linker, hence this flag. This is not needed on Linux since our
-    # Clang is configured to use lld as a default linker, but we cannot use the
-    # same option on macOS since default linker is currently a per-toolchain,
-    # not a per-target option and on macOS, Clang should default to ld64. We
-    # should change Clang to make the default linker a per-target option.
-    ldflags += [ "-fuse-ld=lld" ]
-  }
   configs = [
     ":sysroot",
     ":target",
+    ":clang_defaults",
   ]
 
   rustflags = [
     "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
-    "-Clink-arg=--target=$clang_target",
-    "-Clink-arg=--sysroot=" + rebase_path(sysroot, root_build_dir),
     "-Cdefault-linker-libraries",
   ]
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
 
   if (!toolchain_variant.is_pic_default) {
     # Rust links are always PIE on Linux.  C/C++ static library code that is
@@ -59,17 +45,58 @@ config("compiler") {
     "dl",
     "pthread",
   ]
-  asmflags = cflags + cflags_c
+
+  asmflags = cflags
 }
 
 config("sysroot") {
   cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   ldflags = cflags
   asmflags = cflags
+
+  rustflags = []
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
 }
 
 config("target") {
   cflags = [ "--target=$clang_target" ]
   asmflags = cflags
   ldflags = cflags
+
+  rustflags = []
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
+}
+
+# These flags are enabled by default in Fuchsia's Clang toolchain, but we set
+# them explicitly to support other Clang toolchains and Clang-based tools.
+config("clang_defaults") {
+  cflags_cc = [
+    # Use libc++ as the C++ standard library.
+    "-stdlib=libc++",
+  ]
+  ldflags = [
+    # Use libc++ as the C++ standard library.
+    "-stdlib=libc++",
+
+    # Use unwinder provided by the C++ standard library.
+    "-unwindlib=",
+
+    # Use compiler-rt as the compiler runtime.
+    "-rtlib=compiler-rt",
+
+    # Use lld as the linker.
+    "-fuse-ld=lld",
+
+    # Generate build ID for all binaries.
+    "-Wl,--build-id",
+  ]
+
+  rustflags = []
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
 }

@@ -211,7 +211,14 @@ def main():
         cflags.append('--sysroot=' + args.sysroot)
     if args.target:
         cflags.append('--target=' + args.target)
+
     ldflags = cflags[:]
+    if args.current_os == 'linux':
+        ldflags.extend([
+            '-rtlib=compiler-rt',
+            '-stdlib=libc++',
+            '-unwindlib=',
+        ])
 
     cflags += ['-isystem' + dir for dir in args.include_dir]
     ldflags += ['-L' + dir for dir in args.lib_dir]

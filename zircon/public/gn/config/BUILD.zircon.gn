@@ -70,6 +70,25 @@ if (current_os == "mac") {
   linker = "lld"
 }
 
+# These flags are enabled by default in Fuchsia's Clang toolchain, but we set
+# them explicitly to support other Clang toolchains and Clang-based tools.
+config("clang_defaults") {
+  cflags = [ "-fexperimental-new-pass-manager" ]
+  asmflags = cflags
+  ldflags = cflags
+  if (current_cpu == "x64") {
+    asmflags += [ "-Wa,--mrelax-relocations=yes" ]
+  }
+  if (current_os == "linux") {
+    cflags_cc = [ "-stdlib=libc++" ]
+    ldflags += [
+      "-stdlib=libc++",
+      "-unwindlib=",
+      "-rtlib=compiler-rt",
+    ]
+  }
+}
+
 config("compiler") {
   compiler_flags = []
   defines = []
@@ -77,7 +96,7 @@ config("compiler") {
 
   # For GCC, the compiler command implies the target.
   # For Clang, there's a single compiler command that takes `--target`.
-  if (!is_gcc && (current_cpu != host_cpu || current_os != host_os)) {
+  if (!is_gcc) {
     compiler_flags += [ "--target=${toolchain.target_tuple}" ]
   }
 
@@ -99,6 +118,9 @@ config("compiler") {
     ":color_diagnostics",
     # TODO: "$current_os:compiler",
   ]
+  if (!is_gcc) {
+    configs += [ ":clang_defaults" ]
+  }
 
   if (is_host) {
     configs += [ ":sysroot" ]
