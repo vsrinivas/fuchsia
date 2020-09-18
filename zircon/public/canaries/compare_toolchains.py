@@ -458,7 +458,7 @@ def _remove_gn_config_deps_touch_commands(commands):
     """
     return [
         cmd for cmd in commands if not (
-            cmd.startswith('touch TOOLCHAIN/') and cmd.endswith('_deps.stamp'))
+            cmd.startswith('touch TOOLCHAIN/') and cmd.endswith('deps.stamp'))
     ]
 
 
