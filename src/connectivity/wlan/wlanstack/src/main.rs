@@ -109,6 +109,7 @@ async fn main() -> Result<(), Error> {
         telemetry_server.map(Ok),
     )
     .await?;
+    info!("Exiting");
     Ok(())
 }
 
