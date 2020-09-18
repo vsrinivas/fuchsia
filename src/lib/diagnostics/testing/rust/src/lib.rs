@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use diagnostics_data::{Data, InspectData};
-use diagnostics_reader::{ArchiveReader, BatchIteratorType, ComponentSelector};
+use diagnostics_data::{Data, DiagnosticsData, InspectData};
+use diagnostics_reader::{ArchiveReader, ComponentSelector};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
@@ -17,8 +17,7 @@ use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, prelude::*};
 
-pub use diagnostics_data::{LifecycleType, Severity};
-pub use diagnostics_reader::{Inspect, Lifecycle, Logs};
+pub use diagnostics_data::{Inspect, Lifecycle, LifecycleType, Logs, Severity};
 pub use fuchsia_inspect_node_hierarchy::assert_data_tree;
 
 const ARCHIVIST_URL: &str =
@@ -167,11 +166,8 @@ impl AppReader {
     }
 
     /// Returns a snapshot of the requested data for this component.
-    pub async fn snapshot<T>(&self) -> Vec<Data<T::Key, T::Metadata>>
-    where
-        T: BatchIteratorType,
-    {
-        self.reader.snapshot::<T>().await.expect("snapshot will succeed")
+    pub async fn snapshot<D: DiagnosticsData>(&self) -> Vec<Data<D>> {
+        self.reader.snapshot::<D>().await.expect("snapshot will succeed")
     }
 
     /// Returns inspect data for this component.

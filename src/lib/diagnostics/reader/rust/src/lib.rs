@@ -4,9 +4,7 @@
 
 // TODO(fxb/58038) use thiserror for library errors
 use anyhow::{Context as _, Error};
-use diagnostics_data::{
-    Data, InspectData, InspectMetadata, LifecycleEventMetadata, LogsField, LogsMetadata,
-};
+use diagnostics_data::{Data, DiagnosticsData, InspectData};
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
@@ -17,10 +15,9 @@ use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::client;
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::sink::{Sink, SinkExt};
-use serde::de::DeserializeOwned;
 use serde_json::Value as JsonValue;
-use std::{hash::Hash, str::FromStr};
 
+pub use diagnostics_data::{Inspect, Lifecycle, Logs};
 pub use fidl_fuchsia_diagnostics::DataType;
 pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 
@@ -152,11 +149,11 @@ impl ArchiveReader {
     }
 
     /// Connects to the ArchiveAccessor and returns data matching provided selectors.
-    pub async fn snapshot<T>(&self) -> Result<Vec<Data<T::Key, T::Metadata>>, Error>
+    pub async fn snapshot<D>(&self) -> Result<Vec<Data<D>>, Error>
     where
-        T: BatchIteratorType,
+        D: DiagnosticsData,
     {
-        let raw_json = self.snapshot_raw(T::data_type()).await?;
+        let raw_json = self.snapshot_raw(D::DATA_TYPE).await?;
         Ok(serde_json::from_value(raw_json)?)
     }
 
@@ -266,55 +263,6 @@ where
                 _ => unreachable!("JSON was requested, no other data type should be received"),
             }
         }
-    }
-}
-
-pub trait BatchIteratorType {
-    type Key: AsRef<str> + Clone + DeserializeOwned + Eq + FromStr + Hash + Send + 'static;
-    type Metadata: DeserializeOwned + Send + 'static;
-    fn data_type() -> DataType;
-    fn component_url(metadata: &Self::Metadata) -> &str;
-}
-
-pub struct Inspect;
-impl BatchIteratorType for Inspect {
-    type Key = String;
-    type Metadata = InspectMetadata;
-
-    fn data_type() -> DataType {
-        DataType::Inspect
-    }
-
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
-    }
-}
-
-pub struct Lifecycle;
-impl BatchIteratorType for Lifecycle {
-    type Key = String;
-    type Metadata = LifecycleEventMetadata;
-
-    fn data_type() -> DataType {
-        DataType::Lifecycle
-    }
-
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
-    }
-}
-
-pub struct Logs;
-impl BatchIteratorType for Logs {
-    type Key = LogsField;
-    type Metadata = LogsMetadata;
-
-    fn data_type() -> DataType {
-        DataType::Logs
-    }
-
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
     }
 }
 

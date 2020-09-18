@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_diagnostics::Severity as FidlSeverity;
+use fidl_fuchsia_diagnostics::{DataType, Severity as FidlSeverity};
 use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
-use serde::{self, de::Deserializer, Deserialize, Serialize, Serializer};
+use serde::{
+    self,
+    de::{DeserializeOwned, Deserializer},
+    Deserialize, Serialize, Serializer,
+};
 use std::{
     borrow::Borrow,
     fmt,
@@ -49,6 +53,104 @@ pub enum Metadata {
 impl Default for Metadata {
     fn default() -> Self {
         Metadata::Empty
+    }
+}
+
+/// A trait implemented by marker types which denote "kinds" of diagnostics data.
+pub trait DiagnosticsData {
+    /// The type of metadata included in results of this type.
+    type Metadata: DeserializeOwned + Serialize + Clone + Send + 'static;
+
+    /// The type of key used for indexing node hierarchies in the payload.
+    type Key: AsRef<str> + Clone + DeserializeOwned + Eq + FromStr + Hash + Send + 'static;
+
+    /// The type of error returned in this metadata.
+    type Error: Clone;
+
+    /// Used to query for this kind of metadata in the ArchiveAccessor.
+    const DATA_TYPE: DataType;
+
+    /// Returns the component URL which generated this value.
+    fn component_url(metadata: &Self::Metadata) -> &str;
+
+    /// Returns the timestamp at which this value was recorded.
+    fn timestamp(metadata: &Self::Metadata) -> Timestamp;
+
+    /// Returns the errors recorded with this value, if any.
+    fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>>;
+
+    /// Returns whether any errors are recorded on this value.
+    fn has_errors(metadata: &Self::Metadata) -> bool {
+        Self::errors(metadata).as_ref().map(|e| !e.is_empty()).unwrap_or_default()
+    }
+}
+
+/// Lifecycle events track the start, stop, and diagnostics directory readiness of components.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct Lifecycle;
+
+impl DiagnosticsData for Lifecycle {
+    type Metadata = LifecycleEventMetadata;
+    type Key = String;
+    type Error = Error;
+    const DATA_TYPE: DataType = DataType::Lifecycle;
+
+    fn component_url(metadata: &Self::Metadata) -> &str {
+        &metadata.component_url
+    }
+
+    fn timestamp(metadata: &Self::Metadata) -> Timestamp {
+        metadata.timestamp
+    }
+
+    fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
+        &metadata.errors
+    }
+}
+
+/// Inspect carries snapshots of metrics trees hosted by components.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct Inspect;
+
+impl DiagnosticsData for Inspect {
+    type Metadata = InspectMetadata;
+    type Key = String;
+    type Error = Error;
+    const DATA_TYPE: DataType = DataType::Inspect;
+
+    fn component_url(metadata: &Self::Metadata) -> &str {
+        &metadata.component_url
+    }
+
+    fn timestamp(metadata: &Self::Metadata) -> Timestamp {
+        metadata.timestamp
+    }
+
+    fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
+        &metadata.errors
+    }
+}
+
+/// Logs carry streams of structured events from components.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct Logs;
+
+impl DiagnosticsData for Logs {
+    type Metadata = LogsMetadata;
+    type Key = LogsField;
+    type Error = LogError;
+    const DATA_TYPE: DataType = DataType::Logs;
+
+    fn component_url(metadata: &Self::Metadata) -> &str {
+        &metadata.component_url
+    }
+
+    fn timestamp(metadata: &Self::Metadata) -> Timestamp {
+        metadata.timestamp
+    }
+
+    fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
+        &metadata.errors
     }
 }
 
@@ -202,38 +304,38 @@ impl From<FidlSeverity> for Severity {
 
 /// An instance of diagnostics data with typed metadata and an optional nested payload.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub struct Data<Key, Metadata> {
+pub struct Data<D: DiagnosticsData> {
     /// The source of the data.
     #[serde(default)]
     // TODO(fxb/58033) remove this once the Metadata enum is gone everywhere
     pub data_source: DataSource,
 
     /// The metadata for the diagnostics payload.
-    pub metadata: Metadata,
+    #[serde(bound(
+        deserialize = "D::Metadata: DeserializeOwned",
+        serialize = "D::Metadata: Serialize"
+    ))]
+    pub metadata: D::Metadata,
 
     /// Moniker of the component that generated the payload.
     pub moniker: String,
 
     /// Payload containing diagnostics data, if the payload exists, else None.
-    #[serde(bound(
-        deserialize = "Key: AsRef<str> + Clone + Eq + FromStr + Hash",
-        serialize = "Key: AsRef<str>",
-    ))]
-    pub payload: Option<NodeHierarchy<Key>>,
+    pub payload: Option<NodeHierarchy<D::Key>>,
 
     /// Schema version.
     #[serde(default)]
     pub version: u64,
 }
 
-pub type InspectData = Data<String, InspectMetadata>;
-pub type LifecycleData = Data<String, LifecycleEventMetadata>;
-pub type LogsData = Data<LogsField, LogsMetadata>;
+pub type InspectData = Data<Inspect>;
+pub type LifecycleData = Data<Lifecycle>;
+pub type LogsData = Data<Logs>;
 
 pub type LogsHierarchy = NodeHierarchy<LogsField>;
 pub type LogsProperty = Property<LogsField>;
 
-impl Data<String, LifecycleEventMetadata> {
+impl Data<Lifecycle> {
     /// Creates a new data instance for a lifecycle event.
     pub fn for_lifecycle_event(
         moniker: impl Into<String>,
@@ -260,7 +362,7 @@ impl Data<String, LifecycleEventMetadata> {
     }
 }
 
-impl Data<String, InspectMetadata> {
+impl Data<Inspect> {
     /// Creates a new data instance for inspect.
     pub fn for_inspect(
         moniker: impl Into<String>,
@@ -287,7 +389,7 @@ impl Data<String, InspectMetadata> {
     }
 }
 
-impl Data<LogsField, LogsMetadata> {
+impl Data<Logs> {
     /// Creates a new data instance for logs.
     pub fn for_logs(
         moniker: impl Into<String>,
