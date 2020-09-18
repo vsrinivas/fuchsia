@@ -26,6 +26,7 @@ assemble_system("guest") {
     "//src/bringup/bin/bootsvc:bin",
     "//src/bringup/bin/console",
     "//src/bringup/bin/console:bootfs",
+    "//src/bringup/bin/console-launcher:bootfs",
     "//src/bringup/bin/debuglog",
     "//src/bringup/bin/miscsvc",
     "//src/bringup/bin/netsvc",

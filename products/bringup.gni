@@ -27,8 +27,6 @@ base_package_labels = []
 
 cache_package_labels = []
 
-universe_package_labels = [
-  "//tools/net/device-finder:host",
-]
+universe_package_labels = [ "//tools/net/device-finder:host" ]
 
 host_labels = []

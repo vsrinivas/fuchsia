@@ -15,6 +15,11 @@
             url: "fuchsia-boot:///#meta/console.cm",
         },
         {
+            name: "console-launcher",
+            url: "fuchsia-boot:///#meta/console-launcher.cm",
+            startup: "eager",
+        },
+        {
             name: "ptysvc",
             url: "fuchsia-boot:///#meta/ptysvc.cm",
         },
@@ -44,6 +49,7 @@
             directory: "/boot",
             from: "parent",
             to: [
+                "#console-launcher",
                 "#driver_manager",
                 "#fshost",
             ],
@@ -58,7 +64,10 @@
                 "/svc/fuchsia.sys.Loader",
             ],
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
         },
         {
             protocol: [ "/svc/fuchsia.power.manager.DriverManagerRegistration" ],
@@ -90,6 +99,7 @@
             ],
             from: "parent",
             to: [
+                "#console-launcher",
                 "#driver_manager",
                 "#fshost",
             ],
@@ -99,6 +109,7 @@
             from: "parent",
             to: [
                 "#console",
+                "#console-launcher",
                 "#driver_manager",
                 "#fshost",
                 "#power_manager",
@@ -115,6 +126,7 @@
             ],
             from: "parent",
             to: [
+                "#console-launcher",
                 "#driver_manager",
                 "#fshost",
                 "#power_manager",
@@ -139,9 +151,19 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [
+                "/svc/fuchsia.kernel.DebugBroker",
+                "/svc/fuchsia.kernel.MexecBroker",
+                "/svc/fuchsia.scheduler.ProfileProvider",
+            ],
+            from: "#driver_manager",
+            to: [ "#console-launcher" ],
+        },
+        {
             directory: "/dev",
             from: "#driver_manager",
             to: [
+                "#console-launcher",
                 "#fshost",
                 "#sysinfo",
             ],
@@ -149,13 +171,19 @@
         {
             directory: "/minfs",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
             directory: "/pkgfs",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
@@ -167,13 +195,19 @@
         {
             directory: "/system",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
             directory: "/blob",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
@@ -185,7 +219,10 @@
         {
             directory: "/install",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
@@ -203,13 +240,19 @@
         {
             directory: "/tmp",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
             directory: "/bin",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
 
@@ -234,7 +277,10 @@
             protocol: "/svc/fuchsia.hardware.pty.Device",
             from: "#console",
             as: "/svc/console",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
         },
 
         // Offer the pty service to the driver_manager
@@ -248,7 +294,10 @@
         {
             directory: "/hub",
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
         },
         {
             protocol: "/svc/fuchsia.sysinfo.SysInfo",
@@ -260,6 +309,7 @@
             protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
             from: "#shutdown_shim",
             to: [
+                "#console-launcher",
                 "#driver_manager",
                 "#pwrbtn-monitor",
             ],
@@ -317,12 +367,16 @@
                 "/svc/fuchsia.wlan.service.Wlan",
             ],
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
+                "#console-launcher",
                 "#driver_manager",
                 "#fshost",
             ],

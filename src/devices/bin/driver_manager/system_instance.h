@@ -63,9 +63,6 @@ class SystemInstance : public FsProvider {
 
   void devmgr_vfs_init();
 
-  void start_console(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
-  int ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args);
-
   void start_services(Coordinator& coordinator);
   int ServiceStarter(Coordinator* coordinator);
   int WaitForSystemAvailable(Coordinator* coordinator);

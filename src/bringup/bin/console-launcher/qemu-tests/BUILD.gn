@@ -1,0 +1,32 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = []
+  if (host_os == "linux") {
+    deps += [ ":console_qemu_test($host_toolchain)" ]
+  }
+}
+
+if (is_linux) {
+  go_library("lib") {
+    testonly = true
+    deps = [ "//src/testing/qemu" ]
+  }
+
+  host_test_data("main_zbi") {
+    sources = [ "$root_build_dir/fuchsia.zbi" ]
+  }
+
+  go_test("console_qemu_test") {
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/src/bringup/bin/console-launcher/qemu-tests" ]
+    deps = [ ":lib" ]
+    non_go_deps = [ ":main_zbi" ]
+  }
+}

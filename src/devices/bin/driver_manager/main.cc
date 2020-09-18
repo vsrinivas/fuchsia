@@ -380,7 +380,6 @@ int main(int argc, char** argv) {
   }
 
   system_instance.devmgr_vfs_init();
-  system_instance.start_console(boot_args);
   system_instance.start_services(coordinator);
 
   if (driver_manager_params.driver_host_strict_linking) {

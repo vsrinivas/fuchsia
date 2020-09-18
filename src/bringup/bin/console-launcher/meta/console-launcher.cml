@@ -1,0 +1,104 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// console-launcher component manifest.
+// For information on manifest format and features,
+// see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
+{
+    // The binary to run for this component.
+    program: {
+        binary: "bin/console-launcher",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            directory: "/bin",
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "/boot",
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "/blob",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/minfs",
+            as: "/data",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/dev",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/install",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/pkgfs",
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "/system",
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "/tmp",
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: [
+                "/svc/console",
+                "/svc/fuchsia.boot.Arguments",
+                "/svc/fuchsia.boot.FactoryItems",
+                "/svc/fuchsia.boot.Items",
+                "/svc/fuchsia.boot.ReadOnlyLog",
+                "/svc/fuchsia.boot.RootJob",
+                "/svc/fuchsia.boot.RootJobForInspect",
+                "/svc/fuchsia.boot.RootResource",
+                "/svc/fuchsia.boot.WriteOnlyLog",
+                "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.device.manager.Administrator",
+                "/svc/fuchsia.device.manager.BindDebugger",
+                "/svc/fuchsia.device.manager.DebugDumper",
+                "/svc/fuchsia.device.NameProvider",
+                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+                "/svc/fuchsia.fshost.Filesystems",
+                "/svc/fuchsia.fshost.Registry",
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "/svc/fuchsia.hardware.pty.Device",
+                "/svc/fuchsia.kernel.Counter",
+                "/svc/fuchsia.kernel.DebugBroker",
+                "/svc/fuchsia.kernel.MexecBroker",
+                "/svc/fuchsia.kernel.Stats",
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.net.NameLookup",
+                "/svc/fuchsia.net.routing.Routing",
+                "/svc/fuchsia.net.stack.Log",
+                "/svc/fuchsia.net.stack.Stack",
+                "/svc/fuchsia.netstack.Netstack",
+                "/svc/fuchsia.paver.Paver",
+                "/svc/fuchsia.pkg.PackageResolver",
+                "/svc/fuchsia.pkg.RepositoryManager",
+                "/svc/fuchsia.pkg.rewrite.Engine",
+                "/svc/fuchsia.posix.socket.Provider",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.process.Resolver",
+                "/svc/fuchsia.scheduler.ProfileProvider",
+                "/svc/fuchsia.sys.Environment",
+                "/svc/fuchsia.sys.Launcher",
+                "/svc/fuchsia.sysinfo.SysInfo",
+                "/svc/fuchsia.sysmem.Allocator",
+                "/svc/fuchsia.tracing.controller.Controller",
+                "/svc/fuchsia.tracing.provider.Registry",
+                "/svc/fuchsia.update.Manager",
+                "/svc/fuchsia.virtualconsole.SessionManager",
+                "/svc/fuchsia.wlan.service.Wlan",
+            ],
+        },
+    ],
+}

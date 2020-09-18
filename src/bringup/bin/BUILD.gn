@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "bootsvc:tests",
+    "console-launcher:tests",
     "netsvc:tests",
     "pwrbtn-monitor:tests",
     "virtcon:test",
