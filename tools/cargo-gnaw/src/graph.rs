@@ -28,6 +28,15 @@ impl<'a> GnBuildGraph<'a> {
         self.targets.iter()
     }
 
+    pub fn find_library_target(&self, package: &str, version: &str) -> Option<&GnTarget<'_>> {
+        self.targets().find(|t| match t.target_type {
+            GnRustType::StaticLibrary | GnRustType::Library | GnRustType::ProcMacro => {
+                t.pkg_name == package && t.version() == version
+            }
+            _ => false,
+        })
+    }
+
     /// Add a cargo package to the target list. If the dependencies
     /// are not already in the target graph, add them as well
     pub fn add_cargo_package(&mut self, cargo_pkg_id: PackageId) -> Result<(), Error> {

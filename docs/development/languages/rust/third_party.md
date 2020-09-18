@@ -39,8 +39,11 @@ Note: You need to get OSRB approval first before uploading a CL for review.
    places them in the `vendor` directory, and updates `Cargo.toml` and
    `Cargo.lock`.
 
-   You may need to provide additional metadata for the crates in a [[gn.crate.<crate>]] section
-   inside the Cargo.toml file
+   You may need to provide additional configuration in a `[gn.package.<crate>]` section inside
+   the Cargo.toml file. For crates that use a `build.rs` script this configuration replaces the
+   script, which is (intentionally) unsupported by our build system. This configuration is used
+   by cargo-gnaw, which generates the GN rules from the Cargo.toml file. See [cargo-gnaw's
+   README][cargo-gnaw-readme] for more details.
 
    Note: on Linux, `pkg-config` needs to be installed.
 
@@ -76,6 +79,12 @@ To update a third-party crate, do the following:
 1. Start by bumping the version number of the crate in
    [`third_party/rust_crates/Cargo.toml`][3p-cargo-toml] and rerunning
    `fx update-rustc-third-party` as above.
+
+   You may need to update or provide additional configuration in `[gn.package.<crate>]` sections
+   inside the Cargo.toml file. For crates that use a `build.rs` script this configuration
+   replaces the script, which is (intentionally) unsupported by our build system. This
+   configuration is used by cargo-gnaw, which generates the GN rules from the Cargo.toml file.
+   See [cargo-gnaw's README][cargo-gnaw-readme] for more details.
 1. Identify all new library dependencies brought in
    (see the diff in `//third_party/rust_crates/vendor/`).
    Again, do not submit the CL for code review until you've received OSRB
@@ -93,6 +102,7 @@ To update a third-party crate, do the following:
 [3p-crates]: /third_party/rust_crates/
 [3p-cargo-toml]: /third_party/rust_crates/Cargo.toml
 [3p-vendor]: /third_party/rust_crates/vendor
+[cargo-gnaw-readme]: /tools/cargo-gnaw/README.md
 [osrb-process]: https://docs.google.com/document/d/1X3eNvc4keQxOpbkGUiyYBMtr3ueEnVQCPW61FT96o_E/edit#heading=h.7mb7m2qs89th
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
 

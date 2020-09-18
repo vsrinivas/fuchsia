@@ -62,7 +62,7 @@ impl<'a> BuildScript<'a> {
         let build_script = target.build_script.as_ref().unwrap();
         let rustc = get_rustc();
         // compile the build script
-        let crate_name = format!("{}_build_script", target.gn_name().replace("-", "_"));
+        let crate_name = format!("{}_build_script", target.name().replace("-", "_"));
         let mut out_file = std::env::temp_dir();
         out_file.push(crate_name.clone());
 

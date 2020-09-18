@@ -8,6 +8,6 @@ edition = "2018"
 anyhow = "1.0.27"
 
 # gn config
-[[gn.crate.anyhow."1.0.27"]]
+[gn.package.anyhow."1.0.27"]
 rustflags = ["--cfg=backtrace"]
 configs = ["//build/config:some_config"]

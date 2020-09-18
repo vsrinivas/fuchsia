@@ -26,33 +26,10 @@ Cargo GNaw operates on vendored crates to convert them into [GN](https://gn.goog
 to be vendored with the crates and provides targets for the GN build system to reference.
 
 All top-level crates are given an easy to use GN alias group that references the version exposed in the Cargo.toml.
-Direct dependencies of the root crate can be "lifted" to the top-level by skipping the default root crate.
+Direct dependencies of the root crate can be "lifted" to the top-level by skipping the default
+root crate.
 
-
-#### Build Scripts
-GNaw intentionally does not handle build.rs scripts at compilation time. Any evaluation of a build.rs script is done when the crate is vendored.
-The resulting configuration which is usually produced by the build.rs script is put into a section in the source Cargo.toml. Options detailed below.
-Simple build.rs scripts (ones that only depend upon Rust's `std` library) evaluate and automatically provide the author with the expected configuration.
-
-
-### GN configs
-Underneath a TOML array, a configuration should be passed as "gn.crate.<Name>.<ExactVersion>"
-
-* `configs` - native GN config
-* `deps` - native GN dependency
-* `env_vars` - environment variables, usually used for pretending to be cargo
-* `platform` - platform this configuration targets. Uses the rust cfg format (Ex: cfg(unix))
-* `rustflags` - flags to pass through to rustc
-
-Example:
-```toml
-[[gn.crate.anyhow."1.0.25"]]
-rustflags = ["--cfg=backtrace"]
-```
-
-
-
-## Simple Example
+### Simple Example
 ```toml
 [package]
 name = "simple"
@@ -63,7 +40,7 @@ edition = "2018"
 [dependencies]
 ```
 
-converts to
+converts to:
 
 ```gn
 
@@ -85,4 +62,58 @@ rust_library("simple-1-0-25") {
                "-Cextra-filename=-9ac42213326ac72d"]
 }
 
+```
+
+### Build Scripts
+GNaw intentionally does not handle build.rs scripts at compilation time. Any evaluation of a build.rs script is done when the crate is vendored.
+The resulting configuration which is usually produced by the build.rs script is put into [a
+section in the source Cargo.toml](#gn-configs).
+Simple build.rs scripts (ones that only depend upon Rust's `std` library) evaluate and
+automatically provide the author with the expected configuration.
+
+### Packages vs. targets vs. crates
+The difference between a "package", "target", and a "crate" is useful knowledge when working with GNaw:
+  - A Cargo "target" corresponds to source files that can be compiled into a Rust "crate".
+  There are multiple target types, including library and binary.
+  - A Cargo "package" contains one or more "targets", and can contain at most one library target.
+
+(Paraphrased from https://doc.rust-lang.org/cargo/reference/cargo-targets.html)
+
+Many Cargo packages only contain a single library target that produces a single library crate.
+Because of this (and because of the catchiness of the term) "crate" is often used imprecisely to
+refer to any of those three items depending on the context. However, when packages contain
+multiple targets, like one or more binaries alongside the library, it becomes important to
+distinguish between these terms.
+
+## GN configs
+Some targets, including but not limited to those that use build.rs scripts, require additional
+configuration that can be specified in the Cargo.toml file. This configuration is consumed by
+GNaw, not Cargo, and used when generating GN targets.
+
+### Basic configuration
+Basic configuration for a package's library target is specified as
+`gn.package.<PackageName>.<ExactVersion>`. This configuration will be applied to the GN library
+target unconditionally (for all platforms) and can include the following arrays:
+
+* `configs` - native GN config
+* `deps` - native GN dependency
+* `env_vars` - environment variables, usually used for pretending to be Cargo
+* `rustflags` - flags to pass through to rustc
+
+#### Example
+```toml
+[gn.package.anyhow."1.0.25"]
+rustflags = [ "--cfg=backtrace" ]
+```
+
+### Platform-specific configuration
+Configuration can also be applied to only specific platforms, for example only when building for
+Fuchsia or only when building for a specific host platform.
+
+Platforms are specified in the Rust cfg format (e.g. `cfg(unix)`). The same four configuration fields (`configs`, `deps`, `env_vars`, `rustflags`) documented above are supported.
+
+#### Example
+```toml
+[gn.package.foo."1.2.3".platform."cfg(target_os = \"fuchsia\")"]
+configs = [ "//some:fuchsia_specific_config" ]
 ```

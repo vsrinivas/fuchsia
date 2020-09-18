@@ -245,10 +245,13 @@ winapi = { path = "tiny_mirrors/winapi" }
 winapi-util = { path = "tiny_mirrors/winapi-util" }
 
 #################################################################################
-###                            Cargo Gnaw Configs                             ###
+###                            Cargo GNaw Configs                             ###
+###                                                                           ###
+### See GNaw's documentation in //tools/cargo-gnaw/README.md for more details ###
+### and examples.                                                             ###
 #################################################################################
 
-# All third_party targets get these cfgs
+# Global GN configs that will be added or removed from all generated targets
 
 [gn.config]
 remove_cfgs = [
@@ -267,190 +270,191 @@ add_cfgs = []
 #   rustflags - flags to pass to rustc
 #   deps - native GN dependency
 #   env_vars - environment variables, usually used for pretending to be cargo
-#   platform - platform this configuration targets. Uses the rust cfg format (Ex: cfg(unix))
+#   configs - native GN config to use
 #
 # Keep this sorted alphabetically, please.
 
-[[gn.crate.anyhow."1.0.25"]]
+[gn.package.anyhow."1.0.25"]
 # TODO(bwb) turn on when backtrace stabilizes
 # rustflags = ["--cfg=backtrace"]
 
-[[gn.crate.arrayvec."0.4.10"]]
+[gn.package.arrayvec."0.4.10"]
 
-[[gn.crate.bitflags."1.2.1"]]
+[gn.package.bitflags."1.2.1"]
 rustflags = ["--cfg=bitflags_const_fn"]
 
-[[gn.crate.brotli-sys."0.3.2"]]
+[gn.package.brotli-sys."0.3.2"]
 deps = [ "//third_party/rust_crates/compat/brotli" ]
 
-[[gn.crate.byteorder."1.3.1"]]
+[gn.package.byteorder."1.3.1"]
 rustflags = ["--cfg=byteorder_i128"]
 
-[[gn.crate.crc."1.8.1"]]
+[gn.package.crc."1.8.1"]
 env_vars = ["OUT_DIR=../../../compat/crc"]
 
-[[gn.crate.crc32fast."1.2.0"]]
+[gn.package.crc32fast."1.2.0"]
 rustflags = ["--cfg=crc32fast_stdarchx86"]
 
-[[gn.crate.crypto."0.2.36"]]
-deps = [ "//third_party/rust_crates/compat/rust-crypto" ]
-
-# cxx's build.rs is only used to build it's src/cxx.cc file, for crates that use cxx and build with
-# cargo. It is replaced with //third_party/rust_crates/vendor/cxx:cxx_lib.
-[[gn.crate.cxx."0.3.5"]]
-rustflags = []
-
-[[gn.crate.httparse."1.3.3"]]
+[gn.package.httparse."1.3.3"]
 rustflags = ["--cfg=httparse_simd"]
 
-[[gn.crate.libc."0.2.74"]]
+[gn.package.libc."0.2.74"]
 rustflags = ["--cfg=freebsd11", "--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN"]
 
-# cxx uses this to link against libc++ or libstdc++, for crates that use cxx and build with cargo.
-# It does nothing else.
-[[gn.crate.link-cplusplus."1.0.2"]]
-rustflags = []
-
-[[gn.crate.log."0.4.8"]]
+[gn.package.log."0.4.8"]
 rustflags = ["--cfg=atomic_cas"]
 
-[[gn.crate.memchr."2.3.3"]]
+[gn.package.memchr."2.3.3"]
 rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=memchr_runtime_sse42", "--cfg=memchr_runtime_avx"]
 
-[[gn.crate.mime_guess."1.8.6"]]
+[gn.package.mime_guess."1.8.6"]
 env_vars = ["OUT_DIR=../../../compat/mime_guess"]
 
-[[gn.crate.nix."0.18.0"]]
-rustflags = []
-
-[[gn.crate.num-bigint."0.2.2"]]
+[gn.package.num-bigint."0.2.2"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.num-complex."0.2.1"]]
+[gn.package.num-complex."0.2.1"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.num_derive."0.2.4"]]
+[gn.package.num-derive."0.2.4"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.num-integer."0.1.39"]]
+[gn.package.num-integer."0.1.39"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.num-rational."0.2.1"]]
+[gn.package.num-rational."0.2.1"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.num-traits."0.2.11"]]
+[gn.package.num-traits."0.2.11"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.maybe-uninit."2.0.0"]]
+[gn.package.maybe-uninit."2.0.0"]
 rustflags = ["--cfg=derive_copy", "--cfg=repr_transparent", "--cfg=native_uninit"]
 
-[[gn.crate.num-iter."0.1.37"]]
+[gn.package.num-iter."0.1.37"]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.proc-macro2."0.4.27"]]
+[gn.package.proc-macro2."0.4.27"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
-[[gn.crate.proc-macro2."1.0.19"]]
+[gn.package.proc-macro2."1.0.19"]
 rustflags = ["--cfg=span_locations", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
-[[gn.crate.rand."0.6.5"]]
+[gn.package.rand."0.6.5"]
 rustflags = ["--cfg=rustc_1_25","--cfg=rustc_1_26",  "--cfg=rustc_1_27",]
 
-[[gn.crate.rand_chacha."0.1.1"]]
+[gn.package.rand_chacha."0.1.1"]
 rustflags = ["--cfg=rustc_1_26"]
 
-[[gn.crate.rand_pcg."0.1.1"]]
+[gn.package.rand_pcg."0.1.1"]
 rustflags = ["--cfg=rust_1_26"]
 
-[[gn.crate.ring."0.16.12"]]
+[gn.package.ring."0.16.12"]
 deps = [ "//third_party/rust_crates/compat/ring:ring-core" ]
 
-[[gn.crate.ryu."1.0.3"]]
+[gn.package.rust-crypto."0.2.36"]
+deps = [ "//third_party/rust_crates/compat/rust-crypto" ]
+
+[gn.package.ryu."1.0.3"]
 rustflags = ["--cfg=integer128", "--cfg=must_use_return", "--cfg=maybe_uninit"]
 
-[[gn.crate.ryu."0.2.7"]]
+[gn.package.ryu."0.2.7"]
 rustflags = ["--cfg=integer128", "--cfg=must_use_return"]
 
-[[gn.crate.proc-macro-nested."0.1.4"]]
+[gn.package.proc-macro-nested."0.1.4"]
 rustflags = []
 env_vars = ["OUT_DIR=../../../compat/proc-macro-nested"]
 
-[[gn.crate.serde."1.0.104"]]
+[gn.package.serde."1.0.104"]
 rustflags = ["--cfg=ops_bound", "--cfg=core_reverse", "--cfg=de_boxed_c_str", "--cfg=de_boxed_path", "--cfg=de_rc_dst", "--cfg=core_duration", "--cfg=integer128", "--cfg=range_inclusive", "--cfg=num_nonzero", "--cfg=core_try_from", "--cfg=num_nonzero_signed", "--cfg=std_atomic64", "--cfg=std_atomic"]
 
-[[gn.crate.unicase."1.4.2"]]
+[gn.package.unicase."1.4.2"]
 rustflags = ["--cfg=__unicase__default_hasher", "--cfg=__unicase__iter_cmp"]
 
-[[gn.crate.unicase."2.5.1"]]
+[gn.package.unicase."2.5.1"]
 rustflags = ["--cfg=__unicase__default_hasher", "--cfg=__unicase__const_funs", "--cfg=__unicase__iter_cmp"]
 
-[[gn.crate.valico."2.4.2"]]
+[gn.package.valico."2.4.2"]
 env_vars = ["OUT_DIR=../../../../compat/valico"]
+
+
+# These don't have build.rs scripts but require platform-specific target configuration.
+#
+# Keep this sorted alphabetically, please.
+
+[gn.package.backtrace."0.3.42".platform."cfg(target_os = \"fuchsia\")"]
+configs = [ "//build/config/fuchsia:libunwind" ]
 
 
 # These don't have build.rs scripts, but they rely on Cargo populating the environment variables
 #
 # Keep this sorted alphabetically, please.
-[[gn.crate.backtrace."0.3.42"]]
-platform = "cfg(target_os = \"fuchsia\")"
-configs = [ "//build/config/fuchsia:libunwind" ]
 
-[[gn.crate.handlebars."2.0.0-beta.2"]]
+[gn.package.handlebars."2.0.0-beta.2"]
 # pest relies on this being set to find the grammar file
 env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
 
-[[gn.crate.rust_icu_common."0.3.2"]]
+[gn.package.rust_icu_common."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_ucal."0.3.2"]]
+[gn.package.rust_icu_sys."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_udat."0.3.2"]]
+[gn.package.rust_icu_ucal."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_udata."0.3.2"]]
+[gn.package.rust_icu_udat."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_uenum."0.3.2"]]
+[gn.package.rust_icu_udata."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_uloc."0.3.2"]]
+[gn.package.rust_icu_uenum."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_ustring."0.3.2"]]
+[gn.package.rust_icu_uloc."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
-[[gn.crate.rust_icu_utext."0.3.2"]]
+[gn.package.rust_icu_ustring."0.3.2"]
+configs = [ "//src/lib/icu:version" ]
+[gn.package.rust_icu_utext."0.3.2"]
 configs = [ "//src/lib/icu:version" ]
 
-[[gn.crate.unic-common."0.9.0"]]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-common\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
-[[gn.crate.unic-ucd-version."0.9.0"]]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-version\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
-[[gn.crate.unic-char-range."0.9.0"]]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-char-range\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
-[[gn.crate.unic-char-property."0.9.0"]]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-char-property\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
-[[gn.crate.unic-ucd-block."0.9.0"]]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-block\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
-[[gn.crate.trust_dns_resolver."0.19.2"]]
+[gn.package.trust-dns-resolver."0.19.2"]
 env_vars = [ "CARGO_PKG_VERSION=\\\"0.19.2\\\"" ]
+
+[gn.package.unic-common."0.9.0"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-common\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
+[gn.package.unic-ucd-version."0.9.0"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-version\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
+[gn.package.unic-char-range."0.9.0"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-char-range\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
+[gn.package.unic-char-property."0.9.0"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-char-property\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
+[gn.package.unic-ucd-block."0.9.0"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-block\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
+
+[gn.package.wasm-bindgen-shared."0.2.60"]
+# Do not quote, this is embedded directly in .wasm sections and is needed by wasm-bindgen.
+env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 
 # These dependencies have build.rs scripts, but dummy invocations indicating they
 # do not need to be run are sufficient for our build
 #
 # Keep this sorted alphabetically, please.
-[[gn.crate.backtrace-sys."0.1.32"]]
-[[gn.crate.bincode."1.1.1"]]
-[[gn.crate.crossbeam-epoch."0.8.2"]]
-[[gn.crate.crossbeam-utils."0.7.2"]]
-[[gn.crate.freetype_sys."4.0.5"]]
-[[gn.crate.getrandom."0.1.13"]]
-[[gn.crate.memoffset."0.5.3"]]
-[[gn.crate.nom."5.0.0"]]
-[[gn.crate.parking_lot."0.9.0"]]
-[[gn.crate.parking_lot_core."0.6.2"]]
-[[gn.crate.pulldown-cmark."0.6.0"]]
-[[gn.crate.rayon-core."1.7.0"]]
-[[gn.crate.rust_icu_sys."0.3.2"]]
-configs = [ "//src/lib/icu:version" ]
-[[gn.crate.syn."1.0.21"]]
-[[gn.crate.test-case."1.0.0"]]
-[[gn.crate.wasm-bindgen-shared."0.2.60"]]
-# Do not quote, this is embedded directly in .wasm sections and is needed by wasm-bindgen.
-env_vars = [ "CARGO_PKG_VERSION=0.2.60"]
-[[gn.crate.wasm-bindgen."0.2.60"]]
+[gn.package.backtrace-sys."0.1.32"]
+[gn.package.bincode."1.1.1"]
+[gn.package.crossbeam-epoch."0.8.2"]
+[gn.package.crossbeam-utils."0.7.2"]
+# cxx's build.rs is only used to build it's src/cxx.cc file, for crates that use cxx and build with
+# cargo. It is replaced with //src/lib/rust_cxx:cxx_lib.
+[gn.package.cxx."0.3.5"]
+[gn.package.getrandom."0.1.13"]
+# cxx uses this to link against libc++ or libstdc++, for crates that use cxx and build with cargo.
+# It is replaced by our own build machinery.
+[gn.package.link-cplusplus."1.0.2"]
+[gn.package.memoffset."0.5.3"]
+[gn.package.nix."0.18.0"]
+[gn.package.nom."5.0.0"]
+[gn.package.parking_lot."0.9.0"]
+[gn.package.parking_lot_core."0.6.2"]
+[gn.package.pulldown-cmark."0.6.0"]
+[gn.package.rayon-core."1.7.0"]
+[gn.package.servo-freetype-sys."4.0.5"]
+[gn.package.syn."1.0.21"]
+[gn.package.test-case."1.0.0"]
+[gn.package.wasm-bindgen."0.2.60"]

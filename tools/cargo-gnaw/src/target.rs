@@ -27,7 +27,7 @@ pub struct GnTarget<'a> {
     /// Name of the target given in Cargo.toml
     target_name: &'a str,
     /// Name of the package given in Cargo.toml
-    pkg_name: &'a str,
+    pub pkg_name: &'a str,
     /// Path to the root of the crate
     pub crate_root: &'a Path,
     /// Rust Edition of the target
@@ -35,7 +35,7 @@ pub struct GnTarget<'a> {
     pub edition: &'a str,
     /// Type of crate
     /// rustc: --crate-type
-    target_type: GnRustType,
+    pub target_type: GnRustType,
     /// Rust features enabled on this target
     /// rustc: --cfg=feature=<string>
     pub features: &'a [String],
@@ -111,12 +111,14 @@ impl<'a> GnTarget<'a> {
         self.build_script.is_some()
     }
 
-    pub fn gn_name(&self) -> String {
-        format!("{}", self.target_name)
+    /// Name of the target given in Cargo.toml
+    pub fn name(&self) -> String {
+        self.target_name.to_owned()
     }
 
+    /// Version of the Package from Cargo
     pub fn version(&self) -> String {
-        format!("{}", self.version)
+        self.version.to_string()
     }
 
     pub fn metadata_hash(&self) -> String {

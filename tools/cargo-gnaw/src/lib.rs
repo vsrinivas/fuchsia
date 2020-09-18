@@ -6,7 +6,7 @@
 
 use {
     crate::{build::BuildScript, graph::GnBuildGraph, target::GnTarget, types::*},
-    anyhow::{anyhow, Context, Error},
+    anyhow::{Context, Error},
     argh::FromArgs,
     cargo_metadata::DependencyKind,
     serde_derive::{Deserialize, Serialize},
@@ -53,15 +53,13 @@ struct Opt {
     skip_root: bool,
 }
 
-type CrateName = String;
+type PackageName = String;
 type Version = String;
 
 /// Per-target metadata in the Cargo.toml for Rust crates that
 /// require extra information to in the BUILD.gn
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Default, Clone, Serialize, Deserialize, Debug)]
 pub struct TargetCfg {
-    /// Platform this configuration is for. None is all platforms.
-    platform: Option<Platform>,
     /// Config flags for rustc. Ex: --cfg=std
     rustflags: Option<Vec<String>>,
     /// Environment variables. These are usually from Cargo or the
@@ -73,6 +71,19 @@ pub struct TargetCfg {
     /// GN Configs that this crate should depend on.  Used to add
     /// crate-specific configs.
     configs: Option<Vec<String>>,
+}
+
+// Configuration for a Cargo package. Contains configuration for its (single) library target at the
+// top level and optionally zero or more binaries to generate.
+#[derive(Default, Clone, Serialize, Deserialize, Debug)]
+#[serde(default)]
+pub struct PackageCfg {
+    /// Library target configuration for all platforms.
+    #[serde(flatten)]
+    default_cfg: TargetCfg,
+    /// Per-platform library target configuration.
+    #[serde(rename = "platform")]
+    platform_cfg: HashMap<Platform, TargetCfg>,
 }
 
 /// Configs added to all GN targets in the BUILD.gn
@@ -88,15 +99,33 @@ pub struct GlobalTargetCfgs {
 struct GnBuildMetadata {
     /// global configs
     config: Option<GlobalTargetCfgs>,
-    /// array of crates with target specific configuration
-    #[serde(rename = "crate")]
-    crate_: HashMap<CrateName, HashMap<Version, Vec<TargetCfg>>>,
+    /// map of per-Cargo package configuration
+    package: HashMap<PackageName, HashMap<Version, PackageCfg>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct BuildMetadata {
     gn: Option<GnBuildMetadata>,
 }
+
+type CombinedTargetCfg = HashMap<Option<Platform>, TargetCfg>;
+
+macro_rules! define_combined_cfg {
+    ($t:ty) => {
+        impl $t {
+            fn combined_target_cfg(&self) -> CombinedTargetCfg {
+                let mut combined: CombinedTargetCfg =
+                    self.platform_cfg.clone().into_iter().map(|(k, v)| (Some(k), v)).collect();
+                assert!(
+                    combined.insert(None, self.default_cfg.clone()).is_none(),
+                    "Default platform (None) already present in combined cfg"
+                );
+                combined
+            }
+        }
+    };
+}
+define_combined_cfg!(PackageCfg);
 
 pub fn generate_from_manifest<W: io::Write>(
     mut output: &mut W,
@@ -162,77 +191,78 @@ pub fn generate_from_manifest<W: io::Write>(
                 gn::write_top_level_rule(&mut output, None, &metadata[&top_level_id])?;
             }
         }
-        None => return Err(anyhow!("Failed to resolve a build graph for the package tree")),
+        None => anyhow::bail!("Failed to resolve a build graph for the package tree"),
     }
-    let gn_config = match metadata_configs.gn {
+
+    // Sort targets for stable output to minimize diff churn
+    let mut graph_targets: Vec<&GnTarget<'_>> = build_graph.targets().collect();
+    graph_targets.sort();
+
+    let global_config = match metadata_configs.gn {
         Some(ref gn_configs) => gn_configs.config.as_ref(),
         None => None,
     };
 
-    // Write out a GN rule for each target in the build graph
-    // needs to be sorted for stable output to minimize diff churn
-    let mut graph_targets: Vec<&GnTarget<'_>> = build_graph.targets().collect();
-    graph_targets.sort();
+    // Grab the per-package configs.
+    let gn_pkg_cfgs = metadata_configs.gn.as_ref().map(|i| &i.package);
 
-    // Clone the GN configs so we can consume them while writing the GN files
-    let mut gn_crates = metadata_configs.gn.as_ref().map(|i| i.crate_.clone());
-
-    for target in graph_targets {
-        let cfg: Option<Vec<TargetCfg>> = match gn_crates {
-            Some(ref mut gn_crates) => match gn_crates.get_mut(&target.gn_name()) {
-                Some(crate_) => {
-                    let resp = crate_.remove(&target.version());
-                    if crate_.len() == 0 {
-                        gn_crates
-                            .remove(&target.gn_name())
-                            .ok_or(anyhow!("removed non-existant crate from custom configs"))?;
-                    }
-                    resp
+    // Iterate through the target configs, verifying that the build graph contains the configured
+    // targets, then save off a mapping of GnTarget to the target config.
+    let mut target_cfgs = HashMap::<&GnTarget<'_>, CombinedTargetCfg>::new();
+    let mut unused_configs = String::new();
+    if let Some(gn_pkg_cfgs) = gn_pkg_cfgs {
+        for (pkg_name, versions) in gn_pkg_cfgs {
+            for (pkg_version, pkg_cfg) in versions {
+                // Search the build graph for the library target.
+                if let Some(target) = build_graph.find_library_target(pkg_name, pkg_version) {
+                    assert!(
+                        target_cfgs.insert(target, pkg_cfg.combined_target_cfg()).is_none(),
+                        "Duplicate library config somehow specified"
+                    );
+                } else {
+                    unused_configs.push_str(&format!(
+                        "library crate, package {} version {}\n",
+                        pkg_name, pkg_version
+                    ));
                 }
-                None => None,
-            },
-            None => None,
-        };
+            }
+        }
+    }
+    if unused_configs.len() > 0 {
+        anyhow::bail!(
+            "GNaw config exists for crates that were not found in the Cargo build graph:\n\n{}",
+            unused_configs
+        );
+    }
 
-        if target.uses_build_script() && cfg.is_none() {
+    // Write out a GN rule for each target in the build graph
+    for target in graph_targets {
+        let target_cfg = target_cfgs.get(target);
+        if target.uses_build_script() && target_cfg.is_none() {
             let build_output = BuildScript::compile(target).and_then(|s| s.execute());
             match build_output {
                 Ok(rules) => {
-                    return Err(anyhow!(
+                    anyhow::bail!(
                         "Add this to your Cargo.toml located at {}\n \
                         [[gn.crate.{}.\"{}\"]] \n \
                         rustflags = [{}]\n",
                         manifest_path.display(),
-                        target.gn_name(),
+                        target.name(),
                         target.version(),
                         rules.cfgs.join(", ")
-                    ));
+                    );
                 }
-                Err(err) => {
-                    return Err(anyhow!(
-                        "{} {} uses a build script but no section defined in the GN section \
+                Err(err) => anyhow::bail!(
+                    "{} {} uses a build script but no section defined in the GN section \
                     nor can we automatically generate the appropriate rules:\n{}",
-                        target.gn_name(),
-                        target.version(),
-                        err,
-                    ))
-                }
+                    target.name(),
+                    target.version(),
+                    err,
+                ),
             }
         }
-        let _ = gn::write_rule(&mut output, &target, &project_root, gn_config, cfg)?;
-    }
 
-    // Collect any unused crates and show the user
-    if let Some(gn_crates) = gn_crates {
-        if gn_crates.len() != 0 {
-            let mut accum = String::new();
-            for (crate_, cfg) in gn_crates.iter() {
-                for (version, _) in cfg.iter() {
-                    accum.push_str(format!("crate: {} {}\n", crate_, version).as_str());
-                }
-            }
-            return Err(anyhow!("The following configs are unused:\n\n{}", accum));
-        }
+        let _ = gn::write_rule(&mut output, &target, &project_root, global_config, target_cfg)?;
     }
     Ok(())
 }
@@ -278,7 +308,7 @@ pub fn run(args: &[impl AsRef<str>]) -> Result<(), Error> {
 
     // Format the GN file
     if opt.output.is_none() && opt.gn_bin.is_some() {
-        return Err(anyhow!("Cannot format GN output to stdout"));
+        anyhow::bail!("Cannot format GN output to stdout");
     }
     if let Some(gn_bin) = opt.gn_bin {
         let output = opt.output.expect("output");

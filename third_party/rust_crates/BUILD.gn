@@ -25,6 +25,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":async-std-v1_6_0" ]
   }
 }
+
 group("async-trait") {
   deps = [ ":async-trait-v0_1_40($host_toolchain)" ]
 }
@@ -58,6 +59,7 @@ if (current_os == "fuchsia") {
     deps = [ ":bytes-v0_5_4" ]
   }
 }
+
 group("cargo_metadata") {
   deps = [ ":cargo_metadata-v0_9_1" ]
 }
@@ -87,6 +89,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":crossterm-v0_17_7" ]
   }
 }
+
 group("csv") {
   deps = [ ":csv-v1_1_3" ]
 }
@@ -96,6 +99,7 @@ if (current_os == "fuchsia") {
     deps = [ ":ct-logs-v0_6_0" ]
   }
 }
+
 group("cxx") {
   deps = [ ":cxx-v0_3_5" ]
 }
@@ -109,16 +113,19 @@ if (current_os == "fuchsia") {
     deps = [ ":data-encoding-v2_1_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("derivative") {
     deps = [ ":derivative-v2_1_1($host_toolchain)" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("derp") {
     deps = [ ":derp-v0_0_13" ]
   }
 }
+
 group("difference") {
   deps = [ ":difference-v2_0_0" ]
 }
@@ -128,11 +135,13 @@ if (current_os == "fuchsia") {
     deps = [ ":euclid-v0_20_7" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("eui48") {
     deps = [ ":eui48-v0_4_6" ]
   }
 }
+
 group("fatfs") {
   deps = [ ":fatfs-v0_4_0" ]
 }
@@ -146,6 +155,7 @@ if (current_os == "fuchsia") {
     deps = [ ":freetype-v0_4_1" ]
   }
 }
+
 group("futures") {
   deps = [ ":futures-v0_3_5" ]
 }
@@ -171,6 +181,7 @@ if (current_os == "fuchsia") {
     deps = [ ":getopts-v0_2_18" ]
   }
 }
+
 group("glob") {
   deps = [ ":glob-v0_3_0" ]
 }
@@ -180,6 +191,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":handlebars-v2_0_0-beta_2" ]
   }
 }
+
 group("heck") {
   deps = [ ":heck-v0_3_1" ]
 }
@@ -193,31 +205,37 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":home-v0_5_3" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("http") {
     deps = [ ":http-v0_2_1" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("hyper") {
     deps = [ ":hyper-v0_13_6" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("hyper-rustls") {
     deps = [ ":hyper-rustls-v0_20_0" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("id_tree") {
     deps = [ ":id_tree-v1_5_0" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("indoc") {
     deps = [ ":indoc-v0_3_3" ]
   }
 }
+
 group("itertools") {
   deps = [ ":itertools-v0_8_0" ]
 }
@@ -227,6 +245,7 @@ if (current_os == "fuchsia") {
     deps = [ ":itoa-v0_4_3" ]
   }
 }
+
 group("json5format") {
   deps = [ ":json5format-v0_1_4" ]
 }
@@ -248,6 +267,7 @@ if (current_os == "fuchsia") {
     deps = [ ":lipsum-v0_6_0" ]
   }
 }
+
 group("log") {
   deps = [ ":log-v0_4_8" ]
 }
@@ -273,6 +293,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":nix-v0_18_0" ]
   }
 }
+
 group("nom") {
   deps = [ ":nom-v5_0_0" ]
 }
@@ -290,6 +311,7 @@ if (current_os == "fuchsia") {
     deps = [ ":num-bigint-v0_2_2" ]
   }
 }
+
 group("num-derive") {
   deps = [ ":num-derive-v0_2_4($host_toolchain)" ]
 }
@@ -311,11 +333,13 @@ if (current_os == "fuchsia") {
     deps = [ ":openat-v0_1_17" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("owning_ref") {
     deps = [ ":owning_ref-v0_4_0" ]
   }
 }
+
 group("parking_lot") {
   deps = [ ":parking_lot-v0_9_0" ]
 }
@@ -345,6 +369,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":petgraph-v0_5_1" ]
   }
 }
+
 group("pin-project") {
   deps = [ ":pin-project-v0_4_17" ]
 }
@@ -362,6 +387,7 @@ if (current_os == "fuchsia") {
     deps = [ ":pretty-v0_5_2" ]
   }
 }
+
 group("pretty_assertions") {
   deps = [ ":pretty_assertions-v0_5_1" ]
 }
@@ -371,6 +397,7 @@ if (current_os == "fuchsia") {
     deps = [ ":prettytable-rs-v0_8_0" ]
   }
 }
+
 group("proc-macro-hack") {
   deps = [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
 }
@@ -380,11 +407,13 @@ if (current_os == "fuchsia") {
     deps = [ ":proc-macro-nested-v0_1_4" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("proc-macro2") {
     deps = [ ":proc-macro2-v1_0_19" ]
   }
 }
+
 group("proptest") {
   deps = [ ":proptest-v0_9_3" ]
 }
@@ -398,11 +427,13 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":pulldown-cmark-v0_6_0" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("quote") {
     deps = [ ":quote-v1_0_7" ]
   }
 }
+
 group("rand") {
   deps = [ ":rand-v0_6_5" ]
 }
@@ -420,6 +451,7 @@ if (current_os == "fuchsia") {
     deps = [ ":rand_xorshift-v0_1_1" ]
   }
 }
+
 group("rayon") {
   deps = [ ":rayon-v1_3_0" ]
 }
@@ -453,46 +485,55 @@ if (current_os == "fuchsia") {
     deps = [ ":rust_icu_common-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_sys") {
     deps = [ ":rust_icu_sys-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_ucal") {
     deps = [ ":rust_icu_ucal-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_udat") {
     deps = [ ":rust_icu_udat-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_udata") {
     deps = [ ":rust_icu_udata-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_uenum") {
     deps = [ ":rust_icu_uenum-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_uloc") {
     deps = [ ":rust_icu_uloc-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_ustring") {
     deps = [ ":rust_icu_ustring-v0_3_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rust_icu_utext") {
     deps = [ ":rust_icu_utext-v0_3_2" ]
   }
 }
+
 group("rustc-demangle") {
   deps = [ ":rustc-demangle-v0_1_16" ]
 }
@@ -506,11 +547,13 @@ if (current_os == "fuchsia") {
     deps = [ ":rustls-v0_17_0" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("rusttype") {
     deps = [ ":rusttype-v0_7_5" ]
   }
 }
+
 group("scopeguard") {
   deps = [ ":scopeguard-v0_3_3" ]
 }
@@ -544,16 +587,19 @@ if (current_os == "fuchsia") {
     deps = [ ":serde_repr-v0_1_3($host_toolchain)" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("signal-hook") {
     deps = [ ":signal-hook-v0_1_16" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("simplelog") {
     deps = [ ":simplelog-v0_7_5" ]
   }
 }
+
 group("slab") {
   deps = [ ":slab-v0_4_2" ]
 }
@@ -563,11 +609,13 @@ if (current_os == "fuchsia") {
     deps = [ ":smallvec-v0_6_13" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("smol") {
     deps = [ ":smol-v0_1_11" ]
   }
 }
+
 group("socket2") {
   deps = [ ":socket2-v0_3_12" ]
 }
@@ -589,16 +637,19 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":syn-v1_0_21" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("synstructure") {
     deps = [ ":synstructure-v0_12_1" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("tar") {
     deps = [ ":tar-v0_4_25" ]
   }
 }
+
 group("tempfile") {
   deps = [ ":tempfile-v3_1_0" ]
 }
@@ -612,6 +663,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":termios-v0_3_2" ]
   }
 }
+
 group("test-case") {
   deps = [ ":test-case-v1_0_0($host_toolchain)" ]
 }
@@ -621,6 +673,7 @@ if (current_os == "fuchsia") {
     deps = [ ":textwrap-v0_11_0" ]
   }
 }
+
 group("thiserror") {
   deps = [ ":thiserror-v1_0_9" ]
 }
@@ -630,6 +683,7 @@ if (current_os == "fuchsia") {
     deps = [ ":time-v0_1_42" ]
   }
 }
+
 group("timebomb") {
   deps = [ ":timebomb-v0_1_2" ]
 }
@@ -639,11 +693,13 @@ if (current_os == "fuchsia") {
     deps = [ ":tokio-v0_2_21" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("tokio-rustls") {
     deps = [ ":tokio-rustls-v0_13_1" ]
   }
 }
+
 group("toml") {
   deps = [ ":toml-v0_5_6" ]
 }
@@ -665,21 +721,25 @@ if (current_os == "fuchsia") {
     deps = [ ":trust-dns-proto-v0_19_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("trust-dns-resolver") {
     deps = [ ":trust-dns-resolver-v0_19_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("ttf-parser") {
     deps = [ ":ttf-parser-v0_8_2" ]
   }
 }
+
 if (!(current_os == "fuchsia")) {
   group("tui") {
     deps = [ ":tui-v0_10_0" ]
   }
 }
+
 group("unic-char-range") {
   deps = [ ":unic-char-range-v0_9_0" ]
 }
@@ -697,6 +757,7 @@ if (current_os == "fuchsia") {
     deps = [ ":unicode-normalization-v0_1_8" ]
   }
 }
+
 group("unicode-segmentation") {
   deps = [ ":unicode-segmentation-v1_2_1" ]
 }
@@ -710,6 +771,7 @@ if (current_os == "fuchsia") {
     deps = [ ":untrusted-v0_7_0" ]
   }
 }
+
 group("url") {
   deps = [ ":url-v2_1_0" ]
 }
@@ -731,21 +793,25 @@ if (current_os == "fuchsia") {
     deps = [ ":vk-sys-v0_4_0" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("void") {
     deps = [ ":void-v1_0_2" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("vte") {
     deps = [ ":vte-v0_3_3" ]
   }
 }
+
 if (current_os == "fuchsia") {
   group("walkdir") {
     deps = [ ":walkdir-v2_3_1" ]
   }
 }
+
 group("wasm-bindgen") {
   deps = [ ":wasm-bindgen-v0_2_60" ]
 }
@@ -755,6 +821,7 @@ if (current_os == "fuchsia") {
     deps = [ ":webpki-v0_21_0" ]
   }
 }
+
 group("xml-rs") {
   deps = [ ":xml-rs-v0_8_0" ]
 }
@@ -764,6 +831,7 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":zip-v0_5_5" ]
   }
 }
+
 rust_library("adler32-v1_0_4") {
   crate_name = "adler32"
   crate_root = "//third_party/rust_crates/vendor/adler32/src/lib.rs"

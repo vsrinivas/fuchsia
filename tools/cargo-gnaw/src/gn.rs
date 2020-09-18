@@ -4,7 +4,7 @@
 
 use {
     crate::GlobalTargetCfgs,
-    crate::{cfg::cfg_to_gn_conditional, target::GnTarget, types::*, TargetCfg},
+    crate::{cfg::cfg_to_gn_conditional, target::GnTarget, types::*, CombinedTargetCfg},
     anyhow::{Context, Error},
     cargo_metadata::Package,
     std::collections::HashMap,
@@ -55,11 +55,11 @@ pub fn write_top_level_rule<'a, W: io::Write>(
     writeln!(
         output,
         include_str!("../templates/entry_gn_rules.template"),
-        crate_name = pkg.name,
-        target_name = target_name,
+        group_name = pkg.name,
+        dep_name = target_name,
     )?;
     if platform.is_some() {
-        writeln!(output, "}}")?;
+        writeln!(output, "}}\n")?;
     }
     Ok(())
 }
@@ -178,7 +178,7 @@ pub fn write_rule<W: io::Write>(
     target: &GnTarget<'_>,
     project_root: &Path,
     global_target_cfgs: Option<&GlobalTargetCfgs>,
-    custom_build: Option<Vec<TargetCfg>>,
+    custom_build: Option<&CombinedTargetCfg>,
 ) -> Result<(), Error> {
     // Generate a section for dependencies that is paramaterized on toolchain
     let mut dependencies = String::from("deps = []\n");
@@ -263,27 +263,27 @@ pub fn write_rule<W: io::Write>(
     }
 
     // From the gn custom configs, add flags and env vars
-    for customized_dep in custom_build {
-        for dep in customized_dep {
-            if let Some(ref deps) = dep.deps {
+    if let Some(custom_build) = custom_build {
+        for (platform, cfg) in custom_build {
+            if let Some(ref deps) = cfg.deps {
                 for dep in deps {
                     // TODO: Respect dep.platform here.
                     dependencies.push_str(format!("  deps += [\"{}\"]", dep).as_str());
                 }
             }
-            if let Some(ref flags) = dep.rustflags {
+            if let Some(ref flags) = cfg.rustflags {
                 for flag in flags {
-                    rustflags.add_platform_cfg(dep.platform.clone(), flag.to_string());
+                    rustflags.add_platform_cfg(platform.clone(), flag.to_string());
                 }
             }
-            if let Some(ref env_vars) = dep.env_vars {
+            if let Some(ref env_vars) = cfg.env_vars {
                 for flag in env_vars {
-                    rustenv.add_platform_cfg(dep.platform.clone(), flag.to_string());
+                    rustenv.add_platform_cfg(platform.clone(), flag.to_string());
                 }
             }
-            if let Some(ref crate_configs) = dep.configs {
+            if let Some(ref crate_configs) = cfg.configs {
                 for config in crate_configs {
-                    configs.add_platform_cfg(dep.platform.clone(), config);
+                    configs.add_platform_cfg(platform.clone(), config);
                 }
             }
         }
@@ -304,7 +304,7 @@ pub fn write_rule<W: io::Write>(
             .strip_prefix(project_root)
             .with_context(|| format!(
                 "{} is located outside of the project. Check your vendoring setup",
-                target.gn_name()
+                target.name()
             ))?
             .to_string_lossy()
     );
@@ -313,8 +313,8 @@ pub fn write_rule<W: io::Write>(
         include_str!("../templates/gn_rule.template"),
         gn_rule = target.gn_target_type(),
         target_name = target.gn_pkg_name(),
-        crate_name = target.gn_name().replace("-", "_"),
-        output_name = format!("{}-{}", target.gn_name().replace("-", "_"), target.metadata_hash()),
+        crate_name = target.name().replace("-", "_"),
+        output_name = format!("{}-{}", target.name().replace("-", "_"), target.metadata_hash()),
         root_path = root_relative_path,
         aliased_deps = aliased_deps_str,
         dependencies = dependencies,
