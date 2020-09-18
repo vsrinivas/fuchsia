@@ -282,10 +282,11 @@ else
         echo "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
       fi
     fi
-    HASH=$(echo $IFNAME | shasum)
-    SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
-    ARGS+=" -nic tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,mac=52:54:00$SUFFIX"
+    ARGS+=" -nic tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no"
   fi
+  HASH=$(echo $IFNAME | shasum)
+  SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+  ARGS+=",mac=52:54:00$SUFFIX"
   if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
     ARGS+=",model=e1000"
   else
