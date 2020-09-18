@@ -1,9 +1,9 @@
-# CLI Tool Help Requirements
+# CLI tool help requirements
 
 
 ## Overview
 
-Command line help, as often provided via `--help` is an important means of
+Command line help, as often provided through `--help` is an important means of
 communication with the user. It provides a shorthand for more detailed
 documentation and feature discovery.
 
@@ -11,11 +11,14 @@ documentation and feature discovery.
 ## Guide
 
 Help documentation must include a usage section written in
-[Usage](#usage) format, followed by brief written prose
-describing the command, and the following sections (as needed): Options,
-Commands, Examples, Notes, and Error codes.
+[Usage](#usage) format, followed by a brief descriptions about
+the command, and the following sections (as needed): 
 
-Let's start with a full example before digging into the specifics.
+* Options
+* Commands
+* Examples
+* Notes
+* Error codes
 
 ### Example
 
@@ -129,14 +132,14 @@ in [Fuchsia Tool Requirements](http://go.corp.google.com/fuchsia-tool-requiremen
 - Keyed options
 - Option delimiter
 
-##### Exact Text Syntax
+##### Exact text syntax
 
 Exact text is written as-is in the usage line. In the example "`Usage: copy
 <from> to <destination>`", the word `to` is required exact text. If exact text
 is optional, it will be enclosed in brackets (`[]`) in the usage line: "`Usage:
 copy <from> [to] <destination>`".
 
-##### Argument Syntax
+##### Argument syntax
 
 Arguments are enclosed in angle brackets (<>) to differentiate them from
 explicit text. In the example `Usage: copy <from> <destination>`, both `<from>`
@@ -144,7 +147,7 @@ and `<destination>` are arguments. If an argument is optional, it will be
 enclosed in brackets (`[]`) such as: `Usage: copy <from> [<destination>]`. See
 also [Option Delimiter](./cli.md#option_delimiter).
 
-##### Mutually Exclusive Option Syntax
+##### Mutually exclusive option syntax
 
 There are a couple choices when illustrating mutually exclusive options.
 
@@ -195,14 +198,14 @@ place that note in the description of `-x` but not in `-c` and `-p`. This is to
 keep the `--help` output concise (this rule can be relaxed in the full
 documentation).
 
-##### Optional Keys
+##### Optional keys
 
 To create the appearance of a keyed option with an optional Key, create optional
 exact text followed by an argument. For example "`Usage: copy [from] <from> [to]
 <destination>`". In the example, all of these are valid: "`copy a b`", "`copy
 from a b`", "`copy from a to b`", "`copy a to b`".
 
-##### Repeating Options
+##### Repeating options
 
 If the same positional argument may be repeated, indicate that with an ellipsis
 ('...'). Rather than a Unicode ellipsis, use three consecutive periods. For
@@ -471,9 +474,9 @@ on each screenful of text).
 
 Do not include
 
-- a copyright in the help output (put that where legal specifies)
-- release notes (put that in release notes)
-- full documentation (put that in the markdown documentation)
-- version information (output that from `--version`)
-- documentation on result codes `0` or `1` (put in .md docs)
-- shell-specific help (such as how to redirect output or pipe to a pager)
+- A copyright in the help output (put that where legal specifies).
+- Release notes (put that in release notes).
+- Full documentation (put that in the markdown documentation).
+- Version information (output that from `--version`).
+- Documentation on result codes `0` or `1` (put in .md docs).
+- Shell-specific help (such as how to redirect output or pipe to a pager).
