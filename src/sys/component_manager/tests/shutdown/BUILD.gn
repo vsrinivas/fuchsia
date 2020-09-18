@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("shutdown_integration_test_bin") {
+  name = "shutdown_integration_test"
+  edition = "2018"
+  source_root = "shutdown_integration.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  # TODO(46841): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  sources = [ "shutdown_integration.rs" ]
+}
+
+rustc_binary("system_controller_client") {
+  name = "system_controller_client"
+  edition = "2018"
+  source_root = "system_controller_client.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  # TODO(46841): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  sources = [ "system_controller_client.rs" ]
+}
+
+test_package("shutdown_integration_test") {
+  deps = [
+    ":shutdown_integration_test_bin",
+    ":system_controller_client",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/shutdown_integration_root.cml")
+      dest = "shutdown_integration_root.cm"
+    },
+    {
+      path = rebase_path("meta/system_controller_consumer.cml")
+      dest = "system_controller_consumer.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "system_controller_client"
+    },
+  ]
+
+  tests = [
+    {
+      name = "shutdown_integration_test"
+    },
+  ]
+}

@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/no_pkg_resolver_test"
-    }
-}

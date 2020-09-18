@@ -18,7 +18,7 @@ rustc_test("storage_integration_test_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",

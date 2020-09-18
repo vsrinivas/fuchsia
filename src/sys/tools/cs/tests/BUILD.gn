@@ -12,7 +12,7 @@ rustc_test("v2_test_bin") {
   source_root = "v2_test.rs"
   deps = [
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/tools/cs:lib",
     "//third_party/rust_crates:anyhow",
   ]

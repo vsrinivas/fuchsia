@@ -8,7 +8,7 @@ use {
     echo_interposer::EchoInterposer,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::StreamExt,
-    test_utils_lib::{echo_capability::EchoCapability, events::*, test_utils::*},
+    test_utils_lib::{echo_capability::EchoCapability, events::*, opaque_test::*},
 };
 
 #[fasync::run_singlethreaded(test)]

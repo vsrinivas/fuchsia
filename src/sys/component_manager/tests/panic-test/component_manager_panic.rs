@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_async as fasync, test_utils_lib::test_utils::OpaqueTest};
+use {fuchsia_async as fasync, test_utils_lib::opaque_test::OpaqueTest};
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {

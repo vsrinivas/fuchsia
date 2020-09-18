@@ -12,7 +12,7 @@ use fuchsia_zircon as zx;
 use futures::{channel::oneshot, lock::Mutex, prelude::*};
 use log::*;
 use std::sync::Arc;
-use test_utils_lib::{events::*, test_utils::OpaqueTestBuilder};
+use test_utils_lib::{events::*, opaque_test::OpaqueTestBuilder};
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
     pseudo_directory,

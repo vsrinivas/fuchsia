@@ -17,7 +17,7 @@ rustc_test("base_resolver_test_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:anyhow",
   ]
 

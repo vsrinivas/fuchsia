@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    test_utils_lib::{events::*, test_utils::*},
+    test_utils_lib::{events::*, opaque_test::*},
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 

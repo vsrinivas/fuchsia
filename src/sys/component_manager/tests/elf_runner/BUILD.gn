@@ -20,7 +20,7 @@ rustc_test("elf_runner_test_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

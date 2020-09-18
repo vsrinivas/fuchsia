@@ -5,7 +5,7 @@
 use {
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::*,
-    test_utils_lib::{events::*, test_utils::*},
+    test_utils_lib::{events::*, opaque_test::*},
 };
 
 #[fasync::run_singlethreaded(test)]

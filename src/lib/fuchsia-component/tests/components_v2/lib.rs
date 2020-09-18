@@ -8,7 +8,7 @@ use {
     log::*,
     test_utils_lib::{
         events::{EventMatcher, Ordering, Stopped},
-        test_utils::OpaqueTest,
+        opaque_test::OpaqueTest,
     },
 };
 

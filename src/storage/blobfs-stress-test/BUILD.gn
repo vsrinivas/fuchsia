@@ -17,7 +17,7 @@ rustc_library("blobfs-stress-test-lib") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",

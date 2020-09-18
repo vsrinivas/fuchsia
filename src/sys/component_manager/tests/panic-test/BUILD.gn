@@ -1,0 +1,33 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("component_manager_panic_test_bin") {
+  name = "component_manager_panic_test"
+  edition = "2018"
+  source_root = "component_manager_panic.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
+  ]
+
+  sources = [ "component_manager_panic.rs" ]
+}
+
+test_package("component_manager_panic_test") {
+  deps = [ ":component_manager_panic_test_bin" ]
+
+  tests = [
+    {
+      name = "component_manager_panic_test"
+    },
+  ]
+}

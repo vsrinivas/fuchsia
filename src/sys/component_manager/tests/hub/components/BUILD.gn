@@ -46,7 +46,7 @@ rustc_binary("dynamic_child_reporter_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

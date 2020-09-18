@@ -26,7 +26,7 @@ rustc_test("lifecycle") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:regex",
   ]
@@ -78,7 +78,7 @@ rustc_test("component_exit") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -103,7 +103,7 @@ rustc_test("lifecycle_timeout") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:regex",
   ]
@@ -125,7 +125,7 @@ rustc_test("lifecycle_timeout_unresponsive") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:regex",
   ]

@@ -24,7 +24,7 @@ rustc_test("rights_integration_test_bin") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/scoped_task",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
   ]

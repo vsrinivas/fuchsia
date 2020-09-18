@@ -7,7 +7,7 @@ use {
     log::info,
     test_utils_lib::{
         events::{Event, EventMatcher, Handler, Started},
-        test_utils::OpaqueTest,
+        opaque_test::OpaqueTest,
     },
 };
 

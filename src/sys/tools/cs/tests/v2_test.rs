@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {cs::v2::V2Component, test_utils_lib::events::*, test_utils_lib::test_utils::*};
+use {cs::v2::V2Component, test_utils_lib::events::*, test_utils_lib::opaque_test::*};
 
 async fn launch_cs(hub_v2_path: String) -> Vec<String> {
     // Combine the tree and detailed output for comparison purposes.

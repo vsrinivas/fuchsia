@@ -11,7 +11,7 @@ use {
     hub_report_capability::*,
     io_util::*,
     std::{path::PathBuf, sync::Arc},
-    test_utils_lib::{events::*, test_utils::*},
+    test_utils_lib::{events::*, opaque_test::*},
 };
 
 pub struct TestRunner {

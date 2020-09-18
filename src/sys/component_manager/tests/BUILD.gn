@@ -3,16 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
 
   deps = [
-    ":component_manager_panic_test",
-    ":shutdown_integration_test",
     "base_resolver_test",
     "collections:collections_integration_test",
     "component-time:tests",
@@ -20,49 +15,14 @@ group("tests") {
     "elf_runner:tests",
     "events:events_integration_test",
     "hub:hub_integration_test",
+    "panic-test:component_manager_panic_test",
     "rights:tests",
     "routing:tests",
     "security_policy:tests",
+    "shutdown:shutdown_integration_test",
     "storage:storage_integration_test",
     "utc-time:tests",
     "work_scheduler:work_scheduler_integration_test",
-  ]
-}
-
-rustc_library("test_utils_lib") {
-  name = "test_utils_lib"
-  edition = "2018"
-  source_root = "lib.rs"
-  deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/lib/rust/files_async",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//src/sys/component_manager/tests/fidl:echofactory-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:paste",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [
-    "echo_capability.rs",
-    "echo_factory_capability.rs",
-    "events.rs",
-    "lib.rs",
-    "test_utils.rs",
-    "trigger_capability.rs",
   ]
 }
 
@@ -75,102 +35,11 @@ rustc_binary("trigger_bin") {
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 
   sources = [ "trigger.rs" ]
-}
-
-rustc_test("shutdown_integration_test_bin") {
-  name = "shutdown_integration_test"
-  edition = "2018"
-  source_root = "shutdown_integration.rs"
-  deps = [
-    ":test_utils_lib",
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
-  ]
-
-  # TODO(46841): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  sources = [ "shutdown_integration.rs" ]
-}
-
-rustc_binary("system_controller_client") {
-  name = "system_controller_client"
-  edition = "2018"
-  source_root = "system_controller_client.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//third_party/rust_crates:anyhow",
-  ]
-
-  # TODO(46841): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  sources = [ "system_controller_client.rs" ]
-}
-
-rustc_test("component_manager_panic_test_bin") {
-  name = "component_manager_panic_test"
-  edition = "2018"
-  source_root = "component_manager_panic.rs"
-  deps = [
-    ":test_utils_lib",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
-  ]
-
-  sources = [ "component_manager_panic.rs" ]
-}
-
-test_package("shutdown_integration_test") {
-  deps = [
-    ":shutdown_integration_test_bin",
-    ":system_controller_client",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/shutdown_integration_root.cml")
-      dest = "shutdown_integration_root.cm"
-    },
-    {
-      path = rebase_path("meta/system_controller_consumer.cml")
-      dest = "system_controller_consumer.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "system_controller_client"
-    },
-  ]
-
-  tests = [
-    {
-      name = "shutdown_integration_test"
-    },
-  ]
-}
-
-test_package("component_manager_panic_test") {
-  deps = [ ":component_manager_panic_test_bin" ]
-
-  tests = [
-    {
-      name = "component_manager_panic_test"
-    },
-  ]
 }

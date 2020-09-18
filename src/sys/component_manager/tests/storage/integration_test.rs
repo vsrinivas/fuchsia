@@ -11,7 +11,7 @@ use {
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::{path::PathBuf, sync::Arc, sync::Mutex},
-    test_utils_lib::{events::*, test_utils::*},
+    test_utils_lib::{events::*, opaque_test::*},
 };
 
 lazy_static! {

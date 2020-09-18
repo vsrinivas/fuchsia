@@ -10,7 +10,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     scoped_task,
     std::ffi::CString,
-    test_utils_lib::test_utils::OpaqueTestBuilder,
+    test_utils_lib::opaque_test::OpaqueTestBuilder,
 };
 
 const COMPONENT_MANAGER_URL: &str =

@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_component,
     test_utils_lib::{
         events::*,
-        test_utils::{OpaqueTest, OpaqueTestBuilder},
+        opaque_test::{OpaqueTest, OpaqueTestBuilder},
     },
 };
 

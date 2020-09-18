@@ -5,5 +5,5 @@
 pub mod echo_capability;
 pub mod echo_factory_capability;
 pub mod events;
-pub mod test_utils;
+pub mod opaque_test;
 pub mod trigger_capability;

@@ -16,7 +16,7 @@ rustc_library("work_scheduler_dispatch_reporter") {
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager:lib",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
@@ -38,7 +38,7 @@ rustc_test("work_scheduler_integration_test_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager:lib",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
   ]
 

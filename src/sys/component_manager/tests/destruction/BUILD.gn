@@ -13,7 +13,7 @@ rustc_test("destruction_integration_test_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:anyhow",
   ]
 

@@ -4,7 +4,7 @@
 
 use {
     fuchsia_async as fasync,
-    test_utils_lib::{echo_capability::EchoCapability, test_utils::*},
+    test_utils_lib::{echo_capability::EchoCapability, opaque_test::*},
 };
 
 #[fasync::run_singlethreaded(test)]

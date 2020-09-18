@@ -6,7 +6,7 @@ use {
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     std::cmp::min,
-    test_utils_lib::{events::*, test_utils::*},
+    test_utils_lib::{events::*, opaque_test::*},
 };
 
 /// Drains the required number of events, sorts them and compares them
