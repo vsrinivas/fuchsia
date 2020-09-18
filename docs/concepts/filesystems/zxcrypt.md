@@ -12,6 +12,7 @@ interact with normally.
 zxcrypt contains both a [driver](/src/devices/block/drivers/zxcrypt) and [library](/src/security/zxcrypt)
 Provided by libzxcrypt.so are four functions for managing zxcrypt devices.  Each takes one or more
 `zxcrypt_key_t` keys, which associates the key data, length, and slot in the case of multiple keys.
+
 * The __zxcrypt_format__ function takes an open block device, and writes the necessary encrypted
   metadata to make it a zxcrypt device.  The zxcrypt key provided does not protect the data on the
   device directly, but is used to protect the data key material.
