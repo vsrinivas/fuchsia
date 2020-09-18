@@ -1,0 +1,15 @@
+{
+    program: {
+        binary: "bin/child_for_stress_test",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/test.componentmanager.stresstests.Lifecycle",
+            from: "self",
+        },
+    ],
+}

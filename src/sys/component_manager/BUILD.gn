@@ -325,6 +325,7 @@ group("tests") {
     ":component-manager",
     ":component-manager-tests",
     "src/elf_runner/tests",
+    "stress_tests",
     "tests",
   ]
 }

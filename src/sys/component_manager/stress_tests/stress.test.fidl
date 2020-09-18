@@ -1,0 +1,15 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.componentmanager.stresstests;
+
+/// The way for parent to conrtol lifecycle of its child in a stress test.
+[Discoverable]
+protocol Lifecycle {
+    /// Component will gracefully exit.
+    Stop();
+
+    /// Fired when the server is connected
+    -> OnConnected();
+};
