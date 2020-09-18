@@ -38,7 +38,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
@@ -56,6 +55,7 @@ rustc_binary("bin") {
   test_deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//third_party/rust_crates:matches",
   ]
 }
 
