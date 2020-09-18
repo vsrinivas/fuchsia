@@ -39,41 +39,30 @@ constexpr size_t kScratchBufferSize = 4 * kBlobfsBlockSize;
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
                        NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
                        ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
-                       fzl::OwnedVmoMapper scratch_vmo, storage::OwnedVmoid scratch_vmoid)
+                       fzl::OwnedVmoMapper scratch_vmo)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       node_finder_(node_finder),
       pager_(pager),
       metrics_(metrics),
       zstd_seekable_blob_collection_(zstd_seekable_blob_collection),
-      scratch_vmo_(std::move(scratch_vmo)),
-      scratch_vmoid_(std::move(scratch_vmoid)) {}
+      scratch_vmo_(std::move(scratch_vmo)) {}
 
 zx::status<BlobLoader> BlobLoader::Create(
     TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
     NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
     ZSTDSeekableBlobCollection* zstd_seekable_blob_collection) {
   fzl::OwnedVmoMapper scratch_vmo;
-  storage::OwnedVmoid scratch_vmoid(txn_manager);
   zx_status_t status = scratch_vmo.CreateAndMap(kScratchBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to map scratch vmo: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
-  status = scratch_vmoid.AttachVmo(scratch_vmo.vmo());
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach scratch vmo: %s\n", zx_status_get_string(status));
-    return zx::error(status);
-  }
   return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, pager, metrics,
-                           zstd_seekable_blob_collection, std::move(scratch_vmo),
-                           std::move(scratch_vmoid)));
+                           zstd_seekable_blob_collection, std::move(scratch_vmo)));
 }
 
-void BlobLoader::Reset() {
-  scratch_vmoid_.Reset();
-  scratch_vmo_.Reset();
-}
+void BlobLoader::Reset() { scratch_vmo_.Reset(); }
 
 zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
                                  const BlobCorruptionNotifier* corruption_notifier,
@@ -216,12 +205,12 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
 
 zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& inode,
                                            const BlobCorruptionNotifier* notifier,
-                                           fzl::OwnedVmoMapper* out_vmo,
-                                           std::unique_ptr<BlobVerifier>* out_verifier) {
+                                           fzl::OwnedVmoMapper* vmo_out,
+                                           std::unique_ptr<BlobVerifier>* verifier_out) {
   uint64_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   if (num_merkle_blocks == 0) {
     return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash), metrics_,
-                                           inode.blob_size, notifier, out_verifier);
+                                           inode.blob_size, notifier, verifier_out);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -253,8 +242,8 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
     return status;
   }
 
-  *out_vmo = std::move(merkle_mapper);
-  *out_verifier = std::move(verifier);
+  *vmo_out = std::move(merkle_mapper);
+  *verifier_out = std::move(verifier);
   return ZX_OK;
 }
 
@@ -295,7 +284,6 @@ zx_status_t BlobLoader::InitForDecompression(
   // the decompressor. Read these from disk.
 
   zx_status_t status;
-  fs::ReadTxn txn(txn_manager_);
 
   uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   // We don't know exactly how long the header is, so fill up as much of the scratch VMO as we can.
@@ -308,26 +296,10 @@ zx_status_t BlobLoader::InitForDecompression(
     return ZX_ERR_BAD_STATE;
   }
 
-  const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
-  BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
-  // Skip the first |merkle_blocks| which contain the merkle tree.
-  if ((status = IterateToBlock(&block_iter, merkle_blocks)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to seek past merkle blocks: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  // Prepare |txn| to read the first |num_data_blocks| blocks of data.
-  status = StreamBlocks(&block_iter, num_data_blocks,
-                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(scratch_vmoid_.get(), vmo_offset - merkle_blocks,
-                                      kDataStart + dev_offset, length);
-                          return ZX_OK;
-                        });
-  if (status != ZX_OK) {
-    return status;
-  }
-  if ((status = txn.Transact()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to flush data read transaction: %d\n", status);
-    return status;
+  auto bytes_read = LoadBlocks(node_index, merkle_blocks, num_data_blocks, scratch_vmo_);
+  if (bytes_read.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to load compression header: %s\n", bytes_read.status_string());
+    return bytes_read.error_value();
   }
 
   if ((status = SeekableChunkedDecompressor::CreateDecompressor(
@@ -342,38 +314,15 @@ zx_status_t BlobLoader::InitForDecompression(
 
 zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
                                    const fzl::OwnedVmoMapper& vmo) const {
-  storage::OwnedVmoid vmoid(txn_manager_);
-  zx_status_t status;
-  if ((status = vmoid.AttachVmo(vmo.vmo())) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach VMO to block device; error: %s\n",
-                   zx_status_get_string(status));
-    return status;
-  }
-
-  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
-  uint64_t merkle_size = static_cast<uint64_t>(merkle_blocks) * kBlobfsBlockSize;
-
-  TRACE_DURATION("blobfs", "BlobLoader::LoadMerkle", "merkle_size", merkle_size);
+  const uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   fs::Ticker ticker(metrics_->Collecting());
-  fs::ReadTxn txn(txn_manager_);
-
-  const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
-  BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
-  status = StreamBlocks(&block_iter, merkle_blocks,
-                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid.get(), vmo_offset, kDataStart + dev_offset, length);
-                          return ZX_OK;
-                        });
-  if (status != ZX_OK) {
-    return status;
+  auto bytes_read = LoadBlocks(node_index, /*block_offset=*/0, num_merkle_blocks, vmo);
+  if (bytes_read.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to load Merkle tree: %s\n", bytes_read.status_string());
+    return bytes_read.error_value();
   }
 
-  if ((status = txn.Transact()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to flush merkle read transaction: %d\n", status);
-    return status;
-  }
-
-  metrics_->IncrementMerkleDiskRead(merkle_size, ticker.End());
+  metrics_->IncrementMerkleDiskRead(bytes_read.value(), ticker.End());
   return ZX_OK;
 }
 
@@ -381,14 +330,15 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
                                  const fzl::OwnedVmoMapper& vmo) const {
   TRACE_DURATION("blobfs", "BlobLoader::LoadData");
 
-  zx_status_t status;
-  fs::Duration read_duration;
-  uint64_t bytes_read;
-  if ((status = LoadDataInternal(node_index, inode, vmo, &read_duration, &bytes_read)) != ZX_OK) {
-    return status;
+  const uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
+  const uint32_t num_data_blocks = inode.block_count - num_merkle_blocks;
+  fs::Ticker ticker(metrics_->Collecting());
+  auto bytes_read = LoadBlocks(node_index, num_merkle_blocks, num_data_blocks, vmo);
+  if (bytes_read.is_error()) {
+    return bytes_read.error_value();
   }
-  metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED, bytes_read,
-                                                     read_duration);
+  metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
+                                                     bytes_read.value(), ticker.End());
   return ZX_OK;
 }
 
@@ -423,13 +373,13 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
     return status;
   }
 
-  fs::Duration read_duration;
-  uint64_t bytes_read;
-  if ((status = LoadDataInternal(node_index, inode, compressed_mapper, &read_duration,
-                                 &bytes_read)) != ZX_OK) {
-    return status;
+  fs::Ticker read_ticker(metrics_->Collecting());
+  auto bytes_read = LoadBlocks(node_index, num_merkle_blocks, num_data_blocks, compressed_mapper);
+  if (bytes_read.is_error()) {
+    return bytes_read.error_value();
   }
-  metrics_->unpaged_read_metrics().IncrementDiskRead(algorithm, bytes_read, read_duration);
+  metrics_->unpaged_read_metrics().IncrementDiskRead(algorithm, bytes_read.value(),
+                                                     read_ticker.End());
 
   fs::Ticker ticker(metrics_->Collecting());
 
@@ -458,11 +408,10 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
   return ZX_OK;
 }
 
-zx_status_t BlobLoader::LoadDataInternal(uint32_t node_index, const Inode& inode,
-                                         const fzl::OwnedVmoMapper& vmo, fs::Duration* out_duration,
-                                         uint64_t* out_bytes_read) const {
-  TRACE_DURATION("blobfs", "BlobLoader::LoadDataInternal");
-  fs::Ticker ticker(metrics_->Collecting());
+zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_offset,
+                                            uint32_t block_count,
+                                            const fzl::OwnedVmoMapper& vmo) const {
+  TRACE_DURATION("blobfs", "BlobLoader::LoadBlocks", "block_count", block_count);
 
   zx_status_t status;
   // Attach |vmo| for transfer to the block FIFO.
@@ -470,38 +419,33 @@ zx_status_t BlobLoader::LoadDataInternal(uint32_t node_index, const Inode& inode
   if ((status = vmoid.AttachVmo(vmo.vmo())) != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   fs::ReadTxn txn(txn_manager_);
 
-  // Stream the blocks, skipping the first |merkle_blocks| which contain the merkle tree.
-  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
-  uint32_t data_blocks = inode.block_count - merkle_blocks;
   const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
   BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
-  if ((status = IterateToBlock(&block_iter, merkle_blocks)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to seek past merkle blocks: %s\n", zx_status_get_string(status));
-    return status;
+  if ((status = IterateToBlock(&block_iter, block_offset)) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to seek to starting block: %s\n", zx_status_get_string(status));
+    return zx::error(status);
   }
 
   status = StreamBlocks(
-      &block_iter, data_blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(vmoid.get(), vmo_offset - merkle_blocks, kDataStart + dev_offset, length);
+      &block_iter, block_count, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+        txn.Enqueue(vmoid.get(), vmo_offset - block_offset, kDataStart + dev_offset, length);
         return ZX_OK;
       });
   if (status != ZX_OK) {
-    return status;
+    FS_TRACE_ERROR("blobfs: Failed to stream blocks: %s\n", zx_status_get_string(status));
+    return zx::error(status);
   }
   if ((status = txn.Transact()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to flush data read transaction: %d\n", status);
-    return status;
+    FS_TRACE_ERROR("blobfs: Failed to flush read transaction: %s\n", zx_status_get_string(status));
+    return zx::error(status);
   }
 
-  *out_duration = ticker.End();
-  *out_bytes_read = data_blocks * kBlobfsBlockSize;
-
-  return ZX_OK;
+  return zx::ok(uint64_t{block_count} * kBlobfsBlockSize);
 }
 
 }  // namespace blobfs

@@ -83,7 +83,7 @@ class BlobLoader {
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
              NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
              ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
-             fzl::OwnedVmoMapper scratch_vmo, storage::OwnedVmoid scratch_vmoid);
+             fzl::OwnedVmoMapper scratch_vmo);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
@@ -107,10 +107,10 @@ class BlobLoader {
   zx_status_t LoadAndDecompressData(uint32_t node_index, const Inode& inode,
                                     const fzl::OwnedVmoMapper& vmo) const;
 
-  // The out duration will only be valid when Cobalt metrics are enabled. Otherwise it will be 0.
-  zx_status_t LoadDataInternal(uint32_t node_index, const Inode& inode,
-                               const fzl::OwnedVmoMapper& vmo, fs::Duration* out_duration,
-                               uint64_t* out_bytes_read) const;
+  // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
+  // into |vmo|.
+  zx::status<uint64_t> LoadBlocks(uint32_t node_index, uint32_t block_offset, uint32_t block_count,
+                                  const fzl::OwnedVmoMapper& vmo) const;
 
   TransactionManager* txn_manager_ = nullptr;
   BlockIteratorProvider* block_iter_provider_ = nullptr;
@@ -119,7 +119,6 @@ class BlobLoader {
   BlobfsMetrics* metrics_ = nullptr;
   ZSTDSeekableBlobCollection* zstd_seekable_blob_collection_ = nullptr;
   fzl::OwnedVmoMapper scratch_vmo_;
-  storage::OwnedVmoid scratch_vmoid_;
 };
 
 }  // namespace blobfs
