@@ -348,8 +348,11 @@ class TestSwapchain {
 
     for (int i = 0; i < num_swapchains; ++i) {
       VkSwapchainKHR swapchain;
-      EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, format, usage, &swapchain));
-      destroy_swapchain_khr_(vk_device_, swapchain, nullptr);
+      VkResult result = CreateSwapchainHelper(surface, format, usage, &swapchain);
+      EXPECT_EQ(VK_SUCCESS, result);
+      if (VK_SUCCESS == result) {
+        destroy_swapchain_khr_(vk_device_, swapchain, nullptr);
+      }
     }
 
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
