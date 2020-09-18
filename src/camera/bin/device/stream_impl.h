@@ -136,7 +136,7 @@ class StreamImpl {
         resolution_;
     camera::HangingGetHelper<std::unique_ptr<fuchsia::math::RectF>> crop_region_;
     GetNextFrameCallback frame_callback_;
-    bool participant_;
+    bool participant_ = false;
   };
 
   async::Loop loop_;
