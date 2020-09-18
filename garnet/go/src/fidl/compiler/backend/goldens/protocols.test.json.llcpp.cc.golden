@@ -64,6 +64,16 @@ Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
   error_ = _request.error();
 }
 
+Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x,
+                                         zx_time_t _deadline) {
+  RequestOwnedRequest _request(0, x);
+  _request.GetFidlMessage().Call(
+      RequestResponse::Type, _client, bytes_,
+      RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine, _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 Transitional::UnownedResultOf::Request::Request(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, int64_t x, uint8_t* _response_bytes,
@@ -418,6 +428,16 @@ ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
   error_ = _request.error();
 }
 
+ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
+                                            int64_t b, zx_time_t _deadline) {
+  MethodBOwnedRequest _request(0, a, b);
+  _request.GetFidlMessage().Call(
+      MethodBResponse::Type, _client, bytes_,
+      MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine, _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 ChannelProtocol::UnownedResultOf::MethodB::MethodB(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, int64_t a, int64_t b,
@@ -437,6 +457,18 @@ ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
   _request.GetFidlMessage().Call(
       MutateSocketResponse::Type, _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
+                                                      ::zx::socket& a,
+                                                      zx_time_t _deadline) {
+  MutateSocketOwnedRequest _request(0, a);
+  _request.GetFidlMessage().Call(
+      MutateSocketResponse::Type, _client, bytes_,
+      MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -916,6 +948,18 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
   error_ = _request.error();
 }
 
+WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
+    NoRequestEmptyResponse(zx_handle_t _client, zx_time_t _deadline) {
+  NoRequestEmptyResponseOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      NoRequestEmptyResponseResponse::Type, _client, bytes_,
+      NoRequestEmptyResponseResponse::PrimarySize +
+          NoRequestEmptyResponseResponse::MaxOutOfLine,
+      _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
     NoRequestWithResponse(zx_handle_t _client)
     : bytes_(std::make_unique<
@@ -923,6 +967,18 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
   NoRequestWithResponseOwnedRequest _request(0);
   _request.GetFidlMessage().Call(NoRequestWithResponseResponse::Type, _client,
                                  bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
+    NoRequestWithResponse(zx_handle_t _client, zx_time_t _deadline)
+    : bytes_(std::make_unique<
+             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+  NoRequestWithResponseOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(NoRequestWithResponseResponse::Type, _client,
+                                 bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES,
+                                 _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -969,6 +1025,19 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
   error_ = _request.error();
 }
 
+WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
+    WithRequestEmptyResponse(zx_handle_t _client, const ::fidl::StringView& arg,
+                             zx_time_t _deadline) {
+  WithRequestEmptyResponseOwnedRequest _request(0, arg);
+  _request.GetFidlMessage().Call(
+      WithRequestEmptyResponseResponse::Type, _client, bytes_,
+      WithRequestEmptyResponseResponse::PrimarySize +
+          WithRequestEmptyResponseResponse::MaxOutOfLine,
+      _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
     WithRequestEmptyResponse(zx_handle_t _client, uint8_t* _request_bytes,
                              uint32_t _request_byte_capacity,
@@ -992,6 +1061,19 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
   WithRequestWithResponseOwnedRequest _request(0, arg);
   _request.GetFidlMessage().Call(WithRequestWithResponseResponse::Type, _client,
                                  bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
+    WithRequestWithResponse(zx_handle_t _client, const ::fidl::StringView& arg,
+                            zx_time_t _deadline)
+    : bytes_(std::make_unique<
+             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+  WithRequestWithResponseOwnedRequest _request(0, arg);
+  _request.GetFidlMessage().Call(WithRequestWithResponseResponse::Type, _client,
+                                 bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES,
+                                 _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1731,6 +1813,18 @@ WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
   error_ = _request.error();
 }
 
+WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
+    zx_handle_t _client, zx_time_t _deadline) {
+  ResponseAsStructOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(ResponseAsStructResponse::Type, _client,
+                                 bytes_,
+                                 ResponseAsStructResponse::PrimarySize +
+                                     ResponseAsStructResponse::MaxOutOfLine,
+                                 _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
@@ -1753,6 +1847,18 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
   error_ = _request.error();
 }
 
+WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
+    zx_handle_t _client, zx_time_t _deadline) {
+  ErrorAsPrimitiveOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(ErrorAsPrimitiveResponse::Type, _client,
+                                 bytes_,
+                                 ErrorAsPrimitiveResponse::PrimarySize +
+                                     ErrorAsPrimitiveResponse::MaxOutOfLine,
+                                 _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
@@ -1769,6 +1875,17 @@ WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
   _request.GetFidlMessage().Call(
       ErrorAsEnumResponse::Type, _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client,
+                                                    zx_time_t _deadline) {
+  ErrorAsEnumOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      ErrorAsEnumResponse::Type, _client, bytes_,
+      ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

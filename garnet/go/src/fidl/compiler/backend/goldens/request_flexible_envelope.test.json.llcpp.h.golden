@@ -390,6 +390,9 @@ class Protocol final {
      public:
       explicit RequestStrictResponseFlexible(
           zx_handle_t _client, ::llcpp::fidl::test::json::StrictFoo& s);
+      RequestStrictResponseFlexible(zx_handle_t _client,
+                                    ::llcpp::fidl::test::json::StrictFoo& s,
+                                    zx_time_t _deadline);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       RequestStrictResponseFlexible(RequestStrictResponseFlexible&&) = delete;
@@ -435,6 +438,9 @@ class Protocol final {
      public:
       explicit RequestFlexibleResponseStrict(
           zx_handle_t _client, ::llcpp::fidl::test::json::FlexibleFoo& s);
+      RequestFlexibleResponseStrict(zx_handle_t _client,
+                                    ::llcpp::fidl::test::json::FlexibleFoo& s,
+                                    zx_time_t _deadline);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       RequestFlexibleResponseStrict(RequestFlexibleResponseStrict&&) = delete;

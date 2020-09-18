@@ -162,41 +162,17 @@ void Coordinator::ShutdownFilesystems() {
 zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_client,
                                                   zx::channel system_state_transition_client,
                                                   zx::channel devfs_handle) {
-  using RegisterRequest = power_manager_fidl::DriverManagerRegistration::RegisterRequest;
-  using RegisterResponse = power_manager_fidl::DriverManagerRegistration::RegisterResponse;
-
-  // This request is manually sent to allow timeout for the fidl::Call, until fxb/53240
-  // is resolved.
-  RegisterRequest request(0, system_state_transition_client, devfs_handle);
-  fidl::BytePart request_bytes(reinterpret_cast<uint8_t*>(&request), sizeof(request),
-                               sizeof(request));
-  fidl::DecodedMessage<RegisterRequest> msg(std::move(request_bytes));
-
-  fidl::EncodeResult<RegisterRequest> encode_result = fidl::Encode(std::move(msg));
-  if (encode_result.status != ZX_OK) {
-    LOGF(ERROR, "Failed to register with power_manager.Encoding failed:%d Encode error:%s",
-         encode_result.status, encode_result.error);
-    return encode_result.status;
+  // This request is called with a timeout until fxb/53240 is resolved.
+  power_manager_fidl::DriverManagerRegistration::ResultOf::Register result(
+      power_manager_client.get(), system_state_transition_client, devfs_handle,
+      zx::deadline_after(kPowerManagerConnectionTimeout).get());
+  if (!result.ok()) {
+    LOGF(ERROR, "Failed to register with power_manager:%d\n", result.status());
+    return result.status();
   }
 
-  fidl::Buffer<RegisterResponse> response_buffer;
-  auto result = fidl::Call<RegisterRequest, RegisterResponse>(
-      power_manager_client, std::move(encode_result.message), response_buffer.view(),
-      zx::deadline_after(kPowerManagerConnectionTimeout));
-  if (result.status != ZX_OK) {
-    LOGF(ERROR, "Failed to register with power_manager.Call failed:%s",
-         zx_status_get_string(result.status));
-    return result.status;
-  }
-
-  auto decode_result = fidl::Decode(std::move(result.message));
-  if (decode_result.status != ZX_OK) {
-    LOGF(ERROR, "Failed to register with power_manager.Decode failed:%d\n", decode_result.status);
-    return decode_result.status;
-  }
-
-  if (decode_result.message.message()->result.is_err()) {
-    power_manager_fidl::RegistrationError err = decode_result.message.message()->result.err();
+  if (result.Unwrap()->result.is_err()) {
+    power_manager_fidl::RegistrationError err = result.Unwrap()->result.err();
     if (err == power_manager_fidl::RegistrationError::INVALID_HANDLE) {
       LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
       return ZX_ERR_INVALID_ARGS;

@@ -41,6 +41,16 @@ SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
   error_ = _request.error();
 }
 
+SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b,
+                                   zx_time_t _deadline) {
+  AddOwnedRequest _request(0, a, b);
+  _request.GetFidlMessage().Call(
+      AddResponse::Type, _client, bytes_,
+      AddResponse::PrimarySize + AddResponse::MaxOutOfLine, _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
                                           uint8_t* _request_bytes,
                                           uint32_t _request_byte_capacity,

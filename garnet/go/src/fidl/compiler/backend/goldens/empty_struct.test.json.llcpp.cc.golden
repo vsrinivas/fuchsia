@@ -57,6 +57,18 @@ EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
   error_ = _request.error();
 }
 
+EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
+    zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e,
+    zx_time_t _deadline) {
+  SendAndReceiveOwnedRequest _request(0, e);
+  _request.GetFidlMessage().Call(SendAndReceiveResponse::Type, _client, bytes_,
+                                 SendAndReceiveResponse::PrimarySize +
+                                     SendAndReceiveResponse::MaxOutOfLine,
+                                 _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, ::llcpp::fidl::test::json::Empty& e,

@@ -201,6 +201,8 @@ class EmptyProtocol final {
      public:
       explicit SendAndReceive(zx_handle_t _client,
                               ::llcpp::fidl::test::json::Empty& e);
+      SendAndReceive(zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e,
+                     zx_time_t _deadline);
       explicit SendAndReceive(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       SendAndReceive(SendAndReceive&&) = delete;

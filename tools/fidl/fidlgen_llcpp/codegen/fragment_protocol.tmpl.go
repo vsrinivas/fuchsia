@@ -275,6 +275,10 @@ class {{ .Name }} final {
     class {{ .Name }} final : public ::fidl::Result {
      public:
       explicit {{ .Name }}(zx_handle_t _client {{- template "CommaMessagePrototype" .Request }});
+    {{- if .HasResponse }}
+      {{ .Name }}(zx_handle_t _client {{- template "CommaMessagePrototype" .Request }},
+                           zx_time_t _deadline);
+    {{- end }}
       explicit {{ .Name }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
       {{ .Name }}({{ .Name }}&&) = delete;
       {{ .Name }}(const {{ .Name }}&) = delete;

@@ -38,6 +38,16 @@ Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
   error_ = _request.error();
 }
 
+Parent::ResultOf::GetChild::GetChild(zx_handle_t _client, zx_time_t _deadline) {
+  GetChildOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      GetChildResponse::Type, _client, bytes_,
+      GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine,
+      _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 Parent::UnownedResultOf::GetChild::GetChild(zx_handle_t _client,
                                             uint8_t* _response_bytes,
                                             uint32_t _response_byte_capacity)
@@ -54,6 +64,17 @@ Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
   _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client, bytes_,
                                  GetChildRequestResponse::PrimarySize +
                                      GetChildRequestResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client,
+                                                   zx_time_t _deadline) {
+  GetChildRequestOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client, bytes_,
+                                 GetChildRequestResponse::PrimarySize +
+                                     GetChildRequestResponse::MaxOutOfLine,
+                                 _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

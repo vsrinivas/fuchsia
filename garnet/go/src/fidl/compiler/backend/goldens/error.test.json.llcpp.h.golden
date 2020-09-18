@@ -240,6 +240,8 @@ class Example final {
     class foo final : public ::fidl::Result {
      public:
       explicit foo(zx_handle_t _client, const ::fidl::StringView& s);
+      foo(zx_handle_t _client, const ::fidl::StringView& s,
+          zx_time_t _deadline);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
       foo(const foo&) = delete;

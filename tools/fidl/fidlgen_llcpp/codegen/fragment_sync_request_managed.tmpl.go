@@ -44,5 +44,23 @@ const fragmentSyncRequestManagedTmpl = `
   status_ = _request.status();
   error_ = _request.error();
 }
+  {{- if .HasResponse }}
+
+{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
+  zx_handle_t _client {{- template "CommaMessagePrototype" .Request }}, zx_time_t _deadline)
+    {{- if gt .ResponseReceivedMaxSize 512 -}}
+  : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
+    {{- end }}
+   {
+  {{ .Name }}OwnedRequest _request(0
+    {{- template "CommaPassthroughMessageParams" .Request -}});
+  _request.GetFidlMessage().Call({{ .Name }}Response::Type, _client,
+                                 {{- template "ResponseReceivedByteAccess" . }},
+                                 {{ template "ResponseReceivedSize" . }},
+                                 _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+  {{- end }}
 {{- end }}
 `

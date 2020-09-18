@@ -209,6 +209,7 @@ class Parent final {
     class GetChild final : public ::fidl::Result {
      public:
       explicit GetChild(zx_handle_t _client);
+      GetChild(zx_handle_t _client, zx_time_t _deadline);
       explicit GetChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       GetChild(GetChild&&) = delete;
@@ -247,6 +248,7 @@ class Parent final {
     class GetChildRequest final : public ::fidl::Result {
      public:
       explicit GetChildRequest(zx_handle_t _client);
+      GetChildRequest(zx_handle_t _client, zx_time_t _deadline);
       explicit GetChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       GetChildRequest(GetChildRequest&&) = delete;

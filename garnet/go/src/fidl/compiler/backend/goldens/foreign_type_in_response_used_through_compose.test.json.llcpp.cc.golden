@@ -24,6 +24,15 @@ Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
   error_ = _request.error();
 }
 
+Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client, zx_time_t _deadline) {
+  GetFooOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      GetFooResponse::Type, _client, bytes_,
+      GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine, _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
                                      uint8_t* _response_bytes,
                                      uint32_t _response_byte_capacity)

@@ -328,6 +328,7 @@ class SimpleProtocol final {
     class Add final : public ::fidl::Result {
      public:
       explicit Add(zx_handle_t _client, int32_t a, int32_t b);
+      Add(zx_handle_t _client, int32_t a, int32_t b, zx_time_t _deadline);
       explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Add(Add&&) = delete;
       Add(const Add&) = delete;

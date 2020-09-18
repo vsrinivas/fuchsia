@@ -2538,6 +2538,8 @@ class TestProtocol final {
      public:
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
           zx_handle_t _client);
+      StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client,
+                                                   zx_time_t _deadline);
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
           const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -2599,6 +2601,8 @@ class TestProtocol final {
      public:
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
           zx_handle_t _client);
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(zx_handle_t _client,
+                                                     zx_time_t _deadline);
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
           const ::fidl::Result& result)
           : ::fidl::Result(result) {}

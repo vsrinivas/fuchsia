@@ -181,6 +181,20 @@ TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
   error_ = _request.error();
 }
 
+TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
+    StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client,
+                                                 zx_time_t _deadline) {
+  StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
+      bytes_,
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse::MaxOutOfLine,
+      _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(
         zx_handle_t _client, uint8_t* _response_bytes,
@@ -202,6 +216,19 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
   _request.GetFidlMessage().Call(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
       bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
+    FlexibleXUnionHenceResponseMustBeHeapAllocated(zx_handle_t _client,
+                                                   zx_time_t _deadline)
+    : bytes_(std::make_unique<
+             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
+      bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

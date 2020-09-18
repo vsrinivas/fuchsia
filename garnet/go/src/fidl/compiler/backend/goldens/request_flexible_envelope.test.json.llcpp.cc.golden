@@ -68,6 +68,20 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
   error_ = _request.error();
 }
 
+Protocol::ResultOf::RequestStrictResponseFlexible::
+    RequestStrictResponseFlexible(zx_handle_t _client,
+                                  ::llcpp::fidl::test::json::StrictFoo& s,
+                                  zx_time_t _deadline)
+    : bytes_(std::make_unique<
+             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+  RequestStrictResponseFlexibleOwnedRequest _request(0, s);
+  _request.GetFidlMessage().Call(RequestStrictResponseFlexibleResponse::Type,
+                                 _client, bytes_->data(),
+                                 ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
 Protocol::UnownedResultOf::RequestStrictResponseFlexible::
     RequestStrictResponseFlexible(zx_handle_t _client, uint8_t* _request_bytes,
                                   uint32_t _request_byte_capacity,
@@ -93,6 +107,20 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
   _request.GetFidlMessage().Call(RequestFlexibleResponseStrictResponse::Type,
                                  _client, bytes_->data(),
                                  ZX_CHANNEL_MAX_MSG_BYTES);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+Protocol::ResultOf::RequestFlexibleResponseStrict::
+    RequestFlexibleResponseStrict(zx_handle_t _client,
+                                  ::llcpp::fidl::test::json::FlexibleFoo& s,
+                                  zx_time_t _deadline)
+    : bytes_(std::make_unique<
+             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+  RequestFlexibleResponseStrictOwnedRequest _request(0, s);
+  _request.GetFidlMessage().Call(RequestFlexibleResponseStrictResponse::Type,
+                                 _client, bytes_->data(),
+                                 ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

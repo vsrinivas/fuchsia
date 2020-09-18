@@ -617,6 +617,7 @@ class Transitional final {
     class Request final : public ::fidl::Result {
      public:
       explicit Request(zx_handle_t _client, int64_t x);
+      Request(zx_handle_t _client, int64_t x, zx_time_t _deadline);
       explicit Request(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Request(Request&&) = delete;
       Request(const Request&) = delete;
@@ -1299,6 +1300,7 @@ class ChannelProtocol final {
     class MethodB final : public ::fidl::Result {
      public:
       explicit MethodB(zx_handle_t _client, int64_t a, int64_t b);
+      MethodB(zx_handle_t _client, int64_t a, int64_t b, zx_time_t _deadline);
       explicit MethodB(const ::fidl::Result& result) : ::fidl::Result(result) {}
       MethodB(MethodB&&) = delete;
       MethodB(const MethodB&) = delete;
@@ -1332,6 +1334,7 @@ class ChannelProtocol final {
     class MutateSocket final : public ::fidl::Result {
      public:
       explicit MutateSocket(zx_handle_t _client, ::zx::socket& a);
+      MutateSocket(zx_handle_t _client, ::zx::socket& a, zx_time_t _deadline);
       explicit MutateSocket(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       MutateSocket(MutateSocket&&) = delete;
@@ -2390,6 +2393,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestEmptyResponse final : public ::fidl::Result {
      public:
       explicit NoRequestEmptyResponse(zx_handle_t _client);
+      NoRequestEmptyResponse(zx_handle_t _client, zx_time_t _deadline);
       explicit NoRequestEmptyResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestEmptyResponse(NoRequestEmptyResponse&&) = delete;
@@ -2428,6 +2432,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestWithResponse final : public ::fidl::Result {
      public:
       explicit NoRequestWithResponse(zx_handle_t _client);
+      NoRequestWithResponse(zx_handle_t _client, zx_time_t _deadline);
       explicit NoRequestWithResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestWithResponse(NoRequestWithResponse&&) = delete;
@@ -2479,6 +2484,9 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit WithRequestEmptyResponse(zx_handle_t _client,
                                         const ::fidl::StringView& arg);
+      WithRequestEmptyResponse(zx_handle_t _client,
+                               const ::fidl::StringView& arg,
+                               zx_time_t _deadline);
       explicit WithRequestEmptyResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestEmptyResponse(WithRequestEmptyResponse&&) = delete;
@@ -2522,6 +2530,9 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit WithRequestWithResponse(zx_handle_t _client,
                                        const ::fidl::StringView& arg);
+      WithRequestWithResponse(zx_handle_t _client,
+                              const ::fidl::StringView& arg,
+                              zx_time_t _deadline);
       explicit WithRequestWithResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestWithResponse(WithRequestWithResponse&&) = delete;
@@ -3953,6 +3964,7 @@ class WithErrorSyntax final {
     class ResponseAsStruct final : public ::fidl::Result {
      public:
       explicit ResponseAsStruct(zx_handle_t _client);
+      ResponseAsStruct(zx_handle_t _client, zx_time_t _deadline);
       explicit ResponseAsStruct(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ResponseAsStruct(ResponseAsStruct&&) = delete;
@@ -3987,6 +3999,7 @@ class WithErrorSyntax final {
     class ErrorAsPrimitive final : public ::fidl::Result {
      public:
       explicit ErrorAsPrimitive(zx_handle_t _client);
+      ErrorAsPrimitive(zx_handle_t _client, zx_time_t _deadline);
       explicit ErrorAsPrimitive(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ErrorAsPrimitive(ErrorAsPrimitive&&) = delete;
@@ -4021,6 +4034,7 @@ class WithErrorSyntax final {
     class ErrorAsEnum final : public ::fidl::Result {
      public:
       explicit ErrorAsEnum(zx_handle_t _client);
+      ErrorAsEnum(zx_handle_t _client, zx_time_t _deadline);
       explicit ErrorAsEnum(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ErrorAsEnum(ErrorAsEnum&&) = delete;
