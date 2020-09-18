@@ -24,7 +24,10 @@ pub use self::{
     remote_port_negotiation::RemotePortNegotiationParams, test_command::TestCommandParams,
 };
 use crate::pub_decodable_enum;
-use crate::rfcomm::{frame::FrameParseError, types::CommandResponse};
+use crate::rfcomm::{
+    frame::{Decodable, Encodable, FrameParseError},
+    types::CommandResponse,
+};
 
 pub_decodable_enum! {
     /// The supported Multiplexer Commands in RFCOMM. These commands are sent/received
@@ -40,22 +43,6 @@ pub_decodable_enum! {
         RemotePortNegotiation => 0b100100,
         RemoteLineStatus => 0b010100,
     }
-}
-
-/// A decodable type can be created from a byte buffer.
-/// The type returned is separate (copied) from the buffer once decoded.
-pub(crate) trait Decodable: Sized {
-    /// Decodes into a new object, or returns an error.
-    fn decode(buf: &[u8]) -> Result<Self, FrameParseError>;
-}
-
-/// A encodable type can write itself into a byte buffer.
-pub(crate) trait Encodable: Sized {
-    /// Returns the number of bytes necessary to encode |self|
-    fn encoded_len(&self) -> usize;
-    /// Writes the encoded version of |self| at the start of |buf|
-    /// |buf| must be at least size() length.
-    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError>;
 }
 
 /// The minimum size (in bytes) of a MuxCommand. 1 Byte for the Type field,
@@ -214,7 +201,7 @@ fn length_to_ea_format(mut length: usize) -> Vec<u8> {
 
 /// Represents an RFCOMM multiplexer command.
 #[derive(Debug, PartialEq)]
-struct MuxCommand {
+pub struct MuxCommand {
     /// The parameters associated with this MuxCommand - see RFCOMM 4.3 for the supported commands.
     pub params: MuxCommandParams,
 

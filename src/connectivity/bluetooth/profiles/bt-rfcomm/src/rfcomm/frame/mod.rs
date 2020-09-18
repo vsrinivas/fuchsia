@@ -20,7 +20,10 @@ mod mux_commands;
 
 use crate::pub_decodable_enum;
 use crate::rfcomm::{
-    frame::fcs::verify_fcs,
+    frame::{
+        fcs::{calculate_fcs, verify_fcs},
+        mux_commands::MuxCommand,
+    },
     types::{CommandResponse, Role, DLCI},
 };
 
@@ -72,6 +75,22 @@ macro_rules! tofrom_decodable_enum {
     }
 }
 
+/// A decodable type can be created from a byte buffer.
+/// The type returned is separate (copied) from the buffer once decoded.
+pub(crate) trait Decodable: Sized {
+    /// Decodes into a new object, or returns an error.
+    fn decode(buf: &[u8]) -> Result<Self, FrameParseError>;
+}
+
+/// A encodable type can write itself into a byte buffer.
+pub(crate) trait Encodable: Sized {
+    /// Returns the number of bytes necessary to encode |self|
+    fn encoded_len(&self) -> usize;
+    /// Writes the encoded version of |self| at the start of |buf|
+    /// |buf| must be at least size() length.
+    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError>;
+}
+
 /// Errors associated with parsing an RFCOMM Frame.
 #[derive(Error, Debug)]
 pub enum FrameParseError {
@@ -97,7 +116,7 @@ pub_decodable_enum! {
     /// The type of frame provided in the Control field.
     /// The P/F bit is set to 0 for all frame types.
     /// See table 2, GSM 07.10 5.2.1.3 and RFCOMM 4.2.
-    FrameType<u8, Error> {
+    FrameTypeMarker<u8, Error> {
         SetAsynchronousBalancedMode => 0b00101111,
         UnnumberedAcknowledgement => 0b01100011,
         DisconnectedMode => 0b00001111,
@@ -106,26 +125,152 @@ pub_decodable_enum! {
     }
 }
 
-impl FrameType {
+impl FrameTypeMarker {
     /// Returns true if the frame type is a valid multiplexer start-up frame.
     //
     /// Valid multiplexer start-up frames are the only frames which are allowed to be
     /// sent before the multiplexer starts, and must be sent over the Mux Control Channel.
     fn is_mux_startup_frame(&self, dlci: &DLCI) -> bool {
         dlci.is_mux_control()
-            && (*self == FrameType::SetAsynchronousBalancedMode
-                || *self == FrameType::UnnumberedAcknowledgement
-                || *self == FrameType::DisconnectedMode)
+            && (*self == FrameTypeMarker::SetAsynchronousBalancedMode
+                || *self == FrameTypeMarker::UnnumberedAcknowledgement
+                || *self == FrameTypeMarker::DisconnectedMode)
     }
 
     /// Returns the number of octets needed when calculating the FCS.
     fn fcs_octets(&self) -> usize {
         // For UIH frames, the first 2 bytes of the buffer are used to calculate the FCS.
         // Otherwise, the first 3. Defined in RFCOMM 5.1.1.
-        if *self == FrameType::UnnumberedInfoHeaderCheck {
+        if *self == FrameTypeMarker::UnnumberedInfoHeaderCheck {
             2
         } else {
             3
+        }
+    }
+}
+
+/// A UIH Frame that contains user data.
+#[derive(Debug, PartialEq)]
+pub struct UserData {
+    pub information: Vec<u8>,
+}
+
+impl Decodable for UserData {
+    fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
+        Ok(Self { information: buf.to_vec() })
+    }
+}
+
+impl Encodable for UserData {
+    fn encoded_len(&self) -> usize {
+        self.information.len()
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError> {
+        if buf.len() < self.encoded_len() {
+            return Err(FrameParseError::BufferTooSmall);
+        }
+        buf.copy_from_slice(&self.information);
+        Ok(())
+    }
+}
+
+/// The data associated with a UIH Frame.
+#[derive(Debug, PartialEq)]
+pub enum UIHData {
+    /// A UIH Frame with user data.
+    User(UserData),
+    /// A UIH Frame with a Mux Command.
+    Mux(MuxCommand),
+}
+
+impl Encodable for UIHData {
+    fn encoded_len(&self) -> usize {
+        match self {
+            UIHData::User(data) => data.encoded_len(),
+            UIHData::Mux(command) => command.encoded_len(),
+        }
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError> {
+        if buf.len() < self.encoded_len() {
+            return Err(FrameParseError::BufferTooSmall);
+        }
+
+        match self {
+            UIHData::User(data) => data.encode(buf),
+            UIHData::Mux(command) => command.encode(buf),
+        }
+    }
+}
+
+/// The types of frames supported in RFCOMM.
+/// See RFCOMM 4.2 for the supported frame types.
+#[derive(Debug, PartialEq)]
+pub enum FrameData {
+    SetAsynchronousBalancedMode,
+    UnnumberedAcknowledgement,
+    DisconnectedMode,
+    Disconnect,
+    UnnumberedInfoHeaderCheck(UIHData),
+}
+
+impl FrameData {
+    fn marker(&self) -> FrameTypeMarker {
+        match self {
+            FrameData::SetAsynchronousBalancedMode => FrameTypeMarker::SetAsynchronousBalancedMode,
+            FrameData::UnnumberedAcknowledgement => FrameTypeMarker::UnnumberedAcknowledgement,
+            FrameData::DisconnectedMode => FrameTypeMarker::DisconnectedMode,
+            FrameData::Disconnect => FrameTypeMarker::Disconnect,
+            FrameData::UnnumberedInfoHeaderCheck(_) => FrameTypeMarker::UnnumberedInfoHeaderCheck,
+        }
+    }
+
+    fn decode(
+        frame_type: &FrameTypeMarker,
+        dlci: &DLCI,
+        buf: &[u8],
+    ) -> Result<Self, FrameParseError> {
+        let data = match frame_type {
+            FrameTypeMarker::SetAsynchronousBalancedMode => FrameData::SetAsynchronousBalancedMode,
+            FrameTypeMarker::UnnumberedAcknowledgement => FrameData::UnnumberedAcknowledgement,
+            FrameTypeMarker::DisconnectedMode => FrameData::DisconnectedMode,
+            FrameTypeMarker::Disconnect => FrameData::Disconnect,
+            FrameTypeMarker::UnnumberedInfoHeaderCheck => {
+                let uih_data = if dlci.is_mux_control() {
+                    UIHData::Mux(MuxCommand::decode(buf)?)
+                } else {
+                    UIHData::User(UserData::decode(buf)?)
+                };
+                FrameData::UnnumberedInfoHeaderCheck(uih_data)
+            }
+        };
+        Ok(data)
+    }
+}
+
+impl Encodable for FrameData {
+    fn encoded_len(&self) -> usize {
+        match self {
+            FrameData::SetAsynchronousBalancedMode
+            | FrameData::UnnumberedAcknowledgement
+            | FrameData::DisconnectedMode
+            | FrameData::Disconnect => 0,
+            FrameData::UnnumberedInfoHeaderCheck(data) => data.encoded_len(),
+        }
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError> {
+        if buf.len() < self.encoded_len() {
+            return Err(FrameParseError::BufferTooSmall);
+        }
+
+        match self {
+            FrameData::SetAsynchronousBalancedMode
+            | FrameData::UnnumberedAcknowledgement
+            | FrameData::DisconnectedMode
+            | FrameData::Disconnect => Ok(()),
+            FrameData::UnnumberedInfoHeaderCheck(data) => data.encode(buf),
         }
     }
 }
@@ -160,10 +305,11 @@ bitfield! {
 }
 
 impl ControlField {
-    fn frame_type(&self) -> Result<FrameType, anyhow::Error> {
+    fn frame_type(&self) -> Result<FrameTypeMarker, FrameParseError> {
         // The P/F bit is ignored when determining Frame Type. See RFCOMM 4.2 and GSM 5.2.1.3.
         const FRAME_TYPE_MASK: u8 = 0b11101111;
-        FrameType::try_from(self.frame_type_raw() & FRAME_TYPE_MASK)
+        FrameTypeMarker::try_from(self.frame_type_raw() & FRAME_TYPE_MASK)
+            .or(Err(FrameParseError::UnsupportedFrameType))
     }
 }
 
@@ -175,11 +321,27 @@ const FRAME_INFORMATION_IDX: usize = 2;
 /// See GSM 5.2.1.4.
 const INFORMATION_SECOND_OCTET_SHIFT: usize = 7;
 
+/// The maximum length that can be represented in a single E/A padded octet.
+const MAX_SINGLE_OCTET_LENGTH: usize = 127;
+
 bitfield! {
     pub struct InformationField(u8);
     impl Debug;
     pub bool, ea_bit, set_ea_bit: 0;
-    pub u8, length, set_length: 7, 1;
+    pub u8, length, set_length_inner: 7, 1;
+}
+
+impl InformationField {
+    fn set_length(&mut self, length: u8) {
+        // The length is only 7 bits wide.
+        let mask = 0b1111111;
+        self.set_length_inner(length & mask);
+    }
+}
+
+/// Returns true if the provided `length` needs to be represented as 2 octets.
+fn is_two_octet_length(length: usize) -> bool {
+    length > MAX_SINGLE_OCTET_LENGTH
 }
 
 /// The highest-level unit of data that is passed around in RFCOMM.
@@ -189,16 +351,13 @@ pub struct Frame {
     role: Role,
     /// The DLCI associated with this frame.
     dlci: DLCI,
-    /// The type of this frame. See RFCOMM 4.2 for the supported frame types.
-    frame_type: FrameType,
+    /// The data associated with this frame.
+    data: FrameData,
     /// The P/F bit for this frame. See RFCOMM 5.2.1 which describes the usages
     /// of the P/F bit in RFCOMM.
     poll_final: bool,
     /// Whether this frame is a Command or Response frame.
     command_response: CommandResponse,
-    /// The Information Length associated with this frame. This is only applicable for
-    /// UIH frames. This will be 0 for non-UIH frames.
-    length: u16,
 }
 
 impl Frame {
@@ -216,8 +375,7 @@ impl Frame {
 
         // Parse the Control Field of the frame.
         let control_field = ControlField(buf[FRAME_CONTROL_IDX]);
-        let frame_type: FrameType =
-            control_field.frame_type().or(Err(FrameParseError::UnsupportedFrameType))?;
+        let frame_type: FrameTypeMarker = control_field.frame_type()?;
         let poll_final = control_field.poll_final();
 
         // If the Session multiplexer hasn't started, then the `frame_type` must be a
@@ -250,7 +408,7 @@ impl Frame {
         let header_size = 2 + if is_two_octet_length { 2 } else { 1 };
 
         // Check the FCS before parsing the body of the packet.
-        let fcs_index: usize = (header_size + length).into();
+        let fcs_index = header_size + usize::from(length);
         if buf.len() <= fcs_index {
             return Err(FrameParseError::BufferTooSmall);
         }
@@ -259,9 +417,81 @@ impl Frame {
             return Err(FrameParseError::FCSCheckFailed);
         }
 
-        // TODO(58681): Parse user data fields of Frame if UIH.
+        let data = &buf[header_size..fcs_index];
+        let data = FrameData::decode(&frame_type, &dlci, data)?;
 
-        Ok(Self { role, dlci, frame_type, poll_final, command_response, length })
+        Ok(Self { role, dlci, data, poll_final, command_response })
+    }
+}
+
+impl Encodable for Frame {
+    fn encoded_len(&self) -> usize {
+        // Address + Control + FCS + 1 or 2 octets for Length + Frame data + FCS.
+        3 + if is_two_octet_length(self.data.encoded_len()) { 2 } else { 1 }
+            + self.data.encoded_len()
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError> {
+        if buf.len() != self.encoded_len() {
+            return Err(FrameParseError::BufferTooSmall);
+        }
+
+        // If the multiplexer has started, the C/R bit of the Address Field is set based on
+        // GSM 5.2.1.2 Table 1.
+        // Otherwise, the frame must be a Mux Startup frame, in which case the C/R bit is always
+        // set - see GSM 5.4.4.1 and 5.4.4.2.
+        let cr_bit = if self.role.is_multiplexer_started() {
+            match (&self.role, &self.command_response) {
+                (Role::Initiator, CommandResponse::Command)
+                | (Role::Responder, CommandResponse::Response) => true,
+                _ => false,
+            }
+        } else {
+            if !self.data.marker().is_mux_startup_frame(&self.dlci) {
+                return Err(FrameParseError::InvalidFrame);
+            }
+            true
+        };
+
+        // Set the Address Field, E/A = 1 since there is only one octet.
+        let mut address_field = AddressField(0);
+        address_field.set_ea_bit(true);
+        address_field.set_cr_bit(cr_bit);
+        address_field.set_dlci(u8::from(self.dlci));
+        buf[FRAME_ADDRESS_IDX] = address_field.0;
+
+        // Control Field.
+        let mut control_field = ControlField(0);
+        control_field.set_frame_type(u8::from(&self.data.marker()));
+        control_field.set_poll_final(self.poll_final);
+        buf[FRAME_CONTROL_IDX] = control_field.0;
+
+        // Information Field.
+        let data_length = self.data.encoded_len();
+        let is_two_octet_length = is_two_octet_length(data_length);
+        let mut first_octet_length = InformationField(0);
+        first_octet_length.set_length(data_length as u8);
+        first_octet_length.set_ea_bit(!is_two_octet_length);
+        buf[FRAME_INFORMATION_IDX] = first_octet_length.0;
+        // If the length is two octets, get the upper 7 bits and tag on E/A = 1.
+        if is_two_octet_length {
+            let mut second_octet_length = InformationField(0);
+            second_octet_length.set_length((data_length >> INFORMATION_SECOND_OCTET_SHIFT) as u8);
+            second_octet_length.set_ea_bit(true);
+            buf[FRAME_INFORMATION_IDX + 1] = second_octet_length.0;
+        }
+
+        // Address + Control + Information.
+        let header_size = 2 + if is_two_octet_length { 2 } else { 1 };
+        let fcs_idx = header_size + data_length as usize;
+
+        // Frame data.
+        self.data.encode(&mut buf[header_size..fcs_idx])?;
+
+        // FCS that is computed based on `frame_type`.
+        buf[fcs_idx] = calculate_fcs(&buf[..self.data.marker().fcs_octets()]);
+
+        Ok(())
     }
 }
 
@@ -269,6 +499,7 @@ impl Frame {
 mod tests {
     use super::*;
 
+    use self::mux_commands::{MuxCommandParams, RemotePortNegotiationParams};
     use crate::rfcomm::frame::fcs::calculate_fcs;
     use matches::assert_matches;
 
@@ -277,11 +508,11 @@ mod tests {
         let control_dlci = DLCI::try_from(0).unwrap();
         let user_dlci = DLCI::try_from(5).unwrap();
 
-        let frame_type = FrameType::SetAsynchronousBalancedMode;
+        let frame_type = FrameTypeMarker::SetAsynchronousBalancedMode;
         assert!(frame_type.is_mux_startup_frame(&control_dlci));
         assert!(!frame_type.is_mux_startup_frame(&user_dlci));
 
-        let frame_type = FrameType::Disconnect;
+        let frame_type = FrameTypeMarker::Disconnect;
         assert!(!frame_type.is_mux_startup_frame(&control_dlci));
         assert!(!frame_type.is_mux_startup_frame(&user_dlci));
     }
@@ -349,7 +580,7 @@ mod tests {
     #[test]
     fn test_parse_valid_frame_over_mux_dlci() {
         let role = Role::Unassigned;
-        let frame_type = FrameType::SetAsynchronousBalancedMode;
+        let frame_type = FrameTypeMarker::SetAsynchronousBalancedMode;
         let mut buf = vec![
             0b00000011, // Address Field - EA = 1, C/R = 1, DLCI = 0.
             0b00101111, // Control Field - SABM command with P/F = 0.
@@ -363,10 +594,9 @@ mod tests {
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(0).unwrap(),
-            frame_type: FrameType::SetAsynchronousBalancedMode,
+            data: FrameData::SetAsynchronousBalancedMode,
             poll_final: false,
             command_response: CommandResponse::Command,
-            length: 0,
         };
         assert_eq!(res, expected_frame);
     }
@@ -374,7 +604,7 @@ mod tests {
     #[test]
     fn test_parse_valid_frame_over_user_dlci() {
         let role = Role::Responder;
-        let frame_type = FrameType::SetAsynchronousBalancedMode;
+        let frame_type = FrameTypeMarker::SetAsynchronousBalancedMode;
         let mut buf = vec![
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b00101111, // Control Field - SABM command with P/F = 0.
@@ -388,10 +618,9 @@ mod tests {
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
-            frame_type: FrameType::SetAsynchronousBalancedMode,
+            data: FrameData::SetAsynchronousBalancedMode,
             poll_final: false,
             command_response: CommandResponse::Response,
-            length: 0,
         };
         assert_eq!(res, expected_frame);
     }
@@ -399,7 +628,7 @@ mod tests {
     #[test]
     fn test_parse_frame_with_information_length_invalid_buf_size() {
         let role = Role::Responder;
-        let frame_type = FrameType::UnnumberedInfoHeaderCheck;
+        let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
         let mut buf = vec![
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b11101111, // Control Field - UIH command with P/F = 0.
@@ -416,7 +645,7 @@ mod tests {
     #[test]
     fn test_parse_valid_frame_with_information_length() {
         let role = Role::Responder;
-        let frame_type = FrameType::UnnumberedInfoHeaderCheck;
+        let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
         let mut buf = vec![
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b11101111, // Control Field - UIH command with P/F = 0.
@@ -432,10 +661,14 @@ mod tests {
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
-            frame_type: FrameType::UnnumberedInfoHeaderCheck,
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(UserData {
+                information: vec![
+                    0b00000000, // Data octet #1.
+                    0b00000000, // Data octet #2.
+                ],
+            })),
             poll_final: false,
             command_response: CommandResponse::Response,
-            length: 2,
         };
         assert_eq!(res, expected_frame);
     }
@@ -443,7 +676,7 @@ mod tests {
     #[test]
     fn test_parse_valid_frame_with_two_octet_information_length() {
         let role = Role::Responder;
-        let frame_type = FrameType::UnnumberedInfoHeaderCheck;
+        let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
         let length = 129;
         let length_data = vec![0; length];
 
@@ -456,17 +689,156 @@ mod tests {
         ];
         // Calculate the FCS for the first two bytes, since UIH frame.
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
-        let buf = [buf, length_data, vec![fcs]].concat();
+        let buf = [buf, length_data.clone(), vec![fcs]].concat();
 
         let res = Frame::parse(role, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
-            frame_type: FrameType::UnnumberedInfoHeaderCheck,
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(UserData {
+                information: length_data,
+            })),
             poll_final: false,
             command_response: CommandResponse::Response,
-            length: length as u16,
         };
         assert_eq!(res, expected_frame);
+    }
+
+    #[test]
+    fn test_parse_uih_frame_with_mux_command() {
+        let role = Role::Responder;
+        let frame_type = FrameTypeMarker::UnnumberedInfoHeaderCheck;
+        let mut buf = vec![
+            0b00000011, // Address Field - EA = 1, C/R = 1, Mux DLCI = 0.
+            0b11111111, // Control Field - UIH command with P/F = 0.
+            0b00000111, // Length Field - Bit1 = 1 Indicates one octet length = 3.
+            0b10010001, // Data octet #1 - RPN command.
+            0b00000011, // Data octet #2 - RPN Command length = 1.
+            0b00011111, // Data octet #3 - RPN Data, DLCI = 7.
+        ];
+        // Calculate the FCS for the first two bytes, since UIH frame.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        buf.push(fcs);
+
+        let res = Frame::parse(role, &buf[..]).unwrap();
+        let expected_mux_command = MuxCommand {
+            params: MuxCommandParams::RemotePortNegotiation(RemotePortNegotiationParams {
+                dlci: DLCI::try_from(7).unwrap(),
+                port_values: None,
+            }),
+            command_response: CommandResponse::Response,
+        };
+        let expected_frame = Frame {
+            role,
+            dlci: DLCI::try_from(0).unwrap(),
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(expected_mux_command)),
+            poll_final: true,
+            command_response: CommandResponse::Response,
+        };
+        assert_eq!(res, expected_frame);
+    }
+
+    #[test]
+    fn test_encode_frame_invalid_buf() {
+        let frame = Frame {
+            role: Role::Unassigned,
+            dlci: DLCI::try_from(0).unwrap(),
+            data: FrameData::SetAsynchronousBalancedMode,
+            poll_final: false,
+            command_response: CommandResponse::Command,
+        };
+        let mut buf = [];
+        assert_matches!(frame.encode(&mut buf[..]), Err(FrameParseError::BufferTooSmall));
+    }
+
+    /// Tests that attempting to encode a Mux Startup frame over a user DLCI is rejected.
+    #[test]
+    fn test_encode_mux_startup_frame_over_user_dlci_fails() {
+        let frame = Frame {
+            role: Role::Unassigned,
+            dlci: DLCI::try_from(3).unwrap(),
+            data: FrameData::SetAsynchronousBalancedMode,
+            poll_final: false,
+            command_response: CommandResponse::Command,
+        };
+        let mut buf = vec![0; frame.encoded_len()];
+        assert_matches!(frame.encode(&mut buf[..]), Err(FrameParseError::InvalidFrame));
+    }
+
+    #[test]
+    fn test_encode_mux_startup_frame_succeeds() {
+        let frame = Frame {
+            role: Role::Unassigned,
+            dlci: DLCI::try_from(0).unwrap(),
+            data: FrameData::SetAsynchronousBalancedMode,
+            poll_final: true,
+            command_response: CommandResponse::Command,
+        };
+        let mut buf = vec![0; frame.encoded_len()];
+        assert!(frame.encode(&mut buf[..]).is_ok());
+        let expected = vec![
+            0b00000011, // Address Field: DLCI = 0, C/R = 1, E/A = 1.
+            0b00111111, // Control Field: SABM, P/F = 1.
+            0b00000001, // Length Field: Length = 0, E/A = 1.
+            0b00011100, // FCS - precomputed.
+        ];
+        assert_eq!(buf, expected);
+    }
+
+    #[test]
+    fn test_encode_user_data_frame_succeeds() {
+        let frame = Frame {
+            role: Role::Initiator,
+            dlci: DLCI::try_from(3).unwrap(),
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(UserData {
+                information: vec![
+                    0b00000001, // Data octet #1.
+                    0b00000010, // Data octet #2.
+                ],
+            })),
+            poll_final: true,
+            command_response: CommandResponse::Command,
+        };
+        let mut buf = vec![0; frame.encoded_len()];
+        assert!(frame.encode(&mut buf[..]).is_ok());
+        let expected = vec![
+            0b00001111, // Address Field: DLCI = 3, C/R = 1, E/A = 1.
+            0b11111111, // Control Field - UIH command with P/F = 1.
+            0b00000101, // Length Field - Bit1 = 1 Indicates one octet length = 2.
+            0b00000001, // Data octet #1.
+            0b00000010, // Data octet #2.
+            0b11110011, // FCS - precomputed.
+        ];
+        assert_eq!(buf, expected);
+    }
+
+    #[test]
+    fn test_encode_mux_command_frame_succeeds() {
+        let mux_command = MuxCommand {
+            params: MuxCommandParams::RemotePortNegotiation(RemotePortNegotiationParams {
+                dlci: DLCI::try_from(7).unwrap(),
+                port_values: None,
+            }),
+            command_response: CommandResponse::Command,
+        };
+        let frame = Frame {
+            role: Role::Responder,
+            dlci: DLCI::try_from(0).unwrap(),
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_command)),
+            poll_final: false,
+            command_response: CommandResponse::Command,
+        };
+        let mut buf = vec![0; frame.encoded_len()];
+        assert!(frame.encode(&mut buf[..]).is_ok());
+        let expected = vec![
+            0b00000001, // Address Field: DLCI = 0, C/R = 0, E/A = 1.
+            0b11101111, // Control Field - UIH command with P/F = 1.
+            0b00000111, // Length Field - Bit1 = 1 Indicates one octet length = 3.
+            0b10010011, // Data octet #1 - RPN command, C/R = 1, E/A = 1.
+            0b00000011, // Data octet #2 - RPN Command length = 1.
+            0b00011111, // Data octet #3 - RPN Data, DLCI = 7.
+            0b10101010, // FCS - precomputed.
+        ];
+        assert_eq!(buf, expected);
     }
 }
