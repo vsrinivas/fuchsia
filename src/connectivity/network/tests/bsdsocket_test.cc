@@ -1278,11 +1278,6 @@ TEST(LocalhostTest, AcceptAfterReset) {
   memset(&addr, 0, sizeof(addr));
 
   fbl::unique_fd conn;
-  // TODO(https://github.com/google/gvisor/issues/3780): Remove this.
-#if defined(__Fuchsia__)
-  ASSERT_TRUE(conn = fbl::unique_fd(accept(server.get(), nullptr, 0))) << strerror(errno);
-  return;
-#endif
   ASSERT_TRUE(conn = fbl::unique_fd(accept(server.get(), (sockaddr*)&addr, &addrlen)))
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
@@ -1309,7 +1304,17 @@ TEST(LocalhostTest, AcceptAfterReset) {
   int err;
   socklen_t optlen = sizeof(err);
   ASSERT_EQ(getsockopt(conn.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-  ASSERT_EQ(err, ECONNRESET);
+  ASSERT_EQ(err,
+  // TODO(gvisor.dev/issue/1509): loopRead is consuming the error, so we don't observe it here. This
+  // is yet another symptom of the poor integration between gvisor/netstack and fuchsia/netstack.
+  // Resolving this will require refactoring gvisor/netstack to allow "bring-your-own-buffer", so
+  // that it can read from and write directly into the zircon socket provided by fuchsia/netstack.
+#if defined(__Fuchsia__)
+            0)
+#else
+            ECONNRESET)
+#endif
+      << strerror(errno);
   ASSERT_EQ(optlen, sizeof(err));
 }
 
