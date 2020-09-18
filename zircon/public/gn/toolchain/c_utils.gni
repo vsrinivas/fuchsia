@@ -65,21 +65,30 @@ template("toolchain_utils_action") {
   assert(defined(invoker.utils),
          "toolchain_utils_action(\"$target_name\") requires `utils`")
 
-  if (defined(invoker.variant_target)) {
-    assert(
-        zx == "/",
-        "fxb/51971: toolchain_utils_action() with variant_target is not available in the GN build yet!")
+  target_type = "action"
+  extra_params = {
+  }
 
+  if (zx != "/") {
+    # `variant_target` is completely ignored in the Fuchsia build.
+    # The main reason for this is that it is used primarily to run
+    # the action() in a toolchain built from the same variant as the
+    # one that applies to the kernel (or more exactly, anything with
+    # an `output_name` or `label` of "zircon").
+    #
+    # However, in practice, this is always the same variant that is
+    # applied to the current toolchain instance. Since the Zircon build
+    # has become a secondary child of the Fuchsia build, it lost the
+    # ability to apply per-output or per-label variants anyway, proving
+    # that this feature was seldom used.
+    not_needed(invoker, [ "variant_target" ])
+  } else if (defined(invoker.variant_target)) {
     target_type = "_variant_target"
     extra_params = {
       target = {
         forward_variables_from(invoker.variant_target, "*", [ "type" ])
         type = "action"
       }
-    }
-  } else {
-    target_type = "action"
-    extra_params = {
     }
   }
 
