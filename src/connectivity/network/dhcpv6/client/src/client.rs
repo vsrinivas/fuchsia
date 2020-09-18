@@ -52,6 +52,8 @@ pub enum ClientError {
     DoubleWatch(),
     #[error("unsupported DHCPv6 operational models: {:?}, only stateless is supported", _0)]
     UnsupportedModels(OperationalModels),
+    #[error("socket receive error: {:?}", _0)]
+    SocketRecv(std::io::Error),
 }
 
 /// Theoretical size limit for UDP datagrams.
@@ -93,7 +95,7 @@ impl Future for TimerFut {
 }
 
 /// A DHCPv6 client.
-pub(crate) struct Client {
+pub(crate) struct Client<S: for<'a> AsyncSocket<'a>> {
     /// The interface the client is running on.
     interface_id: u64,
     /// Stores the hash of the last observed version of DNS servers by a watcher.
@@ -106,7 +108,7 @@ pub(crate) struct Client {
     /// Maintains the state for the client.
     state_machine: dhcpv6_core::client::ClientStateMachine<StdRng>,
     /// The socket used to communicate with DHCPv6 servers.
-    socket: fasync::net::UdpSocket,
+    socket: S,
     /// The address to send outgoing messages to.
     server_addr: SocketAddr,
     /// A collection of abort handles to all currently scheduled timers.
@@ -115,6 +117,27 @@ pub(crate) struct Client {
     timer_futs: FuturesUnordered<Abortable<TimerFut>>,
     /// A stream of FIDL requests to this client.
     request_stream: ClientRequestStream,
+}
+
+/// A trait that allows stubbing [`fuchsia_async::net::UdpSocket`] in tests.
+pub(crate) trait AsyncSocket<'a> {
+    type RecvFromFut: Future<Output = Result<(usize, SocketAddr), std::io::Error>> + 'a;
+    type SendToFut: Future<Output = Result<usize, std::io::Error>> + 'a;
+
+    fn recv_from(&'a self, buf: &'a mut [u8]) -> Self::RecvFromFut;
+    fn send_to(&'a self, buf: &'a [u8], addr: SocketAddr) -> Self::SendToFut;
+}
+
+impl<'a> AsyncSocket<'a> for fasync::net::UdpSocket {
+    type RecvFromFut = fasync::net::RecvFrom<'a>;
+    type SendToFut = fasync::net::SendTo<'a>;
+
+    fn recv_from(&'a self, buf: &'a mut [u8]) -> Self::RecvFromFut {
+        self.recv_from(buf)
+    }
+    fn send_to(&'a self, buf: &'a [u8], addr: SocketAddr) -> Self::SendToFut {
+        self.send_to(buf, addr)
+    }
 }
 
 /// Converts a collection of `RequestableOptionCode` to `v6::OptionCode`.
@@ -154,7 +177,7 @@ fn hash<H: Hash>(h: &H) -> u64 {
     dh.finish()
 }
 
-impl Client {
+impl<S: for<'a> AsyncSocket<'a>> Client<S> {
     /// Starts the client in `models`.
     ///
     /// Input `transaction_id` is used to label outgoing messages and match incoming ones.
@@ -162,7 +185,7 @@ impl Client {
         transaction_id: [u8; 3],
         models: OperationalModels,
         interface_id: u64,
-        socket: fasync::net::UdpSocket,
+        socket: S,
         server_addr: SocketAddr,
         request_stream: ClientRequestStream,
     ) -> Result<Self, ClientError> {
@@ -218,7 +241,7 @@ impl Client {
                 Ok(client)
             })
             .await
-            .map(|_: &mut Client| ())
+            .map(|_: &mut Client<S>| ())
     }
 
     /// Sends the latest DNS servers iff a watcher is watching, and the latest set of servers are
@@ -383,27 +406,8 @@ impl Client {
                 }
             },
             recv_from_res = self.socket.recv_from(buf).fuse() => {
-                let () = match recv_from_res {
-                    Ok((size, _addr)) => {
-                        self.handle_message_recv(&buf[..size]).await?
-                    }
-                    Err(recv_err) => {
-                        match self.socket.local_addr() {
-                            Ok(addr) => {
-                                let () = log::warn!(
-                                    "failed to receive message from socket bound to {}: {}; will retransmit request if server response is missed",
-                                    addr,
-                                    recv_err);
-                            }
-                            Err(addr_err) => {
-                                let () = log::warn!(
-                                    "failed to receive message from socket: {}; also failed to fetch address the socket is bound to: {}; will retransmit request if server response is missed",
-                                    recv_err,
-                                    addr_err);
-                            }
-                        }
-                    },
-                };
+                let (size, _addr) = recv_from_res.map_err(ClientError::SocketRecv)?;
+                let () = self.handle_message_recv(&buf[..size]).await?;
                 Ok(Some(()))
             },
             request = self.request_stream.try_next() => {
@@ -480,7 +484,7 @@ pub(crate) async fn serve_client(
                     RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS,
                 )
             })?;
-        let mut client = Client::start(
+        let mut client = Client::<fasync::net::UdpSocket>::start(
             transaction_id(),
             models,
             interface_id,
@@ -736,8 +740,8 @@ mod tests {
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
-        let mut client: Client = exec
-            .run_singlethreaded(Client::start(
+        let mut client = exec
+            .run_singlethreaded(Client::<fasync::net::UdpSocket>::start(
                 transaction_id,
                 OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
                 1, /* interface ID */
@@ -915,7 +919,7 @@ mod tests {
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
-        let mut client: Client = Client::start(
+        let mut client = Client::<fasync::net::UdpSocket>::start(
             transaction_id,
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
             1, /* interface ID */
@@ -967,7 +971,7 @@ mod tests {
 
         let (client_socket, _client_addr) = create_test_socket();
         let (_server_socket, server_addr) = create_test_socket();
-        let mut client: Client = Client::start(
+        let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
             1, /* interface ID */
@@ -1067,7 +1071,7 @@ mod tests {
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
-        let mut client: Client = Client::start(
+        let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
             1, /* interface ID */
@@ -1182,7 +1186,7 @@ mod tests {
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
-        let mut client: Client = Client::start(
+        let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
             1, /* interface ID */
@@ -1248,6 +1252,45 @@ mod tests {
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
             vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_handle_next_event_fails_on_recv_err() {
+        struct StubSocket {}
+        impl<'a> AsyncSocket<'a> for StubSocket {
+            type RecvFromFut = futures::future::Ready<Result<(usize, SocketAddr), std::io::Error>>;
+            type SendToFut = futures::future::Ready<Result<usize, std::io::Error>>;
+
+            fn recv_from(&'a self, _buf: &'a mut [u8]) -> Self::RecvFromFut {
+                futures::future::ready(Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "test recv error",
+                )))
+            }
+            fn send_to(&'a self, _buf: &'a [u8], _addr: SocketAddr) -> Self::SendToFut {
+                futures::future::ready(Ok(0))
+            }
+        }
+
+        let (_client_end, server_end) =
+            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+
+        let mut client = Client::<StubSocket>::start(
+            [1, 2, 3], /* transaction ID */
+            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            1, /* interface ID */
+            StubSocket {},
+            std_socket_addr!([::1]:0),
+            client_stream,
+        )
+        .await
+        .expect("failed to create test client");
+
+        assert_matches!(
+            client.handle_next_event(&mut [0u8]).await,
+            Err(ClientError::SocketRecv(err)) if err.kind() == std::io::ErrorKind::Other
         );
     }
 }
