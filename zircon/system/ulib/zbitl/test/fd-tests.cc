@@ -4,8 +4,6 @@
 
 #include "fd-tests.h"
 
-#include "tests.h"
-
 namespace {
 
 TEST(ZbitlViewFdTests, DefaultConstructed) {

@@ -4,11 +4,8 @@
 
 #include "memory-tests.h"
 
-#include "tests.h"
-
 namespace {
 
-using FblByteArrayTestTraits = FblArrayTestTraits<std::byte>;
 using FblUint64ArrayTestTraits = FblArrayTestTraits<uint64_t>;
 
 TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
@@ -22,6 +19,8 @@ TEST(ZbitlViewFblByteArrayTests, CrcCheckFailure) {
 TEST_ITERATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 
 TEST_MUTATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
+
+TEST_COPY_CREATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 
 TEST(ZbitlViewFblUint64ArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblUint64ArrayTestTraits>());

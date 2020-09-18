@@ -137,9 +137,24 @@ struct StorageTraits<zx::vmo> {
 
   static fitx::result<error_type> Write(const zx::vmo&, uint32_t offset, ByteView);
 
+  static fitx::result<error_type, zx::vmo> Create(const zx::vmo&, size_t size);
+
+  template <typename SlopCheck>
+  static fitx::result<error_type, std::optional<std::pair<zx::vmo, uint32_t>>> Clone(
+      const zx::vmo& zbi, uint32_t offset, uint32_t length, uint32_t to_offset,
+      SlopCheck&& slopcheck) {
+    if (slopcheck(offset % ZX_PAGE_SIZE)) {
+      return DoClone(zbi, offset, length);
+    }
+    return fitx::ok(std::nullopt);
+  }
+
  private:
   static fitx::result<error_type> DoRead(const zx::vmo& zbi, uint64_t offset, uint32_t length,
                                          bool (*)(void*, ByteView), void*);
+
+  static fitx::result<error_type, std::optional<std::pair<zx::vmo, uint32_t>>> DoClone(
+      const zx::vmo& zbi, uint32_t offset, uint32_t length);
 };
 
 template <>
@@ -167,6 +182,14 @@ struct StorageTraits<zx::unowned_vmo> {
 
   static auto Write(const zx::unowned_vmo& vmo, uint32_t offset, ByteView data) {
     return Owned::Write(*vmo, offset, data);
+  }
+
+  static auto Create(const zx::unowned_vmo& vmo, size_t size) { return Owned::Create(*vmo, size); }
+
+  template <typename SlopCheck>
+  static auto Clone(const zx::unowned_vmo& zbi, uint32_t offset, uint32_t length,
+                    uint32_t to_offset, SlopCheck&& slopcheck) {
+    return Owned::Clone(*zbi, offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
   }
 };
 
@@ -200,6 +223,31 @@ class StorageTraits<MapUnownedVmo> {
 
   static auto Write(const MapUnownedVmo& zbi, uint32_t offset, ByteView data) {
     return Owned::Write(zbi.vmo(), offset, data);
+  }
+
+  static fitx::result<error_type, MapOwnedVmo> Create(const MapUnownedVmo& proto, size_t size) {
+    auto result = Owned::Create(proto.vmo(), size);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    return fitx::ok(MapOwnedVmo{std::move(result).value(), zx::unowned_vmar{proto.vmar()}});
+  }
+
+  template <typename SlopCheck>
+  static fitx::result<error_type, std::optional<std::pair<MapOwnedVmo, uint32_t>>> Clone(
+      const MapUnownedVmo& zbi, uint32_t offset, uint32_t length, uint32_t to_offset,
+      SlopCheck&& slopcheck) {
+    auto result =
+        Owned::Clone(zbi.vmo(), offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    if (result.value()) {
+      auto [vmo, slop] = std::move(*std::move(result).value());
+      return fitx::ok(
+          std::make_pair(MapOwnedVmo{std::move(vmo), zx::unowned_vmar{zbi.vmar()}}, slop));
+    }
+    return fitx::ok(std::nullopt);
   }
 
  private:

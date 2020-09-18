@@ -13,6 +13,7 @@ template <typename T>
 struct FblArrayTestTraits {
   using storage_type = fbl::Array<T>;
   using payload_type = fbl::Span<T>;
+  using creation_traits = FblArrayTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
 
@@ -22,12 +23,16 @@ struct FblArrayTestTraits {
     storage_type storage_;
   };
 
+  static void Create(size_t size, Context* context) {
+    const size_t n = (size + sizeof(T) - 1) / sizeof(T);
+    storage_type storage{new T[n], n};
+    *context = {std::move(storage)};
+  }
+
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     ASSERT_TRUE(fd);
-    const size_t n = (size + sizeof(T) - 1) / sizeof(T);
-    fbl::Array<T> storage{new T[n], n};
-    ASSERT_EQ(size, read(fd.get(), storage.data(), size));
-    *context = {std::move(storage)};
+    ASSERT_NO_FATAL_FAILURES(Create(size, context));
+    ASSERT_EQ(size, read(fd.get(), context->storage_.data(), size));
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
@@ -37,6 +42,12 @@ struct FblArrayTestTraits {
     ASSERT_LE(size, bytes.size());
     memcpy(contents->data(), bytes.data(), size);
   }
+
+  static payload_type AsPayload(const storage_type& storage) {
+    return {storage.data(), storage.size()};
+  }
 };
+
+using FblByteArrayTestTraits = FblArrayTestTraits<std::byte>;
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_MEMORY_TESTS_H_

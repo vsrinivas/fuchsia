@@ -14,6 +14,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "copy-tests.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 #define ASSERT_IS_OK(result)                                              \
@@ -49,6 +50,8 @@ size_t GetExpectedNumberOfItems(TestDataZbiType type);
 
 void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents);
 
+void GetExpectedPayloadWithHeader(TestDataZbiType type, size_t idx, Bytes* contents);
+
 std::string GetExpectedJson(TestDataZbiType type);
 
 void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::unique_fd* fd,
@@ -62,8 +65,10 @@ void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::uniqu
 //     ownership of a storage object of type `storage_type`. It is
 //     expected to be called at most once and the associated storage object is
 //     valid only for as long as the context is alive.
-//   * `static void Create(fbl::unique_fd, size_t, Context*)` method for
-//     initializing a context object.
+//   * `static void Create(fbl::unique_fd, size_t, Context*)` for initializing
+//     a context object from given file contents of a given size.
+//   * `static void Create(size_t, Context*)`, for initializing a context
+//     object corrsponding to a fresh storage object of a given size.
 //   * `static void Read(storage_type&, payload_type, size_t, std::string*)`
 //     for reading a payload of a given size into a string, where
 //     `payload_type` coincides with
@@ -73,6 +78,15 @@ void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::uniqu
 // constexpr Boolean member `kDefaultConstructedViewHasStorageError` indicating
 // whether a default-constructed view of that storage type yields an error on
 // iteration.
+//
+// If the storage type is writable, it must also provide:
+//   *`static payload_type AsPayload(storage_type&)` that returns the payload
+//     value representing the entire storage object.
+//
+// If the storage type supports creation
+// (i.e., zbitl::StorageTraits<storage_type> defines Create()) then the test
+//  traits must declare a `creation_traits` type giving the associated test
+//  trait type of its created storage.
 //
 
 //
@@ -284,5 +298,146 @@ void TestMutation(TestDataZbiType type) {
                         TestDataZbiType::kMultipleSmallItems)                                \
   TEST_MUTATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,                 \
                         TestDataZbiType::kSecondItemOnPageBoundary)
+
+template <typename TestTraits>
+void TestCopyCreation(TestDataZbiType type, bool with_header) {
+  using Storage = typename TestTraits::storage_type;
+  static_assert(zbitl::View<Storage>::CanCopyCreate());
+  using CreationTraits = typename TestTraits::creation_traits;
+
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURES(TestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  size_t idx = 0;
+  for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
+    const zbi_header_t header = *((*it).header);
+    const size_t created_size = header.length + (with_header ? sizeof(header) : 0);
+
+    auto result = with_header ? view.CopyRawItemWithHeader(it) : view.CopyRawItem(it);
+    ASSERT_TRUE(result.is_ok(), "item %zu, %s header: %s", idx, with_header ? "with" : "without",
+                CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "item %zu, %s header: %s", idx,
+                with_header ? "with" : "without", CopyResultErrorMsg(std::move(result)).c_str());
+
+    auto created = std::move(result).value().value();
+
+    Bytes actual;
+    auto created_payload = CreationTraits::AsPayload(created);
+    ASSERT_NO_FATAL_FAILURES(CreationTraits::Read(created, created_payload, created_size, &actual));
+
+    Bytes expected;
+    if (with_header) {
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayloadWithHeader(type, idx, &expected));
+    } else {
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &expected));
+    }
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+  }
+  EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
+#define TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, \
+                                              with_header, with_header_name)           \
+  TEST(suite_name, type_name##CopyCreation##with_header_name) {                        \
+    ASSERT_NO_FATAL_FAILURES(TestCopyCreation<TestTraits>(type, with_header));         \
+  }
+
+#define TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, type_name, type)                        \
+  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, true, WithHeader) \
+  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, false, )
+
+#define TEST_COPY_CREATION(suite_name, TestTraits)                                          \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem) \
+  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, BadCrcItemZbi,              \
+                                        TestDataZbiType::kBadCrcItem, false, )              \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                 \
+                             TestDataZbiType::kMultipleSmallItems)                          \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,           \
+                             TestDataZbiType::kSecondItemOnPageBoundary)
+
+template <typename SrcTestTraits, typename DestTestTraits>
+void TestCopying(TestDataZbiType type, bool with_header) {
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  typename SrcTestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURES(SrcTestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  size_t idx = 0;
+  for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
+    const zbi_header_t header = *((*it).header);
+    const size_t copy_size = header.length + (with_header ? sizeof(header) : 0);
+
+    typename DestTestTraits::Context copy_context;
+    ASSERT_NO_FATAL_FAILURES(DestTestTraits::Create(copy_size, &copy_context));
+    auto copy = copy_context.TakeStorage();
+    auto result = with_header ? view.CopyRawItemWithHeader(std::move(copy), it)
+                              : view.CopyRawItem(std::move(copy), it);
+    ASSERT_TRUE(result.is_ok(), "item %zu, %s header: %s", idx, with_header ? "with" : "without",
+                CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "item %zu, %s header: %s", idx,
+                with_header ? "with" : "without", CopyResultErrorMsg(std::move(result)).c_str());
+
+    Bytes actual;
+    auto copy_payload = DestTestTraits::AsPayload(copy);
+    ASSERT_NO_FATAL_FAILURES(DestTestTraits::Read(copy, copy_payload, copy_size, &actual));
+
+    Bytes expected;
+    if (with_header) {
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayloadWithHeader(type, idx, &expected));
+    } else {
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &expected));
+    }
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+  }
+  EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
+#define TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits,       \
+                                        dest_name, type_name, type, with_header, with_header_name) \
+  TEST(suite_name, type_name##Copy##src_name##to##dest_name##with_header_name) {                   \
+    auto test = TestCopying<SrcTestTraits, DestTestTraits>;                                        \
+    ASSERT_NO_FATAL_FAILURES(test(type, with_header));                                             \
+  }
+
+#define TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,      \
+                             type_name, type)                                                     \
+  TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
+                                  type_name, type, true, WithHeader)                              \
+  TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
+                                  type_name, type, false, )
+
+#define TEST_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)               \
+  TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \
+                       TestDataZbiType::kOneItem)                                                  \
+  TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,  \
+                                  BadCrcItemZbi, TestDataZbiType::kBadCrcItem, false, )            \
+  TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
+                       MultipleSmallItemsZbi, TestDataZbiType::kMultipleSmallItems)                \
+  TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
+                       SecondItemOnPageBoundaryZbi, TestDataZbiType::kSecondItemOnPageBoundary)
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

@@ -43,6 +43,7 @@ if (is_host) {
 test("zbitl-unittests") {
   sources = [
     "checking-tests.cc",
+    "copy-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
     "memory-tests.cc",

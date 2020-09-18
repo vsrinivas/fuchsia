@@ -4,8 +4,6 @@
 
 #include "stdio-tests.h"
 
-#include "tests.h"
-
 namespace {
 
 // The type of FILE* cannot be default-constructed, so we skip the

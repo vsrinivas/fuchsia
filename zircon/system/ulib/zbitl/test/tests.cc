@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <zircon/boot/image.h>
 
 #ifndef __Fuchsia__
 #include <libgen.h>
@@ -41,6 +42,36 @@ std::string_view ZbiName(TestDataZbiType type) {
   }
 }
 
+void GetExpectedPayloadCrc32(TestDataZbiType type, size_t idx, uint32_t* crc) {
+  size_t num_items = GetExpectedNumberOfItems(type);
+  ASSERT_LT(idx, num_items, "expected only %zu items", num_items);
+
+  switch (type) {
+    case TestDataZbiType::kEmpty:
+      // Assert would have already fired above.
+      __UNREACHABLE;
+    case TestDataZbiType::kOneItem:
+      *crc = 3608077223;
+      break;
+    case TestDataZbiType::kBadCrcItem:
+      // This function should not be called for this type.
+      __UNREACHABLE;
+    case TestDataZbiType::kMultipleSmallItems: {
+      static const uint32_t crcs[] = {
+          3172087020, 2653628068, 1659816855, 2798301622, 833025785,
+          1420658445, 1308637244, 764240975,  2938513956, 3173475760,
+      };
+      *crc = crcs[idx];
+      break;
+    }
+    case TestDataZbiType::kSecondItemOnPageBoundary: {
+      static const uint32_t crcs[] = {2447293089, 3746526874};
+      *crc = crcs[idx];
+      break;
+    }
+  }
+}
+
 }  // namespace
 
 size_t GetExpectedNumberOfItems(TestDataZbiType type) {
@@ -48,7 +79,6 @@ size_t GetExpectedNumberOfItems(TestDataZbiType type) {
     case TestDataZbiType::kEmpty:
       return 0;
     case TestDataZbiType::kOneItem:
-      return 1;
     case TestDataZbiType::kBadCrcItem:
       return 1;
     case TestDataZbiType::kMultipleSmallItems:
@@ -156,6 +186,24 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents) {
       return;
     }
   }
+}
+
+void GetExpectedPayloadWithHeader(TestDataZbiType type, size_t idx, Bytes* contents) {
+  Bytes payload;
+  ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &payload));
+
+  uint32_t crc;
+  ASSERT_NO_FATAL_FAILURES(GetExpectedPayloadCrc32(type, idx, &crc));
+
+  zbi_header_t header{};
+  header.type = ZBI_TYPE_IMAGE_ARGS;
+  header.magic = ZBI_ITEM_MAGIC;
+  header.flags = ZBI_FLAG_VERSION | ZBI_FLAG_CRC32;
+  header.length = static_cast<uint32_t>(payload.size());
+  header.crc32 = crc;
+
+  *contents = {reinterpret_cast<char*>(&header), sizeof(zbi_header_t)};
+  contents->append(payload);
 }
 
 std::string GetExpectedJson(TestDataZbiType type) {

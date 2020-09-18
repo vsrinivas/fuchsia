@@ -7,6 +7,7 @@
 
 #include <lib/zbitl/stdio.h>
 
+#include "src/lib/files/scoped_temp_dir.h"
 #include "tests.h"
 
 struct StdioTestTraits {
@@ -23,7 +24,20 @@ struct StdioTestTraits {
     storage_type TakeStorage() const { return storage_; }
 
     storage_type storage_ = nullptr;
+    files::ScopedTempDir dir_;
   };
+
+  static void Create(size_t size, Context* context) {
+    std::string filename;
+    ASSERT_TRUE(context->dir_.NewTempFile(&filename));
+    FILE* f = fopen(filename.c_str(), "r+");
+    ASSERT_NOT_NULL(f, "failed to open %s: %s", filename.c_str(), strerror(errno));
+    ASSERT_GE(size, 1);
+    fseek(f, static_cast<long int>(size) - 1, SEEK_SET);
+    putc(0, f);
+    context->storage_ = f;
+    ASSERT_FALSE(ferror(f));
+  }
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     ASSERT_TRUE(fd);
@@ -40,6 +54,8 @@ struct StdioTestTraits {
     ASSERT_EQ(0, ferror(storage), "failed to read payload: %s", strerror(errno));
     ASSERT_EQ(size, n, "did not fully read payload");
   }
+
+  static payload_type AsPayload(storage_type storage) { return 0; }
 };
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_STDIO_TESTS_H_

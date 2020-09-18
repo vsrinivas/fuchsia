@@ -13,6 +13,7 @@
 #include <cstring>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <version>
@@ -109,6 +110,44 @@ struct StorageTraits {
   // the chunk that failed to write might be corrupted in the image and the
   // container will always revalidate everything.
   static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    return fitx::error<error_type>{};
+  }
+
+  // A specialization defines this only if it supports mutation and if creating
+  // new storage from whole cloth makes sense for the storage type somehow.
+  // Its successful return value is whatever makes sense for returning a new,
+  // owning object of a type akin to Storage (possibly Storage itself, possibly
+  // another type).  The new object refers to new storage of at least the given
+  // capacity (in bytes) with nothing in it.  The old storage object might be
+  // used as a prototype in some sense, but the new object is distinct storage.
+  static fitx::result<error_type, Storage> Create(Storage& zbi, uint32_t capacity) {
+    return fitx::error<error_type>{};
+  }
+
+  // A specialization defines this only if it defines Create, and if Clone adds
+  // any value.  The new object is new storage that doesn't mutate the original
+  // storage, whose capacity is at least `to_offset + length`, and whose
+  // contents are the subrange of the original storage starting at `offset`,
+  // with zero-fill from the beginning of the storage up to `to_offset` bytes.
+  // The successful return value is `std::optional<std::pair<T, uint32_t>>`
+  // where T is what a successful Create call returns and the uint32_t is the
+  // actual offset into the new storage, aka the "slop" (see below).  If this
+  // doesn't have something more efficient to do than just allocating storage
+  // space for and copying all `length` bytes of data (using Create and Write),
+  // then it can just return std::nullopt.  If the method would *always* return
+  // std::nullopt then it can just be omitted entirely.  The "slop" refers to
+  // some number of bytes at the beginning of the storage that will read as
+  // zero before the requested range of the original storage begins.  The
+  // storage backend will endeavor to make this match `to_offset`, but might
+  // deliver a different result due to factors like page-rounding.  The
+  // `slopcheck` parameter is a `(uint32_t) -> bool` predicate function object
+  // that says whether a given byte count is acceptable as slop for this clone.
+  // If `slopcheck(slop)` returns false, Clone *must* return std::nullopt
+  // rather than yielding storage with a rejected slop byte count.
+  template <typename SlopCheck>
+  static fitx::result<error_type, std::optional<std::pair<Storage, uint32_t>>> Clone(
+      Storage& zbi, uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
+    static_assert(std::is_invocable_r_v<bool, SlopCheck, uint32_t>);
     return fitx::error<error_type>{};
   }
 };

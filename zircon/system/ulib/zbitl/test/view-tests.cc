@@ -6,12 +6,7 @@
 
 #include <tuple>
 
-#include "tests.h"
-
 namespace {
-
-using StringTestTraits = BasicStringViewTestTraits<char>;
-using ByteViewTestTraits = BasicStringViewTestTraits<std::byte>;
 
 struct EmptyTupleTestTraits {
   using storage_type = std::tuple<>;

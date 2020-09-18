@@ -62,6 +62,11 @@ class StorageTraits<fbl::Array<T>> {
     memcpy(&AsBytes(zbi)[offset], data.data(), data.size());
     return fitx::ok();
   }
+
+  static fitx::result<error_type, Storage> Create(Storage& old, size_t size) {
+    const size_t n = (size + sizeof(T) - 1) / sizeof(T);
+    return fitx::ok(Storage{new T[n], n});
+  }
 };
 
 }  // namespace zbitl

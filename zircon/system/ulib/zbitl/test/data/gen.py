@@ -41,9 +41,11 @@ TEST_DATA_ZBIS = (
     ),
     TestDataZbi(
         name="second-item-on-page-boundary",
-        # Container header: [0, 0x20).
-        # First item: [0x20, 0x1000).
-        # Second item: [0x1000, 0x1040).
+        # Container header:    [0x0000, 0x0020)
+        # First item header:   [0x0020, 0x0040)
+        # First item payload:  [0x0040, 0x1000)
+        # Second item header:  [0x1000, 0x1020)
+        # Second item payload: [0x1020, 0x1040)
         payloads=["X" * 4032, "Y" * 32],
     ),
     # The resulting ZBI will be modified below to indeed give it a bad CRC value.

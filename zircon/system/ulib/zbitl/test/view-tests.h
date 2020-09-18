@@ -38,4 +38,7 @@ struct BasicStringViewTestTraits {
   }
 };
 
+using StringTestTraits = BasicStringViewTestTraits<char>;
+using ByteViewTestTraits = BasicStringViewTestTraits<std::byte>;
+
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VIEW_TESTS_H_

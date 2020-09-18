@@ -226,6 +226,11 @@ class View {
 
   class iterator {
    public:
+    using difference_type = ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+    using iterator_category = std::input_iterator_tag;
+
     /// The default-constructed iterator is invalid for all uses except
     /// equality comparison.
     iterator() = default;
@@ -493,6 +498,178 @@ class View {
     return result;
   }
 
+  // The does a SFINAE check for the StorageTraits<CopyStorage>::Write method
+  // and yields the return type of Copy<CopyStorage>.
+  template <typename CopyStorage, typename T = std::decay_t<CopyStorage>,
+            typename = decltype(StorageTraits<T>::Write(
+                std::declval<std::reference_wrapper<T>>().get(), 0, ByteView{}))>
+  using CopyResult = fitx::result<Error, fitx::result<typename StorageTraits<T>::error_type>>;
+
+  // Copy a range of the underlying storage into an existing piece of storage,
+  // which can be any mutable type with sufficient capacity.  The Error return
+  // value is for a read error.  The "success" return value indicates there was
+  // no read error.  It's another fitx::result<error_type> for the writing side
+  // (which may be different than the type used in Error::storage_error).  The
+  // optional `to_offset` argument says where in `to` the data is written, as a
+  // byte offset that is zero by default.
+  template <typename CopyStorage>
+  CopyResult<CopyStorage> Copy(CopyStorage&& to, uint32_t offset, uint32_t length,
+                               uint32_t to_offset = 0) {
+    using CopyTraits = StorageTraits<std::decay_t<CopyStorage>>;
+    // TODO(mcgrathr): Support SetCapacity, check for error here.
+    ZX_DEBUG_ASSERT(CopyTraits::Capacity(to) >= to_offset + length);
+    auto write = [&to, to_offset](ByteView chunk) mutable  //
+        -> fitx::result<typename CopyTraits::error_type> {
+      if (auto result = CopyTraits::Write(to, to_offset, chunk); result.is_error()) {
+        return std::move(result).take_error();
+      }
+      to_offset += static_cast<uint32_t>(chunk.size());
+      return fitx::ok();
+    };
+    if (auto payload = Traits::Payload(storage(), offset, length); payload.is_error()) {
+      return fitx::error{Error{
+          "cannot translate ZBI offset to storage",
+          offset,
+          std::move(std::move(payload).error_value()),
+      }};
+    } else {
+      auto result = Traits::Read(storage(), payload.value(), length, write);
+      if (result.is_error()) {
+        return fitx::error{Error{
+            "cannot read from storage",
+            offset,
+            std::move(result).error_value(),
+        }};
+      }
+      return std::move(result).take_value();
+    }
+  }
+
+  // Returns true if "copy to new storage" overloads below are available.
+  static constexpr bool CanCopyCreate() { return kCanCopyCreate; }
+
+  // Copy a range of the underlying storage into a freshly-created new piece of
+  // storage (whatever that means for this storage type).  The Error return
+  // value is for a read error.  The "success" return value indicates there was
+  // no read error.  It's another fitx::result<storage_error_type, T> for some
+  // T akin to storage_type, possibly storage_type itself.  For example, all
+  // the unowned VMO storage types yield zx::vmo as the owning equivalent
+  // storage type.  If the optional `to_offset` argument is nonzero, the new
+  // storage starts with that many zero bytes before the copied data.
+  template <
+      // SFINAE check for Traits::Create method.
+      typename T = Traits, typename CreateResult = decltype(T::Create(
+                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
+  fitx::result<Error, CreateResult> Copy(uint32_t offset, uint32_t length, uint32_t to_offset = 0) {
+    auto copy = CopyWithSlop(offset, length, to_offset,
+                             [to_offset](uint32_t slop) { return slop == to_offset; });
+    if (copy.is_error()) {
+      return std::move(copy).take_error();
+    }
+    if (copy.value().is_error()) {
+      return fitx::ok(std::move(copy).value().take_error());
+    }
+    auto [new_storage, slop] = std::move(copy).value().value();
+    ZX_DEBUG_ASSERT(slop == to_offset);
+    return fitx::ok(fitx::ok(std::move(new_storage)));
+  }
+
+  // Copy a single item's payload into supplied storage.
+  template <typename CopyStorage>
+  CopyResult<CopyStorage> CopyRawItem(CopyStorage&& to, const iterator& it) {
+    return Copy(std::forward<CopyStorage>(to), it.payload_offset(), (*it).header->length);
+  }
+
+  // Copy a single item's payload into newly-created storage.
+  template <  // SFINAE check for Traits::Create method.
+      typename T = Traits, typename CreateResult = decltype(T::Create(
+                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
+  fitx::result<Error, CreateResult> CopyRawItem(const iterator& it) {
+    return Copy(it.payload_offset(), (*it).header->length);
+  }
+
+  // Copy a single item's header and payload into supplied storage.
+  template <typename CopyStorage>
+  CopyResult<CopyStorage> CopyRawItemWithHeader(CopyStorage&& to, const iterator& it) {
+    return Copy(std::forward<CopyStorage>(to), it.item_offset(),
+                sizeof(zbi_header_t) + (*it).header->length);
+  }
+
+  // Copy a single item's header and payload into newly-created storage.
+  template <  // SFINAE check for Traits::Create method.
+      typename T = Traits, typename CreateResult = decltype(T::Create(
+                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
+  fitx::result<Error, CreateResult> CopyRawItemWithHeader(const iterator& it) {
+    return Copy(it.item_offset(), sizeof(zbi_header_t) + (*it).header->length);
+  }
+
+  // Copy the subrange `[first,last)` of the ZBI into supplied storage.
+  // The storage will contain a new ZBI container with only those items.
+  template <typename CopyStorage>
+  CopyResult<CopyStorage> Copy(CopyStorage&& to, const iterator& first, const iterator& last) {
+    using CopyTraits = StorageTraits<std::decay_t<CopyStorage>>;
+
+    auto [offset, length] = RangeBounds(first, last);
+    auto copy_result = Copy(to, offset, length, sizeof(zbi_header_t));
+    if (copy_result.is_error()) {
+      return std::move(copy_result).take_error();
+    }
+    if (copy_result.value().is_error()) {
+      return std::move(copy_result).take_value();
+    }
+    const zbi_header_t header = ZBI_CONTAINER_HEADER(length);
+    ByteView out{reinterpret_cast<const std::byte*>(&header), sizeof(header)};
+    return fitx::ok(CopyTraits::Write(to, 0, out));
+  }
+
+  // Copy the subrange `[first,last)` of the ZBI into newly-created storage.
+  // The storage will contain a new ZBI container with only those items.
+  template <  // SFINAE check for Traits::Create method.
+      typename T = Traits, typename CreateResult = decltype(T::Create(
+                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
+  fitx::result<Error, CreateResult> Copy(const iterator& first, const iterator& last) {
+    using CopyTraits = StorageTraits<std::decay_t<decltype(std::declval<CreateResult>().value())>>;
+
+    auto [offset, length] = RangeBounds(first, last);
+    constexpr auto slopcheck = [](uint32_t slop) {
+      return slop == sizeof(zbi_header_t) || slop >= 2 * sizeof(zbi_header_t);
+    };
+    auto copy = CopyWithSlop(offset, length, sizeof(zbi_header_t), slopcheck);
+    if (copy.is_error()) {
+      return std::move(copy).take_error();
+    }
+    if (copy.value().is_error()) {
+      return fitx::ok(std::move(copy).value().take_error());
+    }
+    auto [new_storage, slop] = std::move(copy).value().value();
+
+    if (slop > sizeof(zbi_header_t)) {
+      // Write out a discarded item header to take up all the slop left over
+      // after the container header.
+      ZX_DEBUG_ASSERT(slop >= 2 * sizeof(zbi_header_t));
+
+      zbi_header_t hdr{};
+      hdr.type = ZBI_TYPE_DISCARD;
+      hdr.length = slop - (2 * sizeof(zbi_header_t));
+      hdr = SanitizeHeader(hdr);
+      ByteView out{reinterpret_cast<const std::byte*>(&hdr), sizeof(hdr)};
+      if (auto result = CopyTraits::Write(new_storage, sizeof(zbi_header_t), out);
+          result.is_error()) {
+        return fitx::ok(std::move(result).take_error());
+      }
+      length += sizeof(zbi_header_t) + hdr.length;
+    }
+
+    // Write the new container header.
+    const zbi_header_t hdr = ZBI_CONTAINER_HEADER(length);
+    ByteView out{reinterpret_cast<const std::byte*>(&hdr), sizeof(hdr)};
+    if (auto result = CopyTraits::Write(new_storage, 0, out); result.is_error()) {
+      return fitx::ok(std::move(result).take_error());
+    }
+
+    return fitx::ok(fitx::ok(std::move(new_storage)));
+  }
+
  private:
   struct Unused {};
   struct NoError {};
@@ -511,6 +688,94 @@ class View {
     ZX_DEBUG_ASSERT_MSG(!std::holds_alternative<Unused>(error_),
                         "Fail in Unused: missing zbitl::View::StartIteration() call?");
     error_ = std::move(error);
+  }
+
+  template <
+      // SFINAE check for Traits::Create method.
+      typename T = Traits, typename CreateResult = decltype(T::Create(
+                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
+  static constexpr bool SfinaeCreate(Unused ignored) {
+    return true;
+  }
+
+  // This overload is chosen only if SFINAE detected a missing Create method.
+  static constexpr bool SfinaeCreate(...) { return false; }
+
+  static constexpr bool kCanCopyCreate = SfinaeCreate(Unused{});
+
+  template <
+      typename SlopCheck,
+      // SFINAE check for Traits::Create method.
+      typename T = Traits,
+      typename Result = fitx::result<
+          typename T::error_type,
+          std::pair<std::decay_t<decltype(
+                        T::Create(std::declval<std::reference_wrapper<storage_type>>().get(), 0)
+                            .value())>,
+                    uint32_t>>>
+  fitx::result<Error, Result> CopyWithSlop(uint32_t offset, uint32_t length, uint32_t to_offset,
+                                           SlopCheck&& slopcheck) {
+    if (auto result = Clone(offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
+        result.is_error()) {
+      return fitx::error{Error{
+          "cannot read from storage",
+          offset,
+          std::move(result).error_value(),
+      }};
+    } else if (result.value()) {
+      // Clone did the job!
+      return fitx::ok(fitx::ok(std::move(*std::move(result).value())));
+    }
+
+    // Fall back to Create and copy via Read and Write.
+    if (auto result = Traits::Create(storage(), to_offset + length); result.is_error()) {
+      return fitx::ok(std::move(result).take_error());
+    } else {
+      auto copy = std::move(result).value();
+      static_assert(std::is_convertible_v<typename StorageTraits<decltype(copy)>::error_type,
+                                          typename Traits::error_type>,
+                    "StorageTraits::Create yields type with incompatible error_type");
+      auto copy_result = Copy(copy, offset, length, to_offset);
+      if (copy_result.is_error()) {  // Read error.
+        return std::move(copy_result).take_error();
+      }
+      if (copy_result.value().is_error()) {  // Write error.
+        return fitx::ok(std::move(copy_result).value().take_error());
+      }
+      return fitx::ok(fitx::ok(std::make_pair(std::move(copy), uint32_t{0})));
+    }
+  }
+
+  template <typename SlopCheck,
+            // SFINAE check for Traits::Clone method.
+            typename T = Traits,
+            typename Result = std::decay_t<
+                decltype(T::Clone(std::declval<std::reference_wrapper<storage_type>>().get(), 0, 0,
+                                  0, std::declval<SlopCheck>())
+                             .value())>>
+  fitx::result<typename Traits::error_type, Result> Clone(uint32_t offset, uint32_t length,
+                                                          uint32_t to_offset,
+                                                          SlopCheck&& slopcheck) {
+    return Traits::Clone(storage(), offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
+  }
+
+  // This overload is only used if SFINAE detected no Traits::Clone method.
+  template <typename T = Traits,  // SFINAE check for Traits::Create method.
+            typename CreateResult = std::decay_t<decltype(
+                T::Create(std::declval<std::reference_wrapper<storage_type>>().get(), 0).value())>>
+  fitx::result<typename Traits::error_type, std::optional<std::pair<CreateResult, uint32_t>>> Clone(
+      ...) {
+    return fitx::ok(std::nullopt);  // Can't do it.
+  }
+
+  // Returns [offset, length] in the storage to cover the given item range.
+  auto RangeBounds(const iterator& first, const iterator& last) {
+    uint32_t offset = first.item_offset();
+    uint32_t limit = limit_;
+    if (last != end()) {
+      limit = last.item_offset();
+    }
+    return std::make_pair(offset, limit - offset);
   }
 
   storage_type storage_;
