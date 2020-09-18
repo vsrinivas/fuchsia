@@ -14,6 +14,7 @@ rustc_library("event-queue") {
   with_unit_tests = true
 
   deps = [
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
@@ -21,11 +22,13 @@ rustc_library("event-queue") {
   test_deps = [
     ":test.pkg.eventqueue-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/barrier.rs",
+    "src/lib.rs",
+  ]
 }
 
 group("tests") {
