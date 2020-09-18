@@ -39,6 +39,11 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     List of labels representing the library's runtime dependencies. This is
 #     only needed for runtime dependencies inherited from private dependencies.
 #     Note that these labels should represent SDK targets.
+#
+#   extra_headers [optional]
+#     List of header files that are part of the SDK headers for the library
+#     but that must not be exposed as part of the Fuchsia build. This must ONLY
+#     be used to work-around for https://fxbug.dev/60129.
 
 # The defaults for a sdk_static_library should match that of a shared_library.
 set_defaults("sdk_static_library") {
@@ -161,9 +166,11 @@ template("sdk_static_library") {
         all_headers += [ source_file ]
       }
     }
-  } else {
-    assert(false, "Library does not contain any headers or sources.")
   }
+  if (defined(invoker.extra_headers)) {
+    all_headers += invoker.extra_headers
+  }
+  assert(all_headers != [], "Library does not contain any headers or sources.")
   sdk_metadata_headers = []
   sdk_header_files = []
   foreach(header, all_headers) {

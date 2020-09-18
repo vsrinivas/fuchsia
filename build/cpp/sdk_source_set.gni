@@ -43,6 +43,12 @@ import("//build/sdk/sdk_atom.gni")
 #   non_sdk_deps (optional)
 #     List of dependencies that should not be reflected in SDKs.
 #     Mostly useful for code generation.
+#
+#   extra_headers [optional]
+#     List of header files that are part of the SDK headers for the library
+#     but that must not be exposed as part of the Fuchsia build. This must ONLY
+#     be used as a work-around for https://fxbug.dev/60129.
+#
 template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
   assert(defined(invoker.sdk_name), "Must define an SDK name")
@@ -119,6 +125,9 @@ template("sdk_source_set") {
     not_needed([ "source_headers_are_public" ])
   } else {
     not_needed([ "source_headers_are_public" ])
+  }
+  if (defined(invoker.extra_headers)) {
+    all_headers += invoker.extra_headers
   }
 
   # Determine destinations in the SDK for headers and sources.
