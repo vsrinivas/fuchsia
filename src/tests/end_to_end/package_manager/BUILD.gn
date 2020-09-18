@@ -23,6 +23,7 @@ dart_test("package_manager_test") {
     "//cts/util/pm:pm",
     "//cts/util/ports:ports",
     "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/archive",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/quiver",
@@ -42,20 +43,40 @@ dart_test("package_manager_test") {
 }
 
 if (is_host) {
-  host_test_data("runtime_deps") {
+  action("pm_test_package_gather_deps") {
     metadata = {
       package_barrier = []
     }
+
+    testonly = true
+
+    script = "//cts/build/gather_package_deps.py"
+
+    outputs = [ "$target_gen_dir/pm_deps/package.tar" ]
+
+    deps = [ "//src/tests/end_to_end/package_manager/components:cts-package-manager-sample-component($default_toolchain)" ]
+
+    args = [
+      "--package_json_path",
+      rebase_path(
+          "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/package_manifest.json"),
+      "--meta_far_path",
+      rebase_path(
+          "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/meta.far"),
+      "--output_dir",
+      rebase_path("${target_gen_dir}/pm_deps"),
+    ]
+  }
+
+  host_test_data("runtime_deps") {
     sources = [
-      "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/meta.far",
-      "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/package_manifest.json",
       "$host_tools_dir/pm",
+      "$target_gen_dir/pm_deps/package.tar",
     ]
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
     deps = [
-      "//garnet/packages/tools:sl4f",  # Required to run tests locally.
+      ":pm_test_package_gather_deps($host_toolchain)",
       "//src/sys/pkg/bin/pm:host($host_toolchain)",
-      "//src/tests/end_to_end/package_manager/components:cts-package-manager-sample-component($default_toolchain)",
     ]
   }
 }
@@ -65,6 +86,6 @@ group("tests") {
 
   deps = [
     ":package_manager_test($host_toolchain)",
-    "//garnet/packages/tools:sl4f",
+    "//garnet/packages/tools:sl4f",  # Required to run tests locally.
   ]
 }

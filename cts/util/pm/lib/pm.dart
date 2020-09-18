@@ -8,7 +8,6 @@ import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
 import 'package:ports/ports.dart';
-import 'package:pkg/pkg.dart';
 import 'package:quiver/core.dart' show Optional;
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:retry/retry.dart';
@@ -62,14 +61,12 @@ class PackageManagerRepo {
   /// Uses this command:
   /// `pm -m=<manifest path> archive`
   Future<ProcessResult> pmMArchive(String packageManifestPath) async {
-    _log.info('Creating archive from a given package manifest JSON.');
+    _log.info('Creating archive from a given package manifest.');
     // Running the process from runtime_deps directory is needed since meta.far needs to be
     // a relative path.
     final workingDirectory =
         Platform.script.resolve('runtime_deps').toFilePath();
-    final manifestPath =
-        await createPkgManifestFile(packageManifestPath, workingDirectory);
-    return Process.run(_pmPath, ['-m=$manifestPath', 'archive'],
+    return Process.run(_pmPath, ['-m=$packageManifestPath', 'archive'],
         workingDirectory: workingDirectory);
   }
 

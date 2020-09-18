@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
 import 'package:pkg/pkg.dart';
@@ -33,6 +35,7 @@ Future<String> formattedHostAddress(sl4f.Sl4f sl4fDriver) async {
 
 void main() {
   final log = Logger('package_manager_test');
+  final runtimeDepsPath = Platform.script.resolve('runtime_deps').toFilePath();
   final pmPath = Platform.script.resolve('runtime_deps/pm').toFilePath();
   String hostAddress;
   String manifestPath;
@@ -47,9 +50,25 @@ void main() {
     await sl4fDriver.startServer();
 
     hostAddress = await formattedHostAddress(sl4fDriver);
-    manifestPath = Platform.script
-        .resolve('runtime_deps/package_manifest.json')
-        .toFilePath();
+
+    // Extract the `package.tar`.
+    final packageTarPath =
+        Platform.script.resolve('runtime_deps/package.tar').toFilePath();
+    final bytes = File(packageTarPath).readAsBytesSync();
+    final packageTar = TarDecoder().decodeBytes(bytes);
+    for (final file in packageTar) {
+      final filename = file.name;
+      if (file.isFile) {
+        List<int> data = file.content;
+        File(runtimeDepsPath + Platform.pathSeparator + filename)
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(data);
+      }
+    }
+
+    // The `package.manifest` file comes from the tar extracted above.
+    manifestPath =
+        Platform.script.resolve('runtime_deps/package.manifest').toFilePath();
   });
 
   tearDownAll(() async {

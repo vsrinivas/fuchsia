@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:quiver/core.dart' show Optional;
 import 'package:sl4f/sl4f.dart' as sl4f;
@@ -99,36 +98,4 @@ Future<bool> resetPkgctl(sl4f.Sl4f sl4fDriver, Set<String> originalRepos,
     }
   }
   return true;
-}
-
-/// Convert package JSON into manifest file.
-///
-/// We have a package JSON file that lists the blobs for the package, but
-/// need to convert it into a package manifest file.
-///
-/// Saves the manifest to `$workingDirectory/pkg.manifest`.
-/// Returns path to `pkg.manifest`.
-Future<String> createPkgManifestFile(
-    String manifestJsonPath, String workingDirectory) async {
-  // Convert manifest JSON into a package manifest file.
-  final manifestPath = '$workingDirectory/pkg.manifest';
-  File newManifest = File(manifestPath);
-  var writer = newManifest.openWrite();
-
-  final manifestParsed =
-      json.decode(await File(manifestJsonPath).readAsString());
-  manifestParsed['blobs'].forEach((blob) {
-    if (blob['path'] != 'meta/') {
-      writer.write(
-          '${Directory(blob['path']).absolute.path}=${Directory(blob['source_path']).absolute.path}\n');
-    }
-  });
-
-  // Create a `meta/package` file.
-  var metaPackagePath = '$workingDirectory/pkg-resolver_meta_package.json';
-  File metaPackage = File(metaPackagePath);
-  await metaPackage.writeAsString(r'{"name":"pkg-resolver","version":"0"}');
-  writer.write('meta/package=${metaPackage.absolute.path}');
-  await writer.close();
-  return manifestPath;
 }

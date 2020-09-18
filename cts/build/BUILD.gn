@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+
+_out_dir = "${root_out_dir}/test_data/cts/build"
+
+host_test_data("gather_package_deps_test_data") {
+  testonly = true
+  sources = [
+    "gather_package_deps.py",
+    "gather_package_deps_test.py",
+  ]
+  outputs = [ "${_out_dir}/{{source_file_part}}" ]
+}
+
+host_test("gather_package_deps_test") {
+  binary_path = "${_out_dir}/gather_package_deps_test.py"
+  deps = [ ":gather_package_deps_test_data($host_toolchain)" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":gather_package_deps_test($host_toolchain)" ]
+}
