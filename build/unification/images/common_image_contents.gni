@@ -46,7 +46,6 @@ _common_image_deps += [
   "//src/storage/bin/df",
   "//src/storage/bin/disk-pave:install-disk-image",
   "//src/storage/bin/mount",
-  "//src/storage/bin/storage-metrics",
   "//src/storage/bin/umount",
   "//src/sys/bin/psutils",
   "//src/zircon/bin/kcounter",
