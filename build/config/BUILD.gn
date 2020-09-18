@@ -879,6 +879,7 @@ config("Wno-conversion") {
     "//src/ui/bin/root_presenter/*",
     "//src/ui/examples/bouncing_ball/*",
     "//src/ui/examples/embedder/*",
+    "//src/ui/input/drivers/ft8201/*",
     "//src/ui/input/drivers/hid/*",
     "//src/ui/input/drivers/pc-ps2/*",
     "//src/ui/input/lib/hid-input-report/*",
