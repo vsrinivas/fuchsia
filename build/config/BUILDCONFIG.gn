@@ -358,7 +358,12 @@ if (zircon_toolchain == false) {
       ]
 
   if (toolchain_variant.is_pic_default) {
-    default_common_binary_configs += [ "//build/config:shared_library_config" ]
+    # NOTE: The Zircon build differs from the Fuchsia build for toolchains
+    # that generate PIC-friendly code.
+    default_common_binary_configs += [
+      "//build/config/zircon:shared_library_config",
+      "//build/config/zircon:no_undefined_symbols",
+    ]
   }
 
   # NOTE: Contrary to the Fuchsia build, we start by removing common configs
@@ -808,6 +813,7 @@ declare_args() {
       tags = [
         "instrumented",
         "instrumentation-runtime",
+        "sancov",
       ]
     },
 
@@ -819,6 +825,7 @@ declare_args() {
     {
       forward_variables_from(_asan_variant, "*")
       configs += [ "//build/config/sanitizers:sancov" ]
+      tags += [ "sancov" ]
     },
 
     # Fuzzer variants for various sanitizers.

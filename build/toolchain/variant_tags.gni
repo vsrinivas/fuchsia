@@ -29,6 +29,10 @@ all_variant_tags = [
   # as well.
   "asan",
 
+  # The `sancov` tag is used for variants that implement code coverage
+  # collection.
+  "sancov",
+
   # The `lsan` tag is used for variants that implement leak checking.
   "lsan",
 
