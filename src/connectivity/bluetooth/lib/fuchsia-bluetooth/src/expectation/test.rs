@@ -1,19 +1,16 @@
-use {
-    fidl_fuchsia_bluetooth_sys::TechnologyType,
-    std::collections::HashMap,
-};
+use {fidl_fuchsia_bluetooth_sys::TechnologyType, std::collections::HashMap};
 
 use crate::{
-    expectation::{*, Predicate as P},
-    types::{Address, Peer, PeerId},
     assert_satisfies,
+    expectation::{Predicate as P, *},
     over,
+    types::{Address, Peer, PeerId},
 };
 
 const TEST_PEER_NAME: &'static str = "TestPeer";
 const INCORRECT_PEER_NAME: &'static str = "IncorrectPeer";
-const TEST_PEER_ADDRESS: [u8;6] = [1,0,0,0,0,0];
-const INCORRECT_PEER_ADDRESS: [u8;6] = [2,0,0,0,0,0];
+const TEST_PEER_ADDRESS: [u8; 6] = [1, 0, 0, 0, 0, 0];
+const INCORRECT_PEER_ADDRESS: [u8; 6] = [2, 0, 0, 0, 0, 0];
 
 fn correct_name() -> Predicate<Peer> {
     peer::name(TEST_PEER_NAME)
@@ -40,7 +37,8 @@ fn test_peer() -> Peer {
         rssi: None,
         tx_power: None,
         device_class: None,
-        services: vec![],
+        le_services: vec![],
+        bredr_services: vec![],
     }
 }
 
@@ -57,8 +55,8 @@ fn simple_predicate_succeeds() {
 }
 #[test]
 fn simple_incorrect_predicate_fail() {
-    let predicate = P::equal(Some(INCORRECT_PEER_NAME.to_string()))
-        .over(|dev: &Peer| &dev.name, ".name");
+    let predicate =
+        P::equal(Some(INCORRECT_PEER_NAME.to_string())).over(|dev: &Peer| &dev.name, ".name");
     assert!(!predicate.satisfied(&test_peer()));
 }
 

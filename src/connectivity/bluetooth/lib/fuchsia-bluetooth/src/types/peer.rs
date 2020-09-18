@@ -57,8 +57,11 @@ pub struct Peer {
     /// The most recently obtained transmission power for this peer. Present if known.
     pub tx_power: Option<i8>,
 
-    /// The list of service UUIDs known to be available on this peer.
-    pub services: Vec<Uuid>,
+    /// The list of peer service UUIDs known to be available on the LE transport.
+    pub le_services: Vec<Uuid>,
+
+    /// The cached list of service UUIDs previously discovered on the BR/EDR transport.
+    pub bredr_services: Vec<Uuid>,
 }
 
 impl ImmutableDataInspect<Peer> for ImmutableDataInspectManager {
@@ -74,8 +77,11 @@ impl ImmutableDataInspect<Peer> for ImmutableDataInspectManager {
         }
         writer.create_uint("connected", data.connected.to_property());
         writer.create_uint("bonded", data.bonded.to_property());
-        if !data.services.is_empty() {
-            writer.create_string("services", &data.services.to_property());
+        if !data.le_services.is_empty() {
+            writer.create_string("le_services", &data.le_services.to_property());
+        }
+        if !data.bredr_services.is_empty() {
+            writer.create_string("bredr_services", &data.bredr_services.to_property());
         }
         Self { _manager: manager }
     }
@@ -105,19 +111,20 @@ impl fmt::Display for Peer {
         }
         writeln!(fmt, "\tConnected:\t{}", self.connected)?;
         writeln!(fmt, "\tBonded:\t\t{}", self.bonded)?;
-        writeln!(
-            fmt,
-            "\tServices:\t{:?}",
-            self.services
-                .iter()
-                .map(|uuid| {
-                    let uuid = uuid.to_string();
-                    find_service_uuid(&uuid).map(|an| an.name.to_string()).unwrap_or(uuid)
-                })
-                .collect::<Vec<_>>(),
-        )?;
+        writeln!(fmt, "\tLE Services:\t{:?}", names_from_services(&self.le_services))?;
+        writeln!(fmt, "\tBR/EDR Services:\t{:?}", names_from_services(&self.bredr_services))?;
         Ok(())
     }
+}
+
+fn names_from_services(services: &Vec<Uuid>) -> Vec<String> {
+    services
+        .iter()
+        .map(|uuid| {
+            let uuid = uuid.to_string();
+            find_service_uuid(&uuid).map(|an| an.name.into()).unwrap_or(uuid)
+        })
+        .collect()
 }
 
 fn appearance_from_deprecated(src: fctrl::Appearance) -> Result<Option<Appearance>, Error> {
@@ -161,7 +168,8 @@ impl TryFrom<&fctrl::RemoteDevice> for Peer {
             device_class: None,
             rssi: src.rssi.as_ref().map(|rssi| rssi.value),
             tx_power: src.tx_power.as_ref().map(|tx| tx.value),
-            services: src
+            le_services: vec![],
+            bredr_services: src
                 .service_uuids
                 .iter()
                 .map(|uuid| Uuid::from_str(uuid).map_err(|e| e.into()))
@@ -197,7 +205,7 @@ impl From<&Peer> for fctrl::RemoteDevice {
             tx_power: src.tx_power.map(|t| Box::new(fidl_fuchsia_bluetooth::Int8 { value: t })),
             connected: src.connected,
             bonded: src.bonded,
-            service_uuids: src.services.iter().map(|uuid| uuid.to_string()).collect(),
+            service_uuids: src.bredr_services.iter().map(|uuid| uuid.to_string()).collect(),
         }
     }
 }
@@ -222,8 +230,8 @@ impl TryFrom<fsys::Peer> for Peer {
             device_class: src.device_class,
             rssi: src.rssi,
             tx_power: src.tx_power,
-            services: src.services.unwrap_or(vec![]).iter().map(Uuid::from).collect(),
-            // TODO(fxbug.dev/59628): Convert le_services and bredr_services fields.
+            le_services: src.le_services.unwrap_or(vec![]).iter().map(Uuid::from).collect(),
+            bredr_services: src.bredr_services.unwrap_or(vec![]).iter().map(Uuid::from).collect(),
         })
     }
 }
@@ -241,11 +249,9 @@ impl From<&Peer> for fsys::Peer {
             device_class: src.device_class,
             rssi: src.rssi,
             tx_power: src.tx_power,
-            services: Some(src.services.iter().map(|uuid| uuid.into()).collect()),
-
-            // TODO(fxbug.dev/59628): Convert le_services and bredr_services fields.
-            le_services: None,
-            bredr_services: None,
+            services: None,
+            le_services: Some(src.le_services.iter().map(|uuid| uuid.into()).collect()),
+            bredr_services: Some(src.bredr_services.iter().map(|uuid| uuid.into()).collect()),
         }
     }
 }
@@ -361,7 +367,8 @@ mod tests {
                 option::of(any::<i8>()), // rssi
                 option::of(any::<i8>()), // tx power
             ),
-            any_uuids(), // services
+            any_uuids(), // le_services
+            any_uuids(), // bredr_services
         )
             .prop_map(
                 |(
@@ -377,7 +384,8 @@ mod tests {
                         rssi,
                         tx_power,
                     ),
-                    services,
+                    le_services,
+                    bredr_services,
                 )| {
                     Peer {
                         id: PeerId(id),
@@ -390,7 +398,8 @@ mod tests {
                         device_class,
                         rssi,
                         tx_power,
-                        services,
+                        le_services,
+                        bredr_services,
                     }
                 },
             )
@@ -412,6 +421,13 @@ mod tests {
             // `RemoteDevice` does not have a DeviceClass field and converting one into a `Peer`
             // always initializes this field to None.
             peer.device_class = None;
+
+            // `RemoteDevice` does not have transport-specific service UUID caches, so arbitrarily
+            // use its `service_uuids` field for BR/EDR services. No production bt-host (as of
+            // fxbug.dev/57344) filled in `RemoteDevice.service_uuids` or `Peer.le_services`, so
+            // this permits a `fsys::Peer`->`Peer`->`fctrl::RemoteDevice`->`Peer`->`fsys::Peer`
+            // trip without losing production data (not that such a loop necessarily exists).
+            peer.le_services = vec![];
 
             let control = fctrl::RemoteDevice::from(&peer);
             assert_eq!(Ok(peer), control.try_into().map_err(|e: anyhow::Error| e.to_string()));

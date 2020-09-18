@@ -1178,7 +1178,8 @@ mod tests {
             tx_power: None,
             connected: false,
             bonded: false,
-            services: vec![],
+            le_services: vec![],
+            bredr_services: vec![],
         }
     }
 

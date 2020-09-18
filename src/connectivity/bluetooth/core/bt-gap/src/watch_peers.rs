@@ -107,7 +107,8 @@ mod test {
             device_class: None,
             rssi: None,
             tx_power: None,
-            services: vec![],
+            le_services: vec![],
+            bredr_services: vec![],
         }
     }
 

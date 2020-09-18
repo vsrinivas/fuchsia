@@ -620,7 +620,8 @@ mod tests {
             device_class: None,
             rssi: None,
             tx_power: None,
-            services: vec![],
+            le_services: vec![],
+            bredr_services: vec![],
         }
     }
 
@@ -636,7 +637,8 @@ mod tests {
             device_class: None,
             rssi: None,
             tx_power: None,
-            services: vec![],
+            le_services: vec![],
+            bredr_services: vec![],
         }
     }
 
@@ -658,7 +660,8 @@ mod tests {
             device_class: None,
             rssi,
             tx_power: None,
-            services: vec![],
+            le_services: vec![],
+            bredr_services: vec![],
         }
     }
 
