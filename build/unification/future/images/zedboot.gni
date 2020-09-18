@@ -50,7 +50,6 @@ zedboot_deps += [
 zedboot_deps += [
   "//src/bringup/bin/virtcon:virtual-console",
   "//src/devices/nand/drivers/broker:nand-broker",
-  "//src/devices/nand/drivers/ram-nand",
   "//src/diagnostics/dlog",
   "//src/media/audio/drivers/alc5663",
   "//src/sys/installer:bin",
