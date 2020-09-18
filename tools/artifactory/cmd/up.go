@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -67,6 +68,9 @@ const (
 
 	// Timeout for every file upload.
 	perFileUploadTimeout = 8 * time.Minute
+
+	// Metadata keys.
+	googleReservedFileMtime = "goog-reserved-file-mtime"
 )
 
 type upCommand struct {
@@ -503,8 +507,9 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	queueUploads := func() {
 		defer close(uploads)
 		for _, f := range files {
-			if len(f.Contents) == 0 {
-				if _, err := os.Stat(f.Source); err != nil {
+			if len(f.Source) != 0 {
+				fileInfo, err := os.Stat(f.Source)
+				if err != nil {
 					// The associated artifacts might not actually have been created, which is valid.
 					if os.IsNotExist(err) {
 						logger.Infof(ctx, "%s does not exist; skipping upload", f.Source)
@@ -513,6 +518,11 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 					errs <- err
 					return
 				}
+				mtime := strconv.FormatInt(fileInfo.ModTime().Unix(), 10)
+				if f.Metadata == nil {
+					f.Metadata = map[string]string{}
+				}
+				f.Metadata[googleReservedFileMtime] = mtime
 			}
 			uploads <- f
 		}
