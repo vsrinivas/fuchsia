@@ -29,6 +29,14 @@ rustc_binary("lspci") {
   ]
 }
 
+resource("database") {
+  sources = [ "//third_party/pciids/pci.ids" ]
+  outputs = [ "data/lspci/{{source_file_part}}" ]
+}
+
 group("bootfs") {
-  deps = [ ":lspci" ]
+  deps = [
+    ":database",
+    ":lspci",
+  ]
 }
