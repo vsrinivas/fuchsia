@@ -281,7 +281,7 @@ decode_success("TableWithUnknownTrailingFields") {
 }
 
 decode_success("TableWithUnknownTrailingFieldsAndHandles") {
-    bindings_allowlist = [dart],
+    bindings_allowlist = [go,dart,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),

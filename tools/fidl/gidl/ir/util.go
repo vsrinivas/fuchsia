@@ -149,13 +149,11 @@ func populateUsedHandles(value Value, seen map[Handle]struct{}) {
 		seen[value] = struct{}{}
 	case Record:
 		for _, field := range value.Fields {
-			if field.Key.IsUnknown() {
-				unknownData := field.Value.(UnknownData)
-				for _, handle := range unknownData.Handles {
-					seen[handle] = struct{}{}
-				}
-			}
 			populateUsedHandles(field.Value, seen)
+		}
+	case UnknownData:
+		for _, handle := range value.Handles {
+			seen[handle] = struct{}{}
 		}
 	case []interface{}:
 		for _, item := range value {
