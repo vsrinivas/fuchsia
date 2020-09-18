@@ -15,20 +15,26 @@ use {
     futures::channel::mpsc::UnboundedSender,
     futures::stream::StreamExt,
     futures::TryStreamExt,
+    std::sync::Arc,
 };
 
 const PUBLISHER_EVENT_NAME: &str = "volume_control_events";
 const CONTROLLER_ERROR_DEPENDENCY: &str = "fuchsia.media.audio";
 
+/// Closure definition for an action that can be triggered by ActionFuse.
+pub type ExitAction = Arc<dyn Fn() + Send + Sync + 'static>;
+
 // Stores an AudioStream and a VolumeControl proxy bound to the AudioCore
 // service for |stored_stream|'s stream type. |proxy| is set to None if it
-// fails to bind to the AudioCore service.
+// fails to bind to the AudioCore service. |early_exit_action| specifies a
+// closure to be run if the StreamVolumeControl exits prematurely.
 // TODO(fxb/57705): Replace UnboundedSender with a oneshot channel.
 pub struct StreamVolumeControl {
     pub stored_stream: AudioStream,
     proxy: Option<VolumeControlProxy>,
     audio_service: ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
     publisher: Option<Publisher>,
+    early_exit_action: Option<ExitAction>,
     listen_exit_tx: Option<UnboundedSender<()>>,
 }
 
@@ -45,14 +51,16 @@ impl StreamVolumeControl {
     pub async fn create(
         audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
         stream: AudioStream,
+        early_exit_action: Option<ExitAction>,
         publisher: Option<Publisher>,
     ) -> Result<Self, ControllerError> {
         let mut control = StreamVolumeControl {
             stored_stream: stream,
             proxy: None,
             audio_service: audio_service.clone(),
-            publisher: publisher,
+            publisher,
             listen_exit_tx: None,
+            early_exit_action,
         };
 
         control.bind_volume_control().await?;
@@ -142,6 +150,7 @@ impl StreamVolumeControl {
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
         let publisher_clone = self.publisher.as_ref().map_or(None, |p| Some(p.clone()));
         let mut volume_events = vol_control_proxy.take_event_stream();
+        let early_exit_action = self.early_exit_action.clone();
         fasync::Task::spawn(async move {
             loop {
                 futures::select! {
@@ -151,8 +160,14 @@ impl StreamVolumeControl {
                         }
                         return;
                     }
-                    // TODO(fxb/58181): Handle the case where volume_events fails.
-                    volume_event = volume_events.try_next() => {}
+                    volume_event = volume_events.try_next() => {
+                        if volume_event.is_err() || volume_event.expect("should not be error").is_none(){
+                            if let Some(action) = early_exit_action {
+                                (action)();
+                            }
+                            return;
+                        }
+                    }
 
                 }
             }

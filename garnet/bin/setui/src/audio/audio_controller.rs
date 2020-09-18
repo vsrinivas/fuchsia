@@ -15,6 +15,7 @@ use {
     },
     crate::internal::common::now,
     crate::switchboard::base::*,
+    fuchsia_async as fasync,
     futures::lock::Mutex,
     std::collections::HashMap,
     std::sync::Arc,
@@ -156,8 +157,27 @@ impl VolumeController {
         self.audio_service_connected = true;
 
         for stream in streams.iter() {
-            let stream_volume_control =
-                StreamVolumeControl::create(&audio_service, stream.clone(), None).await?;
+            let client = self.client.clone();
+            let stream_volume_control = StreamVolumeControl::create(
+                &audio_service,
+                stream.clone(),
+                Some(Arc::new(move || {
+                    // When the StreamVolumeControl exits early, inform the
+                    // proxy we have exited. The proxy will then cleanup this
+                    // AudioController.
+                    let client = client.clone();
+                    fasync::Task::spawn(async move {
+                        client
+                            .notify(Event::Exited(Err(ControllerError::UnexpectedError(
+                                "stream_volume_control exit".into(),
+                            ))))
+                            .await;
+                    })
+                    .detach();
+                })),
+                None,
+            )
+            .await?;
             self.stream_volume_controls.insert(stream.stream_type.clone(), stream_volume_control);
         }
 

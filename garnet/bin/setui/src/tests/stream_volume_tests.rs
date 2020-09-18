@@ -48,6 +48,7 @@ async fn test_drop_thread() {
         StreamVolumeControl::create(
             &audio_proxy,
             create_default_audio_stream(AudioStreamType::Media),
+            None,
             Some(publisher),
         )
         .await
@@ -65,4 +66,46 @@ async fn test_drop_thread() {
             panic!("Should have received an event payload");
         }
     }
+}
+
+/// Ensures that the StreamVolumeControl properly fires the provided early exit
+/// closure when the underlying AudioCoreService closes unexpectedly.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_detect_early_exit() {
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle =
+        audio_core_service::Builder::new().set_suppress_client_errors(true).build();
+    service_registry.lock().await.register_service(audio_core_service_handle.clone());
+
+    let service_context_handle =
+        ServiceContext::create(Some(ServiceRegistry::serve(service_registry)), None);
+
+    let audio_proxy = service_context_handle
+        .lock()
+        .await
+        .connect::<fidl_fuchsia_media::AudioCoreMarker>()
+        .await
+        .expect("proxy should be present");
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
+
+    // Create StreamVolumeControl, specifying firing an event as the early exit
+    // action. Note that we must store the returned value or else the normal
+    // drop behavior will clean up it before the AudioCoreService's exit can
+    // be detected.
+    let _stream_volume_control = StreamVolumeControl::create(
+        &audio_proxy,
+        create_default_audio_stream(AudioStreamType::Media),
+        Some(Arc::new(move || {
+            tx.unbounded_send(()).ok();
+        })),
+        None,
+    )
+    .await
+    .expect("should successfully build");
+
+    // Trigger AudioCoreService exit.
+    audio_core_service_handle.lock().await.exit();
+
+    // Check to make sure early exit event was received.
+    assert!(matches!(rx.next().await, Some(..)));
 }

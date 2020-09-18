@@ -8,7 +8,9 @@ use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_media::{AudioRenderUsage, Usage};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+use futures::channel::oneshot;
 use futures::lock::Mutex;
+use futures::FutureExt;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -40,6 +42,7 @@ impl Builder {
 pub struct AudioCoreService {
     suppress_client_errors: bool,
     audio_streams: Arc<RwLock<HashMap<AudioRenderUsage, (f32, bool)>>>,
+    exit_tx: Option<oneshot::Sender<()>>,
 }
 
 impl AudioCoreService {
@@ -51,11 +54,23 @@ impl AudioCoreService {
                 (stream.user_volume_level, stream.user_volume_muted),
             );
         }
-        Self { audio_streams: Arc::new(RwLock::new(streams)), suppress_client_errors }
+        Self {
+            audio_streams: Arc::new(RwLock::new(streams)),
+            suppress_client_errors,
+            exit_tx: None,
+        }
     }
 
     pub fn get_level_and_mute(&self, usage: AudioRenderUsage) -> Option<(f32, bool)> {
         get_level_and_mute(usage, &self.audio_streams)
+    }
+
+    /// Causes the AudioCoreService to exit its request stream processing loop.
+    /// Has no effect if the service is not currently processing requests.
+    pub fn exit(&mut self) {
+        if let Some(tx) = self.exit_tx.take() {
+            tx.send(()).ok();
+        }
     }
 }
 
@@ -72,11 +87,20 @@ impl Service for AudioCoreService {
         let mut manager_stream =
             ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
 
+        let (tx, rx) = oneshot::channel::<()>();
+        self.exit_tx = Some(tx);
+
         let streams_clone = self.audio_streams.clone();
         let suppress_client_errors = self.suppress_client_errors;
         fasync::Task::spawn(async move {
+            let fused_exit = rx.fuse();
+            futures::pin_mut!(fused_exit);
+
             loop {
                 futures::select! {
+                    exit = fused_exit => {
+                        return;
+                    }
                     req = manager_stream.try_next() => {
                         let request = req.unwrap();
 
