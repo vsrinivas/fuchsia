@@ -32,7 +32,9 @@
 
 namespace media::audio {
 
-class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
+class BaseCapturer : public AudioObject,
+                     public fuchsia::media::AudioCapturer,
+                     public std::enable_shared_from_this<BaseCapturer> {
  public:
   AudioClock& reference_clock() { return audio_clock_; }
 

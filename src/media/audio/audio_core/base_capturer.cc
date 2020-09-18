@@ -109,14 +109,15 @@ fit::promise<> BaseCapturer::Cleanup() {
   fit::bridge<> bridge;
   auto nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("audio.debug", "BaseCapturer.capture_cleanup", nonce);
-  async::PostTask(mix_domain_->dispatcher(),
-                  [this, completer = std::move(bridge.completer), nonce]() mutable {
-                    TRACE_DURATION("audio.debug", "BaseCapturer.cleanup_thunk");
-                    TRACE_FLOW_END("audio.debug", "BaseCapturer.capture_cleanup", nonce);
-                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-                    CleanupFromMixThread();
-                    completer.complete_ok();
-                  });
+  async::PostTask(
+      mix_domain_->dispatcher(),
+      [self = shared_from_this(), completer = std::move(bridge.completer), nonce]() mutable {
+        TRACE_DURATION("audio.debug", "BaseCapturer.cleanup_thunk");
+        TRACE_FLOW_END("audio.debug", "BaseCapturer.capture_cleanup", nonce);
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+        self->CleanupFromMixThread();
+        completer.complete_ok();
+      });
 
   // After CleanupFromMixThread is done, no more work will happen on the mix dispatch thread. We
   // need to now ensure our ready_packets signal is De-asserted.
@@ -129,7 +130,6 @@ void BaseCapturer::CleanupFromMixThread() {
 
   mix_wakeup_.Deactivate();
   mix_timer_.Cancel();
-  mix_domain_ = nullptr;
   UpdateState(State::Shutdown);
 }
 
@@ -241,18 +241,18 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // Activate the dispatcher primitives we will use to drive the mixing process. Note we must call
   // Activate on the WakeupEvent from the mix domain, but Signal can be called anytime, even before
   // this Activate occurs.
-  async::PostTask(mix_domain_->dispatcher(), [this] {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-    zx_status_t status =
-        mix_wakeup_.Activate(mix_domain_->dispatcher(), [this](WakeupEvent* event) -> zx_status_t {
-          OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-          FX_DCHECK(event == &mix_wakeup_);
-          return Process();
+  async::PostTask(mix_domain_->dispatcher(), [self = shared_from_this()] {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+    zx_status_t status = self->mix_wakeup_.Activate(
+        self->mix_domain_->dispatcher(), [self](WakeupEvent* event) -> zx_status_t {
+          OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+          FX_DCHECK(event == &self->mix_wakeup_);
+          return self->Process();
         });
 
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed activate mix WakeupEvent";
-      ShutdownFromMixDomain();
+      self->ShutdownFromMixDomain();
       return;
     }
   });
@@ -681,13 +681,13 @@ void BaseCapturer::DoStopAsyncCapture() {
   // service thread so it can complete the stop operation.
   UpdateState(State::AsyncStoppingCallbackPending);
   async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
-                  [this]() { FinishAsyncStopThunk(); });
+                  [self = shared_from_this()]() { self->FinishAsyncStopThunk(); });
 }
 
 void BaseCapturer::ShutdownFromMixDomain() {
   TRACE_DURATION("audio", "BaseCapturer::ShutdownFromMixDomain");
   async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
-                  [this]() { BeginShutdown(); });
+                  [self = shared_from_this()]() { self->BeginShutdown(); });
 }
 
 void BaseCapturer::FinishAsyncStopThunk() {
