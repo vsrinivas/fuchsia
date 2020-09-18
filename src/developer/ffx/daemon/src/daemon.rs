@@ -110,11 +110,11 @@ impl Daemon {
         Daemon { target_collection, event_queue }
     }
 
-    pub async fn handle_requests_from_stream(&self, mut stream: DaemonRequestStream) -> Result<()> {
-        while let Some(req) = stream.try_next().await? {
-            self.handle_request(req).await?;
-        }
-        Ok(())
+    pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
+        stream
+            .map_err(|e| anyhow!("fidl stream err").context(e))
+            .try_for_each_concurrent(None, |req| self.handle_request(req))
+            .await
     }
 
     pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
