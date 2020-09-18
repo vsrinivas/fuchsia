@@ -23,7 +23,7 @@ pub trait Service {
 
     /// Processes the request stream within the specified channel. Ok is returned
     /// on success, an error otherwise.
-    fn process_stream(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error>;
+    fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error>;
 }
 
 /// A helper function for creating a simple setting handler.

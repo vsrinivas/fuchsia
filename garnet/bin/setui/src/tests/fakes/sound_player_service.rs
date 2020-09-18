@@ -68,7 +68,7 @@ impl Service for SoundPlayerService {
         return service_name == PlayerMarker::NAME;
     }
 
-    fn process_stream(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
+    fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
         if !self.can_handle_service(service_name) {
             return Err(format_err!("unsupported"));
         }

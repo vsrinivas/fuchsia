@@ -67,7 +67,7 @@ impl Service for HardwareLightService {
         return service_name == LightMarker::NAME;
     }
 
-    fn process_stream(&self, service_name: &str, channel: Channel) -> Result<(), Error> {
+    fn process_stream(&mut self, service_name: &str, channel: Channel) -> Result<(), Error> {
         if !self.can_handle_service(service_name) {
             return Err(format_err!("unsupported"));
         }

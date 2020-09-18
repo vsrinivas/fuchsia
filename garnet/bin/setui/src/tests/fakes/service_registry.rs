@@ -28,7 +28,7 @@ impl ServiceRegistry {
 
     async fn service_channel(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
         for service_handle in self.services.iter() {
-            let service = service_handle.lock().await;
+            let mut service = service_handle.lock().await;
             if service.can_handle_service(service_name) {
                 return service.process_stream(service_name, channel);
             }

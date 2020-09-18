@@ -46,7 +46,7 @@ impl Service for InputDeviceRegistryService {
         return service_name == fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker::NAME;
     }
 
-    fn process_stream(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
+    fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
         if !self.can_handle_service(service_name) {
             return Err(format_err!("can't handle service"));
         }

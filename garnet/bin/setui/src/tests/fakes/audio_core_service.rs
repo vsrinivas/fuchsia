@@ -64,7 +64,7 @@ impl Service for AudioCoreService {
         return service_name == fidl_fuchsia_media::AudioCoreMarker::NAME;
     }
 
-    fn process_stream(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
+    fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
         if !self.can_handle_service(service_name) {
             return Err(format_err!("unsupported"));
         }
@@ -75,24 +75,33 @@ impl Service for AudioCoreService {
         let streams_clone = self.audio_streams.clone();
         let suppress_client_errors = self.suppress_client_errors;
         fasync::Task::spawn(async move {
-            while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_media::AudioCoreRequest::BindUsageVolumeControl {
-                        usage,
-                        volume_control,
-                        control_handle: _,
-                    } => {
-                        if let Usage::RenderUsage(render_usage) = usage {
-                            process_volume_control_stream(
+            loop {
+                futures::select! {
+                    req = manager_stream.try_next() => {
+                        let request = req.unwrap();
+
+                        if request.is_none() {
+                            return;
+                        }
+                        #[allow(unreachable_patterns)]
+                        match request.expect("request should be present") {
+                            fidl_fuchsia_media::AudioCoreRequest::BindUsageVolumeControl {
+                                usage,
                                 volume_control,
-                                render_usage,
-                                streams_clone.clone(),
-                                suppress_client_errors,
-                            );
+                                control_handle: _,
+                            } => {
+                                if let Usage::RenderUsage(render_usage) = usage {
+                                    process_volume_control_stream(
+                                        volume_control,
+                                        render_usage,
+                                        streams_clone.clone(),
+                                        suppress_client_errors,
+                                    );
+                                }
+                            }
+                            _ => {}
                         }
                     }
-                    _ => {}
                 }
             }
         })

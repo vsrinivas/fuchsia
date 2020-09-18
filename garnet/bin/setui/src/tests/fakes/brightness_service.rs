@@ -39,7 +39,7 @@ impl Service for BrightnessService {
         service_name == fidl_fuchsia_ui_brightness::ControlMarker::NAME
     }
 
-    fn process_stream(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
+    fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
         if !self.can_handle_service(service_name) {
             return Err(format_err!("unsupported"));
         }
