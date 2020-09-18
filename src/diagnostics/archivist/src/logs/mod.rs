@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker};
+use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogInterestSelector, LogListenerSafeMarker, LogRequest, LogRequestStream,
@@ -274,12 +275,17 @@ impl LogManager {
             return;
         }
 
-        let event_listener = Arc::new(control_handle);
+        let control_handle = Arc::new(control_handle);
+        let event_listener = control_handle.clone();
         self.inner
             .lock()
             .await
             .interest_dispatcher
             .add_interest_listener(source, Arc::downgrade(&event_listener));
+
+        // ack successful connections with 'empty' interest
+        // for async clients
+        let _ = control_handle.send_on_register_interest(Interest::empty());
     }
 
     /// Spawn a task to handle requests from components reading the shared log.
