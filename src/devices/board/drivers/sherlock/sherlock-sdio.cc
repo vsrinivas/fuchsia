@@ -120,7 +120,7 @@ constexpr wifi_config_t wifi_config = {
 
 constexpr pbus_metadata_t sd_emmc_metadata[] = {
     {
-        .type = DEVICE_METADATA_EMMC_CONFIG,
+        .type = DEVICE_METADATA_PRIVATE,
         .data_buffer = &sd_emmc_config,
         .data_size = sizeof(sd_emmc_config),
     },

@@ -1034,7 +1034,7 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   aml_sdmmc_config_t config;
   size_t actual;
   status =
-      device_get_metadata(parent, DEVICE_METADATA_EMMC_CONFIG, &config, sizeof(config), &actual);
+      device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &config, sizeof(config), &actual);
   if (status != ZX_OK || actual != sizeof(config)) {
     AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get metadata: %d", status);
     return status;
