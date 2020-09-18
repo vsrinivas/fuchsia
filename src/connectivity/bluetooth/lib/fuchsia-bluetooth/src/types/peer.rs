@@ -222,7 +222,8 @@ impl TryFrom<fsys::Peer> for Peer {
             device_class: src.device_class,
             rssi: src.rssi,
             tx_power: src.tx_power,
-            services: src.services.unwrap_or(vec![]).iter().map(|uuid| Uuid::from(uuid)).collect(),
+            services: src.services.unwrap_or(vec![]).iter().map(Uuid::from).collect(),
+            // TODO(fxbug.dev/59628): Convert le_services and bredr_services fields.
         })
     }
 }
@@ -241,6 +242,10 @@ impl From<&Peer> for fsys::Peer {
             rssi: src.rssi,
             tx_power: src.tx_power,
             services: Some(src.services.iter().map(|uuid| uuid.into()).collect()),
+
+            // TODO(fxbug.dev/59628): Convert le_services and bredr_services fields.
+            le_services: None,
+            bredr_services: None,
         }
     }
 }
@@ -289,32 +294,16 @@ mod tests {
         assert!(peer.is_err());
     }
 
-    fn empty_sys() -> fsys::Peer {
-        fsys::Peer {
-            id: None,
-            address: None,
-            technology: None,
-            connected: None,
-            bonded: None,
-            name: None,
-            appearance: None,
-            device_class: None,
-            rssi: None,
-            tx_power: None,
-            services: None,
-        }
-    }
-
     #[test]
     fn try_from_sys_id_not_present() {
-        let peer = empty_sys();
+        let peer = fsys::Peer::empty();
         let peer = Peer::try_from(peer);
         assert!(peer.is_err());
     }
 
     #[test]
     fn try_from_sys_address_not_present() {
-        let peer = fsys::Peer { id: Some(fbt::PeerId { value: 1 }), ..empty_sys() };
+        let peer = fsys::Peer { id: Some(fbt::PeerId { value: 1 }), ..fsys::Peer::empty() };
         let peer = Peer::try_from(peer);
         assert!(peer.is_err());
     }
@@ -327,7 +316,7 @@ mod tests {
                 type_: fbt::AddressType::Public,
                 bytes: [1, 2, 3, 4, 5, 6],
             }),
-            ..empty_sys()
+            ..fsys::Peer::empty()
         };
         let peer = Peer::try_from(peer);
         assert!(peer.is_err());

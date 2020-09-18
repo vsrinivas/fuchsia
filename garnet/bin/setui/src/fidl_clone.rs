@@ -173,6 +173,8 @@ impl FIDLClone for Peer {
             rssi: self.rssi,
             tx_power: self.tx_power,
             services: self.services.clone(),
+            le_services: self.le_services.clone(),
+            bredr_services: self.bredr_services.clone(),
         };
     }
 }

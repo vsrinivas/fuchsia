@@ -32,7 +32,9 @@ const PEER_TEMPLATE: Peer = Peer {
     device_class: Some(DeviceClass { value: MAJOR_DEVICE_CLASS_PHONE }),
     rssi: Some(-70),
     tx_power: Some(38),
-    services: Some(Vec::new()),
+    services: None,
+    le_services: None,
+    bredr_services: None,
 };
 
 // Sender trait for the fake hanging get handler to send a response back.

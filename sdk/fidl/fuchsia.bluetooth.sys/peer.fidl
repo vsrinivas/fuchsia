@@ -12,6 +12,10 @@ enum TechnologyType {
     DUAL_MODE = 3;
 };
 
+/// Maximum number of discovered services for each transport. Currently set to the number of valid
+/// 16-bit handles or PSMs used to access services.
+const uint16 MAX_PEER_SERVICES = 65535;
+
 /// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE peer.
 table Peer {
     /// Uniquely identifies this peer on the current system.
@@ -60,5 +64,22 @@ table Peer {
     10: int8 tx_power;
 
     /// The list of service UUIDs known to be available on this peer.
-    11: vector<bt.Uuid> services;
+    ///
+    /// This is a legacy field that should not be depended on for new code.
+    [Deprecated]
+    11: vector<bt.Uuid>:MAX_PEER_SERVICES services;
+
+    /// The list of service UUIDs known to be available on the LE transport.
+    ///
+    /// Never present if technology is CLASSIC.
+    12: vector<bt.Uuid>:MAX_PEER_SERVICES le_services;
+
+    /// The cached list of service UUIDs previously discovered on the BR/EDR transport.
+    /// Services are not removed if peer is disconnected if subsequent searches don't find them.
+    ///
+    /// Never present if technology is LOW_ENERGY.
+    ///
+    /// This is a legacy field that should not be depended on for new code.
+    [Deprecated]
+    13: vector<bt.Uuid>:MAX_PEER_SERVICES bredr_services;
 };
