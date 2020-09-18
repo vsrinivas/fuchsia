@@ -533,7 +533,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send SME stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send SME stop response");
             }
         );
 
@@ -664,7 +664,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -927,7 +927,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1033,7 +1033,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1092,7 +1092,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1101,7 +1101,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1184,7 +1184,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1207,7 +1207,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send SME stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send SME stop response");
             }
         );
 
@@ -1256,7 +1256,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1294,7 +1294,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send SME stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send SME stop response");
             }
         );
 
@@ -1353,7 +1353,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send AP stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
             }
         );
 
@@ -1438,7 +1438,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send().expect("could not send SME stop response");
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send SME stop response");
             }
         );
 

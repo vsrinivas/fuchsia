@@ -65,9 +65,16 @@ enum State {
         rsn_cfg: Option<RsnCfg>,
         capabilities: mac::CapabilityInfo,
         rates: Vec<SupportedRate>,
-        responder: Responder<StartResult>,
+        start_responder: Responder<StartResult>,
+        stop_responders: Vec<Responder<fidl_sme::StopApResultCode>>,
         start_timeout: EventId,
         op_radio_cfg: OpRadioConfig,
+    },
+    Stopping {
+        ctx: Context,
+        stop_req: fidl_mlme::StopRequest,
+        responders: Vec<Responder<fidl_sme::StopApResultCode>>,
+        stop_timeout: Option<EventId>,
     },
     Started {
         bss: InfraBss,
@@ -193,7 +200,8 @@ impl ApSme {
                     rsn_cfg,
                     capabilities,
                     rates,
-                    responder,
+                    start_responder: responder,
+                    stop_responders: vec![],
                     start_timeout,
                     op_radio_cfg: op,
                 }
@@ -201,7 +209,11 @@ impl ApSme {
             s @ State::Starting { .. } => {
                 responder.respond(StartResult::PreviousStartInProgress);
                 s
-            }
+            },
+            s @ State::Stopping { .. } => {
+                responder.respond(StartResult::Canceled);
+                s
+            },
             s @ State::Started { .. } => {
                 responder.respond(StartResult::AlreadyStarted);
                 s
@@ -210,26 +222,35 @@ impl ApSme {
         receiver
     }
 
-    pub fn on_stop_command(&mut self) -> oneshot::Receiver<()> {
-        let (stop_responder, receiver) = Responder::new();
-        self.state = self.state.take().map(|state| match state {
+    pub fn on_stop_command(&mut self) -> oneshot::Receiver<fidl_sme::StopApResultCode> {
+        let (responder, receiver) = Responder::new();
+        self.state = self.state.take().map(|mut state| match state {
             s @ State::Idle { .. } => {
-                stop_responder.respond(());
+                responder.respond(fidl_sme::StopApResultCode::Success);
                 s
             }
-            State::Starting { ctx, responder: start_responder, .. } => {
-                start_responder.respond(StartResult::Canceled);
-                stop_responder.respond(());
-                State::Idle { ctx }
+            State::Starting { ref mut stop_responders, .. } => {
+                stop_responders.push(responder);
+                state
             }
-            State::Started { bss } => {
+            State::Stopping { mut ctx, stop_req, mut responders, mut stop_timeout } => {
+                responders.push(responder);
+                // No stop request is ongoing, so forward this stop request.
+                // The previous stop request may have timed out or failed and we are in an
+                // unclean state where we don't know whether the AP has stopped or not.
+                if stop_timeout.is_none() {
+                    stop_timeout.replace(send_stop_req(&mut ctx, stop_req.clone()));
+                }
+                State::Stopping { ctx, stop_req, responders, stop_timeout }
+            }
+            State::Started { mut bss } => {
                 // IEEE Std 802.11-2016, 6.3.12.2.3: The SME should notify associated non-AP STAs of
                 // imminent infrastructure BSS termination before issuing the MLME-STOP.request
                 // primitive.
-                for (client_addr, _) in bss.clients {
+                for (client_addr, _) in &bss.clients {
                     bss.ctx.mlme_sink.send(MlmeRequest::Deauthenticate(
                         fidl_mlme::DeauthenticateRequest {
-                            peer_sta_address: client_addr,
+                            peer_sta_address: *client_addr,
                             // This seems to be the most appropriate reason code (IEEE Std
                             // 802.11-2016, Table 9-45): Requesting STA is leaving the BSS (or
                             // resetting). The spec doesn't seem to mandate a choice of reason code
@@ -239,13 +260,14 @@ impl ApSme {
                     ));
                 }
 
-                bss.ctx
-                    .mlme_sink
-                    .send(MlmeRequest::Stop(fidl_mlme::StopRequest { ssid: bss.ssid.clone() }));
-                // Currently, MLME doesn't send any response back. We simply assume
-                // that the stop request succeeded immediately
-                stop_responder.respond(());
-                State::Idle { ctx: bss.ctx }
+                let stop_req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
+                let timeout = send_stop_req(&mut bss.ctx, stop_req.clone());
+                State::Stopping {
+                    ctx: bss.ctx,
+                    stop_req,
+                    responders: vec![responder],
+                    stop_timeout: Some(timeout),
+                }
             }
         });
         receiver
@@ -253,7 +275,7 @@ impl ApSme {
 
     pub fn get_running_ap(&self) -> Option<fidl_sme::Ap> {
         match self.state.as_ref() {
-            Some(State::Started { bss: InfraBss { ssid, op_radio_cfg, clients, .. } }) => {
+            Some(State::Started { bss: InfraBss { ssid, op_radio_cfg, clients, .. }, .. }) => {
                 Some(fidl_sme::Ap {
                     ssid: ssid.to_vec(),
                     channel: op_radio_cfg.chan.primary,
@@ -263,6 +285,13 @@ impl ApSme {
             _ => None,
         }
     }
+}
+
+fn send_stop_req(ctx: &mut Context, stop_req: fidl_mlme::StopRequest) -> EventId {
+    let event = Event::Sme { event: SmeEvent::StopTimeout };
+    let stop_timeout = ctx.timer.schedule(event);
+    ctx.mlme_sink.send(MlmeRequest::Stop(stop_req.clone()));
+    stop_timeout
 }
 
 /// Adapt user-providing operation condition to underlying device capabilities.
@@ -291,7 +320,7 @@ impl super::Station for ApSme {
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         debug!("received MLME event: {:?}", event);
-        self.state = self.state.take().map(|mut state| match state {
+        self.state = self.state.take().map(|state| match state {
             State::Idle { .. } => {
                 warn!("received MlmeEvent while ApSme is idle {:?}", event);
                 state
@@ -302,7 +331,8 @@ impl super::Station for ApSme {
                 rsn_cfg,
                 capabilities,
                 rates,
-                responder,
+                start_responder,
+                stop_responders,
                 start_timeout,
                 op_radio_cfg,
             } => match event {
@@ -314,7 +344,8 @@ impl super::Station for ApSme {
                     capabilities,
                     rates,
                     op_radio_cfg,
-                    responder,
+                    start_responder,
+                    stop_responders,
                 ),
                 _ => {
                     warn!("received MlmeEvent while ApSme is starting {:?}", event);
@@ -324,13 +355,36 @@ impl super::Station for ApSme {
                         rsn_cfg,
                         capabilities,
                         rates,
-                        responder,
+                        start_responder,
+                        stop_responders,
                         start_timeout,
                         op_radio_cfg,
                     }
                 }
             },
-            State::Started { ref mut bss } => {
+            State::Stopping { ctx, stop_req, mut responders, mut stop_timeout } => match event {
+                MlmeEvent::StopConf { resp } => match resp.result_code {
+                    fidl_mlme::StopResultCodes::Success
+                    | fidl_mlme::StopResultCodes::BssAlreadyStopped => {
+                        for responder in responders.drain(..) {
+                            responder.respond(fidl_sme::StopApResultCode::Success);
+                        }
+                        State::Idle { ctx }
+                    }
+                    fidl_mlme::StopResultCodes::InternalError => {
+                        for responder in responders.drain(..) {
+                            responder.respond(fidl_sme::StopApResultCode::InternalError);
+                        }
+                        stop_timeout.take();
+                        State::Stopping { ctx, stop_req, responders, stop_timeout }
+                    }
+                },
+                _ => {
+                    warn!("received MlmeEvent while ApSme is stopping {:?}", event);
+                    State::Stopping { ctx, stop_req, responders, stop_timeout }
+                }
+            },
+            State::Started { mut bss } => {
                 match event {
                     MlmeEvent::OnChannelSwitched { info } => bss.handle_channel_switch(info),
                     MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
@@ -356,7 +410,7 @@ impl super::Station for ApSme {
                     }
                     _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
                 }
-                state
+                State::Started { bss }
             }
         });
     }
@@ -366,8 +420,9 @@ impl super::Station for ApSme {
             State::Idle { .. } => state,
             State::Starting {
                 start_timeout,
-                ctx,
-                responder,
+                mut ctx,
+                start_responder,
+                stop_responders,
                 capabilities,
                 rates,
                 ssid,
@@ -377,13 +432,25 @@ impl super::Station for ApSme {
                 Event::Sme { event } => match event {
                     SmeEvent::StartTimeout if start_timeout == timed_event.id => {
                         warn!("Timed out waiting for MLME to start");
-                        responder.respond(StartResult::TimedOut);
-                        State::Idle { ctx }
+                        start_responder.respond(StartResult::TimedOut);
+                        if stop_responders.is_empty() {
+                            State::Idle { ctx }
+                        } else {
+                            let stop_req = fidl_mlme::StopRequest { ssid };
+                            let timeout = send_stop_req(&mut ctx, stop_req.clone());
+                            State::Stopping {
+                                ctx,
+                                stop_req,
+                                responders: stop_responders,
+                                stop_timeout: Some(timeout),
+                            }
+                        }
                     }
                     _ => State::Starting {
                         start_timeout,
                         ctx,
-                        responder,
+                        start_responder,
+                        stop_responders,
                         capabilities,
                         rates,
                         ssid,
@@ -394,7 +461,8 @@ impl super::Station for ApSme {
                 _ => State::Starting {
                     start_timeout,
                     ctx,
-                    responder,
+                    start_responder,
+                    stop_responders,
                     capabilities,
                     rates,
                     ssid,
@@ -402,6 +470,25 @@ impl super::Station for ApSme {
                     op_radio_cfg,
                 },
             },
+            State::Stopping { ctx, stop_req, mut responders, mut stop_timeout } => {
+                match timed_event.event {
+                    Event::Sme { event } => match event {
+                        SmeEvent::StopTimeout if stop_timeout.is_some() => {
+                            if stop_timeout == Some(timed_event.id) {
+                                for responder in responders.drain(..) {
+                                    responder.respond(fidl_sme::StopApResultCode::TimedOut);
+                                }
+                                stop_timeout.take();
+                            }
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+                // If timeout triggered, then the responders and the timeout are cleared, and
+                // we are left in an unclean stopping state
+                State::Stopping { ctx, stop_req, responders, stop_timeout }
+            }
             State::Started { ref mut bss } => {
                 bss.handle_timeout(timed_event);
                 state
@@ -427,35 +514,43 @@ fn validate_config(config: &Config) -> Result<(), StartResult> {
 
 fn handle_start_conf(
     conf: fidl_mlme::StartConfirm,
-    ctx: Context,
+    mut ctx: Context,
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
     capabilities: mac::CapabilityInfo,
     rates: Vec<SupportedRate>,
     op_radio_cfg: OpRadioConfig,
-    responder: Responder<StartResult>,
+    start_responder: Responder<StartResult>,
+    stop_responders: Vec<Responder<fidl_sme::StopApResultCode>>,
 ) -> State {
-    match conf.result_code {
-        fidl_mlme::StartResultCodes::Success => {
-            responder.respond(StartResult::Success);
-            State::Started {
-                bss: InfraBss {
-                    ssid,
-                    rsn_cfg,
-                    clients: HashMap::new(),
-                    aid_map: aid::Map::default(),
-                    capabilities,
-                    rates,
-                    op_radio_cfg,
-                    ctx,
-                },
+    if stop_responders.is_empty() {
+        match conf.result_code {
+            fidl_mlme::StartResultCodes::Success => {
+                start_responder.respond(StartResult::Success);
+                State::Started {
+                    bss: InfraBss {
+                        ssid,
+                        rsn_cfg,
+                        clients: HashMap::new(),
+                        aid_map: aid::Map::default(),
+                        capabilities,
+                        rates,
+                        op_radio_cfg,
+                        ctx,
+                    },
+                }
+            }
+            result_code => {
+                error!("failed to start BSS: {:?}", result_code);
+                start_responder.respond(StartResult::InternalError);
+                State::Idle { ctx }
             }
         }
-        result_code => {
-            error!("failed to start BSS: {:?}", result_code);
-            responder.respond(StartResult::InternalError);
-            State::Idle { ctx }
-        }
+    } else {
+        start_responder.respond(StartResult::Canceled);
+        let stop_req = fidl_mlme::StopRequest { ssid };
+        let timeout = send_stop_req(&mut ctx, stop_req.clone());
+        State::Stopping { ctx, stop_req, responders: stop_responders, stop_timeout: Some(timeout) }
     }
 }
 
@@ -858,19 +953,74 @@ mod tests {
     }
 
     #[test]
-    fn ap_stops_while_idle() {
-        let (mut sme, _, _) = create_sme();
-        let mut receiver = sme.on_stop_command();
-        assert_eq!(Ok(Some(())), receiver.try_recv());
+    fn start_req_while_ap_is_stopping() {
+        let (mut sme, _, _) = start_unprotected_ap();
+        let mut stop_receiver = sme.on_stop_command();
+        let mut start_receiver = sme.on_start_command(unprotected_config());
+        assert_eq!(Ok(None), stop_receiver.try_recv());
+        assert_eq!(Ok(Some(StartResult::Canceled)), start_receiver.try_recv());
     }
 
     #[test]
-    fn stop_req_while_ap_is_starting() {
+    fn ap_stops_while_idle() {
         let (mut sme, _, _) = create_sme();
+        let mut receiver = sme.on_stop_command();
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
+    }
+
+    #[test]
+    fn stop_req_while_ap_is_starting_then_succeeds() {
+        let (mut sme, mut mlme_stream, _) = create_sme();
         let mut start_receiver = sme.on_start_command(unprotected_config());
         let mut stop_receiver = sme.on_stop_command();
+        assert_eq!(Ok(None), start_receiver.try_recv());
+        assert_eq!(Ok(None), stop_receiver.try_recv());
+
+        // Verify start request is sent to MLME but not stop request yet
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(_))));
+        assert_variant!(mlme_stream.try_next(), Err(e) => {
+            assert_eq!(e.to_string(), "receiver channel is empty");
+        });
+
+        // Once start confirmation is finished, then stop request is sent out
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
         assert_eq!(Ok(Some(StartResult::Canceled)), start_receiver.try_recv());
-        assert_eq!(Ok(Some(())), stop_receiver.try_recv());
+        assert_eq!(Ok(None), stop_receiver.try_recv());
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert_eq!(stop_req.ssid, SSID.to_vec());
+        });
+
+        // Respond with a successful stop result code
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), stop_receiver.try_recv());
+    }
+
+    #[test]
+    fn stop_req_while_ap_is_starting_then_times_out() {
+        let (mut sme, mut mlme_stream, mut time_stream) = create_sme();
+        let mut start_receiver = sme.on_start_command(unprotected_config());
+        let mut stop_receiver = sme.on_stop_command();
+        assert_eq!(Ok(None), start_receiver.try_recv());
+        assert_eq!(Ok(None), stop_receiver.try_recv());
+
+        // Verify start request is sent to MLME but not stop request yet
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(_))));
+        assert_variant!(mlme_stream.try_next(), Err(e) => {
+            assert_eq!(e.to_string(), "receiver channel is empty");
+        });
+
+        // Time out the start request. Then stop request is sent out
+        let (_, event) = time_stream.try_next().unwrap().expect("expect timer message");
+        sme.on_timeout(event);
+        assert_eq!(Ok(Some(StartResult::TimedOut)), start_receiver.try_recv());
+        assert_eq!(Ok(None), stop_receiver.try_recv());
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert_eq!(stop_req.ssid, SSID.to_vec());
+        });
+
+        // Respond with a successful stop result code
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), stop_receiver.try_recv());
     }
 
     #[test]
@@ -881,7 +1031,9 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
             assert_eq!(stop_req.ssid, SSID.to_vec());
         });
-        assert_eq!(Ok(Some(())), receiver.try_recv());
+        assert_eq!(Ok(None), receiver.try_recv());
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::BssAlreadyStopped));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
     }
 
     #[test]
@@ -911,10 +1063,58 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
             assert_eq!(stop_req.ssid, SSID.to_vec());
         });
-        assert_eq!(Ok(Some(())), receiver.try_recv());
+        assert_eq!(Ok(None), receiver.try_recv());
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
 
         // Check status
         assert_eq!(None, sme.get_running_ap());
+    }
+
+    #[test]
+    fn ap_queues_concurrent_stop_requests() {
+        let (mut sme, _, _) = start_unprotected_ap();
+        let mut receiver1 = sme.on_stop_command();
+        let mut receiver2 = sme.on_stop_command();
+
+        assert_eq!(Ok(None), receiver1.try_recv());
+        assert_eq!(Ok(None), receiver2.try_recv());
+
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver1.try_recv());
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver2.try_recv());
+    }
+
+    #[test]
+    fn uncleaned_stopping_state() {
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let mut stop_receiver1 = sme.on_stop_command();
+        // Clear out the stop request
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert_eq!(stop_req.ssid, SSID.to_vec());
+        });
+
+        assert_eq!(Ok(None), stop_receiver1.try_recv());
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::InternalError));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::InternalError)), stop_receiver1.try_recv());
+
+        // While in unclean stopping state, no start request can be made
+        let mut start_receiver = sme.on_start_command(unprotected_config());
+        assert_eq!(Ok(Some(StartResult::Canceled)), start_receiver.try_recv());
+        assert_variant!(mlme_stream.try_next(), Err(e) => {
+            assert_eq!(e.to_string(), "receiver channel is empty");
+        });
+
+        // SME will forward another stop request to lower layer
+        let mut stop_receiver2 = sme.on_stop_command();
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert_eq!(stop_req.ssid, SSID.to_vec());
+        });
+
+        // Respond successful this time
+        assert_eq!(Ok(None), stop_receiver2.try_recv());
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), stop_receiver2.try_recv());
     }
 
     #[test]
@@ -1177,6 +1377,10 @@ mod tests {
 
     fn create_start_conf(result_code: fidl_mlme::StartResultCodes) -> MlmeEvent {
         MlmeEvent::StartConf { resp: fidl_mlme::StartConfirm { result_code } }
+    }
+
+    fn create_stop_conf(result_code: fidl_mlme::StopResultCodes) -> MlmeEvent {
+        MlmeEvent::StopConf { resp: fidl_mlme::StopConfirm { result_code } }
     }
 
     struct Client {

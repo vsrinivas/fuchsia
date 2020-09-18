@@ -34,7 +34,9 @@ pub async fn get_first_sme(wlan_svc: &WlanService) -> Result<fidl_sme::ApSmeProx
     get_sme_proxy(&wlan_svc, iface_id).await
 }
 
-pub async fn stop(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error> {
+pub async fn stop(
+    iface_sme_proxy: &fidl_sme::ApSmeProxy,
+) -> Result<fidl_sme::StopApResultCode, Error> {
     let stop_ap_result_code = iface_sme_proxy.stop().await;
 
     match stop_ap_result_code {

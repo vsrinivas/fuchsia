@@ -10,6 +10,7 @@ use crate::{timer::TimeoutDuration, MacAddr};
 // client iface is scanning, this is not a magic number, but a number we chose after
 // discussion.
 pub const START_TIMEOUT_SECONDS: i64 = 10;
+pub const STOP_TIMEOUT_SECONDS: i64 = 10;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -29,12 +30,14 @@ impl TimeoutDuration for Event {
 #[derive(Debug, Clone)]
 pub enum SmeEvent {
     StartTimeout,
+    StopTimeout,
 }
 
 impl SmeEvent {
     pub fn timeout_duration(&self) -> zx::Duration {
         match self {
             SmeEvent::StartTimeout => START_TIMEOUT_SECONDS.seconds(),
+            SmeEvent::StopTimeout => STOP_TIMEOUT_SECONDS.seconds(),
         }
     }
 }

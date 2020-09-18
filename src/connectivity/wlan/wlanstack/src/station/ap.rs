@@ -98,8 +98,8 @@ async fn handle_fidl_request(
             responder.send(r)?;
         }
         fidl_sme::ApSmeRequest::Stop { responder } => {
-            stop(sme).await;
-            responder.send()?;
+            let r = stop(sme).await;
+            responder.send(r)?;
         }
         fidl_sme::ApSmeRequest::Status { responder } => {
             let mut r = status(sme);
@@ -139,10 +139,11 @@ fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultC
     }
 }
 
-async fn stop(sme: &Mutex<Sme>) {
+async fn stop(sme: &Mutex<Sme>) -> fidl_sme::StopApResultCode {
     let receiver = sme.lock().unwrap().on_stop_command();
     receiver.await.unwrap_or_else(|_| {
         error!("Responder for AP Stop command was dropped without sending a response");
+        fidl_sme::StopApResultCode::InternalError
     })
 }
 
