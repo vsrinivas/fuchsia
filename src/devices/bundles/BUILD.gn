@@ -68,6 +68,7 @@ group("utils") {
     "//src/devices/bin/unbind",
     "//src/devices/block/bin/gpt",
     "//src/devices/block/bin/lsblk",
+    "//src/devices/block/bin/sdio",
     "//src/devices/clock/bin/clock",
     "//src/devices/clock/bin/clock:clkctl",
     "//src/devices/cpu/bin/cpuctl",

@@ -38,7 +38,6 @@ _common_image_deps += [
   "//src/developer/forensics/crasher/cpp:crasher_exe",
   "//src/devices/block/bin/disk-inspect",
   "//src/devices/block/bin/fvm-check",
-  "//src/devices/block/bin/sdio",
   "//src/devices/nand/bin/nand-loader",
   "//src/devices/nand/bin/nand-util",
   "//src/devices/nand/drivers/broker:nand-broker",
