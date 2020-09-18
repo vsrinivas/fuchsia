@@ -61,14 +61,7 @@ test_package("netstack_gotests") {
     ":netstack_link_netdevice_test",
     ":netstack_test",
     "ifconfig:netstack_ifconfig_test",
-    "netstack_service_test",
     "util:netstack_util_test",
-  ]
-
-  binaries = [
-    {
-      name = "netstack_service_test"
-    },
   ]
 
   tests = [
