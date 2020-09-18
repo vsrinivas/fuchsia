@@ -37,6 +37,7 @@ group("usb-peripheral-stack") {
 group("utils") {
   deps = [
     "//src/devices/bundles:utils",
+    "//src/graphics/display/bin/dsiutil",
     "//src/media/audio/tools/audio-driver-ctl:bin",
     "//src/ui/backlight/bin/backlight",
     "//src/ui/input/bin/hid",

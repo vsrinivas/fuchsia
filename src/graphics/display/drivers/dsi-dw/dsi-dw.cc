@@ -7,14 +7,16 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-
-#include "dw-mipi-dsi-reg.h"
+#include <fbl/auto_lock.h>
 
 // Header Creation Macros
 #define GEN_HDR_WC_MSB(x) ((x & 0xFF) << 16)
@@ -47,6 +49,40 @@ constexpr uint32_t kBitCmdFull = 1;
 constexpr uint32_t kBitCmdEmpty = 0;
 
 }  // namespace
+
+// DsiDwBase Functions
+zx_status_t DsiDwBase::Bind() {
+  auto status = DdkAdd("dw-dsi-base", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
+  if (status != ZX_OK) {
+    DSI_ERROR("Could not add device (%d)", status);
+    return status;
+  }
+  return status;
+}
+
+void DsiDwBase::SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd,
+                        ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync _completer) {
+  zx_status_t status = ZX_OK;
+  // TODO(payamm): We don't support READ at the moment. READ is complicated because it consumes
+  // additional cycles required to get info from the LCD. This may cause issues if the command is
+  // issued during the last line of a frame. If we want to support READ, we would want to properly
+  // stop VIDEO, switch to COMMAND mode and perform the read. For now, we will not support it.
+  fidl::VectorView<uint8_t> rsp_data(nullptr, 0);
+  status = dsidw_->SendCommand(cmd, txdata, rsp_data);
+  if (status != ZX_OK) {
+    _completer.ReplyError(status);
+  }
+  _completer.ReplySuccess(std::move(rsp_data));
+}
+
+zx_status_t DsiDwBase::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  fidl_dsi::DsiBase::Dispatch(this, msg, &transaction);
+  return transaction.Status();
+}
+
+void DsiDwBase::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+void DsiDwBase::DdkRelease() { delete this; }
 
 zx_status_t DsiDw::DsiImplWriteReg(uint32_t reg, uint32_t val) {
   // TODO(payamm): Verify register offset is valid
@@ -186,7 +222,24 @@ zx_status_t DsiDw::DsiImplPhyWaitForReady() {
 zx_status_t DsiDw::DsiImplSendCmd(const mipi_dsi_cmd_t* cmd_list, size_t cmd_count) {
   zx_status_t status = ZX_OK;
   for (size_t i = 0; i < cmd_count && status == ZX_OK; i++) {
-    status = SendCmd(cmd_list[i]);
+    status = SendCommand(cmd_list[i]);
+  }
+  return status;
+}
+
+// TODO(payamm): Add support for other types of commands
+zx_status_t DsiDw::SendCommand(const fidl_dsi::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata,
+                               fidl::VectorView<uint8_t>& response) {
+  fbl::AutoLock lock(&command_lock_);
+  zx_status_t status = ZX_OK;
+  switch (cmd.dsi_data_type()) {
+    case kMipiDsiDtDcsShortWrite0:
+    case kMipiDsiDtDcsShortWrite1:
+      status = DcsWriteShort(cmd, txdata);
+      break;
+    default:
+      DSI_ERROR("Unsupported/Invalid DSI Command Type %d\n", cmd.dsi_data_type());
+      status = ZX_ERR_NOT_SUPPORTED;
   }
   return status;
 }
@@ -266,10 +319,15 @@ zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
 
   // The following values are relevent for video mode
   // 3.1 Configure low power transitions and video mode type
+
+  // Note: If the lp_cmd_en bit of the VID_MODE_CFG register is 0, the commands are sent
+  // in high-speed in Video Mode. In this case, the DWC_mipi_dsi_host automatically determines
+  // the area where each command can be sent and no programming or calculation is required.
+
   DsiDwVidModeCfgReg::Get()
       .ReadFrom(&(*dsi_mmio_))
       .set_vpg_en(0)
-      .set_lp_cmd_en(1)
+      .set_lp_cmd_en(0)
       .set_frame_bta_ack_en(1)
       .set_lp_hfp_en(1)
       .set_lp_hbp_en(1)
@@ -576,7 +634,7 @@ zx_status_t DsiDw::WaitforBtaAck() {
 
 // MIPI DSI Functions as implemented by DWC IP
 zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
-  // Sanity check payload data and size
+  // Check that the payload size and command match
   if ((cmd.pld_data_count > 2) || (cmd.pld_data_count > 0 && cmd.pld_data_list == nullptr) ||
       (cmd.dsi_data_type & kMipiDsiDtGenShortWrite0) != kMipiDsiDtGenShortWrite0) {
     DSI_ERROR("Invalid Gen short cmd sent\n");
@@ -596,8 +654,28 @@ zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
   return GenericHdrWrite(regVal);
 }
 
+zx_status_t DsiDw::DcsWriteShort(const fidl_dsi::MipiDsiCmd& cmd,
+                                 fidl::VectorView<uint8_t>& txdata) {
+  // Check that the payload size and command match
+  if ((txdata.count() > 1) ||
+      (cmd.dsi_data_type() & kMipiDsiDtDcsShortWrite0) != kMipiDsiDtDcsShortWrite0) {
+    DSI_ERROR("Invalid DCS short command\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint32_t regVal = 0;
+  regVal |= GEN_HDR_DT(cmd.dsi_data_type());
+  regVal |= GEN_HDR_VC(cmd.virtual_channel_id());
+  regVal |= GEN_HDR_WC_LSB(txdata[0]);
+  if (txdata.count() == 1) {
+    regVal |= GEN_HDR_WC_MSB(txdata[1]);
+  }
+
+  return GenericHdrWrite(regVal);
+}
+
 zx_status_t DsiDw::DcsWriteShort(const mipi_dsi_cmd_t& cmd) {
-  // Sanity check payload data and size
+  // Check that the payload size and command match
   if ((cmd.pld_data_count > 1) || (cmd.pld_data_list == nullptr) ||
       (cmd.dsi_data_type & kMipiDsiDtDcsShortWrite0) != kMipiDsiDtDcsShortWrite0) {
     DSI_ERROR("Invalid DCS short command\n");
@@ -752,7 +830,8 @@ zx_status_t DsiDw::GenRead(const mipi_dsi_cmd_t& cmd) {
   return status;
 }
 
-zx_status_t DsiDw::SendCmd(const mipi_dsi_cmd_t& cmd) {
+zx_status_t DsiDw::SendCommand(const mipi_dsi_cmd_t& cmd) {
+  fbl::AutoLock lock(&command_lock_);
   zx_status_t status = ZX_OK;
 
   switch (cmd.dsi_data_type) {
@@ -813,6 +892,20 @@ zx_status_t DsiDw::Bind() {
   if (status != ZX_OK) {
     DSI_ERROR("could not add device %d\n", status);
   }
+
+  fbl::AllocChecker ac;
+  std::unique_ptr<DsiDwBase> dw_base = fbl::make_unique_checked<DsiDwBase>(&ac, zxdev_, this);
+  if (!ac.check()) {
+    DSI_ERROR("Could not create DsiDwBase");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  status = dw_base->Bind();
+  if (status != ZX_OK) {
+    DSI_ERROR("Dsi Base Initialization failed (%d)", status);
+    return status;
+  }
+  __UNUSED auto ptr = dw_base.release();
   return status;
 }
 

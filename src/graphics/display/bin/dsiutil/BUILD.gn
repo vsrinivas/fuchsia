@@ -1,0 +1,15 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("dsiutil") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "main.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.dsiimpl",
+    "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/mipi-dsi",
+  ]
+}

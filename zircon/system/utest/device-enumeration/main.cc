@@ -235,6 +235,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "backlight/ti-lp8556",
       "display/amlogic-display/display-controller",
       "sys/platform/00:00:1e/dw-dsi",
+      "class/dsi-base/000",
       "sys/platform/05:00:10/aml-canvas",
       "tee/optee",
       "aml-video",
@@ -426,6 +427,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "aml-thermal-pll/thermal",
       "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller",
+      "class/dsi-base/000",
       "sys/platform/05:00:18/aml-usb-phy-v2",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.

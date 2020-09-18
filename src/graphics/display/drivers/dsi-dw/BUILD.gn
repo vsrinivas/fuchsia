@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 driver_module("dsi-dw") {
   configs += [
@@ -31,11 +33,72 @@ driver_module("dsi-dw") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mipi-dsi",
   ]
+}
+
+test("dsi-dw-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "dsi-dw-test"
+  sources = [
+    "dsi-dw-test.cc",
+    "dsi-dw.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.dsi",
+    "//sdk/banjo/ddk.protocol.dsiimpl",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/mipi-dsi",
+  ]
+}
+
+unittest_package("dsi-dw-test-package") {
+  package_name = "dsi-dw-test"
+  deps = [ ":dsi-dw-test" ]
+
+  tests = [
+    {
+      name = "dsi-dw-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":dsi-dw-test-package" ]
 }

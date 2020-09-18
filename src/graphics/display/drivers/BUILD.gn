@@ -9,6 +9,7 @@ group("tests") {
     "aml-canvas:tests",
     "amlogic-display:tests",
     "display:tests",
+    "dsi-dw:tests",
     "goldfish-display:tests",
     "intel-i915:tests",
     "mt8167s-display:tests",

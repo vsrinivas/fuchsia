@@ -170,5 +170,6 @@ DDK_PROTOCOL_DEF(VREG,                    146, "vreg", 0)
 DDK_PROTOCOL_DEF(ADC,                     147, "adc", 0)
 DDK_PROTOCOL_DEF(DSI,                     148, "dsi", PF_NOPUB)
 DDK_PROTOCOL_DEF(BT_VENDOR,               149, "bt-vendor", 0)
+DDK_PROTOCOL_DEF(DSI_BASE,                150, "dsi-base", 0)
 #undef DDK_PROTOCOL_DEF
 #endif

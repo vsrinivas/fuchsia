@@ -5,20 +5,35 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_
 
+#include <fuchsia/hardware/dsi/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/dispatcher.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/llcpp/types.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/channel.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/driver.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/dsi.h>
 #include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
@@ -31,7 +46,30 @@
 
 namespace dsi_dw {
 
+class DsiDwBase;
 class DsiDw;
+
+namespace fidl_dsi = ::llcpp::fuchsia::hardware::dsi;
+
+using DeviceTypeBase = ddk::Device<DsiDwBase, ddk::Unbindable, ddk::Messageable>;
+class DsiDwBase : public DeviceTypeBase,
+                  public ddk::EmptyProtocol<ZX_PROTOCOL_DSI_BASE>,
+                  public llcpp::fuchsia::hardware::dsi::DsiBase::Interface {
+ public:
+  DsiDwBase(zx_device_t* parent, DsiDw* dsidw) : DeviceTypeBase(parent), dsidw_(dsidw) {}
+  zx_status_t Bind();
+
+  // FIDL
+  void SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd, ::fidl::VectorView<uint8_t> txdata,
+               SendCmdCompleter::Sync _completer) override;
+
+  void DdkUnbind(ddk::UnbindTxn txn);
+  void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+ private:
+  DsiDw* dsidw_;
+};
 
 using DeviceType = ddk::Device<DsiDw, ddk::Unbindable>;
 
@@ -64,36 +102,45 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   void DdkRelease();
 
  private:
-  inline bool IsPldREmpty();
-  inline bool IsPldRFull();
-  inline bool IsPldWEmpty();
-  inline bool IsPldWFull();
-  inline bool IsCmdEmpty();
-  inline bool IsCmdFull();
-  zx_status_t WaitforFifo(uint32_t bit, bool val);
-  zx_status_t WaitforPldWNotFull();
-  zx_status_t WaitforPldWEmpty();
-  zx_status_t WaitforPldRFull();
-  zx_status_t WaitforPldRNotEmpty();
-  zx_status_t WaitforCmdNotFull();
-  zx_status_t WaitforCmdEmpty();
+  inline bool IsPldREmpty() TA_REQ(command_lock_);
+  inline bool IsPldRFull() TA_REQ(command_lock_);
+  inline bool IsPldWEmpty() TA_REQ(command_lock_);
+  inline bool IsPldWFull() TA_REQ(command_lock_);
+  inline bool IsCmdEmpty() TA_REQ(command_lock_);
+  inline bool IsCmdFull() TA_REQ(command_lock_);
+  zx_status_t WaitforFifo(uint32_t bit, bool val) TA_REQ(command_lock_);
+  zx_status_t WaitforPldWNotFull() TA_REQ(command_lock_);
+  zx_status_t WaitforPldWEmpty() TA_REQ(command_lock_);
+  zx_status_t WaitforPldRFull() TA_REQ(command_lock_);
+  zx_status_t WaitforPldRNotEmpty() TA_REQ(command_lock_);
+  zx_status_t WaitforCmdNotFull() TA_REQ(command_lock_);
+  zx_status_t WaitforCmdEmpty() TA_REQ(command_lock_);
   void DumpCmd(const mipi_dsi_cmd_t& cmd);
-  zx_status_t GenericPayloadRead(uint32_t* data);
-  zx_status_t GenericHdrWrite(uint32_t data);
-  zx_status_t GenericPayloadWrite(uint32_t data);
-  void EnableBta();
-  void DisableBta();
-  zx_status_t WaitforBtaAck();
-  zx_status_t GenWriteShort(const mipi_dsi_cmd_t& cmd);
-  zx_status_t DcsWriteShort(const mipi_dsi_cmd_t& cmd);
-  zx_status_t GenWriteLong(const mipi_dsi_cmd_t& cmd);
-  zx_status_t GenRead(const mipi_dsi_cmd_t& cmd);
-  zx_status_t SendCmd(const mipi_dsi_cmd_t& cmd);
+  zx_status_t GenericPayloadRead(uint32_t* data) TA_REQ(command_lock_);
+  zx_status_t GenericHdrWrite(uint32_t data) TA_REQ(command_lock_);
+  zx_status_t GenericPayloadWrite(uint32_t data) TA_REQ(command_lock_);
+  void EnableBta() TA_REQ(command_lock_);
+  void DisableBta() TA_REQ(command_lock_);
+  zx_status_t WaitforBtaAck() TA_REQ(command_lock_);
+  zx_status_t GenWriteShort(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
+  zx_status_t DcsWriteShort(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
+  zx_status_t GenWriteLong(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
+  zx_status_t DcsWriteShort(const fidl_dsi::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata)
+      TA_REQ(command_lock_);
+  zx_status_t GenRead(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
+  zx_status_t SendCommand(const mipi_dsi_cmd_t& cmd);
+  zx_status_t SendCommand(const fidl_dsi::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata,
+                          fidl::VectorView<uint8_t>& response);
   zx_status_t GetColorCode(color_code_t c, bool& packed, uint8_t& code);
   zx_status_t GetVideoMode(video_mode_t v, uint8_t& mode);
   std::optional<ddk::MmioBuffer> dsi_mmio_;
   pdev_protocol_t pdev_proto_ = {nullptr, nullptr};
   ddk::PDev pdev_;
+
+  // This lock is used to synchronize SendCmd issued from FIDL server and Banjo interface
+  fbl::Mutex command_lock_;
+
+  friend DsiDwBase;
 };
 
 }  // namespace dsi_dw
