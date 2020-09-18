@@ -665,19 +665,22 @@ async fn test_retry() {
     // For each failed attempt, make sure a retry event was broadcasted
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
         verify_handler_event(
+            setting_type,
             event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Execute(setting_type, request_id),
+            event::handler::Event::Execute(request_id),
         );
         verify_handler_event(
+            setting_type,
             event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Retry(setting_type, request.clone()),
+            event::handler::Event::Retry(request.clone()),
         );
     }
 
     // Ensure that the final event reports that attempts were exceeded
     verify_handler_event(
+        setting_type,
         event_receptor.next().await.expect("should be notified of external failure"),
-        event::handler::Event::AttemptsExceeded(setting_type, request.clone()),
+        event::handler::Event::AttemptsExceeded(request.clone()),
     );
 
     // Regenerate setting handler
@@ -707,8 +710,9 @@ async fn test_retry() {
 
     // Make sure SettingHandler tears down
     verify_handler_event(
+        setting_type,
         event_receptor.next().await.expect("should be notified of teardown"),
-        event::handler::Event::Teardown(setting_type),
+        event::handler::Event::Teardown,
     );
 }
 
@@ -768,23 +772,27 @@ fn test_timeout() {
         // For each failed attempt, make sure a retry event was broadcasted
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
             verify_handler_event(
+                setting_type,
                 event_receptor.next().await.expect("should be notified of execute"),
-                event::handler::Event::Execute(setting_type, request_id),
+                event::handler::Event::Execute(request_id),
             );
             verify_handler_event(
+                setting_type,
                 event_receptor.next().await.expect("should be notified of timeout"),
-                event::handler::Event::Timeout(setting_type, request.clone()),
+                event::handler::Event::Timeout(request.clone()),
             );
             verify_handler_event(
+                setting_type,
                 event_receptor.next().await.expect("should be notified of reattempt"),
-                event::handler::Event::Retry(setting_type, request.clone()),
+                event::handler::Event::Retry(request.clone()),
             );
         }
 
         // Ensure that the final event reports that attempts were exceeded
         verify_handler_event(
+            setting_type,
             event_receptor.next().await.expect("should be notified of exceeded attempts"),
-            event::handler::Event::AttemptsExceeded(setting_type, request.clone()),
+            event::handler::Event::AttemptsExceeded(request.clone()),
         );
     };
 
@@ -857,12 +865,14 @@ fn test_timeout_no_retry() {
         );
 
         verify_handler_event(
+            setting_type,
             event_receptor.next().await.expect("should be notified of execution"),
-            event::handler::Event::Execute(setting_type, request_id),
+            event::handler::Event::Execute(request_id),
         );
         verify_handler_event(
+            setting_type,
             event_receptor.next().await.expect("should be notified of timeout"),
-            event::handler::Event::Timeout(setting_type, request),
+            event::handler::Event::Timeout(request),
         );
     };
 
@@ -885,12 +895,16 @@ fn test_timeout_no_retry() {
 
 /// Checks that the supplied message event specifies the supplied handler event.
 fn verify_handler_event(
+    setting_type: SettingType,
     message_event: MessageEvent<event::Payload, event::Address>,
     event: event::handler::Event,
 ) {
-    if let MessageEvent::Message(event::Payload::Event(event::Event::Handler(captured_event)), _) =
-        message_event
+    if let MessageEvent::Message(
+        event::Payload::Event(event::Event::Handler(captured_type, captured_event)),
+        _,
+    ) = message_event
     {
+        assert_eq!(captured_type, setting_type);
         assert_eq!(event, captured_event);
         return;
     }

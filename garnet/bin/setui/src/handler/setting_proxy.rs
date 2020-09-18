@@ -78,7 +78,7 @@ pub struct SettingProxy {
 /// Publishes an event to the event_publisher.
 macro_rules! publish {
     ($self:ident, $event:expr) => {
-        $self.event_publisher.send_event(event::Event::Handler($event));
+        $self.event_publisher.send_event(event::Event::Handler($self.setting_type, $event));
     };
 }
 
@@ -362,10 +362,7 @@ impl SettingProxy {
             result = Err(ControllerError::IrrecoverableError);
             retry = true;
         } else if matches!(result, Err(ControllerError::TimeoutError)) {
-            self.event_publisher.send_event(event::Event::Handler(event::handler::Event::Timeout(
-                self.setting_type,
-                request.request.clone(),
-            )));
+            publish!(self, event::handler::Event::Timeout(request.request.clone()));
             retry = self.retry_on_timeout;
         }
 
@@ -435,12 +432,12 @@ impl SettingProxy {
         // If we have exceeded the maximum number of attempts, remove this
         // request from the queue.
         if current_attempts > self.max_attempts {
-            publish!(self, event::handler::Event::AttemptsExceeded(self.setting_type, request));
+            publish!(self, event::handler::Event::AttemptsExceeded(request));
             self.request(ActiveControllerRequest::RemoveActive(id));
             return;
         }
 
-        publish!(self, event::handler::Event::Execute(self.setting_type, id));
+        publish!(self, event::handler::Event::Execute(id));
 
         let mut receptor = self
             .controller_messenger_client
@@ -490,7 +487,6 @@ impl SettingProxy {
         publish!(
             self,
             event::handler::Event::Retry(
-                self.setting_type,
                 self.active_requests
                     .front()
                     .expect("active request should be present")
@@ -531,6 +527,6 @@ impl SettingProxy {
         // properly stopped. Without this, the client event loop will run forever.
         self.controller_messenger_factory.delete(signature);
 
-        publish!(self, event::handler::Event::Teardown(self.setting_type));
+        publish!(self, event::handler::Event::Teardown);
     }
 }

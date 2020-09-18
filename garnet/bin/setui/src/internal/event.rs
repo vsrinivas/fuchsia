@@ -21,7 +21,7 @@ pub enum Event {
     Earcon(earcon::Event),
     Restore(restore::Event),
     Closed(&'static str),
-    Handler(handler::Event),
+    Handler(SettingType, handler::Event),
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
@@ -45,15 +45,15 @@ pub mod earcon {
 }
 
 pub mod handler {
-    use crate::switchboard::base::{SettingRequest, SettingType};
+    use crate::switchboard::base::SettingRequest;
 
     #[derive(PartialEq, Clone, Debug)]
     pub enum Event {
-        Retry(SettingType, SettingRequest),
-        Timeout(SettingType, SettingRequest),
-        AttemptsExceeded(SettingType, SettingRequest),
-        Execute(SettingType, u64),
-        Teardown(SettingType),
+        Retry(SettingRequest),
+        Timeout(SettingRequest),
+        AttemptsExceeded(SettingRequest),
+        Execute(u64),
+        Teardown,
     }
 }
 
