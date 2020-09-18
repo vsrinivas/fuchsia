@@ -66,7 +66,7 @@ zx_library("minfs") {
     ]
   }
   public_deps = [
-    "//zircon/public/lib/bitmap",
+    "//zircon/system/ulib/bitmap",
 
     #"//zircon/system/ulib/disk_inspector",
     "//zircon/public/lib/fbl",
@@ -79,12 +79,12 @@ zx_library("minfs") {
     "//zircon/system/ulib/storage/operation",
   ]
   deps = [
-    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/transaction",

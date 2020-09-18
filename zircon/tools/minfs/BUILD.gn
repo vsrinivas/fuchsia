@@ -14,9 +14,9 @@ import("//build/sdk/sdk_host_tool.gni")
 executable("minfs") {
   sources = [ "main.cc" ]
   deps = [
-    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fs-host",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/minfs",

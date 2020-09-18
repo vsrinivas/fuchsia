@@ -20,12 +20,10 @@
 #   git -C zircon/public/lib clean -df
 #
 abr/
-affine/
 arch/
 arm64/
 async/
 async-cpp/
-bitmap/
 boringssl/
 cmdline/
 cmpctmalloc/
@@ -36,7 +34,6 @@ devicetree/
 elfload/
 elf-psabi/
 explicit-memory/
-ffl/
 fidl/
 fidl_base/
 fidl-llcpp/
@@ -49,7 +46,6 @@ lz4/
 mmio-ptr/
 mmio-ptr-fake/
 ngunwind/
-pretty/
 ram-crashlog/
 region-alloc/
 runtime/
@@ -65,5 +61,4 @@ x86/
 zbitl/
 zircon-headers/
 zstd/
-zxc/
 zx-panic-libc/

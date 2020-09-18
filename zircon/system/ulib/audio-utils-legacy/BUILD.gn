@@ -30,9 +30,9 @@ zx_library("audio-utils-legacy") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/affine",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/affine",
     "//zircon/system/ulib/fzl",
   ]
 }

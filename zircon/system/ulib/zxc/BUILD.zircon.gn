@@ -2,17 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 source_set("fitx") {
   sources = [
-    "lib/fitx/internal/compiler.h",
-    "lib/fitx/internal/result.h",
-    "lib/fitx/internal/type_traits.h",
-    "lib/fitx/result.h",
+    "include/lib/fitx/internal/compiler.h",
+    "include/lib/fitx/internal/result.h",
+    "include/lib/fitx/internal/type_traits.h",
+    "include/lib/fitx/result.h",
   ]
 }
 
 source_set("zx") {
-  sources = [ "lib/zx/status.h" ]
+  sources = [ "include/lib/zx/status.h" ]
   public_deps = [ ":fitx" ]
 }
 
@@ -25,6 +27,7 @@ zx_library("zxc") {
     "lib/fitx/result.h",
     "lib/zx/status.h",
   ]
+  sdk_migrated = true
   sources = []
   public_deps = [
     ":fitx",

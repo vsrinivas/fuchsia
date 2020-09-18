@@ -20,16 +20,16 @@ zx_library("id_allocator") {
   sources = [ "id_allocator.cc" ]
   public_deps = [
     # <id_allocator/id_allocator.h> has #include <bitmap/bitmap.h>.
-    "//zircon/public/lib/bitmap",
+    "//zircon/system/ulib/bitmap",
 
     # <id_allocator/id_allocator.h> has #include <fbl/algorithm.h>.
     "//zircon/public/lib/fbl",
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/bitmap",
   ]
 }

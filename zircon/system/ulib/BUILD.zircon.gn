@@ -21,17 +21,14 @@ group("ulib") {
     "$zx/kernel/lib/devicetree",
     "$zx/third_party/ulib",
     "abr",
-    "affine",
     "async",
     "async:async-cpp",
-    "bitmap",
     "c",
     "c:crt1",
     "ddk-platform-defs",
     "elf-psabi",
     "elfload",
     "explicit-memory",
-    "ffl",
     "fidl",
     "fidl:fidl-llcpp",
     "fidl:fidl_base",
@@ -40,7 +37,6 @@ group("ulib") {
     "lockdep",
     "mmio-ptr",
     "mmio-ptr:mmio-ptr-fake",
-    "pretty",
     "ram-crashlog",
     "region-alloc",
     "runtime",
@@ -50,7 +46,6 @@ group("ulib") {
     "zbitl",
     "zircon",
     "zircon:zircon-headers",
-    "zxc",
   ]
 }
 
@@ -66,15 +61,11 @@ group("ulib-host") {
     "$zx/third_party/ulib/zstd",
     "$zx/third_party/ulib/zstd:zstdseek",
     "async",
-    "bitmap",
-    "ffl",
     "fidl:fidl",
     "fidl:fidl-llcpp",
     "fidl:fidl_base",
-    "pretty",
     "zbitl",
     "zircon:zircon-headers",
-    "zxc",
   ]
   if (current_os == "linux") {
     deps += [ "$zx/third_party/ulib/usbhost:usbhost-static" ]

@@ -19,9 +19,7 @@ import("//build/fuzzing/fuzzer.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":affine",
-  ]
+  deps = [ ":affine" ]
 }
 
 test("affine") {
@@ -42,9 +40,9 @@ test("affine") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/affine",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/affine",
   ]
 
   # TODO(41888): UBSan has found an instance of undefined behavior in this target.
@@ -54,7 +52,7 @@ test("affine") {
 
 fuzzer("affine-fuzzer") {
   sources = [ "affine-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/affine" ]
+  deps = [ "//zircon/system/ulib/affine" ]
 }
 
 bootfs_test("affine-bootfs-test") {

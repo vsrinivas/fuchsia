@@ -18,9 +18,7 @@ import("//build/unification/zbi/bootfs_test.gni")
 import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
-  deps = [
-    ":bitmap",
-  ]
+  deps = [ ":bitmap" ]
 }
 
 test("bitmap") {
@@ -40,15 +38,15 @@ test("bitmap") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/bitmap",
   ]
 }
 fuzzer("raw-bitmap-fuzzer") {
   sources = [ "raw-bitmap-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/bitmap" ]
+  deps = [ "//zircon/system/ulib/bitmap" ]
 }
 
 bootfs_test("bitmap-bootfs-test") {
