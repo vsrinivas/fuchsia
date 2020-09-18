@@ -14,6 +14,9 @@ use {
     thiserror::Error,
 };
 
+mod async_reader;
+pub use async_reader::AsyncReader;
+
 /// An error encountered while reading a file
 #[derive(Debug, Error)]
 #[allow(missing_docs)]

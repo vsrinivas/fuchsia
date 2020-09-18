@@ -30,6 +30,7 @@ rustc_library("io_util") {
   sources = [
     "src/directory.rs",
     "src/file.rs",
+    "src/file/async_reader.rs",
     "src/lib.rs",
     "src/node.rs",
   ]
