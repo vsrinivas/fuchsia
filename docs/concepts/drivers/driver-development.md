@@ -44,9 +44,11 @@ this command is run, the following steps need to be followed:
 1) Include the `driver_module` or `driver_package` build target in the correct
 place to get your driver included into the system.
  - For packaged drivers the `driver_package` build target should be added to
-   the relevant board file in `//boards` or `//vendor/boards`.
+   the relevant board file in `//boards` or `//vendor/<foo>/boards` to a
+   `xx_package_labels` GN argument.
  - For boot drivers the `driver_module` build target should be added to
-   [//build/unification/images/common_image_contents.gni](/build/unification/images/common_image_contents.gni)
+   the relevant board file in `//boards` or `//vendor/<foo>/boards` to the
+   `board_bootfs_labels` GN argument.
 2) Include the `tests` build target in the `<PATH>:tests` build target to get
 your tests included in CQ.
 3) Add proper bind rules in `<NAME>.bind`.

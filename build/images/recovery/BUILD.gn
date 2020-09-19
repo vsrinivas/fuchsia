@@ -6,7 +6,6 @@ import("//build/board.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
-import("//build/unification/images/common_image_contents.gni")
 
 group("recovery") {
   testonly = true
@@ -78,7 +77,17 @@ assemble_system("recovery-eng") {
             ] + zedboot_cmdline_args + board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
-  bootfs_labels = common_image_contents + board_recovery_bootfs_labels
+  bootfs_labels = board_recovery_bootfs_labels
+  bootfs_labels += [
+    "//build/info:bootfs",
+    "//bundles:bootstrap",
+    "//bundles:debugging",
+    "//bundles/bringup:manual_testing",
+    "//bundles/drivers:bootstrap",
+    "//bundles/drivers:usb-host-stack",
+    "//bundles/drivers:usb-peripheral-stack",
+    "//bundles/drivers:utils",
+  ]
   bootfs_labels +=
       [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
@@ -95,7 +104,17 @@ assemble_system("recovery-fdr") {
   devmgr_config = [ "virtcon.disable=true" ]
   cmdline = []
 
-  bootfs_labels = common_image_contents + board_recovery_bootfs_labels
+  bootfs_labels = board_recovery_bootfs_labels
+  bootfs_labels += [
+    "//build/info:bootfs",
+    "//bundles:bootstrap",
+    "//bundles:debugging",
+    "//bundles/bringup:manual_testing",
+    "//bundles/drivers:bootstrap",
+    "//bundles/drivers:usb-host-stack",
+    "//bundles/drivers:usb-peripheral-stack",
+    "//bundles/drivers:utils",
+  ]
   bootfs_labels +=
       [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 

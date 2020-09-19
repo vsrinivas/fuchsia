@@ -4,7 +4,6 @@
 
 import("//build/images/assemble_system.gni")
 import("//build/testing/host_test_data.gni")
-import("//build/unification/images/common_image_contents.gni")
 
 assemble_system("overnet") {
   base_packages = [
@@ -22,8 +21,18 @@ assemble_system("overnet") {
     "//src/connectivity/overnet/overnetstack:overnetstack_config",
     "//src/connectivity/overnet/tools/debug-serial",
   ]
-  bootfs_labels = common_image_contents
-  bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+  bootfs_labels = [
+    "//build/info:bootfs",
+    "//bundles:bootstrap",
+    "//bundles:debugging",
+    "//bundles/bringup:manual_testing",
+    "//bundles/drivers:bootstrap",
+    "//bundles/drivers:usb-host-stack",
+    "//bundles/drivers:usb-peripheral-stack",
+    "//bundles/drivers:utils",
+  ]
+  bootfs_labels +=
+      [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
   ramdisk_fvm_in_zbi = true
 }
 

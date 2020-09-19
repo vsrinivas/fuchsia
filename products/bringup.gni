@@ -16,7 +16,23 @@ kernel_cmdline_args = [
   "netsvc.disable=false",
 ]
 
-product_bootfs_labels =
+product_bootfs_labels = [
+  "//build/info:bootfs",
+  "//bundles:bootstrap",
+  "//bundles:debugging",
+  "//bundles/bringup:manual_testing",
+  "//bundles/drivers:bootstrap",
+  "//bundles/drivers:usb-host-stack",
+  "//bundles/drivers:usb-peripheral-stack",
+  "//bundles/drivers:utils",
+]
+
+# TODO(56988): We shouldn't need runtests, but right now it's used by profile
+# builders, so include it here until we remove that dependency.
+product_bootfs_labels += [ "//src/testing/runtests" ]
+
+# Component manager configuration.
+product_bootfs_labels +=
     [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
 meta_package_labels = []

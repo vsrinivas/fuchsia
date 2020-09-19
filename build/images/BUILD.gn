@@ -24,7 +24,6 @@ import("//build/info/info.gni")
 import("//build/package_metadata.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/images/common_image_contents.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
 import("//build/unification/zbi/zbi_input.gni")
 import("//src/sys/component_index/component_index.gni")
@@ -590,7 +589,6 @@ group("fuchsia_contents") {
     "//build/unification/zbi:kernel",
   ]
   deps += product_bootfs_labels + board_bootfs_labels
-  deps += common_image_contents
 }
 
 # The main bootable image, which requires `blob.blk` to appear on some
