@@ -1,8 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# Known to infrastructure.
-# TODO(fxbug.dev/10198): delete me. zbi_tests.json is now always produced.
-group("zbi_tests") {
-}

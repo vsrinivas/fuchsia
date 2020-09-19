@@ -250,13 +250,6 @@ group("tests") {
 }
 ```
 
-### Zircon fuzzers  {#zircon}
-
-Zircon fuzzers are built the same as fuzzers for other code. Add the fuzzer GN template to the same
-BUILD.gn as the code under test, and add that new fuzzer target to the
-[`_migrated_fuzzers`][zircon-fuzzers] list used by the `//garnet/tests/zircon:zircon_fuzzers`
-target.
-
 ## Build fuzzers with `fx` {#fx-set}
 
 As noted above, the Fuchsia build system will build the fuzzers _only_ if it is explicitly told to
@@ -317,7 +310,3 @@ Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [ubsan-sio]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#usage
 [ubsan-all]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks
 [variants]: /docs/concepts/build_system/variants.md
-[zircon-fuzzers]: /garnet/tests/zircon/BUILD.gn
-
-
-
