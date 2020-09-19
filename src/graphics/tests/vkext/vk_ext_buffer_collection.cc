@@ -106,9 +106,8 @@ class VulkanExtensionTest : public testing::Test {
 };
 
 VulkanExtensionTest::~VulkanExtensionTest() {
-  const vk::Device &device = *ctx_->device();
   if (vk_device_memory_) {
-    vkFreeMemory(device, vk_device_memory_, nullptr);
+    vkFreeMemory(*ctx_->device(), vk_device_memory_, nullptr);
     vk_device_memory_ = VK_NULL_HANDLE;
   }
 }
