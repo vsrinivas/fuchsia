@@ -101,7 +101,7 @@ struct MockDevice : public DeviceInterface {
 
   // DeviceInterface implementation.
 
-  zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) override final {
+  zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) final {
     *timer = CreateTimer(id);
     return ZX_OK;
   }
@@ -110,14 +110,14 @@ struct MockDevice : public DeviceInterface {
     return std::make_unique<TestTimer>(id, &clock_);
   }
 
-  zx_handle_t GetSmeChannelRef() override final { return mlme_.get(); }
+  zx_handle_t GetSmeChannelRef() final { return mlme_.get(); }
 
-  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final {
+  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) final {
     eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});
     return ZX_OK;
   }
 
-  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) override final {
+  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) final {
     WlanPacket wlan_packet;
     wlan_packet.pkt = std::move(packet);
     wlan_packet.flags = flags;
@@ -125,23 +125,23 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t SendService(fbl::Span<const uint8_t> span) override final {
+  zx_status_t SendService(fbl::Span<const uint8_t> span) final {
     std::vector<uint8_t> msg(span.cbegin(), span.cend());
     svc_queue.push_back(msg);
     return ZX_OK;
   }
 
-  zx_status_t SetChannel(wlan_channel_t chan) override final {
+  zx_status_t SetChannel(wlan_channel_t chan) final {
     state->set_channel(chan);
     return ZX_OK;
   }
 
-  zx_status_t SetStatus(uint32_t status) override final {
+  zx_status_t SetStatus(uint32_t status) final {
     state->set_online(status == 1);
     return ZX_OK;
   }
 
-  zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final {
+  zx_status_t ConfigureBss(wlan_bss_config_t* cfg) final {
     if (!cfg) {
       bss_cfg.reset();
     } else {
@@ -153,17 +153,17 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) override final {
+  zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) final {
     beacon = std::move(packet);
     return ZX_OK;
   }
 
-  zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) override final {
+  zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) final {
     beaconing_enabled = (bcn_cfg != nullptr);
     return ZX_OK;
   }
 
-  zx_status_t SetKey(wlan_key_config_t* cfg) override final {
+  zx_status_t SetKey(wlan_key_config_t* cfg) final {
     keys.push_back(*cfg);
     return ZX_OK;
   }
@@ -172,25 +172,25 @@ struct MockDevice : public DeviceInterface {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final {
+  zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) final {
     sta_assoc_ctx_ = *assoc_ctx;
     return ZX_OK;
   }
-  zx_status_t ClearAssoc(const common::MacAddr& peer_addr) override final {
+  zx_status_t ClearAssoc(const common::MacAddr& peer_addr) final {
     std::memset(&sta_assoc_ctx_, 0, sizeof(sta_assoc_ctx_));
     return ZX_OK;
   }
 
-  fbl::RefPtr<DeviceState> GetState() override final { return state; }
+  fbl::RefPtr<DeviceState> GetState() final { return state; }
 
   const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
 
-  zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) override final {
+  zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t GetMinstrelStats(const common::MacAddr& addr,
-                               ::fuchsia::wlan::minstrel::Peer* resp) override final {
+                               ::fuchsia::wlan::minstrel::Peer* resp) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

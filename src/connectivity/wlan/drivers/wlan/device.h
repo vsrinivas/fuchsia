@@ -64,25 +64,25 @@ class Device : public DeviceInterface {
                                    size_t data_size);
 
   // DeviceInterface methods
-  zx_handle_t GetSmeChannelRef() override final;
-  zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) override final;
-  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final;
-  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) override final;
-  zx_status_t SendService(fbl::Span<const uint8_t> span) override final;
-  zx_status_t SetChannel(wlan_channel_t chan) override final;
-  zx_status_t SetStatus(uint32_t status) override final;
-  zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final;
-  zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) override final;
-  zx_status_t ConfigureBeacon(std::unique_ptr<Packet> beacon) override final;
-  zx_status_t SetKey(wlan_key_config_t* key_config) override final;
-  zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) override final;
-  zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final;
-  fbl::RefPtr<DeviceState> GetState() override final;
-  zx_status_t ClearAssoc(const common::MacAddr& peer_addr) override final;
-  const wlanmac_info_t& GetWlanInfo() const override final;
-  zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) override final;
+  zx_handle_t GetSmeChannelRef() final;
+  zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) final;
+  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) final;
+  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) final;
+  zx_status_t SendService(fbl::Span<const uint8_t> span) final;
+  zx_status_t SetChannel(wlan_channel_t chan) final;
+  zx_status_t SetStatus(uint32_t status) final;
+  zx_status_t ConfigureBss(wlan_bss_config_t* cfg) final;
+  zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) final;
+  zx_status_t ConfigureBeacon(std::unique_ptr<Packet> beacon) final;
+  zx_status_t SetKey(wlan_key_config_t* key_config) final;
+  zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) final;
+  zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) final;
+  fbl::RefPtr<DeviceState> GetState() final;
+  zx_status_t ClearAssoc(const common::MacAddr& peer_addr) final;
+  const wlanmac_info_t& GetWlanInfo() const final;
+  zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) final;
   zx_status_t GetMinstrelStats(const common::MacAddr& addr,
-                               ::fuchsia::wlan::minstrel::Peer* peer_fidl) override final;
+                               ::fuchsia::wlan::minstrel::Peer* peer_fidl) final;
 
  private:
   struct TimerSchedulerImpl : public TimerScheduler {

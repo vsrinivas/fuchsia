@@ -39,7 +39,7 @@ class ClientMlme : public Mlme {
   zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
   zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) override;
   zx_status_t HandleTimeout(const ObjectId id) override;
-  void HwScanComplete(uint8_t code) override final;
+  void HwScanComplete(uint8_t code) final;
 
   // Visible for tests only
   bool OnChannel();
