@@ -6,9 +6,12 @@
 
 #include <lib/fit/result.h>
 
+#include <bitset>
 #include <cstdint>
+#include <string>
 
 #include <fbl/algorithm.h>
+#include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
 
 #include "src/storage/volume_image/options.h"
@@ -63,6 +66,11 @@ constexpr uint64_t kReadBufferSize = 4096;
 template <typename T>
 fbl::Span<const uint8_t> FixedSizeStructToSpan(const T& typed_content) {
   return fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&typed_content), sizeof(T));
+}
+
+template <typename T>
+fbl::Span<uint8_t> FixedSizeStructToSpan(T& typed_content) {
+  return fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&typed_content), sizeof(T));
 }
 
 class NoopCompressor final : public Compressor {
@@ -168,6 +176,18 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   return fit::ok(current_offset);
 }
 
+bool AddRange(std::map<uint64_t, uint64_t>& existing_ranges, uint64_t start, uint64_t length) {
+  auto end = start + length;
+  for (auto [cur_start, cur_end] : existing_ranges) {
+    // disjoint sets dont overlap.
+    if (cur_end > start && cur_start < end) {
+      return false;
+    }
+  }
+  existing_ranges[start] = start + length;
+  return true;
+}
+
 }  // namespace
 
 fvm::SparseImage FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
@@ -248,6 +268,124 @@ uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor
   }
 
   return image_size;
+}
+
+fit::result<fvm::SparseImage, std::string> FvmSparseImageGetHeader(uint64_t offset,
+                                                                   const Reader& reader) {
+  fvm::SparseImage header = {};
+  auto header_buffer = FixedSizeStructToSpan(header);
+
+  auto header_read_result = reader.Read(offset, header_buffer);
+  if (header_read_result.is_error()) {
+    return header_read_result.take_error_result();
+  }
+
+  if (header.magic != fvm::kSparseFormatMagic) {
+    return fit::error("Fvm Sparse Image header |magic| is incorrect. Expected " +
+                      std::to_string(fvm::kSparseFormatMagic) + ", but found " +
+                      std::to_string(header.magic) + ".");
+  }
+
+  if (header.version != fvm::kSparseFormatVersion) {
+    return fit::error("Fvm Sparse Image header |version| is incorrect. Expected " +
+                      std::to_string(fvm::kSparseFormatVersion) + ", but found " +
+                      std::to_string(header.version) + ".");
+  }
+
+  if ((header.flags & ~fvm::kSparseFlagAllValid) != 0) {
+    return fit::error(
+        "Fvm Sparse Image header |flags| contains invalid values. Found " +
+        std::bitset<sizeof(fvm::SparseImage::flags)>(header.flags).to_string() + " valid flags " +
+        std::bitset<sizeof(fvm::SparseImage::flags)>(fvm::kSparseFlagAllValid).to_string());
+  }
+
+  if (header.header_length < sizeof(fvm::SparseImage)) {
+    return fit::error("Fvm Sparse Image header |header_length| must be at least " +
+                      std::to_string(sizeof(fvm::SparseImage)) + ", but was " +
+                      std::to_string(header.header_length) + ".");
+  }
+
+  if (header.slice_size == 0) {
+    return fit::error("Fvm Sparse Image header |slice_size| must be non zero.");
+  }
+
+  return fit::ok(header);
+}
+
+fit::result<std::vector<FvmSparsePartitionEntry>, std::string> FvmSparseImageGetPartitions(
+    uint64_t offset, const Reader& reader, const fvm::SparseImage& header) {
+  std::vector<FvmSparsePartitionEntry> partitions(header.partition_count);
+  uint64_t current_offset = offset;
+
+  // Check partitions and extents.
+  for (uint64_t i = 0; i < header.partition_count; ++i) {
+    FvmSparsePartitionEntry& partition = partitions[i];
+    auto partition_read_result =
+        reader.Read(current_offset, FixedSizeStructToSpan(partition.descriptor));
+    if (partition_read_result.is_error()) {
+      return partition_read_result.take_error_result();
+    }
+
+    if (partition.descriptor.magic != fvm::kPartitionDescriptorMagic) {
+      return fit::error(
+          "Fvm Sparse Image Partition descriptor contains incorrect magic. Expected " +
+          std::to_string(fvm::kPartitionDescriptorMagic) + ", but found " +
+          std::to_string(partition.descriptor.magic) + ".");
+    }
+
+    if ((partition.descriptor.flags & ~fvm::kSparseFlagAllValid) != 0) {
+      return fit::error("Fvm Sparse Image Partition descriptor contains unknown flags.");
+    }
+
+    current_offset += sizeof(fvm::PartitionDescriptor);
+    std::map<uint64_t, uint64_t> allocated_ranges;
+    for (uint32_t j = 0; j < partition.descriptor.extent_count; ++j) {
+      fvm::ExtentDescriptor extent = {};
+      auto extent_read_result = reader.Read(current_offset, FixedSizeStructToSpan(extent));
+      if (extent_read_result.is_error()) {
+        return extent_read_result.take_error_result();
+      }
+
+      if (extent.magic != fvm::kExtentDescriptorMagic) {
+        return fit::error("Fvm Sparse Image Partition " + std::to_string(i) +
+                          " extent descriptor " + std::to_string(j) +
+                          " contains invalid magic. Expected " +
+                          std::to_string(fvm::kExtentDescriptorMagic) + ", but found " +
+                          std::to_string(extent.magic) + ".");
+      }
+
+      if (extent.extent_length > extent.slice_count * header.slice_size) {
+        return fit::error("Fvm Sparse Image Partition " + std::to_string(i) +
+                          " extent descriptor " + std::to_string(j) + " extent length(" +
+                          std::to_string(extent.extent_length) +
+                          ") exceeds the allocated slice range(" +
+                          std::to_string(extent.slice_count * header.slice_size) + "), " +
+                          std::to_string(extent.slice_count) + " allocated slices of size " +
+                          std::to_string(header.slice_size) + ".");
+      }
+
+      if (!AddRange(allocated_ranges, extent.slice_start, extent.slice_count)) {
+        return fit::error("Fvm Sparse Image Partition " + std::to_string(i) +
+                          " extent descriptor " + std::to_string(j) +
+                          " contains overlapping slice ranges.");
+      }
+
+      current_offset += sizeof(fvm::ExtentDescriptor);
+      partition.extents.push_back(extent);
+    }
+  }
+
+  return fit::ok(partitions);
+}
+
+CompressionOptions FvmSparseImageGetCompressionOptions(const fvm::SparseImage& header) {
+  CompressionOptions options;
+  options.schema = CompressionSchema::kNone;
+  if ((header.flags & fvm::kSparseFlagLz4) != 0) {
+    options.schema = CompressionSchema::kLz4;
+  }
+
+  return options;
 }
 
 }  // namespace storage::volume_image

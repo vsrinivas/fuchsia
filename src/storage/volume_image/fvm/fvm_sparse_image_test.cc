@@ -6,7 +6,10 @@
 
 #include <lib/fit/function.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <memory>
 
@@ -591,6 +594,342 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageWithWriteErrorIsError) {
   auto write_result = FvmSparseWriteImage(descriptor, &writer);
   ASSERT_TRUE(write_result.is_error());
   ASSERT_EQ(kWriteError, write_result.error());
+}
+
+class BufferReader final : public Reader {
+ public:
+  template <typename T>
+  BufferReader(uint64_t offset, const T* data)
+      : image_offset_(offset), image_buffer_(reinterpret_cast<const uint8_t*>(data), sizeof(T)) {
+    assert(image_buffer_.data() != nullptr);
+  }
+
+  uint64_t GetMaximumOffset() const final { return std::numeric_limits<uint64_t>::max(); }
+
+  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+    // if no overlap zero the buffer.
+    if (offset + buffer.size() < image_offset_ || offset > image_offset_ + image_buffer_.size()) {
+      std::fill(buffer.begin(), buffer.end(), 0);
+      return fit::ok();
+    }
+
+    size_t zeroed_bytes = 0;  // Zero anything before the header start.
+    if (offset < image_offset_) {
+      size_t distance_to_header = image_offset_ - offset;
+      zeroed_bytes = std::min(distance_to_header, buffer.size());
+      std::fill(buffer.begin(), buffer.begin() + zeroed_bytes, 0);
+    }
+
+    uint64_t copied_bytes = 0;
+    if (zeroed_bytes < buffer.size()) {
+      copied_bytes = std::min(buffer.size() - zeroed_bytes, image_buffer_.size());
+      size_t distance_from_start = (image_offset_ > offset) ? 0 : offset - image_offset_;
+      memcpy(buffer.data() + zeroed_bytes, image_buffer_.subspan(distance_from_start).data(),
+             copied_bytes);
+    }
+
+    if (zeroed_bytes + copied_bytes < buffer.size()) {
+      std::fill(buffer.begin() + zeroed_bytes + copied_bytes, buffer.end(), 0);
+    }
+
+    return fit::ok();
+  }
+
+ private:
+  uint64_t image_offset_ = 0;
+  fbl::Span<const uint8_t> image_buffer_;
+};
+
+TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithBadMagicIsError) {
+  constexpr uint64_t kImageOffset = 12345678;
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic - 1;
+  header.version = fvm::kSparseFormatVersion;
+  header.flags = fvm::kSparseFlagAllValid;
+  header.header_length = sizeof(fvm::SparseImage);
+  header.slice_size = 2 << 20;
+
+  BufferReader reader(kImageOffset, &header);
+
+  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithVersionMismatchIsError) {
+  constexpr uint64_t kImageOffset = 12345678;
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic;
+  header.version = fvm::kSparseFormatVersion - 1;
+  header.flags = fvm::kSparseFlagAllValid;
+  header.header_length = sizeof(fvm::SparseImage);
+  header.slice_size = 2 << 20;
+
+  BufferReader reader(kImageOffset, &header);
+
+  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithUnknownFlagIsError) {
+  constexpr uint64_t kImageOffset = 12345678;
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic;
+  header.version = fvm::kSparseFormatVersion;
+  header.flags = fvm::kSparseFlagAllValid;
+  header.header_length = sizeof(fvm::SparseImage);
+  header.slice_size = 2 << 20;
+
+  // All bytes are set.
+  header.flags = std::numeric_limits<decltype(fvm::SparseImage::flags)>::max();
+  ASSERT_NE((header.flags & ~fvm::kSparseFlagAllValid), 0u)
+      << "At least one flag must be unused for an invalid flag to be a possibility.";
+
+  BufferReader reader(kImageOffset, &header);
+
+  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithZeroSliceSizeIsError) {
+  constexpr uint64_t kImageOffset = 12345678;
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic;
+  header.version = fvm::kSparseFormatVersion;
+  header.flags = fvm::kSparseFlagAllValid;
+  header.header_length = sizeof(fvm::SparseImage);
+  header.slice_size = 0;
+
+  // All bytes are set.
+  header.flags = std::numeric_limits<decltype(fvm::SparseImage::flags)>::max();
+  ASSERT_NE((header.flags & ~fvm::kSparseFlagAllValid), 0u)
+      << "At least one flag must be unused for an invalid flag to be a possibility.";
+
+  BufferReader reader(kImageOffset, &header);
+
+  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithHeaderLengthTooSmallIsError) {
+  constexpr uint64_t kImageOffset = 12345678;
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic;
+  header.version = fvm::kSparseFormatVersion;
+  header.flags = fvm::kSparseFlagAllValid;
+  header.header_length = sizeof(fvm::SparseImage) - 1;
+  header.slice_size = 2 << 20;
+
+  // All bytes are set.
+  header.flags = std::numeric_limits<decltype(fvm::SparseImage::flags)>::max();
+  ASSERT_NE((header.flags & ~fvm::kSparseFlagAllValid), 0u)
+      << "At least one flag must be unused for an invalid flag to be a possibility.";
+
+  BufferReader reader(kImageOffset, &header);
+
+  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderIsOk) {
+  constexpr uint64_t kImageOffset = 12345678;
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic;
+  header.version = fvm::kSparseFormatVersion;
+  header.header_length = 2048;
+  header.flags = fvm::kSparseFlagLz4;
+  header.maximum_disk_size = 12345;
+  header.partition_count = 12345676889;
+  header.slice_size = 9999;
+
+  BufferReader reader(kImageOffset, &header);
+
+  auto header_or = FvmSparseImageGetHeader(kImageOffset, reader);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  ASSERT_THAT(header_or.value(), HeaderEq(header));
+}
+
+struct PartitionDescriptors {
+  struct {
+    fvm::PartitionDescriptor descriptor;
+    fvm::ExtentDescriptor extents[2];
+  } partition_1 __PACKED;
+  struct {
+    fvm::PartitionDescriptor descriptor;
+    fvm::ExtentDescriptor extents[3];
+  } partition_2 __PACKED;
+} __PACKED;
+
+PartitionDescriptors GetPartitions() {
+  PartitionDescriptors partitions = {};
+  std::string name = "somerandomname";
+  std::array<uint8_t, sizeof(fvm::PartitionDescriptor::type)> guid = {1, 2,  3,  4,  5,  6,  7, 8,
+                                                                      9, 10, 11, 12, 13, 14, 15};
+
+  partitions.partition_1.descriptor.magic = fvm::kPartitionDescriptorMagic;
+  partitions.partition_1.descriptor.flags = fvm::kSparseFlagZxcrypt;
+  memcpy(partitions.partition_1.descriptor.name, name.data(), name.length());
+  memcpy(partitions.partition_1.descriptor.type, guid.data(), guid.size());
+  partitions.partition_1.descriptor.extent_count = 2;
+
+  partitions.partition_1.extents[0].magic = fvm::kExtentDescriptorMagic;
+  partitions.partition_1.extents[0].extent_length = 0;
+  partitions.partition_1.extents[0].slice_start = 0;
+  partitions.partition_1.extents[0].slice_count = 1;
+
+  partitions.partition_1.extents[1].magic = fvm::kExtentDescriptorMagic;
+  partitions.partition_1.extents[1].extent_length = 0;
+  partitions.partition_1.extents[1].slice_start = 2;
+  partitions.partition_1.extents[1].slice_count = 1;
+
+  name = "somerandomname2";
+  guid = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  partitions.partition_2.descriptor.magic = fvm::kPartitionDescriptorMagic;
+  partitions.partition_2.descriptor.flags = fvm::kSparseFlagZxcrypt;
+  memcpy(partitions.partition_2.descriptor.name, name.data(), name.length());
+  memcpy(partitions.partition_2.descriptor.type, guid.data(), guid.size());
+  partitions.partition_2.descriptor.extent_count = 3;
+
+  partitions.partition_2.extents[0].magic = fvm::kExtentDescriptorMagic;
+  partitions.partition_2.extents[0].extent_length = 0;
+  partitions.partition_2.extents[0].slice_start = 0;
+  partitions.partition_2.extents[0].slice_count = 1;
+
+  partitions.partition_2.extents[1].magic = fvm::kExtentDescriptorMagic;
+  partitions.partition_2.extents[1].extent_length = 0;
+  partitions.partition_2.extents[1].slice_start = 1;
+  partitions.partition_2.extents[1].slice_count = 1;
+
+  partitions.partition_2.extents[2].magic = fvm::kExtentDescriptorMagic;
+  partitions.partition_2.extents[2].extent_length = 0;
+  partitions.partition_2.extents[2].slice_start = 2;
+  partitions.partition_2.extents[2].slice_count = 1;
+
+  return partitions;
+}
+
+fvm::SparseImage GetHeader() {
+  fvm::SparseImage header = {};
+  header.magic = fvm::kSparseFormatMagic;
+  header.version = fvm::kSparseFormatVersion;
+  header.header_length = sizeof(fvm::SparseImage) + sizeof(PartitionDescriptors);
+  header.flags = fvm::kSparseFlagLz4;
+  header.partition_count = 2;
+  header.slice_size = 8192;
+
+  return header;
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithBadPartitionMagicIsError) {
+  constexpr uint64_t kImageOffset = 123456;
+  auto header = GetHeader();
+  auto partitions = GetPartitions();
+  partitions.partition_2.descriptor.magic = 0;
+
+  // The partition data starts at a random spot.
+  BufferReader reader(kImageOffset, &partitions);
+
+  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithUnknownFlagIsError) {
+  constexpr uint64_t kImageOffset = 123456;
+  auto header = GetHeader();
+  auto partitions = GetPartitions();
+  partitions.partition_2.descriptor.flags =
+      std::numeric_limits<decltype(fvm::PartitionDescriptor::flags)>::max();
+
+  // The partition data starts at a random spot.
+  BufferReader reader(kImageOffset, &partitions);
+
+  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithBadExtentMagicIsError) {
+  constexpr uint64_t kImageOffset = 123456;
+  auto header = GetHeader();
+  auto partitions = GetPartitions();
+  partitions.partition_2.extents[0].magic = 0;
+
+  // The partition data starts at a random spot.
+  BufferReader reader(kImageOffset, &partitions);
+
+  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithExtentLengthSliceCountMismatchIsError) {
+  constexpr uint64_t kImageOffset = 123456;
+  auto header = GetHeader();
+  auto partitions = GetPartitions();
+  partitions.partition_2.extents[0].extent_length = 2 * header.slice_size;
+  partitions.partition_2.extents[0].slice_count = 1;
+  // The partition data starts at a random spot.
+  BufferReader reader(kImageOffset, &partitions);
+
+  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithOverlapingSlicesInPartitionExtentsIsError) {
+  constexpr uint64_t kImageOffset = 123456;
+  auto header = GetHeader();
+  auto partitions = GetPartitions();
+
+  partitions.partition_2.extents[0].slice_start = 1;
+  partitions.partition_2.extents[0].slice_count = 4;
+
+  partitions.partition_2.extents[1].slice_start = 8;
+  partitions.partition_2.extents[1].slice_count = 2;
+
+  auto& extent = partitions.partition_2.extents[2];
+
+  // The partition data starts at a random spot.
+  BufferReader reader(kImageOffset, &partitions);
+
+  // Case 1:
+  //    * extent overlaps before range.
+  extent.slice_start = 0;
+  extent.slice_count = 3;
+  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+
+  // Case 2:
+  //    * extent overlaps after range.
+  extent.slice_start = 4;
+  extent.slice_count = 2;
+  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+
+  // Case 3:
+  //    * extent overlaps in the middle of range
+  extent.slice_start = 2;
+  extent.slice_count = 1;
+  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+
+  // Case 4:
+  //    * extent overlaps multiple ranges
+  extent.slice_start = 4;
+  extent.slice_count = 8;
+  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+
+  // Case 5:
+  //    * extent covers same range
+  extent.slice_start = 1;
+  extent.slice_count = 4;
+  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsIsOk) {
+  constexpr uint64_t kImageOffset = 123456;
+  auto header = GetHeader();
+  auto partitions = GetPartitions();
+
+  // The partition data starts at a random spot.
+  BufferReader reader(kImageOffset, &partitions);
+  auto partitions_or = FvmSparseImageGetPartitions(kImageOffset, reader, header);
+
+  ASSERT_TRUE(partitions_or.is_ok()) << partitions_or.error();
+  auto actual_partitions = partitions_or.take_value();
+
+  ASSERT_EQ(actual_partitions.size(), 2u);
+  EXPECT_THAT(partitions.partition_1.descriptor,
+              PartitionDescriptorMatchesEntry(actual_partitions[0]));
+  EXPECT_THAT(partitions.partition_1.extents, ExtentDescriptorsMatchesEntry(actual_partitions[0]));
+
+  EXPECT_THAT(partitions.partition_2.descriptor,
+              PartitionDescriptorMatchesEntry(actual_partitions[1]));
+  EXPECT_THAT(partitions.partition_2.extents, ExtentDescriptorsMatchesEntry(actual_partitions[1]));
 }
 
 class FvmSparseReaderImpl final : public fvm::ReaderInterface {

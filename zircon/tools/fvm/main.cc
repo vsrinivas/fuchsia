@@ -5,19 +5,21 @@
 #include <unistd.h>
 
 #include <cstdint>
+#include <cstdio>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fvm-host/container.h>
 #include <fvm-host/file-wrapper.h>
 #include <fvm-host/format.h>
 #include <fvm/sparse-reader.h>
 #include <safemath/checked_math.h>
 
-#include "fbl/auto_call.h"
 #include "mtd.h"
 #include "range/interval-tree.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
@@ -27,6 +29,8 @@
 #include "src/storage/volume_image/ftl/raw_nand_image_utils.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image_reader.h"
+#include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/decompressor.h"
 #include "src/storage/volume_image/utils/fd_reader.h"
 #include "src/storage/volume_image/utils/fd_writer.h"
 
@@ -60,6 +64,9 @@ int usage(void) {
   fprintf(stderr,
           " verify : Report basic information about sparse/fvm files and run fsck on"
           " contained partitions.\n");
+  fprintf(stderr,
+          " check : verifies that the |--sparse| image provided is valid. if |--max_disk_size| is "
+          "provided check that the maximum disk size is set to such value in the sparse image.\n");
   fprintf(stderr,
           " size : Prints the minimum size required in order to pave a sparse file."
           " If the --disk flag is provided, instead checks that the paved sparse file"
@@ -406,6 +413,10 @@ int main(int argc, char** argv) {
   int i = 1;
   const char* path = argv[i++];     // Output path
   const char* command = argv[i++];  // Command
+  if (strcmp(path, "check") == 0) {
+    command = path;
+    i--;
+  }
 
   size_t length = 0;
   size_t offset = 0;
@@ -512,6 +523,89 @@ int main(int argc, char** argv) {
 
   if (!strcmp(command, "create") && should_unlink) {
     unlink(path);
+  }
+
+  if (strcmp(command, "check") == 0) {
+    char* input_type = argv[i];
+    char* input_path = argv[i + 1];
+    if (strcmp(input_type, "--sparse") != 0) {
+      usage();
+      return -1;
+    }
+    auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
+    if (sparse_image_reader_or.is_error()) {
+      fprintf(stderr, "%s\n", sparse_image_reader_or.error().c_str());
+      return -1;
+    }
+
+    auto header_or =
+        storage::volume_image::FvmSparseImageGetHeader(0, sparse_image_reader_or.value());
+    if (header_or.is_error()) {
+      fprintf(stderr, "Failed to parse sparse image header. %s\n", header_or.error().c_str());
+      return -1;
+    }
+    auto header = header_or.take_value();
+
+    if (max_disk_size != 0 && header.maximum_disk_size != max_disk_size) {
+      fprintf(stderr, "Sparse image does not match max disk size. Found %lu, expected %lu.\n",
+              static_cast<size_t>(header.maximum_disk_size), max_disk_size);
+      return -1;
+    }
+
+    auto partitions_or = storage::volume_image::FvmSparseImageGetPartitions(
+        sizeof(header), sparse_image_reader_or.value(), header);
+    if (partitions_or.is_error()) {
+      fprintf(stderr, "Failed to parse sparse image partition metadata. %s\n",
+              partitions_or.error().c_str());
+      return -1;
+    }
+    auto partitions = partitions_or.take_value();
+
+    int expected_data_length = 0;
+    int total_size = sparse_image_reader_or.value().GetMaximumOffset();
+    for (const auto& partition : partitions) {
+      for (const auto& extent : partition.extents) {
+        expected_data_length += extent.extent_length;
+      }
+    }
+
+    auto compression_options = storage::volume_image::FvmSparseImageGetCompressionOptions(header);
+    // Decompress the image.
+    if (compression_options.schema != storage::volume_image::CompressionSchema::kNone) {
+      std::unique_ptr<SparseContainer> compressedContainer;
+      if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
+        return -1;
+      }
+      std::string tmp_path = std::filesystem::temp_directory_path().generic_string() +
+                             "/decompressed_sparse_fvm_XXXXXX";
+      fbl::unique_fd created_file(mkstemp(tmp_path.data()));
+
+      if (!created_file.is_valid()) {
+        fprintf(stderr, "Failed to create temporary file for decompressing image. %s\n",
+                strerror(errno));
+        return -1;
+      }
+
+      if (compressedContainer->Decompress(tmp_path.c_str()) != ZX_OK) {
+        return -1;
+      }
+
+      auto reader_or = storage::volume_image::FdReader::Create(tmp_path);
+      if (reader_or.is_error()) {
+        fprintf(stderr, "%s\n", reader_or.error().c_str());
+        return -1;
+      }
+      total_size = reader_or.value().GetMaximumOffset() - header.header_length;
+    }
+
+    if (expected_data_length > total_size) {
+      fprintf(stderr, "Extent accumulated length is %d, uncompressed data is %d\n",
+              expected_data_length, total_size);
+      return -1;
+    }
+
+    fprintf(stderr, "--sparse input file is a valid FVM Sparse Image.\n");
+    return 0;
   }
 
   if (!strcmp(command, "ftl-raw-nand")) {
@@ -909,6 +1003,7 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else {
+    fprintf(stderr, "Unrecognized command: \"%s\"\n", command);
     usage();
   }
 

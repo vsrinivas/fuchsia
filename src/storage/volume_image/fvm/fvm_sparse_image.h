@@ -7,9 +7,12 @@
 
 #include <fvm/fvm-sparse.h>
 
+#include "fvm/format.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
+#include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/compressor.h"
+#include "src/storage/volume_image/utils/decompressor.h"
 #include "src/storage/volume_image/utils/writer.h"
 
 namespace storage::volume_image {
@@ -49,6 +52,22 @@ uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor
 fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
                                                        Writer* writer,
                                                        Compressor* compressor = nullptr);
+
+// Returns the compressions options stored in |header|.
+CompressionOptions FvmSparseImageGetCompressionOptions(const fvm::SparseImage& header);
+
+// On success, returns the valid |fvm::SparseImage| header contained in |reader| starting at
+// |offset|.
+//
+// On failure, returns the error which caused the header to be invalid.
+fit::result<fvm::SparseImage, std::string> FvmSparseImageGetHeader(uint64_t offset,
+                                                                   const Reader& reader);
+
+// On success, returns the valid collection of |FvmSparsePartitionEntry| as described by |header|
+// and contained in |reader| as described in |offset|. That is, the partition descriptors start
+// at |offset| in |reader|.
+fit::result<std::vector<FvmSparsePartitionEntry>, std::string> FvmSparseImageGetPartitions(
+    uint64_t offset, const Reader& reader, const fvm::SparseImage& header);
 
 }  // namespace storage::volume_image
 

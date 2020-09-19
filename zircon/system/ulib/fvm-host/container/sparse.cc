@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <inttypes.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -645,7 +646,7 @@ zx_status_t SparseContainer::Decompress(const char* path) {
 
   fbl::unique_fd fd;
 
-  fd.reset(open(path, O_WRONLY | O_CREAT | O_EXCL, 0644));
+  fd.reset(open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644));
   if (!fd) {
     fprintf(stderr, "could not open %s: %s\n", path, strerror(errno));
     return ZX_ERR_IO;
