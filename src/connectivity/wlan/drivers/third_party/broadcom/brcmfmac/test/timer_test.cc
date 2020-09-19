@@ -24,19 +24,15 @@
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 namespace wlan::brcmfmac {
 
 struct TestTimerCfg {
   sync_completion_t wait_for_timer;
   Timer* timer = nullptr;
-  WorkItem timeout_work;
-  WorkQueue* queue;
   uint32_t delay;
   uint32_t target_cnt = 0;
   uint32_t timer_exc_cnt = 0;
-  uint32_t timer_sch_cnt = 0;
   bool call_timerset = false;
   bool call_timerstop = false;
   bool periodic = false;
@@ -52,7 +48,6 @@ class TimerTest : public testing::Test {
 
   void SetUp() override;
   brcmf_pub* GetFakeDrvr() { return fake_drvr_.get(); }
-  WorkQueue* GetQueue() { return queue_.get(); }
   void CreateTimer(TestTimerCfg* cfg, uint32_t exp_count, bool periodic, bool call_timerset,
                    bool call_timerstop);
   void StartTimer(TestTimerCfg* cfg, uint32_t delay);
@@ -62,21 +57,19 @@ class TimerTest : public testing::Test {
   TestTimerCfg* GetTimerCfg2() { return timer_cfg_2_.get(); }
 
  private:
-  std::unique_ptr<WorkQueue> queue_;
   std::unique_ptr<brcmf_pub> fake_drvr_;
   std::unique_ptr<async::Loop> dispatcher_loop_;
   std::unique_ptr<TestTimerCfg> timer_cfg_1_;
   std::unique_ptr<TestTimerCfg> timer_cfg_2_;
 };
 
-// Setup the dispatcher and work queue
+// Setup the dispatcher and timer contexts
 void TimerTest::SetUp() {
   fake_drvr_ = std::make_unique<brcmf_pub>();
   dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = dispatcher_loop_->StartThread("test-timer-worker", nullptr);
   EXPECT_EQ(status, ZX_OK);
   fake_drvr_->dispatcher = dispatcher_loop_->dispatcher();
-  queue_ = std::make_unique<WorkQueue>("TimerTest Work");
   timer_cfg_1_ = std::make_unique<TestTimerCfg>("timer1");
   timer_cfg_2_ = std::make_unique<TestTimerCfg>("timer2");
   // The timer must be standard layout in order to use containerof
@@ -84,23 +77,12 @@ void TimerTest::SetUp() {
 }
 
 TimerTest::~TimerTest() {
-  queue_->Flush();
   if (dispatcher_loop_ != nullptr) {
     dispatcher_loop_->Shutdown();
   }
 }
 
-static void test_timer_handler(void* data) {
-  struct TestTimerCfg* cfg = static_cast<decltype(cfg)>(data);
-  if (cfg->timer_sch_cnt < cfg->target_cnt)
-    cfg->queue->Schedule(&cfg->timeout_work);
-  cfg->timer_sch_cnt++;
-  if (cfg->call_timerstop) {
-    cfg->timer->Stop();
-  }
-}
-
-static void test_timer_process(TestTimerCfg* cfg) {
+static void test_timer_handler(TestTimerCfg* cfg) {
   // There shouldn't be a race between the running tests and the async tasks lapping over
   cfg->timer_exc_cnt++;
   if (cfg->timer_exc_cnt > cfg->target_cnt)
@@ -110,13 +92,9 @@ static void test_timer_process(TestTimerCfg* cfg) {
     cfg->timer->Start(cfg->delay);
   }
   if (cfg->call_timerstop || (cfg->timer_exc_cnt == cfg->target_cnt)) {
+    cfg->timer->Stop();
     sync_completion_signal(&cfg->wait_for_timer);
   }
-}
-
-static void test_timeout_worker(WorkItem* work) {
-  struct TestTimerCfg* cfg = containerof(work, struct TestTimerCfg, timeout_work);
-  test_timer_process(cfg);
 }
 
 TestTimerCfg::TestTimerCfg(const char* timer_name) { strcpy(name, timer_name); }
@@ -130,8 +108,6 @@ TestTimerCfg::~TestTimerCfg() {
 
 void TimerTest::CreateTimer(TestTimerCfg* cfg, uint32_t exp_count, bool periodic,
                             bool call_timerset, bool call_timerstop) {
-  cfg->timeout_work = WorkItem(test_timeout_worker);
-  cfg->queue = GetQueue();
   cfg->target_cnt = exp_count;
   cfg->call_timerset = call_timerset;
   cfg->call_timerstop = call_timerstop;
