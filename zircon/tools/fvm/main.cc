@@ -311,10 +311,9 @@ zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t IsRawFvmImageFile(const char* path, size_t offset, bool* result) {
+bool IsRawFvmImageFile(const char* path, size_t offset) {
   zx_status_t status = FvmContainer::Verify(path, offset);
-  *result = status == ZX_OK;
-  return status;
+  return status == ZX_OK;
 }
 
 zx_status_t IsFvmSparseImageFile(const char* path, bool* result) {
@@ -346,10 +345,7 @@ zx_status_t IsLZ4CompressedFile(const char* path, bool* result) {
 
 const char* DetermineImageInputTypeOption(const char* input_path, size_t offset) {
   bool result;
-  if (IsRawFvmImageFile(input_path, offset, &result) != ZX_OK) {
-    return nullptr;
-  }
-  if (result) {
+  if (IsRawFvmImageFile(input_path, offset)) {
     return "--raw";
   }
 
