@@ -58,11 +58,13 @@ class TestSurface {
         .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
         .pNext = nullptr,
     };
-    VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS,
-              f_vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
-
-    vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
+    VkSurfaceKHR surface = nullptr;
+    VkResult result =
+        f_vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface);
+    EXPECT_EQ(VK_SUCCESS, result);
+    if (VK_SUCCESS == result) {
+      vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
+    }
   }
 
   bool use_framebuffer_ = false;
