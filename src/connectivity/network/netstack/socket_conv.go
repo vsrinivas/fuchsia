@@ -227,10 +227,6 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_LINGER:
-		// TODO(tamird): Remove this when upstream supports UDP correctly.
-		if transProto != tcp.ProtocolNumber {
-			return C.struct_linger{}, nil
-		}
 		var v tcpip.LingerOption
 		if err := ep.GetSockOpt(&v); err != nil {
 			return nil, err
