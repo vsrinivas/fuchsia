@@ -8,7 +8,22 @@ ffx_plugin("ffx_update") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-  deps = []
+  args_with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
   sources = [
     "src/args.rs",
     "src/lib.rs",
