@@ -6,6 +6,9 @@ library fuchsia.accessibility.semantics;
 
 using fuchsia.ui.gfx;
 
+/// Max number of elements in a semantic set.
+const uint32 MAX_SET_ELEMENTS = 100;
+
 /// Represents actions that can be applied to Nodes.
 enum Action {
     /// The default action associated with the element.
@@ -45,6 +48,12 @@ enum Role {
     TEXT_FIELD = 5;
     /// A slider, e.g. a volume slider or a time slider of a video.
     SLIDER = 6;
+    /// A link, e.g. a link on a webpage.
+    LINK = 7;
+    /// A check box that can be toggled.
+    CHECK_BOX = 8;
+    /// A radio button that selects an option among a group of options.
+    RADIO_BUTTON = 9;
 };
 
 /// Slider / range control attributes.
@@ -56,6 +65,18 @@ table RangeAttributes {
     /// The step delta the element applies when the action DECREMENT or 
     /// INCREMENT are invoked.
     3: float32 step_delta;
+};
+
+/// Set attributes that control how an element is connected to others in the
+/// same set. For example, a group of radio buttons in html containing the same
+/// name attribute are part of the same set.
+table SetAttributes {
+    /// Size of the set.
+    1: uint32 size;
+    /// Element index in the set, starting from one.
+    2: uint32 index;
+    /// Node ids of other elements in this set.
+    3: vector<uint32>:MAX_SET_ELEMENTS set_element_ids;
 };
 
 /// An attribute is an essential property to describe an element. Unlike states, attributes do not
@@ -77,6 +98,10 @@ table Attributes {
     /// The range attributes are filled if the element is a slider / a range
     /// control.
     4: RangeAttributes range;
+
+    /// Set attributes are filled if the element is part of some type of set.
+    /// For example, radio buttons that are related are part of the same set.
+    5: SetAttributes set;
 };
 
 /// Represents the state of a UI checkbox.
