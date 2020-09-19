@@ -22,10 +22,53 @@ namespace {
 class Mac80211Test : public SingleApTest {
  public:
   Mac80211Test() { mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans()); }
-  ~Mac80211Test() {}
+  ~Mac80211Test() {
+    mtx_lock(&mvm_->mutex);
+    iwl_mvm_unbind_mvmvif(mvm_, mvmvif_idx_);
+    mtx_unlock(&mvm_->mutex);
+  }
 
  protected:
+  // A helper function to create a client interface to be used in the test case.
+  void ClientInterfaceHelper() {
+    // First find a free slot for the interface.
+    mtx_lock(&mvm_->mutex);
+    EXPECT_EQ(ZX_OK, iwl_mvm_find_free_mvmvif_slot(mvm_, &mvmvif_idx_));
+    EXPECT_EQ(ZX_OK, iwl_mvm_bind_mvmvif(mvm_, mvmvif_idx_, &mvmvif_));
+    mtx_unlock(&mvm_->mutex);
+
+    // Initialize the interface data and add it to the mvm.
+    mvmvif_.mvm = mvm_;
+    mvmvif_.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_.bss_conf.beacon_int = 16;
+    iwl_mvm_mac_add_interface(&mvmvif_);
+
+    // Assign the phy_ctxt in the mvm to the interface.
+    wlan_channel_t chandef = {
+        // any arbitrary values
+        .primary = 35,
+    };
+    uint16_t phy_ctxt_id;
+    ASSERT_EQ(ZX_OK, iwl_mvm_add_chanctx(mvm_, &chandef, &phy_ctxt_id));
+    mvmvif_.phy_ctxt = &mvm_->phy_ctxts[phy_ctxt_id];
+
+    // Assign the AP sta info.
+    ASSERT_EQ(IEEE80211_TIDS_MAX + 1, ARRAY_SIZE(ap_sta_.txq));
+    for (size_t i = 0; i < ARRAY_SIZE(ap_sta_.txq); i++) {
+      ap_sta_.txq[i] = &txqs_[i];
+    }
+    ASSERT_EQ(ZX_OK, iwl_mvm_mac_sta_state(&mvmvif_, &ap_sta_, IWL_STA_NOTEXIST, IWL_STA_NONE));
+
+    // Set it to associated.
+    mvm_->fw_id_to_mac_id[0]->sta_state = IWL_STA_AUTHORIZED;
+  }
+
   struct iwl_mvm* mvm_;
+  // for ClientInterfaceHelper().
+  struct iwl_mvm_vif mvmvif_;
+  int mvmvif_idx_;
+  struct iwl_mvm_sta ap_sta_;
+  struct iwl_mvm_txq txqs_[IEEE80211_TIDS_MAX + 1];
 };
 
 // Normal case: add an interface, then delete it.
@@ -198,6 +241,96 @@ TEST_F(Mac80211Test, MvmSlotBindUnbind) {
   ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
   ASSERT_EQ(ret, ZX_OK);
   ASSERT_EQ(index, 1);
+}
+
+class McastFilterTest : public Mac80211Test {
+ public:
+  McastFilterTest() {
+    // Set up pointer back to this test so that the following wrapper can call its mock funciton.
+    struct trans_sim_priv* priv = IWL_TRANS_GET_TRANS_SIM(mvm_->trans);
+    priv->test = this;
+  }
+  ~McastFilterTest() { mock_send_cmd_.VerifyAndClear(); }
+
+  // The values we expect.  We only test few arbitrary bytes in 'addr_list' .
+  //
+  mock_function::MockFunction<zx_status_t,
+                              uint32_t,  // hcmd->id
+                              uint8_t,   // mcast_cmd->port_id
+                              uint8_t,   // mcast_cmd->count
+                              uint8_t,   // mcast_cmd->bssid[0]
+                              uint8_t,   // mcast_cmd->addr_list[0 * ETH_ALEN + 0]
+                              uint8_t,   // mcast_cmd->addr_list[1 * ETH_ALEN + 5]
+                              uint8_t    // mcast_cmd->addr_list[2 * ETH_ALEN + 2]
+                              >
+      mock_send_cmd_;
+  static zx_status_t send_cmd_wrapper(struct iwl_trans* trans, struct iwl_host_cmd* hcmd) {
+    struct trans_sim_priv* priv = IWL_TRANS_GET_TRANS_SIM(trans);
+    McastFilterTest* test = reinterpret_cast<McastFilterTest*>(priv->test);
+    ZX_ASSERT(test);
+
+    auto mcast_cmd = reinterpret_cast<const struct iwl_mcast_filter_cmd*>(hcmd->data[0]);
+    return test->mock_send_cmd_.Call(hcmd->id, mcast_cmd->port_id, mcast_cmd->count,
+                                     mcast_cmd->bssid[0], mcast_cmd->addr_list[0 * ETH_ALEN + 0],
+                                     mcast_cmd->addr_list[1 * ETH_ALEN + 5],
+                                     mcast_cmd->addr_list[2 * ETH_ALEN + 2]);
+  }
+
+  void bind_mock_function() {
+    org_send_cmd_ = sim_trans_.iwl_trans()->ops->send_cmd;
+    sim_trans_.iwl_trans()->ops->send_cmd = send_cmd_wrapper;
+  }
+
+  void unbind_mock_function() { sim_trans_.iwl_trans()->ops->send_cmd = org_send_cmd_; }
+
+ private:
+  zx_status_t (*org_send_cmd_)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);  // for backup
+};
+
+TEST_F(McastFilterTest, McastFilterNormal) {
+  ClientInterfaceHelper();
+
+  // mock function after the testing environment had been set.
+  bind_mock_function();
+
+  // Test if we can configure the mcast filter.
+  mock_send_cmd_.ExpectCall(ZX_OK, WIDE_ID(LONG_GROUP, MCAST_FILTER_CMD),  // hcmd->id
+                            0,                                             // mcast_cmd->port_id
+                            3,                                             // mcast_cmd->count
+                            0x00,                                          // mcast_cmd->bssid[0]
+                            0x33,  // mcast_cmd->addr_list[0 * ETH_ALEN + 0]
+                            0x02,  // mcast_cmd->addr_list[1 * ETH_ALEN + 5]
+                            0x5e   // mcast_cmd->addr_list[2 * ETH_ALEN + 2]
+  );
+  iwl_mvm_configure_filter(mvm_);
+
+  ASSERT_NE(mvm_->mcast_filter_cmd, nullptr);
+
+  unbind_mock_function();
+}
+
+TEST_F(McastFilterTest, McastFilterNoActiveInterface) {
+  // mock function after the testing environment had been set.
+  bind_mock_function();
+
+  // We shall expect nothing will happen because ClientInterfaceHelper() is not called and
+  // no interface is created.
+  iwl_mvm_configure_filter(mvm_);
+
+  unbind_mock_function();
+}
+
+TEST_F(McastFilterTest, McastFilterAp) {
+  ClientInterfaceHelper();
+  mvmvif_.mac_role = WLAN_INFO_MAC_ROLE_AP;  // overwrite to AP.
+
+  // mock function after the testing environment had been set.
+  bind_mock_function();
+
+  // We shall expect nothing will happen because the interface is for AP.
+  iwl_mvm_configure_filter(mvm_);
+
+  unbind_mock_function();
 }
 
 }  // namespace

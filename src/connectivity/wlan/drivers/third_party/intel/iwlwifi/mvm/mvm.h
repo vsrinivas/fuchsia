@@ -2144,6 +2144,9 @@ zx_status_t iwl_mvm_bind_mvmvif(struct iwl_mvm* mvm, int idx, struct iwl_mvm_vif
 void iwl_mvm_unbind_mvmvif(struct iwl_mvm* mvm, int idx);
 zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
+
+void iwl_mvm_configure_filter(struct iwl_mvm* mvm);
+
 zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
                                 const wlan_hw_scan_config_t* scan_config);
 

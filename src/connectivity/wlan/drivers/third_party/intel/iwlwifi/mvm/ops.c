@@ -1066,8 +1066,9 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
   iwl_mvm_fm_unregister(mvm);
 #endif
 
-  kfree(mvm->scan_cmd);
-  kfree(mvm->mcast_filter_cmd);
+  free(mvm->scan_cmd);
+  mvm->scan_cmd = NULL;
+  free(mvm->mcast_filter_cmd);
   mvm->mcast_filter_cmd = NULL;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS

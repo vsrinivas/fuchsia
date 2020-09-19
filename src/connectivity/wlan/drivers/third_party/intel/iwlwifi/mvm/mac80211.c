@@ -1526,62 +1526,81 @@ out_release:
 static int iwl_mvm_mac_config(struct ieee80211_hw* hw, uint32_t changed) {
     return 0;
 }
+#endif  // NEEDS_PORTING
 
 struct iwl_mvm_mc_iter_data {
-    struct iwl_mvm* mvm;
-    int port_id;
+  struct iwl_mvm* mvm;
+  int port_id;
 };
 
-static void iwl_mvm_mc_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
-    struct iwl_mvm_mc_iter_data* data = _data;
-    struct iwl_mvm* mvm = data->mvm;
-    struct iwl_mcast_filter_cmd* cmd = mvm->mcast_filter_cmd;
-    struct iwl_host_cmd hcmd = {
-        .id = MCAST_FILTER_CMD,
-        .flags = CMD_ASYNC,
-        .dataflags[0] = IWL_HCMD_DFL_NOCOPY,
-    };
-    int ret, len;
+// Once the interface becomes an associated client interface, the driver uses the pre-configured
+// MCAST_FILTER_CMD to tell firmware the multicast packets it is interested so that the firmware
+// can forward them to driver when the firmware receives them.
+//
+static void iwl_mvm_mc_iface_iterator(void* _data, struct iwl_mvm_vif* mvmvif) {
+  struct iwl_mvm_mc_iter_data* data = _data;
+  struct iwl_mvm* mvm = data->mvm;
+  struct iwl_mcast_filter_cmd* cmd = mvm->mcast_filter_cmd;
+  struct iwl_host_cmd hcmd = {
+      .id = MCAST_FILTER_CMD,
+      .flags = CMD_ASYNC,
+      .dataflags[0] = IWL_HCMD_DFL_NOCOPY,
+  };
+  int ret, len;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-    if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL) && mvm->mcast_active_filter_cmd) {
-        cmd = mvm->mcast_active_filter_cmd;
-    }
+  if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL) && mvm->mcast_active_filter_cmd) {
+    cmd = mvm->mcast_active_filter_cmd;
+  }
 #endif
 
-    /* if we don't have free ports, mcast frames will be dropped */
-    if (WARN_ON_ONCE(data->port_id >= MAX_PORT_ID_NUM)) { return; }
+  /* if we don't have free ports, mcast frames will be dropped */
+  if (data->port_id >= MAX_PORT_ID_NUM) {
+    IWL_WARN(mvmvif, "%s(): port id (%d) is larger than max port number (%d)\n", __func__,
+             data->port_id, MAX_PORT_ID_NUM);
+    return;
+  }
 
-    if (vif->type != NL80211_IFTYPE_STATION || !vif->bss_conf.assoc) { return; }
+  // Only associated client interface can continue. Other interfaces will be ignored.
+  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT ||
+      mvmvif->mvm->fw_id_to_mac_id[0]->sta_state != IWL_STA_AUTHORIZED) {
+    IWL_ERR(mvmvif, "unexpected state while setting mcast filter. role: %d!=%d or state: %d!=%d\n",
+            mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT, mvmvif->mvm->fw_id_to_mac_id[0]->sta_state,
+            IWL_STA_AUTHORIZED);
+    return;
+  }
 
-    cmd->port_id = data->port_id++;
-    memcpy(cmd->bssid, vif->bss_conf.bssid, ETH_ALEN);
-    len = roundup(sizeof(*cmd) + cmd->count * ETH_ALEN, 4);
+  cmd->port_id = data->port_id++;
+  memcpy(cmd->bssid, mvmvif->bss_conf.bssid, ETH_ALEN);
+  len = ROUND_UP(sizeof(*cmd) + cmd->count * ETH_ALEN, 4);
 
-    hcmd.len[0] = len;
-    hcmd.data[0] = cmd;
+  hcmd.len[0] = len;
+  hcmd.data[0] = cmd;
 
-    ret = iwl_mvm_send_cmd(mvm, &hcmd);
-    if (ret) { IWL_ERR(mvm, "mcast filter cmd error. ret=%d\n", ret); }
+  ret = iwl_mvm_send_cmd(mvm, &hcmd);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "mcast filter cmd error. ret=%s\n", zx_status_get_string(ret));
+  }
 }
 
-#ifndef CPTCFG_IWLMVM_VENDOR_CMDS
-static
-#endif
-    void
-    iwl_mvm_recalc_multicast(struct iwl_mvm* mvm) {
-    struct iwl_mvm_mc_iter_data iter_data = {
-        .mvm = mvm,
-    };
+// Traverse all interfaces and set the multicast filter for associated client interface.
+static void iwl_mvm_recalc_multicast(struct iwl_mvm* mvm) {
+  struct iwl_mvm_mc_iter_data iter_data = {
+      .mvm = mvm,
+  };
 
-    iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
-    if (WARN_ON_ONCE(!mvm->mcast_filter_cmd)) { return; }
+  if (!mvm->mcast_filter_cmd) {
+    IWL_WARN(mvm, "%s(): mcast_filter_cmd is NULL\n", __func__);
+    return;
+  }
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_mc_iface_iterator, &iter_data);
+  ieee80211_iterate_active_interfaces_atomic(mvm, iwl_mvm_mc_iface_iterator, &iter_data);
 }
 
+#if 0  // NEEDS_PORTING
+// TODO(51238): implement iwl_mvm_prepare_multicast()
 static uint64_t iwl_mvm_prepare_multicast(struct ieee80211_hw* hw,
                                           struct netdev_hw_addr_list* mc_list) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
@@ -1612,33 +1631,72 @@ static uint64_t iwl_mvm_prepare_multicast(struct ieee80211_hw* hw,
 
     return (uint64_t)(unsigned long)cmd;
 }
+#endif  // NEEDS_PORTING
 
-static void iwl_mvm_configure_filter(struct ieee80211_hw* hw, unsigned int changed_flags,
-                                     unsigned int* total_flags, uint64_t multicast) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    struct iwl_mcast_filter_cmd* cmd = (void*)(unsigned long)multicast;
+void iwl_mvm_configure_filter(struct iwl_mvm* mvm) {
+  // There are 3 multicast addresses we want firmware to pass it to driver.
+  // TODO(51238): remove the hardcoded mcast_addrs after iwl_mvm_prepare_multicast() is implemented.
+  uint8_t mcast_addrs[][ETH_ALEN] = {
+      {
+          // IPv6 mutlicast address
+          0x33,
+          0x33,
+          0x00,
+          0x00,
+          0x00,
+          0x01,
+      },
+      {
+          // IPv6 mutlicast address
+          0x33,
+          0x33,
+          0x00,
+          0x00,
+          0x00,
+          0x02,
+      },
+      {
+          // IPv4 mutlicast address
+          0x01,
+          0x00,
+          0x5e,
+          0x00,
+          0x00,
+          0x01,
+      },
+  };
 
-    mutex_lock(&mvm->mutex);
+  struct iwl_mcast_filter_cmd* cmd =
+      calloc(1, sizeof(struct iwl_mcast_filter_cmd) + sizeof(mcast_addrs));
 
-    /* replace previous configuration */
-    kfree(mvm->mcast_filter_cmd);
-    mvm->mcast_filter_cmd = cmd;
+  mtx_lock(&mvm->mutex);
 
-    if (!cmd) { goto out; }
+  /* replace previous configuration */
+  free(mvm->mcast_filter_cmd);
+  mvm->mcast_filter_cmd = cmd;
+  if (!cmd) {
+    goto out;
+  }
 
-    if (changed_flags & FIF_ALLMULTI) { cmd->pass_all = !!(*total_flags & FIF_ALLMULTI); }
+  if (cmd->pass_all) {
+    cmd->count = 0;
+  }
 
-    if (cmd->pass_all) { cmd->count = 0; }
+  for (size_t i = 0; i < ARRAY_SIZE(mcast_addrs); i++) {
+    size_t offset = i * ETH_ALEN;
+    memcpy(&cmd->addr_list[offset], mcast_addrs[i], ETH_ALEN);
+  }
+  cmd->count = ARRAY_SIZE(mcast_addrs);
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-    iwl_mvm_active_rx_filters(mvm);
+  iwl_mvm_active_rx_filters(mvm);
 #endif
-    iwl_mvm_recalc_multicast(mvm);
+  iwl_mvm_recalc_multicast(mvm);
 out:
-    mutex_unlock(&mvm->mutex);
-    *total_flags = 0;
+  mtx_unlock(&mvm->mutex);
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_config_iface_filter(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                                         unsigned int filter_flags, unsigned int changed_flags) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
