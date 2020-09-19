@@ -19,8 +19,6 @@ kernel_cmdline_args = [
 product_bootfs_labels =
     [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
-product_zedboot_bootfs_labels = product_bootfs_labels
-
 meta_package_labels = []
 
 base_package_labels = []

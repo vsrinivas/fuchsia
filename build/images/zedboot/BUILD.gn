@@ -12,11 +12,48 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/future/images/zedboot.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
 
-# Note: the contents of the zbi are now located in the zedboot.gni file in the
-# imports above.
+zedboot_deps = []
+
+# Base system.
+zedboot_deps += [
+  "//build/info:bootfs",
+  "//bundles:bootstrap-zedboot",
+  "//bundles/drivers:bootstrap",
+  "//bundles/drivers:usb-host-stack",
+  "//bundles/drivers:usb-peripheral-stack",
+  "//bundles/drivers:utils",
+]
+
+# Component manager configuration.
+
+zedboot_deps +=
+    [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+
+# Needed for installer runs.
+zedboot_deps += [
+  "//src/storage/bin/disk-pave:install-disk-image",
+  "//src/storage/bin/mount",
+  "//src/sys/installer:bin",
+]
+
+# For debugging.
+zedboot_deps += [
+  "//src/bringup/bin/virtcon:virtual-console",
+  "//src/connectivity/network/bin/ping",
+  "//src/devices/nand/bin/nand-util",
+  "//src/devices/nand/drivers/broker:nand-broker",
+  "//src/diagnostics/dlog",
+  "//src/security/bin/syscall-check",
+  "//src/storage/bin/dd",
+  "//src/storage/bin/umount",
+  "//src/sys/bin/psutils:killall",
+  "//src/sys/bin/psutils:ps",
+  "//src/sys/bin/psutils:threads",
+  "//src/zircon/bin/ktrace",
+  "//zircon/third_party/uapp/dash",
+]
 
 # Zedboot must be included to pave devices until recovery has a replacement
 # mechanism. Products can specify recovery_label to determine which
@@ -84,7 +121,7 @@ migrated_zbi("zbi") {
     "//src/sys/installer:bin",
   ]
   deps += zedboot_deps
-  deps += product_zedboot_bootfs_labels + board_zedboot_bootfs_labels
+  deps += board_zedboot_bootfs_labels
 
   if (!include_devmgr_config_in_vbmeta) {
     deps += [ ":devmgr_config" ]
