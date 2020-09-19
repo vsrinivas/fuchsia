@@ -29,7 +29,7 @@ BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
   symbolize="$(btf::make_hosttools_mock symbolize)"
-  symbol_index="$(btf::make_installed_hosttools_mock symbol-index)"
+  symbol_index="$(btf::make_hosttools_mock symbol-index)"
 }
 
 TEST_log_raw() {

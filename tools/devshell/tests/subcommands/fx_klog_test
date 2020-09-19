@@ -24,7 +24,7 @@ BT_SET_UP() {
   fx="$(btf::setup_fx)"
   symbolize="$(btf::make_hosttools_mock symbolize)"
   loglistener="$(btf::make_installed_hosttools_mock loglistener)"
-  symbol_index="$(btf::make_installed_hosttools_mock symbol-index)"
+  symbol_index="$(btf::make_hosttools_mock symbol-index)"
 }
 
 TEST_klog_local() {

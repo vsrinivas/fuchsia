@@ -11,7 +11,7 @@
 # This file is not self-contained! ../../lib/vars.sh must be sourced before this file.
 
 function symbol-index {
-  local symbol_index="${FUCHSIA_BUILD_DIR}/host-tools/symbol-index"
+  local symbol_index="${HOST_OUT_DIR}/symbol-index"
 
   if [[ ! -e ${symbol_index} ]]; then
     fx-error "${symbol_index} is not found, make sure you have //bundles:tools (or //tools) in " \
