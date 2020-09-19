@@ -404,5 +404,44 @@ void main() {
           .toString();
       expect(resolveOutput.contains('package contents:'), isTrue);
     });
+    test(
+        'Test the flow from repo creation, to archive generation, '
+        'to running the component on the device.', () async {
+      // Covers several key steps:
+      // 0. Sanity check. The given component is not already available in the repo.
+      // 1. The given component is archived into a valid `.far`.
+      // 2. We are able to create our own repo.
+      // 3. We are able to serve our repo to a given Fuchsia device.
+      // 4. The device is able to pull the given component from our repo.
+      // 5. The given component contains the expected content.
+      var resolveOutput = (await repoServer.pkgctlResolve(
+              'Confirm that `$testPackageName` does not exist.',
+              'fuchsia-pkg://fuchsia.com/$testPackageName',
+              1))
+          .stdout
+          .toString();
+      log.info('resolve before: $resolveOutput');
+      expect(resolveOutput.contains('package contents:'), isFalse);
+
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
+
+      await repoServer.amberctlAddSrcNF(
+          'Adding the new repository as an update source with http://$hostAddress:$port',
+          repoServer.getRepoPath(),
+          'http://$hostAddress:$port/config.json',
+          0);
+
+      var response = await sl4fDriver.ssh.run(
+          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample.cmx');
+      expect(response.exitCode, 0);
+      expect(response.stdout.toString(), 'Hello, World!\n');
+      response = await sl4fDriver.ssh.run(
+          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample2.cmx');
+      expect(response.exitCode, 0);
+      expect(response.stdout.toString(), 'Hello, World2!\n');
+    });
   }, timeout: _timeout);
 }
