@@ -34,6 +34,7 @@ PT_NOTE = 4
 PT_GNU_RELRO = 0x6474e552
 PF_X = 1
 PF_W = 2
+PF_R = 4
 DT_NEEDED = 1
 DT_PLTRELSZ = 2
 DT_STRTAB = 5
@@ -314,6 +315,7 @@ elf_sizes = namedtuple(
         'relcount',                 # DT_RELCOUNT + DT_RELACOUNT
         'relro',                    # PT_GNU_RELRO p_memsz
         'code',                     # executable segment p_filesz
+        'rodata',                   # read-only data segment p_filesz
         'data',                     # writable segment p_filesz
         'bss',                      # writable segment p_memsz past p_filesz
     ])
@@ -576,9 +578,17 @@ def get_elf_info(filename, match_notes=False):
         return (phdr for phdr in phdrs
                 if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_W) != 0)
 
+    def gen_rodata_segments():
+        return (phdr for phdr in phdrs
+                if phdr.p_type == PT_LOAD and phdr.p_flags == PF_R)
+
     def get_code_size():
         return sum(get_segment_size(phdr, file=True, mem=False)
                    for phdr in gen_executable_segments())
+
+    def get_rodata_size():
+        return sum(get_segment_size(phdr, file=True, mem=False)
+                   for phdr in gen_rodata_segments())
 
     def get_data_size():
         return sum(get_segment_size(phdr, file=True, mem=False)
@@ -705,6 +715,7 @@ def get_elf_info(filename, match_notes=False):
                 elf_sizes(file=filesize,
                           memory=get_memory_size(),
                           code=get_code_size(),
+                          rodata=get_rodata_size(),
                           relro=get_relro_size(),
                           data=get_data_size(),
                           bss=get_bss_size(),
