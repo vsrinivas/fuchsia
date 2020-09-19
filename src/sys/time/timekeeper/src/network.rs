@@ -2,175 +2,107 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{anyhow, Error},
-    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
-    fidl_fuchsia_netstack as fnetstack,
-    futures::{stream::FusedStream, TryStreamExt},
-    itertools::Itertools,
-    log::info,
-};
+use {anyhow::Error, fidl_fuchsia_net_interfaces as finterfaces, std::collections::HashMap};
 
-// TODO(https://github.com/bitflags/bitflags/issues/180): replace this function with normal BitOr.
-const fn const_bitor(left: fnetstack::Flags, right: fnetstack::Flags) -> fnetstack::Flags {
-    fnetstack::Flags::from_bits_truncate(left.bits() | right.bits())
+// Returns true iff the supplied [`finterfaces::Properties`] (expected to be fully populated)
+// appears to provide network connectivity, i.e. is not loopback, is online, has an IP address, and
+// has default route (v4 or v6).
+fn network_available(
+    finterfaces::Properties {
+        device_class,
+        online,
+        addresses,
+        has_default_ipv4_route,
+        has_default_ipv6_route,
+        ..
+    }: &finterfaces::Properties,
+) -> bool {
+    return device_class.is_some()
+        && *device_class != Some(finterfaces::DeviceClass::Loopback(finterfaces::Empty {}))
+        && *online == Some(true)
+        && addresses.as_ref().map_or(false, |addresses| !addresses.is_empty())
+        && (*has_default_ipv4_route == Some(true) || *has_default_ipv6_route == Some(true));
 }
 
-// Returns true iff any byte in the supplied `IpAddress` is non-zero.
-fn address_populated(addr: &IpAddress) -> bool {
-    match addr {
-        IpAddress::Ipv4(Ipv4Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
-        IpAddress::Ipv6(Ipv6Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
-    }
+// Initialize an interface watcher and return its events as a stream.
+pub(crate) fn event_stream(
+    interfaces_state: &finterfaces::StateProxy,
+) -> Result<impl futures::Stream<Item = Result<finterfaces::Event, Error>>, Error> {
+    fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interfaces_state)
 }
 
-// Returns true iff the supplied `NetInterface` appears to provide network connectivity, i.e. is up,
-// has DHCP, and has a non-zero IP address.
-fn network_available(net_interface: fnetstack::NetInterface) -> bool {
-    const REQUIRED_FLAGS: fnetstack::Flags =
-        const_bitor(fnetstack::Flags::Up, fnetstack::Flags::Dhcp);
-    let fnetstack::NetInterface { flags, addr, .. } = net_interface;
-    flags.contains(REQUIRED_FLAGS) && address_populated(&addr)
-}
-
-// Returns a short log string summarizing the relevant state of a network interface.
-fn log_string(net_interface: &fnetstack::NetInterface) -> String {
-    let fnetstack::NetInterface { name, flags, features, addr, .. } = net_interface;
-    format!(
-        "{}/flag={}/feat={}/addr={}",
-        name,
-        flags.bits(),
-        features.bits(),
-        address_populated(&addr)
-    )
-}
-
-/// Returns Ok once the netstack indicates Internet connectivity should be available.
-pub async fn wait_for_network_available(
-    mut netstack_events: fnetstack::NetstackEventStream,
-) -> Result<(), Error> {
-    while !netstack_events.is_terminated() {
-        if let Some(fnetstack::NetstackEvent::OnInterfacesChanged { interfaces }) =
-            netstack_events.try_next().await?
-        {
-            info!("interface change: {}", interfaces.iter().map(log_string).join(", "));
-            if interfaces.into_iter().any(network_available) {
-                return Ok(());
-            }
+// Returns Ok once the netstack indicates Internet connectivity should be available.
+pub(crate) async fn wait_for_network_available<S>(stream: S) -> Result<(), Error>
+where
+    S: futures::Stream<Item = Result<finterfaces::Event, Error>>,
+{
+    fidl_fuchsia_net_interfaces_ext::wait_interface(stream, &mut HashMap::new(), |if_map| {
+        if if_map.values().any(network_available) {
+            Some(())
+        } else {
+            None
         }
-    }
-    Err(anyhow!("Stream terminated"))
+    })
+    .await
 }
 
 // Functions to assist in the unit testing of other modules. Define outside ::test so our
 // internal unit test doesn't need to be public.
 
 #[cfg(test)]
-fn create_interface(flags: fnetstack::Flags, addr: IpAddress) -> fnetstack::NetInterface {
-    fnetstack::NetInterface {
-        id: 1,
-        flags,
-        features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-        configuration: 0,
-        name: "my little pony".to_string(),
-        addr,
-        netmask: IpAddress::Ipv4(Ipv4Address { addr: [0, 0, 0, 0] }),
-        broadaddr: IpAddress::Ipv4(Ipv4Address { addr: [0, 0, 0, 0] }),
-        ipv6addrs: vec![],
-        hwaddr: vec![],
-    }
-}
-
-#[cfg(test)]
-fn create_event_service(
-    interface_sets: Vec<Vec<fnetstack::NetInterface>>,
-) -> fnetstack::NetstackProxy {
-    let (netstack_service, netstack_server) =
-        fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
-    let (_, netstack_control) = netstack_server.into_stream_and_control_handle().unwrap();
-    for mut interface_set in interface_sets {
-        let () =
-            netstack_control.send_on_interfaces_changed(&mut interface_set.iter_mut()).unwrap();
-    }
-    netstack_service
-}
-
-#[cfg(test)]
-pub fn create_event_service_with_valid_interface() -> fnetstack::NetstackProxy {
-    create_event_service(vec![vec![create_interface(
-        const_bitor(fnetstack::Flags::Up, fnetstack::Flags::Dhcp),
-        IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 1, 2] }),
-    )]])
+pub(crate) fn create_stream_with_valid_interface(
+) -> impl futures::Stream<Item = Result<finterfaces::Event, Error>> {
+    futures::stream::once(futures::future::ok(finterfaces::Event::Existing(
+        tests::valid_interface(),
+    )))
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use {
+        super::*, fidl_fuchsia_hardware_network as fnetwork, fidl_fuchsia_net as fnet,
+        net_declare::fidl_ip,
+    };
 
-    const EMPTY_IP_V4: IpAddress = IpAddress::Ipv4(Ipv4Address { addr: [0, 0, 0, 0] });
-    const VALID_IP_V4: IpAddress = IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 1, 1] });
-    const EMPTY_IP_V6: IpAddress = IpAddress::Ipv6(Ipv6Address { addr: [0; 16] });
-    const VALID_IP_V6: IpAddress = IpAddress::Ipv6(Ipv6Address { addr: [1; 16] });
-    const VALID_FLAGS: fnetstack::Flags = const_bitor(fnetstack::Flags::Up, fnetstack::Flags::Dhcp);
+    pub(crate) fn valid_interface() -> finterfaces::Properties {
+        finterfaces::Properties {
+            id: Some(1),
+            name: Some("test1".to_string()),
+            device_class: Some(finterfaces::DeviceClass::Device(fnetwork::DeviceClass::Ethernet)),
+            online: Some(true),
+            addresses: Some(vec![finterfaces::Address {
+                addr: Some(fnet::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 }),
+            }]),
+            has_default_ipv4_route: Some(true),
+            has_default_ipv6_route: Some(true),
+        }
+    }
 
     #[test]
     fn network_availability() {
         // All these combinations should not indicate an available network.
-        assert!(!network_available(create_interface(fnetstack::Flags::empty(), VALID_IP_V4)));
-        assert!(!network_available(create_interface(fnetstack::Flags::Up, VALID_IP_V4)));
-        assert!(!network_available(create_interface(fnetstack::Flags::Dhcp, VALID_IP_V4)));
-        assert!(!network_available(create_interface(VALID_FLAGS, EMPTY_IP_V4)));
-        assert!(!network_available(create_interface(VALID_FLAGS, EMPTY_IP_V6)));
-        // But these should indicate an available network.
-        assert!(network_available(create_interface(VALID_FLAGS, VALID_IP_V4)));
-        assert!(network_available(create_interface(VALID_FLAGS, VALID_IP_V6)));
-    }
-
-    #[fasync::run_until_stalled(test)]
-    #[should_panic]
-    async fn wait_for_network_available_timeout() {
-        // Create a server and send a first event
-        let (service, server) =
-            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
-        let mut interfaces = vec![create_interface(fnetstack::Flags::empty(), EMPTY_IP_V4)];
-        let (_, netstack_control) = server.into_stream_and_control_handle().unwrap();
-        netstack_control.send_on_interfaces_changed(&mut interfaces.iter_mut()).unwrap();
-        // Swallow the wait_for_network_available result, if it returns either a success or an error
-        // this method should complete successfully causing the test to fail.
-        let _ = wait_for_network_available(service.take_event_stream()).await;
-        // Send a second event before returning our future, this ensures wait_for_network_available
-        // cannot complete immediately so should result in the test stalling.
-        netstack_control.send_on_interfaces_changed(&mut interfaces.iter_mut()).unwrap();
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn wait_for_network_available_failure() {
-        // Create a server and then immediately close the channel
-        let (service, server) =
-            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
-        drop(server);
-        wait_for_network_available(service.take_event_stream())
-            .await
-            .expect_err("Wait for network available should have returned Err");
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn wait_for_network_available_success() {
-        // Send four events, which get successively better until the last is sufficient.
-        let netstack_service = create_event_service(vec![
-            vec![],
-            vec![create_interface(VALID_FLAGS, EMPTY_IP_V6)],
-            vec![
-                create_interface(VALID_FLAGS, EMPTY_IP_V6),
-                create_interface(fnetstack::Flags::empty(), VALID_IP_V4),
-            ],
-            vec![
-                create_interface(VALID_FLAGS, EMPTY_IP_V6),
-                create_interface(VALID_FLAGS, VALID_IP_V4),
-            ],
-        ]);
-        wait_for_network_available(netstack_service.take_event_stream())
-            .await
-            .expect("Wait for network available should have returned Ok");
+        assert!(!network_available(&finterfaces::Properties {
+            device_class: None,
+            ..valid_interface()
+        }));
+        assert!(!network_available(&finterfaces::Properties {
+            device_class: Some(finterfaces::DeviceClass::Loopback(finterfaces::Empty {})),
+            ..valid_interface()
+        }));
+        assert!(!network_available(&finterfaces::Properties {
+            online: Some(false),
+            ..valid_interface()
+        }));
+        assert!(!network_available(&finterfaces::Properties {
+            addresses: Some(vec![]),
+            ..valid_interface()
+        }));
+        assert!(!network_available(&finterfaces::Properties {
+            has_default_ipv4_route: Some(false),
+            has_default_ipv6_route: Some(false),
+            ..valid_interface()
+        }));
+        // But this should indicate an available network.
+        assert!(network_available(&valid_interface()));
     }
 }

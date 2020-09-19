@@ -16,8 +16,7 @@ rustc_binary("bin") {
     ":time_metrics_registry",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
     "//src/lib/async-utils",
@@ -29,6 +28,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -53,7 +53,9 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/connectivity/lib/net-declare",
     "//third_party/rust_crates:matches",
   ]
 }

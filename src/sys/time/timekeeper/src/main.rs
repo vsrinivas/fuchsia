@@ -14,13 +14,14 @@ mod time_source;
 use {
     crate::{
         diagnostics::{CobaltDiagnostics, CobaltDiagnosticsImpl, InspectDiagnostics},
-        network::wait_for_network_available,
+        network::{event_stream, wait_for_network_available},
         rtc::{Rtc, RtcImpl},
         time_source::{Event, PushTimeSource, TimeSource},
     },
     anyhow::{Context as _, Error},
     chrono::prelude::*,
-    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_time as ftime, fuchsia_async as fasync,
+    fidl_fuchsia_net_interfaces as finterfaces, fidl_fuchsia_time as ftime,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt as _},
@@ -79,8 +80,10 @@ async fn main() -> Result<(), Error> {
     };
 
     let time_source = PushTimeSource::new(NETWORK_TIME_SERVICE.to_string());
-    let netstack_service =
-        fuchsia_component::client::connect_to_service::<fnetstack::NetstackMarker>().unwrap();
+    let interface_state_service =
+        fuchsia_component::client::connect_to_service::<finterfaces::StateMarker>()
+            .context("failed to connect to fuchsia.net.interfaces/State")?;
+    let interface_event_stream = event_stream(&interface_state_service)?;
     let notifier_clone = notifier.clone();
 
     fasync::Task::spawn(async move {
@@ -89,7 +92,7 @@ async fn main() -> Result<(), Error> {
             optional_rtc,
             notifier_clone,
             time_source,
-            netstack_service,
+            interface_event_stream,
             Arc::clone(&inspect),
             cobalt,
         )
@@ -122,15 +125,17 @@ fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
 /// Checks for network connectivity before attempting any time updates.
 ///
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
-async fn maintain_utc<C: CobaltDiagnostics, R: Rtc, T: TimeSource>(
+async fn maintain_utc<C: CobaltDiagnostics, R: Rtc, T: TimeSource, S>(
     utc_clock: Arc<zx::Clock>,
     mut optional_rtc: Option<Arc<R>>,
     notifs: Notifier,
     time_source: T,
-    netstack_service: fnetstack::NetstackProxy,
+    interface_event_stream: S,
     inspect: Arc<Mutex<InspectDiagnostics>>,
     mut cobalt: C,
-) {
+) where
+    S: futures::Stream<Item = Result<finterfaces::Event, Error>>,
+{
     info!("record the state at initialization.");
     match initial_utc_source(&*utc_clock) {
         ftime::UtcSource::Backstop => {
@@ -187,8 +192,8 @@ async fn maintain_utc<C: CobaltDiagnostics, R: Rtc, T: TimeSource>(
     };
 
     info!("waiting for network connectivity before attempting network time sync...");
-    match wait_for_network_available(netstack_service.take_event_stream()).await {
-        Ok(_) => inspect.lock().await.network_available(),
+    match wait_for_network_available(interface_event_stream).await {
+        Ok(()) => inspect.lock().await.network_available(),
         Err(why) => warn!("failed to wait for network, attempted to sync time anyway: {:?}", why),
     }
 
@@ -386,7 +391,7 @@ mod tests {
             Event::TimeSample { utc: *UPDATE_TIME_2, monotonic: zx::Time::from_nanos(1) },
         ]);
 
-        let netstack_service = network::create_event_service_with_valid_interface();
+        let interface_event_stream = network::create_stream_with_valid_interface();
 
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
         // Spawning test notifier and verifying initial state
@@ -398,7 +403,7 @@ mod tests {
             Some(Arc::clone(&rtc)),
             notifier.clone(),
             time_source,
-            netstack_service,
+            interface_event_stream,
             Arc::clone(&inspect_diagnostics),
             cobalt_diagnostics,
         ));
@@ -441,7 +446,7 @@ mod tests {
             status: ftexternal::Status::Network,
         }]);
 
-        let netstack_service = network::create_event_service_with_valid_interface();
+        let interface_event_stream = network::create_stream_with_valid_interface();
 
         // Spawning test notifier and verifying the initial state
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
@@ -455,7 +460,7 @@ mod tests {
             Some(Arc::clone(&rtc)),
             notifier.clone(),
             time_source,
-            netstack_service,
+            interface_event_stream,
             Arc::clone(&inspect_diagnostics),
             cobalt_diagnostics,
         )
@@ -499,7 +504,7 @@ mod tests {
             status: ftexternal::Status::Network,
         }]);
 
-        let netstack_service = network::create_event_service_with_valid_interface();
+        let interface_event_stream = network::create_stream_with_valid_interface();
 
         // Spawning test notifier and verifying the initial state
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
@@ -513,7 +518,7 @@ mod tests {
             Some(Arc::clone(&rtc)),
             notifier.clone(),
             time_source,
-            netstack_service,
+            interface_event_stream,
             Arc::clone(&inspect_diagnostics),
             cobalt_diagnostics,
         )
@@ -558,7 +563,7 @@ mod tests {
             status: ftexternal::Status::Hardware,
         }]);
 
-        let netstack_service = network::create_event_service_with_valid_interface();
+        let interface_event_stream = network::create_stream_with_valid_interface();
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
 
         maintain_utc(
@@ -566,7 +571,7 @@ mod tests {
             Some(Arc::clone(&rtc)),
             notifier.clone(),
             time_source,
-            netstack_service,
+            interface_event_stream,
             Arc::clone(&inspect_diagnostics),
             cobalt_diagnostics,
         )
@@ -607,7 +612,7 @@ mod tests {
         let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
 
         let time_source = FakeTimeSource::failing();
-        let netstack_service = network::create_event_service_with_valid_interface();
+        let interface_event_stream = network::create_stream_with_valid_interface();
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
 
         maintain_utc(
@@ -615,7 +620,7 @@ mod tests {
             Some(Arc::clone(&rtc)),
             notifier.clone(),
             time_source,
-            netstack_service,
+            interface_event_stream,
             Arc::clone(&inspect_diagnostics),
             cobalt_diagnostics,
         )
