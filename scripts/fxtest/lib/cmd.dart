@@ -164,6 +164,7 @@ class FuchsiaTestCommand {
       } on FxRunException {
         emitEvent(FatalError(
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
+        _exitCodeSetter(failureExitCode);
         return;
       }
       // Re-parse the manifest in case it has changed as a side effect of building
@@ -270,6 +271,7 @@ class FuchsiaTestCommand {
 
     if (!await checklist.isDeviceReady(_testBundles)) {
       emitEvent(FatalError('Device is not ready for running device tests'));
+      _exitCodeSetter(failureExitCode);
       return;
     }
 

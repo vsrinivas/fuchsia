@@ -74,6 +74,18 @@ TEST_fxtest_build() {
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
 
+# Ensure that `fx test` exits with a non-zero status if `fx build` fails.
+TEST_fxtest_build_failure_exits_with_nonzero_status() {
+  cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname="overflow_fuzzer_test"
+  echo 1 > "${BT_TEMP_DIR}/tools/devshell/build.mock_status"
+  BT_EXPECT_FAIL ${fx} test ${testname} > ${out}
+  # ensure that fx build was called
+  # TODO: once fx test calls fx build with a specific target, check it here as well
+  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+}
+
 # Ensure that `fx build` is not called when "--no-build" option is given
 TEST_fxtest_nobuild() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
@@ -83,6 +95,18 @@ TEST_fxtest_nobuild() {
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+}
+
+# Ensure that `fx test` exits with a non-zero status if
+# `fx # is-package-server-running` fails.
+TEST_fxtest_fails_with_no_package_server() {
+  cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname1="overflow_fuzzer_test"
+  echo 1 > "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_status"
+  BT_EXPECT_FAIL ${fx} test --no-build ${testname} > ${out}
+  # ensure that fx is-package-server-running was called
+  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_state"
 }
 
 # Test that "fx test" runs a component test pinning it to the hash (merkleroot) of
