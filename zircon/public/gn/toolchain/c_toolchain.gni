@@ -338,6 +338,9 @@ template("c_toolchain") {
       } else {
         link_inputs = "-Wl,--start-group " + link_inputs +
                       " {{libs}} -Wl,--end-group {{solibs}}"
+        depfile = "$outfile.d"
+        depsformat = "gcc"
+        switches += " -Wl,--dependency-file=$depfile"
         mapfile = "${outfile_base}.map"
         outputs += [ mapfile ]
         switches += " -Wl,-Map,$mapfile"
