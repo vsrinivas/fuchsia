@@ -899,7 +899,7 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
   }
 }
 
-// internal routine to map a run of pages
+// internal routine to map a run of pages. dsb must be called after MapPages is called.
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                                   vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
                                   uint page_size_shift) {
@@ -920,7 +920,6 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte
   LOCAL_KTRACE("mmu map", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
   ssize_t ret = MapPageTable(vaddr, vaddr_rel, paddr, size, attrs, top_index_shift, page_size_shift,
                              tt_virt_);
-  __dsb(ARM_MB_SY);
   return ret;
 }
 
@@ -1037,6 +1036,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
                        &page_size_shift);
     ret = MapPages(vaddr, paddr, count * PAGE_SIZE, attrs, vaddr_base, top_size_shift,
                    top_index_shift, page_size_shift);
+    __dsb(ARM_MB_SY);
   }
 
   if (mapped) {
@@ -1101,7 +1101,6 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     for (; idx < count; ++idx) {
       paddr_t paddr = phys[idx];
       DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
-      // TODO: optimize by not DSBing inside each of these calls
       ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base, top_size_shift, top_index_shift,
                      page_size_shift);
       if (ret < 0) {
@@ -1111,6 +1110,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
       v += PAGE_SIZE;
       total_mapped += ret / PAGE_SIZE;
     }
+    __dsb(ARM_MB_SY);
     undo.cancel();
   }
   DEBUG_ASSERT(total_mapped <= count);
