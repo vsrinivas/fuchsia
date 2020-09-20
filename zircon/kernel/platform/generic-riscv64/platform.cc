@@ -6,6 +6,7 @@
 
 #include <arch.h>
 #include <debug.h>
+#include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
@@ -19,6 +20,7 @@
 
 #include <arch/arch_ops.h>
 #include <arch/riscv64.h>
+#include <arch/riscv64/sbi.h>
 #include <arch/mp.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
@@ -34,6 +36,7 @@
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
 #include <platform/crashlog.h>
+#include <platform/timer.h>
 #include <vm/bootreserve.h>
 #include <vm/kstack.h>
 #include <vm/physmap.h>
@@ -53,6 +56,8 @@
 #include <zircon/types.h>
 
 #include <pdev/pdev.h>
+
+#define LOCAL_TRACE 0
 
 // Defined in start.S.
 extern paddr_t zbi_paddr;
@@ -397,14 +402,31 @@ void topology_init() {
 }
 
 void platform_stop_timer(void) {
+  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
+}
+
+void platform_shutdown_timer(void) {
+  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
 }
 
 zx_ticks_t platform_current_ticks() {
-  return 0;
+  return riscv64_get_time();
 }
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
+  // enable the timer
+  riscv64_csr_set(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
+
+  // convert interval to ticks
+  uint64_t ticks = riscv64_get_time() + deadline / 10;
+  sbi_set_timer(ticks);
+
   return ZX_OK;
+}
+
+void riscv64_timer_exception(void) {
+  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
+  timer_tick(current_time());
 }
 
 zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg) {
