@@ -29,6 +29,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #include "usb-function.h"
 
@@ -231,8 +232,11 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
   while (header < end) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {
       auto* desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
-      if (desc->bInterfaceNumber >= countof(interface_map_) ||
-          interface_map_[desc->bInterfaceNumber] != function) {
+      ZX_ASSERT(function->configuration() < configurations_.size());
+      auto configuration = configurations_[function->configuration()];
+      auto& interface_map = configuration->interface_map;
+      if (desc->bInterfaceNumber >= countof(interface_map) ||
+          interface_map[desc->bInterfaceNumber] != function) {
         zxlogf(ERROR, "usb_func_set_interface: bInterfaceNumber %u", desc->bInterfaceNumber);
         return ZX_ERR_INVALID_ARGS;
       }
@@ -264,55 +268,65 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
 
 zx_status_t UsbPeripheral::FunctionRegistered() {
   fbl::AutoLock lock(&lock_);
-
-  if (config_desc_.size() != 0) {
-    zxlogf(ERROR, "%s: already have configuration descriptor!", __func__);
+  ZX_ASSERT(configurations_.size() > 0);
+  if (configurations_[0]->config_desc.size() != 0) {
     return ZX_ERR_BAD_STATE;
   }
 
   // Check to see if we have all our functions registered.
   // If so, we can build our configuration descriptor and tell the DCI driver we are ready.
-  size_t length = sizeof(usb_configuration_descriptor_t);
-  for (size_t i = 0; i < functions_.size(); i++) {
-    auto* function = functions_[i].get();
-    size_t descriptors_length;
-    if (function->GetDescriptors(&descriptors_length) != nullptr) {
-      length += descriptors_length;
-    } else {
-      // Need to wait for more functions to register.
-      return ZX_OK;
+  fbl::Vector<size_t> lengths;
+  for (auto& config : configurations_) {
+    auto& functions = config->functions;
+    size_t length = sizeof(usb_configuration_descriptor_t);
+
+    for (size_t i = 0; i < functions.size(); i++) {
+      auto* function = functions[i].get();
+      size_t descriptors_length;
+      if (function->GetDescriptors(&descriptors_length) != nullptr) {
+        length += descriptors_length;
+      } else {
+        // Need to wait for more functions to register.
+        return ZX_OK;
+      }
     }
+    lengths.push_back(length);
   }
-
+  size_t config_idx = 0;
   // build our configuration descriptor
-  fbl::AllocChecker ac;
-  auto* config_desc_bytes = new (&ac) uint8_t[length];
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(config_desc_bytes);
+  for (auto& config : configurations_) {
+    auto& functions = config->functions;
+    size_t length = lengths[config_idx];
+    fbl::AllocChecker ac;
+    auto* config_desc_bytes = new (&ac) uint8_t[length];
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(config_desc_bytes);
 
-  config_desc->bLength = sizeof(*config_desc);
-  config_desc->bDescriptorType = USB_DT_CONFIG;
-  config_desc->wTotalLength = htole16(length);
-  config_desc->bNumInterfaces = 0;
-  config_desc->bConfigurationValue = 1;
-  config_desc->iConfiguration = 0;
-  // TODO(voydanoff) add a way to configure bmAttributes and bMaxPower
-  config_desc->bmAttributes = USB_CONFIGURATION_SELF_POWERED | USB_CONFIGURATION_RESERVED_7;
-  config_desc->bMaxPower = 0;
+    config_desc->bLength = sizeof(*config_desc);
+    config_desc->bDescriptorType = USB_DT_CONFIG;
+    config_desc->wTotalLength = htole16(length);
+    config_desc->bNumInterfaces = 0;
+    config_desc->bConfigurationValue = static_cast<uint8_t>(1 + config_idx);
+    config_desc->iConfiguration = 0;
+    // TODO(voydanoff) add a way to configure bmAttributes and bMaxPower
+    config_desc->bmAttributes = USB_CONFIGURATION_SELF_POWERED | USB_CONFIGURATION_RESERVED_7;
+    config_desc->bMaxPower = 0;
 
-  uint8_t* dest = reinterpret_cast<uint8_t*>(config_desc + 1);
-  for (size_t i = 0; i < functions_.size(); i++) {
-    auto* function = functions_[i].get();
-    size_t descriptors_length;
-    auto* descriptors = function->GetDescriptors(&descriptors_length);
-    memcpy(dest, descriptors, descriptors_length);
-    dest += descriptors_length;
-    config_desc->bNumInterfaces =
-        static_cast<uint8_t>(config_desc->bNumInterfaces + function->GetNumInterfaces());
+    uint8_t* dest = reinterpret_cast<uint8_t*>(config_desc + 1);
+    for (size_t i = 0; i < functions.size(); i++) {
+      auto* function = functions[i].get();
+      size_t descriptors_length;
+      auto* descriptors = function->GetDescriptors(&descriptors_length);
+      memcpy(dest, descriptors, descriptors_length);
+      dest += descriptors_length;
+      config_desc->bNumInterfaces =
+          static_cast<uint8_t>(config_desc->bNumInterfaces + function->GetNumInterfaces());
+    }
+    config->config_desc.reset(config_desc_bytes, length);
+    config_idx++;
   }
-  config_desc_.reset(config_desc_bytes, length);
 
   zxlogf(DEBUG, "usb_device_function_registered functions_registered = true");
   functions_registered_ = true;
@@ -342,10 +356,12 @@ void UsbPeripheral::FunctionCleared() {
 zx_status_t UsbPeripheral::AllocInterface(fbl::RefPtr<UsbFunction> function,
                                           uint8_t* out_intf_num) {
   fbl::AutoLock lock(&lock_);
-
-  for (uint8_t i = 0; i < countof(interface_map_); i++) {
-    if (interface_map_[i] == nullptr) {
-      interface_map_[i] = function;
+  ZX_ASSERT(function->configuration() < configurations_.size());
+  auto configuration = configurations_[function->configuration()];
+  auto& interface_map = configuration->interface_map;
+  for (uint8_t i = 0; i < countof(interface_map); i++) {
+    if (interface_map[i] == nullptr) {
+      interface_map[i] = function;
       *out_intf_num = i;
       return ZX_OK;
     }
@@ -403,15 +419,20 @@ zx_status_t UsbPeripheral::GetDescriptor(uint8_t request_type, uint16_t value, u
     *out_actual = length;
     return ZX_OK;
   } else if (desc_type == USB_DT_CONFIG && index == 0) {
-    if (config_desc_.size() == 0) {
+    index = value & 0xff;
+    if (index >= configurations_.size()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    auto& config_desc = configurations_[index]->config_desc;
+    if (config_desc.size() == 0) {
       zxlogf(ERROR, "%s: configuration descriptor not set", __func__);
       return ZX_ERR_INTERNAL;
     }
-    auto desc_length = config_desc_.size();
+    auto desc_length = config_desc.size();
     if (length > desc_length) {
       length = desc_length;
     }
-    memcpy(buffer, config_desc_.data(), length);
+    memcpy(buffer, config_desc.data(), length);
     *out_actual = length;
     return ZX_OK;
   } else if (value >> 8 == USB_DT_STRING) {
@@ -459,12 +480,14 @@ zx_status_t UsbPeripheral::SetConfiguration(uint8_t configuration) {
   bool configured = configuration > 0;
 
   fbl::AutoLock lock(&lock_);
-
-  for (size_t i = 0; i < functions_.size(); i++) {
-    auto* function = functions_[i].get();
-    auto status = function->SetConfigured(configured, speed_);
-    if (status != ZX_OK && configured) {
-      return status;
+  for (auto& config : configurations_) {
+    auto& functions = config->functions;
+    for (auto& function : functions) {
+      auto status =
+          function->SetConfigured(function->configuration() == (configuration - 1), speed_);
+      if (status != ZX_OK && configured) {
+        return status;
+      }
     }
   }
 
@@ -474,18 +497,19 @@ zx_status_t UsbPeripheral::SetConfiguration(uint8_t configuration) {
 }
 
 zx_status_t UsbPeripheral::SetInterface(uint8_t interface, uint8_t alt_setting) {
-  if (interface >= countof(interface_map_)) {
+  auto configuration = configurations_[configuration_ - 1];
+  if (interface >= countof(configuration->interface_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  auto function = interface_map_[interface];
+  auto function = configuration->interface_map[interface];
   if (function != nullptr) {
     return function->SetInterface(interface, alt_setting);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t UsbPeripheral::AddFunction(FunctionDescriptor desc) {
+zx_status_t UsbPeripheral::AddFunction(UsbConfiguration& config, FunctionDescriptor desc) {
   fbl::AutoLock lock(&lock_);
 
   if (functions_bound_) {
@@ -493,12 +517,13 @@ zx_status_t UsbPeripheral::AddFunction(FunctionDescriptor desc) {
   }
 
   fbl::AllocChecker ac;
-  auto function = fbl::MakeRefCountedChecked<UsbFunction>(&ac, zxdev(), this, std::move(desc));
+  auto function =
+      fbl::MakeRefCountedChecked<UsbFunction>(&ac, zxdev(), this, std::move(desc), config.index);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  functions_.push_back(function);
+  config.functions.push_back(function);
 
   return ZX_OK;
 }
@@ -514,7 +539,11 @@ zx_status_t UsbPeripheral::BindFunctions() {
     zxlogf(ERROR, "%s: device descriptor not set", __func__);
     return ZX_ERR_BAD_STATE;
   }
-  if (functions_.size() == 0) {
+  if (!configurations_.size()) {
+    zxlogf(ERROR, "%s: no configurations found", __func__);
+    return ZX_ERR_BAD_STATE;
+  }
+  if (configurations_[0]->functions.size() == 0) {
     zxlogf(ERROR, "%s: no functions to bind", __func__);
     return ZX_ERR_BAD_STATE;
   }
@@ -536,10 +565,13 @@ void UsbPeripheral::ClearFunctions() {
     for (size_t i = 0; i < 256; i++) {
       dci_.CancelAll(static_cast<uint8_t>(i));
     }
-    for (size_t i = 0; i < functions_.size(); i++) {
-      auto* function = functions_[i].get();
-      if (function->zxdev()) {
-        num_functions_to_clear_++;
+    for (auto& configuration : configurations_) {
+      auto& functions = configuration->functions;
+      for (size_t i = 0; i < functions.size(); i++) {
+        auto* function = functions[i].get();
+        if (function->zxdev()) {
+          num_functions_to_clear_++;
+        }
       }
     }
     zxlogf(DEBUG, "%s: found %lu functions", __func__, num_functions_to_clear_);
@@ -551,10 +583,13 @@ void UsbPeripheral::ClearFunctions() {
   }
 
   // TODO(jocelyndang): we can call DdkRemove inside the lock above once DdkRemove becomes async.
-  for (size_t i = 0; i < functions_.size(); i++) {
-    auto* function = functions_[i].get();
-    if (function->zxdev()) {
-      function->DdkAsyncRemove();
+  for (auto& configuration : configurations_) {
+    auto& functions = configuration->functions;
+    for (size_t i = 0; i < functions.size(); i++) {
+      auto* function = functions[i].get();
+      if (function->zxdev()) {
+        function->DdkAsyncRemove();
+      }
     }
   }
 }
@@ -563,15 +598,11 @@ void UsbPeripheral::ClearFunctionsComplete() {
   zxlogf(DEBUG, "%s", __func__);
 
   shutting_down_ = false;
-  functions_.reset();
-  config_desc_.reset();
+  configurations_.reset();
   functions_bound_ = false;
   functions_registered_ = false;
   function_devs_added_ = false;
-
-  for (size_t i = 0; i < countof(interface_map_); i++) {
-    interface_map_[i].reset();
-  }
+  configurations_.reset();
   for (size_t i = 0; i < countof(endpoint_map_); i++) {
     endpoint_map_[i].reset();
   }
@@ -589,30 +620,34 @@ zx_status_t UsbPeripheral::AddFunctionDevices() {
   if (function_devs_added_) {
     return ZX_OK;
   }
+  int func_index = 0;
+  for (auto& configuration : configurations_) {
+    auto& functions = configuration->functions;
+    for (unsigned i = 0; i < functions.size(); i++) {
+      auto function = functions[i];
+      char name[16];
+      snprintf(name, sizeof(name), "function-%03u", func_index);
 
-  for (unsigned i = 0; i < functions_.size(); i++) {
-    auto function = functions_[i];
-    char name[16];
-    snprintf(name, sizeof(name), "function-%03u", i);
+      auto& desc = function->GetFunctionDescriptor();
 
-    auto& desc = function->GetFunctionDescriptor();
+      zx_device_prop_t props[] = {
+          {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_FUNCTION},
+          {BIND_USB_CLASS, 0, desc.interface_class},
+          {BIND_USB_SUBCLASS, 0, desc.interface_subclass},
+          {BIND_USB_PROTOCOL, 0, desc.interface_protocol},
+          {BIND_USB_VID, 0, device_desc_.idVendor},
+          {BIND_USB_PID, 0, device_desc_.idProduct},
+      };
 
-    zx_device_prop_t props[] = {
-        {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_FUNCTION},
-        {BIND_USB_CLASS, 0, desc.interface_class},
-        {BIND_USB_SUBCLASS, 0, desc.interface_subclass},
-        {BIND_USB_PROTOCOL, 0, desc.interface_protocol},
-        {BIND_USB_VID, 0, device_desc_.idVendor},
-        {BIND_USB_PID, 0, device_desc_.idProduct},
-    };
-
-    auto status = function->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "usb_dev_bind_functions add_device failed %d", status);
-      return status;
+      auto status = function->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "usb_dev_bind_functions add_device failed %d", status);
+        return status;
+      }
+      // Hold a reference while devmgr has a pointer to the function.
+      function->AddRef();
+      func_index++;
     }
-    // Hold a reference while devmgr has a pointer to the function.
-    function->AddRef();
   }
 
   function_devs_added_ = true;
@@ -703,8 +738,10 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
         // Delegate to one of the function drivers.
         // USB_RECIP_DEVICE should only be used when there is a single active interface.
         // But just to be conservative, try all the available interfaces.
-        for (size_t i = 0; i < countof(interface_map_); i++) {
-          auto function = interface_map_[i];
+        auto configuration = configurations_[configuration_ - 1];
+        auto& interface_map = configuration->interface_map;
+        for (size_t i = 0; i < countof(interface_map); i++) {
+          auto function = interface_map[i];
           if (function != nullptr) {
             auto status = function->Control(setup, write_buffer, write_size, read_buffer, read_size,
                                             out_read_actual);
@@ -720,11 +757,13 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
           request == USB_REQ_SET_INTERFACE && length == 0) {
         return SetInterface(static_cast<uint8_t>(index), static_cast<uint8_t>(value));
       } else {
-        if (index >= countof(interface_map_)) {
+        auto configuration = configurations_[configuration_ - 1];
+        auto& interface_map = configuration->interface_map;
+        if (index >= countof(interface_map)) {
           return ZX_ERR_OUT_OF_RANGE;
         }
         // delegate to the function driver for the interface
-        auto function = interface_map_[index];
+        auto function = interface_map[index];
         if (function != nullptr) {
           return function->Control(setup, write_buffer, write_size, read_buffer, read_size,
                                    out_read_actual);
@@ -766,9 +805,12 @@ void UsbPeripheral::UsbDciInterfaceSetConnected(bool connected) {
 
   if (was_connected != connected) {
     if (!connected) {
-      for (size_t i = 0; i < functions_.size(); i++) {
-        auto* function = functions_[i].get();
-        function->SetConfigured(false, USB_SPEED_UNDEFINED);
+      for (auto& configuration : configurations_) {
+        auto& functions = configuration->functions;
+        for (size_t i = 0; i < functions.size(); i++) {
+          auto* function = functions[i].get();
+          function->SetConfigured(false, USB_SPEED_UNDEFINED);
+        }
       }
     }
   }
@@ -777,38 +819,46 @@ void UsbPeripheral::UsbDciInterfaceSetConnected(bool connected) {
 void UsbPeripheral::UsbDciInterfaceSetSpeed(usb_speed_t speed) { speed_ = speed; }
 
 void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
-                                     ::fidl::VectorView<FunctionDescriptor> func_descs,
+                                     ::fidl::VectorView<ConfigurationDescriptor> config_descs,
                                      SetConfigurationCompleter::Sync completer) {
   zxlogf(DEBUG, "%s", __func__);
+  ZX_ASSERT(!config_descs.empty());
   peripheral::Device_SetConfiguration_Result response;
-  {
-    fbl::AutoLock lock(&lock_);
-    if (shutting_down_) {
-      zxlogf(ERROR, "%s: cannot set configuration while clearing functions", __func__);
-      zx_status_t status = ZX_ERR_BAD_STATE;
+  uint8_t index = 0;
+  for (auto& func_descs : config_descs) {
+    auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
+    descriptor->index = index;
+    configurations_.push_back(descriptor);
+    {
+      fbl::AutoLock lock(&lock_);
+      if (shutting_down_) {
+        zxlogf(ERROR, "%s: cannot set configuration while clearing functions", __func__);
+        zx_status_t status = ZX_ERR_BAD_STATE;
+        response.set_err(fidl::unowned_ptr(&status));
+        completer.Reply(std::move(response));
+        return;
+      }
+    }
+
+    if (func_descs.count() == 0) {
+      zx_status_t status = ZX_ERR_INVALID_ARGS;
       response.set_err(fidl::unowned_ptr(&status));
       completer.Reply(std::move(response));
       return;
     }
-  }
 
-  if (func_descs.count() == 0) {
-    zx_status_t status = ZX_ERR_INVALID_ARGS;
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-    return;
+    zx_status_t status = SetDeviceDescriptor(std::move(device_desc));
+    if (status != ZX_OK) {
+      response.set_err(fidl::unowned_ptr(&status));
+      completer.Reply(std::move(response));
+      return;
+    }
+    for (auto func_desc : func_descs) {
+      AddFunction(*descriptor, func_desc);
+    }
+    index++;
   }
-
-  zx_status_t status = SetDeviceDescriptor(std::move(device_desc));
-  if (status != ZX_OK) {
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-    return;
-  }
-  for (auto func_desc : func_descs) {
-    AddFunction(func_desc);
-  }
-  status = BindFunctions();
+  zx_status_t status = BindFunctions();
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
@@ -820,9 +870,8 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
 }
 
 zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
-  if (desc.b_num_configurations != 1) {
-    zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported",
-           desc.b_num_configurations);
+  if (desc.b_num_configurations == 0) {
+    zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations must be non-zero");
     return ZX_ERR_INVALID_ARGS;
   } else {
     device_desc_.bLength = sizeof(usb_device_descriptor_t);
@@ -945,6 +994,8 @@ void UsbPeripheral::DdkRelease() {
 }
 
 zx_status_t UsbPeripheral::SetDefaultConfig(FunctionDescriptor* descriptors, size_t length) {
+  auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
+  configurations_.push_back(descriptor);
   device_desc_.bLength = sizeof(usb_device_descriptor_t),
   device_desc_.bDescriptorType = USB_DT_DEVICE;
   device_desc_.bcdUSB = htole16(0x0200);
@@ -957,7 +1008,7 @@ zx_status_t UsbPeripheral::SetDefaultConfig(FunctionDescriptor* descriptors, siz
 
   zx_status_t status = ZX_OK;
   for (size_t i = 0; i < length; i++) {
-    status = AddFunction(std::move(*(descriptors + i)));
+    status = AddFunction(*descriptor, std::move(*(descriptors + i)));
     if (status != ZX_OK) {
       return status;
     }

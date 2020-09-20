@@ -77,19 +77,19 @@ USBVirtualBusBase::USBVirtualBusBase() {
 int USBVirtualBusBase::GetRootFd() { return devmgr_.devfs_root().get(); }
 
 void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
-                                              std::vector<FunctionDescriptor> function_descs) {
+                                              std::vector<ConfigurationDescriptor> config_descs) {
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
   auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
   ASSERT_OK(set_result.status());
 
   auto set_config =
-      peripheral_->SetConfiguration(std::move(device_desc), fidl::unowned_vec(function_descs));
+      peripheral_->SetConfiguration(std::move(device_desc), fidl::unowned_vec(config_descs));
   ASSERT_OK(set_config.status());
   ASSERT_FALSE(set_config->result.is_err());
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), function_descs.size());
+  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 1);
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_registered());
 
@@ -107,7 +107,7 @@ void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {
   ASSERT_OK(clear_functions.status());
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 0);
+  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 1);
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_cleared());
 }

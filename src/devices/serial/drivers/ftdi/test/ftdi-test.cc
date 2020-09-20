@@ -34,6 +34,8 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
 // Initialize an FTDI USB device. Asserts on failure.
 void USBVirtualBus::InitFtdi(fbl::String* devpath) {
+  using ConfigurationDescriptor =
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
   usb_peripheral::DeviceDescriptor device_desc = {};
@@ -55,9 +57,9 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
 
   std::vector<usb_peripheral::FunctionDescriptor> function_descs;
   function_descs.push_back(ftdi_function_desc);
-
-  ASSERT_NO_FATAL_FAILURES(
-      SetupPeripheralDevice(std::move(device_desc), std::move(function_descs)));
+  std::vector<ConfigurationDescriptor> config_descs;
+  config_descs.emplace_back(fidl::unowned_vec(function_descs));
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));
   while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {

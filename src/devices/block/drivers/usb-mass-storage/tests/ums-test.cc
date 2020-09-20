@@ -69,6 +69,8 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
 // Initialize UMS. Asserts on failure.
 void USBVirtualBus::InitUMS(fbl::String* devpath) {
+  using ConfigurationDescriptor =
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
   // auto device_desc = GetDeviceDescriptor();
   usb_peripheral::FunctionDescriptor ums_function_desc = {
       .interface_class = USB_CLASS_MSC,
@@ -78,8 +80,10 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
 
   std::vector<usb_peripheral::FunctionDescriptor> function_descs;
   function_descs.push_back(ums_function_desc);
+  std::vector<ConfigurationDescriptor> config_descs;
+  config_descs.emplace_back(fidl::unowned_vec(function_descs));
 
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(GetDeviceDescriptor(), std::move(function_descs)));
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(GetDeviceDescriptor(), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/block", O_RDONLY));
   while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
@@ -101,6 +105,8 @@ class BlockDeviceController {
   }
 
   void Connect() {
+    using ConfigurationDescriptor =
+        ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
     // auto device_desc = GetDeviceDescriptor();
     usb_peripheral::FunctionDescriptor ums_function_desc = {
         .interface_class = USB_CLASS_MSC,
@@ -110,9 +116,10 @@ class BlockDeviceController {
 
     std::vector<usb_peripheral::FunctionDescriptor> function_descs;
     function_descs.push_back(ums_function_desc);
-
+    std::vector<ConfigurationDescriptor> config_descs;
+    config_descs.emplace_back(fidl::unowned_vec(function_descs));
     ASSERT_NO_FATAL_FAILURES(
-        bus_->SetupPeripheralDevice(GetDeviceDescriptor(), std::move(function_descs)));
+        bus_->SetupPeripheralDevice(GetDeviceDescriptor(), std::move(config_descs)));
 
     fbl::String devpath;
     while (fdio_watch_directory(openat(bus_->GetRootFd(), "class/usb-cache-test", O_RDONLY),

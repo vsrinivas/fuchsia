@@ -24,6 +24,8 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/syscalls.h>
 
+#include <vector>
+
 #include <ddk/platform-defs.h>
 #include <fbl/string.h>
 #include <hid/boot.h>
@@ -84,13 +86,10 @@ zx_status_t WaitForHostAndPeripheral(int dirfd, int event, const char* name, voi
   if (status != ZX_OK) {
     return status;
   }
-  if (topological_path.find("/usb-peripheral/") != std::string::npos) {
+  if (topological_path.find("/usb-peripheral/function-001") != std::string::npos) {
     device_paths->peripheral_path = path;
   } else if (topological_path.find("/usb-bus/") != std::string::npos) {
     device_paths->host_path = path;
-  } else {
-    printf("Unexpected ethernet device found");
-    return ZX_ERR_INTERNAL;
   }
   if (device_paths->host_path.size() && device_paths->peripheral_path.size()) {
     return ZX_ERR_STOP;
@@ -100,7 +99,8 @@ zx_status_t WaitForHostAndPeripheral(int dirfd, int event, const char* name, voi
 
 void USBVirtualBus::InitUsbCdcEcm(std::string* peripheral_path, std::string* host_path) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
-
+  using ConfigurationDescriptor =
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
   usb_peripheral::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_device_class = 0;
@@ -108,14 +108,14 @@ void USBVirtualBus::InitUsbCdcEcm(std::string* peripheral_path, std::string* hos
   device_desc.b_device_protocol = 0;
   device_desc.b_max_packet_size0 = 64;
   device_desc.bcd_device = htole16(0x0100);
-  device_desc.b_num_configurations = 1;
+  device_desc.b_num_configurations = 2;
 
   device_desc.manufacturer = fidl::StringView(kManufacturer);
   device_desc.product = fidl::StringView(kProduct);
   device_desc.serial = fidl::StringView(kSerial);
 
-  device_desc.id_vendor = htole16(0x18D1);
-  device_desc.id_product = htole16(0xA020);
+  device_desc.id_vendor = htole16(0x0BDA);
+  device_desc.id_product = htole16(0x8152);
 
   usb_peripheral::FunctionDescriptor usb_cdc_ecm_function_desc = {
       .interface_class = USB_CLASS_COMM,
@@ -125,9 +125,11 @@ void USBVirtualBus::InitUsbCdcEcm(std::string* peripheral_path, std::string* hos
 
   std::vector<usb_peripheral::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_cdc_ecm_function_desc);
+  std::vector<ConfigurationDescriptor> config_descs;
+  config_descs.emplace_back(fidl::unowned_vec(function_descs));
+  config_descs.emplace_back(fidl::unowned_vec(function_descs));
 
-  ASSERT_NO_FATAL_FAILURES(
-      SetupPeripheralDevice(std::move(device_desc), std::move(function_descs)));
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
   DevicePaths device_paths;

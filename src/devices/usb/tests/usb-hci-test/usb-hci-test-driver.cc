@@ -64,7 +64,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       std::optional<Request> request;
       sync_completion_t completion;
       size_t bytes;
-      Request::Alloc(&request, 4096 * 3, bulk_in_.bEndpointAddress, parent_size,
+      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
                      [&bytes, &completion](Request request) {
                        bytes = request.request()->response.actual;
                        sync_completion_signal(&completion);
@@ -78,7 +78,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       std::optional<Request> request;
       sync_completion_t completion;
       size_t bytes;
-      Request::Alloc(&request, 4096 * 3, bulk_in_.bEndpointAddress, parent_size,
+      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
                      [&bytes, &completion](Request request) {
                        bytes = request.request()->response.actual;
                        sync_completion_signal(&completion);
@@ -92,7 +92,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       std::optional<Request> request;
       sync_completion_t completion;
       size_t bytes;
-      Request::Alloc(&request, 4096 * 3, bulk_in_.bEndpointAddress, parent_size,
+      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
                      [&bytes, &completion](Request request) {
                        bytes = request.request()->response.actual;
                        sync_completion_signal(&completion);
@@ -100,7 +100,32 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       request->Queue(usb_);
       sync_completion_wait(&completion, ZX_TIME_INFINITE);
       // Last packet
-      correct_byte_count &= bytes == (4096 * 2) + 512;
+      correct_byte_count &= bytes == (4096 * 3) + 511;
+    }
+    {
+      // Validate correctness (run test 512 times to create TRB loops)
+      for (size_t i = 0; i < 512; i++) {
+        std::optional<Request> request;
+        sync_completion_t completion;
+        size_t bytes;
+        Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
+                       [&bytes, &completion](Request request) {
+                         bytes = request.request()->response.actual;
+                         uint32_t* val;
+                         request.Mmap(reinterpret_cast<void**>(&val));
+                         for (size_t i = 0; i < ((4096 * 3) / 4); i++) {
+                           if (val[i] != i) {
+                             bytes = 0;
+                           }
+                         }
+                         sync_completion_signal(&completion);
+                       });
+        request->Queue(usb_);
+        sync_completion_wait(&completion, ZX_TIME_INFINITE);
+        sync_completion_reset(&completion);
+        // Last packet
+        correct_byte_count &= bytes == (4096 * 3) + 511;
+      }
     }
     {
       // Validate correctness (run test 512 times to create TRB loops)

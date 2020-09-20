@@ -18,6 +18,8 @@ namespace usb_virtual_bus_base {
 
 using driver_integration_test::IsolatedDevmgr;
 
+using ConfigurationDescriptor =
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
 using ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
 using ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
 
@@ -26,7 +28,7 @@ class __EXPORT USBVirtualBusBase {
   USBVirtualBusBase();
 
   void SetupPeripheralDevice(DeviceDescriptor&& device_desc,
-                             std::vector<FunctionDescriptor> function_descs);
+                             std::vector<ConfigurationDescriptor> function_descs);
   // Asks the peripheral device to clear its functions and waits for the FunctionsCleared event.
   void ClearPeripheralDeviceFunctions();
 

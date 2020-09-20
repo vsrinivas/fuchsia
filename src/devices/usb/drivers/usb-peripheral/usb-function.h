@@ -26,8 +26,12 @@ class UsbFunction : public UsbFunctionType,
                     public ddk::UsbFunctionProtocol<UsbFunction, ddk::base_protocol>,
                     public fbl::RefCounted<UsbFunction> {
  public:
-  UsbFunction(zx_device_t* parent, UsbPeripheral* peripheral, FunctionDescriptor desc)
-      : UsbFunctionType(parent), peripheral_(peripheral), function_descriptor_(std::move(desc)) {}
+  UsbFunction(zx_device_t* parent, UsbPeripheral* peripheral, FunctionDescriptor desc,
+              uint8_t configuration)
+      : UsbFunctionType(parent),
+        configuration_(configuration),
+        peripheral_(peripheral),
+        function_descriptor_(desc) {}
 
   // Device protocol implementation.
   void DdkRelease();
@@ -50,6 +54,7 @@ class UsbFunction : public UsbFunctionType,
   zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
   zx_status_t Control(const usb_setup_t* setup, const void* write_buffer, size_t write_size,
                       void* read_buffer, size_t read_size, size_t* out_read_actual);
+  uint8_t configuration() const { return configuration_; }
 
   inline const usb_descriptor_header_t* GetDescriptors(size_t* out_length) const {
     *out_length = descriptors_.size();
@@ -65,6 +70,7 @@ class UsbFunction : public UsbFunctionType,
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbFunction);
 
+  uint8_t configuration_;
   UsbPeripheral* peripheral_;
   ddk::UsbFunctionInterfaceProtocolClient function_intf_;
   thrd_t thread_;

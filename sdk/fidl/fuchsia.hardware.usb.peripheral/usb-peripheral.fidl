@@ -7,6 +7,7 @@ library fuchsia.hardware.usb.peripheral;
 using zx;
 
 const uint32 MAX_FUNCTION_DESCRIPTORS = 32;
+const uint32 MAX_CONFIG_DESCRIPTORS = 5;
 const uint32 MAX_STRING_DESCRIPTORS = 255;
 
 const uint32 MAX_STRING_LENGTH = 127;
@@ -17,6 +18,8 @@ struct FunctionDescriptor {
     uint8 interface_subclass;
     uint8 interface_protocol;
 };
+
+using ConfigurationDescriptor = vector<FunctionDescriptor>:MAX_FUNCTION_DESCRIPTORS;
 
 /// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
 /// except for the string fields.
@@ -52,7 +55,7 @@ protocol Device {
     /// configuration's interfaces.
     /// At least one function descriptor must be provided.
     SetConfiguration(DeviceDescriptor device_desc,
-                     vector<FunctionDescriptor>:MAX_FUNCTION_DESCRIPTORS function_descriptors)
+                     vector<ConfigurationDescriptor>:MAX_CONFIG_DESCRIPTORS config_descriptors)
         -> () error zx.status;
 
     /// Tells the device to remove the child devices for the configuration's interfaces

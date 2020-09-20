@@ -43,7 +43,8 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 void USBVirtualBus::InitUsbHid(
     fbl::String* devpath, ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor desc) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
-
+  using ConfigurationDescriptor =
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
   usb_peripheral::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;
@@ -52,9 +53,10 @@ void USBVirtualBus::InitUsbHid(
 
   std::vector<usb_peripheral::FunctionDescriptor> function_descs;
   function_descs.push_back(desc);
+  std::vector<ConfigurationDescriptor> config_descs;
+  config_descs.emplace_back(fidl::unowned_vec(function_descs));
 
-  ASSERT_NO_FATAL_FAILURES(
-      SetupPeripheralDevice(std::move(device_desc), std::move(function_descs)));
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/input", O_RDONLY));
   while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {

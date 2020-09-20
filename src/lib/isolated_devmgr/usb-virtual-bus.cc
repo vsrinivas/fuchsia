@@ -126,13 +126,16 @@ void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync completer) {
 
 void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
                                               std::vector<FunctionDescriptor> function_descs) {
+  using ConfigurationDescriptor =
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
   zx::channel state_change_sender, state_change_receiver;
   ASSERT_EQ(zx::channel::create(0, &state_change_sender, &state_change_receiver), ZX_OK);
   auto set_result = peripheral_->SetStateChangeListener(std::move(state_change_receiver));
   ASSERT_EQ(set_result.status(), ZX_OK);
-
+  std::vector<ConfigurationDescriptor> config_descs;
+  config_descs.emplace_back(fidl::unowned_vec(function_descs));
   auto set_config =
-      peripheral_->SetConfiguration(std::move(device_desc), ::fidl::unowned_vec(function_descs));
+      peripheral_->SetConfiguration(std::move(device_desc), ::fidl::unowned_vec(config_descs));
   ASSERT_EQ(set_config.status(), ZX_OK);
   ASSERT_FALSE(set_config->result.is_err());
 

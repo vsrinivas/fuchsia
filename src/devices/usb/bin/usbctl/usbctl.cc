@@ -170,19 +170,24 @@ static int open_usb_device(void) {
 }
 
 static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
+  using ConfigurationDescriptor =
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
   device_desc.id_vendor = htole16(config->vid);
   device_desc.id_product = htole16(config->pid);
   device_desc.manufacturer = MANUFACTURER_STRING;
   device_desc.product = fidl::unowned_str(config->product_string, strlen(config->product_string));
   device_desc.serial = SERIAL_STRING;
-
+  ConfigurationDescriptor config_desc;
   peripheral::FunctionDescriptor func_descs[config->descs_count];
   memcpy(func_descs, config->descs, sizeof(peripheral::FunctionDescriptor) * config->descs_count);
-  fidl::VectorView<peripheral::FunctionDescriptor> function_descs(fidl::unowned_ptr(func_descs),
-                                                                  config->descs_count);
-
+  {
+    fidl::VectorView<peripheral::FunctionDescriptor> function_descs(fidl::unowned_ptr(func_descs),
+                                                                    config->descs_count);
+    config_desc = std::move(function_descs);
+  }
   auto resp = peripheral::Device::Call::SetConfiguration(
-      zx::unowned_channel(svc), std::move(device_desc), std::move(function_descs));
+      zx::unowned_channel(svc), std::move(device_desc),
+      fidl::VectorView(fidl::unowned_ptr(&config_desc), 1));
   if (resp.status() != ZX_OK) {
     return resp.status();
   }

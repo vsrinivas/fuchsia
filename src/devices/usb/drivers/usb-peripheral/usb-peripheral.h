@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
+#include <vector>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/usb/dci.h>
@@ -15,6 +17,7 @@
 #include <ddktl/protocol/usb/modeswitch.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -66,11 +69,25 @@ namespace usb_peripheral {
 
 class UsbFunction;
 
+using ConfigurationDescriptor =
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
 using ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
 using ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
 
 class UsbPeripheral;
 using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messageable>;
+
+struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
+  static constexpr uint8_t MAX_INTERFACES = 32;
+  // Functions associated with this configuration
+  fbl::Vector<fbl::RefPtr<UsbFunction>> functions;
+  // USB configuration descriptor, synthesized from our functions' descriptors.
+  fbl::Array<uint8_t> config_desc;
+
+  // Map from interface number to function.
+  fbl::RefPtr<UsbFunction> interface_map[MAX_INTERFACES];
+  uint8_t index;
+};
 
 // This is the main class for the USB peripheral role driver.
 // It binds against the USB DCI driver device and manages a list of UsbFunction devices,
@@ -99,7 +116,7 @@ class UsbPeripheral : public UsbPeripheralType,
   // FIDL messages
 
   void SetConfiguration(DeviceDescriptor desc,
-                        ::fidl::VectorView<FunctionDescriptor> function_descriptors,
+                        ::fidl::VectorView<ConfigurationDescriptor> configuration_descriptors,
                         SetConfigurationCompleter::Sync completer) override;
   void ClearFunctions(ClearFunctionsCompleter::Sync completer) override;
   void SetStateChangeListener(zx::channel listener,
@@ -127,7 +144,6 @@ class UsbPeripheral : public UsbPeripheralType,
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbPeripheral);
 
-  static constexpr uint8_t MAX_INTERFACES = 32;
   static constexpr uint8_t MAX_STRINGS = 255;
 
   // OUT endpoints are in range 1 - 15, IN endpoints are in range 17 - 31.
@@ -145,7 +161,7 @@ class UsbPeripheral : public UsbPeripheralType,
   }
 
   zx_status_t Init();
-  zx_status_t AddFunction(FunctionDescriptor desc);
+  zx_status_t AddFunction(UsbConfiguration& config, FunctionDescriptor desc);
   zx_status_t BindFunctions();
   // Begins the process of clearing the functions.
   void ClearFunctions();
@@ -168,16 +184,12 @@ class UsbPeripheral : public UsbPeripheralType,
   const ddk::UsbModeSwitchProtocolClient ums_;
   // USB device descriptor set via ioctl_usb_peripheral_set_device_desc()
   usb_device_descriptor_t device_desc_ = {};
-  // USB configuration descriptor, synthesized from our functions' descriptors.
-  fbl::Array<uint8_t> config_desc_;
-  // Map from interface number to function.
-  fbl::RefPtr<UsbFunction> interface_map_[MAX_INTERFACES];
   // Map from endpoint index to function.
   fbl::RefPtr<UsbFunction> endpoint_map_[USB_MAX_EPS];
   // Strings for USB string descriptors.
   fbl::Vector<fbl::String> strings_ __TA_GUARDED(lock_);
   // List of usb_function_t.
-  fbl::Vector<fbl::RefPtr<UsbFunction>> functions_;
+  fbl::Vector<fbl::RefPtr<UsbConfiguration>> configurations_;
   // mutex for protecting our state
   fbl::Mutex lock_;
   // Current USB mode set via ioctl_usb_peripheral_set_mode()

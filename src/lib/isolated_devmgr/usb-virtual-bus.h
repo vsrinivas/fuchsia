@@ -21,6 +21,9 @@
 namespace usb_virtual_bus {
 using llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
 using llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
+using ConfigurationDescriptor =
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+
 class USBVirtualBusBase {
  public:
   USBVirtualBusBase(std::string pkg_url, std::string svc_name);
