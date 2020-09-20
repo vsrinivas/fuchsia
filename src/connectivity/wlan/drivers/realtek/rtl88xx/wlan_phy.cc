@@ -10,6 +10,7 @@
 #include <wlan/common/phy.h>
 
 #include "bus.h"
+#include "src/connectivity/wlan/drivers/realtek/rtl88xx/rtl88xx-bind.h"
 
 namespace wlan {
 namespace rtl88xx {
@@ -80,8 +81,7 @@ zx_status_t WlanPhy::Create(zx_device_t* bus_device) {
   };
   status = device_add(bus_device, &args, &wlan_phy->zx_device_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: WlanPhy failed to create zx_device_: %s",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "rtl88xx: WlanPhy failed to create zx_device_: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -172,11 +172,4 @@ static constexpr zx_driver_ops_t rtl88xx_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(rtl88xx, rtl88xx_driver_ops, "zircon", "0.1", 8)
-BI_GOTO_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI, 0),
-    BI_ABORT_IF(NE, BIND_PCI_VID, 0x10ec),  // Realtek PCI VID
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x0000), BI_ABORT(), BI_LABEL(0),
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
-    BI_ABORT_IF(NE, BIND_USB_VID, 0x0bda),  // Realtek USB VID
-    BI_MATCH_IF(EQ, BIND_USB_PID, 0xc820),  // UM821C04_3V3 test board
-    ZIRCON_DRIVER_END(rtl88xx)
+ZIRCON_DRIVER(rtl88xx, rtl88xx_driver_ops, "zircon", "0.1");

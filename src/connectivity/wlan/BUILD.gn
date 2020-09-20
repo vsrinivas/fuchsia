@@ -26,6 +26,7 @@ group("tests") {
   testonly = true
 
   public_deps = [
+    "//src/connectivity/wlan/drivers/realtek:tests",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device/test:sim_device_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env/test:wlan-sim-env-test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",

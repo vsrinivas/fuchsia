@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+
+  {
+    "name": "PCI",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.REALTEK",
+      "fuchsia.BIND_PCI_DID": "0"
+    }
+  },
+
+  {
+    "name": "USB",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.REALTEK",
+      "fuchsia.BIND_USB_PID": "0xc820"
+    }
+  }
+]

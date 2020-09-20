@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.pci;
+using fuchsia.usb;
+
+if fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE {
+  fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.REALTEK;
+  fuchsia.BIND_PCI_DID == 0x0000;
+} else {
+  fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK;
+  fuchsia.BIND_USB_PID == 0xc820; // UM821C04_3V3 test board
+}
