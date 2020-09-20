@@ -333,52 +333,6 @@ uint32_t VmObject::num_user_children() const {
   return user_child_count_;
 }
 
-void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op) {
-  while (!list->is_empty()) {
-    VmObject* object = list->pop_front();
-    AssertHeld(object->lock_);
-
-    // offsets for vmos needn't be aligned, but vmars use aligned offsets
-    const uint64_t aligned_offset = ROUNDDOWN(object->range_change_offset_, PAGE_SIZE);
-    const uint64_t aligned_len =
-        ROUNDUP(object->range_change_offset_ + object->range_change_len_, PAGE_SIZE) -
-        aligned_offset;
-
-    // other mappings may have covered this offset into the vmo, so unmap those ranges
-    for (auto& m : object->mapping_list_) {
-      AssertHeld(*m.object_lock());
-      if (op == RangeChangeOp::Unmap) {
-        m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
-      } else if (op == RangeChangeOp::RemoveWrite) {
-        m.RemoveWriteVmoRangeLocked(aligned_offset, aligned_len);
-      } else {
-        panic("Unknown RangeChangeOp %d\n", static_cast<int>(op));
-      }
-    }
-
-    // inform all our children this as well, so they can inform their mappings
-    for (auto& c : object->children_list_) {
-      // range updates only happen if we are a paged vmo, in which case we know all of our children
-      // will be paged.
-      DEBUG_ASSERT(c.is_paged());
-      VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
-      AssertHeld(child.lock_);
-      child.RangeChangeUpdateFromParentLocked(object->range_change_offset_,
-                                              object->range_change_len_, list);
-    }
-  }
-}
-
-void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) {
-  canary_.Assert();
-
-  RangeChangeList list;
-  this->range_change_offset_ = offset;
-  this->range_change_len_ = len;
-  list.push_front(this);
-  RangeChangeUpdateListLocked(&list, op);
-}
-
 zx_status_t VmObject::InvalidateCache(const uint64_t offset, const uint64_t len) {
   return CacheOp(offset, len, CacheOpType::Invalidate);
 }

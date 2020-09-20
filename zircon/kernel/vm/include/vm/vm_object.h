@@ -62,7 +62,6 @@ enum class CloneType {
 namespace internal {
 struct ChildListTag {};
 struct GlobalListTag {};
-struct RangeChangeListTag {};
 }  // namespace internal
 
 // The base vm object that holds a range of bytes of data
@@ -72,8 +71,7 @@ struct RangeChangeListTag {};
 class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
                  public fbl::ContainableBaseClasses<
                      fbl::TaggedDoublyLinkedListable<VmObject*, internal::ChildListTag>,
-                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>,
-                     fbl::TaggedSinglyLinkedListable<VmObject*, internal::RangeChangeListTag>> {
+                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -363,34 +361,10 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   virtual ~VmObject();
   friend fbl::RefPtr<VmObject>;
 
-  // Types for an additional linked list over the VmObject for use when doing a RangeChangeUpdate.
-  //
-  // To avoid unbounded stack growth we need to reserve the memory to exist on a
-  // RangeChange list in our object so that we can have a flat iteration over a
-  // work list. RangeChangeLists should only be used by the RangeChangeUpdate
-  // code.
-  using RangeChangeList = fbl::TaggedSinglyLinkedList<VmObject*, internal::RangeChangeListTag>;
-
-  uint64_t range_change_offset_ TA_GUARDED(lock_);
-  uint64_t range_change_len_ TA_GUARDED(lock_);
-
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
   void AddToGlobalList();
   void RemoveFromGlobalList();
-
-  // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
-  enum class RangeChangeOp {
-    Unmap,
-    RemoveWrite,
-  };
-
-  // Apply the specified operation to all mappings in the given range. This is applied to all
-  // descendants within the range.
-  void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
-
-  // Given an initial list of VmObject's performs RangeChangeUpdate on it until the list is empty.
-  static void RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op);
 
   // magic value
   fbl::Canary<fbl::magic("VMO_")> canary_;

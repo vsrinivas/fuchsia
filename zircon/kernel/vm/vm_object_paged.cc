@@ -3301,7 +3301,7 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
@@ -3333,7 +3333,7 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
@@ -3582,6 +3582,51 @@ void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, con
   range_change_offset_ = offset_new;
   range_change_len_ = len_new;
   list->push_front(this);
+}
+
+void VmObjectPaged::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op) {
+  while (!list->is_empty()) {
+    VmObjectPaged* object = list->pop_front();
+    AssertHeld(object->lock_);
+
+    // offsets for vmos needn't be aligned, but vmars use aligned offsets
+    const uint64_t aligned_offset = ROUNDDOWN(object->range_change_offset_, PAGE_SIZE);
+    const uint64_t aligned_len =
+        ROUNDUP(object->range_change_offset_ + object->range_change_len_, PAGE_SIZE) -
+        aligned_offset;
+
+    // other mappings may have covered this offset into the vmo, so unmap those ranges
+    for (auto& m : object->mapping_list_) {
+      AssertHeld(*m.object_lock());
+      if (op == RangeChangeOp::Unmap) {
+        m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
+      } else if (op == RangeChangeOp::RemoveWrite) {
+        m.RemoveWriteVmoRangeLocked(aligned_offset, aligned_len);
+      } else {
+        panic("Unknown RangeChangeOp %d\n", static_cast<int>(op));
+      }
+    }
+
+    // inform all our children this as well, so they can inform their mappings
+    for (auto& c : object->children_list_) {
+      // All our children are paged VMOs themselves.
+      DEBUG_ASSERT(c.is_paged());
+      VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
+      AssertHeld(child.lock_);
+      child.RangeChangeUpdateFromParentLocked(object->range_change_offset_,
+                                              object->range_change_len_, list);
+    }
+  }
+}
+
+void VmObjectPaged::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) {
+  canary_.Assert();
+
+  RangeChangeList list;
+  this->range_change_offset_ = offset;
+  this->range_change_len_ = len;
+  list.push_front(this);
+  RangeChangeUpdateListLocked(&list, op);
 }
 
 fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {

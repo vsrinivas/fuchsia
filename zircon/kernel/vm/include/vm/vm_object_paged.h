@@ -161,9 +161,6 @@ class VmObjectPaged final : public VmObject {
   // must have the same lock.
   void InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) TA_REQ(lock_);
 
-  void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len, RangeChangeList* list)
-      TA_REQ(lock_);
-
   uint32_t GetMappingCachePolicy() const override;
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
@@ -455,6 +452,37 @@ class VmObjectPaged final : public VmObject {
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
   bool DebugValidatePageSplitsLocked() const TA_REQ(lock_);
 
+  // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
+  enum class RangeChangeOp {
+    Unmap,
+    RemoveWrite,
+  };
+
+  // Types for an additional linked list over the VmObjectPaged for use when doing a
+  // RangeChangeUpdate.
+  //
+  // To avoid unbounded stack growth we need to reserve the memory to exist on a
+  // RangeChange list in our object so that we can have a flat iteration over a
+  // work list. RangeChangeLists should only be used by the RangeChangeUpdate
+  // code.
+  using RangeChangeNodeState = fbl::SinglyLinkedListNodeState<VmObjectPaged*>;
+  struct RangeChangeTraits {
+    static RangeChangeNodeState& node_state(VmObjectPaged& foo) { return foo.range_change_state_; }
+  };
+  using RangeChangeList =
+      fbl::SinglyLinkedListCustomTraits<VmObjectPaged*, VmObjectPaged::RangeChangeTraits>;
+  friend struct RangeChangeTraits;
+
+  // Apply the specified operation to all mappings in the given range. This is applied to all
+  // descendants within the range.
+  void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
+
+  // Given an initial list of VmObject's performs RangeChangeUpdate on it until the list is empty.
+  static void RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op);
+
+  void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len, RangeChangeList* list)
+      TA_REQ(lock_);
+
   // members
   const uint32_t options_;
   uint64_t size_ TA_GUARDED(lock_) = 0;
@@ -547,6 +575,10 @@ class VmObjectPaged final : public VmObject {
 
   // The page source, if any.
   const fbl::RefPtr<PageSource> page_source_;
+
+  RangeChangeNodeState range_change_state_;
+  uint64_t range_change_offset_ TA_GUARDED(lock_);
+  uint64_t range_change_len_ TA_GUARDED(lock_);
 
   // a tree of pages
   VmPageList page_list_ TA_GUARDED(lock_);
