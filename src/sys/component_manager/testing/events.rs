@@ -106,13 +106,8 @@ impl EventSource {
         I: Injector,
     {
         let matcher = matcher.unwrap_or(EventMatcher::new());
-        if let Some(capability_id) = matcher.capability_id.as_ref() {
-            if capability_id != I::Marker::NAME
-            // TODO(56604): Remove support for path-based.
-            && capability_id != &format!("/svc/{}", I::Marker::NAME)
-            {
-                return Err(format_err!("Unexpected Capability Id provided"));
-            }
+        if let Err(e) = matcher.capability_id.matches(&Some(I::Marker::NAME.to_string())) {
+            return Err(e);
         }
         let matcher = matcher.expect_capability_id(I::Marker::NAME);
         let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
@@ -215,7 +210,7 @@ impl EventSource {
         let mut event_names = vec![];
         for event in &expected_events {
             if let Some(event_type) = &event.event_type {
-                event_names.push(event_name(&event_type));
+                event_names.push(event_name(&event_type.value()));
             } else {
                 return Err(format_err!("No event name or type set for matcher {:?}", event));
             }
@@ -271,7 +266,7 @@ impl EventStream {
         let event = self.next().await.unwrap();
         let descriptor = EventDescriptor::try_from(&event).unwrap();
         let event = T::from_fidl(event).unwrap();
-        assert!(expected_event_matcher.matches(&descriptor));
+        expected_event_matcher.matches(&descriptor).unwrap();
         assert!(event.is_err());
         event
     }
@@ -282,7 +277,7 @@ impl EventStream {
         let event = self.next().await.unwrap();
         let descriptor = EventDescriptor::try_from(&event).unwrap();
         let event = T::from_fidl(event).unwrap();
-        assert!(expected_event_matcher.matches(&descriptor));
+        expected_event_matcher.matches(&descriptor).unwrap();
         assert!(event.is_ok());
         event
     }
@@ -312,7 +307,7 @@ impl EventStream {
             let descriptor = EventDescriptor::try_from(&event)?;
             eprintln!("Received descriptor {:?}", descriptor);
             if let Ok(event) = T::from_fidl(event) {
-                if expected_event_matcher.matches(&descriptor) {
+                if expected_event_matcher.matches(&descriptor).is_ok() {
                     return Ok(event);
                 }
             }
@@ -344,7 +339,7 @@ impl EventStream {
                         if let Some((index, _)) = expected_events
                             .iter()
                             .enumerate()
-                            .find(|&event| event.1.matches(&actual_event))
+                            .find(|&event| event.1.matches(&actual_event).is_ok())
                         {
                             expected_event = expected_events.remove(index);
                         } else {
@@ -353,7 +348,7 @@ impl EventStream {
                     }
                 }
 
-                assert!(expected_event.matches(&actual_event));
+                expected_event.matches(&actual_event).unwrap();
                 if expected_events.is_empty() {
                     break;
                 }
@@ -546,29 +541,6 @@ pub trait RoutingProtocol {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Ord, PartialOrd)]
-/// Used for matching against events. If the matcher doesn't crash the exit code
-/// then `AnyCrash` can be used to match against any Stopped event caused by a crash.
-/// that indicate failure are crushed into `Crash`.
-pub enum ExitStatusMatcher {
-    Clean,
-    AnyCrash,
-    Crash(i32),
-}
-
-impl ExitStatusMatcher {
-    fn matches(&self, other: &ExitStatus) -> bool {
-        match (self, other) {
-            (ExitStatusMatcher::Clean, ExitStatus::Clean) => true,
-            (ExitStatusMatcher::AnyCrash, ExitStatus::Crash(_)) => true,
-            (ExitStatusMatcher::Crash(exit_code), ExitStatus::Crash(other_exit_code)) => {
-                exit_code == other_exit_code
-            }
-            _ => false,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Ord, PartialOrd)]
 /// Simplifies the exit status represented by an Event. All stop status values
 /// that indicate failure are crushed into `Crash`.
 pub enum ExitStatus {
@@ -585,11 +557,139 @@ impl From<i32> for ExitStatus {
     }
 }
 
+// A matcher that implements this trait is able to match against values of type `T`.
+// A matcher corresponds to a field named `NAME`.
+trait RawFieldMatcher<T>: Clone + std::fmt::Debug {
+    const NAME: &'static str;
+    fn matches(&self, other: &T) -> bool;
+}
+
+#[derive(Clone, Debug)]
+struct EventTypeMatcher {
+    event_type: fsys::EventType,
+}
+
+impl EventTypeMatcher {
+    fn new(event_type: fsys::EventType) -> Self {
+        Self { event_type }
+    }
+
+    fn value(&self) -> &fsys::EventType {
+        &self.event_type
+    }
+}
+
+impl RawFieldMatcher<fsys::EventType> for EventTypeMatcher {
+    const NAME: &'static str = "event_type";
+
+    fn matches(&self, other: &fsys::EventType) -> bool {
+        self.event_type == *other
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct CapabilityIdMatcher {
+    capability_id: String,
+}
+
+impl CapabilityIdMatcher {
+    fn new(capability_id: impl Into<String>) -> Self {
+        Self { capability_id: capability_id.into() }
+    }
+}
+
+impl RawFieldMatcher<String> for CapabilityIdMatcher {
+    const NAME: &'static str = "capability_id";
+
+    fn matches(&self, other: &String) -> bool {
+        self.capability_id == *other || &format!("/svc/{}", self.capability_id) == other
+    }
+}
+
+#[derive(Clone, Debug)]
+struct MonikerMatcher {
+    monikers: RegexSet,
+}
+
+impl MonikerMatcher {
+    fn new<I, S>(monikers: I) -> Self
+    where
+        S: AsRef<str>,
+        I: IntoIterator<Item = S>,
+    {
+        Self { monikers: RegexSet::new(monikers).unwrap() }
+    }
+}
+
+impl RawFieldMatcher<String> for MonikerMatcher {
+    const NAME: &'static str = "target_monikers";
+
+    fn matches(&self, other: &String) -> bool {
+        self.monikers.is_match(other)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Ord, PartialOrd)]
+/// Used for matching against events. If the matcher doesn't crash the exit code
+/// then `AnyCrash` can be used to match against any Stopped event caused by a crash.
+/// that indicate failure are crushed into `Crash`.
+pub enum ExitStatusMatcher {
+    Clean,
+    AnyCrash,
+    Crash(i32),
+}
+
+impl RawFieldMatcher<ExitStatus> for ExitStatusMatcher {
+    const NAME: &'static str = "exit_status";
+
+    fn matches(&self, other: &ExitStatus) -> bool {
+        match (self, other) {
+            (ExitStatusMatcher::Clean, ExitStatus::Clean) => true,
+            (ExitStatusMatcher::AnyCrash, ExitStatus::Crash(_)) => true,
+            (ExitStatusMatcher::Crash(exit_code), ExitStatus::Crash(other_exit_code)) => {
+                exit_code == other_exit_code
+            }
+            _ => false,
+        }
+    }
+}
+
+/// A field matcher is an optional matcher that compares against an optional field.
+/// If there is a mismatch, an error string is generated. If there is no matcher specified,
+/// then there is no error. If there is matcher without a corresponding field then that's a missing
+/// field error. Otherwise, the FieldMatcher delegates to the RawFieldMatcher to determine if the
+/// matcher matches against the raw field.
+trait FieldMatcher<T> {
+    fn matches(&self, other: &Option<T>) -> Result<(), Error>;
+}
+
+impl<LeftHandSide, RightHandSide> FieldMatcher<RightHandSide> for Option<LeftHandSide>
+where
+    LeftHandSide: RawFieldMatcher<RightHandSide>,
+    RightHandSide: std::fmt::Debug,
+{
+    fn matches(&self, other: &Option<RightHandSide>) -> Result<(), Error> {
+        match (self, other) {
+            (Some(value), Some(other_value)) => match value.matches(other_value) {
+                true => Ok(()),
+                false => Err(format_err!(
+                    "Field `{}` mismatch. Expected: {:?}, Actual: {:?}",
+                    LeftHandSide::NAME,
+                    value,
+                    other_value
+                )),
+            },
+            (Some(_), None) => Err(format_err!("Missing field `{}`.", LeftHandSide::NAME)),
+            (None, _) => Ok(()),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct EventMatcher {
-    event_type: Option<fsys::EventType>,
-    capability_id: Option<String>,
-    target_moniker: Option<RegexSet>,
+    event_type: Option<EventTypeMatcher>,
+    target_monikers: Option<MonikerMatcher>,
+    capability_id: Option<CapabilityIdMatcher>,
     exit_status: Option<ExitStatusMatcher>,
 }
 
@@ -597,11 +697,11 @@ impl EventMatcher {
     /// Creates a new `EventDescriptor` with the given `event_type`.
     /// The rest of the fields are unset.
     pub fn new() -> Self {
-        Self { event_type: None, target_moniker: None, capability_id: None, exit_status: None }
+        Self { event_type: None, target_monikers: None, capability_id: None, exit_status: None }
     }
 
     pub fn expect_type<T: Event>(mut self) -> Self {
-        self.event_type = Some(T::TYPE);
+        self.event_type = Some(EventTypeMatcher::new(T::TYPE));
         self
     }
 
@@ -616,51 +716,29 @@ impl EventMatcher {
         S: AsRef<str>,
         I: IntoIterator<Item = S>,
     {
-        self.target_moniker = Some(RegexSet::new(monikers).unwrap());
+        self.target_monikers = Some(MonikerMatcher::new(monikers));
         self
     }
+
     /// The expected capability id.
     pub fn expect_capability_id(mut self, capability_id: impl Into<String>) -> Self {
-        self.capability_id = Some(capability_id.into());
+        self.capability_id = Some(CapabilityIdMatcher::new(capability_id));
         self
     }
 
     /// The expected exit status. Only applies to the Stop event.
     pub fn expect_stop(mut self, exit_status: Option<ExitStatusMatcher>) -> Self {
-        self.event_type = Some(fsys::EventType::Stopped);
+        self.event_type = Some(EventTypeMatcher::new(fsys::EventType::Stopped));
         self.exit_status = exit_status;
         self
     }
 
-    pub fn matches(&self, other: &EventDescriptor) -> bool {
-        let matches_event_type = match (&self.event_type, &other.event_type) {
-            (Some(event_type), Some(other_event_type)) => event_type == other_event_type,
-            (Some(_), None) => false,
-            (None, _) => true,
-        };
-
-        let matches_moniker = match (&self.target_moniker, &other.target_moniker) {
-            (Some(moniker), Some(other_moniker)) => moniker.is_match(other_moniker),
-            (Some(_), None) => false,
-            (None, _) => true,
-        };
-
-        let matches_capability_id = match (&self.capability_id, &other.capability_id) {
-            (Some(capability_id), Some(other_capability_id)) => {
-                capability_id == other_capability_id
-                    || &format!("/svc/{}", capability_id) == other_capability_id
-            }
-            (Some(_), None) => false,
-            (None, _) => true,
-        };
-
-        let matches_exit_status = match (&self.exit_status, &other.exit_status) {
-            (Some(exit_status), Some(other_exit_status)) => exit_status.matches(other_exit_status),
-            (Some(_), None) => false,
-            (None, _) => true,
-        };
-
-        matches_event_type && matches_moniker && matches_capability_id && matches_exit_status
+    pub fn matches(&self, other: &EventDescriptor) -> Result<(), Error> {
+        self.event_type.matches(&other.event_type)?;
+        self.target_monikers.matches(&other.target_moniker)?;
+        self.capability_id.matches(&other.capability_id)?;
+        self.exit_status.matches(&other.exit_status)?;
+        Ok(())
     }
 }
 

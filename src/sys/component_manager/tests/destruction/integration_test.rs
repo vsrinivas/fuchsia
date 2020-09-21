@@ -16,7 +16,7 @@ fn expect_next(actual_events: &mut Vec<EventDescriptor>, expected_events: Vec<Ev
     let mut actual_events: Vec<EventDescriptor> = actual_events.drain(0..num_events).collect();
     actual_events.sort_unstable();
     for (actual_event, expected_event) in actual_events.iter().zip(expected_events.iter()) {
-        assert!(expected_event.matches(actual_event));
+        expected_event.matches(actual_event).unwrap();
     }
 }
 
