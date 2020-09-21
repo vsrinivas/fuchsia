@@ -61,7 +61,10 @@ class FormatInfo {
   // Returns the maximum number of slices that can be addressed from the maximum possible size of
   // the metatadata.
   size_t GetMaxAllocatableSlices() const {
-    return (metadata_allocated_size() - kAllocTableOffset) / sizeof(SliceEntry);
+    // The "-1" here allows for the unused 0 indexed slice.
+    // TODO(fxb/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
+    // allocation data itself is 1-indexed. This inconsistency should be fixed,
+    return (metadata_allocated_size() - kAllocTableOffset) / sizeof(SliceEntry) - 1;
   }
 
   // Returns the maximum number of slices that the allocated metadata can address for a given

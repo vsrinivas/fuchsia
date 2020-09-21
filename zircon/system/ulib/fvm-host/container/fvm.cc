@@ -337,12 +337,16 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     }
 
     ssize_t r = pread(fd_.get(), data.data(), slice_size_, source_format_info.GetSliceStart(index));
+    ZX_ASSERT(source_format_info.GetSliceStart(index) ==
+              source_format_info.header().GetSliceDataOffset(index));
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to read data from FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
     }
 
     r = pwrite(fd.get(), data.data(), slice_size_, target_format_info.GetSliceStart(index));
+    ZX_ASSERT(target_format_info.GetSliceStart(index) ==
+              target_format_info.header().GetSliceDataOffset(index));
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to write data to FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
@@ -350,6 +354,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
   }
 
   size_t metadata_size = fvm::MetadataSize(disk_size, slice_size_);
+  ZX_ASSERT(metadata_size == target_format_info.header().GetMetadataUsedBytes());
   zx_status_t status = info_.Grow(metadata_size);
   if (status != ZX_OK) {
     return status;

@@ -296,6 +296,7 @@ zx_status_t FvmInfo::GetSlice(size_t index, fvm::SliceEntry** out) const {
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
   uintptr_t offset =
       static_cast<uintptr_t>(fvm::kAllocTableOffset + index * sizeof(fvm::SliceEntry));
+  ZX_ASSERT(offset == SuperBlock()->GetSliceEntryOffset(index));
   *out = reinterpret_cast<fvm::SliceEntry*>(metadata_start + offset);
   return ZX_OK;
 }

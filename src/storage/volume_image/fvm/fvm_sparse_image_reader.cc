@@ -245,17 +245,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
     metadata.insert(metadata.end(), data.begin(), data.end());
   };
 
-  fvm::Header header{
-      .magic = fvm::kMagic,
-      .version = fvm::kVersion,
-      .pslice_count = format_info.slice_count(),
-      .slice_size = fvm_sparse_header.slice_size,
-      .fvm_partition_size = disk_size,
-      .vpartition_table_size = fvm::PartitionTable::kLength,
-      .allocation_table_size = format_info.GetMaxAllocatableSlices() * sizeof(fvm::SliceEntry),
-  };
-
-  append_metadata(FixedSizeStructToSpan(header));
+  append_metadata(FixedSizeStructToSpan(const_cast<fvm::Header&>(format_info.header())));
 
   metadata.resize(fvm::PartitionTable::kOffset);
   append_metadata(ContainerToSpan(fvm_partitions));

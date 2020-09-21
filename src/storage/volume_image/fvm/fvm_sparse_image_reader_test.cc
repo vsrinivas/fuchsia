@@ -171,7 +171,7 @@ class NullWriter : public Writer {
   }
 };
 
-TEST(FvmSparseImageReaderTest, ImageWithMaxSizeALlocatesEnoughMetadata) {
+TEST(FvmSparseImageReaderTest, ImageWithMaxSizeAllocatesEnoughMetadata) {
   auto base_reader_or = FdReader::Create(sparse_image_path);
   ASSERT_TRUE(base_reader_or.is_ok()) << base_reader_or.error();
 
@@ -195,9 +195,8 @@ TEST(FvmSparseImageReaderTest, ImageWithMaxSizeALlocatesEnoughMetadata) {
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();
   ASSERT_EQ(header.magic, fvm::kMagic);
 
-  auto actual_format_info = fvm::FormatInfo(header);
-  EXPECT_EQ(expected_format_info.metadata_allocated_size(),
-            actual_format_info.metadata_allocated_size());
+  EXPECT_EQ(expected_format_info.header().GetMetadataAllocatedBytes(),
+            header.GetMetadataAllocatedBytes());
 }
 
 // This doesn't test that the resulting image is valid, but it least tests that FtlImageWrite can

@@ -41,14 +41,16 @@ TEST(FvmInfoTest, FromSuperblockNoGaps) {
   EXPECT_EQ(CalculateSliceStart(kMaxDiskSize, kPartitionTableSize, kAllocTableSize),
             format_info.GetSliceStart(1));
   EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
-                sizeof(SliceEntry),
+                    sizeof(SliceEntry) -
+                1,
             format_info.GetMaxAllocatableSlices());
   EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
             format_info.GetMaxAddressableSlices(kMaxDiskSize));
   EXPECT_EQ(
       format_info.GetSliceStart(1) +
           kFvmSlizeSize * ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
-                           sizeof(SliceEntry)),
+                               sizeof(SliceEntry) -
+                           1),
       format_info.GetMaxPartitionSize());
 }
 
@@ -68,14 +70,16 @@ TEST(FvmInfoTest, FromSuperblockWithGaps) {
             format_info.GetSliceStart(1));
 
   EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
-                sizeof(SliceEntry),
+                    sizeof(SliceEntry) -
+                1,
             format_info.GetMaxAllocatableSlices());
   EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
             format_info.GetMaxAddressableSlices(kMaxDiskSize));
   EXPECT_EQ(
       format_info.GetSliceStart(1) +
           kFvmSlizeSize * ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
-                           sizeof(SliceEntry)),
+                               sizeof(SliceEntry) -
+                           1),
       format_info.GetMaxPartitionSize());
 }
 
@@ -95,14 +99,16 @@ TEST(FvmInfoTest, FromDiskSize) {
             format_info.GetSliceStart(1));
 
   EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
-                sizeof(SliceEntry),
+                    sizeof(SliceEntry) -
+                1,
             format_info.GetMaxAllocatableSlices());
   EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
             format_info.GetMaxAddressableSlices(kMaxDiskSize));
   EXPECT_EQ(
       format_info.GetSliceStart(1) +
           kFvmSlizeSize * ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
-                           sizeof(SliceEntry)),
+                               sizeof(SliceEntry) -
+                           1),
       format_info.GetMaxPartitionSize());
 }
 
@@ -122,14 +128,16 @@ TEST(FvmInfoTest, FromPreallocatedSizeWithGaps) {
             format_info.GetSliceStart(1));
 
   EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
-                sizeof(SliceEntry),
+                    sizeof(SliceEntry) -
+                1,
             format_info.GetMaxAllocatableSlices());
   EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
             format_info.GetMaxAddressableSlices(kMaxDiskSize));
   EXPECT_EQ(
       format_info.GetSliceStart(1) +
           kFvmSlizeSize * ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
-                           sizeof(SliceEntry)),
+                               sizeof(SliceEntry) -
+                           1),
       format_info.GetMaxPartitionSize());
 }
 
@@ -141,7 +149,8 @@ TEST(FvmInfoTest, FromPreallocatedSizeNthEntryOOB) {
   // The number of usable slices in the Disk is big enough that we limit the number of slices to
   // those that fit in the metadata. This will match the metadata size, the last
   // allocateable slice will be OOB, which is why the MaxAddressable slice will be before it.
-  EXPECT_EQ(format_info.GetMaxAllocatableSlices() - 1,
+  EXPECT_EQ(1023, format_info.GetMaxAllocatableSlices());
+  EXPECT_EQ(format_info.GetMaxAllocatableSlices(),
             format_info.GetMaxAddressableSlices(kMaxDiskSize * 10));
 }
 

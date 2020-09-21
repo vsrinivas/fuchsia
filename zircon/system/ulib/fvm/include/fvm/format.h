@@ -42,16 +42,17 @@
 //       .     |   ... Table of VPartitionEntry ...
 //       .     |
 //             +----------------------------------
-// Block N  -> | Allocation table (starts at block boundary)
+// Block X  -> | Allocation table (starts at block boundary)
 //       .     |
 //       .     |   ... Table of SliceEntry[pslice_count] ...
 //       .     |
-//             |   -------------------                 <- Metadata used size.
-//             |
-//             |   <unused allocation table space>
-//             |
-//             +==================================     <- Metadata allocated size (block boundary).
-// Block X  -> | Header (secondary, starts at block boundary)
+//             | <padding to next block boundary>
+// Block Y  -> +----------------------------------     <- Metadata used bytes (block boundary).
+//       .     |
+//       .     |   <unused allocation table space>
+//       .     |
+//             +==================================     <- Metadata allocated bytes (block boundary).
+// Block Z  -> | Header (secondary, starts at block boundary)
 //             +----------------------------------
 //             | Partition table (secondary)
 //             +----------------------------------
@@ -113,6 +114,46 @@ struct block_alignment {
 
 // FVM header which describes the contents and layout of the volume manager.
 struct Header {
+  // The partition table always starts at a block offset, and is always a multiple of blocks
+  // long in bytes.
+  size_t GetPartitionTableOffset() const;
+  size_t GetPartitionTableEntryCount() const;
+  size_t GetPartitionTableByteSize() const;
+
+  // The allocation table begins on a block boundary after the partition table. It has a "used"
+  // portion which are available for use by partitions (though they may not be used yet). Then it
+  // has a potentially-larger "allocated" portion which allows FVM to grow assuming the underlying
+  // device has room.
+  size_t GetAllocationTableOffset() const;
+  size_t GetAllocationTableUsedEntryCount() const;
+  size_t GetAllocationTableUsedByteSize() const;
+  size_t GetAllocationTableAllocatedEntryCount() const;
+  size_t GetAllocationTableAllocatedByteSize() const;
+
+  // Byte offset from the beginning of the Header to the allocation table entry (SliceEntry struct)
+  // with the given ID. Physical slice IDs are 1-based so valid input is:
+  //   1 <= pslice <= pslice_count
+  // To get the actual slice data, see GetSliceOffset().
+  size_t GetSliceEntryOffset(size_t pslice) const;
+
+  // The metadata counts the header, partition table, and allocation table. The allocation table
+  // may contain unused entries (allowing FVM to grow as long as there is space on the underlying
+  // device), in which case the used bytes will be less than the allocated bytes.
+  //
+  // When the Header is default-initialized and the disk or slice size is 0, the metadata size
+  // is defined to be 0.
+  size_t GetMetadataUsedBytes() const;
+  size_t GetMetadataAllocatedBytes() const;
+
+  // Byte offset from the beginning of the device to the slice data. Physical slice IDs are 1-based
+  // so valid input is:
+  //   1 <= pslice <= pslice_count
+  // This gets the actual slice data. To get the slice's allocation table entry, see
+  // GetSliceEntryOffset().
+  size_t GetSliceDataOffset(size_t pslice) const;
+
+  // Data ------------------------------------------------------------------------------------------
+
   // Unique identifier for this format type. Expected to be kMagic.
   uint64_t magic;
 
@@ -125,6 +166,11 @@ struct Header {
   //
   // Physical slices are 1-indexed (0 means "none"). Therefore:
   //   1 <= |maximum valid pslice| <= pslice_count
+  //
+  // IMPORTANT NOTE: Due to fxb/59980, this value is one less than the number of entries worth of
+  // space in the allocation table because there is an unused 0 entry. Always compute with
+  // UsableSlicesCountOrZero() in fvm.cc to account for some edge conditions. See also
+  // allocation_table_size below.
   uint64_t pslice_count;
 
   // Size of the each slice in bytes. Must be a multiple of kBlockSize.
@@ -356,6 +402,71 @@ enum class SuperblockType {
   kPrimary,
   kSecondary,
 };
+
+inline size_t Header::GetPartitionTableOffset() const {
+  // The partition table starts at the first block after the header.
+  return kBlockSize;
+}
+
+inline size_t Header::GetPartitionTableEntryCount() const {
+  // Currently we expect the partition table count and size to be constant.
+  // TODO(bug 40192): Derive this from the header so we can have different sizes.
+  return kMaxVPartitions;
+}
+
+inline size_t Header::GetPartitionTableByteSize() const {
+  // Currently we expect the partition table count and size to be constant.
+  // TODO(bug 40192): Derive this from the header so we can have different sizes.
+  return sizeof(VPartitionEntry) * kMaxVPartitions;
+}
+
+inline size_t Header::GetAllocationTableOffset() const {
+  // The allocation table follows the partition table immediately.
+  return GetPartitionTableOffset() + GetPartitionTableByteSize();
+}
+
+inline size_t Header::GetAllocationTableUsedEntryCount() const { return pslice_count; }
+
+inline size_t Header::GetAllocationTableUsedByteSize() const {
+  // Ensure the used allocation table byte size is always on a multiple of the block suize.
+  return fbl::round_up(sizeof(SliceEntry) * GetAllocationTableUsedEntryCount(), kBlockSize);
+}
+
+inline size_t Header::GetAllocationTableAllocatedEntryCount() const {
+  // The "-1" here allows for the unused 0 indexed slice.
+  // TODO(fxb/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
+  // allocation data itself is 1-indexed. This inconsistency should be fixed,
+  return GetAllocationTableAllocatedByteSize() / sizeof(SliceEntry) - 1;
+}
+
+inline size_t Header::GetAllocationTableAllocatedByteSize() const { return allocation_table_size; }
+
+inline size_t Header::GetSliceEntryOffset(size_t pslice) const {
+  // TODO(fxb/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
+  // allocation data itself is 1-indexed. This inconsistency should be fixed,
+  return GetAllocationTableOffset() + pslice * sizeof(SliceEntry);
+}
+
+inline size_t Header::GetMetadataUsedBytes() const {
+  if (fvm_partition_size == 0 || slice_size == 0)
+    return 0;  // Uninitialized header.
+
+  // The used metadata ends after the used portion of the allocation table.
+  return GetAllocationTableOffset() + GetAllocationTableUsedByteSize();
+}
+
+inline size_t Header::GetMetadataAllocatedBytes() const {
+  if (fvm_partition_size == 0 || slice_size == 0)
+    return 0;  // Uninitialized header.
+
+  // The metadata ends after the allocation table.
+  return GetAllocationTableOffset() + GetAllocationTableAllocatedByteSize();
+}
+
+inline size_t Header::GetSliceDataOffset(size_t pslice) const {
+  return 2 * GetMetadataAllocatedBytes() +  // Skip two copies of metadata at beginning of device.
+         (pslice - 1) * slice_size;         // pslice is 1-based and starts after the 2x metadata.
+}
 
 }  // namespace fvm
 

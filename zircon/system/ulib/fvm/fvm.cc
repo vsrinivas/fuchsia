@@ -51,7 +51,7 @@ constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metad
   // if the number of slices fit perfectly in the metadata, the allocated buffer won't be big
   // enough to address them all. This only happens when the rounded up block value happens to
   // match the disk size.
-  // TODO(gevalentino): Fix underlying cause and remove workaround.
+  // TODO(fxb/59980): Fix underlying cause and remove workaround.
   if ((AllocationTable::kOffset + slice_count * sizeof(SliceEntry)) == metadata_allocated_size) {
     slice_count--;
   }
@@ -104,7 +104,26 @@ FormatInfo FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size
   header.allocation_table_size = AllocTableLength(max_size, slice_size);
   header.generation = 1;
 
-  return FormatInfo(header);
+  FormatInfo result(header);
+
+  // Validate the getters with the older implementations.
+  // TODO remove this when everything is converted to the new getters.
+  ZX_ASSERT(header.GetPartitionTableOffset() == PartitionTable::kOffset);
+  ZX_ASSERT(header.GetPartitionTableByteSize() == PartitionTable::kLength);
+  ZX_ASSERT(header.GetAllocationTableOffset() == AllocationTable::kOffset);
+  ZX_ASSERT(header.GetAllocationTableAllocatedByteSize() ==
+            AllocationTable::Length(max_size, slice_size));
+  // We don't check the "used" bytes because the "new" version in the Header struct computes this
+  // from the pslice_count, while the "old" version in FormatInfo computes it from the
+  // fvm_partition_size. These should theoretically agree but will disagree in some corrupted cases,
+  // and these happen in tests.
+
+  ZX_ASSERT(header.GetSliceDataOffset(1) == result.GetSliceStart(1));
+  ZX_ASSERT(header.GetSliceDataOffset(17) == result.GetSliceStart(17));
+
+  ZX_ASSERT(header.GetAllocationTableAllocatedEntryCount() == result.GetMaxAllocatableSlices());
+
+  return result;
 }
 
 FormatInfo FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
@@ -116,6 +135,8 @@ size_t FormatInfo::metadata_size() const {
 }
 
 size_t FormatInfo::metadata_allocated_size() const {
+  ZX_ASSERT(kAllocTableOffset + header_.allocation_table_size ==
+            header_.GetMetadataAllocatedBytes());
   return kAllocTableOffset + header_.allocation_table_size;
 }
 
