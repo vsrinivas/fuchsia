@@ -78,7 +78,7 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *syncEndpoint, *syncE
 			NIC:         nic2,
 		},
 	})
-	s.SetForwarding(true)
+	s.SetForwarding(ipv4.ProtocolNumber, true)
 	return s, &linkEP1, &linkEP2
 }
 

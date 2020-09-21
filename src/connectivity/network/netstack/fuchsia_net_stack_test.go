@@ -14,9 +14,12 @@ import (
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
 func TestValidateIPAddressMask(t *testing.T) {
@@ -280,5 +283,13 @@ func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {
 }
 
 func (ni *stackImpl) isIpForwardingEnabled() bool {
-	return ni.ns.stack.Forwarding()
+	for _, protocol := range []tcpip.NetworkProtocolNumber{
+		ipv4.ProtocolNumber,
+		ipv6.ProtocolNumber,
+	} {
+		if !ni.ns.stack.Forwarding(protocol) {
+			return false
+		}
+	}
+	return true
 }

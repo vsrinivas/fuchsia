@@ -488,12 +488,22 @@ func (ni *stackImpl) DisablePacketFilter(_ fidl.Context, id uint64) (stack.Stack
 }
 
 func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {
-	ni.ns.stack.SetForwarding(true)
+	for _, protocol := range []tcpip.NetworkProtocolNumber{
+		ipv4.ProtocolNumber,
+		ipv6.ProtocolNumber,
+	} {
+		ni.ns.stack.SetForwarding(protocol, true)
+	}
 	return nil
 }
 
 func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
-	ni.ns.stack.SetForwarding(false)
+	for _, protocol := range []tcpip.NetworkProtocolNumber{
+		ipv4.ProtocolNumber,
+		ipv6.ProtocolNumber,
+	} {
+		ni.ns.stack.SetForwarding(protocol, false)
+	}
 	return nil
 }
 
