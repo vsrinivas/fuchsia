@@ -34,7 +34,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging")?;
 
     let update_algorithm = HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?);
-    let push_source = PushSource::new(update_algorithm, Status::Ok);
+    let push_source = PushSource::new(update_algorithm, Status::Ok)?;
     let update_fut = push_source.poll_updates();
 
     let mut fs = ServiceFs::new();
