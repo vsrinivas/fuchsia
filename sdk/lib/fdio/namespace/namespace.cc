@@ -10,6 +10,7 @@
 
 #include <cerrno>
 
+#include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -96,11 +97,8 @@ zx_status_t fdio_ns_export(fdio_ns_t* ns, fdio_flat_namespace_t** out) { return 
 
 __EXPORT
 zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) {
-  zx_status_t status;
-  mtx_lock(&fdio_lock);
-  status = fdio_ns_export(fdio_root_ns, out);
-  mtx_unlock(&fdio_lock);
-  return status;
+  fbl::AutoLock lock(&fdio_lock);
+  return fdio_ns_export(fdio_root_ns, out);
 }
 
 __EXPORT

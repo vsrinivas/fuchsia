@@ -7,8 +7,6 @@
 
 #include "private.h"
 
-zx_status_t zxio_default_destroy(zxio_t* io) { return ZX_OK; }
-
 zx_status_t zxio_default_close(zxio_t* io) { return ZX_OK; }
 
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle) {

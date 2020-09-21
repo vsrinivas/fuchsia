@@ -60,7 +60,6 @@ TEST(NullTest, Basic) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
 
   ASSERT_OK(zxio_close(&io));
-  ASSERT_OK(zxio_destroy(&io));
 }
 
 TEST(NullTest, Release) {
@@ -69,5 +68,5 @@ TEST(NullTest, Release) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_release(&io, &handle));
   ASSERT_EQ(ZX_HANDLE_INVALID, handle);
-  ASSERT_OK(zxio_destroy(&io));
+  ASSERT_OK(zxio_close(&io));
 }

@@ -101,7 +101,6 @@ TEST_F(ExtensionNode, DefaultBehaviors) {
   ASSERT_EQ(0, server->num_close());
   ASSERT_OK(zxio_close(&node.io));
   ASSERT_EQ(1, server->num_close());
-  ASSERT_OK(zxio_destroy(&node.io));
 }
 
 TEST_F(ExtensionNode, CloseError) {
@@ -117,13 +116,12 @@ TEST_F(ExtensionNode, CloseError) {
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
 
   ASSERT_STATUS(ZX_ERR_IO, zxio_close(&node.io));
-  ASSERT_OK(zxio_destroy(&node.io));
 }
 
 TEST_F(ExtensionNode, SkipClose) {
   zxio_node_t node;
   constexpr static zxio_extension_ops_t extension_ops = {
-      .destroy = nullptr,
+      .close = nullptr,
       .skip_close_call = true,
       .readv = nullptr,
       .writev = nullptr,
@@ -134,9 +132,8 @@ TEST_F(ExtensionNode, SkipClose) {
   ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
 
   ASSERT_EQ(0, server->num_close());
-  ASSERT_STATUS(ZX_OK, zxio_close(&node.io));
+  ASSERT_OK(zxio_close(&node.io));
   ASSERT_EQ(0, server->num_close());
-  ASSERT_OK(zxio_destroy(&node.io));
 }
 
 TEST_F(ExtensionNode, OverrideOperations) {
@@ -144,7 +141,7 @@ TEST_F(ExtensionNode, OverrideOperations) {
    public:
     explicit MyIo(zx::channel client) {
       constexpr static zxio_extension_ops_t kExtensionOps = {
-          .destroy = nullptr,
+          .close = nullptr,
           .skip_close_call = false,
           .readv =
               [](zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
@@ -161,10 +158,7 @@ TEST_F(ExtensionNode, OverrideOperations) {
       zxio_node_init(this, client.release(), &kExtensionOps);
     }
 
-    ~MyIo() {
-      ASSERT_OK(zxio_close(**this));
-      ASSERT_OK(zxio_destroy(**this));
-    }
+    ~MyIo() { ASSERT_OK(zxio_close(**this)); }
 
     zxio_t* operator*() { return &this->zxio_node_t::io; }
 
@@ -221,5 +215,4 @@ TEST_F(ExtensionNode, GetAttr) {
   ASSERT_EQ(kContentSize, attr.content_size);
 
   ASSERT_OK(zxio_close(&node.io));
-  ASSERT_OK(zxio_destroy(&node.io));
 }

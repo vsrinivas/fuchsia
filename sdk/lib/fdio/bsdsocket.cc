@@ -149,7 +149,6 @@ int socket(int domain, int type, int protocol) {
 
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_get_ops(io)->close(io);
     fdio_release(io);
     return ERRNO(EMFILE);
   }
@@ -307,7 +306,6 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
 
   nfd = fdio_assign_reserved(nfd, accepted_io);
   if (nfd < 0) {
-    fdio_get_ops(accepted_io)->close(accepted_io);
     fdio_release(accepted_io);
   }
   return nfd;

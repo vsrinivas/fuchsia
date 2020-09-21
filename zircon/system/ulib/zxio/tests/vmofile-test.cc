@@ -28,7 +28,6 @@ class VmoFileNonZeroOffsetTest : public zxtest::Test {
   void TearDown() override {
     h2.reset();
     ASSERT_STATUS(ZX_ERR_PEER_CLOSED, zxio_close(io));
-    ASSERT_OK(zxio_destroy(io));
   }
 
  protected:
@@ -134,5 +133,4 @@ TEST(VmoFileTest, GetExact) {
 
   h2.reset();
   ASSERT_STATUS(ZX_ERR_PEER_CLOSED, zxio_close(io));
-  ASSERT_OK(zxio_destroy(io));
 }

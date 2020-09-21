@@ -39,15 +39,11 @@ typedef struct zxio_storage {
 // zxio_t with a custom operations table.
 typedef struct zxio_ops {
   // Releases all resources held by |io|.
-  // After |destroy| returns, any further ops must not be called relative to |io|.
-  zx_status_t (*destroy)(zxio_t* io);
-
-  // After |close| returns, any further ops must not be called relative to |io|,
-  // except |destroy|.
+  // After |close| returns, any further ops must not be called relative to |io|.
   zx_status_t (*close)(zxio_t* io);
 
   // After |release| returns, any further ops most not be called relative to |io|,
-  // except |destroy|.
+  // except |close|.
   zx_status_t (*release)(zxio_t* io, zx_handle_t* out_handle);
 
   // TODO(tamird/abarth): clarify the semantics of this operation. fdio currently relies on this to

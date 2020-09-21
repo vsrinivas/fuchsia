@@ -26,7 +26,7 @@ class Debuglog : public HasIo {
   explicit Debuglog(zx::debuglog debuglog) : HasIo(kOps), handle_(std::move(debuglog)) {}
 
  private:
-  zx_status_t Destroy();
+  zx_status_t Close();
   zx_status_t Clone(zx_handle_t* out_handle);
   zx_status_t Writev(const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                      size_t* out_actual);
@@ -47,14 +47,14 @@ class Debuglog : public HasIo {
 constexpr zxio_ops_t Debuglog::kOps = ([]() {
   using Adaptor = Adaptor<Debuglog>;
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = Adaptor::From<&Debuglog::Destroy>;
+  ops.close = Adaptor::From<&Debuglog::Close>;
   ops.clone = Adaptor::From<&Debuglog::Clone>;
   ops.writev = Adaptor::From<&Debuglog::Writev>;
   ops.isatty = Adaptor::From<&Debuglog::IsATty>;
   return ops;
 })();
 
-zx_status_t Debuglog::Destroy() {
+zx_status_t Debuglog::Close() {
   this->~Debuglog();
   return ZX_OK;
 }

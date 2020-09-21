@@ -18,12 +18,10 @@ __BEGIN_CDECLS
 // return |ZX_ERR_WRONG_TYPE| or I/O operations (e.g., read, read_at, write,
 // write_at, seek) and |ZX_ERR_NOT_SUPPORTED| for other operations.
 //
-// * |zxio_default_destroy| does succeed, but does nothing.
 // * |zxio_default_close| does succeed, but does nothing.
 // * |zxio_default_wait_begin| returns an invalid handle and no signals.
 // * |zxio_default_wait_end| returns no signals.
 
-zx_status_t zxio_default_destroy(zxio_t* io);
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle);
 zx_status_t zxio_default_close(zxio_t* io);
 zx_status_t zxio_default_clone(zxio_t* io, zx_handle_t* out_handle);
@@ -70,7 +68,6 @@ zx_status_t zxio_default_isatty(zxio_t* io, bool* tty);
 // the default implementations of unimplemented operations is consistent across
 // ops tables.
 static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
-    .destroy = zxio_default_destroy,
     .close = zxio_default_close,
     .release = zxio_default_release,
     .clone = zxio_default_clone,

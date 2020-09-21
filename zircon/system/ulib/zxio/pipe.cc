@@ -10,17 +10,9 @@
 
 #include "private.h"
 
-static zx_status_t zxio_pipe_destroy(zxio_t* io) {
-  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
-  pipe->~zxio_pipe_t();
-  return ZX_OK;
-}
-
 static zx_status_t zxio_pipe_close(zxio_t* io) {
   auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
-  // TODO(fxbug.dev/45407): We should mark the handle as "detached", instead of closing
-  // the handle with risks of race behavior.
-  pipe->socket.reset();
+  pipe->~zxio_pipe_t();
   return ZX_OK;
 }
 
@@ -216,7 +208,6 @@ zx_status_t zxio_stream_pipe_writev(zxio_t* io, const zx_iovec_t* vector, size_t
 
 static constexpr zxio_ops_t zxio_pipe_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_pipe_destroy;
   ops.close = zxio_pipe_close;
   ops.release = zxio_pipe_release;
   ops.clone = zxio_pipe_clone;

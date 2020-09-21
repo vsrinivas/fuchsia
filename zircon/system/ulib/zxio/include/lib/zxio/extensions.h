@@ -69,18 +69,18 @@ typedef struct zxio_node {
   uint64_t opaque[2];
 } zxio_node_t;
 
-// Apart from |destroy|, these functions extend the |zxio_node_t| with
+// Apart from |close|, these functions extend the |zxio_node_t| with
 // implementations of operations beyond the ones relevant to |fuchsia.io/Node|.
 //
 // TODO(fxb/45659): We eventually would want to plumb extension support for all
 // non-Node methods.
 typedef struct zxio_extension_ops {
-  // A hook to destroy any resources held by the custom transport before the
-  // node portion is invalidated, as part of a |zxio_close| or |zxio_release|.
+  // A hook to close any resources held by the custom transport before the
+  // node portion is invalidated as part of |zxio_close|.
   //
   // If this entry is |nullptr|, the default behavior is to do nothing for the
   // custom part (i.e. treat them as pure data).
-  void (*destroy)(zxio_node_t* io);
+  void (*close)(zxio_node_t* io);
 
   // Specifies whether running |zxio_close| on this node should call
   // |fuchsia.io/Node.Close| and block.

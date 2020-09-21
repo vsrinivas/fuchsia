@@ -171,7 +171,6 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
   }
 
   if (io_to_close) {
-    fdio_get_ops(io_to_close)->close(io_to_close);
     fdio_release(io_to_close);
   }
   return fd;
@@ -219,8 +218,6 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
   }
   return io;
 }
-
-zx_status_t fdio_close(fdio_t* io) { return fdio_get_ops(io)->close(io); }
 
 // Verify the O_* flags which align with ZXIO_FS_*.
 static_assert(O_PATH == ZX_FS_FLAG_VNODE_REF_ONLY, "Open Flag mismatch");
@@ -725,7 +722,6 @@ extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
       fdio_fdtab[fd] = nullptr;
       fdio_dupcount_release(io);
       if (fdio_get_dupcount(io) == 0) {
-        fdio_get_ops(io)->close(io);
         fdio_release(io);
       }
     }
@@ -920,7 +916,6 @@ int unlinkat(int dirfd, const char* path, int flags) {
     return ERROR(r);
   }
   r = fdio_get_ops(io)->unlink(io, name, strlen(name));
-  fdio_get_ops(io)->close(io);
   fdio_release(io);
   return STATUS(r);
 }
@@ -1041,25 +1036,20 @@ ssize_t write(int fd, const void* buf, size_t count) {
 
 __EXPORT
 int close(int fd) {
-  mtx_lock(&fdio_lock);
-  if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == nullptr)) {
-    mtx_unlock(&fdio_lock);
+  if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
     return ERRNO(EBADF);
   }
-  fdio_t* io = fdio_fdtab[fd];
-  fdio_dupcount_release(io);
-  fdio_fdtab[fd] = nullptr;
-  if (fdio_get_dupcount(io) > 0) {
-    // still alive in other fdtab slots
-    mtx_unlock(&fdio_lock);
-    fdio_release(io);
-    return ZX_OK;
-  } else {
-    mtx_unlock(&fdio_lock);
-    int r = fdio_get_ops(io)->close(io);
-    fdio_release(io);
-    return STATUS(r);
+  fdio_t* io;
+  {
+    fbl::AutoLock lock(&fdio_lock);
+    io = fdio_fdtab[fd];
+    if (io == nullptr) {
+      return ERRNO(EBADF);
+    }
+    fdio_dupcount_release(io);
+    fdio_fdtab[fd] = nullptr;
   }
+  return STATUS(fdio_release(io));
 }
 
 static int fdio_dup(int oldfd, int newfd, int starting_fd) {
@@ -1239,8 +1229,8 @@ static int truncateat(int dirfd, const char* path, off_t len) {
   if ((r = __fdio_open_at(&io, dirfd, path, O_WRONLY, 0)) < 0) {
     return ERROR(r);
   }
-  r = fdio_get_ops(io)->truncate(io, len);
-  fdio_close(io);
+  const fdio_ops_t* ops = fdio_get_ops(io);
+  r = ops->truncate(io, len);
   fdio_release(io);
   return STATUS(r);
 }
@@ -1300,10 +1290,8 @@ static int two_path_op_at(int olddirfd, const char* oldpath, int newdirfd, const
                                                     newname, strlen(newname));
 
 newparent_open:
-  fdio_get_ops(io_newparent)->close(io_newparent);
   fdio_release(io_newparent);
 oldparent_open:
-  fdio_get_ops(io_oldparent)->close(io_oldparent);
   fdio_release(io_oldparent);
   return STATUS(status);
 }
@@ -1348,7 +1336,6 @@ static int vopenat(int dirfd, const char* path, int flags, va_list args) {
     *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
   }
   if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-    fdio_get_ops(io)->close(io);
     fdio_release(io);
     return ERRNO(EMFILE);
   }
@@ -1386,7 +1373,6 @@ int mkdirat(int dirfd, const char* path, mode_t mode) {
   if ((r = __fdio_open_at_ignore_eisdir(&io, dirfd, path, O_RDONLY | O_CREAT | O_EXCL, mode)) < 0) {
     return ERROR(r);
   }
-  fdio_get_ops(io)->close(io);
   fdio_release(io);
   return 0;
 }
@@ -1438,7 +1424,6 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
     return ERROR(r);
   }
   r = fdio_stat(io, s);
-  fdio_close(io);
   fdio_release(io);
   return STATUS(r);
 }
@@ -1538,7 +1523,6 @@ int utimensat(int dirfd, const char* path, const struct timespec times[2], int f
     return ERROR(r);
   }
   r = zx_utimens(io, times, 0);
-  fdio_close(io);
   fdio_release(io);
   return STATUS(r);
 }
@@ -1560,9 +1544,7 @@ static int socketpair_create(int fd[2], uint32_t options) {
   fd[0] = fdio_bind_to_fd(a, -1, 0);
   if (fd[0] < 0) {
     int errno_ = errno;
-    fdio_close(a);
     fdio_release(a);
-    fdio_close(b);
     fdio_release(b);
     return ERRNO(errno_);
   }
@@ -1570,7 +1552,6 @@ static int socketpair_create(int fd[2], uint32_t options) {
   if (fd[1] < 0) {
     int errno_ = errno;
     close(fd[0]);
-    fdio_close(b);
     fdio_release(b);
     return ERRNO(errno_);
   }
@@ -1660,7 +1641,6 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
       return ERROR(status);
     }
   }
-  fdio_close(io);
   fdio_release(io);
   return STATUS(status);
 }
@@ -1700,7 +1680,6 @@ void fdio_chdir(fdio_t* io, const char* path) {
   fbl::AutoLock lock(&fdio_lock);
   fdio_t* old = fdio_cwd_handle;
   fdio_cwd_handle = io;
-  fdio_get_ops(old)->close(old);
   fdio_release(old);
 }
 
@@ -1901,7 +1880,6 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
   fdio_t* io = fdio_waitable_create(h, signals_in, signals_out, shared_handle);
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_close(io);
     fdio_release(io);
   }
   return fd;
@@ -2227,9 +2205,6 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
         !nonblocking) {
       uint32_t pending;
       switch (fdio_wait(io, FDIO_EVT_WRITABLE, deadline, &pending)) {
-        case ZX_ERR_BAD_HANDLE:
-          status = ZX_ERR_BAD_HANDLE;
-          break;
         case ZX_ERR_TIMED_OUT:
           break;
         case ZX_OK:
@@ -2270,9 +2245,6 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
         !nonblocking) {
       uint32_t pending;
       switch (fdio_wait(io, FDIO_EVT_READABLE, deadline, &pending)) {
-        case ZX_ERR_BAD_HANDLE:
-          status = ZX_ERR_BAD_HANDLE;
-          break;
         case ZX_ERR_TIMED_OUT:
           break;
         case ZX_OK:

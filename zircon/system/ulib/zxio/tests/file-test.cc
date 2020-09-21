@@ -150,7 +150,6 @@ class File : public zxtest::Test {
     ASSERT_EQ(0, server_->num_close());
     ASSERT_OK(zxio_close(&file_.io));
     ASSERT_EQ(1, server_->num_close());
-    ASSERT_OK(zxio_destroy(&file_.io));
   }
 
  protected:
@@ -359,60 +358,6 @@ TEST_F(File, ReadWriteStream) {
   ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
   ASSERT_OK(OpenFile());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
-}
-
-class FileConcurrentAccess : public File {
- public:
-  void TearDown() override {
-    // Stop closing the zxio on behalf of the test case.
-  }
-};
-
-TEST_F(FileConcurrentAccess, CloseShouldInterruptOtherOps) {
-  class TestServer : public TestServerBase {
-   public:
-    void GetAttr(GetAttrCompleter::Sync completer) override {
-      // Forever delay the response... until the server is destroyed.
-      // This implies the client would have to rely on |zxio_close|
-      // to interrupt |zxio_attr_get|.
-      EXPECT_FALSE(completer_.has_value());
-      sync_completion_signal(&called_get_attr_);
-      completer_ = completer.ToAsync();
-    }
-    virtual ~TestServer() {
-      ASSERT_TRUE(completer_.has_value());
-      completer_->Close(ZX_ERR_IO);
-    }
-    sync_completion_t* called_get_attr() { return &called_get_attr_; }
-
-   private:
-    sync_completion_t called_get_attr_;
-    std::optional<GetAttrCompleter::Async> completer_;
-  };
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
-  ASSERT_OK(OpenFile());
-
-  std::atomic<bool> get_attr_returned = false;
-  std::future<zx_status_t> concurrent = std::async(std::launch::async, [&] {
-    zxio_node_attributes_t attr;
-    zx_status_t status = zxio_attr_get(&file_.io, &attr);
-    get_attr_returned.store(true);
-    return status;
-  });
-
-  // First ensure |zxio_attr_get| has been blocked on the FIDL call.
-  ASSERT_OK(sync_completion_wait_deadline(server->called_get_attr(), ZX_TIME_INFINITE));
-
-  ASSERT_FALSE(get_attr_returned.load());
-  ASSERT_EQ(0, server->num_close());
-  ASSERT_OK(zxio_close(&file_.io));
-  ASSERT_EQ(1, server->num_close());
-
-  concurrent.wait();
-  ASSERT_TRUE(get_attr_returned.load());
-  ASSERT_STATUS(ZX_ERR_PEER_CLOSED, concurrent.get());
-  ASSERT_OK(zxio_destroy(&file_.io));
 }
 
 class Remote : public File {

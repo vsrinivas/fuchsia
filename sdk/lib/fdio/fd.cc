@@ -18,7 +18,6 @@ zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {
   }
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_close(io);
     fdio_release(io);
     return ZX_ERR_BAD_STATE;
   }

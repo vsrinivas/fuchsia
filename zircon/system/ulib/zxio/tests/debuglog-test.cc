@@ -30,10 +30,7 @@ class DebugLogTest : public zxtest::Test {
     ASSERT_NE(logger_, nullptr);
   }
 
-  void TearDown() override final {
-    if (logger_)
-      ASSERT_OK(zxio_destroy(logger_));
-  }
+  void TearDown() override final { ASSERT_OK(zxio_close(logger_)); }
 
   zx::channel local_;
   zx::channel remote_;
@@ -43,41 +40,18 @@ class DebugLogTest : public zxtest::Test {
 
 constexpr size_t kNumThreads = 256;
 
-// Sets up multiple threads that write to debuglog concurrently; ASAN or TSAN builders will
-// be responsible for catching bugs.
-std::array<std::thread, kNumThreads> StartStressingThreads(zxio_t* logger,
-                                                           bool allow_handle_closed_error) {
+TEST_F(DebugLogTest, ThreadSafety) {
   std::array<std::thread, kNumThreads> threads;
 
   for (size_t i = 0; i < kNumThreads; ++i) {
-    threads[i] = std::thread([i, logger, allow_handle_closed_error]() {
+    threads[i] = std::thread([=]() {
       std::string log_str = "output from " + std::to_string(i) + "\n";
       size_t actual;
-      zx_status_t status = zxio_write(logger, log_str.c_str(), log_str.size(), 0, &actual);
-      // We would get |ZX_ERR_BAD_HANDLE| if the debuglog was closed.
-      if (!allow_handle_closed_error || status != ZX_ERR_BAD_HANDLE) {
-        ASSERT_OK(status);
-        ASSERT_EQ(actual, log_str.size());
-      }
+      ASSERT_OK(zxio_write(logger_, log_str.c_str(), log_str.size(), 0, &actual));
+      ASSERT_EQ(actual, log_str.size());
     });
   }
 
-  return threads;
-}
-
-TEST_F(DebugLogTest, ThreadSafety) {
-  auto threads = StartStressingThreads(logger_, /* allow_handle_closed_error */ false);
-
-  for (auto& t : threads) {
-    t.join();
-  }
-  ASSERT_OK(zxio_close(logger_));
-}
-
-TEST_F(DebugLogTest, ThreadSafety_CloseDuringWrite) {
-  auto threads = StartStressingThreads(logger_, /* allow_handle_closed_error */ true);
-
-  ASSERT_OK(zxio_close(logger_));
   for (auto& t : threads) {
     t.join();
   }

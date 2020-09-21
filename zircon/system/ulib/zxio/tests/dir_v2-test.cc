@@ -119,7 +119,6 @@ class DirV2 : public zxtest::Test {
     ASSERT_EQ(0, server_->num_close());
     ASSERT_OK(zxio_close(&dir_.io));
     ASSERT_EQ(1, server_->num_close());
-    ASSERT_OK(zxio_destroy(&dir_.io));
   }
 
  protected:

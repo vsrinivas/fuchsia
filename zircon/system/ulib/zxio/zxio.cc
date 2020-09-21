@@ -20,7 +20,7 @@
 // implementation file and are not visible in the header.
 typedef struct zxio_internal {
   explicit zxio_internal(const zxio_ops_t* ops)
-      : ops(ops), extensions(nullptr), extension_init_func(0), interrupted(false) {}
+      : ops(ops), extensions(nullptr), extension_init_func(0) {}
 
   const zxio_ops_t* ops;
 
@@ -34,14 +34,6 @@ typedef struct zxio_internal {
   // If applicable, records which function in |extensions| was used to
   // initialize this |zxio_t|.
   uintptr_t extension_init_func;
-
-  // When true, operations on this object must error with |ZX_ERR_BAD_HANDLE|.
-  //
-  // TODO(fxbug.dev/45407): This is a stop-gap solution until we have handle detaching support.
-  // When handles could be detached in a zxio_close implementation, future calls on that
-  // handle will directly fail, so it is cleaner to encode the alive-ness of a zxio
-  // object on the handles, rather than keeping track of an extra state here.
-  std::atomic<bool> interrupted;
 
   uint8_t reserved[7];
 } zxio_internal_t;
@@ -61,7 +53,7 @@ const zxio_internal_t* to_internal(const zxio_t* io) {
 
 bool zxio_is_valid(const zxio_t* io) {
   const zxio_internal_t* zio = to_internal(io);
-  return zio->ops != nullptr && !zio->interrupted.load();
+  return zio->ops != nullptr;
 }
 
 void zxio_init(zxio_t* io, const zxio_ops_t* ops) { new (io) zxio_internal_t(ops); }
@@ -79,11 +71,14 @@ void zxio_extensions_set(zxio_t* io, const zxio_extensions_t* extensions) {
   to_internal(io)->extensions = extensions;
 }
 
-zx_status_t zxio_destroy(zxio_t* io) {
+zx_status_t zxio_close(zxio_t* io) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
   static_assert(std::is_trivially_destructible<zxio_internal_t>::value,
                 "zxio_internal_t must have trivial destructor");
   zxio_internal_t* zio = to_internal(io);
-  zx_status_t status = zio->ops->destroy(io);
+  zx_status_t status = zio->ops->close(io);
   // Poison the object. Double destruction is undefined behavior.
   zio->ops = nullptr;
   return status;
@@ -94,17 +89,7 @@ zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  zio->interrupted.store(true);
   return zio->ops->release(io, out_handle);
-}
-
-zx_status_t zxio_close(zxio_t* io) {
-  if (!zxio_is_valid(io)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-  zxio_internal_t* zio = to_internal(io);
-  zio->interrupted.store(true);
-  return zio->ops->close(io);
 }
 
 zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle) {

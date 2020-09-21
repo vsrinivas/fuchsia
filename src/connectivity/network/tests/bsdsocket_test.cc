@@ -2610,24 +2610,10 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
     closeRST = true;
   }
 
-#if defined(__Fuchsia__)
-  bool isClient = closeTarget == CloseTarget::CLIENT;
-#endif
-
   // While blocked in I/O, close the peer.
   std::latch fut_started(1);
   const auto fut = std::async(std::launch::async, [&]() {
     fut_started.count_down();
-
-#if defined(__Fuchsia__)
-    // TODO(fxbug.dev/45407): Linux considers the pending I/O to hold a reference to the file
-    // descriptor, and we should too.
-    if (isClient) {
-      ASSERT_EQ(executeIO(), -1);
-      EXPECT_EQ(errno, EBADF) << strerror(errno);
-      return;
-    }
-#endif
 
     if (closeRST) {
       ASSERT_EQ(executeIO(), -1);
@@ -2649,17 +2635,19 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
     case CloseTarget::CLIENT: {
       ASSERT_EQ(setsockopt(client.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
           << strerror(errno);
-      ASSERT_EQ(close(client.release()), 0) << strerror(errno);
-#if defined(__Fuchsia__)
-      // TODO(fxbug.dev/45407): Fuchsia incorrectly interrupts the pending I/O when the file
-      // descriptor is closed.
-      break;
-#else
+
+      int fd = client.release();
+
+      ASSERT_EQ(close(fd), 0) << strerror(errno);
+
       // Closing the file descriptor does not interrupt the pending I/O.
       ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
 
+      // The pending I/O is still blocked, but the file descriptor is gone.
+      ASSERT_EQ(fsync(fd), -1) << strerror(errno);
+      ASSERT_EQ(errno, EBADF) << errno;
+
       // Fallthrough to unblock the future.
-#endif
     }
     case CloseTarget::SERVER: {
       ASSERT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)

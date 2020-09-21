@@ -83,21 +83,19 @@ fio2::NodeAttributes ToIo2NodeAttributes(fidl::Allocator& allocator,
 // These functions are named with "v2" to avoid mixing up with fuchsia.io v1
 // backend during grepping.
 
-zx_status_t zxio_remote_v2_destroy(zxio_t* io) {
-  RemoteV2 rio(io);
-  rio.Destroy();
-  return ZX_OK;
-}
-
 zx_status_t zxio_remote_v2_close(zxio_t* io) {
   RemoteV2 rio(io);
-  auto result = fio2::Node::Call::Close(rio.control());
-  // TODO(yifeit): The |Node.Close| method is one-way. In order to catch
-  // any server-side error during close, we should wait for an epitaph.
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  return rio.control()->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+  zx_status_t status = [&]() {
+    auto result = fio2::Node::Call::Close(rio.control());
+    // TODO(yifeit): The |Node.Close| method is one-way. In order to catch
+    // any server-side error during close, we should wait for an epitaph.
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    return rio.control()->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+  }();
+  rio.Close();
+  return status;
 }
 
 zx_status_t zxio_remote_v2_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -221,7 +219,7 @@ zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* at
 
 }  // namespace
 
-void RemoteV2::Destroy() {
+void RemoteV2::Close() {
   Release().reset();
   if (rio_->observer != ZX_HANDLE_INVALID) {
     zx_handle_close(rio_->observer);
@@ -241,7 +239,6 @@ zx::channel RemoteV2::Release() {
 
 static constexpr zxio_ops_t zxio_remote_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_remote_v2_destroy;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
   ops.clone = zxio_remote_v2_clone;
@@ -265,7 +262,6 @@ zx_status_t zxio_remote_v2_init(zxio_storage_t* storage, zx_handle_t control,
 
 static constexpr zxio_ops_t zxio_dir_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_remote_v2_destroy;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
   ops.clone = zxio_remote_v2_clone;
@@ -513,7 +509,6 @@ zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t of
 
 static constexpr zxio_ops_t zxio_file_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_remote_v2_destroy;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
   ops.clone = zxio_remote_v2_clone;

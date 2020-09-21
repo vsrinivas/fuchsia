@@ -52,15 +52,13 @@ static bool timespec_to_duration(const struct timespec* spec, zx_duration_t* out
   return true;
 }
 
-static zx_status_t fdio_timer_destroy(zxio_t* io) {
+static zx_status_t fdio_timer_close(zxio_t* io) {
   fdio_timer_t* timer = reinterpret_cast<fdio_timer_t*>(io);
   zx_handle_t handle = timer->handle;
   timer->handle = ZX_HANDLE_INVALID;
   zx_handle_close(handle);
   return ZX_OK;
 }
-
-static zx_status_t fdio_timer_close(zxio_t* io) { return ZX_OK; }
 
 static zx_status_t fdio_timer_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                                     zxio_flags_t flags, size_t* out_actual) {
@@ -129,7 +127,6 @@ static void fdio_timer_wait_end(zxio_t* io, zx_signals_t zx_signals,
 
 static constexpr zxio_ops_t fdio_timer_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = fdio_timer_destroy;
   ops.close = fdio_timer_close;
   ops.readv = fdio_timer_readv;
   ops.wait_begin = fdio_timer_wait_begin;

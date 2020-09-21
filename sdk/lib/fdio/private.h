@@ -149,7 +149,7 @@ void fdio_acquire(fdio_t* io);
 
 // Decreases the refcount of |io| by one. If the reference count
 // reaches zero, the object is destroyed.
-void fdio_release(fdio_t* io);
+zx_status_t fdio_release(fdio_t* io);
 
 // Returns true if |io| is the only acquired reference to an object.
 bool fdio_is_last_reference(fdio_t* io);
@@ -184,11 +184,7 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 // will follow.
 //
 // dupcount tracks how many fdtab entries an fdio object
-// is in.  close() reduces the dupcount, and only actually
-// closes the underlying object when it reaches zero.
-
-// Closes the underlying I/O backend object.
-zx_status_t fdio_close(fdio_t* io);
+// is in.
 
 // Waits until one or more |events| are signalled, or the |deadline| passes.
 // The |events| are of the form |FDIO_EVT_*|, defined in io.h.

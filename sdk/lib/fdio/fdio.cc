@@ -90,11 +90,13 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io) { return &io->sndtimeo; }
 
 void fdio_acquire(fdio_t* io) { io->refcount.fetch_add(1); }
 
-void fdio_release(fdio_t* io) {
+zx_status_t fdio_release(fdio_t* io) {
   if (io->refcount.fetch_sub(1) == 1) {
-    zxio_destroy(fdio_get_zxio(io));
+    zx_status_t status = fdio_get_ops(io)->close(io);
     delete io;
+    return status;
   }
+  return ZX_OK;
 }
 
 bool fdio_is_last_reference(fdio_t* io) { return io->refcount.load() == 1; }

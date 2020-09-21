@@ -27,20 +27,13 @@ typedef struct fdio_waitable {
 static_assert(sizeof(fdio_waitable_t) <= sizeof(zxio_storage_t),
               "fdio_waitable_t must fit inside zxio_storage_t.");
 
-static zx_status_t fdio_waitable_destroy(zxio_t* io) {
+static zx_status_t fdio_waitable_close(zxio_t* io) {
   fdio_waitable_t* waitable = reinterpret_cast<fdio_waitable_t*>(io);
   if (!waitable->shared_handle) {
     zx_handle_t handle = waitable->handle;
     waitable->handle = ZX_HANDLE_INVALID;
     zx_handle_close(handle);
   }
-  return ZX_OK;
-}
-
-static zx_status_t fdio_waitable_close(zxio_t* io) {
-  // TODO(fxbug.dev/45407): When the syscall to detach a handle from its object is added,
-  // we should use that to mark the handle as detached, instead of closing
-  // the handle with risks of race behavior.
   return ZX_OK;
 }
 
@@ -73,7 +66,6 @@ static void fdio_waitable_wait_end(zxio_t* io, zx_signals_t zx_signals,
 
 static constexpr zxio_ops_t fdio_waitable_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = fdio_waitable_destroy;
   ops.close = fdio_waitable_close;
   ops.wait_begin = fdio_waitable_wait_begin;
   ops.wait_end = fdio_waitable_wait_end;

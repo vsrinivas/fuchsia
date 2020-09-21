@@ -180,7 +180,7 @@ class Remote {
     return control;
   }
 
-  void Destroy() {
+  void Close() {
     Release().reset();
     if (rio_->event != ZX_HANDLE_INVALID) {
       zx_handle_close(rio_->event);
@@ -369,15 +369,11 @@ fio::NodeAttributes ToNodeAttributes(zxio_node_attributes_t attr, ToIo1ModePermi
   };
 }
 
-zx_status_t zxio_remote_destroy(zxio_t* io) {
-  Remote rio(io);
-  rio.Destroy();
-  return ZX_OK;
-}
-
 zx_status_t zxio_remote_close(zxio_t* io) {
   Remote rio(io);
-  return zxio_raw_remote_close(rio.control());
+  zx_status_t status = zxio_raw_remote_close(rio.control());
+  rio.Close();
+  return status;
 }
 
 zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -811,7 +807,6 @@ zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
 
 static constexpr zxio_ops_t zxio_remote_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_remote_destroy;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
@@ -887,7 +882,6 @@ zx_status_t zxio_dir_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
 
 static constexpr zxio_ops_t zxio_dir_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_remote_destroy;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
@@ -961,7 +955,6 @@ zx_status_t zxio_file_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
 
 static constexpr zxio_ops_t zxio_file_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = zxio_remote_destroy;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;

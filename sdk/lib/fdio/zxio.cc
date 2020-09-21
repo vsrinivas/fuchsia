@@ -17,6 +17,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_lock.h>
+
 #include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -396,29 +398,23 @@ fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t str
 
 __EXPORT
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
-  mtx_lock(&fdio_lock);
+  fbl::AutoLock lock(&fdio_lock);
   if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == nullptr)) {
-    mtx_unlock(&fdio_lock);
     return ZX_ERR_NOT_FOUND;
   }
   fdio_t* io = fdio_fdtab[fd];
   fdio_dupcount_release(io);
   fdio_fdtab[fd] = nullptr;
+  zx_status_t status;
   if (fdio_get_dupcount(io) > 0) {
     // still alive in other fdtab slots
     // this fd goes away but we can't give away the handle
-    mtx_unlock(&fdio_lock);
-    fdio_release(io);
-    return ZX_ERR_UNAVAILABLE;
+    status = ZX_ERR_UNAVAILABLE;
   } else {
-    mtx_unlock(&fdio_lock);
-    zx_status_t r = fdio_get_ops(io)->unwrap(io, out);
-    if (r != ZX_OK) {
-      fdio_get_ops(io)->close(io);
-    }
-    fdio_release(io);
-    return r;
+    status = fdio_get_ops(io)->unwrap(io, out);
   }
+  fdio_release(io);
+  return status;
 }
 
 __EXPORT
@@ -675,7 +671,7 @@ int fdio_pipe_pair(fdio_t** _a, fdio_t** _b, uint32_t options) {
     return ZX_ERR_NO_MEMORY;
   }
   if ((b = fdio_pipe_create(std::move(h1))) == nullptr) {
-    fdio_zxio_close(a);
+    fdio_release(a);
     return ZX_ERR_NO_MEMORY;
   }
   *_a = a;

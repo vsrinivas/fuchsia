@@ -155,7 +155,6 @@ static zx_status_t fdio_open_fd_common(fdio_t* iodir, const char* path, uint32_t
 
   int fd;
   if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-    fdio_get_ops(io)->close(io);
     fdio_release(io);
     return ZX_ERR_BAD_STATE;
   }

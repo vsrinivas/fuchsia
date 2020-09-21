@@ -749,18 +749,9 @@ static fdio_ops_t fdio_datagram_socket_ops = {
 
 static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = [](zxio_t* io) {
-    auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
-    zs->~zxio_datagram_socket_t();
-    return ZX_OK;
-  };
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
     zx_status_t channel_status = base_close(zs->client.channel());
-    // TODO(fxbug.dev/45407): When the syscall to detach a handle from its object is added,
-    // we should use that to mark the handle as detached, instead of closing
-    // the handle with risks of race behavior.
-    zs->event.reset();
     return channel_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -948,16 +939,12 @@ static fdio_ops_t fdio_stream_socket_ops = {
 
 static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = [](zxio_t* io) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    zxio_destroy(&zs->pipe.io);
-    zs->~zxio_stream_socket_t();
-    return ZX_OK;
-  };
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
     zx_status_t channel_status = base_close(zs->client.channel());
     zx_status_t aux_status = zxio_close(&zs->pipe.io);
+    zxio_close(&zs->pipe.io);
+    zs->~zxio_stream_socket_t();
     return channel_status != ZX_OK ? channel_status : aux_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {

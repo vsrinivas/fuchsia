@@ -26,19 +26,20 @@ __BEGIN_CDECLS
 // # Threading model
 //
 // Most operations on zxio_t objects can be called concurrently from any thread.
-// However, the caller needs to synchronize |zxio_destroy| and |zxio_release|
-// with other operations. Specifically, no operations may be called concurrently
-// with |zxio_destroy| or |zxio_release| on the same |zxio_t|.
+// However, the caller needs to synchronize |zxio_close| with other operations.
+// Specifically, no operations may be called concurrently with |zxio_close| on
+// the same |zxio_t|.
 typedef struct zxio_tag zxio_t;
 
 // Node
 
-// Attempt to destroy |io|.
+// Attempt to close |io|.
 //
-// Does not block.
+// Where applicable, waits for an acknowledgement from the server which may communicate any I/O
+// errors.
 //
 // Always consumes |io|.
-zx_status_t zxio_destroy(zxio_t* io);
+zx_status_t zxio_close(zxio_t* io);
 
 // Extracts the underlying |zx_handle_t| for |io| if one exists. Does not
 // terminate the connection with the server.
@@ -48,16 +49,6 @@ zx_status_t zxio_destroy(zxio_t* io);
 // Does not consume |io|. However, after this method returns, future I/O on this
 // object are guaranteed to return |ZX_ERR_BAD_HANDLE|.
 zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
-
-// Signals an intent to terminate connection with the server. Where applicable,
-// waits for an acknowledgement from the server which may communicate any I/O
-// errors.
-//
-// At the same time, attempts to interrupt any concurrent operation on |io|.
-//
-// Does not consume |io|. However, after this method returns, future I/O on this
-// object are guaranteed to return |ZX_ERR_BAD_HANDLE|.
-zx_status_t zxio_close(zxio_t* io);
 
 // Attempt to create a |zx_handle_t| that represents another session with |io|.
 //

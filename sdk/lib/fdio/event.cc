@@ -39,15 +39,13 @@ typedef struct fdio_event {
 static_assert(sizeof(fdio_event_t) <= sizeof(zxio_storage_t),
               "fdio_event_t must fit inside zxio_storage_t.");
 
-static zx_status_t fdio_event_destroy(zxio_t* io) {
+static zx_status_t fdio_event_close(zxio_t* io) {
   fdio_event_t* event = reinterpret_cast<fdio_event_t*>(io);
   zx_handle_t handle = event->handle;
   event->handle = ZX_HANDLE_INVALID;
   zx_handle_close(handle);
   return ZX_OK;
 }
-
-static zx_status_t fdio_event_close(zxio_t* io) { return ZX_OK; }
 
 static void fdio_event_update_signals(fdio_event_t* event) __TA_REQUIRES(event->lock) {
   zx_signals_t set_mask = ZX_SIGNAL_NONE;
@@ -178,7 +176,6 @@ static void fdio_event_wait_end(zxio_t* io, zx_signals_t zx_signals,
 
 static constexpr zxio_ops_t fdio_event_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.destroy = fdio_event_destroy;
   ops.close = fdio_event_close;
   ops.readv = fdio_event_readv;
   ops.writev = fdio_event_writev;
