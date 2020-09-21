@@ -334,7 +334,8 @@ class InterfaceMethod {
  public:
   friend class Interface;
 
-  const Interface& enclosing_interface() const { return enclosing_interface_; }
+  InterfaceMethod() = default;
+  const Interface& enclosing_interface() const { return *enclosing_interface_; }
   const std::string& name() const { return name_; }
   Ordinal64 ordinal() const { return ordinal_; }
   bool is_composed() const { return is_composed_; }
@@ -351,9 +352,16 @@ class InterfaceMethod {
     return response_.get();
   }
 
+  semantic::MethodSemantic* semantic() { return semantic_.get(); }
   const semantic::MethodSemantic* semantic() const { return semantic_.get(); }
   void set_semantic(std::unique_ptr<semantic::MethodSemantic> semantic) {
     semantic_ = std::move(semantic);
+  }
+
+  semantic::MethodDisplay* short_display() { return short_display_.get(); }
+  const semantic::MethodDisplay* short_display() const { return short_display_.get(); }
+  void set_short_display(std::unique_ptr<semantic::MethodDisplay> short_display) {
+    short_display_ = std::move(short_display);
   }
 
   std::string fully_qualified_name() const;
@@ -364,13 +372,14 @@ class InterfaceMethod {
  private:
   InterfaceMethod(const Interface& interface, const rapidjson::Value* json_definition);
 
-  const Interface& enclosing_interface_;
+  const Interface* const enclosing_interface_ = nullptr;
   const std::string name_;
-  const Ordinal64 ordinal_;
-  const bool is_composed_;
+  const Ordinal64 ordinal_ = 0;
+  const bool is_composed_ = false;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
   std::unique_ptr<semantic::MethodSemantic> semantic_;
+  std::unique_ptr<semantic::MethodDisplay> short_display_;
 };
 
 class Interface {

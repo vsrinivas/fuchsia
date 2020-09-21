@@ -305,7 +305,7 @@ class StructValue : public Value {
   StructValue* AsStructValue() override { return this; }
   const StructValue* AsStructValue() const override { return this; }
 
-  const Value* GetFieldValue(std::string_view field_name) const;
+  std::pair<const Type*, const Value*> GetFieldValue(std::string_view field_name) const;
 
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;

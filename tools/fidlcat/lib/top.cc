@@ -45,15 +45,24 @@ void Top::DisplayProcessContent(FidlcatPrinter& printer, Process* process) {
     sorted_protocols.emplace_back(protocol.second.get());
   }
   std::sort(sorted_protocols.begin(), sorted_protocols.end(), [](Protocol* left, Protocol* right) {
-    return left->event_count() > right->event_count();
+    return (left->event_count() > right->event_count()) ||
+           ((left->event_count() == right->event_count()) &&
+            ((left->interface() == nullptr) || (right->interface() == nullptr) ||
+             (left->interface()->name().compare(right->interface()->name()) < 0)));
   });
 
   const char* separator = "";
   // Displays all the protocols one after the other.
   for (const auto& protocol : sorted_protocols) {
     printer << separator;
-    printer << protocol->interface()->name() << ": " << protocol->event_count()
-            << ((protocol->event_count() == 1) ? " event" : " events") << '\n';
+    if (protocol->interface() == nullptr) {
+      printer << "unknown interfaces: "
+              << ": " << protocol->event_count()
+              << ((protocol->event_count() == 1) ? " event" : " events") << '\n';
+    } else {
+      printer << protocol->interface()->name() << ": " << protocol->event_count()
+              << ((protocol->event_count() == 1) ? " event" : " events") << '\n';
+    }
     fidl_codec::Indent indent(printer);
     DisplayProtocolContent(printer, protocol);
     separator = "\n";
@@ -65,13 +74,19 @@ void Top::DisplayProtocolContent(FidlcatPrinter& printer, Protocol* protocol) {
   for (const auto& method : protocol->methods()) {
     sorted_methods.emplace_back(method.second.get());
   }
-  std::sort(sorted_methods.begin(), sorted_methods.end(),
-            [](Method* left, Method* right) { return left->event_count() > right->event_count(); });
+  std::sort(sorted_methods.begin(), sorted_methods.end(), [](Method* left, Method* right) {
+    return (left->event_count() > right->event_count()) ||
+           ((left->event_count() == right->event_count()) &&
+            ((left->method() == nullptr) || (right->method() == nullptr) ||
+             (left->method()->name().compare(right->method()->name()) < 0)));
+  });
 
   // Displays all the methods one after the other.
   for (const auto& method : sorted_methods) {
-    printer << method->method()->name() << ": " << method->event_count()
-            << ((method->event_count() == 1) ? " event" : " events") << '\n';
+    if (method->method() != nullptr) {
+      printer << method->method()->name() << ": " << method->event_count()
+              << ((method->event_count() == 1) ? " event" : " events") << '\n';
+    }
     fidl_codec::Indent indent(printer);
     for (const auto event : method->events()) {
       event->Display(printer, /*with_channel=*/true);

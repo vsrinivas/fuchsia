@@ -522,9 +522,10 @@ TestGenerator::CollectArgumentsFromDecodedValue(const std::string& variable_pref
 
   for (const std::unique_ptr<fidl_codec::StructMember>& struct_member :
        struct_value->struct_definition().members()) {
-    const fidl_codec::Value* value = struct_value->GetFieldValue(struct_member->name());
+    std::pair<const fidl_codec::Type*, const fidl_codec::Value*> value =
+        struct_value->GetFieldValue(struct_member->name());
     fidl_codec::CppVisitor visitor(AcquireUniqueName(variable_prefix + struct_member->name()));
-    value->Visit(&visitor, struct_member->type());
+    value.second->Visit(&visitor, value.first);
 
     std::shared_ptr<fidl_codec::CppVariable> argument = visitor.result();
     cpp_vars.emplace_back(argument);

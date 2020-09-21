@@ -40,6 +40,8 @@ class BuiltinSemanticTest : public SemanticParserTest {
 
   void ExecuteRead(const MethodSemantic* method_semantic, const StructValue* request,
                    const StructValue* response);
+  void ShortDisplay(std::ostream& os, const MethodDisplay* display, const StructValue* request,
+                    const StructValue* response);
 
  protected:
   HandleSemantic handle_semantic_;
@@ -56,16 +58,46 @@ BuiltinSemanticTest::BuiltinSemanticTest()
 
 void BuiltinSemanticTest::ExecuteWrite(const MethodSemantic* method_semantic,
                                        const StructValue* request, const StructValue* response) {
-  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
-                                                ContextType::kWrite, request, response);
+  fidl_codec::semantic::AssignmentSemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
+                                                          ContextType::kWrite, request, response);
   method_semantic->ExecuteAssignments(&context);
 }
 
 void BuiltinSemanticTest::ExecuteRead(const MethodSemantic* method_semantic,
                                       const StructValue* request, const StructValue* response) {
-  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
-                                                ContextType::kRead, request, response);
+  fidl_codec::semantic::AssignmentSemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
+                                                          ContextType::kRead, request, response);
   method_semantic->ExecuteAssignments(&context);
+}
+
+void BuiltinSemanticTest::ShortDisplay(std::ostream& os, const MethodDisplay* display,
+                                       const StructValue* request, const StructValue* response) {
+  PrettyPrinter printer(os, WithoutColors, true, "", 100, false);
+  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, ZX_HANDLE_INVALID, request,
+                                                response);
+  bool first_argument = true;
+  for (const auto& expression : display->inputs()) {
+    if (first_argument) {
+      printer << '(';
+      first_argument = false;
+    } else {
+      printer << ", ";
+    }
+    expression->PrettyPrint(printer, &context);
+  }
+  if (!first_argument) {
+    printer << ')';
+  }
+  printer << '\n';
+  bool first_result = true;
+  for (const auto& expression : display->results()) {
+    printer << (first_result ? "-> " : ", ");
+    first_result = false;
+    expression->PrettyPrint(printer, &context);
+  }
+  if (!first_result) {
+    printer << '\n';
+  }
 }
 
 // Check Node::Clone: request.object = handle
@@ -239,6 +271,85 @@ TEST_F(BuiltinSemanticTest, CreateComponent) {
   ASSERT_EQ(inferred_handle_info_2->type(), "server-control");
   ASSERT_EQ(inferred_handle_info_2->path(),
             "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
+}
+
+// Check short display of Directory::Open.
+TEST_F(BuiltinSemanticTest, OpenShortDisplay) {
+  // Checks that Directory::Open exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Open");
+  ASSERT_NE(method, nullptr);
+  // Checks that the short display is defined for Open.
+  ASSERT_NE(method->short_display(), nullptr);
+
+  // This message (we only define the fields used by the display):
+  StructValue request(*method->request());
+  request.AddField("path", std::make_unique<StringValue>("fuchsia.sys.Launcher"));
+  request.AddField("object", std::make_unique<HandleValue>(channel0_));
+
+  std::stringstream os;
+  ShortDisplay(os, method->short_display(), &request, nullptr);
+  ASSERT_EQ(os.str(),
+            "(\"fuchsia.sys.Launcher\")\n"
+            "-> 00002000\n");
+}
+
+// Check short display of File::Seek.
+TEST_F(BuiltinSemanticTest, FileSeekShortDisplay) {
+  // Checks that Node::Clone exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/File", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Seek");
+  ASSERT_NE(method, nullptr);
+  // Checks that the short display is defined for Seek.
+  ASSERT_NE(method->short_display(), nullptr);
+
+  // This message (we only define the fields used by the display):
+  StructValue request(*method->request());
+  request.AddField("start", std::make_unique<IntegerValue>(0, false));
+  request.AddField("offset", std::make_unique<IntegerValue>(1000, false));
+
+  std::stringstream os;
+  ShortDisplay(os, method->short_display(), &request, nullptr);
+  ASSERT_EQ(os.str(), "(START, 1000)\n");
+}
+
+// Check short display of File::Write.
+TEST_F(BuiltinSemanticTest, FileWriteShortDisplay) {
+  // Checks that Node::Clone exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/File", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Write");
+  ASSERT_NE(method, nullptr);
+  // Checks that the short display is defined for Write.
+  ASSERT_NE(method->short_display(), nullptr);
+
+  // This message (we only define the fields used by the display):
+  StructValue request(*method->request());
+  auto vector = std::make_unique<VectorValue>();
+  vector->AddValue(std::make_unique<IntegerValue>(10, false));
+  vector->AddValue(std::make_unique<IntegerValue>(20, false));
+  vector->AddValue(std::make_unique<IntegerValue>(30, false));
+  vector->AddValue(std::make_unique<IntegerValue>(40, false));
+  vector->AddValue(std::make_unique<IntegerValue>(50, false));
+  request.AddField("data", std::move(vector));
+
+  std::stringstream os;
+  ShortDisplay(os, method->short_display(), &request, nullptr);
+  ASSERT_EQ(os.str(), "(5 bytes)\n");
 }
 
 }  // namespace semantic

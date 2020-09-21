@@ -92,6 +92,34 @@ TEST_F(SemanticParserTest, CheckAssignments) {
             "request.bar2 = handle : 'cloned'\n");
 }
 
+TEST_F(SemanticParserTest, CheckDisplay) {
+  std::string text =
+      "  input_field: request.path;\n"
+      "  result: request.object;\n"
+      "  input_field: request.data.size ' bytes';\n"
+      "  input_field: 'buffer of ' request.data.size ' bytes';\n"
+      "  input_field: 'size = ' request.data.size;\n"
+      "}\n";
+  InterfaceMethod method;
+  ParserErrors parser_errors;
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  while (!parser.IsEof()) {
+    parser.ParseMethod(&method);
+  }
+
+  ASSERT_NE(method.short_display(), nullptr);
+
+  std::stringstream ss;
+  method.short_display()->Dump(ss);
+  std::string result = ss.str();
+  ASSERT_EQ(result,
+            "input_field: request.path;\n"
+            "input_field: request.data.size \" bytes\";\n"
+            "input_field: \"buffer of \" request.data.size \" bytes\";\n"
+            "input_field: \"size = \" request.data.size;\n"
+            "result: request.object;\n");
+}
+
 TEST_F(SemanticParserTest, EmptyText) {
   std::string text = "";
   std::stringstream error_stream;
@@ -295,6 +323,86 @@ TEST_F(SemanticParserTest, MissingLeftBrace2) {
             "}\n"
             "^\n"
             "5:1: Keyword 'library' expected.\n");
+}
+
+TEST_F(SemanticParserTest, InputFieldColonExpected) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    input_field request.path;\n"
+      "    result: request.object;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    input_field request.path;\n"
+            "                ^\n"
+            "3:17: Symbol ':' expected.\n");
+}
+
+TEST_F(SemanticParserTest, ResultColonExpected) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    input_field: request.path;\n"
+      "    result request.object;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    result request.object;\n"
+            "           ^\n"
+            "4:12: Symbol ':' expected.\n");
+}
+
+TEST_F(SemanticParserTest, InputFieldSemiColonExpected) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    input_field: request.path\n"
+      "    result: request.object;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    result: request.object;\n"
+            "    ^\n"
+            "4:5: Symbol ';' expected.\n");
+}
+
+TEST_F(SemanticParserTest, ResultSemiColonExpected) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    input_field: request.path;\n"
+      "    result: request.object\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "  }\n"
+            "  ^\n"
+            "5:3: Symbol ';' expected.\n");
 }
 
 TEST_F(SemanticParserTest, AssignmentExpected) {

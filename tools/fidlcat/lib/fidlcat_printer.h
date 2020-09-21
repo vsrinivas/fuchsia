@@ -29,6 +29,10 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
   FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process, std::ostream& os,
                  std::string_view line_header, int tabulations = 0);
 
+  const Inference& inference() const { return inference_; }
+
+  Process* process() const { return process_; }
+
   bool display_stack_frame() const { return display_stack_frame_; }
 
   bool DumpMessages() const override { return dump_messages_; }

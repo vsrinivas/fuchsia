@@ -294,14 +294,69 @@ void SemanticParser::ParseLibrary() {
       NextLexicalToken();
       return;
     }
-    auto method_semantic = std::make_unique<MethodSemantic>();
-    while (!ConsumeRightBrace() && !IsEof()) {
-      ParseAssignment(method_semantic.get());
-    }
-    if (method != nullptr) {
-      method->set_semantic(std::move(method_semantic));
+    ParseMethod(method);
+  }
+}
+
+void SemanticParser::ParseMethod(InterfaceMethod* method) {
+  while (!ConsumeRightBrace() && !IsEof()) {
+    if (Is("input_field")) {
+      NextLexicalToken();
+      ParseColon();
+      std::unique_ptr<DisplayExpression> expression = ParseDisplayExpression();
+      if (method != nullptr) {
+        MethodDisplay* display = method->short_display();
+        if (display == nullptr) {
+          method->set_short_display(std::make_unique<MethodDisplay>());
+          display = method->short_display();
+        }
+        display->AddInput(std::move(expression));
+      }
+      if (!ParseSemicolon()) {
+        SkipSemicolon();
+      }
+    } else if (Is("result")) {
+      NextLexicalToken();
+      ParseColon();
+      std::unique_ptr<DisplayExpression> expression = ParseDisplayExpression();
+      if (method != nullptr) {
+        MethodDisplay* display = method->short_display();
+        if (display == nullptr) {
+          method->set_short_display(std::make_unique<MethodDisplay>());
+          display = method->short_display();
+        }
+        display->AddResult(std::move(expression));
+      }
+      if (!ParseSemicolon()) {
+        SkipSemicolon();
+      }
+    } else {
+      MethodSemantic* method_semantic = nullptr;
+      if (method != nullptr) {
+        method_semantic = method->semantic();
+        if (method_semantic == nullptr) {
+          method->set_semantic(std::make_unique<MethodSemantic>());
+          method_semantic = method->semantic();
+        }
+      }
+      ParseAssignment(method_semantic);
     }
   }
+}
+
+std::unique_ptr<DisplayExpression> SemanticParser::ParseDisplayExpression() {
+  auto display_expression = std::make_unique<DisplayExpression>();
+  if (IsString()) {
+    display_expression->set_header(ConsumeString());
+  }
+  std::unique_ptr<Expression> expression = ParseExpression();
+  if (expression != nullptr) {
+    display_expression->set_expression(std::move(expression));
+  }
+  if (IsString()) {
+    display_expression->set_footer(ConsumeString());
+  }
+  return display_expression;
 }
 
 void SemanticParser::ParseAssignment(MethodSemantic* method_semantic) {
@@ -321,7 +376,9 @@ void SemanticParser::ParseAssignment(MethodSemantic* method_semantic) {
     SkipSemicolon();
     return;
   }
-  method_semantic->AddAssignment(std::move(destination), std::move(source));
+  if (method_semantic != nullptr) {
+    method_semantic->AddAssignment(std::move(destination), std::move(source));
+  }
   if (!ParseSemicolon()) {
     SkipSemicolon();
   }

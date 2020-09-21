@@ -14,6 +14,7 @@
 
 namespace fidl_codec {
 
+class InterfaceMethod;
 class LibraryLoader;
 
 namespace semantic {
@@ -191,6 +192,7 @@ class SemanticParser {
   bool ParseRightBrace() { return Parse(LexicalToken::kRightBrace, "}"); }
   bool ParseLeftParenthesis() { return Parse(LexicalToken::kLeftParenthesis, "("); }
   bool ParseRightParenthesis() { return Parse(LexicalToken::kRightParenthesis, ")"); }
+  bool ParseColon() { return Parse(LexicalToken::kColon, ":"); }
   bool ParseColonColon() { return Parse(LexicalToken::kColonColon, "::"); }
   bool ParseComma() { return Parse(LexicalToken::kComma, ","); }
   bool ParseEqual() { return Parse(LexicalToken::kEqual, "="); }
@@ -204,6 +206,10 @@ class SemanticParser {
   void ParseSemantic();
   // Parses a library block.
   void ParseLibrary();
+  // Parses a method (semantic rules and short displays).
+  void ParseMethod(InterfaceMethod* method);
+  // Parses an expression to display.
+  std::unique_ptr<DisplayExpression> ParseDisplayExpression();
   // Parses an assignment (that is a semantic rule).
   void ParseAssignment(MethodSemantic* method_semantic);
   // Parses an expression.

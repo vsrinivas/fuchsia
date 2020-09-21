@@ -18,7 +18,7 @@ namespace semantic {
 void ExpressionStringLiteral::Dump(std::ostream& os) const { os << '\'' << value_ << '\''; }
 
 bool ExpressionStringLiteral::Execute(SemanticContext* context, ExpressionValue* result) const {
-  result->set(value_);
+  result->set_string(value_);
   return true;
 }
 
@@ -28,14 +28,14 @@ bool ExpressionRequest::Execute(SemanticContext* context, ExpressionValue* resul
   if (context->request() == nullptr) {
     return false;
   }
-  result->set(context->request());
+  result->set_value(nullptr, context->request());
   return true;
 }
 
 void ExpressionHandle::Dump(std::ostream& os) const { os << "handle"; }
 
 bool ExpressionHandle::Execute(SemanticContext* context, ExpressionValue* result) const {
-  result->set(context->handle());
+  result->set_handle(context->handle());
   return true;
 }
 
@@ -49,10 +49,10 @@ bool ExpressionHandleDescription::Execute(SemanticContext* context, ExpressionVa
   if (!type_->Execute(context, &type) || !path_->Execute(context, &path)) {
     return false;
   }
-  if (!type.string() || !path.string()) {
+  if ((type.kind() != ExpressionValue::kString) || (path.kind() != ExpressionValue::kString)) {
     return false;
   }
-  result->set(*type.string(), -1, *path.string(), "");
+  result->set_inferred_handle_info(type.string(), -1, path.string(), "");
   return true;
 }
 
@@ -63,20 +63,32 @@ bool ExpressionFieldAccess::Execute(SemanticContext* context, ExpressionValue* r
   if (!expression_->Execute(context, &value)) {
     return false;
   }
-  if (value.value() != nullptr) {
+  if (value.kind() == ExpressionValue::kValue) {
     const StructValue* struct_value = value.value()->AsStructValue();
     if (struct_value != nullptr) {
-      const Value* field_value = struct_value->GetFieldValue(field_);
-      if (field_value == nullptr) {
+      std::pair<const Type*, const Value*> field_value = struct_value->GetFieldValue(field_);
+      if (field_value.second == nullptr) {
         return false;
       }
-      const StringValue* string = field_value->AsStringValue();
+      const StringValue* string = field_value.second->AsStringValue();
       if (string == nullptr) {
-        result->set(field_value);
+        result->set_value(field_value.first, field_value.second);
       } else {
-        result->set(string->string());
+        result->set_string(string->string());
       }
       return true;
+    }
+    if (field_ == "size") {
+      const StringValue* string_value = value.value()->AsStringValue();
+      if (string_value != nullptr) {
+        result->set_integer(string_value->string().size());
+        return true;
+      }
+      const VectorValue* vector_value = value.value()->AsVectorValue();
+      if (vector_value != nullptr) {
+        result->set_integer(vector_value->values().size());
+        return true;
+      }
     }
   }
   return false;
@@ -90,36 +102,41 @@ bool ExpressionSlash::Execute(SemanticContext* context, ExpressionValue* result)
   if (!left_->Execute(context, &left_value) || !right_->Execute(context, &right_value)) {
     return false;
   }
-  const InferredHandleInfo* inferred_handle_info = left_value.inferred_handle_info();
-  if ((inferred_handle_info == nullptr) && (left_value.handle() != ZX_HANDLE_INVALID)) {
+  const InferredHandleInfo* inferred_handle_info = nullptr;
+  if (left_value.kind() == ExpressionValue::kInferredHandleInfo) {
+    inferred_handle_info = left_value.inferred_handle_info();
+  }
+  if (left_value.kind() == ExpressionValue::kHandle) {
     inferred_handle_info =
         context->handle_semantic()->GetInferredHandleInfo(context->pid(), left_value.handle());
   }
   if (inferred_handle_info == nullptr) {
     return false;
   }
-  if (right_value.string()) {
+  if (right_value.kind() == ExpressionValue::kString) {
     if (inferred_handle_info->path().empty()) {
-      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), *right_value.string(),
-                  inferred_handle_info->attributes());
+      result->set_inferred_handle_info(inferred_handle_info->type(), inferred_handle_info->fd(),
+                                       right_value.string(), inferred_handle_info->attributes());
       return true;
     }
-    if (*right_value.string() == ".") {
-      result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
-                  inferred_handle_info->path(), inferred_handle_info->attributes());
+    if (right_value.string() == ".") {
+      result->set_inferred_handle_info(inferred_handle_info->type(), inferred_handle_info->fd(),
+                                       inferred_handle_info->path(),
+                                       inferred_handle_info->attributes());
       return true;
     }
-    std::string path(*right_value.string());
+    std::string path(right_value.string());
     if (path.find("./") == 0) {
       path.erase(0, 2);
     }
     if (inferred_handle_info->path() == "/") {
-      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), "/" + path,
-                  inferred_handle_info->attributes());
+      result->set_inferred_handle_info(inferred_handle_info->type(), inferred_handle_info->fd(),
+                                       "/" + path, inferred_handle_info->attributes());
       return true;
     }
-    result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
-                inferred_handle_info->path() + "/" + path, inferred_handle_info->attributes());
+    result->set_inferred_handle_info(inferred_handle_info->type(), inferred_handle_info->fd(),
+                                     inferred_handle_info->path() + "/" + path,
+                                     inferred_handle_info->attributes());
     return true;
   }
   return false;
@@ -133,23 +150,26 @@ bool ExpressionColon::Execute(SemanticContext* context, ExpressionValue* result)
   if (!left_->Execute(context, &left_value) || !right_->Execute(context, &right_value)) {
     return false;
   }
-  const InferredHandleInfo* inferred_handle_info = left_value.inferred_handle_info();
-  if ((inferred_handle_info == nullptr) && (left_value.handle() != ZX_HANDLE_INVALID)) {
+  const InferredHandleInfo* inferred_handle_info = nullptr;
+  if (left_value.kind() == ExpressionValue::kInferredHandleInfo) {
+    inferred_handle_info = left_value.inferred_handle_info();
+  }
+  if (left_value.kind() == ExpressionValue::kHandle) {
     inferred_handle_info =
         context->handle_semantic()->GetInferredHandleInfo(context->pid(), left_value.handle());
   }
   if (inferred_handle_info == nullptr) {
     return false;
   }
-  if (right_value.string()) {
+  if (right_value.kind() == ExpressionValue::kString) {
     if (inferred_handle_info->attributes().empty()) {
-      result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
-                  inferred_handle_info->path(), *right_value.string());
+      result->set_inferred_handle_info(inferred_handle_info->type(), inferred_handle_info->fd(),
+                                       inferred_handle_info->path(), right_value.string());
       return true;
     }
-    result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
-                inferred_handle_info->path(),
-                inferred_handle_info->attributes() + ", " + std::string(*right_value.string()));
+    result->set_inferred_handle_info(
+        inferred_handle_info->type(), inferred_handle_info->fd(), inferred_handle_info->path(),
+        inferred_handle_info->attributes() + ", " + std::string(right_value.string()));
     return true;
   }
   return false;
@@ -157,7 +177,7 @@ bool ExpressionColon::Execute(SemanticContext* context, ExpressionValue* result)
 
 void Assignment::Dump(std::ostream& os) const { os << *destination_ << " = " << *source_ << '\n'; }
 
-void Assignment::Execute(SemanticContext* context) const {
+void Assignment::Execute(AssignmentSemanticContext* context) const {
   ExpressionValue destination_value;
   ExpressionValue source_value;
   if (!destination_->Execute(context, &destination_value) ||
@@ -205,9 +225,50 @@ void MethodSemantic::Dump(std::ostream& os) const {
   }
 }
 
-void MethodSemantic::ExecuteAssignments(SemanticContext* context) const {
+void MethodSemantic::ExecuteAssignments(AssignmentSemanticContext* context) const {
   for (const auto& assignment : assignments_) {
     assignment->Execute(context);
+  }
+}
+
+void DisplayExpression::Dump(std::ostream& os) const {
+  if (!header_.empty()) {
+    os << " \"" << header_ << '"';
+  }
+  if (expression_ != nullptr) {
+    os << ' ';
+    expression_->Dump(os);
+  }
+  if (!footer_.empty()) {
+    os << " \"" << footer_ << '"';
+  }
+}
+
+void DisplayExpression::PrettyPrint(PrettyPrinter& printer, SemanticContext* context) {
+  if (!header_.empty()) {
+    printer << header_;
+  }
+  if (expression_ != nullptr) {
+    fidl_codec::semantic::ExpressionValue value;
+    expression_->Execute(context, &value);
+    value.UseLinkedHandle(context);
+    value.PrettyPrint(printer);
+  }
+  if (!footer_.empty()) {
+    printer << footer_;
+  }
+}
+
+void MethodDisplay::Dump(std::ostream& os) const {
+  for (const auto& input : inputs_) {
+    os << "input_field:";
+    input->Dump(os);
+    os << ";\n";
+  }
+  for (const auto& result : results_) {
+    os << "result:";
+    result->Dump(os);
+    os << ";\n";
   }
 }
 
@@ -268,6 +329,48 @@ void InferredHandleInfo::Display(PrettyPrinter& printer) const {
     if (!attributes_.empty()) {
       printer << " [" << Blue << attributes_ << ResetColor << ']';
     }
+  }
+}
+
+void ExpressionValue::UseLinkedHandle(const SemanticContext* context) {
+  if (kind_ == kValue) {
+    auto handle_value = value_->AsHandleValue();
+    if (handle_value != nullptr) {
+      set_handle(handle_value->handle().handle);
+    }
+  }
+  if (kind_ == kHandle) {
+    if (handle_ != ZX_HANDLE_INVALID) {
+      zx_handle_t linked_handle =
+          context->handle_semantic()->GetLinkedHandle(context->pid(), handle_);
+      if (linked_handle != ZX_HANDLE_INVALID) {
+        handle_ = linked_handle;
+      }
+    }
+  }
+}
+
+void ExpressionValue::PrettyPrint(PrettyPrinter& printer) {
+  switch (kind_) {
+    case kUndefined:
+      break;
+    case kValue:
+      value_->PrettyPrint(value_type_, printer);
+      break;
+    case kHandle: {
+      zx_handle_info_t handle_info{.handle = handle_};
+      printer.DisplayHandle(handle_info);
+      break;
+    }
+    case kInferredHandleInfo:
+      inferred_handle_info_->Display(printer);
+      break;
+    case kString:
+      printer << Red << '"' << string_ << '"' << ResetColor;
+      break;
+    case kInteger:
+      printer << Blue << integer_ << ResetColor;
+      break;
   }
 }
 

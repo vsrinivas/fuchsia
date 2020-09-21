@@ -16,6 +16,15 @@ std::string builtin_semantic_fuchsia_io =
     "  }\n"
     "  Directory::Open {\n"
     "    request.object = handle / request.path;\n"
+    "    input_field: request.path;\n"
+    "    result: request.object;\n"
+    "  }\n"
+    "  File::Seek {\n"
+    "    input_field: request.start;\n"
+    "    input_field: request.offset;\n"
+    "  }\n"
+    "  File::Write {\n"
+    "    input_field: request.data.size ' bytes';\n"
     "  }\n"
     "}\n";
 

@@ -160,7 +160,7 @@ void Inference::InferMessage(const OutputEvent* event,
         }
         break;
     }
-    fidl_codec::semantic::SemanticContext context(
+    fidl_codec::semantic::AssignmentSemanticContext context(
         this, event->thread()->process()->koid(), event->thread()->koid(),
         handle_value->handle().handle, context_type, request, response);
     semantic->ExecuteAssignments(&context);

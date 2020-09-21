@@ -271,7 +271,7 @@ void Table::DecodeTypes() {
 
 InterfaceMethod::InterfaceMethod(const Interface& interface,
                                  const rapidjson::Value* json_definition)
-    : enclosing_interface_(interface),
+    : enclosing_interface_(&interface),
       name_(interface.enclosing_library()->ExtractString(json_definition, "method", "<unknown>",
                                                          "name")),
       ordinal_(interface.enclosing_library()->ExtractUint64(json_definition, "method", name_,
@@ -289,7 +289,7 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
 }
 
 std::string InterfaceMethod::fully_qualified_name() const {
-  std::string fqn(enclosing_interface_.name());
+  std::string fqn(enclosing_interface_->name());
   fqn.append(".");
   fqn.append(name());
   return fqn;

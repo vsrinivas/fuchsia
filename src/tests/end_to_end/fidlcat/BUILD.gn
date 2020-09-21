@@ -77,6 +77,7 @@ if (is_host) {
       "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
       "$host_tools_dir/fidlcat",
       "${target_gen_dir}/echo_client_cpp.debug",
+      "//src/tests/end_to_end/fidlcat/bugreport.proto",
       "//src/tests/end_to_end/fidlcat/echo.proto",
       "//src/tests/end_to_end/fidlcat/echo_client.proto",
       "//src/tests/end_to_end/fidlcat/echo_client_sync.proto",

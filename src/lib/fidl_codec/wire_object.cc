@@ -183,13 +183,13 @@ void UnionValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitUnionValue(this, for_type);
 }
 
-const Value* StructValue::GetFieldValue(std::string_view field_name) const {
+std::pair<const Type*, const Value*> StructValue::GetFieldValue(std::string_view field_name) const {
   for (const auto& field : fields_) {
     if (field.first->name() == field_name) {
-      return field.second.get();
+      return std::make_pair(field.first->type(), field.second.get());
     }
   }
-  return nullptr;
+  return std::make_pair(nullptr, nullptr);
 }
 
 void StructValue::AddField(std::string_view name, uint32_t id, std::unique_ptr<Value> value) {

@@ -18,6 +18,7 @@ namespace fidl_codec {
 
 class Value;
 class StructValue;
+class Type;
 
 namespace semantic {
 
@@ -30,39 +31,52 @@ enum class ContextType { kRead, kWrite, kCall };
 // Context used during the execution of semantic rules.
 class SemanticContext {
  public:
-  SemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_koid_t tid, zx_handle_t handle,
-                  ContextType type, const StructValue* request, const StructValue* response)
+  SemanticContext(const HandleSemantic* handle_semantic, zx_koid_t pid, zx_handle_t handle,
+                  const StructValue* request, const StructValue* response)
       : handle_semantic_(handle_semantic),
         pid_(pid),
-        tid_(tid),
         handle_(handle),
-        type_(type),
         request_(request),
         response_(response) {}
 
-  HandleSemantic* handle_semantic() const { return handle_semantic_; }
+  const HandleSemantic* handle_semantic() const { return handle_semantic_; }
   zx_koid_t pid() const { return pid_; }
-  zx_koid_t tid() const { return tid_; }
   zx_handle_t handle() const { return handle_; }
-  ContextType type() const { return type_; }
   const StructValue* request() const { return request_; }
   const StructValue* response() const { return response_; }
 
  private:
   // The semantic rules for the FIDL method.
-  HandleSemantic* const handle_semantic_;
+  const HandleSemantic* const handle_semantic_;
   // The process id.
   const zx_koid_t pid_;
-  // The thread id.
-  const zx_koid_t tid_;
   // The handle we are reading/writing on.
   const zx_handle_t handle_;
-  // The context type.
-  const ContextType type_;
   // The request (can be null).
   const StructValue* const request_;
   // The response (can be null).
   const StructValue* const response_;
+};
+
+// Context used during the execution of semantic rules.
+class AssignmentSemanticContext : public SemanticContext {
+ public:
+  AssignmentSemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_koid_t tid,
+                            zx_handle_t handle, ContextType type, const StructValue* request,
+                            const StructValue* response)
+      : SemanticContext(handle_semantic, pid, handle, request, response), tid_(tid), type_(type) {}
+
+  zx_koid_t tid() const { return tid_; }
+  ContextType type() const { return type_; }
+  HandleSemantic* handle_semantic() const {
+    return const_cast<HandleSemantic*>(SemanticContext::handle_semantic());
+  }
+
+ private:
+  // The thread id.
+  const zx_koid_t tid_;
+  // The context type.
+  const ContextType type_;
 };
 
 // Base class for all expressions (for semantic).
@@ -177,7 +191,7 @@ class Assignment {
       : destination_(std::move(destination)), source_(std::move(source)) {}
 
   void Dump(std::ostream& os) const;
-  void Execute(SemanticContext* context) const;
+  void Execute(AssignmentSemanticContext* context) const;
 
  private:
   const std::unique_ptr<Expression> destination_;
@@ -196,10 +210,55 @@ class MethodSemantic {
   }
 
   void Dump(std::ostream& os) const;
-  void ExecuteAssignments(SemanticContext* context) const;
+  void ExecuteAssignments(AssignmentSemanticContext* context) const;
 
  private:
   std::vector<std::unique_ptr<Assignment>> assignments_;
+};
+
+// Defines an expression to be displayed.
+class DisplayExpression {
+ public:
+  DisplayExpression() = default;
+
+  void set_header(std::string&& header) { header_ = std::move(header); }
+
+  void set_expression(std::unique_ptr<Expression> expression) {
+    expression_ = std::move(expression);
+  }
+
+  void set_footer(std::string&& footer) { footer_ = std::move(footer); }
+
+  void Dump(std::ostream& os) const;
+  void PrettyPrint(PrettyPrinter& printer, SemanticContext* context);
+
+ private:
+  std::string header_;
+  std::unique_ptr<Expression> expression_;
+  std::string footer_;
+};
+
+// Defines what needs to be display for a method. This is used to display short views of methods.
+class MethodDisplay {
+ public:
+  MethodDisplay() = default;
+
+  const std::vector<std::unique_ptr<DisplayExpression>>& inputs() const { return inputs_; }
+  const std::vector<std::unique_ptr<DisplayExpression>>& results() const { return results_; }
+
+  void AddInput(std::unique_ptr<DisplayExpression> input) {
+    inputs_.emplace_back(std::move(input));
+  }
+
+  void AddResult(std::unique_ptr<DisplayExpression> result) {
+    results_.emplace_back(std::move(result));
+  }
+
+  void Dump(std::ostream& os) const;
+
+ private:
+  std::vector<std::unique_ptr<DisplayExpression>> inputs_;
+  std::vector<std::unique_ptr<DisplayExpression>> results_;
 };
 
 // Holds the information we have inferred for a handle.
@@ -371,32 +430,81 @@ class HandleSemantic {
   std::map<zx_koid_t, zx_koid_t> linked_koids_;
 };
 
-// Holds the evaluation of an expression. Only one of the three fields can be defined.
+// Holds the evaluation of an expression. The value depends on kind_.
 class ExpressionValue {
  public:
-  ExpressionValue() : inferred_handle_info_() {}
+  ExpressionValue() = default;
 
-  void set(const Value* value) { value_ = value; }
-  void set(zx_handle_t handle) { handle_ = handle; }
-  void set(std::string_view type, int64_t fd, std::string_view path, std::string_view attributes) {
+  enum Kind { kUndefined, kValue, kHandle, kInferredHandleInfo, kString, kInteger };
+  void set_value(const Type* value_type, const Value* value) {
+    FX_DCHECK(value != nullptr);
+    kind_ = kValue;
+    value_type_ = value_type;
+    value_ = value;
+  }
+  void set_handle(zx_handle_t handle) {
+    kind_ = kHandle;
+    handle_ = handle;
+  }
+  void set_inferred_handle_info(std::string_view type, int64_t fd, std::string_view path,
+                                std::string_view attributes) {
+    kind_ = kInferredHandleInfo;
     inferred_handle_info_ = std::make_unique<InferredHandleInfo>(type, fd, path, attributes);
   }
-  void set(const std::string& string) { string_ = string; }
+  void set_string(const std::string& string) {
+    kind_ = kString;
+    string_ = string;
+  }
+  void set_integer(int64_t integer) {
+    kind_ = kInteger;
+    integer_ = integer;
+  }
 
-  const Value* value() const { return value_; }
-  zx_handle_t handle() const { return handle_; }
-  const InferredHandleInfo* inferred_handle_info() const { return inferred_handle_info_.get(); }
-  const std::optional<std::string>& string() const { return string_; }
+  Kind kind() const { return kind_; }
+  const Type* value_type() const {
+    FX_DCHECK(kind_ == kValue);
+    return value_type_;
+  }
+  const Value* value() const {
+    FX_DCHECK(kind_ == kValue);
+    return value_;
+  }
+  zx_handle_t handle() const {
+    FX_DCHECK(kind_ == kHandle);
+    return handle_;
+  }
+  const InferredHandleInfo* inferred_handle_info() const {
+    FX_DCHECK(kind_ == kInferredHandleInfo);
+    return inferred_handle_info_.get();
+  }
+  const std::string& string() const {
+    FX_DCHECK(kind_ == kString);
+    return string_;
+  }
+  int64_t integer() const {
+    FX_DCHECK(kind_ == kInteger);
+    return integer_;
+  }
+
+  // If the value is a handle and if the handle is linked then the value is assigned with the
+  // linked handle.
+  void UseLinkedHandle(const SemanticContext* context);
+
+  void PrettyPrint(PrettyPrinter& printer);
 
  private:
-  // If not null, the value is a FIDL value.
+  Kind kind_ = kUndefined;
+  // If kind is kValue, value_ is a FIDL value with the type value_type_.
+  const Type* value_type_ = nullptr;
   const Value* value_ = nullptr;
-  // If not ZX_HANDLE_INVALID, the value is a handle.
+  // If kind is kHandle, handle_ is a handle.
   zx_handle_t handle_ = ZX_HANDLE_INVALID;
-  // If not null, the value is a inferred handle info.
+  // If kind is kInferredHandleInfo, inferred_handle_info_ is a inferred handle info.
   std::unique_ptr<InferredHandleInfo> inferred_handle_info_;
-  // A string.
-  std::optional<std::string> string_;
+  // If kind is kString, string_ is a string.
+  std::string string_;
+  // If kind is kInteger, integer_ is an integer.
+  int64_t integer_ = 0;
 };
 
 }  // namespace semantic

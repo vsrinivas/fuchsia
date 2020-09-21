@@ -295,12 +295,56 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
               << fidl_codec::ResetColor;
     }
   }
+  bool first_argument = true;
   if (with_channel && (invoked_event()->handle_info() != nullptr)) {
     printer << '(';
     printer.DisplayHandleInfo(invoked_event()->handle_info());
+    first_argument = false;
+  }
+  if ((method != nullptr) && (method->short_display() != nullptr)) {
+    fidl_codec::Indent indent(printer);
+    const fidl_codec::StructValue* request = (syscall()->kind() == SyscallKind::kChannelRead)
+                                                 ? GetMessage()->decoded_request()
+                                                 : invoked_event()->GetMessage()->decoded_request();
+    fidl_codec::semantic::SemanticContext context(&printer.inference(), printer.process()->koid(),
+                                                  (invoked_event()->handle_info() == nullptr)
+                                                      ? ZX_HANDLE_INVALID
+                                                      : invoked_event()->handle_info()->handle(),
+                                                  request, nullptr);
+    for (const auto& expression : method->short_display()->inputs()) {
+      if (first_argument) {
+        printer << '(';
+        first_argument = false;
+      } else {
+        printer << ", ";
+      }
+      expression->PrettyPrint(printer, &context);
+    }
+  }
+  if (!first_argument) {
     printer << ')';
   }
   printer << '\n';
+  if ((method != nullptr) && (method->short_display() != nullptr)) {
+    fidl_codec::Indent indent(printer);
+    const fidl_codec::StructValue* request = (syscall()->kind() == SyscallKind::kChannelRead)
+                                                 ? GetMessage()->decoded_request()
+                                                 : invoked_event()->GetMessage()->decoded_request();
+    fidl_codec::semantic::SemanticContext context(&printer.inference(), printer.process()->koid(),
+                                                  (invoked_event()->handle_info() == nullptr)
+                                                      ? ZX_HANDLE_INVALID
+                                                      : invoked_event()->handle_info()->handle(),
+                                                  request, nullptr);
+    bool first_result = true;
+    for (const auto& expression : method->short_display()->results()) {
+      printer << (first_result ? "-> " : ", ");
+      first_result = false;
+      expression->PrettyPrint(printer, &context);
+    }
+    if (!first_result) {
+      printer << '\n';
+    }
+  }
 }
 
 void OutputEvent::PrettyPrint(FidlcatPrinter& printer) const {

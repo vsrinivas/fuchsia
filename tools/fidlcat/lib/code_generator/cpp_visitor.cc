@@ -56,11 +56,11 @@ void CppVariableStruct::GenerateInitialization(PrettyPrinter& printer, const cha
 
   for (const std::unique_ptr<fidl_codec::StructMember>& struct_member :
        value()->AsStructValue()->struct_definition().members()) {
-    const fidl_codec::Value* member_value =
+    std::pair<const fidl_codec::Type*, const fidl_codec::Value*> member_value =
         value()->AsStructValue()->GetFieldValue(struct_member->name());
 
     CppVisitor visitor(name() + "_" + struct_member->name());
-    member_value->Visit(&visitor, struct_member->type());
+    member_value.second->Visit(&visitor, struct_member->type());
 
     auto member = visitor.result();
     member->GenerateInitialization(printer);
