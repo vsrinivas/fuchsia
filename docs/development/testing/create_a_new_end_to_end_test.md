@@ -239,7 +239,7 @@ currently running FEMU or the `fx serve` command.
 In a new terminal, run the `my_new_e2e_test` end-to-end test:
 
 ```posix-terminal
-fx run-e2e-tests my_new_e2e_test
+fx test --e2e my_new_e2e_test
 ```
 
 This test prints the following output:
@@ -247,15 +247,13 @@ This test prints the following output:
 ```none
 ...
 
-<< running host_x64/my_new_e2e_test >>
 00:00 +0: my_new_e2e_test tests hello world
 
 Printed "Hello world!" in the device's log.
 
 00:02 +1: All tests passed!
 
-
-1 of 1 test passed
+...
 ```
 
 To scan the device’s log for the `Hello world!` string, run the `fx log` command
@@ -306,11 +304,11 @@ Use the following resources for writing new tests:
 
 ## Update and run the test {#update-and-run-the-test}
 
-After editing the test’s source code, use the `fx run-e2e-tests` command to run
+After editing the test’s source code, use the `fx test --e2e` command to run
 the updated version of the test, for example:
 
 ```posix-terminal
-fx run-e2e-tests my_new_e2e_test
+fx test --e2e my_new_e2e_test
 ```
 
 When this command detects any changes in the test’s source code, the command

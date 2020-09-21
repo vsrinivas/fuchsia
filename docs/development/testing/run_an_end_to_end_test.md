@@ -111,31 +111,31 @@ currently running FEMU or the `fx serve` command.
 Run the `screen_is_not_black_no_basemgr_test` end-to-end test:
 
 ```posix-terminal
-fx run-e2e-tests screen_is_not_black_no_basemgr_test
+fx test --e2e screen_is_not_black_no_basemgr_test
 ```
 
-When the test passes, this `fx` command prints the following output in the end:
+When the test passes, this command prints output similar to the
+following:
 
 ```none
-Saw a screen that is not black.
+Saw a screen that is not black; waiting for 0:00:59.924543 now.
+
+...
 
 [FINE]: Running over ssh: killall sl4f.cmx
-01:04 +1: All tests passed!
-
-
-1 of 1 test passed
+01:46 +1: All tests passed!
 ```
 
 ## General instructions {:#general-instructions}
 
 ### Run any end-to-end test {#run-any-end-to-end-test}
 
-Use the `fx run-e2e-tests` command to run an end-to-end test from your host
+Use the `fx test --e2e` command to run an end-to-end test from your host
 machine:
 
-<pre class="prettyprint">
-<code class="devsite-terminal">fx run-e2e-tests <var>TEST_NAME</var></code>
-</pre>
+```posix-terminal
+fx test --e2e <TEST_NAME>
+```
 
 Some product configurations may include a set of end-to-end tests by default
 (see [Examine product configuration files](#examine-product-configuration-files)).
@@ -143,9 +143,9 @@ However, if you want to run an end-to-end test that is not part of your
 product configuration, configure your Fuchsia image to include the specific
 test:
 
-<pre class="prettyprint">
-<code class="devsite-terminal">fx set <var>PRODUCT</var>.<var>BOARD</var> --with <var>TEST_DIRECTORY</var>:<var>TARGET</var></code>
-</pre>
+```posix-terminal
+fx set <PRODUCT>.<BOARD> --with <TEST_DIRECTORY>:<TARGET>
+```
 
 For example, the following commands configure and build your Fuchsia image
 with all the end-to-end tests in the
@@ -200,7 +200,6 @@ cache_package_labels += [
 universe_package_labels += [
   "//src/tests/end_to_end/screen_is_not_black:no_basemgr_test",
   "//src/tests/end_to_end/sl4f:test",
-  "//src/tests/end_to_end/audio_record:test",
   "//src/tests/end_to_end/perf:test",
   ...
 ]
