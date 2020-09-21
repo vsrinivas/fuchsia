@@ -295,10 +295,9 @@ static void gic_handle_irq(iframe_t* frame) {
                 Thread::Current::Get(), vector, (uintptr_t)IFRAME_PC(frame));
 
   // deliver the interrupt
-  struct int_handler_struct* handler = pdev_get_int_handler(vector);
-  interrupt_eoi eoi = IRQ_EOI_DEACTIVATE;
-  if (handler->handler) {
-    eoi = handler->handler(handler->arg);
+  interrupt_eoi eoi;
+  if (!pdev_invoke_int_if_present(vector, &eoi)) {
+    eoi = IRQ_EOI_DEACTIVATE;
   }
   GICREG(0, GICC_EOIR) = iar;
   if (eoi == IRQ_EOI_DEACTIVATE) {

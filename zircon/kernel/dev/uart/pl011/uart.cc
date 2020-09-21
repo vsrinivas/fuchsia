@@ -108,7 +108,7 @@ static void pl011_uart_init(const void* driver_data, uint32_t length) {
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // assumes interrupts are contiguous
-  zx_status_t status = register_int_handler(uart_irq, &pl011_uart_irq, NULL);
+  zx_status_t status = register_permanent_int_handler(uart_irq, &pl011_uart_irq, NULL);
   DEBUG_ASSERT(status == ZX_OK);
 
   // clear all irqs

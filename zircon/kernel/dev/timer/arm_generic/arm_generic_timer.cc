@@ -318,7 +318,7 @@ static void arm_generic_timer_init(uint32_t freq_override) {
   platform_set_ticks_to_time_ratio(arm_generic_timer_compute_conversion_factors<true>(cntfrq));
 
   LTRACEF("register irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
-  zx_status_t status = register_int_handler(timer_irq, &platform_tick, NULL);
+  zx_status_t status = register_permanent_int_handler(timer_irq, &platform_tick, NULL);
   DEBUG_ASSERT(status == ZX_OK);
   unmask_interrupt(timer_irq);
 }

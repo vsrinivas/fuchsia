@@ -146,14 +146,14 @@ zx_ticks_t platform_current_ticks() {
     return current_ticks_rdtsc();
   } else {
     switch (wall_clock) {
-    case CLOCK_UNSELECTED:
-      return 0;
-    case CLOCK_PIT:
-      return current_ticks_pit();
-    case CLOCK_HPET:
-      return current_ticks_hpet();
-    default:
-      PANIC_UNIMPLEMENTED;
+      case CLOCK_UNSELECTED:
+        return 0;
+      case CLOCK_PIT:
+        return current_ticks_pit();
+      case CLOCK_HPET:
+        return current_ticks_hpet();
+      default:
+        PANIC_UNIMPLEMENTED;
     }
   }
 }
@@ -567,7 +567,7 @@ static void pc_init_timer(uint level) {
       set_pit_frequency(1000);  // ~1ms granularity
 
       uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-      zx_status_t status = register_int_handler(irq, &pit_timer_tick, NULL);
+      zx_status_t status = register_permanent_int_handler(irq, &pit_timer_tick, NULL);
       DEBUG_ASSERT(status == ZX_OK);
       unmask_interrupt(irq);
     }

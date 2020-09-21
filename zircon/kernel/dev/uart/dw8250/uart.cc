@@ -209,9 +209,9 @@ static void dw8250_uart_init(const void* driver_data, uint32_t length) {
     return;
   }
 
-  status = register_int_handler(uart_irq, &dw8250_uart_irq, NULL);
+  status = register_permanent_int_handler(uart_irq, &dw8250_uart_irq, NULL);
   if (status != ZX_OK) {
-    printf("UART: register_int_handler failed %d\n", status);
+    printf("UART: register_permanent_int_handler failed %d\n", status);
     return;
   }
   // enable interrupt

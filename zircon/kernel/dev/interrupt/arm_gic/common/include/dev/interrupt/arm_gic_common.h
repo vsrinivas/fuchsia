@@ -37,7 +37,7 @@ enum {
 // Registers a software generated interrupt handler.
 static inline zx_status_t gic_register_sgi_handler(unsigned int vector, int_handler handler) {
   DEBUG_ASSERT(vector < GIC_BASE_PPI);
-  return register_int_handler(vector, handler, nullptr);
+  return register_permanent_int_handler(vector, handler, nullptr);
 }
 
 #endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_COMMON_H_

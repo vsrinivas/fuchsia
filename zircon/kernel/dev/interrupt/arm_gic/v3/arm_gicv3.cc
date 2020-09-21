@@ -272,16 +272,15 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector) {
   return ZX_OK;
 }
 
-static zx_status_t gic_deactivate_interrupt(unsigned int vector){
-    if (vector >= gic_max_int) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t gic_deactivate_interrupt(unsigned int vector) {
+  if (vector >= gic_max_int) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    uint32_t reg = 1 << (vector % 32);
-    GICREG(0, GICD_ICACTIVER(vector / 32)) = reg;
+  uint32_t reg = 1 << (vector % 32);
+  GICREG(0, GICD_ICACTIVER(vector / 32)) = reg;
 
-    return ZX_OK;
-
+  return ZX_OK;
 }
 
 static zx_status_t gic_configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
@@ -364,10 +363,9 @@ static void gic_handle_irq(iframe_t* frame) {
                 Thread::Current::Get(), vector, (uintptr_t)IFRAME_PC(frame));
 
   // deliver the interrupt
-  struct int_handler_struct* handler = pdev_get_int_handler(vector);
-  interrupt_eoi eoi = IRQ_EOI_DEACTIVATE;
-  if (handler->handler) {
-    eoi = handler->handler(handler->arg);
+  interrupt_eoi eoi;
+  if (!pdev_invoke_int_if_present(vector, &eoi)) {
+    eoi = IRQ_EOI_DEACTIVATE;
   }
   gic_write_eoir(vector);
   if (eoi == IRQ_EOI_DEACTIVATE) {

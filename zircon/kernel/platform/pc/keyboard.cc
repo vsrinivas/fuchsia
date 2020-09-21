@@ -697,7 +697,7 @@ void platform_init_keyboard(Cbuf* buffer) {
   keyboard_command(&ctr, 0x1f4);
 
   uint32_t irq = apic_io_isa_to_global(ISA_IRQ_KEYBOARD);
-  zx_status_t status = register_int_handler(irq, &i8042_interrupt, NULL);
+  zx_status_t status = register_permanent_int_handler(irq, &i8042_interrupt, NULL);
   DEBUG_ASSERT(status == ZX_OK);
   unmask_interrupt(irq);
 

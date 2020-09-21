@@ -49,7 +49,18 @@ zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mod
 
 typedef interrupt_eoi (*int_handler)(void* arg);
 
+// Registers a handler+arg to be called for the given interrupt vector. The handler may be called
+// with internal spinlocks held and should not itself call register_int_handler. This handler may
+// be serialized with other handlers.
+// This can be called repeatedly to change the handler/arg for a given vector.
 zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg);
+
+// Registers a handler+arg to be called for the given interrupt vector. Once this is used to set a
+// handler it is an error to modify the vector again through this or register_int_handler.
+// Registration via this method allows the interrupt manager to avoid needing to synchronize
+// re-registrations with invocations, which can be much more efficient and avoid unneeded
+// serialization of handlers.
+zx_status_t register_permanent_int_handler(unsigned int vector, int_handler handler, void* arg);
 
 // These return the [base, max] range of vectors that can be used with zx_interrupt syscalls
 // This api will need to evolve if valid vector ranges later are not contiguous

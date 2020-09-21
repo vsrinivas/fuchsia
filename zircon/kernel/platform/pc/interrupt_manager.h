@@ -94,7 +94,8 @@ class InterruptManager {
   //
   // If no more CPU interrupt vectors are available, returns
   // ZX_ERR_NO_RESOURCES.
-  zx_status_t RegisterInterruptHandler(unsigned int vector, int_handler handler, void* arg) {
+  zx_status_t RegisterInterruptHandler(unsigned int vector, int_handler handler, void* arg,
+                                       bool permanent = false) {
     if (!IoApic::IsValidInterrupt(vector, 0 /* flags */)) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -111,6 +112,11 @@ class InterruptManager {
 
     if (x86_vector == 0 && handler == nullptr) {
       return ZX_OK;
+    }
+
+    // If the vector already exists make sure it's not permanent and that we're allowed to modify it
+    if (x86_vector && handler_table_[x86_vector].permanent()) {
+      return ZX_ERR_ALREADY_BOUND;
     }
 
     if (x86_vector && !handler) {
@@ -144,7 +150,7 @@ class InterruptManager {
     DEBUG_ASSERT(x86_vector != 0);
 
     // Update the handler table and register the x86 vector with the io_apic.
-    bool set = handler_table_[x86_vector].SetHandler(handler, arg);
+    bool set = handler_table_[x86_vector].SetHandler(handler, arg, permanent);
     if (!set) {
       // If we're here, then RegisterInterruptHandler() was called on the
       // same vector twice to set the handler without clearing the handler
@@ -248,28 +254,49 @@ class InterruptManager {
       *arg = arg_;
     }
 
+    bool permanent() const {
+      // Permanent handlers do not get modified once set, and are only set on startup, so we can use
+      // relaxed loads.
+      return permanent_.load(ktl::memory_order_relaxed);
+    }
+
     // Returns true if the handler was present.  Must be called with
     // interrupts disabled.
     bool InvokeIfPresent() {
-      Guard<SpinLock, NoIrqSave> guard{&lock_};
-      if (handler_) {
-        handler_(arg_);
+      if (permanent()) {
+        // Once permanent is set to true we know that handler and arg are immutable and so it is
+        // safe to read them without holding the lock.
+        [this]() TA_NO_THREAD_SAFETY_ANALYSIS {
+          DEBUG_ASSERT(handler_);
+          handler_(arg_);
+        }();
         return true;
+      } else {
+        Guard<SpinLock, NoIrqSave> guard{&lock_};
+        if (handler_) {
+          handler_(arg_);
+          return true;
+        }
+        return false;
       }
-      return false;
     }
 
     // Set the handler for this entry.  If |handler| is nullptr, |arg| is
     // ignored.  Makes no change and returns false if |handler| is not
     // nullptr and this entry already has a handler assigned.
-    bool SetHandler(int_handler handler, void* arg) {
+    bool SetHandler(int_handler handler, void* arg, bool make_permanent) {
       Guard<SpinLock, IrqSave> guard{&lock_};
+      // Cannot modify existing permanent handlers.
+      if (permanent()) {
+        return false;
+      }
       if (handler && handler_) {
         return false;
       }
 
       handler_ = handler;
       arg_ = handler ? arg : nullptr;
+      permanent_.store(make_permanent, ktl::memory_order_relaxed);
       return true;
     }
 
@@ -277,6 +304,7 @@ class InterruptManager {
     // ignored.
     void OverwriteHandler(int_handler handler, void* arg) {
       Guard<SpinLock, IrqSave> guard{&lock_};
+      DEBUG_ASSERT(!permanent());
       handler_ = handler;
       arg_ = handler ? arg : nullptr;
     }
@@ -286,6 +314,7 @@ class InterruptManager {
 
     int_handler handler_ TA_GUARDED(lock_) = nullptr;
     void* arg_ TA_GUARDED(lock_) = nullptr;
+    ktl::atomic<bool> permanent_ = false;
   };
 
   void FreeHandler(uint base, uint count) TA_REQ(lock_) {

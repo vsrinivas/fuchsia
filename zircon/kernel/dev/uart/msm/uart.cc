@@ -258,7 +258,7 @@ static void msm_uart_init(const void* driver_data, uint32_t length) {
   // enable RX and TX interrupts
   uart_write(UART_IRQ_RXSTALE | UART_IRQ_TX_READY, UART_DM_IMR);
 
-  register_int_handler(uart_irq, &uart_irq_handler, nullptr);
+  register_permanent_int_handler(uart_irq, &uart_irq_handler, nullptr);
   unmask_interrupt(uart_irq);
 }
 

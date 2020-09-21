@@ -15,29 +15,68 @@
 
 #define ARM_MAX_INT 1024
 
-static SpinLock lock;
+DECLARE_SINGLETON_SPINLOCK(pdev_lock);
+
+struct int_handler_struct {
+  int_handler handler TA_GUARDED(pdev_lock::Get()) = nullptr;
+  void* arg TA_GUARDED(pdev_lock::Get()) = nullptr;
+  ktl::atomic<bool> permanent = false;
+};
+
 static struct int_handler_struct int_handler_table[ARM_MAX_INT];
 
-struct int_handler_struct* pdev_get_int_handler(unsigned int vector) {
+static struct int_handler_struct* pdev_get_int_handler(unsigned int vector) {
   DEBUG_ASSERT(vector < ARM_MAX_INT);
   return &int_handler_table[vector];
 }
 
-zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg) {
+bool pdev_invoke_int_if_present(unsigned int vector, interrupt_eoi* result) {
+  auto h = pdev_get_int_handler(vector);
+  // Use a relaxed load as permanent handlers are never modified once set, and they are only set in
+  // startup code, and so there is nothing to race with.
+  if (h->permanent.load(ktl::memory_order_relaxed)) {
+    // Once permanent is set to true we know that handler and arg are immutable and so it is safe
+    // to read them without holding the lock.
+    [&result, &h]() TA_NO_THREAD_SAFETY_ANALYSIS {
+      DEBUG_ASSERT(h->handler);
+      *result = h->handler(h->arg);
+    }();
+    return true;
+  }
+  Guard<SpinLock, IrqSave> guard{pdev_lock::Get()};
+
+  if (h->handler) {
+    *result = h->handler(h->arg);
+    return true;
+  }
+  return false;
+}
+
+static zx_status_t register_int_handler_common(unsigned int vector, int_handler handler, void* arg,
+                                               bool permanent) {
   if (!is_valid_interrupt(vector, 0)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  AutoSpinLock guard(&lock);
+  Guard<SpinLock, IrqSave> guard{pdev_lock::Get()};
 
   auto h = pdev_get_int_handler(vector);
-  if (handler && h->handler) {
+  if ((handler && h->handler) || h->permanent.load(ktl::memory_order_relaxed)) {
     return ZX_ERR_ALREADY_BOUND;
   }
   h->handler = handler;
   h->arg = arg;
+  h->permanent.store(permanent, ktl::memory_order_relaxed);
 
   return ZX_OK;
+}
+
+zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg) {
+  return register_int_handler_common(vector, handler, arg, false);
+}
+
+zx_status_t register_permanent_int_handler(unsigned int vector, int_handler handler, void* arg) {
+  return register_int_handler_common(vector, handler, arg, true);
 }
 
 static zx_status_t default_mask(unsigned int vector) { return ZX_ERR_NOT_SUPPORTED; }

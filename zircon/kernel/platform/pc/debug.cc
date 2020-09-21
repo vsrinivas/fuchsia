@@ -557,7 +557,7 @@ void pc_init_debug() {
 
   // Otherwise, set up interrupts.
   uint32_t irq = apic_io_isa_to_global(static_cast<uint8_t>(debug_port.irq));
-  zx_status_t status = register_int_handler(irq, uart_irq_handler, NULL);
+  zx_status_t status = register_permanent_int_handler(irq, uart_irq_handler, NULL);
   DEBUG_ASSERT(status == ZX_OK);
   unmask_interrupt(irq);
 

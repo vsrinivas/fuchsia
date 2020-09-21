@@ -14,12 +14,9 @@
 
 __BEGIN_CDECLS
 
-struct int_handler_struct {
-  int_handler handler;
-  void* arg;
-};
-
-struct int_handler_struct* pdev_get_int_handler(unsigned int vector);
+// Invokes the handler for the given vector if one is registered. If true is returned a handler was
+// present and |result| contains the return value of the handler, otherwise false is returned.
+bool pdev_invoke_int_if_present(unsigned int vector, interrupt_eoi* result);
 
 // Interrupt Controller interface
 struct pdev_interrupt_ops {

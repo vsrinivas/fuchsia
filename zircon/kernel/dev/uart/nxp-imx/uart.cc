@@ -179,7 +179,7 @@ static void imx_uart_init(const void* driver_data, uint32_t length) {
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // register uart irq
-  register_int_handler(uart_irq, &uart_irq_handler, NULL);
+  register_permanent_int_handler(uart_irq, &uart_irq_handler, NULL);
 
   // set rx fifo threshold to 1 character
   regVal = UARTREG(MX8_UFCR);

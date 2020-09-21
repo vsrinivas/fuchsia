@@ -157,6 +157,10 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
   return kInterruptManager.RegisterInterruptHandler(vector, handler, arg);
 }
 
+zx_status_t register_permanent_int_handler(unsigned int vector, int_handler handler, void* arg) {
+  return kInterruptManager.RegisterInterruptHandler(vector, handler, arg, true /* Permanent */);
+}
+
 uint32_t interrupt_get_base_vector(void) {
   // Intel Software Developer's Manual v3 chapter 6.2
   // 0-31 are reserved for architecture defined interrupts & exceptions

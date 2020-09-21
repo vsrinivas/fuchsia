@@ -171,7 +171,8 @@ static void s905_uart_init(const void* driver_data, uint32_t length) {
   temp2 |= (1 << 8) | (1);
   UARTREG(s905_uart_base, S905_UART_IRQ_CONTROL) = temp2;
 
-  zx_status_t status = register_int_handler(s905_uart_irq, &uart_irq, (void*)s905_uart_base);
+  zx_status_t status =
+      register_permanent_int_handler(s905_uart_irq, &uart_irq, (void*)s905_uart_base);
   DEBUG_ASSERT(status == ZX_OK);
 
   initialized = true;
