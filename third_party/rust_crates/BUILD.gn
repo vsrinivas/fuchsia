@@ -108,10 +108,8 @@ group("cxxbridge-cmd") {
   deps = [ ":cxxbridge-cmd-v0_3_5" ]
 }
 
-if (current_os == "fuchsia") {
-  group("data-encoding") {
-    deps = [ ":data-encoding-v2_1_2" ]
-  }
+group("data-encoding") {
+  deps = [ ":data-encoding-v2_1_2" ]
 }
 
 if (current_os == "fuchsia") {
@@ -120,10 +118,8 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("derp") {
-    deps = [ ":derp-v0_0_13" ]
-  }
+group("derp") {
+  deps = [ ":derp-v0_0_13" ]
 }
 
 group("difference") {
@@ -206,16 +202,12 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("http") {
-    deps = [ ":http-v0_2_1" ]
-  }
+group("http") {
+  deps = [ ":http-v0_2_1" ]
 }
 
-if (current_os == "fuchsia") {
-  group("hyper") {
-    deps = [ ":hyper-v0_13_6" ]
-  }
+group("hyper") {
+  deps = [ ":hyper-v0_13_6" ]
 }
 
 if (current_os == "fuchsia") {
@@ -240,10 +232,8 @@ group("itertools") {
   deps = [ ":itertools-v0_8_0" ]
 }
 
-if (current_os == "fuchsia") {
-  group("itoa") {
-    deps = [ ":itoa-v0_4_3" ]
-  }
+group("itoa") {
+  deps = [ ":itoa-v0_4_3" ]
 }
 
 group("json5format") {
@@ -766,10 +756,8 @@ group("unicode-width") {
   deps = [ ":unicode-width-v0_1_5" ]
 }
 
-if (current_os == "fuchsia") {
-  group("untrusted") {
-    deps = [ ":untrusted-v0_7_0" ]
-  }
+group("untrusted") {
+  deps = [ ":untrusted-v0_7_0" ]
 }
 
 group("url") {
