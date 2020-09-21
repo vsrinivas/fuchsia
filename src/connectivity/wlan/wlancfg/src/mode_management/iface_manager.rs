@@ -199,7 +199,6 @@ impl IfaceManagerService {
         fuchsia_zircon::ok(status)?;
 
         // Spawn the AP state machine.
-        let (state_machine_start_sender, _) = oneshot::channel();
         let (sender, receiver) = mpsc::channel(1);
         let state_machine = ap_fsm::AccessPoint::new(sender);
 
@@ -210,7 +209,6 @@ impl IfaceManagerService {
             event_stream,
             receiver,
             self.ap_update_sender.clone(),
-            state_machine_start_sender,
         )
         .boxed();
 

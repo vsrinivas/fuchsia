@@ -22,7 +22,6 @@ use {
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::info,
-    pin_utils::pin_mut,
     void::ResultVoidErrExt,
     wlan_common::{
         channel::{Cbw, Channel, Phy},
@@ -139,10 +138,9 @@ pub async fn serve(
     sme_event_stream: fidl_sme::ApSmeEventStream,
     req_stream: mpsc::Receiver<ManualRequest>,
     message_sender: ApListenerMessageSender,
-    sender: oneshot::Sender<()>,
 ) {
-    let state_machine = stopping_state(sender, proxy, req_stream.into_future(), message_sender)
-        .into_state_machine();
+    let state_machine =
+        stopped_state(proxy, req_stream.into_future(), message_sender).into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() => {
@@ -193,16 +191,14 @@ fn perform_manual_request(
 ///
 /// The starting state can be entered in the following ways.
 /// 1. When the state machine is stopped and it is asked to start an AP.
-/// 2. When the state machine is started and it is asked to start an AP.
-/// 3. When the state machine is started and the AP fails.
+/// 2. When the state machine is started and the AP fails.
 ///
 /// The starting state can be exited in the following ways.
-/// 1. When a new manual request comes in, the request is processed as appropriate.
-/// 2. When the start request finishes, transition into the started state.
-/// 3. If the start request fails, exit the state machine along the error path.
+/// 1. When the start request finishes, transition into the started state.
+/// 2. If the start request fails, exit the state machine along the error path.
 async fn starting_state(
     proxy: fidl_sme::ApSmeProxy,
-    mut next_req: NextReqFut,
+    next_req: NextReqFut,
     mut req: ApConfig,
     responder: Option<StartResponder>,
     sender: ApListenerMessageSender,
@@ -223,41 +219,24 @@ async fn starting_state(
         .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     let mut ap_config = fidl_sme::ApConfig::from(req.clone());
-    let pending_start_request = proxy.start(&mut ap_config).fuse();
-    pin_mut!(pending_start_request);
+    let result = proxy.start(&mut ap_config).await;
 
-    loop {
-        select! {
-            res = pending_start_request => {
-                // If 'start' call to SME failed, return an error since we can't
-                // recover from it
-                let res = res.map_err(|e| {
-                    let mut state = state.clone();
-                    state.state = types::OperatingState::Failed;
-                    let _ = send_state_update(&sender, state);
-                    format_err!("Failed to send a start command to wlanstack: {}", e)
-                }).map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
-                match responder {
-                    Some(responder) => responder.send(res).unwrap_or_else(|_| ()),
-                    None => {}
-                }
-                state.state = types::OperatingState::Active;
-                send_state_update(&sender, state.clone()).map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
-                return Ok(started_state(proxy, next_req, req, state, sender).into_state());
-            },
-            (new_req, req_stream) = next_req => {
-                match responder {
-                    Some(responder) => {
-                        responder
-                            .send(fidl_sme::StartApResultCode::Canceled)
-                            .unwrap_or_else(|_| ());
-                    },
-                    None => {}
-                }
-                return perform_manual_request(proxy.clone(), new_req, req_stream, sender);
-            }
-        }
+    // If 'start' call to SME failed, return an error since we can't
+    // recover from it
+    let result = result.map_err(|e| {
+        let mut state = state.clone();
+        state.state = types::OperatingState::Failed;
+        let _ = send_state_update(&sender, state);
+        ExitReason(Err(format_err!("Failed to send a start command to wlanstack: {}", e)))
+    })?;
+    match responder {
+        Some(responder) => responder.send(result).unwrap_or_else(|_| ()),
+        None => {}
     }
+    state.state = types::OperatingState::Active;
+    send_state_update(&sender, state.clone())
+        .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    return Ok(started_state(proxy, next_req, req, state, sender).into_state());
 }
 
 /// In the stopping state, an ApSmeProxy::Stop is requested.  Once the stop request has been
@@ -265,57 +244,26 @@ async fn starting_state(
 /// then transitions into the stopped state.
 ///
 /// The stopping state can be entered in the following ways.
-/// 1. As the initial entering point of the state machine.
-/// 2. When a manual stop request is made when the state machine is in the starting state.
-/// 3. When a manual stop request is made when the state machine is in the started state.
+/// 1. When a manual stop request is made when the state machine is in the started state.
 ///
 /// The stopping state can be exited in the following ways.
-/// 1. When a manual start request is made, the state machine will transition to the starting
+/// 1. When the request to stop the SME completes, the state machine will transition to the stopped
 ///    state.
-/// 2. When the request to stop the SME completes, the state machine will transition to the stopped
-///    state.
-/// 3. If an SME interaction fails, exits the state machine with an error.
+/// 2. If an SME interaction fails, exits the state machine with an error.
 async fn stopping_state(
     responder: oneshot::Sender<()>,
     proxy: fidl_sme::ApSmeProxy,
-    mut next_req: NextReqFut,
+    next_req: NextReqFut,
     sender: ApListenerMessageSender,
 ) -> Result<State, ExitReason> {
-    let mut responders = vec![responder];
-    let pending_stop_request = proxy.stop().fuse();
+    let result = match proxy.stop().await {
+        Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
+        Ok(code) => Err(format_err!("Unexpected StopApResultCode: {:?}", code)),
+        Err(e) => Err(format_err!("Failed to send a stop command to wlanstack: {}", e)),
+    };
+    result.map_err(|e| ExitReason(Err(e)))?;
 
-    pin_mut!(pending_stop_request);
-
-    'waiting_to_stop: loop {
-        next_req = select! {
-            res = pending_stop_request => {
-                // If 'stop' call to SME failed, return an error since we can't
-                // recover from it
-                res.map_err(|e| { ExitReason(Err(format_err!("Failed to send a stop command to wlanstack: {}", e))) })?;
-                break 'waiting_to_stop;
-            },
-            (req, req_stream) = next_req => {
-                match req {
-                    Some(ManualRequest::Stop(responder)) => {
-                        responders.push(responder);
-                        req_stream.into_future()
-                    },
-                    other => {
-                        for responder in responders {
-                            responder.send(()).unwrap_or_else(|_| ())
-                        }
-                        return perform_manual_request(proxy, other, req_stream, sender);
-                    }
-                }
-            }
-        }
-    }
-
-    // Notify the user(s) that stop was confirmed by the SME
-    for responder in responders {
-        responder.send(()).unwrap_or_else(|_| ())
-    }
-
+    responder.send(()).unwrap_or_else(|_| ());
     send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     Ok(stopped_state(proxy, next_req, sender).into_state())
@@ -417,6 +365,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_policy as fidl_policy,
         futures::{stream::StreamFuture, task::Poll, Future},
+        pin_utils::pin_mut,
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
@@ -994,11 +943,23 @@ mod tests {
         let (exit_sender, mut exit_receiver) = oneshot::channel();
         ap.exit(exit_sender).expect("failed to make stop request");
 
-        // Expect the exit responder and stop responder to be acknowledged and the state machine to
-        // exit.
+        // While stopping is still in progress, exit and stop should not be responded to yet.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Pending);
+
+        // Once stop AP request is finished, the state machine can terminate
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
+            }
+        );
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
-        assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
         assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Ok(())));
+        assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -1080,21 +1041,25 @@ mod tests {
         let mut ap = AccessPoint::new(test_values.ap_req_sender);
         ap.start(req, start_sender).expect("failed to make stop request");
 
-        // The state machine should acknowledge the stop request.
+        // The state machine should not respond to the stop request yet until it's finished.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Ok(())));
-
-        // Expect the original stop request from the SME proxy due to entering the stopping state.
+        assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Pending);
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
-
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
+        let stop_responder = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
-            }
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => responder
         );
+
+        // The state machine should not send new request yet since stop is still unfinished
+        assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // After SME sends response, the state machine can proceed
+        stop_responder
+            .send(fidl_sme::StopApResultCode::Success)
+            .expect("could not send AP stop response");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Ok(())));
 
         // Expect another stop request from the state machine entering the starting state.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -1149,6 +1114,42 @@ mod tests {
     }
 
     #[test]
+    fn test_failed_result_code_while_stopping() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        // Run the stopping state.
+        let (stop_sender, mut stop_receiver) = oneshot::channel();
+        let fut = stopping_state(
+            stop_sender,
+            test_values.sme_proxy,
+            test_values.ap_req_stream.into_future(),
+            test_values.update_sender,
+        );
+        let fut = run_state_machine(fut);
+        pin_mut!(fut);
+
+        // Verify that no state update is ready yet.
+        assert_variant!(&mut test_values.update_receiver.try_next(), Err(_));
+
+        // Expect the stop request from the SME proxy
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
+                responder.send(fidl_sme::StopApResultCode::InternalError).expect("could not send AP stop response");
+            }
+        );
+
+        // The state machine should exit.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Err(_)));
+    }
+
+    #[test]
     fn test_stop_while_starting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1188,9 +1189,9 @@ mod tests {
             }
         );
 
-        // Wait for a start request, but don't reply to it.
+        // Wait for a start request, but don't reply to it yet.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        let _start_responder = assert_variant!(
+        let start_responder = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Start{ config: _, responder }) => {
                 responder
@@ -1202,8 +1203,27 @@ mod tests {
         let (stop_sender, mut stop_receiver) = oneshot::channel();
         ap.stop(stop_sender).expect("failed to make stop request");
 
-        // Run the state machine and ensure that a stop request is issued by the SME proxy.
+        // Run the state machine and ensure that a stop request is not issued by the SME proxy yet.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // After SME responds to start request, the state machine can continue
+        start_responder
+            .send(fidl_sme::StartApResultCode::Success)
+            .expect("could not send SME start response");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut start_receiver),
+            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
+        );
+
+        // When state machine goes to started state, it issues a status request. Ignore it.
+        let _status_responder = assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Status{ responder }) => responder
+        );
+
+        // Stop request should be issued now to SME
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
@@ -1214,10 +1234,6 @@ mod tests {
         // Expect the responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Ok(())));
-        assert_variant!(
-            exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Canceled))
-        );
     }
 
     #[test]
@@ -1262,7 +1278,7 @@ mod tests {
 
         // Wait for a start request, but don't reply to it.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        let _start_responder = assert_variant!(
+        let start_responder = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Start{ config: _, responder }) => {
                 responder
@@ -1282,15 +1298,39 @@ mod tests {
         let mut ap = AccessPoint::new(test_values.ap_req_sender);
         ap.start(req, second_start_sender).expect("failed to make start request");
 
-        // Run the state machine and ensure that the first start request was cancelled.
+        // Run the state machine and ensure that the first start request is still pending.
+        // Furthermore, no new start request is issued yet.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Pending);
+        assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // Respond to the first start request
+        start_responder
+            .send(fidl_sme::StartApResultCode::Success)
+            .expect("failed to send start response");
+
+        // The first request should receive the acknowledgement, the second one shouldn't.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Canceled))
+            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
+        );
+        assert_variant!(exec.run_until_stalled(&mut second_start_receiver), Poll::Pending);
+
+        // The state machine checks for status to make sure AP is started
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Status{ responder }) => {
+                let ap_info = fidl_sme::Ap { ssid: vec![], channel: 0, num_clients: 0 };
+                let mut response = fidl_sme::ApStatusResponse {
+                    running_ap: Some(Box::new(ap_info))
+                };
+                responder.send(&mut response).expect("could not send AP status response");
+            }
         );
 
         // The state machine should transition back into the starting state and issue a stop
-        // request.
+        // request, due to the second start request.
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
@@ -1309,7 +1349,7 @@ mod tests {
             }
         );
 
-        // The start request should receive the acknowledgement.
+        // The second start request should receive the acknowledgement now.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut second_start_receiver),
@@ -1359,7 +1399,7 @@ mod tests {
 
         // Wait for a start request, but don't reply to it.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        let _start_responder = assert_variant!(
+        let start_responder = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ApSmeRequest::Start{ config: _, responder }) => {
                 responder
@@ -1371,13 +1411,21 @@ mod tests {
         let (exit_sender, mut exit_receiver) = oneshot::channel();
         ap.exit(exit_sender).expect("failed to make stop request");
 
-        // Expect the state machine to exit, responder to be acknowledged, and the start to be
-        // cancelled.
+        // While starting is still in progress, exit and start should not be responded to yet.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Pending);
+
+        // Once start AP request is finished, the state machine can terminate
+        start_responder
+            .send(fidl_sme::StartApResultCode::Success)
+            .expect("could not send AP start response");
+
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
         assert_variant!(
             exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Canceled))
+            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
         );
     }
 
@@ -1415,35 +1463,24 @@ mod tests {
     }
 
     #[test]
-    fn test_serve_continues_after_stop() {
+    fn test_serve_does_not_terminate_right_away() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let sme_event_stream = test_values.sme_proxy.take_event_stream();
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
-        let (sender, mut receiver) = oneshot::channel();
         let fut = serve(
             0,
             test_values.sme_proxy,
             sme_event_stream,
             test_values.ap_req_stream,
             test_values.update_sender,
-            sender,
         );
         pin_mut!(fut);
 
-        // Run the state machine so that the it makes a Stop request.
+        // Run the state machine. No request is made initially.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
-                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send SME stop response");
-            }
-        );
-
-        // Run the future again and ensure that it has not exited after receiving the response.
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+        assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
     }
 }
