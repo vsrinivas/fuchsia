@@ -50,9 +50,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # TODO(56138): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/account_event_emitter.rs",
     "src/account_handler_connection.rs",

@@ -96,9 +96,6 @@ rustc_test("core_test") {
            "//third_party/rust_crates:async-trait",
          ]
 
-  # TODO(56138): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   if (is_host) {
     deps += [ ":test_certs" ]
     args = [ "--test-threads=1" ]

@@ -67,9 +67,6 @@ rustc_library("fuchsia-async") {
     ]
   }
   test_deps = [ "//third_party/rust_crates:futures-test" ]
-
-  # TODO(56138): Fix the leaks and remove this.
-  test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_staticlib("fuchsia-async-staticlib") {

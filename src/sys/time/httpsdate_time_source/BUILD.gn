@@ -33,9 +33,6 @@ rustc_binary("bin") {
     "src/push_source.rs",
   ]
 
-  # TODO(56138): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   test_deps = [
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:matches",

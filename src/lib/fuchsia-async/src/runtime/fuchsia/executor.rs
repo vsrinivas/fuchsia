@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::atomic_future::AtomicFuture;
+use crate::atomic_future::{AtomicFuture, AttemptPollResult};
 use crate::runtime::DurationExt;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
@@ -317,6 +317,8 @@ impl Executor {
                 threadiness: Threadiness::default(),
                 threads: Mutex::new(Vec::new()),
                 receivers: Mutex::new(PacketReceiverMap::new()),
+                task_count: AtomicUsize::new(0),
+                active_tasks: Mutex::new(HashMap::new()),
                 ready_tasks: SegQueue::new(),
                 time: time,
             }),
@@ -492,10 +494,7 @@ impl Executor {
         match packet.key() {
             EMPTY_WAKEUP_ID => self.poll_main_future(main_future),
             TASK_READY_WAKEUP_ID => {
-                if let Ok(task) = self.inner.ready_tasks.pop() {
-                    let lw = waker_ref(&task);
-                    task.future.try_poll(&mut Context::from_waker(&lw));
-                };
+                self.inner.poll_ready_tasks();
                 Poll::Pending
             }
             receiver_key => {
@@ -768,6 +767,9 @@ impl Drop for Executor {
         // Drop all of the uncompleted tasks
         while let Ok(_) = self.inner.ready_tasks.pop() {}
 
+        // Drop all tasks
+        self.inner.active_tasks.lock().clear();
+
         // Remove the thread-local executor set in `new`.
         EHandle::rm_local();
     }
@@ -940,6 +942,8 @@ struct Inner {
     threadiness: Threadiness,
     threads: Mutex<Vec<thread::JoinHandle<()>>>,
     receivers: Mutex<PacketReceiverMap<Arc<dyn PacketReceiver>>>,
+    task_count: AtomicUsize,
+    active_tasks: Mutex<HashMap<usize, Arc<Task>>>,
     ready_tasks: SegQueue<Arc<Task>>,
     time: ExecutorTime,
 }
@@ -984,17 +988,24 @@ impl Inner {
     fn poll_ready_tasks(&self) {
         // TODO: loop but don't starve
         if let Ok(task) = self.ready_tasks.pop() {
-            let w = waker_ref(&task);
-            task.future.try_poll(&mut Context::from_waker(&w));
+            if task.try_poll() {
+                // Completed
+                self.active_tasks.lock().remove(&task.id);
+            }
         }
     }
 
     fn spawn(self: &Arc<Self>, future: FutureObj<'static, ()>) {
-        let task =
-            Arc::new(Task { future: AtomicFuture::new(future), executor: Arc::downgrade(self) });
-
-        self.ready_tasks.push(task);
-        self.notify_task_ready();
+        // Prevent a deadlock in `.active_tasks` when a task is spawned from a custom
+        // Drop impl while the executor is being torn down.
+        if self.done.load(Ordering::SeqCst) {
+            return;
+        }
+        let next_id = self.task_count.fetch_add(1, Ordering::Relaxed);
+        let task = Task::new(next_id, future, self.clone());
+        let waker = task.waker();
+        self.active_tasks.lock().insert(next_id, task);
+        ArcWake::wake_by_ref(&waker);
     }
 
     fn spawn_local(self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
@@ -1066,15 +1077,36 @@ impl Inner {
 }
 
 struct Task {
+    id: usize,
     future: AtomicFuture,
-    executor: Weak<Inner>,
+    executor: Arc<Inner>,
 }
 
-impl ArcWake for Task {
+impl Task {
+    fn new(id: usize, future: FutureObj<'static, ()>, executor: Arc<Inner>) -> Arc<Self> {
+        Arc::new(Self { id, future: AtomicFuture::new(future), executor })
+    }
+
+    fn waker(self: &Arc<Self>) -> Arc<TaskWaker> {
+        Arc::new(TaskWaker { task: Arc::downgrade(self) })
+    }
+
+    fn try_poll(self: &Arc<Self>) -> bool {
+        let task_waker = self.waker();
+        let w = waker_ref(&task_waker);
+        self.future.try_poll(&mut Context::from_waker(&w)) == AttemptPollResult::IFinished
+    }
+}
+
+struct TaskWaker {
+    task: Weak<Task>,
+}
+
+impl ArcWake for TaskWaker {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        if let Some(executor) = Weak::upgrade(&arc_self.executor) {
-            executor.ready_tasks.push(arc_self.clone());
-            executor.notify_task_ready();
+        if let Some(task) = Weak::upgrade(&arc_self.task) {
+            task.executor.ready_tasks.push(task.clone());
+            task.executor.notify_task_ready();
         }
     }
 }
@@ -1296,5 +1328,51 @@ mod tests {
         // Still doesn't reuse IDs after map is cleared
         map.clear();
         assert_eq!(map.insert(e1), 3);
+    }
+
+    #[test]
+    fn task_destruction() {
+        struct DropSpawner {
+            dropped: Arc<AtomicBool>,
+        }
+        impl Drop for DropSpawner {
+            fn drop(&mut self) {
+                self.dropped.store(true, Ordering::SeqCst);
+                let dropped_clone = self.dropped.clone();
+                super::spawn(async {
+                    // Hold on to a reference here to verify that it, too, is destroyed later
+                    let _dropped_clone = dropped_clone;
+                    panic!("task spawned in drop shouldn't be polled");
+                });
+            }
+        }
+        let mut dropped = Arc::new(AtomicBool::new(false));
+        let drop_spawner = DropSpawner { dropped: dropped.clone() };
+        let mut executor = Executor::new().unwrap();
+        let main_fut = async move {
+            spawn(async move {
+                // Take ownership of the drop spawner
+                let _drop_spawner = drop_spawner;
+                future::pending::<()>().await;
+            });
+        };
+        pin_mut!(main_fut);
+        assert!(executor.run_until_stalled(&mut main_fut).is_ready());
+        assert_eq!(
+            dropped.load(Ordering::SeqCst),
+            false,
+            "executor dropped pending task before destruction"
+        );
+
+        // Should drop the pending task and it's owned drop spawner,
+        // as well as gracefully drop the future spawned from the drop spawner.
+        drop(executor);
+        let dropped = Arc::get_mut(&mut dropped)
+            .expect("someone else is unexpectedly still holding on to a reference");
+        assert_eq!(
+            dropped.load(Ordering::SeqCst),
+            true,
+            "executor did not drop pending task during destruction"
+        );
     }
 }

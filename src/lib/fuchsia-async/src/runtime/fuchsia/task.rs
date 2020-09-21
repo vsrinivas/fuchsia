@@ -44,7 +44,9 @@ impl Task<()> {
 }
 
 impl<T: Send> Task<T> {
-    /// Spawn a new task on the current executor.
+    /// Spawn a new task on the current executor. The passed future will live until
+    /// it completes, the returned `Task` is dropped while the executor is running,
+    /// or the executor is destroyed, whichever comes first.
     pub fn spawn(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
         let (future, remote_handle) = future.remote_handle();
         super::executor::spawn(future);

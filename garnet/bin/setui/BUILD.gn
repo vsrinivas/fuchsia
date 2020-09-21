@@ -78,9 +78,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  # TODO(56138): Fix the leaks and remove this.
-  test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/accessibility.rs",
     "src/accessibility/accessibility_controller.rs",
@@ -280,9 +277,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
   ]
 
-  # TODO(56138): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [ "src/main.rs" ]
 }
 
@@ -327,9 +321,6 @@ rustc_binary("setui-config-test") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
-
-  # TODO(56138): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   source_root = "src/setui_config_test.rs"
 

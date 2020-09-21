@@ -31,9 +31,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # TODO(56138): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   test_deps = [ "//src/lib/storage/pseudo-fs" ]
 
   sources = [ "src/main.rs" ]
