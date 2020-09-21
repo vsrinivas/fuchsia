@@ -10,7 +10,11 @@
     "getting_started.md",
     "glossary.md",
     "navbar.md",
-    "SYNTAX.md"
+    "SYNTAX.md",
+    "cipd.gni",
+    "code_coverage.pb.go",
+    "goldens.txt",
+    "all_selectors.txt"
   ],
   "skipDirs": [
     ".git",

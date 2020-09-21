@@ -12,10 +12,11 @@ Table of Contents:
 <ol>{{ range $file, $licenses := .TableOfContents }}<li>{{ $file }} (
 	{{ range $_, $license := $licenses }} <a href="#{{ (getCategory $license) }}">{{ (getCategory $license) }}</a>, {{ end }})</li>{{ end }}</ol>
 {{ range $_, $license := .Used }}<br />
+{{ range $author := (getAuthors $license) }}
 <div id="{{ (getCategory $license) }}" style="background-color: #eeeeee">
 Notices for file(s), reference: {{ (getCategory $license) }}:<ul>
-{{ range $author := (getAuthors $license) }}<li>Authors/Contributors: {{ $author }}</li>
 <li> License Category: {{ (getCategory $license) }} </li>
+<li>Authors/Contributors: {{ $author }}</li>
 {{ range $files := (getFiles $license $author) }}<li>{{ $files }}</li>
 {{ end }}
 </ul>
