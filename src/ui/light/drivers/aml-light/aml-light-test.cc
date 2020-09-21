@@ -4,8 +4,8 @@
 
 #include "aml-light.h"
 
-#include <lib/async-loop/default.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <fbl/alloc_checker.h>
@@ -205,6 +205,59 @@ TEST_F(AmlLightTest, SetValueTest2) {
   }
   {
     auto get_result = client.GetCurrentBrightnessValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 51);
+  }
+}
+
+// TODO (rdzhuang): redundant tests. remove after migration
+TEST_F(AmlLightTest, SetValue2Test) {
+  pwm_.ExpectEnable(ZX_OK);
+  aml_pwm::mode_config regular = {aml_pwm::ON, {}};
+  pwm_config_t config = {false, 1250, 100.0, &regular, sizeof(regular)};
+  pwm_.ExpectSetConfig(ZX_OK, config);
+
+  auto gpio = gpio_.GetProto();
+  auto pwm = pwm_.GetProto();
+  light_ = FakeAmlLight::Create(gpio, pwm);
+  ASSERT_NOT_NULL(light_);
+  Init();
+
+  ::llcpp::fuchsia::hardware::light::Light::SyncClient client(std::move(client_));
+  {
+    auto get_result = client.GetCurrentBrightnessValue2(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 255);
+  }
+  {
+    auto get_result = client.GetCurrentBrightnessValue2(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 255);
+  }
+  {
+    config.duty_cycle = 0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client.SetBrightnessValue2(0, 0);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    auto get_result = client.GetCurrentBrightnessValue2(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 0);
+  }
+  {
+    config.duty_cycle = 20.0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client.SetBrightnessValue2(0, 51);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client.SetBrightnessValue2(0, 51);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    auto get_result = client.GetCurrentBrightnessValue2(0);
     EXPECT_OK(get_result.status());
     EXPECT_EQ(get_result->result.response().value, 51);
   }

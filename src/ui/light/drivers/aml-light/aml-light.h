@@ -74,8 +74,12 @@ class AmlLight : public AmlLightType,
   void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer);
   void GetCurrentBrightnessValue(uint32_t index,
                                  GetCurrentBrightnessValueCompleter::Sync completer);
+  void GetCurrentBrightnessValue2(uint32_t index,
+                                  GetCurrentBrightnessValue2Completer::Sync completer);
   void SetBrightnessValue(uint32_t index, uint8_t value,
                           SetBrightnessValueCompleter::Sync completer);
+  void SetBrightnessValue2(uint32_t index, uint8_t value,
+                           SetBrightnessValue2Completer::Sync completer);
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer);
   void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync completer);
 
@@ -94,8 +98,16 @@ class AmlLight : public AmlLightType,
                                       GetGroupCurrentBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
+  void GetGroupCurrentBrightnessValue2(uint32_t group_id,
+                                       GetGroupCurrentBrightnessValue2Completer::Sync completer) {
+    completer.ReplyError(LightError::NOT_SUPPORTED);
+  }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
                                SetGroupBrightnessValueCompleter::Sync completer) {
+    completer.ReplyError(LightError::NOT_SUPPORTED);
+  }
+  void SetGroupBrightnessValue2(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+                                SetGroupBrightnessValue2Completer::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,

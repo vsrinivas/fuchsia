@@ -127,8 +127,36 @@ void AmlLight::GetCurrentBrightnessValue(uint32_t index,
   }
 }
 
+// TODO (rdzhuang): Redundant with GetCurrentBrightnessValue for migration to floating point
+void AmlLight::GetCurrentBrightnessValue2(uint32_t index,
+                                          GetCurrentBrightnessValue2Completer::Sync completer) {
+  if (index >= lights_.size()) {
+    completer.ReplyError(LightError::INVALID_INDEX);
+    return;
+  }
+  if (lights_[index].GetCapability() == Capability::BRIGHTNESS) {
+    completer.ReplySuccess(lights_[index].GetCurrentBrightnessValue());
+  } else {
+    completer.ReplyError(LightError::NOT_SUPPORTED);
+  }
+}
+
 void AmlLight::SetBrightnessValue(uint32_t index, uint8_t value,
                                   SetBrightnessValueCompleter::Sync completer) {
+  if (index >= lights_.size()) {
+    completer.ReplyError(LightError::INVALID_INDEX);
+    return;
+  }
+  if (lights_[index].SetBrightnessValue(value) != ZX_OK) {
+    completer.ReplyError(LightError::FAILED);
+  } else {
+    completer.ReplySuccess();
+  }
+}
+
+// TODO (rdzhuang): Redundant with SetCurrentBrightnessValue for migration to floating point
+void AmlLight::SetBrightnessValue2(uint32_t index, uint8_t value,
+                                   SetBrightnessValue2Completer::Sync completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
