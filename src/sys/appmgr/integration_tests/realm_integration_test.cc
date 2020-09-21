@@ -243,8 +243,13 @@ TEST_F(RealmTest, ConnectToServiceWhenRealmDies) {
   auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   WaitForEnclosingEnvToStart(enclosing_environment.get());
 
-  // make sure echo service is running.
+  // first make sure that environment is running and can process requests.
   fidl::examples::echo::EchoPtr echo;
+  enclosing_environment->ConnectToService(echo.NewRequest());
+  RunLoopUntil([&] { return connected; });
+
+  // reset connection and now connect and kill the environment.
+  connected = false;
   enclosing_environment->ConnectToService(echo.NewRequest());
   bool killed = false;
   // kill enclosing env
