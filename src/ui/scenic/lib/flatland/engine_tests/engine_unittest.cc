@@ -17,6 +17,7 @@
 #include <limits>
 #include <thread>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/handles/object_info.h"
@@ -30,8 +31,6 @@
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
-#include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
-#include "src/ui/scenic/lib/flatland/tests/mock_renderer.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -40,11 +39,8 @@
 using ::testing::_;
 using ::testing::Return;
 
-using flatland::FlatlandPresenter;
 using flatland::ImageMetadata;
 using flatland::LinkSystem;
-using flatland::MockFlatlandPresenter;
-using flatland::MockRenderer;
 using flatland::Renderer;
 using flatland::TransformGraph;
 using flatland::TransformHandle;

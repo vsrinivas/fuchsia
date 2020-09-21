@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,25 +9,16 @@ group("tests") {
 }
 
 executable("unittests") {
-  output_name = "flatland_unittests"
+  output_name = "flatland_engine_unittests"
   testonly = true
-  sources = [
-    "flatland_manager_unittest.cc",
-    "flatland_unittest.cc",
-    "global_matrix_data_unittest.cc",
-    "global_topology_data_unittest.cc",
-    "hanging_get_helper_unittest.cc",
-    "link_system_unittest.cc",
-    "mock_flatland_presenter.h",
-    "mock_renderer.h",
-    "transform_graph_unittest.cc",
-    "uber_struct_system_unittest.cc",
-  ]
+  sources = [ "engine_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest:gtest",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/display:hdcp_client",
+    "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",

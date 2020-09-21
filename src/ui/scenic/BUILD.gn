@@ -20,9 +20,9 @@ group("tests") {
   public_deps = [
     ":fuzzers",
     ":scenic_tests",
+    "lib/gfx/tests",
     "lib/gfx/tests:mock_pose_buffer_provider",
     "lib/gfx/tests/rotated_square_test",
-    "lib/gfx/tests",
     "lib/scenic/util/tests:tests",
     "lib/utils:tests",
   ]
@@ -39,6 +39,7 @@ group("fuzzers") {
 test_package("scenic_tests") {
   deps = [
     "lib/display/tests",
+    "lib/flatland/engine_tests:tests",
     "lib/flatland/renderer/tests",
     "lib/flatland/tests",
     "lib/gfx/tests",
@@ -55,6 +56,13 @@ test_package("scenic_tests") {
     },
     {
       name = "flatland_unittests"
+      environments = basic_envs
+    },
+    {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      name = "flatland_engine_unittests"
       environments = basic_envs
     },
     {
