@@ -301,7 +301,7 @@ impl EventStream {
         &mut self,
         expected_event_matcher: EventMatcher,
     ) -> Result<T, Error> {
-        let expected_event_matcher = expected_event_matcher.expect_type::<T>();
+        let expected_event_matcher = expected_event_matcher.expect_type(T::TYPE);
         loop {
             let event = self.next().await?;
             let descriptor = EventDescriptor::try_from(&event)?;
@@ -694,14 +694,12 @@ pub struct EventMatcher {
 }
 
 impl EventMatcher {
-    /// Creates a new `EventDescriptor` with the given `event_type`.
-    /// The rest of the fields are unset.
     pub fn new() -> Self {
         Self { event_type: None, target_monikers: None, capability_id: None, exit_status: None }
     }
 
-    pub fn expect_type<T: Event>(mut self) -> Self {
-        self.event_type = Some(EventTypeMatcher::new(T::TYPE));
+    pub fn expect_type(mut self, event_type: fsys::EventType) -> Self {
+        self.event_type = Some(EventTypeMatcher::new(event_type));
         self
     }
 

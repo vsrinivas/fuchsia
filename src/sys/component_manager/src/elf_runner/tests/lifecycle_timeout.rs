@@ -59,9 +59,9 @@ async fn test_stop_timeouts() {
         EventMatcher::new()
             .expect_monikers(&target_monikers)
             .expect_stop(Some(ExitStatusMatcher::AnyCrash)),
-        EventMatcher::new().expect_type::<Destroyed>().expect_monikers(&target_monikers),
-        EventMatcher::new().expect_type::<Destroyed>().expect_monikers(&target_monikers),
-        EventMatcher::new().expect_type::<Destroyed>().expect_monikers(&target_monikers),
+        EventMatcher::new().expect_type(Destroyed::TYPE).expect_monikers(&target_monikers),
+        EventMatcher::new().expect_type(Destroyed::TYPE).expect_monikers(&target_monikers),
+        EventMatcher::new().expect_type(Destroyed::TYPE).expect_monikers(&target_monikers),
     ];
 
     event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();

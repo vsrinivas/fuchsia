@@ -54,34 +54,34 @@ async fn destruction() {
         &mut events,
         vec![
             EventMatcher::new()
-                .expect_type::<Stopped>()
+                .expect_type(Stopped::TYPE)
                 .expect_moniker("./coll:parent:1/trigger_a:0"),
             EventMatcher::new()
-                .expect_type::<Stopped>()
+                .expect_type(Stopped::TYPE)
                 .expect_moniker("./coll:parent:1/trigger_b:0"),
         ],
     );
 
     expect_next(
         &mut events,
-        vec![EventMatcher::new().expect_type::<Stopped>().expect_moniker("./coll:parent:1")],
+        vec![EventMatcher::new().expect_type(Stopped::TYPE).expect_moniker("./coll:parent:1")],
     );
 
     expect_next(
         &mut events,
         vec![
             EventMatcher::new()
-                .expect_type::<Destroyed>()
+                .expect_type(Destroyed::TYPE)
                 .expect_moniker("./coll:parent:1/trigger_a:0"),
             EventMatcher::new()
-                .expect_type::<Destroyed>()
+                .expect_type(Destroyed::TYPE)
                 .expect_moniker("./coll:parent:1/trigger_b:0"),
         ],
     );
 
     expect_next(
         &mut events,
-        vec![EventMatcher::new().expect_type::<Destroyed>().expect_moniker("./coll:parent:1")],
+        vec![EventMatcher::new().expect_type(Destroyed::TYPE).expect_moniker("./coll:parent:1")],
     );
 
     assert!(events.is_empty());

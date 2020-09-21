@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
     test_utils_lib::{
-        events::{EventMatcher, Ordering, Stopped},
+        events::{Event, EventMatcher, Ordering, Stopped},
         opaque_test::OpaqueTest,
     },
 };
@@ -21,7 +21,7 @@ async fn scoped_instances() -> Result<(), Error> {
 
     let event_source = test.connect_to_event_source().await?;
     let event =
-        EventMatcher::new().expect_type::<Stopped>().expect_moniker("./coll:auto-*".to_string());
+        EventMatcher::new().expect_type(Stopped::TYPE).expect_moniker("./coll:auto-*".to_string());
     let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
     let expectation = event_source.expect_events(Ordering::Unordered, expected_events).await?;
 

@@ -35,8 +35,9 @@ async fn test_exit_detection() {
 
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
 
-    let expected_events =
-        vec![EventMatcher::new().expect_type::<events::Stopped>().expect_moniker(&target_moniker)];
+    let expected_events = vec![EventMatcher::new()
+        .expect_type(events::Stopped::TYPE)
+        .expect_moniker(&target_moniker)];
     event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
 }
 
@@ -65,8 +66,9 @@ async fn test_exit_after_rendezvous() {
     // Wait to get confirmation that the component under test exited.
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
     let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
-    let expected_events =
-        vec![EventMatcher::new().expect_type::<events::Stopped>().expect_moniker(&target_moniker)];
+    let expected_events = vec![EventMatcher::new()
+        .expect_type(events::Stopped::TYPE)
+        .expect_moniker(&target_moniker)];
     event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
 
     // Check that we received a request from the component under test.
