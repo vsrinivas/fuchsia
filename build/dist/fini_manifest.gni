@@ -69,7 +69,7 @@ template("fini_manifest") {
                              "visibility",
                            ])
 
-    script = "//build/unification/future/data/convert_manifest_to_fini.py"
+    script = "//build/dist/convert_manifest_to_fini.py"
 
     inputs = [ intermediate_file ]
     outputs = [ manifest_file ]

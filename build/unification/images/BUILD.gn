@@ -8,7 +8,7 @@
 # (`legacy-foo` targets) or migrated from that build into the Fuchsia GN build
 # (`migrated-foo` targets).
 
-import("//build/unification/future/data/fini_manifest.gni")
+import("//build/dist/fini_manifest.gni")
 import("aggregate_manifest.gni")
 import("artifacts.gni")
 import("zircon_artifact.gni")

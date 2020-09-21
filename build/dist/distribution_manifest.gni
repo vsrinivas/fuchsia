@@ -97,7 +97,7 @@ template("distribution_manifest") {
                              "visibility",
                            ])
 
-    script = "//build/unification/future/data/expand_and_find_conflicting_dist_entries.py"
+    script = "//build/dist/expand_and_find_conflicting_dist_entries.py"
 
     inputs = [ intermediate_file ]
     outputs = [ manifest_file ]
