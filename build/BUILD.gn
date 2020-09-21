@@ -189,7 +189,6 @@ group("deprecated_package_underscore") {
     "//src/camera:camera_tests",
     "//src/camera/bin/device:camera_device",
     "//src/camera/bin/device_watcher:camera_device_watcher",
-    "//src/camera/camera_manager2:camera_manager2",
     "//src/camera/drivers/usb_video:usb_video",
     "//src/camera/drivers/virtual_camera:virtual_camera",
     "//src/camera/examples/camera_display:camera_display",
