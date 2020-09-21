@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, DEFAULT_EVENT_TIMEOUT_SEC, EVENTS_TIMEOUT_SECONDS},
+    crate::constants::get_socket,
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
@@ -11,7 +11,6 @@ use {
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
-    ffx_config::get,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
@@ -261,18 +260,10 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                let event_timeout = Duration::from_secs(
-                    get(EVENTS_TIMEOUT_SECONDS).await.unwrap_or(DEFAULT_EVENT_TIMEOUT_SEC),
-                );
-                match target
-                    .events
-                    .wait_for(Some(event_timeout), |e| e == TargetEvent::RcsActivated)
-                    .await
-                {
+                match target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
                     Ok(()) => (),
                     Err(e) => {
                         log::warn!("{}", e);
-                        // TODO(awdavies): More specific error here like timeout?
                         responder
                             .send(&mut Err(DaemonError::RcsConnectionError))
                             .context("sending error response")?;

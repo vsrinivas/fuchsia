@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Result},
+    async_std::future::timeout,
     ffx_core::FfxError,
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::Ffx,
@@ -13,7 +14,11 @@ use {
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     lazy_static::lazy_static,
     std::sync::{Arc, Mutex},
+    std::time::Duration,
 };
+
+// Config key for event timeout.
+const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
 
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.
@@ -37,12 +42,15 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
     let app: Ffx = argh::from_env();
-
-    daemon_proxy
-        .get_remote_control(&app.target.unwrap_or("".to_string()), remote_server_end)
-        .await
-        .context("connecting to RCS")
-        .map(|_| remote_proxy)
+    let event_timeout = Duration::from_secs(ffx_config::get(PROXY_TIMEOUT_SECS).await?);
+    timeout(
+        event_timeout,
+        daemon_proxy.get_remote_control(&app.target.unwrap_or("".to_string()), remote_server_end),
+    )
+    .await
+    .context("timeout")?
+    .context("connecting to RCS")
+    .map(|_| remote_proxy)
 }
 
 async fn is_experiment_subcommand_on(key: &'static str) -> bool {
