@@ -10,6 +10,7 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
+#include <ddk/metadata/emmc.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
@@ -61,6 +62,11 @@ static aml_sdmmc_config_t luis_config = {
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
 
+const emmc_config_t sherlock_emmc_config = {
+    // Maintain the current Sherlock behavior until we determine that trim is needed.
+    .enable_trim = false,
+};
+
 static const guid_map_t guid_map[] = {
     {"boot", GUID_ZIRCON_A_VALUE},
     {"system", GUID_ZIRCON_B_VALUE},
@@ -80,6 +86,11 @@ static const pbus_metadata_t sherlock_emmc_metadata[] = {
         .type = DEVICE_METADATA_GUID_MAP,
         .data_buffer = guid_map,
         .data_size = sizeof(guid_map),
+    },
+    {
+        .type = DEVICE_METADATA_EMMC_CONFIG,
+        .data_buffer = &sherlock_emmc_config,
+        .data_size = sizeof(sherlock_emmc_config),
     },
 };
 

@@ -10,6 +10,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/emmc.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/sdmmc.h>
 #include <pretty/hexdump.h>
@@ -237,7 +239,13 @@ bool SdmmcBlockDevice::MmcSupportsHs400() {
 }
 
 zx_status_t SdmmcBlockDevice::ProbeMmc() {
-  zx_status_t st = ZX_OK;
+  size_t actual = 0;
+  emmc_config_t config = {};
+  zx_status_t st =
+      device_get_metadata(parent(), DEVICE_METADATA_EMMC_CONFIG, &config, sizeof(config), &actual);
+  if (st != ZX_OK || actual != sizeof(config)) {
+    config.enable_trim = true;  // Default to having trim enabled.
+  }
 
   // Query OCR
   uint32_t ocr = 0;
@@ -379,9 +387,8 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
          bus_width_, timing_);
 
   // The discard command was added in eMMC 4.5.
-  if (raw_ext_csd_[MMC_EXT_CSD_EXT_CSD_REV] >= MMC_EXT_CSD_EXT_CSD_REV_1_6) {
-    // TODO(fxbug.dev/49028): Determine which devices should have trim enabled.
-    // block_info_.flags |= BLOCK_FLAG_TRIM_SUPPORT;
+  if (raw_ext_csd_[MMC_EXT_CSD_EXT_CSD_REV] >= MMC_EXT_CSD_EXT_CSD_REV_1_6 && config.enable_trim) {
+    block_info_.flags |= BLOCK_FLAG_TRIM_SUPPORT;
   }
   return ZX_OK;
 }
