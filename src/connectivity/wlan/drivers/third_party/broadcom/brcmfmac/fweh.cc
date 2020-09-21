@@ -28,6 +28,7 @@
 #include "linuxisms.h"
 #include "macros.h"
 #include "proto.h"
+#include "third_party/bcmdhd/crossdriver/wlioctl.h"
 #include "workqueue.h"
 
 // queue item type
@@ -388,24 +389,28 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
   int i;
   zx_status_t err;
   bcme_status_t fw_err = BCME_OK;
-  struct brcmf_eventmsgs_ext eventmsgs_ext;
+  eventmsgs_ext_t* msgs_ext;
   size_t msg_len = BRCMF_EVENTING_MASK_LEN + EVENTMSGS_EXT_STRUCT_SIZE;
   bool support_eventmsgs_ext = true;
 
-  // Initialize the struct with 0.
-  memset(&eventmsgs_ext, 0, msg_len);
+  // Initialize the struct.
+  msgs_ext = (eventmsgs_ext_t*)calloc(1, msg_len);
+  if (msgs_ext == nullptr) {
+    BRCMF_ERR("eventmsgs_ext allocation failed.");
+    return ZX_ERR_NO_MEMORY;
+  }
 
-  err = brcmf_fil_iovar_data_get(ifp, "event_msgs_ext", &eventmsgs_ext, msg_len, &fw_err);
+  err = brcmf_fil_iovar_data_get(ifp, "event_msgs_ext", msgs_ext, msg_len, &fw_err);
   if (err != ZX_OK) {
     // Use original way to read event mask from firmware if eventmsgs_ext is not supported by
     // firmware.
     if (fw_err == BCME_VERSION) {
       support_eventmsgs_ext = false;
       BRCMF_WARN("event_msgs_ext is not supported in current firmware");
-      err = brcmf_fil_iovar_data_get(ifp, "event_msgs", eventmsgs_ext.event_mask,
+      err = brcmf_fil_iovar_data_get(ifp, "event_msgs", msgs_ext->event_mask,
                                      BRCMF_EVENTING_MASK_LEN, &fw_err);
       if (err != ZX_OK) {
-        BRCMF_ERR("Set event_msgs(_ext) error: %s, fw err %s", zx_status_get_string(err),
+        BRCMF_ERR("Get event_msgs error: %s, fw err %s", zx_status_get_string(err),
                   brcmf_fil_get_errstr(fw_err));
         return err;
       }
@@ -420,32 +425,33 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     if (ifp->drvr->fweh.evt_handler[i]) {
       BRCMF_DBG(EVENT, "enable event %s",
                 brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(i)));
-      setbit(eventmsgs_ext.event_mask, i);
+      setbit(msgs_ext->event_mask, i);
     }
   }
 
   /* want to handle IF event as well */
   BRCMF_DBG(EVENT, "enable event IF");
-  setbit(eventmsgs_ext.event_mask, BRCMF_E_IF);
+  setbit(msgs_ext->event_mask, BRCMF_E_IF);
 
   if (!support_eventmsgs_ext) {
     // Use original way to write event mask from firmware if eventmsgs_ext is not supported by
     // firmware.
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmsgs_ext.event_mask,
-                                   BRCMF_EVENTING_MASK_LEN, &fw_err);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", msgs_ext->event_mask, BRCMF_EVENTING_MASK_LEN,
+                                   &fw_err);
   } else {
     // Use "event_msgs_ext" to write extended event mask to firmware.
-    eventmsgs_ext.version = EVENTMSGS_VERSION;
-    eventmsgs_ext.command = EVENTMSGS_SET_MASK;
-    eventmsgs_ext.length = BRCMF_EVENTING_MASK_LEN;
+    msgs_ext->version = EVENTMSGS_VERSION;
+    msgs_ext->command = EVENTMSGS_SET_MASK;
+    msgs_ext->length = BRCMF_EVENTING_MASK_LEN;
 
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs_ext", &eventmsgs_ext, msg_len, &fw_err);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs_ext", msgs_ext, msg_len, &fw_err);
   }
   if (err != ZX_OK) {
     BRCMF_ERR("Set event_msgs(_ext) error: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
 
+  free(msgs_ext);
   return err;
 }
 
