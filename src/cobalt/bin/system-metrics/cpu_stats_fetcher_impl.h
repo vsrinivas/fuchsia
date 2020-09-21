@@ -20,7 +20,7 @@ namespace cobalt {
 class CpuStatsFetcherImpl : public CpuStatsFetcher {
  public:
   CpuStatsFetcherImpl();
-  bool FetchCpuPercentage(double* cpu_percentage) override;
+  FetchCpuResult FetchCpuPercentage(double* cpu_percentage) override;
 
  private:
   bool FetchCpuCoreCount();

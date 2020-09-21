@@ -9,6 +9,12 @@
 
 namespace cobalt {
 
+enum class FetchCpuResult {
+  Ok,
+  FirstDataPoint,
+  Error,
+};
+
 // An abstrace interface for cpu stats fetching from various
 // resources
 class CpuStatsFetcher {
@@ -18,12 +24,11 @@ class CpuStatsFetcher {
   // Get average CPU percentage used over all CPU cores since
   // the last time this function is called.
   //
-  // Return true if this is not the first time this function is
-  // called. Pass the calculated percentage in cpu_percentage.
-  // Return false if this is the first time this function is called
-  // and there is not a time range during which we can calculate
-  // the average CPU used.
-  virtual bool FetchCpuPercentage(double *cpu_percentage) = 0;
+  // If it is not the first time this function is called, the return value will be Ok and
+  // cpu_percentage will be populated with the calculated CPU usage since the last call. If it is
+  // the first time this function is called, the return value will be FirstDataPoint and
+  // cpu_percentage will be unchanged. If an error occurs, the return value will be Error.
+  virtual FetchCpuResult FetchCpuPercentage(double *cpu_percentage) = 0;
 };
 
 }  // namespace cobalt

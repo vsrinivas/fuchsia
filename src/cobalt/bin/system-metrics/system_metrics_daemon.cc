@@ -420,11 +420,15 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
     return std::chrono::minutes(1);
   }
   double cpu_percentage;
-  if (!cpu_stats_fetcher_->FetchCpuPercentage(&cpu_percentage)) {
-    return std::chrono::minutes(1);
+  switch (cpu_stats_fetcher_->FetchCpuPercentage(&cpu_percentage)) {
+    case cobalt::FetchCpuResult::Ok:
+      StoreCpuData(cpu_percentage);
+      return std::chrono::seconds(1);
+    case cobalt::FetchCpuResult::FirstDataPoint:
+      return std::chrono::seconds(1);
+    case cobalt::FetchCpuResult::Error:
+      return std::chrono::minutes(1);
   }
-  StoreCpuData(cpu_percentage);
-  return std::chrono::seconds(1);
 }
 
 void SystemMetricsDaemon::LogLogStats() {

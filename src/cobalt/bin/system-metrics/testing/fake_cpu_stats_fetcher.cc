@@ -8,9 +8,9 @@ namespace cobalt {
 
 FakeCpuStatsFetcher::FakeCpuStatsFetcher() {}
 
-bool FakeCpuStatsFetcher::FetchCpuPercentage(double *cpu_percentage) {
+FetchCpuResult FakeCpuStatsFetcher::FetchCpuPercentage(double *cpu_percentage) {
   *cpu_percentage = 12.34;
-  return true;
+  return FetchCpuResult::Ok;
 }
 
 }  // namespace cobalt

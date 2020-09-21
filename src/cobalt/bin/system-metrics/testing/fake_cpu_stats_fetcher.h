@@ -12,7 +12,7 @@ namespace cobalt {
 class FakeCpuStatsFetcher : public cobalt::CpuStatsFetcher {
  public:
   FakeCpuStatsFetcher();
-  bool FetchCpuPercentage(double *cpu_percentage) override;
+  FetchCpuResult FetchCpuPercentage(double *cpu_percentage) override;
 };
 
 }  // namespace cobalt

@@ -17,17 +17,17 @@ namespace cobalt {
 
 CpuStatsFetcherImpl::CpuStatsFetcherImpl() { InitializeKernelStats(); }
 
-bool CpuStatsFetcherImpl::FetchCpuPercentage(double *cpu_percentage) {
+FetchCpuResult CpuStatsFetcherImpl::FetchCpuPercentage(double *cpu_percentage) {
   TRACE_DURATION("system_metrics", "CpuStatsFetcherImpl::FetchCpuPercentage");
   if (FetchCpuStats() == false) {
-    return false;
+    return FetchCpuResult::Error;
   }
   bool success = CalculateCpuPercentage(cpu_percentage);
   last_cpu_stats_buffer_.swap(cpu_stats_buffer_);
   last_cpu_stats_ = cpu_stats_;
 
   last_cpu_fetch_time_ = cpu_fetch_time_;
-  return success;
+  return success ? FetchCpuResult::Ok : FetchCpuResult::FirstDataPoint;
 }
 
 bool CpuStatsFetcherImpl::FetchCpuStats() {
