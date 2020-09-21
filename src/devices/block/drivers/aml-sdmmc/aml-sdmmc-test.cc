@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-sd-emmc.h"
+#include "aml-sdmmc.h"
 
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -15,7 +15,7 @@
 #include <soc/aml-s912/s912-hw.h>
 #include <zxtest/zxtest.h>
 
-#include "aml-sd-emmc-regs.h"
+#include "aml-sdmmc-regs.h"
 
 namespace sdmmc {
 

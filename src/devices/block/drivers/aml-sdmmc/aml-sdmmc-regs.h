@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AML_SDMMC_AML_SDMMC_REGS_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AML_SDMMC_AML_SDMMC_REGS_H_
 
 #include <zircon/types.h>
 
@@ -325,4 +325,4 @@ class AmlSdmmcAdjustV2 : public hwreg::RegisterBase<AmlSdmmcAdjustV2, uint32_t> 
   DEF_BIT(22, adj_auto);
 };
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AML_SDMMC_AML_SDMMC_REGS_H_

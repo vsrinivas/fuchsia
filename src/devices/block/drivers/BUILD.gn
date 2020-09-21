@@ -7,7 +7,7 @@ group("tests") {
 
   deps = [
     "ahci:tests",
-    "aml-sd-emmc:tests",
+    "aml-sdmmc:tests",
     "block-verity:tests",
     "core:tests",
     "ftl:tests",

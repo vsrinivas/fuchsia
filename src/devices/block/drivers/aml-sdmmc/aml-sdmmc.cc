@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-sd-emmc.h"
+#include "aml-sdmmc.h"
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -37,7 +37,7 @@
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include "aml-sd-emmc-regs.h"
+#include "aml-sdmmc-regs.h"
 
 // Limit maximum number of descriptors to 512 for now
 #define AML_DMA_DESC_MAX_COUNT 512
