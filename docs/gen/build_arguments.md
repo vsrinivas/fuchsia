@@ -1995,7 +1995,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //src/ui/scenic/BUILD.gn:115
+From //src/ui/scenic/BUILD.gn:123
 
 ### scenic_ignore_vsync
 
