@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/unification/zbi/migrated_zbi.gni")
-import("//build/unification/zbi/tests.gni")
 import("//build/unification/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
@@ -13,9 +12,6 @@ import("//zircon/public/gn/test/zbi_test_success.gni")
 #
 #   args (optional)
 #     [list of strings] Command line arguments for the resulting zbi.
-#
-#   reference (optional)
-#     [string] Name of the Zircon zbi test this target mimics.
 #
 #   device_types
 #     [list of strings] Devices the test should run on.
@@ -53,7 +49,6 @@ template("migrated_zbi_test") {
                            "*",
                            [
                              "args",
-                             "reference",
                              "device_types",
                            ])
     testonly = true
@@ -80,55 +75,6 @@ template("migrated_zbi_test") {
     output_file = "${invoker.output_dir}/$output_file"
   } else {
     output_file = "$target_out_dir/$output_file"
-  }
-
-  if (defined(invoker.reference)) {
-    reference = invoker.reference
-    reference_zbi = false
-    foreach(test, zircon_zbi_tests) {
-      if (test.name == reference) {
-        assert(reference_zbi == false, "Duplicate zbi test: $reference")
-        reference_zbi = test.path
-      }
-    }
-    assert(reference_zbi != false, "Could not find zbi test $reference")
-
-    reference_target = "${target_name}_reference"
-
-    zbi_tool = "$zircon_tools_dir/zbi"
-
-    action(reference_target) {
-      forward_variables_from(invoker, [ "visibility" ])
-
-      testonly = true
-
-      script = "//build/unification/zbi/compare_zbis.py"
-
-      deps = [
-        ":$zbi_target",
-        "//zircon/public/tool/zbi($host_toolchain)",
-      ]
-
-      inputs = [
-        output_file,
-        reference_zbi,
-        zbi_tool,
-      ]
-      outputs = [ "$target_gen_dir/$target_name.stamp" ]
-
-      args = [
-        "--tool",
-        rebase_path(zbi_tool, root_build_dir),
-        "--reference-zbi",
-        rebase_path(reference_zbi, root_build_dir),
-        "--generated-zbi",
-        rebase_path(output_file, root_build_dir),
-        "--stamp",
-        rebase_path(outputs[0], root_build_dir),
-      ]
-    }
-
-    group_deps += [ ":$reference_target" ]
   }
 
   if (defined(invoker.device_types)) {
