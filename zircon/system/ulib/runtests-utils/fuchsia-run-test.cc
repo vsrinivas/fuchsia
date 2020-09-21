@@ -44,10 +44,6 @@
 #include <runtests-utils/profile.h>
 #include <runtests-utils/service-proxy-dir.h>
 
-// Signatures to print to indicate failure or success.
-constexpr char kFailureSignature[] = "\n[runtests][FAILED]";
-constexpr char kSuccessSignature[] = "\n[runtests][PASSED]";
-
 namespace fio = ::llcpp::fuchsia::io;
 
 namespace runtests {
@@ -588,11 +584,12 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   const zx::time end_time = zx::clock::get_monotonic();
   const int64_t duration_milliseconds = (end_time - start_time).to_msecs();
   if (status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d (%s)\n", test_name, status,
-            zx_status_get_string(status));
     if (status == ZX_ERR_TIMED_OUT) {
+      fprintf(stderr, "%s timed out\n", test_name);
       return std::make_unique<Result>(test_name, TIMED_OUT, 0, duration_milliseconds);
     }
+    fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d (%s)\n", test_name, status,
+            zx_status_get_string(status));
     return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0, duration_milliseconds);
   }
 
@@ -610,16 +607,12 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   // https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/tools/testing/runtests/output.go
   std::unique_ptr<Result> result;
   if (proc_info.return_code == 0) {
-    fprintf(stderr, "%s %s passed", kSuccessSignature, test_name);
     result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);
   } else {
-    fprintf(stderr, "%s %s exited with nonzero status: %" PRId64, kFailureSignature, test_name,
-            proc_info.return_code);
+    fprintf(stderr, "%s exited with nonzero status: %" PRId64, test_name, proc_info.return_code);
     result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
                                       duration_milliseconds);
   }
-  fprintf(stderr, " (%" PRIu64 ".%03u sec)\n", duration_milliseconds / 1000,
-          (unsigned)(duration_milliseconds % 1000));
 
   if (output_dir == nullptr) {
     return result;

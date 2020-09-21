@@ -33,6 +33,11 @@
 
 namespace runtests {
 
+// Signatures to print to indicate failure or success.
+// Testrunner looks for these exact strings, follows by the test name to determine test status.
+constexpr char kFailureSignature[] = "\n[runtests][FAILED]";
+constexpr char kSuccessSignature[] = "\n[runtests][PASSED]";
+
 void ParseTestNames(const fbl::StringPiece input, fbl::Vector<fbl::String>* output) {
   // strsep modifies its input, so we have to make a mutable copy.
   // +1 because StringPiece::size() excludes null terminator.
@@ -365,8 +370,17 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
       fflush(stdout);
       std::unique_ptr<Result> result =
           RunTest(argv.data(), output_dir, output_filename, output_test_name.c_str(), timeout_msec);
-      if (result->launch_status != SUCCESS) {
+      char duration_str[64];  // Size should be large enough for all reasonable durations.
+      snprintf(duration_str, sizeof(duration_str), "%" PRIu64 ".%03u sec",
+               result->duration_milliseconds / 1000,
+               (unsigned)(result->duration_milliseconds % 1000));
+      // testrunner looks for "<kFailureSignature|kSuccessSignature> <test name>". Anything after
+      // that is just for humans.
+      if (result->launch_status == SUCCESS) {
+        fprintf(stderr, "%s %s (%s)\n", kSuccessSignature, output_test_name.c_str(), duration_str);
+      } else {
         *failed_count += 1;
+        fprintf(stderr, "%s %s (%s)\n", kFailureSignature, output_test_name.c_str(), duration_str);
       }
       results->push_back(std::move(result));
     }
