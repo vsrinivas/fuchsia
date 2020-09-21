@@ -194,7 +194,7 @@ int usb_host_read_event(struct usb_host_context *context)
     int i, ret, done = 0;
     int offset = 0;
     int wd;
-    ret = read(context->fd, event_buf, sizeof(event_buf));
+    ret = (int) read(context->fd, event_buf, sizeof(event_buf));
     if (ret >= (int)sizeof(struct inotify_event)) {
         while (offset < ret && !done) {
             event = (struct inotify_event*)&event_buf[offset];
@@ -321,7 +321,7 @@ struct usb_device *usb_device_new(const char *dev_name, int fd)
     D("usb_device_new %s fd: %d\n", dev_name, fd);
     if (lseek(fd, 0, SEEK_SET) != 0)
         goto failed;
-    length = read(fd, device->desc, sizeof(device->desc));
+    length = (int) read(fd, device->desc, sizeof(device->desc));
     D("usb_device_new read returned %d errno %d\n", length, errno);
     if (length < 0)
         goto failed;
@@ -560,11 +560,11 @@ int usb_device_control_transfer(struct usb_device *device,
     if (!usb_device_reopen_writeable(device))
         return -1;
     memset(&ctrl, 0, sizeof(ctrl));
-    ctrl.bRequestType = requestType;
-    ctrl.bRequest = request;
-    ctrl.wValue = value;
-    ctrl.wIndex = index;
-    ctrl.wLength = length;
+    ctrl.bRequestType = (unsigned char) requestType;
+    ctrl.bRequest = (unsigned char) request;
+    ctrl.wValue = (unsigned short) value;
+    ctrl.wIndex = (unsigned short) index;
+    ctrl.wLength = (unsigned short) length;
     ctrl.data = buffer;
     ctrl.timeout = timeout;
     return ioctl(device->fd, USBDEVFS_CONTROL, &ctrl);
@@ -646,8 +646,8 @@ struct usb_request *usb_request_wait(struct usb_device *dev, int timeoutMillis)
     // Read the request. This should usually succeed as we polled before, but it can fail e.g. when
     // two threads are reading usb requests at the same time and only a single request is available.
     struct usbdevfs_urb *urb = NULL;
-    int res = TEMP_FAILURE_RETRY(ioctl(dev->fd, timeoutMillis == -1 ? USBDEVFS_REAPURB :
-                                       USBDEVFS_REAPURBNDELAY, &urb));
+    int res = (int) TEMP_FAILURE_RETRY(ioctl(dev->fd, timeoutMillis == -1 ? USBDEVFS_REAPURB :
+                                             USBDEVFS_REAPURBNDELAY, &urb));
     D("%s returned %d\n", timeoutMillis == -1 ? "USBDEVFS_REAPURB" : "USBDEVFS_REAPURBNDELAY", res);
     if (res < 0) {
         D("[ reap urb - error %d]\n", errno);
