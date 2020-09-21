@@ -56,7 +56,7 @@ test("minfs-unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//src/storage/minfs",
+    "//src/storage/minfs:minfs_private",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -70,7 +70,6 @@ test("minfs-unit") {
     "//zircon/system/ulib/fvm",
     "//zircon/third_party/ulib/cksum",
   ]
-  include_dirs = [ "//src/storage/minfs" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
   # TODO(47417): Fix the leaks and remove this.
@@ -84,7 +83,7 @@ source_set("integration-fixtures") {
     "integration/utils.cc",
   ]
   deps = [
-    "//src/storage/minfs",
+    "//src/storage/minfs:minfs_private",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
@@ -109,7 +108,7 @@ test("minfs-integration") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//src/devices/tests/sysdev",
-    "//src/storage/minfs",
+    "//src/storage/minfs:minfs_private",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -139,7 +138,7 @@ test("minfs-power") {
   deps = [
     ":integration-fixtures",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//src/storage/minfs",
+    "//src/storage/minfs:minfs_private",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
@@ -159,16 +158,15 @@ test("minfs-host") {
   }
   sources = [ "host/bcache_test.cc" ]
   deps = [
-    "//src/storage/minfs",
+    "//src/storage/minfs:minfs_private",
     "//zircon/public/lib/zxtest",
   ]
-  include_dirs = [ "$zx/system/ulib/minfs" ]
 }
 
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
-    "//src/storage/minfs",
+    "//src/storage/minfs:minfs_private",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/block-client:fake-device",

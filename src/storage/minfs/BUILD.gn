@@ -37,6 +37,7 @@ zx_library("minfs") {
     "lazy_reader.cc",
     "metrics.cc",
     "minfs.cc",
+    "minfs_private.h",
     "resizeable_array_buffer.cc",
     "transaction_limits.cc",
     "vnode.cc",
@@ -142,4 +143,22 @@ zx_library("minfs") {
     # TODO(fxb/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
+}
+
+# Targets that depend on minfs_private expect to include the private headers using relative includes
+# and we expect the relative includes inside of minfs to work as well.
+config("private_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [ "." ]
+}
+
+# This target exists for tests that need to include the minfs_private.h header. It is not exposed
+# to the SDK but some tests need these internals.
+source_set("minfs_private") {
+  visibility = [ "//src/storage/minfs/*" ]
+
+  public = [ "minfs_private.h" ]
+  public_configs = [ ":private_config" ]
+  public_deps = [ ":minfs" ]
 }
