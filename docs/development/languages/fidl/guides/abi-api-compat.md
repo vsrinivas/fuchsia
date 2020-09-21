@@ -12,6 +12,14 @@ existing usages. Failed changes manifest in the following ways:
 The Fuchsia project requires that changes to published FIDL libraries are both
 source-compatible and binary-compatible for partners.
 
+Note: Some changes are binary-compatible, yet require a specific transition path
+to avoid runtime validation issues. Binary-compatibility indicates that two
+peers have the same understanding of how to read or write the data, though these
+two peers may disagree on which values are deemed valid. As an example, a
+`uint32` is binary-compatible with a `enum : uint32`, even though the enum has
+runtime validation which restricts the domain to only the specific values
+identified by the enum members.
+
 ## Which changes to a FIDL API are safe?
 
 For the purpose of describing interface compatibility, FIDL libraries are made
