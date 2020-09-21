@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-hardware-sdio") {
+fidl("fuchsia.hardware.sdio") {
   sources = [ "sdio.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
