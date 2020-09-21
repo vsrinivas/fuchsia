@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("zbitl") {
+import("$zx_build/public/gn/migrated_targets.gni")
+
+zx_library("zbitl") {
   host = true
   kernel = true
   static = true
@@ -12,6 +14,7 @@ library("zbitl") {
   # compilation of this library to the fuchsia build.
   sdk = "source"
   sdk_headers = []
+  sdk_migrated = true
 
   sources = [
     "checking.cc",

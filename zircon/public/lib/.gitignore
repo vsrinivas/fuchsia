@@ -22,8 +22,6 @@
 abr/
 arch/
 arm64/
-async/
-async-cpp/
 boringssl/
 cmdline/
 cmpctmalloc/
@@ -34,9 +32,6 @@ devicetree/
 elfload/
 elf-psabi/
 explicit-memory/
-fidl/
-fidl_base/
-fidl-llcpp/
 host/
 kcmdline/
 lazy_init/
@@ -49,9 +44,7 @@ ngunwind/
 ram-crashlog/
 region-alloc/
 runtime/
-safemath/
 smbios/
-sync/
 syscalls-headers/
 uart/
 uart-mock/

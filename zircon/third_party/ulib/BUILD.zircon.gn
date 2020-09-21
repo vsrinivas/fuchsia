@@ -8,7 +8,6 @@ group("ulib") {
   deps = [
     "lz4",
     "ngunwind",
-    "safemath",
     "zstd",
   ]
 }

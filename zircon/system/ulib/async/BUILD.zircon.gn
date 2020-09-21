@@ -2,19 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("async") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
     "lib/async/dispatcher.h",
+    "lib/async/irq.h",
     "lib/async/paged_vmo.h",
     "lib/async/receiver.h",
     "lib/async/task.h",
     "lib/async/time.h",
     "lib/async/trap.h",
     "lib/async/wait.h",
-    "lib/async/irq.h",
   ]
+  sdk_migrated = true
   host = true
   public_deps = [
     # <lib/async/cpp/wait.h> has #include <lib/fit/function.h>.
@@ -32,14 +35,15 @@ zx_library("async-cpp") {
   sdk_publishable = true
   sdk_headers = [
     "lib/async/cpp/executor.h",
+    "lib/async/cpp/irq.h",
     "lib/async/cpp/paged_vmo.h",
     "lib/async/cpp/receiver.h",
     "lib/async/cpp/task.h",
     "lib/async/cpp/time.h",
     "lib/async/cpp/trap.h",
     "lib/async/cpp/wait.h",
-    "lib/async/cpp/irq.h",
   ]
+  sdk_migrated = true
   public_deps = [
     # <lib/async/cpp/executor.h> has #include <lib/zx/time.h>.
     # <lib/async/cpp/task.h> has #include <lib/zx/time.h>.

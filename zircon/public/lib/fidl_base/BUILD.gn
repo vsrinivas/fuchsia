@@ -1,0 +1,15 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_alias.gni")
+
+# Required because some //vendor/... target still depend on this.
+group("fidl_base") {
+  public_deps = [ "//zircon/system/ulib/fidl:fidl_base" ]
+}
+
+sdk_alias("fidl_base_sdk") {
+  target = "//zircon/system/ulib/fidl:fidl_base_sdk"
+  type = "atom"
+}

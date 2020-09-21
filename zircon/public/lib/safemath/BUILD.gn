@@ -1,0 +1,10 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_alias.gni")
+
+# Required because there are //vendor/... targets that depend on it.
+group("safemath") {
+  public_deps = [ "//zircon/third_party/ulib/safemath" ]
+}

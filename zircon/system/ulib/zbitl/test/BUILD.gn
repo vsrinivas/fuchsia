@@ -54,8 +54,8 @@ test("zbitl-unittests") {
   deps = [
     "//src/lib/files",
     "//src/lib/fxl",
-    "//zircon/public/lib/zbitl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zbitl",
 
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",

@@ -2,7 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl/params.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
+if (zx == "/") {
+  import("$zx/public/gn/fidl/params.gni")
+} else {
+  import("//build/fidl/args.gni")
+  zx_fidl_trace_level = fidl_trace_level
+}
 
 declare_args() {
   fidl_write_v1_wireformat = false
@@ -31,6 +37,7 @@ zx_library("fidl_base") {
     "lib/fidl/visitor.h",
     "lib/fidl/walker.h",
   ]
+  sdk_migrated = true
 
   sources = [
     "builder.cc",
@@ -60,6 +67,7 @@ zx_library("fidl") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/fidl/epitaph.h" ]
+  sdk_migrated = true
   sources = [
     "epitaph.c",
     "handle_closing.cc",
@@ -74,38 +82,41 @@ if (is_fuchsia) {
   zx_library("fidl-llcpp") {
     sdk = "source"
     sdk_headers = [
+      "lib/fidl/llcpp/aligned.h",
+      "lib/fidl/llcpp/allocator.h",
       "lib/fidl/llcpp/array.h",
       "lib/fidl/llcpp/async_binding.h",
       "lib/fidl/llcpp/async_transaction.h",
-      "lib/fidl/llcpp/client.h",
-      "lib/fidl/llcpp/client_base.h",
-      "lib/fidl/llcpp/coding.h",
-      "lib/fidl/llcpp/connect_service.h",
-      "lib/fidl/llcpp/server.h",
-      "lib/fidl/llcpp/service_handler_interface.h",
-      "lib/fidl/llcpp/decoded_message.h",
-      "lib/fidl/llcpp/encoded_message.h",
-      "lib/fidl/llcpp/linearization_buffer.h",
-      "lib/fidl/llcpp/linearized_and_encoded.h",
-      "lib/fidl/llcpp/message.h",
-      "lib/fidl/llcpp/result.h",
-      "lib/fidl/llcpp/aligned.h",
-      "lib/fidl/llcpp/response_storage.h",
-      "lib/fidl/llcpp/sync_call.h",
-      "lib/fidl/llcpp/traits.h",
-      "lib/fidl/llcpp/transaction.h",
-      "lib/fidl/llcpp/string_view.h",
-      "lib/fidl/llcpp/vector_view.h",
-      "lib/fidl/llcpp/tracking_ptr.h",
-      "lib/fidl/llcpp/allocator.h",
       "lib/fidl/llcpp/buffer_allocator.h",
       "lib/fidl/llcpp/buffer_then_heap_allocator.h",
-      "lib/fidl/llcpp/failover_allocator.h",
+      "lib/fidl/llcpp/client_base.h",
+      "lib/fidl/llcpp/client.h",
+      "lib/fidl/llcpp/coding.h",
+      "lib/fidl/llcpp/connect_service.h",
+      "lib/fidl/llcpp/decoded_message.h",
+      "lib/fidl/llcpp/encoded_message.h",
       "lib/fidl/llcpp/envelope.h",
+      "lib/fidl/llcpp/errors.h",
+      "lib/fidl/llcpp/failover_allocator.h",
+      "lib/fidl/llcpp/heap_allocator.h",
+      "lib/fidl/llcpp/linearized_and_encoded.h",
       "lib/fidl/llcpp/memory.h",
+      "lib/fidl/llcpp/message.h",
+      "lib/fidl/llcpp/message_storage.h",
+      "lib/fidl/llcpp/result.h",
+      "lib/fidl/llcpp/server.h",
+      "lib/fidl/llcpp/service_handler_interface.h",
+      "lib/fidl/llcpp/string_view.h",
+      "lib/fidl/llcpp/sync_call.h",
+      "lib/fidl/llcpp/tracking_ptr.h",
+      "lib/fidl/llcpp/traits.h",
+      "lib/fidl/llcpp/transaction.h",
+      "lib/fidl/llcpp/types.h",
       "lib/fidl/llcpp/unowned_ptr.h",
       "lib/fidl/llcpp/unsafe_buffer_allocator.h",
+      "lib/fidl/llcpp/vector_view.h",
     ]
+    sdk_migrated = true
     sources = [
       "llcpp_async_binding.cc",
       "llcpp_async_transaction.cc",
@@ -150,25 +161,25 @@ if (is_fuchsia) {
     host = true
     sdk = "source"
     sdk_headers = [
-      "lib/fidl/llcpp/array.h",
-      "lib/fidl/llcpp/coding.h",
-      "lib/fidl/llcpp/server.h",
-      "lib/fidl/llcpp/linearization_buffer.h",
-      "lib/fidl/llcpp/linearized_and_encoded.h",
       "lib/fidl/llcpp/aligned.h",
-      "lib/fidl/llcpp/traits.h",
-      "lib/fidl/llcpp/string_view.h",
-      "lib/fidl/llcpp/vector_view.h",
-      "lib/fidl/llcpp/tracking_ptr.h",
       "lib/fidl/llcpp/allocator.h",
+      "lib/fidl/llcpp/array.h",
       "lib/fidl/llcpp/buffer_allocator.h",
       "lib/fidl/llcpp/buffer_then_heap_allocator.h",
-      "lib/fidl/llcpp/failover_allocator.h",
+      "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/envelope.h",
+      "lib/fidl/llcpp/failover_allocator.h",
+      "lib/fidl/llcpp/linearized_and_encoded.h",
       "lib/fidl/llcpp/memory.h",
+      "lib/fidl/llcpp/server.h",
+      "lib/fidl/llcpp/string_view.h",
+      "lib/fidl/llcpp/tracking_ptr.h",
+      "lib/fidl/llcpp/traits.h",
       "lib/fidl/llcpp/unowned_ptr.h",
       "lib/fidl/llcpp/unsafe_buffer_allocator.h",
+      "lib/fidl/llcpp/vector_view.h",
     ]
+    sdk_migrated = true
     sources = [ "llcpp_coding.c" ]
     public_deps = [ "$zx/system/ulib/zircon:headers" ]
     deps = [
