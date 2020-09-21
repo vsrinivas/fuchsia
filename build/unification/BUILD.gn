@@ -8,7 +8,6 @@ group("unification") {
   deps = [
     "images",
     "tests:host-metadata",
-    "tools",
     "zbi",
   ]
 }
