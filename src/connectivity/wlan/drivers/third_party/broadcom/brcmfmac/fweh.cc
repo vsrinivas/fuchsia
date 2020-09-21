@@ -389,18 +389,11 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
   int i;
   zx_status_t err;
   bcme_status_t fw_err = BCME_OK;
-  eventmsgs_ext_t* msgs_ext;
-  size_t msg_len = BRCMF_EVENTING_MASK_LEN + EVENTMSGS_EXT_STRUCT_SIZE;
+  char msgs_ext_buf[BRCMF_EVENTING_MASK_LEN + EVENTMSGS_EXT_STRUCT_SIZE] = {};
+  eventmsgs_ext_t* msgs_ext = reinterpret_cast<eventmsgs_ext_t *>(msgs_ext_buf);
   bool support_eventmsgs_ext = true;
 
-  // Initialize the struct.
-  msgs_ext = (eventmsgs_ext_t*)calloc(1, msg_len);
-  if (msgs_ext == nullptr) {
-    BRCMF_ERR("eventmsgs_ext allocation failed.");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  err = brcmf_fil_iovar_data_get(ifp, "event_msgs_ext", msgs_ext, msg_len, &fw_err);
+  err = brcmf_fil_iovar_data_get(ifp, "event_msgs_ext", msgs_ext_buf, sizeof(msgs_ext_buf), &fw_err);
   if (err != ZX_OK) {
     // Use original way to read event mask from firmware if eventmsgs_ext is not supported by
     // firmware.
@@ -444,14 +437,13 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     msgs_ext->command = EVENTMSGS_SET_MASK;
     msgs_ext->length = BRCMF_EVENTING_MASK_LEN;
 
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs_ext", msgs_ext, msg_len, &fw_err);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs_ext", msgs_ext_buf, sizeof(msgs_ext_buf), &fw_err);
   }
   if (err != ZX_OK) {
     BRCMF_ERR("Set event_msgs(_ext) error: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
 
-  free(msgs_ext);
   return err;
 }
 
