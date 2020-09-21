@@ -64,6 +64,9 @@ pub use net_declare_macros::fidl_socket_addr_v4;
 ///
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
 pub use net_declare_macros::fidl_socket_addr_v6;
+/// Declares a [`fidl_fuchsia_net::Subnet`] from a parsable CIDR address string
+/// in the form `addr/prefix`. E.g. 192.168.0.1/24 or ff08::1/64.
+pub use net_declare_macros::fidl_subnet;
 
 /// Redeclaration of macros to generate `std` types.
 pub mod std {
@@ -84,6 +87,7 @@ pub mod fidl {
     pub use super::fidl_socket_addr as socket_addr;
     pub use super::fidl_socket_addr_v4 as socket_addr_v4;
     pub use super::fidl_socket_addr_v6 as socket_addr_v6;
+    pub use super::fidl_subnet as subnet;
 }
 
 #[cfg(test)]
@@ -247,6 +251,30 @@ mod tests {
         assert_eq!(
             fidl::MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] },
             fidl_mac!("AA:BB:CC:DD:EE:FF")
+        );
+    }
+
+    #[test]
+    fn test_fidl_subnet_v4() {
+        assert_eq!(
+            fidl::Subnet {
+                addr: fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr: [192, 168, 0, 1] }),
+                prefix_len: 24
+            },
+            fidl_subnet!(192.168.0.1/24)
+        );
+    }
+
+    #[test]
+    fn test_fidl_subnet_v6() {
+        assert_eq!(
+            fidl::Subnet {
+                addr: fidl::IpAddress::Ipv6(fidl::Ipv6Address {
+                    addr: [0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
+                }),
+                prefix_len: 64
+            },
+            fidl_subnet!(ff01::0102/64)
         );
     }
 }

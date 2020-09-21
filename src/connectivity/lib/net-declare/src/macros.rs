@@ -292,6 +292,7 @@ impl Generator<SocketAddrV6> for FidlGen {
 /// Helper struct to parse Mac addresses from string.
 #[derive(Default)]
 struct MacAddress([u8; 6]);
+
 #[derive(thiserror::Error, Debug)]
 enum MacParseError {
     #[error("invalid length for MacAddress, should be 6")]
@@ -337,6 +338,66 @@ impl Generator<MacAddress> for FidlGen {
     }
 }
 
+/// Helper struct to parse Cidr addresses from string.
+struct CidrAddress {
+    address: std::net::IpAddr,
+    prefix: u8,
+}
+
+#[derive(thiserror::Error, Debug)]
+enum CidrParseError {
+    #[error("missing address")]
+    MissingIp,
+    #[error("missing prefix length")]
+    MissingPrefix,
+    #[error("unexpected trailing data \"{0}\"")]
+    TrailingInformation(String),
+    #[error("failed to parse IP \"{0}\": {1}")]
+    IpParseError(String, std::net::AddrParseError),
+    #[error("failed to parse prefix \"{0}\": {1}")]
+    PrefixParseError(String, std::num::ParseIntError),
+    #[error("bad prefix value {0} for {1}")]
+    BadPrefix(u8, std::net::IpAddr),
+}
+
+impl FromStr for CidrAddress {
+    type Err = CidrParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parse_iter = s.split('/');
+        let ip_str = parse_iter.next().ok_or(CidrParseError::MissingIp)?;
+        let prefix_str = parse_iter.next().ok_or(CidrParseError::MissingPrefix)?;
+        if let Some(trailing) = parse_iter.next() {
+            return Err(CidrParseError::TrailingInformation(trailing.to_string()));
+        }
+        let address = std::net::IpAddr::from_str(ip_str)
+            .map_err(|e| CidrParseError::IpParseError(ip_str.to_string(), e))?;
+        let prefix = u8::from_str_radix(prefix_str, 10)
+            .map_err(|e| CidrParseError::PrefixParseError(prefix_str.to_string(), e))?;
+        let addr_len = 8 * match address {
+            std::net::IpAddr::V4(a) => a.octets().len(),
+            std::net::IpAddr::V6(a) => a.octets().len(),
+        };
+        if usize::from(prefix) > addr_len {
+            return Err(CidrParseError::BadPrefix(prefix, address));
+        }
+        Ok(CidrAddress { address, prefix })
+    }
+}
+
+impl Generator<CidrAddress> for FidlGen {
+    fn generate(input: CidrAddress) -> TokenStream {
+        let CidrAddress { address, prefix } = input;
+        let address = Self::generate(address);
+        quote! {
+            fidl_fuchsia_net::Subnet {
+                addr: #address,
+                prefix_len: #prefix
+            }
+        }
+    }
+}
+
 declare_macro!(fidl_ip, FidlGen, IpAddr);
 declare_macro!(fidl_ip_v4, FidlGen, Ipv4Addr);
 declare_macro!(fidl_ip_v6, FidlGen, Ipv6Addr);
@@ -344,3 +405,4 @@ declare_macro!(fidl_socket_addr, FidlGen, SocketAddr);
 declare_macro!(fidl_socket_addr_v4, FidlGen, SocketAddrV4);
 declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);
 declare_macro!(fidl_mac, FidlGen, MacAddress);
+declare_macro!(fidl_subnet, FidlGen, CidrAddress);
