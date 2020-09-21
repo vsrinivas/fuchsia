@@ -332,7 +332,7 @@ template("c_toolchain") {
       link_inputs = "-Wl,-filelist,$rspfile {{libs}} {{solibs}}"
     } else {
       rspfile_content = "{{inputs}}"
-      link_inputs = "@'$rspfile'"
+      link_inputs = "'@$rspfile'"
       if (invoker.os == "win") {
         link_inputs += " {{libs}} {{solibs}}"
       } else {

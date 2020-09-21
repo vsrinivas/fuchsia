@@ -431,7 +431,7 @@ template("clang_toolchain") {
     tool("alink") {
       rspfile = "{{output}}.rsp"
       command =
-          "rm -f {{output}} && $ar {{arflags}} rcsD {{output}} @\"$rspfile\""
+          "rm -f {{output}} && $ar {{arflags}} rcsD {{output}} \"@$rspfile\""
       description = "AR {{output}}"
       rspfile_content = "{{inputs}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
@@ -456,7 +456,7 @@ template("clang_toolchain") {
       } else {
         depfile = "$outfile.d"
         depsformat = "gcc"
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\" {{solibs}} {{libs}}"
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" \"@$rspfile\" {{solibs}} {{libs}}"
         rspfile_content = "{{inputs}}"
         default_output_extension = ".so"
       }
@@ -506,7 +506,7 @@ template("clang_toolchain") {
       } else {
         depfile = "$outfile.d"
         depsformat = "gcc"
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" @\"$rspfile\" {{solibs}} {{libs}}"
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" \"@$rspfile\" {{solibs}} {{libs}}"
         rspfile_content = "{{inputs}}"
         default_output_extension = ".so"
       }
@@ -553,7 +553,7 @@ template("clang_toolchain") {
       } else {
         depfile = "$outfile.d"
         depsformat = "gcc"
-        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
+        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,--start-group \"@$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
         rspfile_content = "{{inputs}}"
       }
       if (use_strip) {
