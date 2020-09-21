@@ -43,6 +43,7 @@ impl From<TimeSample> for Update {
     }
 }
 
+#[cfg(test)]
 impl Update {
     /// Returns true iff the update contained is a status.
     pub fn is_status(&self) -> bool {
