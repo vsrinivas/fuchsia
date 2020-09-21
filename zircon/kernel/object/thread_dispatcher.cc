@@ -309,15 +309,6 @@ bool ThreadDispatcher::HasStartedLocked() const {
          lifecycle != ThreadState::Lifecycle::INITIALIZED;
 }
 
-static void ThreadCleanupDpc(Dpc* d) {
-  LTRACEF("dpc %p\n", d);
-
-  ThreadDispatcher* t = d->arg<ThreadDispatcher>();
-  DEBUG_ASSERT(t);
-
-  delete t;
-}
-
 void ThreadDispatcher::ExitingCurrent() {
   canary_.Assert();
 
