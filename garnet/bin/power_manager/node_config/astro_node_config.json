@@ -50,9 +50,23 @@
   },
   {
     "type": "TemperatureHandler",
-    "name": "temperature",
+    "name": "temperature_soc_pll",
     "config": {
       "driver_path": "/dev/sys/platform/05:03:a/thermal"
+    }
+  },
+  {
+    "type": "TemperatureHandler",
+    "name": "temperature_therm_dsp",
+    "config": {
+      "driver_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-dsp"
+    }
+  },
+  {
+    "type": "TemperatureHandler",
+    "name": "temperature_therm_wifi",
+    "config": {
+      "driver_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-wifi"
     }
   },
   {
@@ -64,7 +78,7 @@
     "name": "thermal_policy",
     "dependencies": {
       "crash_report_handler_node": "crash_handler",
-      "temperature_handler_node": "temperature",
+      "temperature_handler_node": "temperature_soc_pll",
       "cpu_control_nodes": [
         "cpu_control"
       ],
@@ -84,6 +98,32 @@
       },
       "thermal_shutdown_temperature": 95.0,
       "throttle_end_delay": 60.0
+    }
+  },
+  {
+    "type": "ThermalShutdown",
+    "name": "thermal_shutdown_therm_dsp",
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "temperature_handler_node": "temperature_therm_dsp"
+    },
+    "config": {
+      "thermal_shutdown_temperature_c": 73.0,
+      "poll_interval_s": 1,
+      "filter_time_constant_s": 1
+    }
+  },
+  {
+    "type": "ThermalShutdown",
+    "name": "thermal_shutdown_therm_wifi",
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "temperature_handler_node": "temperature_therm_wifi"
+    },
+    "config": {
+      "thermal_shutdown_temperature_c": 73.0,
+      "poll_interval_s": 1,
+      "filter_time_constant_s": 1
     }
   }
 ]
