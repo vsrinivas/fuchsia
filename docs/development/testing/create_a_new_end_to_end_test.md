@@ -281,7 +281,6 @@ Use the following resources for writing new tests:
 *   The [developer guide](https://pub.dev/packages/test){:.external} for writing
     Dart tests.
 *   The source code of existing end-to-end tests, for example:
-    *   <code>[can_browse_web_tes.dart](/src/tests/end_to_end/can_browse_web/test/can_browse_web_test.dart)</code>
     *   <code>[screen_is_not_black_test.dart](/src/tests/end_to_end/screen_is_not_black/test/screen_is_not_black_test.dart)</code>
 *   The source code of the <code>[sl4f](/src/tests/end_to_end/sl4f/test/)</code>
     end-to-end test, which tests various

@@ -52,21 +52,7 @@ group("end_to_end_deps") {
 group("terminal_end_to_end_deps") {
   testonly = true
   public_deps = [
-    # Used by can_browse_web_test
-    "//src/modular/bin/sessionctl",
-
     # Needed for running performance tests.
     "//src/tests/end_to_end/perf:package_deps",
-  ]
-}
-
-# Product-specific dependency groups for dependencies that are only used for a
-# small number of tests, to avoid them being included in the cached package set
-# for products that do not include the corresponding test.
-group("workstation_end_to_end_deps") {
-  testonly = true
-  public_deps = [
-    # Used by can_browse_web_test
-    "//src/modular/bin/sessionctl",
   ]
 }
