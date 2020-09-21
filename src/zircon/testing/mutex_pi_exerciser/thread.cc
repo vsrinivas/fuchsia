@@ -95,7 +95,7 @@ zx_status_t Thread::Start(Thunk thunk) {
       return ZX_ERR_NO_RESOURCES;
     }
 
-    auto cleanup = fbl::MakeAutoCall([this]() { Kill(); });
+    auto cleanup = fbl::MakeAutoCall([this]() { Exit(); });
 
     zx_status_t res = EnsureProfile(prio_);
     if (res != ZX_OK) {
@@ -160,13 +160,9 @@ int Thread::EntryPoint() {
 
 void Thread::Exit() {
   if (handle_.is_valid()) {
-    zx_status_t res = WaitForState(State::WAITING_TO_START);
-    if (res != ZX_OK) {
-      Kill();
-    } else {
-      barrier_.Signal();
-      thrd_join(thread_, nullptr);
-    }
+    ZX_ASSERT(WaitForState(State::WAITING_TO_START) == ZX_OK);
+    barrier_.Signal();
+    thrd_join(thread_, nullptr);
   }
 
   barrier_.Reset();

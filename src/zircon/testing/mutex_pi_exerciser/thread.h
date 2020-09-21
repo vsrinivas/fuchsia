@@ -48,12 +48,6 @@ class Thread {
 
   int EntryPoint();
   void Exit();
-  void Kill() {
-    if (handle_.is_valid()) {
-      handle_.kill();
-      handle_.reset();
-    }
-  }
 
   zx_status_t WaitForState(State target_state);
 
