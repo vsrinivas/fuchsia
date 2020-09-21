@@ -17,7 +17,10 @@ use {
         StreamExt,
     },
     regex::RegexSet,
-    std::{convert::TryFrom, sync::Arc},
+    std::{
+        convert::TryFrom,
+        sync::{atomic::AtomicBool, Arc},
+    },
     thiserror::Error,
 };
 
@@ -50,6 +53,7 @@ fn event_name(event_type: &fsys::EventType) -> String {
 /// Refer to events.fidl for a detailed description of this protocol.
 pub struct EventSource {
     proxy: fsys::BlockingEventSourceProxy,
+    running: AtomicBool,
 }
 
 impl EventSource {
@@ -71,10 +75,15 @@ impl EventSource {
 
     /// Wraps a provided BlockingEventSource proxy
     pub fn from_proxy(proxy: fsys::BlockingEventSourceProxy) -> Self {
-        Self { proxy }
+        Self { proxy, running: AtomicBool::new(false) }
     }
 
     pub async fn subscribe(&self, event_names: Vec<impl AsRef<str>>) -> Result<EventStream, Error> {
+        if self.running.load(std::sync::atomic::Ordering::SeqCst) {
+            return Err(format_err!(
+                "The component tree is already running! Subscribing to new events is racy!"
+            ));
+        }
         let (client_end, stream) = create_request_stream::<fsys::EventStreamMarker>()?;
         self.proxy
             .subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end)
@@ -187,7 +196,11 @@ impl EventSource {
     }
 
     pub async fn start_component_tree(&self) {
-        self.proxy.start_component_tree().await.unwrap();
+        let was_running =
+            self.running.compare_and_swap(false, true, std::sync::atomic::Ordering::SeqCst);
+        if !was_running {
+            self.proxy.start_component_tree().await.unwrap();
+        }
     }
 
     /// Verifies that the given events are received from the event system. Based on the vector of

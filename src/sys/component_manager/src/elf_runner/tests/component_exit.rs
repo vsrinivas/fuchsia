@@ -20,8 +20,9 @@ async fn test_exit_detection() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    event_source.start_component_tree().await;
     let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
+    event_source.start_component_tree().await;
+
     let collection_name = String::from("test-collection");
 
     let instance = ScopedInstance::new(
@@ -50,6 +51,7 @@ async fn test_exit_after_rendezvous() {
     let event_source = EventSource::new_sync().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
     event_source.install_injector(rendezvous_service.clone(), None).await.unwrap();
+    let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
     event_source.start_component_tree().await;
 
     // Launch the component under test.
@@ -65,7 +67,6 @@ async fn test_exit_after_rendezvous() {
 
     // Wait to get confirmation that the component under test exited.
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
-    let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
     let expected_events = vec![EventMatcher::new()
         .expect_type(events::Stopped::TYPE)
         .expect_moniker(&target_moniker)];

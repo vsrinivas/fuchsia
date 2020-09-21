@@ -12,6 +12,13 @@ use {
 #[fasync::run_singlethreaded]
 async fn main() {
     let event_source = EventSource::new_sync().unwrap();
+
+    // Subscribe to relevant events
+    let mut event_stream = event_source
+        .subscribe(vec![Stopped::NAME, MarkedForDestruction::NAME, Destroyed::NAME])
+        .await
+        .unwrap();
+
     // Creating children will not complete until `start_component_tree` is called.
     event_source.start_component_tree().await;
 
@@ -76,12 +83,6 @@ async fn main() {
     // integration test via HubReport
     hub_report
         .report_file_content("/hub/children/coll:simple_instance/children/child/id")
-        .await
-        .unwrap();
-
-    // Subscribe to relevant events
-    let mut event_stream = event_source
-        .subscribe(vec![Stopped::NAME, MarkedForDestruction::NAME, Destroyed::NAME])
         .await
         .unwrap();
 
