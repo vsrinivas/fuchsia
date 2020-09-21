@@ -21,7 +21,7 @@ if (is_host) {
     output_name = "coresight_tests"
     sources = [ "rom_table_tests.cc" ]
     deps = [
-      "//zircon/public/lib/coresight",
+      "//zircon/kernel/dev/coresight",
       "//zircon/public/lib/hwreg-mock",
       "//zircon/public/lib/zxtest",
     ]

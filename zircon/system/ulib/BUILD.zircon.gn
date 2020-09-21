@@ -18,7 +18,6 @@ group("ulib") {
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/devicetree",
     "$zx/third_party/ulib",
     "abr",
     "c",
@@ -45,9 +44,6 @@ group("ulib") {
 group("ulib-host") {
   testonly = true
   deps = [
-    "$zx/kernel/dev/coresight",
-    "$zx/kernel/lib/devicetree",
-    "$zx/kernel/lib/heap/cmpctmalloc",
     "$zx/third_party/ulib/boringssl",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",

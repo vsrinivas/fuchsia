@@ -29,7 +29,7 @@ group("tests") {
 test("devicetree-tests") {
   sources = [ "devicetree_tests.cc" ]
   deps = [
-    "//zircon/public/lib/devicetree",
+    "//zircon/kernel/lib/devicetree",
     "//zircon/public/lib/zxtest",
   ]
   if (is_host) {

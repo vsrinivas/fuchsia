@@ -24,10 +24,13 @@ if (is_host) {
       "page_manager.cc",
     ]
     deps = [
-      "//zircon/public/lib/cmpctmalloc",
+      "//zircon/kernel/lib/heap/cmpctmalloc",
       "//zircon/public/lib/zxtest",
     ]
-    include_dirs = [ "//zircon/kernel/lib/heap/cmpctmalloc/include/lib" ]
+    include_dirs = [
+      "//zircon/kernel/lib/heap/cmpctmalloc/include/lib",
+      "//zircon/kernel/lib/heap/include",
+    ]
 
     # TODO(fxb/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
