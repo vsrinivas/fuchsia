@@ -1828,7 +1828,7 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
   return ZX_OK;
 }
 
-VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
+VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, 
                                                             VmObjectPaged** owner_out,
                                                             uint64_t* owner_offset_out,
                                                             uint64_t* owner_id_out) {
@@ -1951,7 +1951,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   // page.
   if ((!page_or_mark || page_or_mark->IsEmpty()) && parent_) {
     page_or_mark =
-        FindInitialPageContentLocked(offset, pf_flags, &page_owner, &owner_offset, &owner_id);
+        FindInitialPageContentLocked(offset, &page_owner, &owner_offset, &owner_id);
   } else {
     page_owner = this;
     owner_offset = offset;
@@ -2417,7 +2417,7 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
   if (!slot || !slot->IsPage()) {
     VmObjectPaged* page_owner;
     uint64_t owner_offset, owner_id;
-    if (!FindInitialPageContentLocked(page_base_offset, VMM_PF_FLAG_WRITE, &page_owner,
+    if (!FindInitialPageContentLocked(page_base_offset, &page_owner,
                                       &owner_offset, &owner_id)) {
       // Parent doesn't have a page either, so nothing to do this is already zero.
       return ZX_OK;
@@ -2569,7 +2569,7 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
       if (!initial_content_.inited) {
         DEBUG_ASSERT(can_see_parent);
         VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
-            offset, VMM_PF_FLAG_WRITE, &initial_content_.page_owner, &initial_content_.owner_offset,
+            offset, &initial_content_.page_owner, &initial_content_.owner_offset,
             &initial_content_.owner_id);
         // We only care about the parent having a 'true' vm_page for content. If the parent has a
         // marker then it's as if the parent has no content since that's a zero page anyway, which

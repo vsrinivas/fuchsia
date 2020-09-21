@@ -308,7 +308,7 @@ class VmObjectPaged final : public VmObject {
   // as well as the VmObjectPaged and offset which own the page. If no ancestor has a committed
   // page for the offset, returns null as well as the VmObjectPaged/offset which need to be queried
   // to populate the page.
-  VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
+  VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset,
                                                VmObjectPaged** owner_out,
                                                uint64_t* owner_offset_out, uint64_t* owner_id_out)
       TA_REQ(lock_);
