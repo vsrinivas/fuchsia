@@ -250,11 +250,11 @@ int main(int argc, char** argv) {
       .ai_socktype = SOCK_RAW,
   };
   struct addrinfo* info;
-  auto undo = fbl::MakeAutoCall([&info]() { freeaddrinfo(info); });
   if (getaddrinfo(options.host, NULL, &hints, &info)) {
     fprintf(stderr, "ping: unknown host %s\n", options.host);
     return -1;
   }
+  auto undo = fbl::MakeAutoCall([info]() { freeaddrinfo(info); });
 
   int proto;
   uint8_t type;
