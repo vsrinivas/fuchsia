@@ -56,6 +56,9 @@ level when some clients cannot be migrated atomically:
 | enum     | member        | ✅ | [⚠️](#enum-member-add) | [⚠️](#enum-member-remove) | [⚠️](#enum-member-rename) | ❌ | -- | ✅ |
 | bits     | member        | ✅ | [⚠️](#bits-member-add) | [⚠️](#bits-member-remove) | [⚠️](#bits-member-rename) | ❌ | -- | ✅ |
 | const    | value         | -- | -- | -- | -- | ❌ | -- | [✅](#const-value-default-value) |
+| _all_    | attribute     | -- | [⚠️](#attributes) | [⚠️](#attributes) | -- | -- | -- | -- |
+| type     | constraint    | -- | [⚠️](#constraints) | [⚠️](#constraints) | -- | -- | -- | -- |
+| _decl_   | modifier      | -- | [⚠️](#modifiers) | [⚠️](#modifiers) | -- | -- | -- | -- |
 
 *Legend:*
 
@@ -250,7 +253,7 @@ Renames are binary-compatible, except in the case of libraries, protocols,
 methods and events. See the `[Selector]` attribute for binary-compatible renames
 of these.
 
-### Attributes
+### Attributes {#attributes}
 
 Removing `[Discoverable]` is a source-incompatible change. You first need to
 ensure that there are no references to the generated protocol name before
@@ -273,6 +276,21 @@ they often accompany other incompatible changes:
 * `[Doc]`
 * `[MaxBytes]`
 * `[MaxHandles]`
+
+### Constraints {#constraints}
+
+ABI: Relaxing or tightening constraints is binary-compatible. However, when
+evolving constraints, care must be taken to transition readers or writers to
+avoid runtime validation issues.
+
+When relaxing a constraint (e.g. changing a vector's maximum allowable size to
+grow from `vector<T>:128` to `vector<T>:256`), all readers must transition ahead
+of writers to avoid values being rejected at runtime.
+
+Conversely, when tightening a constraint, all writers must transition ahead of
+readers to avoid emitting values which would then be rejected at runtime.
+
+API: Relaxing or tightening constraints is source-compatible.
 
 ### Modifiers {#modifiers}
 
