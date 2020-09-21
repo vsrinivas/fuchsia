@@ -9,7 +9,6 @@
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <zircon/status.h>
 
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
@@ -28,6 +27,15 @@ namespace {
 // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
 constexpr float kDefaultRootViewDepth = 1000;
 
+// TODO(SCN-1278): Remove this.
+// Turn two floats (high bits, low bits) into a 64-bit uint.
+trace_flow_id_t PointerTraceHACK(float fa, float fb) {
+  uint32_t ia, ib;
+  memcpy(&ia, &fa, sizeof(uint32_t));
+  memcpy(&ib, &fb, sizeof(uint32_t));
+  return (((uint64_t)ia) << 32) | ib;
+}
+
 }  // namespace
 
 Presentation::Presentation(
@@ -37,7 +45,8 @@ Presentation::Presentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
     int32_t display_startup_rotation_adjustment, std::function<void()> on_client_death)
-    : scenic_(scenic),
+    : component_context_(component_context),
+      scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
       activity_notifier_(activity_notifier),
@@ -52,7 +61,7 @@ Presentation::Presentation(
       safe_presenter_(safe_presenter),
       safe_presenter_a11y_(&a11y_session_),
       weak_factory_(this) {
-  FX_DCHECK(component_context);
+  FX_DCHECK(component_context_);
   FX_DCHECK(compositor_id != 0);
   FX_DCHECK(safe_presenter_);
   renderer_.SetCamera(camera_);
@@ -89,40 +98,34 @@ Presentation::Presentation(
   }
 
   SetScenicDisplayRotation();
-  {
-    fuchsia::ui::views::ViewRef root_view_ref, a11y_view_ref;
-    {    // Set up views and view holders.
-      {  // Set up the root view.
-        auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
-        auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-        fidl::Clone(view_ref, &root_view_ref);
-        root_view_holder_.emplace(session_, std::move(internal_view_holder_token),
-                                  "Root View Holder");
-        root_view_.emplace(session_, std::move(internal_view_token), std::move(control_ref),
-                           std::move(view_ref), "Root View");
-      }
 
-      {  // Set up the "accessibility view"
-        auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
-        auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-        fidl::Clone(view_ref, &a11y_view_ref);
-        a11y_view_holder_.emplace(session_, std::move(internal_view_holder_token),
-                                  "A11y View Holder");
-        a11y_view_.emplace(&a11y_session_, std::move(internal_view_token), std::move(control_ref),
-                           std::move(view_ref), "A11y View");
-      }
-
-      client_view_holder_.emplace(&a11y_session_, std::move(view_holder_token),
-                                  "Client View Holder");
-
-      // Connect it all up.
-      scene_.AddChild(root_view_holder_.value());
-      root_view_->AddChild(a11y_view_holder_.value());
-      a11y_view_->AddChild(client_view_holder_.value());
+  {    // Set up views and view holders.
+    {  // Set up the root view.
+      auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
+      auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+      fidl::Clone(view_ref, &root_view_ref_);
+      root_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+                                "Root View Holder");
+      root_view_.emplace(session_, std::move(internal_view_token), std::move(control_ref),
+                         std::move(view_ref), "Root View");
     }
 
-    injector_.emplace(component_context, /*context*/ std::move(root_view_ref),
-                      /*target*/ std::move(a11y_view_ref));
+    {  // Set up the "accessibility view"
+      auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
+      auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+      fidl::Clone(view_ref, &a11y_view_ref_);
+      a11y_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+                                "A11y View Holder");
+      a11y_view_.emplace(&a11y_session_, std::move(internal_view_token), std::move(control_ref),
+                         std::move(view_ref), "A11y View");
+    }
+
+    client_view_holder_.emplace(&a11y_session_, std::move(view_holder_token), "Client View Holder");
+
+    // Connect it all up.
+    scene_.AddChild(root_view_holder_.value());
+    root_view_->AddChild(a11y_view_holder_.value());
+    a11y_view_->AddChild(client_view_holder_.value());
   }
 
   // Link ourselves to the presentation interface once screen dimensions are
@@ -148,7 +151,6 @@ Presentation::Presentation(
   FX_DCHECK(a11y_view_holder_);
   FX_DCHECK(a11y_view_);
   FX_DCHECK(client_view_holder_);
-  FX_DCHECK(injector_);
 
   a11y_session_.set_event_handler(
       [on_client_death = std::move(on_client_death),
@@ -157,7 +159,7 @@ Presentation::Presentation(
           if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
               event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
               event.gfx().view_disconnected().view_holder_id == client_id) {
-            FX_LOGS(WARNING) << "Client died, destroying presentation.";
+            // Client died.
             on_client_death();  // This kills the Presentation, so exit immediately to be safe.
             return;
           }
@@ -300,50 +302,14 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
   layer_.SetSize(static_cast<float>(display_metrics_.width_in_px()),
                  static_cast<float>(display_metrics_.height_in_px()));
 
-  UpdateViewport();
-
   return true;
 }
 
-void Presentation::UpdateViewport() {
-  // Viewport should match the visible part of the display 1:1. To do this we need to match the
-  // ClipSpaceTransform.
-  //
-  // Since the ClipSpaceTransform is defined in Vulkan NDC with scaling, and the Viewport is defined
-  // in pixel coordinates, we need to be able to transform offsets to pixel coordinates. This is
-  // done by multiplying by half the display length and inverting the scale.
-  //
-  // Because the ClipSpaceTransform is defined with its origin in the center, and the
-  // Viewport with its origin in the top left corner, we need to add a center offset to compensate.
-  // This turns out to be as simple as half the scaled display length minus half the ClipSpace
-  // length, which equals scale - 1 in NDC.
-  //
-  // Finally, because the ClipSpaceTransform and the Viewport transform are defined in opposite
-  // directions (camera to scene vs context to viewport), all the transforms should be inverted
-  // for the Viewport transform. This means an inverted scale and negative clip offsets.
-  //
-  const float display_width = static_cast<float>(display_metrics_.width_in_px());
-  const float display_height = static_cast<float>(display_metrics_.height_in_px());
-  const float inverted_scale = 1.f / clip_scale_;
-  const float ndc_to_pixel_x = inverted_scale * display_width * 0.5f;
-  const float ndc_to_pixel_y = inverted_scale * display_height * 0.5f;
-  const float center_offset_ndc = clip_scale_ - 1.f;
-
-  injector_->SetViewport({
-      .width = display_width,
-      .height = display_height,
-      .scale = inverted_scale,
-      .x_offset = ndc_to_pixel_x * (center_offset_ndc - clip_offset_x_),
-      .y_offset = ndc_to_pixel_y * (center_offset_ndc - clip_offset_y_),
-  });
-}
-
 void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
-  const uint32_t device_id = input_device->id();
+  FX_VLOGS(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
-  FX_VLOGS(1) << "OnDeviceAdded: device_id=" << device_id;
+  FX_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
 
-  FX_DCHECK(device_states_by_id_.count(device_id) == 0);
   std::unique_ptr<ui_input::DeviceState> state;
 
   if (input_device->descriptor()->sensor) {
@@ -351,22 +317,20 @@ void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
                                                       fuchsia::ui::input::InputReport event) {
       OnSensorEvent(device_id, std::move(event));
     };
-    state = std::make_unique<ui_input::DeviceState>(device_id, input_device->descriptor(),
+    state = std::make_unique<ui_input::DeviceState>(input_device->id(), input_device->descriptor(),
                                                     std::move(callback));
   } else {
     ui_input::OnEventCallback callback = [this](fuchsia::ui::input::InputEvent event) {
       OnEvent(std::move(event));
     };
-    state = std::make_unique<ui_input::DeviceState>(device_id, input_device->descriptor(),
+    state = std::make_unique<ui_input::DeviceState>(input_device->id(), input_device->descriptor(),
                                                     std::move(callback));
   }
 
   ui_input::DeviceState* state_ptr = state.get();
   auto device_pair = std::make_pair(input_device, std::move(state));
   state_ptr->OnRegistered();
-  device_states_by_id_.emplace(device_id, std::move(device_pair));
-
-  injector_->OnDeviceAdded(device_id);
+  device_states_by_id_.emplace(input_device->id(), std::move(device_pair));
 }
 
 void Presentation::OnDeviceRemoved(uint32_t device_id) {
@@ -376,8 +340,6 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
     device_states_by_id_[device_id].second->OnUnregistered();
     device_states_by_id_.erase(device_id);
   }
-
-  injector_->OnDeviceRemoved(device_id);
 }
 
 void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport input_report) {
@@ -408,16 +370,10 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
 
 void Presentation::SetClipSpaceTransform(float x, float y, float scale,
                                          SetClipSpaceTransformCallback callback) {
-  clip_offset_x_ = x;
-  clip_offset_y_ = y;
-  clip_scale_ = scale;
-  camera_.SetClipSpaceTransform(clip_offset_x_, clip_offset_y_, clip_scale_);
+  camera_.SetClipSpaceTransform(x, y, scale);
   // The callback is used to throttle magnification transition animations and is expected to
   // approximate the framerate.
-  safe_presenter_->QueuePresent([this, callback = std::move(callback)] {
-    callback();
-    UpdateViewport();
-  });
+  safe_presenter_->QueuePresent([callback = std::move(callback)] { callback(); });
 }
 
 void Presentation::ResetClipSpaceTransform() {
@@ -430,7 +386,26 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
 
   activity_notifier_->ReceiveInputEvent(event);
 
-  injector_->OnEvent(event);
+  if (!event.is_pointer()) {
+    FX_LOGS(ERROR) << "Only pointer input events are handled.";
+    return;
+  }
+
+  // TODO(SCN-1278): Use proper trace_id for tracing flow.
+  const trace_flow_id_t trace_id =
+      PointerTraceHACK(event.pointer().radius_major, event.pointer().radius_minor);
+  TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
+
+  fuchsia::ui::input::Command input_cmd;
+  {
+    fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
+    pointer_cmd.pointer_event = std::move(event.pointer());
+    pointer_cmd.compositor_id = compositor_id_;
+    input_cmd.set_send_pointer_input(std::move(pointer_cmd));
+  }
+
+  TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
+  session_->Enqueue(std::move(input_cmd));
 }
 
 void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {

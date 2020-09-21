@@ -8,8 +8,6 @@ source_set("fakes") {
   sources = [
     "fake_focuser.cc",
     "fake_focuser.h",
-    "fake_injector_registry.cc",
-    "fake_injector_registry.h",
     "fake_scenic.cc",
     "fake_scenic.h",
     "fake_session.cc",
@@ -19,8 +17,6 @@ source_set("fakes") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
   ]

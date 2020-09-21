@@ -22,7 +22,6 @@
 #include "src/ui/bin/root_presenter/activity_notifier.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
-#include "src/ui/bin/root_presenter/injector.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
@@ -59,18 +58,12 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   const scenic::Layer& layer() const { return layer_; }
 
-  bool is_initialized() const { return display_model_initialized_; }
-
  private:
   // |fuchsia::ui::policy::Presentation|
   void CapturePointerEventsHACK(
       fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override {
     FX_LOGS(ERROR) << "CapturePointerEventsHACK is obsolete.";
   }
-
-  // Updates the injection Viewport to match the currently visible display (i.e. accounting for
-  // ClipSpaceTransform).
-  void UpdateViewport();
 
   // |fuchsia::accessibility::MagnificationHandler|
   // Sets the transform for screen magnification, applied after the camera projection.
@@ -92,6 +85,8 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
+
+  const sys::ComponentContext* component_context_;
 
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
@@ -124,6 +119,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   scenic::Camera camera_;
   std::optional<scenic::View> root_view_;
   std::optional<scenic::ViewHolder> root_view_holder_;
+  fuchsia::ui::views::ViewRef root_view_ref_;
 
   // |a11y_view_holder_| uses:
   // - It's used to set scale, rotation and translation for all child views.
@@ -132,10 +128,9 @@ class Presentation : fuchsia::ui::policy::Presentation,
   scenic::Session a11y_session_;
   std::optional<scenic::View> a11y_view_;
   std::optional<scenic::ViewHolder> a11y_view_holder_;
+  fuchsia::ui::views::ViewRef a11y_view_ref_;
 
   std::optional<scenic::ViewHolder> client_view_holder_;
-
-  std::optional<Injector> injector_;
 
   bool display_model_initialized_ = false;
 
@@ -155,11 +150,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // Used when the native display orientation is reported incorrectly.
   // TODO(SCN-857) - Make this less of a hack.
   int32_t display_startup_rotation_adjustment_;
-
-  // Current ClipSpaceTransform. Used to set up a matching input Viewport.
-  float clip_scale_ = 1;
-  float clip_offset_x_ = 0;
-  float clip_offset_y_ = 0;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;

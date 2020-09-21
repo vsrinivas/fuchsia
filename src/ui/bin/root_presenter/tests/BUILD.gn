@@ -24,10 +24,7 @@ test_package("root_presenter_tests") {
     },
     {
       name = "root_presenter_unittests"
-      environments = [ nuc_env ]
-      log_settings = {
-        max_severity = "ERROR"
-      }
+      environments = basic_envs
     },
   ]
 }

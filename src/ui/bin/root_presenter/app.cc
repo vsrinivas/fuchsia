@@ -23,12 +23,13 @@
 
 namespace root_presenter {
 
-App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatcher)
-    : component_context_(component_context),
+App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       input_reader_(this),
-      fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_,
+      fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get(),
                                                          std::make_shared<MediaRetriever>())),
-      activity_notifier_(dispatcher, ActivityNotifierImpl::kDefaultInterval, *component_context_),
+      activity_notifier_(dispatcher, ActivityNotifierImpl::kDefaultInterval,
+                         *component_context_.get()),
       focuser_binding_(this),
       media_buttons_handler_(&activity_notifier_) {
   FX_DCHECK(component_context_);
@@ -72,7 +73,7 @@ void App::PresentView(
   }
 
   auto presentation = std::make_unique<Presentation>(
-      component_context_, scenic_.get(), session_.get(), compositor_->id(),
+      component_context_.get(), scenic_.get(), session_.get(), compositor_->id(),
       std::move(view_holder_token), std::move(presentation_request), safe_presenter_.get(),
       &activity_notifier_, display_startup_rotation_adjustment,
       /*on_client_death*/ [this] { ShutdownPresentation(); });
@@ -226,7 +227,7 @@ void App::InitializeServices() {
 
     // Add Color Transform Handler.
     color_transform_handler_ = std::make_unique<ColorTransformHandler>(
-        component_context_, compositor_->id(), session_.get(), safe_presenter_.get());
+        component_context_.get(), compositor_->id(), session_.get(), safe_presenter_.get());
 
     // If a11y tried to register a Focuser while Scenic wasn't ready yet, bind the request now.
     if (deferred_a11y_focuser_binding_) {

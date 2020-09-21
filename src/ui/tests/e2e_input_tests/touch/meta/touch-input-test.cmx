@@ -25,7 +25,6 @@
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]
     }
