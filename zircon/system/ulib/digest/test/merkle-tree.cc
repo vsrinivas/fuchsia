@@ -10,6 +10,7 @@
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <digest/node-digest.h>
 #include <zxtest/zxtest.h>
 
 namespace digest {
@@ -211,6 +212,13 @@ TEST(MerkleTree, Verify) {
                                            tree_len, digest));
       data[flip] ^= 0xff;
     }
+  }
+}
+
+TEST(MerkleTree, CalculateMerkleTreeSize) {
+  for (const auto &tree_params : kTreeParams) {
+    EXPECT_EQ(tree_params.tree_len, CalculateMerkleTreeSize(tree_params.data_len, kDefaultNodeSize),
+              "Data len: %lu, digest: %s", tree_params.data_len, tree_params.digest);
   }
 }
 

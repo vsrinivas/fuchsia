@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -12,6 +13,7 @@
 #include <digest/digest.h>
 #include <digest/hash-list.h>
 #include <digest/merkle-tree.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 namespace digest {
@@ -180,6 +182,16 @@ zx_status_t MerkleTreeVerifier::Verify(const void *buf, size_t buf_len, size_t d
   }
   buf = hash_list_.list() + data_off;
   return next_->Verify(buf, buf_len, data_off);
+}
+
+size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size) {
+  ZX_ASSERT_MSG(NodeDigest::IsValidNodeSize(node_size), "node_size=%lu", node_size);
+  size_t merkle_tree_size = 0;
+  while (data_size > node_size) {
+    data_size = fbl::round_up(CalculateHashListSize(data_size, node_size), node_size);
+    merkle_tree_size += data_size;
+  }
+  return merkle_tree_size;
 }
 
 }  // namespace digest

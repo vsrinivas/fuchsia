@@ -109,6 +109,12 @@ class MerkleTreeVerifier : public internal::MerkleTree<const uint8_t, const void
   zx_status_t Verify(const void *buf, size_t buf_len, size_t data_off);
 };
 
+// Convenience method for calculating the minimum size needed to hold a Merkle tree for the given
+// |data_size|.  It does NOT include room for the root digest.
+//
+// Panics if |node_size| does not satisfy |NodeDigest::IsValidNodeSize|.
+size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size);
+
 }  // namespace digest
 
 #endif  // DIGEST_MERKLE_TREE_H_

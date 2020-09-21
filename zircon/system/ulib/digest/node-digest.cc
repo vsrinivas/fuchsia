@@ -15,7 +15,7 @@
 namespace digest {
 
 zx_status_t NodeDigest::SetNodeSize(size_t node_size) {
-  if (node_size < kMinNodeSize || node_size > kMaxNodeSize || !fbl::is_pow2(node_size)) {
+  if (!IsValidNodeSize(node_size)) {
     return ZX_ERR_INVALID_ARGS;
   }
   node_size_ = node_size;

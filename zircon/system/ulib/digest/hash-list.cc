@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -10,6 +11,7 @@
 
 #include <digest/digest.h>
 #include <digest/hash-list.h>
+#include <digest/node-digest.h>
 
 namespace digest {
 namespace internal {
@@ -154,6 +156,14 @@ bool HashListVerifier::IsValidRange(size_t data_off, size_t buf_len) {
 
 void HashListVerifier::HandleOne(const Digest &digest) {
   verified_ &= (digest.Equals(list() + list_off(), GetDigestSize()));
+}
+
+size_t CalculateHashListSize(size_t data_size, size_t node_size) {
+  NodeDigest node_digest;
+  ZX_ASSERT_MSG(node_digest.SetNodeSize(node_size) == ZX_OK, "node_size=%lu", node_size);
+  size_t digest_size = node_digest.len();
+  return std::max(node_digest.ToNode(node_digest.NextAligned(data_size)) * digest_size,
+                  digest_size);
 }
 
 }  // namespace digest

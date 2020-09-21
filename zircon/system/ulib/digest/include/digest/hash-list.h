@@ -151,6 +151,12 @@ class HashListVerifier : public internal::HashList<const uint8_t> {
   bool verified_ = false;
 };
 
+// Convenience method for calculating the minimum size needed to hold a hash list for the given
+// |data_size|.
+//
+// Panics if |node_size| does not satisfy |NodeDigest::IsValidNodeSize|.
+size_t CalculateHashListSize(size_t data_size, size_t node_size);
+
 }  // namespace digest
 
 #endif  // DIGEST_HASH_LIST_H_

@@ -125,5 +125,17 @@ TEST(NodeDigest, ResetAndAppend) {
   }
 }
 
+TEST(NodeDigest, IsValidNodeSize) {
+  EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMinNodeSize));
+  EXPECT_TRUE(NodeDigest::IsValidNodeSize(kDefaultNodeSize));
+  EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMaxNodeSize));
+  // Power of 2 less than kMinNodeSize.
+  EXPECT_FALSE(NodeDigest::IsValidNodeSize(kMinNodeSize >> 1));
+  // Power of 2 greater than kMaxNodeSize.
+  EXPECT_FALSE(NodeDigest::IsValidNodeSize(kMaxNodeSize << 1));
+  // Not a power of 2 between kMinNodeSize and kMaxNodeSize.
+  EXPECT_FALSE(NodeDigest::IsValidNodeSize(kMaxNodeSize - 1));
+}
+
 }  // namespace testing
 }  // namespace digest

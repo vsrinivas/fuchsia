@@ -39,7 +39,7 @@ class NodeDigest {
   size_t node_size() const { return node_size_; }
   void set_id(uint64_t id) { id_ = id; }
 
-  // Sets the node size, which must a power of 2 between |kMinNodeSize| and |kMaxNodeSize|.
+  // Sets the node size if |node_size| satisfies |IsValidNodeSize|.
   zx_status_t SetNodeSize(size_t node_size);
 
   // Returns true if |data_off| is aligned to a node boundary.
@@ -67,6 +67,11 @@ class NodeDigest {
   // Wrapper for Digest::Update.  This will hash data up to |buf_len| bytes from |buf|, and return
   // the number of bytes hashed.
   size_t Append(const void* buf, size_t buf_len);
+
+  // Returns |true| if |node_size| is a power of 2 between |kMinNodeSize| and |kMaxNodeSize|.
+  static constexpr bool IsValidNodeSize(size_t node_size) {
+    return node_size >= kMinNodeSize && node_size <= kMaxNodeSize && fbl::is_pow2(node_size);
+  }
 
  private:
   // The underlying digest used to hash the data.

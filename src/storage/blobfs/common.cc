@@ -11,6 +11,7 @@
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <digest/node-digest.h>
 #include <fs/trace.h>
 #include <safemath/checked_math.h>
 
@@ -24,7 +25,6 @@
 #include <blobfs/common.h>
 
 using digest::Digest;
-using digest::MerkleTreeCreator;
 
 namespace blobfs {
 
@@ -75,19 +75,10 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
 
 }  // namespace
 
-// Number of blocks reserved for the Merkle Tree
-// TODO(fxbug.dev/45457): Refactor this method to not require heap allocations.
+// Number of blocks reserved for the Merkle Tree.
 uint32_t ComputeNumMerkleTreeBlocks(const Inode& blobNode) {
-  MerkleTreeCreator mtc;
-  // If this fails, omit the Merkle tree. This will cause subsequent Merkle tree creation and/or
-  // verification to fail.
-  zx_status_t status = mtc.SetDataLength(blobNode.blob_size);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Merkle tree blocks (%s) Failure: %d\n",
-                   Digest(blobNode.merkle_root_hash).ToString().c_str(), status);
-    return 0;
-  }
-  size_t merkle_size = mtc.GetTreeLength();
+  size_t merkle_size =
+      digest::CalculateMerkleTreeSize(blobNode.blob_size, digest::kDefaultNodeSize);
   if (merkle_size > std::numeric_limits<uint32_t>::max()) {
     FS_TRACE_ERROR("blobfs: Merkle tree blocks (%s) max exceeded: %zu\n",
                    Digest(blobNode.merkle_root_hash).ToString().c_str(), merkle_size);

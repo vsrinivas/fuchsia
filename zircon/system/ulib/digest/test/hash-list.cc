@@ -197,5 +197,16 @@ TEST(HashListVerifier, Verify) {
   }
 }
 
+TEST(HashList, CalculateHashListSize) {
+  EXPECT_EQ(kSha256Length, CalculateHashListSize(0, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length, CalculateHashListSize(1, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length, CalculateHashListSize(10, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length, CalculateHashListSize(kDefaultNodeSize - 1, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length, CalculateHashListSize(kDefaultNodeSize, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length * 2, CalculateHashListSize(kDefaultNodeSize + 1, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length * 40, CalculateHashListSize(kDefaultNodeSize * 40, kDefaultNodeSize));
+  EXPECT_EQ(kSha256Length * 41, CalculateHashListSize(kDefaultNodeSize * 40 + 1, kDefaultNodeSize));
+}
+
 }  // namespace testing
 }  // namespace digest
