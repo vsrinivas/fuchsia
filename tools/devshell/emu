@@ -378,7 +378,7 @@ if (( NET )); then
   HASH=$(echo $IFNAME | shasum)
   SUFFIX=$(for i in {0..2}; do echo -n ":${HASH:$(( 2 * i )):2}"; done)
   MAC=",mac=52:54:00$SUFFIX"
-  ARGS+=("-device" "e1000,netdev=net0${MAC}")
+  ARGS+=("-device" "virtio-net-pci,vectors=8,netdev=net0${MAC}")
 else
   ARGS+=("-net" "none")
 fi

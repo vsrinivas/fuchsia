@@ -200,14 +200,14 @@ INPUT
   if is-mac; then
     if [[ -c /dev/tap0 && -w /dev/tap0 ]]; then
       gn-test-check-mock-partial -netdev type=tap,ifname=tap0,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh"
-      gn-test-check-mock-partial -device e1000,netdev=net0,mac=52:54:00:4d:27:96
+      gn-test-check-mock-partial -device virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:4d:27:96
     else
       gn-test-check-mock-partial -netdev type=tap,ifname=fakenetwork,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh"
-      gn-test-check-mock-partial -device e1000,netdev=net0,mac=52:54:00:95:03:66
+      gn-test-check-mock-partial -device virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:95:03:66
     fi
   else
     gn-test-check-mock-partial -netdev type=tap,ifname=qemu,id=net0,script=no
-    gn-test-check-mock-partial -device e1000,netdev=net0,mac=52:54:00:63:5e:7a
+    gn-test-check-mock-partial -device virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:63:5e:7a
   fi
   gn-test-check-mock-partial --unknown-arg1-to-qemu
   gn-test-check-mock-partial --unknown-arg2-to-qemu
