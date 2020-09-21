@@ -5294,10 +5294,11 @@ class Transitional::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<Transitional>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+  explicit EventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
 struct ChannelProtocol::AsyncEventHandlers {
@@ -5408,10 +5409,11 @@ class ChannelProtocol::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<ChannelProtocol>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+  explicit EventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
 struct WithAndWithoutRequestResponse::AsyncEventHandlers {
@@ -5618,10 +5620,11 @@ class WithAndWithoutRequestResponse::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<WithAndWithoutRequestResponse>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+  explicit EventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
 struct WithErrorSyntax::AsyncEventHandlers {};
@@ -5739,10 +5742,11 @@ class WithErrorSyntax::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<WithErrorSyntax>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+  explicit EventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
 }  // namespace name

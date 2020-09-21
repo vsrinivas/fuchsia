@@ -56,7 +56,7 @@ class TestProtocol {
       }
     }
 
-    std::shared_ptr<internal::ChannelRefTracker::ChannelRef> GetChannel() {
+    std::shared_ptr<internal::ChannelRef> GetChannel() {
       return internal::ClientBase::GetChannel();
     }
 

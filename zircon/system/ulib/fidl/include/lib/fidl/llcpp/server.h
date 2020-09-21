@@ -28,7 +28,7 @@ namespace internal {
 
 template <typename Protocol>
 fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
-    async_dispatcher_t* dispatcher, zx_handle_t channel, void* impl,
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
 
 }  // namespace internal
@@ -79,12 +79,12 @@ class ServerBindingRef {
 
  private:
   friend fit::result<ServerBindingRef<Protocol>, zx_status_t>
-  internal::TypeErasedBindServer<Protocol>(async_dispatcher_t* dispatcher, zx_handle_t channel,
+  internal::TypeErasedBindServer<Protocol>(async_dispatcher_t* dispatcher, zx::channel channel,
                                            void* impl,
                                            internal::TypeErasedServerDispatchFn dispatch_fn,
                                            internal::TypeErasedOnUnboundFn on_unbound);
 
-  explicit ServerBindingRef(std::weak_ptr<internal::AsyncBinding> internal_binding)
+  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
       : event_sender_(std::move(internal_binding)) {}
 
   typename Protocol::EventSender event_sender_;
@@ -163,7 +163,7 @@ template <typename Interface>
 fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
-      dispatcher, channel.release(), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
+      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
 }
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
@@ -178,7 +178,7 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
     OnUnboundFn<Interface> on_unbound) {
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
-      dispatcher, channel.release(), impl, &Interface::_Outer::TypeErasedDispatch,
+      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
       [fn = std::move(on_unbound)](void* impl, UnbindInfo info, zx::channel channel) mutable {
         fn(static_cast<Interface*>(impl), info, std::move(channel));
       });
@@ -194,7 +194,7 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
     async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<Interface> impl) {
   Interface* impl_raw = impl.get();
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
-      dispatcher, channel.release(), impl_raw, &Interface::_Outer::TypeErasedDispatch,
+      dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
       [intf = std::move(impl)](void*, UnbindInfo, zx::channel) {});
 }
 
@@ -203,10 +203,10 @@ namespace internal {
 
 template <typename Protocol>
 fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
-    async_dispatcher_t* dispatcher, zx_handle_t channel, void* impl,
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncBinding::CreateServerBinding(
-      dispatcher, channel, impl, dispatch_fn, std::move(on_unbound));
+  auto internal_binding = internal::AsyncServerBinding::Create(
+      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {
     return fit::ok(fidl::ServerBindingRef<Protocol>(std::move(internal_binding)));

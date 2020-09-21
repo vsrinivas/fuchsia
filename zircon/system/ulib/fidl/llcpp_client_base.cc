@@ -19,21 +19,8 @@ zx_status_t ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel cha
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   channel_tracker_.Init(std::move(channel));
-  auto channel_ref = channel_tracker_.Get();
-  auto binding = AsyncBinding::CreateClientBinding(
-      dispatcher, channel_ref->handle(), this,
-      [client = std::weak_ptr(client)](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*) {
-        if (auto _client = client.lock())
-          return _client->Dispatch(std::move(_client), msg);
-        return std::optional<UnbindInfo>({UnbindInfo::kUnbind, ZX_OK});
-      },
-      [on_unbound = std::move(on_unbound), client, channel_ref](
-          void*, UnbindInfo info, zx::channel) mutable {
-        channel_ref = nullptr;  // Release the binding's implicit reference to the channel.
-        client->ReleaseResponseContextsWithError();
-        client = nullptr;  // Release the binding's implicit reference to the ClientBase.
-        on_unbound(info);
-      });
+  auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
+                                            std::move(on_unbound));
   auto status = binding->BeginWait();
   binding_ = std::move(binding);
   return status;
@@ -45,7 +32,7 @@ void ClientBase::Unbind() {
 }
 
 zx::channel ClientBase::WaitForChannel() {
-  // Unbind to release the AsyncBinding's reference to the channel.
+  // Unbind to release the AsyncClientBinding's reference to the channel.
   Unbind();
   // Wait for all references to be released.
   return channel_tracker_.WaitForChannel();
@@ -90,9 +77,7 @@ void ClientBase::ReleaseResponseContextsWithError() {
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(std::shared_ptr<ClientBase>&& calling_ref,
-                                               fidl_msg_t* msg) {
-  auto client = std::move(calling_ref);  // Move reference into scope.
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl_msg_t* msg) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
 
   if (hdr->ordinal == kFidlOrdinalEpitaph) {
@@ -129,12 +114,10 @@ std::optional<UnbindInfo> ClientBase::Dispatch(std::shared_ptr<ClientBase>&& cal
       return UnbindInfo{UnbindInfo::kDecodeError, status};
     }
 
-    client = nullptr;  // Release the reference to `this` before invoking user code.
     context->OnReply(reinterpret_cast<uint8_t*>(msg->bytes));
     return {};
   }
 
-  client = nullptr;  // Release the reference to `this` before invoking user code.
   // Dispatch events (received messages with no txid).
   return DispatchEvent(msg);
 }
@@ -151,7 +134,7 @@ zx::channel ChannelRefTracker::WaitForChannel() {
     std::scoped_lock lock(lock_);
     // Ensure that only one thread receives the channel.
     if (!channel_) return channel;
-    channel.reset(channel_->SyncOnDelete(&on_delete));
+    channel.reset(channel_->ReleaseOnDelete(&on_delete));
     channel_ = nullptr;  // Allow the ChannelRef to be destroyed.
   }
 

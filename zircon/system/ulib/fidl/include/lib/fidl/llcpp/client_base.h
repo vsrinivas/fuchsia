@@ -71,37 +71,38 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   zx_txid_t txid_ = 0;             // Zircon txid of outstanding transaction.
 };
 
-// ChannelRefTracker takes ownership of a channel handle and is used to create and track strong
-// references to it. On destruction, ChannelRefTracker can be configured to transfer ownership.
-// Otherwise, the channel handle is closed.
+// ChannelRef takes ownership of a channel. It can be configured to transfer ownership on
+// destruction. Otherwise, the channel is closed.
+class ChannelRef {
+ public:
+  explicit ChannelRef(zx::channel channel) : handle_(channel.release()) {}
+  ~ChannelRef() {
+    if (on_delete_) {
+      sync_completion_signal(on_delete_);
+    } else {
+      // If there is no waiter, the channel will be discarded, so close the handle.
+      zx_handle_close(handle_);
+    }
+  }
+
+  zx_handle_t handle() const { return handle_; }
+
+  zx_handle_t ReleaseOnDelete(sync_completion_t* on_delete) {
+    on_delete_ = on_delete;
+    return handle_;
+  }
+
+ private:
+  sync_completion_t* on_delete_ = nullptr;
+  const zx_handle_t handle_;
+};
+
+// ChannelRefTracker takes ownership of a channel, wrapping it in a ChannelRef. It is used to create
+// and track one or more strong references to the channel.
 class ChannelRefTracker {
  public:
-  class ChannelRef {
-   public:
-    explicit ChannelRef(zx::channel channel) : handle_(channel.release()) {}
-    ~ChannelRef() {
-      if (on_delete_) {
-        sync_completion_signal(on_delete_);
-      } else {
-        // If there is no waiter, the channel will be discarded, so close the handle.
-        zx_handle_close(handle_);
-      }
-    }
-
-    zx_handle_t handle() const { return handle_; }
-
-    zx_handle_t SyncOnDelete(sync_completion_t* on_delete) {
-      on_delete_ = on_delete;
-      return handle_;
-    }
-
-   private:
-    sync_completion_t* on_delete_ = nullptr;
-    const zx_handle_t handle_;
-  };
-
   // Set the given channel as the owned channel.
-  void Init(zx::channel channel);
+  void Init(zx::channel channel) __TA_EXCLUDES(lock_);
 
   // If the ChannelRef is still alive, returns a strong reference to it.
   std::shared_ptr<ChannelRef> Get() { return channel_weak_.lock(); }
@@ -109,7 +110,7 @@ class ChannelRefTracker {
   // Blocks on the release of any outstanding strong references to the channel and returns it. Only
   // one caller will be able to retrieve the channel. Other calls will return immediately with a
   // null channel.
-  zx::channel WaitForChannel();
+  zx::channel WaitForChannel() __TA_EXCLUDES(lock_);
 
  private:
   std::mutex lock_;
@@ -160,7 +161,7 @@ class ClientBase {
 
   // Returns a strong reference to the channel to prevent destruction during a zx_channel_call() or
   // zx_channel_write(). The caller is responsible for releasing the reference.
-  std::shared_ptr<ChannelRefTracker::ChannelRef> GetChannel() { return channel_tracker_.Get(); }
+  std::shared_ptr<ChannelRef> GetChannel() { return channel_tracker_.Get(); }
 
   // For debugging.
   size_t GetTransactionCount() {
@@ -168,18 +169,18 @@ class ClientBase {
     return contexts_.size();
   }
 
+  // Dispatch function invoked by AsyncClientBinding on incoming message. Invokes the virtual
+  // DispatchEvent().
+  std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg);
+
   // Generated client event dispatcher function.
   virtual std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) = 0;
 
  private:
-  // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual
-  // DispatchEvent().
-  std::optional<UnbindInfo> Dispatch(std::shared_ptr<ClientBase>&& calling_ref, fidl_msg_t* msg);
-
   ChannelRefTracker channel_tracker_;
 
   // Weak reference to the internal binding state.
-  std::weak_ptr<AsyncBinding> binding_;
+  std::weak_ptr<AsyncClientBinding> binding_;
 
   // State for tracking outstanding transactions.
   std::mutex lock_;

@@ -60,9 +60,10 @@ class AsyncTransaction final : public Transaction {
   bool IsUnbound() final;
 
  private:
-  friend fidl::internal::AsyncBinding;
+  friend fidl::internal::AsyncServerBinding;
 
-  std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t* msg);
+  std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding,
+                                     fidl_msg_t* msg);
 
   void MoveImpl(AsyncTransaction&& other) noexcept {
     txid_ = other.txid_;

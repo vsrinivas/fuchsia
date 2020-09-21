@@ -30,10 +30,10 @@ class {{ .Name }}::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<{{ .Name }}>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 {{- end }}
 `

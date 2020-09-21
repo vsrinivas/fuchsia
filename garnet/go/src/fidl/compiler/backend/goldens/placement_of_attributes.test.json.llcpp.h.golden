@@ -755,10 +755,11 @@ class ExampleProtocol::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<ExampleProtocol>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+  explicit EventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
 }  // namespace example
