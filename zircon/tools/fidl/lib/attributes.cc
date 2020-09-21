@@ -14,7 +14,7 @@ bool AttributesBuilder::Insert(raw::Attribute attribute) {
   auto result = InsertHelper(std::move(attribute));
   switch (result.kind) {
     case InsertResult::Kind::kDuplicate: {
-      reporter_->ReportError(ErrDuplicateAttribute, attribute_span, attribute_name);
+      reporter_->Report(ErrDuplicateAttribute, attribute_span, attribute_name);
       return false;
     }
     case InsertResult::Kind::kOk:

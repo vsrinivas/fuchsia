@@ -234,8 +234,8 @@ bool IsSimple(const Type* type, Reporter* reporter) {
             LibraryName(identifier_type->name.library(), "."), identifier_type->name.decl_name());
         if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
           // Any unions not in the allow-list are treated as non-simple.
-          reporter->ReportError(ErrUnionCannotBeSimple, identifier_type->name.span(),
-                                identifier_type->name);
+          reporter->Report(ErrUnionCannotBeSimple, identifier_type->name.span(),
+                           identifier_type->name);
           return false;
         }
       }
@@ -299,7 +299,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
 
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
-    reporter_->ReportError(ErrUnknownType, name.span(), name);
+    reporter_->Report(ErrUnknownType, name.span(), name);
     return false;
   }
   return type_template->Create({.span = name.span(),
@@ -330,7 +330,7 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
 
 bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*>& err,
                         const std::optional<SourceSpan>& span) const {
-  reporter_->ReportError(err, span, this);
+  reporter_->Report(err, span, this);
   return false;
 }
 
@@ -710,14 +710,14 @@ void AttributeSchema::ValidatePlacement(Reporter* reporter, const raw::Attribute
     return;
 
   if (allowed_placements_.size() == 1 && *allowed_placements_.cbegin() == Placement::kDeprecated) {
-    reporter->ReportError(ErrDeprecatedAttribute, attribute.span(), attribute);
+    reporter->Report(ErrDeprecatedAttribute, attribute.span(), attribute);
     return;
   }
 
   auto iter = allowed_placements_.find(placement);
   if (iter != allowed_placements_.end())
     return;
-  reporter->ReportError(ErrInvalidAttributePlacement, attribute.span(), attribute);
+  reporter->Report(ErrInvalidAttributePlacement, attribute.span(), attribute);
 }
 
 void AttributeSchema::ValidateValue(Reporter* reporter, const raw::Attribute& attribute) const {
@@ -726,8 +726,8 @@ void AttributeSchema::ValidateValue(Reporter* reporter, const raw::Attribute& at
   auto iter = allowed_values_.find(attribute.value);
   if (iter != allowed_values_.end())
     return;
-  reporter->ReportError(ErrInvalidAttributeValue, attribute.span(), attribute, attribute.value,
-                        allowed_values_);
+  reporter->Report(ErrInvalidAttributeValue, attribute.span(), attribute, attribute.value,
+                   allowed_values_);
 }
 
 void AttributeSchema::ValidateConstraint(Reporter* reporter, const raw::Attribute& attribute,
@@ -739,8 +739,8 @@ void AttributeSchema::ValidateConstraint(Reporter* reporter, const raw::Attribut
   } else if (check.NoNewErrors()) {
     // TODO(pascallouis): It would be nicer to use the span of
     // the declaration, however we do not keep it around today.
-    reporter->ReportError(ErrAttributeConstraintNotSatisfied, attribute.span(), attribute,
-                          attribute.value);
+    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute.span(), attribute,
+                     attribute.value);
   }
 }
 
@@ -750,7 +750,7 @@ bool SimpleLayoutConstraint(Reporter* reporter, const raw::Attribute& attribute,
   bool ok = true;
   for (const auto& member : struct_decl->members) {
     if (!IsSimple(member.type_ctor.get()->type, reporter)) {
-      reporter->ReportError(ErrMemberMustBeSimple, member.name, member.name.data());
+      reporter->Report(ErrMemberMustBeSimple, member.name, member.name.data());
       ok = false;
     }
   }
@@ -762,10 +762,10 @@ bool ParseBound(Reporter* reporter, const SourceSpan& span, const std::string& i
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      reporter->ReportError(ErrBoundIsTooBig, span);
+      reporter->Report(ErrBoundIsTooBig, span);
       return false;
     case utils::ParseNumericResult::kMalformed: {
-      reporter->ReportError(ErrUnableToParseBound, span, input);
+      reporter->Report(ErrUnableToParseBound, span, input);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -809,7 +809,7 @@ bool MaxBytesConstraint(Reporter* reporter, const raw::Attribute& attribute, con
       return false;
   }
   if (max_bytes > bound) {
-    reporter->ReportError(ErrTooManyBytes, attribute.span(), bound, max_bytes);
+    reporter->Report(ErrTooManyBytes, attribute.span(), bound, max_bytes);
     return false;
   }
   return true;
@@ -841,7 +841,7 @@ bool MaxHandlesConstraint(Reporter* reporter, const raw::Attribute& attribute, c
       return false;
   }
   if (max_handles > bound) {
-    reporter->ReportError(ErrTooManyHandles, attribute.span(), bound, max_handles);
+    reporter->Report(ErrTooManyHandles, attribute.span(), bound, max_handles);
     return false;
   }
   return true;
@@ -869,7 +869,7 @@ bool ResultShapeConstraint(Reporter* reporter, const raw::Attribute& attribute, 
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    reporter->ReportError(ErrInvalidErrorType, decl->name.span());
+    reporter->Report(ErrInvalidErrorType, decl->name.span());
     return false;
   }
 
@@ -909,8 +909,7 @@ bool TransportConstraint(Reporter* reporter, const raw::Attribute& attribute, co
   };
   for (auto transport : transports) {
     if (kValidTransports->count(transport) == 0) {
-      reporter->ReportError(ErrInvalidTransportType, decl->name.span(), transport,
-                            *kValidTransports);
+      reporter->Report(ErrInvalidTransportType, decl->name.span(), transport, *kValidTransports);
       return false;
     }
   }
@@ -1064,8 +1063,7 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
   for (const auto& name_and_schema : attribute_schemas_) {
     auto edit_distance = EditDistance(name_and_schema.first, attribute_name);
     if (0 < edit_distance && edit_distance < 2) {
-      reporter->ReportWarning(WarnAttributeTypo, attribute.span(), attribute_name,
-                              name_and_schema.first);
+      reporter->Report(WarnAttributeTypo, attribute.span(), attribute_name, name_and_schema.first);
       return nullptr;
     }
   }
@@ -1146,8 +1144,8 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Rep
       const auto& ref = name_to_ref.second;
       if (ref->used_)
         continue;
-      reporter->ReportError(ErrUnusedImport, ref->span_, for_library.name(), ref->library_->name(),
-                            ref->library_->name());
+      reporter->Report(ErrUnusedImport, ref->span_, for_library.name(), ref->library_->name(),
+                       ref->library_->name());
     }
   }
   return checkpoint.NoNewErrors();
@@ -1168,20 +1166,20 @@ std::string LibraryName(const Library* library, std::string_view separator) {
 
 bool Library::Fail(std::unique_ptr<Diagnostic> err) {
   assert(err && "should not report nullptr error");
-  reporter_->ReportError(std::move(err));
+  reporter_->Report(std::move(err));
   return false;
 }
 
 template <typename... Args>
 bool Library::Fail(const ErrorDef<Args...>& err, const Args&... args) {
-  reporter_->ReportError(err, args...);
+  reporter_->Report(err, args...);
   return false;
 }
 
 template <typename... Args>
 bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                    const Args&... args) {
-  reporter_->ReportError(err, span, args...);
+  reporter_->Report(err, span, args...);
   return false;
 }
 
@@ -1832,7 +1830,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
       if (member->maybe_used->maybe_default_value) {
         // TODO(FIDL-609): Support defaults on tables.
         const auto default_value = member->maybe_used->maybe_default_value.get();
-        reporter_->ReportError(ErrDefaultsOnTablesNotSupported, default_value->span());
+        reporter_->Report(ErrDefaultsOnTablesNotSupported, default_value->span());
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
         Fail(ErrNullableTableMember, member->span());
@@ -1869,7 +1867,7 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         return;
       if (member->maybe_used->maybe_default_value) {
         const auto default_value = member->maybe_used->maybe_default_value.get();
-        reporter_->ReportError(ErrDefaultsOnUnionsNotSupported, default_value->span());
+        reporter_->Report(ErrDefaultsOnUnionsNotSupported, default_value->span());
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
         Fail(ErrNullableUnionMember, member->span());
@@ -2933,9 +2931,9 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
       if (struct_decl->resourceness == types::Resourceness::kValue) {
         for (const auto& member : struct_decl->members) {
           if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
-            library_->reporter_->ReportWarning(ErrTypeMustBeResource, struct_decl->name.span(),
-                                               struct_decl->name, member.name.data(),
-                                               std::string_view("struct"), struct_decl->name);
+            library_->reporter_->Report(ErrTypeMustBeResource, struct_decl->name.span(),
+                                        struct_decl->name, member.name.data(),
+                                        std::string_view("struct"), struct_decl->name);
           }
         }
       }
@@ -2948,9 +2946,9 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
           if (member.maybe_used) {
             const auto& used = *member.maybe_used;
             if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
-              library_->reporter_->ReportWarning(ErrTypeMustBeResource, table_decl->name.span(),
-                                                 table_decl->name, used.name.data(),
-                                                 std::string_view("table"), table_decl->name);
+              library_->reporter_->Report(ErrTypeMustBeResource, table_decl->name.span(),
+                                          table_decl->name, used.name.data(),
+                                          std::string_view("table"), table_decl->name);
             }
           }
         }
@@ -2964,9 +2962,9 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
           if (member.maybe_used) {
             const auto& used = *member.maybe_used;
             if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
-              library_->reporter_->ReportWarning(ErrTypeMustBeResource, union_decl->name.span(),
-                                                 union_decl->name, used.name.data(),
-                                                 std::string_view("union"), union_decl->name);
+              library_->reporter_->Report(ErrTypeMustBeResource, union_decl->name.span(),
+                                          union_decl->name, used.name.data(),
+                                          std::string_view("union"), union_decl->name);
             }
           }
         }

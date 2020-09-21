@@ -123,7 +123,7 @@ std::nullptr_t Parser::Fail(std::unique_ptr<Diagnostic> err) {
   assert(err && "should not report nullptr error");
   if (Ok()) {
     err->span = last_token_.span();
-    reporter_->ReportError(std::move(err));
+    reporter_->Report(std::move(err));
   }
   return nullptr;
 }
@@ -136,7 +136,7 @@ std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const Args&... args) {
 template <typename... Args>
 std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token, const Args&... args) {
   if (Ok()) {
-    reporter_->ReportError(err, token, args...);
+    reporter_->Report(err, token, args...);
   }
   return nullptr;
 }
@@ -145,7 +145,7 @@ template <typename... Args>
 std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                             const Args&... args) {
   if (Ok()) {
-    reporter_->ReportError(err, span, args...);
+    reporter_->Report(err, span, args...);
   }
   return nullptr;
 }
@@ -397,7 +397,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
       // disallow any blank lines between this doc comment and the previous one
       std::string_view trailing_whitespace = last_token_.previous_end().data();
       if (std::count(trailing_whitespace.cbegin(), trailing_whitespace.cend(), '\n') > 1)
-        reporter_->ReportWarning(WarnBlankLinesWithinDocCommentBlock, previous_token_);
+        reporter_->Report(WarnBlankLinesWithinDocCommentBlock, previous_token_);
     }
 
     doc_line = ConsumeToken(OfKind(Token::Kind::kDocComment));
@@ -409,7 +409,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   }
 
   if (Peek().kind() == Token::Kind::kEndOfFile)
-    reporter_->ReportWarning(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
+    reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
   return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
 }
@@ -422,7 +422,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
     doc_comment = ParseDocComment();
   }
   if (for_parameter && doc_comment) {
-    reporter_->ReportError(ErrDocCommentOnParameters, previous_token_);
+    reporter_->Report(ErrDocCommentOnParameters, previous_token_);
     return Fail();
   }
   if (Peek().kind() == Token::Kind::kLeftSquare) {
@@ -1547,7 +1547,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         if (using_decl->maybe_type_ctor) {
           done_with_library_imports = true;
         } else if (done_with_library_imports) {
-          reporter_->ReportError(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
+          reporter_->Report(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
         }
         using_list.emplace_back(std::move(using_decl));
         return More;

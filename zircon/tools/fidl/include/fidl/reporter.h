@@ -102,31 +102,34 @@ class Reporter {
   }
 
   template <typename... Args>
-  void ReportError(const ErrorDef<Args...>& err, const Args&... args) {
-    ReportError(std::move(MakeError(err, args...)));
+  void Report(const ErrorDef<Args...>& err, const Args&... args) {
+    Report(std::move(MakeError(err, args...)));
   }
   template <typename... Args>
-  void ReportError(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                   const Args&... args) {
-    ReportError(std::move(MakeError(err, span, args...)));
+  void Report(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
+              const Args&... args) {
+    Report(std::move(MakeError(err, span, args...)));
   }
   template <typename... Args>
-  void ReportError(const ErrorDef<Args...>& err, const Token& token, const Args&... args) {
-    ReportError(std::move(MakeError(err, token.span(), args...)));
+  void Report(const ErrorDef<Args...>& err, const Token& token, const Args&... args) {
+    Report(std::move(MakeError(err, token.span(), args...)));
   }
 
   template <typename... Args>
-  void ReportWarning(const WarningDef<Args...>& warn, const std::optional<SourceSpan>& span,
-                     const Args&... args) {
-    ReportWarning(std::move(MakeWarning(warn, span, args...)));
+  void Report(const WarningDef<Args...>& err, const Args&... args) {
+    Report(std::move(MakeWarning(err, args...)));
   }
   template <typename... Args>
-  void ReportWarning(const WarningDef<Args...>& err, const Token& token, const Args&... args) {
-    ReportWarning(std::move(MakeWarning(err, token.span(), args...)));
+  void Report(const WarningDef<Args...>& warn, const std::optional<SourceSpan>& span,
+              const Args&... args) {
+    Report(std::move(MakeWarning(warn, span, args...)));
+  }
+  template <typename... Args>
+  void Report(const WarningDef<Args...>& err, const Token& token, const Args&... args) {
+    Report(std::move(MakeWarning(err, token.span(), args...)));
   }
 
-  void ReportError(std::unique_ptr<Diagnostic> diag);
-  void ReportWarning(std::unique_ptr<Diagnostic> diag);
+  void Report(std::unique_ptr<Diagnostic> diag);
 
   void PrintReports();
   void PrintReportsJson();

@@ -90,21 +90,22 @@ void Reporter::AddWarning(std::unique_ptr<Diagnostic> diag) {
   }
 }
 
-// Record an error with the span, message, source line, position indicator,
+// Record a diagnostic with the span, message, source line, position indicator,
 // and, if span is not nullopt, tildes under the token reported.
 //
 //     filename:line:col: {error, warning}: message
 //     sourceline
 //        ^~~~
-void Reporter::ReportError(std::unique_ptr<Diagnostic> diag) {
-  assert(diag && "should not report nullptr error");
-  assert(diag->kind == DiagnosticKind::kError);
-  AddError(std::move(diag));
-}
-void Reporter::ReportWarning(std::unique_ptr<Diagnostic> diag) {
-  assert(diag && "should not report nullptr warning");
-  assert(diag->kind == DiagnosticKind::kWarning);
-  AddWarning(std::move(diag));
+void Reporter::Report(std::unique_ptr<Diagnostic> diag) {
+  assert(diag && "should not report nullptr diagnostic");
+  switch (diag->kind) {
+    case DiagnosticKind::kError:
+      AddError(std::move(diag));
+      break;
+    case DiagnosticKind::kWarning:
+      AddWarning(std::move(diag));
+      break;
+  }
 }
 
 void Reporter::PrintReports() {

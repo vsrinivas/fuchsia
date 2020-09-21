@@ -53,7 +53,7 @@ class Parser {
           break;
         case Token::Kind::kDocComment:
           if (state_ == State::kDocCommentThenComment)
-            reporter_->ReportWarning(WarnCommentWithinDocCommentBlock, last_token_);
+            reporter_->Report(WarnCommentWithinDocCommentBlock, last_token_);
           state_ = State::kDocCommentLast;
           return token;
         default:
