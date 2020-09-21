@@ -28,6 +28,9 @@ enum ConsumerControlButton : uint32 {
 
     /// This button represents rebooting the host.
     REBOOT = 6;
+
+    /// This button represents disabling the camera on the host.
+    CAMERA_DISABLE = 7;
 };
 
 /// Describes the format of the input report that will be sent from the

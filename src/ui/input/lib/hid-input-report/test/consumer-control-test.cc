@@ -36,7 +36,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   EXPECT_TRUE(descriptor.consumer_control().has_input());
 
   // Test the descriptor.
-  EXPECT_EQ(descriptor.consumer_control().input().buttons().count(), 4U);
+  EXPECT_EQ(descriptor.consumer_control().input().buttons().count(), 5U);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[0],
             llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[1],
@@ -44,6 +44,8 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[2],
             llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[3],
+            llcpp::fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE);
+  EXPECT_EQ(descriptor.consumer_control().input().buttons()[4],
             llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
 
   // Test a report parses correctly.

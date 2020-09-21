@@ -599,7 +599,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   fuchsia_input_report::ConsumerControlInputDescriptor& consumer_control_desc =
       desc.consumer_control().input();
   ASSERT_TRUE(consumer_control_desc.has_buttons());
-  ASSERT_EQ(4, consumer_control_desc.buttons().count());
+  ASSERT_EQ(5, consumer_control_desc.buttons().count());
 
   ASSERT_EQ(consumer_control_desc.buttons()[0],
             llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
@@ -608,6 +608,8 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   ASSERT_EQ(consumer_control_desc.buttons()[2],
             llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
   ASSERT_EQ(consumer_control_desc.buttons()[3],
+            llcpp::fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE);
+  ASSERT_EQ(consumer_control_desc.buttons()[4],
             llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
 
   // Get an InputReportsReader.

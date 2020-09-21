@@ -33,6 +33,8 @@ std::optional<fuchsia_input_report::ConsumerControlButton> HidToConsumerControlB
        fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN},
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kReset),
        fuchsia_input_report::ConsumerControlButton::REBOOT},
+      {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kCameraAccessDisabled),
+       fuchsia_input_report::ConsumerControlButton::CAMERA_DISABLE},
       {hid::USAGE(hid::usage::Page::kTelephony, hid::usage::Telephony::kPhoneMute),
        fuchsia_input_report::ConsumerControlButton::MIC_MUTE},
   };

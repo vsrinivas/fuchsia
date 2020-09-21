@@ -91,9 +91,11 @@ static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::PAUS
 static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::FACTORY_RESET) == 4);
 static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::MIC_MUTE) == 5);
 static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::REBOOT) == 6);
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::CAMERA_DISABLE) == 7);
 // These strings must be ordered based on the enums in fuchsia.input.report/consumer_control.fidl.
 const char* const kConsumerControlButtonStrings[] = {
-    "ERROR", "VOLUME_UP", "VOLUME_DOWN", "PAUSE", "FACTORY_RESET", "MIC_MUTE", "REBOOT",
+    "ERROR",         "VOLUME_UP", "VOLUME_DOWN", "PAUSE",
+    "FACTORY_RESET", "MIC_MUTE",  "REBOOT",      "CAMERA_DISABLE",
 };
 
 class Printer {
