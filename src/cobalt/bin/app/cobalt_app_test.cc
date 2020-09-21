@@ -413,4 +413,14 @@ TEST_F(CobaltAppTest, LogCustomEvent) {
   EXPECT_EQ(event.custom_event().values().at("response_code").index_value(), 2);
 }
 
+TEST_F(CobaltAppTest, ShutDown) {
+  EXPECT_EQ(fake_service_->is_shut_down(), false);
+  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
+  context_provider_.ConnectToPublicService(process_lifecycle.NewRequest(),
+                                           "fuchsia.process.lifecycle.Lifecycle");
+  process_lifecycle->Stop();
+  RunLoopUntilIdle();
+  EXPECT_EQ(fake_service_->is_shut_down(), true);
+}
+
 }  // namespace cobalt

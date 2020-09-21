@@ -5,6 +5,7 @@
     "sandbox": {
         "features": [
             "isolated-temp"
-        ]
+        ],
+        "services": [ "fuchsia.process.lifecycle.Lifecycle"]
     }
 }

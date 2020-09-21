@@ -46,6 +46,7 @@ source_set("lib") {
     "metric_event_logger_factory_impl.h",
     "metric_event_logger_impl.cc",
     "metric_event_logger_impl.h",
+    "process_lifecycle_impl.h",
     "system_data_updater_impl.cc",
     "system_data_updater_impl.h",
     "timer_manager.cc",
@@ -59,6 +60,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",

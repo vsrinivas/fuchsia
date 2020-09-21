@@ -6,6 +6,7 @@
 #define SRC_COBALT_BIN_APP_COBALT_APP_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <stdlib.h>
 
@@ -20,6 +21,7 @@
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/configuration_data.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"
+#include "src/cobalt/bin/app/process_lifecycle_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/app/user_consent_watcher.h"
@@ -130,6 +132,9 @@ class CobaltApp {
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
+
+  std::unique_ptr<cobalt::ProcessLifecycle> process_lifecycle_impl_;
+  fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
 
   std::unique_ptr<UserConsentWatcher> user_consent_watcher_;
 

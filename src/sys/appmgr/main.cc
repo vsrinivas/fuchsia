@@ -125,6 +125,8 @@ int main(int argc, char** argv) {
   std::unordered_set<component::Moniker> lifecycle_allowlist;
   lifecycle_allowlist.insert(component::Moniker{
       .url = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx", .realm_path = {"sys"}});
+  lifecycle_allowlist.insert(component::Moniker{
+      .url = "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx", .realm_path = {"sys"}});
 
   component::AppmgrArgs args{.pa_directory_request = std::move(pa_directory_request),
                              .lifecycle_request = std::move(lifecycle_request),
