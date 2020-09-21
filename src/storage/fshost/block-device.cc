@@ -131,13 +131,13 @@ std::string GetTopologicalPath(int fd) {
   auto resp = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(disk_connection.borrow_channel()));
   if (resp.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get topological path (fidl error): "
-                   << zx_status_get_string(resp.status());
+    FX_LOGS(WARNING) << "Unable to get topological path (fidl error): "
+                     << zx_status_get_string(resp.status());
     return {};
   }
   if (resp->result.is_err()) {
-    FX_LOGS(ERROR) << "Unable to get topological path: "
-                   << zx_status_get_string(resp->result.err());
+    FX_LOGS(WARNING) << "Unable to get topological path: "
+                     << zx_status_get_string(resp->result.err());
     return {};
   }
   const auto& path = resp->result.response().path;
