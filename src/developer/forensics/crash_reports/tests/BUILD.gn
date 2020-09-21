@@ -252,6 +252,25 @@ executable("sized_data_reader_unittest_exe") {
   ]
 }
 
+executable("snapshot_manager_unittest_exe") {
+  testonly = true
+
+  sources = [ "snapshot_manager_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:errors",
+    "//src/developer/forensics/crash_reports:snapshot_manager",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:data_provider",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("store_unittest_exe") {
   testonly = true
 
@@ -437,6 +456,14 @@ fuchsia_component("sized_data_reader_unittest") {
   deps = [ ":sized_data_reader_unittest_exe" ]
 }
 
+fuchsia_component("snapshot_manager_unittest") {
+  testonly = true
+
+  manifest = "meta/snapshot_manager_unittest.cmx"
+
+  deps = [ ":snapshot_manager_unittest_exe" ]
+}
+
 fuchsia_component("store_unittest") {
   testonly = true
 
@@ -457,6 +484,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":crash_reports_integration_test_invalid_override_config",
     ":crash_reports_integration_test_valid_override_config",
     ":data_provider_ptr_unittest",
+    ":snapshot_manager_unittest",
     ":inspect_manager_unittest",
     ":main_service_unittest",
     ":privacy_settings_ptr_unittest",

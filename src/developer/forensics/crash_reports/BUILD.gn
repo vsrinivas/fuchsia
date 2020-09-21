@@ -333,6 +333,33 @@ source_set("sized_data_reader") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+source_set("snapshot_manager") {
+  sources = [
+    "snapshot.cc",
+    "snapshot.h",
+    "snapshot_manager.cc",
+    "snapshot_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:sized_data",
+    "//src/developer/forensics/utils:storage_size",
+    "//src/lib/timekeeper",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    ":errors",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/uuid",
+  ]
+}
+
 source_set("store") {
   sources = [
     "store.cc",

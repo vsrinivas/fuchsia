@@ -32,7 +32,7 @@ std::vector<Annotation> BuildAnnotations(const std::map<std::string, std::string
 Attachment BuildAttachment(const std::string& key) {
   Attachment attachment;
   attachment.key = key;
-  FX_CHECK(fsl::VmoFromString("unused", &attachment.value));
+  FX_CHECK(fsl::VmoFromString("", &attachment.value));
   return attachment;
 }
 

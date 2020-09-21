@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/snapshot_manager_unittest_exe"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
