@@ -86,24 +86,17 @@ dart_library("fxtest_lib") {
 ## Tests
 
 dart_test("test_runner_test") {
-  # TODO(fxbug.dev/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [ "test_runner_test.dart" ]
 
   deps = [
     ":fxtest_lib",
+    "//scripts/fxutils",
     "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",
   ]
 }
 
 dart_test("fxtest_tests") {
-  # TODO(fxbug.dev/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [
     "args_test.dart",
     "helper_test.dart",
@@ -119,6 +112,11 @@ dart_test("fxtest_tests") {
 
   deps = [
     ":fxtest_lib",
+    "//scripts/fxutils",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/io",
+    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]

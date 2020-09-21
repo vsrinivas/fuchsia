@@ -27,7 +27,6 @@ protobuf_dart("dart_strict_deps_proto") {
 }
 
 dart_test("dart_strict_deps_tests") {
-  disable_strict_deps_check = true
   sources = [
     "dependency_check_test.dart",
     "file_processor_test.dart",
@@ -35,6 +34,7 @@ dart_test("dart_strict_deps_tests") {
   deps = [
     ":dart_strict_deps_proto",
     "./library:dart_strict_deps_lib",
+    "//third_party/dart-pkg/pub/analyzer",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/package_config",
     "//third_party/dart-pkg/pub/quiver",

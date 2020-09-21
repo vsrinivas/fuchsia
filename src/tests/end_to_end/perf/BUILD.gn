@@ -27,13 +27,13 @@ test_list = [
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
-    # TODO(fxbug.dev/57840): This package has transitive dependencies.
-    # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-    disable_strict_deps_check = true
     sources = [ "$target_name.dart" ]
 
     deps = [
       "//sdk/testing/sl4f/client",
+      "//third_party/dart-pkg/pub/args",
+      "//third_party/dart-pkg/pub/logging",
+      "//third_party/dart-pkg/pub/meta",
       "//third_party/dart-pkg/pub/test",
     ]
 
@@ -57,10 +57,6 @@ flutter_test_list = [
 ]
 foreach(target_name, flutter_test_list) {
   dart_test(target_name) {
-    # TODO(fxbug.dev/57840): This package has transitive dependencies.
-    # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-    disable_strict_deps_check = true
-
     sources = [ "flutter/$target_name.dart" ]
 
     deps = [
@@ -91,10 +87,6 @@ total_shards = "8"
 foreach(shard, shards) {
   target_name = "fidl_microbenchmarks_test_shard_" + shard
   dart_test(target_name) {
-    # TODO(fxbug.dev/57840): This package has transitive dependencies.
-    # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-    disable_strict_deps_check = true
-
     sources = [ "fidl_microbenchmarks_test.dart" ]
 
     args = [
@@ -104,6 +96,7 @@ foreach(shard, shards) {
 
     deps = [
       "//sdk/testing/sl4f/client",
+      "//third_party/dart-pkg/pub/args",
       "//third_party/dart-pkg/pub/test",
     ]
 
@@ -185,14 +178,11 @@ group("touch_input_test") {
 
 # Runs the benchmark for touch latency
 dart_test("touch_input_latency_benchmarks_test") {
-  # TODO(fxbug.dev/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [ "touch_input_latency_benchmarks_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
 
@@ -214,9 +204,6 @@ group("tests") {
 }
 
 dart_test("touch_input_latency_metric_test") {
-  # TODO(fxbug.dev/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
   sources = [ "touch_input_latency_metric_test.dart" ]
 
   deps = [
@@ -226,9 +213,6 @@ dart_test("touch_input_latency_metric_test") {
 }
 
 dart_test("flutter_startup_time_metric_test") {
-  # TODO(fxbug.dev/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
   sources = [ "flutter/flutter_startup_time_metric_test.dart" ]
 
   deps = [
