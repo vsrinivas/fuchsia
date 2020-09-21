@@ -391,11 +391,14 @@ zx_status_t VPartitionManager::Load() {
       FreeSlices(vpartitions[i].get(), 0, VSliceMax());
       continue;
     }
-    if (AddPartition(std::move(vpartitions[i]))) {
+    if ((status = AddPartition(std::move(vpartitions[i]))) != ZX_OK) {
+      zxlogf(ERROR, "Failed to add partition: %s", zx_status_get_string(status));
       continue;
     }
     device_count++;
   }
+
+  zxlogf(INFO, "Loaded %lu partitions", device_count);
 
   return ZX_OK;
 }
