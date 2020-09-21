@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//build/testing/bootfs_test.gni")
 
 # As of this writing, the best way to get this test on your system is to add //bundles/bringup:tests
 # to the base packages in your build. The binary ends up in /boot/test/sys/debugger-test

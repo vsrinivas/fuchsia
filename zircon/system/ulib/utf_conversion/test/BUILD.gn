@@ -13,14 +13,12 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//build/testing/bootfs_test.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
-  deps = [
-    ":utf_conversion-test",
-  ]
+  deps = [ ":utf_conversion-test" ]
 }
 
 test("utf_conversion-test") {

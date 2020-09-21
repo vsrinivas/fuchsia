@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//build/testing/bootfs_test.gni")
 
 driver_module("ram-nand") {
   configs += [

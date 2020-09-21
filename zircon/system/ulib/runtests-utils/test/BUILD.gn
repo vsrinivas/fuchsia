@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/unification/zbi/bootfs_test.gni")
+import("//build/testing/bootfs_test.gni")
 group("test") {
   testonly = true
   deps = [ ":service-proxy-dir" ]
