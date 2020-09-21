@@ -1477,7 +1477,16 @@ static bool vmo_create_contiguous_test() {
     return ZX_OK;
   };
   status = vmo->Lookup(0, alloc_size, lookup_func, &last_pa);
+  paddr_t first_pa;
+  paddr_t second_pa;
   EXPECT_EQ(status, ZX_OK, "vmo lookup\n");
+  EXPECT_EQ(ZX_OK, vmo->LookupContiguous(0, alloc_size, &first_pa));
+  EXPECT_EQ(first_pa + alloc_size - PAGE_SIZE, last_pa);
+  EXPECT_EQ(ZX_OK, vmo->LookupContiguous(PAGE_SIZE, PAGE_SIZE, &second_pa));
+  EXPECT_EQ(first_pa + PAGE_SIZE, second_pa);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo->LookupContiguous(42, PAGE_SIZE, nullptr));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo->LookupContiguous(alloc_size - PAGE_SIZE, PAGE_SIZE * 2, nullptr));
 
   END_TEST;
 }
@@ -1886,6 +1895,10 @@ static bool vmo_lookup_test() {
   EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
   pages_seen = 0;
 
+  // Contiguous lookups of single pages should also succeed
+  status = vmo->LookupContiguous(PAGE_SIZE, PAGE_SIZE, nullptr);
+  EXPECT_EQ(ZX_OK, status, "contiguous lookup of single page\n");
+
   // Commit the rest
   status = vmo->CommitRange(0, alloc_size);
   EXPECT_EQ(ZX_OK, status, "committing vm object\n");
@@ -1894,6 +1907,10 @@ static bool vmo_lookup_test() {
   status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
   EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");
   EXPECT_EQ(alloc_size / PAGE_SIZE, pages_seen, "lookup on partially committed pages\n");
+  status = vmo->LookupContiguous(0, PAGE_SIZE, nullptr);
+  EXPECT_EQ(ZX_OK, status, "contiguous lookup of single page\n");
+  status = vmo->LookupContiguous(0, alloc_size, nullptr);
+  EXPECT_NE(ZX_OK, status, "contiguous lookup of multiple pages\n");
 
   END_TEST;
 }

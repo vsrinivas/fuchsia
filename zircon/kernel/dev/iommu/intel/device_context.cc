@@ -210,7 +210,7 @@ zx_status_t DeviceContext::SecondLevelMap(const fbl::RefPtr<VmObject>& vmo, uint
 
   uint flags = perms_to_arch_mmu_flags(perms);
 
-  if (vmo->is_paged() && !static_cast<VmObjectPaged*>(vmo.get())->is_contiguous()) {
+  if (vmo->LookupContiguous(offset, size, nullptr) == ZX_OK) {
     return SecondLevelMapDiscontiguous(vmo, offset, size, flags, map_contiguous, virt_paddr,
                                        mapped_len);
   }
@@ -297,19 +297,8 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
 zx_status_t DeviceContext::SecondLevelMapContiguous(const fbl::RefPtr<VmObject>& vmo,
                                                     uint64_t offset, size_t size, uint flags,
                                                     paddr_t* virt_paddr, size_t* mapped_len) {
-  DEBUG_ASSERT(!vmo->is_paged() || static_cast<VmObjectPaged*>(vmo.get())->is_contiguous());
-
-  auto lookup_fn = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    paddr_t* paddr = static_cast<paddr_t*>(ctx);
-    *paddr = pa;
-    return ZX_OK;
-  };
-
-  // Lookup the page in the VMO at the given offset. Since we know the VMO is
-  // contiguous, we can just extrapolate the rest of the addresses from the
-  // first.
   paddr_t paddr = UINT64_MAX;
-  zx_status_t status = vmo->Lookup(offset, PAGE_SIZE, lookup_fn, &paddr);
+  zx_status_t status = vmo->LookupContiguous(offset, size, &paddr);
   if (status != ZX_OK) {
     return status;
   }

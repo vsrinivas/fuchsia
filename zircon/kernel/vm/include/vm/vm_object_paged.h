@@ -136,6 +136,7 @@ class VmObjectPaged final : public VmObject {
   zx_status_t Write(const void* ptr, uint64_t offset, size_t len) override;
   zx_status_t Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
                      void* context) override;
+  zx_status_t LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) override;
 
   zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,
                        size_t len) override;
@@ -308,8 +309,7 @@ class VmObjectPaged final : public VmObject {
   // as well as the VmObjectPaged and offset which own the page. If no ancestor has a committed
   // page for the offset, returns null as well as the VmObjectPaged/offset which need to be queried
   // to populate the page.
-  VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset,
-                                               VmObjectPaged** owner_out,
+  VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, VmObjectPaged** owner_out,
                                                uint64_t* owner_offset_out, uint64_t* owner_id_out)
       TA_REQ(lock_);
 

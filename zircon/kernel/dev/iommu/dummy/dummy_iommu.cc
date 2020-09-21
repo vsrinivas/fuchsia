@@ -52,32 +52,29 @@ zx_status_t DummyIommu::Map(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vm
   if (perms == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (offset + size < offset || offset + size > vmo->size()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  auto lookup_fn = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    paddr_t* paddr = static_cast<paddr_t*>(ctx);
-    *paddr = pa;
-    return ZX_OK;
-  };
 
   paddr_t paddr = INVALID_PADDR;
-  zx_status_t status = vmo->Lookup(offset, ktl::min<size_t>(PAGE_SIZE, size), lookup_fn, &paddr);
+  size = ROUNDUP(size, PAGE_SIZE);
+  zx_status_t status = vmo->LookupContiguous(offset, size, &paddr);
+  // If the range is fundamentally incorrect or out of range then we immediately error. Otherwise
+  // even if we have some other error case we will fall back to attempting single pages at a time.
+  if (status == ZX_ERR_INVALID_ARGS || status == ZX_ERR_OUT_OF_RANGE) {
+    return status;
+  }
+  if (status == ZX_OK) {
+    DEBUG_ASSERT(paddr != INVALID_PADDR);
+    *vaddr = paddr;
+    *mapped_len = size;
+    return ZX_OK;
+  }
+
+  status = vmo->LookupContiguous(offset, PAGE_SIZE, &paddr);
   if (status != ZX_OK) {
     return status;
   }
-  if (paddr == INVALID_PADDR) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (vmo->is_paged()) {
-    *vaddr = paddr;
-    *mapped_len = PAGE_SIZE;
-  } else {
-    *vaddr = paddr;
-    *mapped_len = ROUNDUP(size, PAGE_SIZE);
-  }
+  DEBUG_ASSERT(paddr != INVALID_PADDR);
+  *vaddr = paddr;
+  *mapped_len = PAGE_SIZE;
   return ZX_OK;
 }
 
@@ -96,29 +93,13 @@ zx_status_t DummyIommu::MapContiguous(uint64_t bus_txn_id, const fbl::RefPtr<VmO
   if (perms == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  uint64_t end;
-  if (add_overflow(offset, size, &end) || end > vmo->size()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  if (!vmo->is_contiguous()) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  auto lookup_fn = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    paddr_t* paddr = static_cast<paddr_t*>(ctx);
-    *paddr = pa;
-    return ZX_OK;
-  };
 
   paddr_t paddr = INVALID_PADDR;
-  zx_status_t status = vmo->Lookup(offset, PAGE_SIZE, lookup_fn, &paddr);
+  zx_status_t status = vmo->LookupContiguous(offset, size, &paddr);
   if (status != ZX_OK) {
     return status;
   }
-  if (paddr == INVALID_PADDR) {
-    return ZX_ERR_BAD_STATE;
-  }
+  DEBUG_ASSERT(paddr != INVALID_PADDR);
 
   *vaddr = paddr;
   *mapped_len = size;

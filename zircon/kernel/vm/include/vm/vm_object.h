@@ -123,9 +123,18 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // execute lookup_fn on a given range of physical addresses within the vmo
+  // execute lookup_fn on a given range of physical addresses within the vmo.
+  // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS.
   virtual zx_status_t Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
                              void* context) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Attempts to lookup the given range in the VMO. If it exists and is physically contiguous
+  // returns the paddr of the start of the range. The offset must be page aligned.
+  // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS.
+  // A null |paddr| may be passed to just check for contiguity.
+  virtual zx_status_t LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

@@ -1828,7 +1828,7 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
   return ZX_OK;
 }
 
-VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, 
+VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset,
                                                             VmObjectPaged** owner_out,
                                                             uint64_t* owner_offset_out,
                                                             uint64_t* owner_id_out) {
@@ -1950,8 +1950,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   // Get content from parent if available, otherwise accept we are the owner of the yet to exist
   // page.
   if ((!page_or_mark || page_or_mark->IsEmpty()) && parent_) {
-    page_or_mark =
-        FindInitialPageContentLocked(offset, &page_owner, &owner_offset, &owner_id);
+    page_or_mark = FindInitialPageContentLocked(offset, &page_owner, &owner_offset, &owner_id);
   } else {
     page_owner = this;
     owner_offset = offset;
@@ -2417,8 +2416,7 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
   if (!slot || !slot->IsPage()) {
     VmObjectPaged* page_owner;
     uint64_t owner_offset, owner_id;
-    if (!FindInitialPageContentLocked(page_base_offset, &page_owner,
-                                      &owner_offset, &owner_id)) {
+    if (!FindInitialPageContentLocked(page_base_offset, &page_owner, &owner_offset, &owner_id)) {
       // Parent doesn't have a page either, so nothing to do this is already zero.
       return ZX_OK;
     }
@@ -3285,6 +3283,40 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
     return status;
   }
 
+  return ZX_OK;
+}
+
+zx_status_t VmObjectPaged::LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) {
+  canary_.Assert();
+
+  if (unlikely(len == 0 || !IS_PAGE_ALIGNED(offset))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  Guard<Mutex> guard{&lock_};
+  if (unlikely(!InRange(offset, len, size_))) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (unlikely(!is_contiguous() && len != PAGE_SIZE)) {
+    return ZX_ERR_BAD_STATE;
+  }
+  // If this is a slice then our pages are in our first non-slice parent. Our previous range check
+  // is still valid as slices have to be strict subsets and are nothing can be resizable.
+  VmPageOrMarker* page;
+  if (is_slice()) {
+    uint64_t parent_offset;
+    VmObjectPaged* paged_parent = PagedParentOfSliceLocked(&parent_offset);
+    AssertHeld(paged_parent->lock_);
+    page = paged_parent->page_list_.Lookup(offset + parent_offset);
+  } else {
+    page = page_list_.Lookup(offset);
+  }
+  if (!page || !page->IsPage()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (out_paddr) {
+    *out_paddr = page->Page()->paddr();
+  }
   return ZX_OK;
 }
 
