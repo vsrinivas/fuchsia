@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -422,9 +421,7 @@ func (r *RunCommand) startSyslogStream(ctx context.Context, client *sshutil.Clie
 	go func() {
 		defer f.Close()
 		defer wg.Done()
-		if err := syslogger.Stream(ctx, f); err != nil && !errors.Is(err, ctx.Err()) {
-			logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
-		}
+		syslogger.Stream(ctx, f)
 	}()
 
 	// The caller should call this function when they want to stop streaming syslogs.

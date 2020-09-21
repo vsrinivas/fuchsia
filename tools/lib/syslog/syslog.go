@@ -50,16 +50,22 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 	for {
 		// Note: Fuchsia's log_listener does not write to stderr.
 		err := s.client.Run(ctx, cmd, output, nil)
-		// We need not attempt to reconnect if the context was canceled or if we
-		// hit an error unrelated to the connection.
-		if err != nil {
+
+		completedSuccessfully := err == nil || ctx.Err() != nil
+		if !completedSuccessfully {
 			logger.Debugf(ctx, "error streaming syslog: %v", err)
 		}
 
-		if err == nil || ctx.Err() != nil || !sshutil.IsConnectionError(err) {
+		// We need not attempt to reconnect if we hit an error unrelated to the
+		// connection (which is probably unrecoverable) or if the context was
+		// canceled (context cancellation is the only mechanism for stopping
+		// this method, so it generally indicates that the caller is exiting
+		// normally).
+		if completedSuccessfully || !sshutil.IsConnectionError(err) {
 			logger.Debugf(ctx, "syslog streaming complete")
 			return err
 		}
+
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)
 		if err := s.client.ReconnectWithBackoff(ctx, retry.NewConstantBackoff(defaultReconnectInterval)); err != nil {
 			// The context probably got cancelled before we were able to
