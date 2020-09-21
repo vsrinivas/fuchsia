@@ -74,14 +74,23 @@ class Sl4f {
   static const _sl4fHttpDefaultPort = 80;
   static final _portSuffixRe = RegExp(r':\d+$');
 
-  final _client = http.Client();
+  final _client = HttpClient();
 
   /// Authority (IP, hostname, etc.) of the device under test.
-  final String target;
+  String get target {
+    final host = targetUrl.host.replaceAll('%25', '%');
+    if (host.contains(':')) {
+      return '[$host]';
+    }
+    return host;
+  }
 
   /// TCP port number that the SL4F HTTP server is listening on the target
   /// device
-  final int port;
+  int get port => targetUrl.port;
+
+  /// Url of the target SL4F HTTP server.
+  final Uri targetUrl;
 
   /// [Ssh] client to talk to the device.
   ///
@@ -89,19 +98,49 @@ class Sl4f {
   /// facades to start commands and forward ports.
   final Ssh ssh;
 
+  /// Additional HTTP headers to send with each request.
+  ///
+  /// These may be used by proxy servers.
+  final Map<String, String> headers;
+
+  /// Additional [Cookie]s to send with each request.
+  final List<Cookie> cookies;
+
   /// Create a new Sl4f instance that connects to a given [target] address and
   /// uses the [ssh] connection.
   ///
   /// Most of the time users should use [Sl4f.fromEnvironment] to instantiate
   /// [Sl4f] using environment variables provided by `fx` and the CI/CQ infra.
-  Sl4f(this.target, this.ssh, [this.port = _sl4fHttpDefaultPort])
-      : assert(target != null && target.isNotEmpty) {
+  ///
+  /// Optionally specify [headers] and [cookies] to attach those to all requests.
+  Sl4f(String target, this.ssh,
+      [int port = _sl4fHttpDefaultPort,
+      this.headers = const {},
+      this.cookies = const []])
+      : assert(target != null && target.isNotEmpty),
+        targetUrl = Uri.http('$target:$port', '') {
     if (_portSuffixRe.hasMatch(target)) {
-      throw Sl4fException('Target argument cannot contain a port. '
+      throw ArgumentError('Target argument cannot contain a port. '
           'Use the port argument instead.');
     }
 
     _log.info('Target device: $target');
+  }
+
+  /// Creates a new Sl4f client instance that sends requests to [targetUrl],
+  ///
+  /// Optionally specify [headers] and [cookies] to attach those to all requests.
+  ///
+  /// This constructor explicitly disables SSH access to the target hosting the Sl4f server.
+  /// Use this for constructing a "pure HTTP" client for talking to Sl4f servers.
+  /// (The Sl4f server itself has no concept of SSH).
+  Sl4f.fromUrl(this.targetUrl,
+      [this.headers = const {}, this.cookies = const []])
+      : ssh = null {
+    if (targetUrl == null) {
+      throw ArgumentError('targetUrl cannot be null');
+    }
+    _log.info('Target url: $targetUrl');
   }
 
   /// Constructs an SL4F client from the following environment variables:
@@ -194,29 +233,38 @@ class Sl4f {
   /// Closes the underlying HTTP client.
   ///
   /// If clients remain unclosed, the dart process might not terminate.
-  void close() => _client.close();
+  void close() => _client.close(force: true);
 
   /// Sends a JSON-RPC request to SL4F.
   ///
   /// Throws a [JsonRpcException] if the SL4F server replied with a non-null
   /// error string.
   Future<dynamic> request(String method, [dynamic params]) async {
+    final httpResponse = await _getRequest(method, params);
+    final responseBody = await httpResponse.transform(utf8.decoder).join();
+    Map<String, dynamic> response = jsonDecode(responseBody);
+    final dynamic error = response['error'];
+    if (error != null) {
+      throw JsonRpcException(responseBody, error);
+    }
+
+    return response['result'];
+  }
+
+  Future<HttpClientResponse> _getRequest(String method,
+      [dynamic params]) async {
     // Although params is optional, this will pass a null params if it is
     // omitted. This is actually required by our SL4F server (although it is
     // not required in JSON RPC:
     // https://www.jsonrpc.org/specification#request_object).
-    final httpRequest = http.Request('GET', Uri.http('$target:$port', ''))
-      ..body = jsonEncode({'id': '', 'method': method, 'params': params});
-
-    final httpResponse =
-        await http.Response.fromStream(await _client.send(httpRequest));
-    Map<String, dynamic> response = jsonDecode(httpResponse.body);
-    final dynamic error = response['error'];
-    if (error != null) {
-      throw JsonRpcException(httpRequest.body, error);
-    }
-
-    return response['result'];
+    final body = jsonEncode({'id': '', 'method': method, 'params': params});
+    final httpRequest = await _client.getUrl(targetUrl);
+    headers.forEach(httpRequest.headers.add);
+    cookies.forEach(httpRequest.cookies.add);
+    httpRequest
+      ..contentLength = body.length
+      ..write(body);
+    return await httpRequest.close();
   }
 
   /// Starts the SL4F server on the target using ssh.
@@ -401,7 +449,7 @@ class Sl4f {
       }
 
       try {
-        await http.get(Uri.http('$target:$port', '/')).timeout(timeout);
+        await _getRequest('').timeout(timeout);
       } on IOException {
         continue;
       } on TimeoutException {

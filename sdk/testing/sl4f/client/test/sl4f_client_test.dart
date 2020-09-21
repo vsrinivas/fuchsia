@@ -308,13 +308,34 @@ void main() {
   });
 
   group('Sl4f constructor', () {
+    test('empty path in targetUrl', () {
+      Sl4f client = Sl4f('1.2.3.4', null);
+      expect(client.targetUrl.path, isEmpty);
+    });
     test('throws exception if target ipv4 address has port', () {
       expect(() => Sl4f('1.2.3.4:8282', null),
-          throwsA(TypeMatcher<Sl4fException>()));
+          throwsA(TypeMatcher<FormatException>()));
     });
     test('throws exception if target ipv6 address has port', () {
       expect(() => Sl4f('[::1]:8282', null),
-          throwsA(TypeMatcher<Sl4fException>()));
+          throwsA(TypeMatcher<FormatException>()));
+    });
+  });
+
+  group('Sl4f fromUrl', () {
+    test('correct target and port', () {
+      Sl4f client = Sl4f.fromUrl(Uri.http('sl4f.com:1234', ''));
+      expect(client.target, equals('sl4f.com'));
+      expect(client.port, equals(1234));
+    });
+    test('null url throws exception', () {
+      expect(() => Sl4f.fromUrl(null), throwsA(TypeMatcher<ArgumentError>()));
+    });
+    test('header is set', () {
+      Sl4f client =
+          Sl4f.fromUrl(Uri.http('sl4f.com:1234', ''), {'testKey': 'testValue'});
+      expect(client.headers, contains('testKey'));
+      expect(client.headers['testKey'], equals('testValue'));
     });
   });
 }
