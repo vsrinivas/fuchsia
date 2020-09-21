@@ -40,12 +40,12 @@ static_library("fs_test") {
   ]
   public_deps = [
     "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/storage/minfs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/minfs",
   ]
 }
 
@@ -292,10 +292,10 @@ test("minfs_tests") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/minfs",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fvm",
-    "//zircon/system/ulib/minfs",
   ]
 }
 
@@ -424,10 +424,10 @@ test("resize_tests") {
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/minfs",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fvm",
-    "//zircon/system/ulib/minfs",
   ]
 }
 

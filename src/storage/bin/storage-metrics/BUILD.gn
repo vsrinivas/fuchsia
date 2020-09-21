@@ -14,10 +14,10 @@ executable("storage-metrics") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//sdk/lib/fdio",
+    "//src/storage/minfs",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/minfs",
   ]
 }

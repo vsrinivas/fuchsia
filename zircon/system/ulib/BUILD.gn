@@ -41,7 +41,6 @@ fuzzers_package("fuzzers") {
     "gfx/test:gfx-fuzzer",
     "hid-parser/test:hid-parser-fuzzer",
     "ldmsg/test:ldmsg-fuzzer",
-    "minfs/test:minfs-fuzzer",
     "tftp/test:tftp-fuzzer",
     "utf_conversion/test:utf_conversion-fuzzer",
     "zbi-bootfs/test:zbi-bootfs-fuzzer",

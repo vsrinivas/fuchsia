@@ -46,13 +46,14 @@ zx_library("fvm-host") {
     "//src/storage/blobfs",
 
     # <fvm-host/format.h> has #include <minfs/bcache.h>.
-    "//zircon/system/ulib/minfs",
+    "//src/storage/minfs",
 
     # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.
     "//zircon/system/ulib/fvm",
   ]
   deps = [
     "//src/storage/blobfs",
+    "//src/storage/minfs",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -62,7 +63,6 @@ zx_library("fvm-host") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
-    "//zircon/system/ulib/minfs",
     "//zircon/third_party/ulib/cksum",
   ]
 }

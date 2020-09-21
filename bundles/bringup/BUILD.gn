@@ -30,6 +30,10 @@ group("tests") {
     "//src/media/audio/drivers/intel-hda/test:intel-hda-bootfs-test",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-bootfs-test",  # HW-required.
     "//src/media/audio/tools/audio-driver-ctl:test-bootfs-test",
+    "//src/storage/minfs/allocator/test:minfs-allocator-unit-bootfs-test",
+    "//src/storage/minfs/test:minfs-integration-bootfs-test",
+    "//src/storage/minfs/test:minfs-power-bootfs-test",
+    "//src/storage/minfs/test:minfs-unit-bootfs-test",
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-bootfs-test",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-bootfs-test",
     "//src/ui/backlight/tests:backlight-test-bootfs-test",
@@ -109,10 +113,6 @@ group("tests") {
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-bootfs-test",
     "//zircon/system/ulib/lockdep/test:lockdep-test-bootfs-test",
     "//zircon/system/ulib/memfs/test:memfs-tests-bootfs-test",
-    "//zircon/system/ulib/minfs/allocator/test:minfs-allocator-unit-bootfs-test",
-    "//zircon/system/ulib/minfs/test:minfs-integration-bootfs-test",
-    "//zircon/system/ulib/minfs/test:minfs-power-bootfs-test",
-    "//zircon/system/ulib/minfs/test:minfs-unit-bootfs-test",
     "//zircon/system/ulib/mipi-dsi/test:mipidsi-bootfs-test",
     "//zircon/system/ulib/mmio-ptr/test:mmio-ptr-unittest-bootfs-test",
     "//zircon/system/ulib/mock-function/test:mock-function-test-bootfs-test",

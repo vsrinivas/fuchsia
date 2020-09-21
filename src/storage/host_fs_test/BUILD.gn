@@ -23,9 +23,9 @@ if (is_host) {
 
     deps = [
       "//src/lib/fxl/test:gtest_main",
+      "//src/storage/minfs",
       "//third_party/googletest:gtest",
       "//zircon/public/lib/fbl",
-      "//zircon/system/ulib/minfs",
     ]
   }
 }

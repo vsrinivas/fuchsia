@@ -120,7 +120,7 @@ group("migrated-tests") {
 
     #------------------
     #------------------
-    "//zircon/system/ulib/minfs/test:minfs-host",
+    "//src/storage/minfs/test:minfs-host",
 
     #------------------
     #------------------
