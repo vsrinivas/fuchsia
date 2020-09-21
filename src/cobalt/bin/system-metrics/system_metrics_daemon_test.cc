@@ -745,12 +745,15 @@ TEST_F(SystemMetricsDaemonTest, LogLogStats) {
   fake_logger_.reset_logged_events();
 
   // Report 4 error logs, 0 kernel logs, 3 logs for appmgr, and 2 granular records.
+  // Paths must be truncted to 64 characters before being sent to Cobalt as components.
   const uint64_t line_no1 = 123;
   const uint64_t line_no2 = 9999;
+  const char* kLongPath = "third_party/cobalt/src/local_aggregation_1.1/observation_generator.cc";
+  const char* kTruncatedPath = "_party/cobalt/src/local_aggregation_1.1/observation_generator.cc";
   fake_log_stats_fetcher_->AddErrorCount(4);
   fake_log_stats_fetcher_->AddComponentErrorCount(cobalt::ComponentEventCode::Appmgr, 3);
   fake_log_stats_fetcher_->AddGranularRecord("path/to/file.cc", line_no1, 321);
-  fake_log_stats_fetcher_->AddGranularRecord("qwerty", line_no2, 11);
+  fake_log_stats_fetcher_->AddGranularRecord(kLongPath, line_no2, 11);
   LogLogStats();
   RunLoopUntilIdle();
   CheckValues(cobalt::kLogCobaltEvents, 2, fuchsia_system_metrics::kGranularErrorLogCountMetricId,
@@ -785,7 +788,7 @@ TEST_F(SystemMetricsDaemonTest, LogLogStats) {
             fake_logger_.logged_events()[4].metric_id);
   EXPECT_EQ(11u, fake_logger_.logged_events()[4].payload.event_count().count);
   EXPECT_EQ((line_no2 - 1) % 1023, fake_logger_.logged_events()[4].event_codes[0]);
-  EXPECT_EQ("qwerty", fake_logger_.logged_events()[4].component);
+  EXPECT_EQ(kTruncatedPath, fake_logger_.logged_events()[4].component);
 
   fake_logger_.reset_logged_events();
 }

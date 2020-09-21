@@ -451,9 +451,14 @@ void SystemMetricsDaemon::LogLogStats() {
     }
 
     for (auto& record : metrics.granular_stats) {
+      // Component can only be up to 64 bytes, so truncate the beginning of the file path if it
+      // doesn't fit.
+      std::string component = record.file_path.size() > 64
+                                  ? record.file_path.substr(record.file_path.size() - 64)
+                                  : record.file_path;
       events.push_back(CobaltEventBuilder(fuchsia_system_metrics::kGranularErrorLogCountMetricId)
                            .with_event_code((record.line_no - 1) % 1023)
-                           .with_component(record.file_path)
+                           .with_component(component)
                            .as_count_event(0, record.count));
     }
 
@@ -596,6 +601,8 @@ zx_status_t SystemMetricsDaemon::ReinitializeIfPeerClosed(zx_status_t zx_status)
   if (zx_status == ZX_ERR_PEER_CLOSED) {
     FX_LOGS(ERROR) << "Logger connection closed. Reconnecting...";
     InitializeLogger();
+  } else if (zx_status != ZX_OK) {
+    FX_PLOGS(ERROR, zx_status) << "Logger failed";
   }
   return zx_status;
 }
