@@ -104,9 +104,7 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
 
   // find physical pages to back the range of the object and pin them.
   // |len| must be non-zero.
-  virtual zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  virtual zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) = 0;
 
   // free a range of the vmo back to the default state
   virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
@@ -117,9 +115,7 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   // Unpin the given range of the vmo.  This asserts if it tries to unpin a
   // page that is already not pinned (do not expose this function to
   // usermode).
-  virtual void Unpin(uint64_t offset, uint64_t len) {
-    panic("Unpin should only be called on a pinned range");
-  }
+  virtual void Unpin(uint64_t offset, uint64_t len) = 0;
 
   // read/write operators against kernel pointers only
   virtual zx_status_t Read(void* ptr, uint64_t offset, size_t len) { return ZX_ERR_NOT_SUPPORTED; }

@@ -210,6 +210,21 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, vmo_lookup_f
   return ZX_OK;
 }
 
+zx_status_t VmObjectPhysical::CommitRangePinned(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  if (unlikely(len == 0 || !IS_PAGE_ALIGNED(offset))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  Guard<Mutex> guard{&lock_};
+  if (unlikely(!InRange(offset, len, size_))) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  // Physical VMOs are always committed and so are always pinned.
+  return ZX_OK;
+}
+
 uint32_t VmObjectPhysical::GetMappingCachePolicy() const {
   Guard<Mutex> guard{&lock_};
 

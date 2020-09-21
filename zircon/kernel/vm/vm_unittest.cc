@@ -1422,6 +1422,33 @@ static bool vmo_create_physical_test() {
   EXPECT_EQ(ARCH_MMU_FLAG_UNCACHED, cache_policy, "check initial cache policy");
   EXPECT_TRUE(vmo->is_contiguous(), "check contiguous");
 
+  vmo.reset();
+  pmm_free_page(vm_page);
+
+  END_TEST;
+}
+
+static bool vmo_physical_pin_test() {
+  BEGIN_TEST;
+
+  paddr_t pa;
+  vm_page_t* vm_page;
+  zx_status_t status = pmm_alloc_page(0, &vm_page, &pa);
+  ASSERT_EQ(ZX_OK, status);
+
+  fbl::RefPtr<VmObject> vmo;
+  status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+
+  // Validate we can pin the range.
+  EXPECT_EQ(ZX_OK, vmo->CommitRangePinned(0, PAGE_SIZE));
+
+  // Pinning out side should fail.
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE));
+
+  // Unpin for physical VMOs does not currently do anything, but still call it to be API correct.
+  vmo->Unpin(0, PAGE_SIZE);
+
+  vmo.reset();
   pmm_free_page(vm_page);
 
   END_TEST;
@@ -3759,6 +3786,7 @@ VM_UNITTEST(vmo_multiple_pin_test)
 VM_UNITTEST(vmo_commit_test)
 VM_UNITTEST(vmo_odd_size_commit_test)
 VM_UNITTEST(vmo_create_physical_test)
+VM_UNITTEST(vmo_physical_pin_test)
 VM_UNITTEST(vmo_create_contiguous_test)
 VM_UNITTEST(vmo_contiguous_decommit_test)
 VM_UNITTEST(vmo_precommitted_map_test)
