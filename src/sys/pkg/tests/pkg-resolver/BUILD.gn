@@ -335,9 +335,6 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//third_party/rust_crates:void",
   ]
 
-  # TODO(46772): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [ "src/resolve_succeeds_with_broken_minfs.rs" ]
 }
 

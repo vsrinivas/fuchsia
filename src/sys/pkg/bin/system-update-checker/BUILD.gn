@@ -58,9 +58,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
   ]
 
-  # TODO(54452): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/apply.rs",
     "src/channel.rs",

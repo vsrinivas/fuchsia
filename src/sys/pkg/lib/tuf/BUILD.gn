@@ -55,9 +55,6 @@ rustc_library("tuf") {
     "//third_party/rust_crates:url",
   ]
 
-  # TODO(46838): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = common_sources
 }
 
@@ -94,9 +91,6 @@ rustc_test("tuf_lib_test") {
     "//third_party/rust_crates:untrusted",
     "//third_party/rust_crates:url",
   ]
-
-  # TODO(46838): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = common_sources
 
