@@ -12,6 +12,7 @@ import (
 
 	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	libcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	libllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp/lib"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
@@ -19,6 +20,7 @@ import (
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <benchmarkfidl/llcpp/fidl.h>
+#include <lib/fidl/cpp/test/handle_util.h>
 #include <perftest/perftest.h>
 
 #include "src/tests/benchmarks/fidl/llcpp/builder_benchmark_util.h"
@@ -29,14 +31,46 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
+{{- if .HandleDefs }}
+std::vector<zx_handle_t> _BuildHandles() {
+	return {{ .HandleDefs }};
+}
+
+{{ .Type }} _BuildFromHandles(const std::vector<zx_handle_t>& handle_defs) {
+  {{ .ValueBuildHeap }}
+  auto result =  {{ .ValueVarHeap }};
+  return result;
+}
+
 {{ .Type }} Build{{ .Name }}Heap() {
+  return _BuildFromHandles(_BuildHandles());
+}
+{{- else }}
+std::tuple<> _BuildEmptyContext() {
+	return std::make_tuple();
+}
+
+{{ .Type }} _BuildFromEmptyContext(std::tuple<> _context) {
 	{{ .ValueBuildHeap }}
-	auto obj = {{ .ValueVarHeap }};
-	return obj;
+	auto result = {{ .ValueVarHeap }};
+	return result;
 }
+
+{{ .Type }} Build{{ .Name }}Heap() {
+  {{ .ValueBuildHeap }}
+  auto result = {{ .ValueVarHeap }};
+  return result;
+}
+{{- end }}
+
 bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
-	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Heap);
+{{- if .HandleDefs }}
+  return llcpp_benchmarks::BuilderBenchmark(state, _BuildFromHandles, _BuildHandles);
+{{- else }}
+  return llcpp_benchmarks::BuilderBenchmark(state, _BuildFromEmptyContext, _BuildEmptyContext);
+{{- end }}
 }
+
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }}Heap);
 }
@@ -55,7 +89,7 @@ bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
 {{- end -}}
 
 void RegisterTests() {
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/WallTime", BenchmarkBuilder{{ .Name }}Heap);
+	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }}Heap);
 	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
 	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
 	{{ if .EnableSendEventBenchmark }}
@@ -73,6 +107,7 @@ PERFTEST_CTOR(RegisterTests)
 type benchmarkTmplInput struct {
 	Path, Name, Type, EventProtocolType, EchoCallProtocolType string
 	ValueBuildHeap, ValueVarHeap                              string
+	HandleDefs                                                string
 	EnableSendEventBenchmark, EnableEchoCallBenchmark         bool
 }
 
@@ -98,6 +133,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 			EchoCallProtocolType:     benchmarkTypeFromValue(gidlBenchmark.Value) + "EchoCall",
 			ValueBuildHeap:           valBuildHeap,
 			ValueVarHeap:             valVarHeap,
+			HandleDefs:               libcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
 			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
 		}); err != nil {

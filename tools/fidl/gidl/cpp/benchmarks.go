@@ -18,6 +18,7 @@ import (
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <benchmarkfidl/cpp/fidl.h>
+#include <lib/fidl/cpp/test/handle_util.h>
 #include <perftest/perftest.h>
 
 #include "src/tests/benchmarks/fidl/hlcpp/builder_benchmark_util.h"
@@ -28,14 +29,46 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
+{{- if .HandleDefs }}
+std::vector<zx_handle_t> _BuildHandles() {
+	return {{ .HandleDefs }};
+}
+
+{{ .Type }} _BuildFromHandles(const std::vector<zx_handle_t>& handle_defs) {
+  {{ .ValueBuild }}
+  auto result =  {{ .ValueVar }};
+  return result;
+}
+
+{{ .Type }} Build{{ .Name }}() {
+  return _BuildFromHandles(_BuildHandles());
+}
+{{- else }}
+std::tuple<> _BuildEmptyContext() {
+	return std::make_tuple();
+}
+
+{{ .Type }} _BuildFromEmptyContext(std::tuple<> _context) {
+	{{ .ValueBuild }}
+	auto result = {{ .ValueVar }};
+	return result;
+}
+
 {{ .Type }} Build{{ .Name }}() {
   {{ .ValueBuild }}
   auto result = {{ .ValueVar }};
   return result;
 }
+{{- end }}
+
 bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
-  return hlcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }});
+{{- if .HandleDefs }}
+  return hlcpp_benchmarks::BuilderBenchmark(state, _BuildFromHandles, _BuildHandles);
+{{- else }}
+  return hlcpp_benchmarks::BuilderBenchmark(state, _BuildFromEmptyContext, _BuildEmptyContext);
+{{- end }}
 }
+
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
   return hlcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
 }
@@ -54,7 +87,7 @@ bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
 {{- end -}}
 
 void RegisterTests() {
-  perftest::RegisterTest("HLCPP/Builder/{{ .Path }}/WallTime", BenchmarkBuilder{{ .Name }});
+  perftest::RegisterTest("HLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
   perftest::RegisterTest("HLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
   perftest::RegisterTest("HLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
   {{ if .EnableSendEventBenchmark }}
@@ -72,6 +105,7 @@ PERFTEST_CTOR(RegisterTests)
 type benchmarkTmplInput struct {
 	Path, Name, Type                                  string
 	ValueBuild, ValueVar                              string
+	HandleDefs                                        string
 	EventProtocolType, EchoCallProtocolType           string
 	EnableSendEventBenchmark, EnableEchoCallBenchmark bool
 }
@@ -98,6 +132,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 			Type:                     benchmarkTypeFromValue(gidlBenchmark.Value),
 			ValueBuild:               valueBuild,
 			ValueVar:                 valueVar,
+			HandleDefs:               BuildHandleDefs(gidlBenchmark.HandleDefs),
 			EventProtocolType:        benchmarkTypeFromValue(gidlBenchmark.Value) + "EventProtocol",
 			EchoCallProtocolType:     benchmarkTypeFromValue(gidlBenchmark.Value) + "EchoCall",
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
@@ -116,4 +151,26 @@ func benchmarkTypeFromValue(value gidlir.Value) string {
 
 func benchmarkName(gidlName string) string {
 	return strings.ReplaceAll(gidlName, "/", "_")
+}
+
+func BuildHandleDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_t>{\n")
+	for i, d := range defs {
+		switch d.Subtype {
+		case fidlir.Channel:
+			builder.WriteString("fidl::test::util::create_channel(),")
+		case fidlir.Event:
+			builder.WriteString("fidl::test::util::create_event(),")
+		default:
+			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
+		}
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+	}
+	builder.WriteString("}")
+	return builder.String()
 }

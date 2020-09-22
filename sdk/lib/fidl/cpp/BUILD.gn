@@ -153,6 +153,17 @@ source_set("test_util") {
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
+source_set("handle_util") {
+  testonly = true
+
+  sources = [
+    "test/handle_util.cc",
+    "test/handle_util.h",
+  ]
+
+  public_deps = [ "//zircon/public/lib/zx" ]
+}
+
 source_set("test_support") {
   testonly = true
 

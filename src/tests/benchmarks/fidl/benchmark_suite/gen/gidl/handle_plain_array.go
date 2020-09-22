@@ -25,7 +25,7 @@ func init() {
 				// a type, chosen here to be 'event' for better comparison with the
 				// event_handle_array benchmark.
 				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 64),
-				Allowlist:  []config.Binding{config.Dart, config.Rust},
+				Denylist:   []config.Binding{config.Go},
 			},
 		},
 	})

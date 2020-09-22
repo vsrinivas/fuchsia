@@ -7,22 +7,23 @@
 
 namespace llcpp_benchmarks {
 
-template <typename BuilderFunc>
-bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
+template <typename BuilderFunc, typename SetupFunc>
+bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder, SetupFunc setup) {
+  state->DeclareStep("Setup/WallTime");
+  state->DeclareStep("Build/WallTime");
+  state->DeclareStep("Teardown/WallTime");
   while (state->KeepRunning()) {
-    builder();
+    auto buildContext = setup();
+
+    state->NextStep();  // End: Setup. Begin: Build
+
+    [[maybe_unused]] auto result = builder(buildContext);
+
+    state->NextStep();  // End: Build. Start: Teardown
+
+    // handles inside the constructed object are destroyed here as `result` goes
+    // out of scope
   }
-
-  return true;
-}
-
-template <typename Allocator, typename BuilderFunc>
-bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  while (state->KeepRunning()) {
-    Allocator allocator;
-    builder(&allocator);
-  }
-
   return true;
 }
 

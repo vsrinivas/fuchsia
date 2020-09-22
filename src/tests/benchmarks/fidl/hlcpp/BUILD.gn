@@ -13,6 +13,7 @@ gidl_cpp_benchmarks("benchmark_suite_hlcpp") {
   inputs = benchmark_suite_gidl_files
   fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
   deps = [
+    "//sdk/lib/fidl/cpp:handle_util",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

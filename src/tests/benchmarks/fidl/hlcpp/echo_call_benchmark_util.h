@@ -15,7 +15,9 @@ namespace hlcpp_benchmarks {
 
 template <typename ProtocolType, typename FidlType>
 class EchoServerImpl : public ProtocolType {
-  void Echo(FidlType val, typename ProtocolType::EchoCallback callback) override { callback(val); }
+  void Echo(FidlType val, typename ProtocolType::EchoCallback callback) override {
+    callback(std::move(val));
+  }
 };
 
 template <typename ProtocolType, typename BuilderFunc>
@@ -41,7 +43,7 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: EchoCall.
 
     FidlType out;
-    zx_status_t status = ptr->Echo(in, &out);
+    zx_status_t status = ptr->Echo(std::move(in), &out);
 
     state->NextStep();  // End: EchoCall. Begin: Teardown
 

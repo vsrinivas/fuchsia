@@ -87,6 +87,8 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 		return fmt.Sprintf("%g", value)
 	case string:
 		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
+	case gidlir.Handle:
+		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value)
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
 	case []interface{}:
@@ -195,6 +197,17 @@ func typeName(decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("::fidl::VectorPtr<%s>", typeName(decl.Elem()))
 		}
 		return fmt.Sprintf("std::vector<%s>", typeName(decl.Elem()))
+	case *gidlmixer.HandleDecl:
+		switch decl.Subtype() {
+		case fidlir.Handle:
+			return "zx::handle"
+		case fidlir.Channel:
+			return "zx::channel"
+		case fidlir.Event:
+			return "zx::event"
+		default:
+			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
+		}
 	default:
 		panic("unhandled case")
 	}

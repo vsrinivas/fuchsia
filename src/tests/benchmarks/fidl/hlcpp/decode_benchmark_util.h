@@ -12,30 +12,41 @@ namespace hlcpp_benchmarks {
 template <typename BuilderFunc>
 bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   using FidlType = std::invoke_result_t<BuilderFunc>;
-  FidlType obj = builder();
-
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
-  auto offset = enc.Alloc(EncodedSize<FidlType>);
-  obj.Encode(&enc, offset);
-  fidl::Message encode_msg = enc.GetMessage();
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  std::vector<uint8_t> buffer(encode_msg.bytes().actual());
+  std::vector<uint8_t> buffer;
+  std::vector<zx_handle_t> handles;
   while (state->KeepRunning()) {
+    // construct a new object each iteration so that the handle close cost is included in the
+    // decode time.
+    FidlType obj = builder();
+
+    fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
+    auto offset = enc.Alloc(EncodedSize<FidlType>);
+    obj.Encode(&enc, offset);
+    fidl::Message encode_msg = enc.GetMessage();
+
+    buffer.resize(encode_msg.bytes().actual());
+    handles.resize(encode_msg.handles().actual());
     memcpy(buffer.data(), encode_msg.bytes().data(), encode_msg.bytes().actual());
+    memcpy(handles.data(), encode_msg.handles().data(),
+           encode_msg.handles().actual() * sizeof(zx_handle_t));
 
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      uint32_t size = buffer.size();
-      fidl::Message decode_msg(fidl::BytePart(buffer.data(), size, size), fidl::HandlePart());
-      ZX_ASSERT(ZX_OK == decode_msg.Decode(FidlType::FidlType, nullptr));
+      fidl::Message decode_msg(fidl::BytePart(buffer.data(), buffer.size(), buffer.size()),
+                               fidl::HandlePart(handles.data(), handles.size(), handles.size()));
+      const char* error_msg;
+      ZX_ASSERT_MSG(ZX_OK == decode_msg.Decode(FidlType::FidlType, &error_msg), "%s", error_msg);
       fidl::Decoder decoder(std::move(decode_msg));
       FidlType output;
       FidlType::Decode(&decoder, &output, 0);
+      // Note: `output` goes out of scope here, so we include its destruction time in the
+      // Decode/Walltime step, including closing any handles.
     }
 
     state->NextStep();  // End: Decode. Begin: Teardown.

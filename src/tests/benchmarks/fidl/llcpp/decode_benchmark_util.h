@@ -21,26 +21,38 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   using FidlType = std::invoke_result_t<BuilderFunc>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  // Encode the value.
-  fidl::aligned<FidlType> aligned_value = builder();
-  ::fidl::internal::LinearizeBuffer<FidlType> buf;
-  auto encode_result = ::fidl::LinearizeAndEncode<FidlType>(&aligned_value.value, buf.buffer());
-  ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
-  const fidl::BytePart& bytes = encode_result.message.bytes();
-
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  std::vector<uint8_t> test_data(bytes.size());
+  std::vector<uint8_t> test_bytes;
+  std::vector<zx_handle_t> test_handles;
   while (state->KeepRunning()) {
-    memcpy(test_data.data(), bytes.data(), bytes.size());
+    // construct a new object each iteration, so that the handle close cost is included in the
+    // decode time.
+    fidl::aligned<FidlType> aligned_value = builder();
+    // encode the value.
+    ::fidl::internal::LinearizeBuffer<FidlType> buf;
+    auto encode_result = ::fidl::LinearizeAndEncode<FidlType>(&aligned_value.value, buf.buffer());
+    ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
+    const fidl::BytePart& bytes = encode_result.message.bytes();
+    const fidl::HandlePart& handles = encode_result.message.handles();
+
+    test_bytes.resize(bytes.size());
+    test_handles.resize(handles.size());
+    memcpy(test_bytes.data(), bytes.data(), bytes.actual());
+    memcpy(test_handles.data(), handles.data(), handles.actual() * sizeof(zx_handle_t));
+    fidl_msg_t msg = {
+        .bytes = &test_bytes[0],
+        .handles = &test_handles[0],
+        .num_bytes = (uint32_t)test_bytes.size(),
+        .num_handles = (uint32_t)test_handles.size(),
+    };
 
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      uint32_t size = (uint32_t)test_data.size();
-      fidl::EncodedMessage<FidlType> message(fidl::BytePart(&test_data[0], size, size));
+      fidl::EncodedMessage<FidlType> message(&msg);
       auto decode_result = fidl::Decode(std::move(message));
       ZX_ASSERT(decode_result.status == ZX_OK);
     }

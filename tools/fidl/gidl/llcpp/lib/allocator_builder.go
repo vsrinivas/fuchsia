@@ -86,6 +86,8 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 			return strconv.Quote(value)
 		}
 		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q", value)
+	case gidlir.Handle:
+		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
