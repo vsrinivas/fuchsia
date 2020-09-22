@@ -137,6 +137,48 @@ macro_rules! inspect_insert {
     }};
 }
 
+/// Convenience macro to construct a closure that implements WriteInspect, so it can be
+/// used in `inspect_log!` and `inspect_insert!`.
+///
+/// Note that this macro constructs a *move* closure underneath, unlike `inspect_log!` and
+/// `inspect_insert!` where variables are only borrowed.
+///
+/// Example 1:
+///
+/// ```
+/// let bounded_list_node = ...;
+/// let obj = make_inspect_loggable!(k1: "1", k2: 2i64, k3: "3");
+/// inspect_log!(bounded_list_node, some_key: obj);
+/// ```
+///
+/// Example 2
+///
+/// ```
+/// let bounded_list_node = ...;
+/// let point = Some((10, 50));
+/// inspect_log!(bounded_list_node, point?: point.map(|(x, y)| make_inspect_loggable!({
+///     x: x,
+///     y: y,
+/// })))
+/// ```
+#[macro_export]
+macro_rules! make_inspect_loggable {
+    ($($args:tt)+) => {{
+        use $crate::{inspect_insert, nodes::NodeWriter};
+        struct WriteInspectClosure<F>(F);
+        impl<F> WriteInspect for WriteInspectClosure<F> where F: Fn(&mut NodeWriter<'_>, &str) {
+            fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
+                self.0(writer, key);
+            }
+        }
+        let f = WriteInspectClosure(move |writer: &mut NodeWriter<'_>, key: &str| {
+            let mut child = writer.create_child(key);
+            inspect_insert!(child, $($args)+);
+        });
+        f
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,6 +405,33 @@ mod tests {
         inspect_insert!(node_writer, {
             k1: &1u64,
             k2?: Some("v2"),
+        });
+    }
+
+    #[test]
+    fn test_make_inspect_loggable() {
+        let (inspector, mut node) = inspector_and_list_node();
+
+        let obj = make_inspect_loggable!(k1: "1", k2: 2i64, k3: "3");
+        inspect_log!(node, some_key: obj);
+
+        let point = Some((10i64, 50i64));
+        inspect_log!(node, point?: point.map(|(x, y)| make_inspect_loggable!({
+            x: x,
+            y: y,
+        })));
+
+        assert_inspect_tree!(inspector, root: {
+            list_node: {
+                "0": {
+                    "@time": AnyProperty,
+                    some_key: { k1: "1", k2: 2i64, k3: "3" },
+                },
+                "1": {
+                    "@time": AnyProperty,
+                    point: { x: 10i64, y: 50i64 },
+                },
+            }
         });
     }
 
