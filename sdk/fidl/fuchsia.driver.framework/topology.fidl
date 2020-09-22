@@ -1,0 +1,53 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.driver.framework;
+
+using fuchsia.sys2;
+
+using zx;
+
+const uint8 MAX_OFFER_COUNT = 64;
+const uint8 MAX_PROTOCOL_COUNT = 64;
+const uint8 MAX_PROTOCOL_NAME_LENGTH = 128;
+const uint8 MAX_DEVICE_NAME_LENGTH = 128;
+
+/// Definition of a Banjo protocol, that is local to a driver host.
+table BanjoProtocol {
+    /// Fully-qualified name of the protocol.
+    1: string:MAX_PROTOCOL_NAME_LENGTH name;
+
+    /// Virtual address of the protocol, within a driver host's process.
+    2: zx.vaddr address;
+};
+
+/// Arguments for adding a node.
+table NodeAddArgs {
+    /// The name of the node.
+    1: string:MAX_DEVICE_NAME_LENGTH name;
+
+    /// FIDL services to offer to the driver that is bound to this node.
+    2: vector<fuchsia.sys2.OfferDecl>:MAX_OFFER_COUNT offers;
+
+    /// Banjo protocols to provide to the driver that is bound to this node.
+    3: vector<BanjoProtocol>:MAX_PROTOCOL_COUNT protocols;
+};
+
+/// Protocol through which a parent node controls one of its children.
+protocol NodeController {
+    /// Removes the node and all of its children.
+    Remove();
+};
+
+/// Protocol through which a driver manages a node that it is bound to.
+protocol Node {
+    /// Adds a child node to this node.
+    ///
+    /// If `node` is present, this driver takes responsibility for binding to
+    /// the newly created child. Otherwise, the driver framework will locate an
+    /// appropriate driver to bind the child to.
+    AddChild(NodeAddArgs args,
+             request<NodeController> controller,
+             request<Node>? node);
+};

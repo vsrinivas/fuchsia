@@ -1,0 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.driver.framework;
+
+using fuchsia.url;
+
+using zx;
+
+/// Protocol through which the driver index can be queried.
+protocol DriverIndex {
+    /// Match a set of device arguments to a driver package URL.
+    Match(NodeAddArgs args)
+        -> (string:fuchsia.url.MAX_URL_LENGTH url, NodeAddArgs matched_args)
+        error zx.status;
+};
