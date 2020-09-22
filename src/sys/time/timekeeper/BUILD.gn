@@ -38,6 +38,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -45,6 +46,7 @@ rustc_binary("bin") {
     "src/diagnostics/cobalt.rs",
     "src/diagnostics/inspect.rs",
     "src/diagnostics/mod.rs",
+    "src/enums.rs",
     "src/main.rs",
     "src/network.rs",
     "src/rtc.rs",

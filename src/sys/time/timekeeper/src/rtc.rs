@@ -16,7 +16,6 @@ use {
     log::error,
     std::{fs, path::PathBuf},
     thiserror::Error,
-    time_metrics_registry::RealTimeClockEventsMetricDimensionEventType as CobaltRtcEventType,
 };
 
 lazy_static! {
@@ -36,17 +35,7 @@ pub enum RtcCreationError {
     #[error("Found {0} RTC devices, more than the 1 we expected")]
     MultipleDevices(usize),
     #[error("Could not connect to RTC device: {0}")]
-    CouldNotConnect(Error),
-}
-
-impl Into<CobaltRtcEventType> for RtcCreationError {
-    fn into(self) -> CobaltRtcEventType {
-        match self {
-            RtcCreationError::NoDevices => CobaltRtcEventType::NoDevices,
-            RtcCreationError::MultipleDevices(_) => CobaltRtcEventType::MultipleDevices,
-            RtcCreationError::CouldNotConnect(_) => CobaltRtcEventType::ConnectionFailed,
-        }
-    }
+    ConnectionFailed(Error),
 }
 
 /// Interface to interact with a real-time clock. Note that the RTC hardware interface is limited
@@ -79,7 +68,7 @@ impl RtcImpl {
                 }
             },
             Some(Err(err)) => {
-                Err(RtcCreationError::CouldNotConnect(anyhow!("Failed to read entry: {}", err)))
+                Err(RtcCreationError::ConnectionFailed(anyhow!("Failed to read entry: {}", err)))
             }
             None => Err(RtcCreationError::NoDevices),
         }
@@ -89,12 +78,12 @@ impl RtcImpl {
     pub fn new(path_buf: PathBuf) -> Result<RtcImpl, RtcCreationError> {
         let path_str = path_buf
             .to_str()
-            .ok_or(RtcCreationError::CouldNotConnect(anyhow!("Non unicode path")))?;
+            .ok_or(RtcCreationError::ConnectionFailed(anyhow!("Non unicode path")))?;
         let (proxy, server) = create_proxy::<frtc::DeviceMarker>().map_err(|err| {
-            RtcCreationError::CouldNotConnect(anyhow!("Failed to create proxy: {}", err))
+            RtcCreationError::ConnectionFailed(anyhow!("Failed to create proxy: {}", err))
         })?;
         service_connect(&path_str, server.into_channel()).map_err(|err| {
-            RtcCreationError::CouldNotConnect(anyhow!("Failed to connect to device: {}", err))
+            RtcCreationError::ConnectionFailed(anyhow!("Failed to connect to device: {}", err))
         })?;
         Ok(RtcImpl { proxy })
     }
