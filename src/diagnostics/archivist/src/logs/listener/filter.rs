@@ -84,8 +84,13 @@ impl MessageFilter {
             .min_severity
             .map(|m| m.for_listener() > log_message.legacy_severity().for_listener())
             .unwrap_or(false);
-        let reject_tags =
-            !self.tags.is_empty() && !log_message.tags().any(|tag| self.tags.contains(tag));
+        let reject_tags = if self.tags.is_empty() {
+            false
+        } else if log_message.tags().count() == 0 {
+            !self.tags.contains(log_message.component_name())
+        } else {
+            !log_message.tags().any(|tag| self.tags.contains(tag))
+        };
 
         !(reject_pid || reject_tid || reject_severity || reject_tags)
     }
@@ -94,18 +99,22 @@ impl MessageFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::message::{
-        LegacySeverity, LogsHierarchy, Severity, PLACEHOLDER_MONIKER, PLACEHOLDER_URL,
-    };
+    use crate::logs::message::{LegacySeverity, LogsHierarchy, Severity};
+    use fidl_fuchsia_sys_internal::SourceIdentity;
 
     fn test_message() -> Message {
+        let identity = SourceIdentity {
+            instance_id: None,
+            realm_path: Some(vec!["bogus".to_string()]),
+            component_name: Some("specious-at-best.cmx".to_string()),
+            component_url: Some("fuchsia-pkg://not-a-package".to_string()),
+        };
         Message::new(
             fuchsia_zircon::Time::from_nanos(1),
             Severity::Info,
             1, // size
             0, // dropped logs
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &identity,
             LogsHierarchy::new("root", vec![], vec![]),
         )
     }
@@ -256,5 +265,14 @@ mod tests {
         filter.min_severity = Some(LegacySeverity::Debug);
         message.metadata.severity = Severity::Trace;
         assert_eq!(filter.should_send(&message), false);
+    }
+
+    #[test]
+    fn should_send_attributed_tag() {
+        let message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.tags = vec!["specious-at-best.cmx".to_string()].into_iter().collect();
+        assert_eq!(filter.should_send(&message), true);
     }
 }

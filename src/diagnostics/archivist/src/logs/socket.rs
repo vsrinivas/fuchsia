@@ -12,7 +12,7 @@ use std::{marker::PhantomData, sync::Arc};
 /// An `Encoding` is able to parse a `Message` from raw bytes.
 pub trait Encoding {
     /// Attempt to parse a message from the given buffer
-    fn parse_message(buf: &[u8]) -> Result<Message, StreamError>;
+    fn parse_message(source: &SourceIdentity, buf: &[u8]) -> Result<Message, StreamError>;
 }
 
 /// An encoding that can parse the legacy [logger/syslog wire format]
@@ -28,14 +28,14 @@ pub struct LegacyEncoding;
 pub struct StructuredEncoding;
 
 impl Encoding for LegacyEncoding {
-    fn parse_message(buf: &[u8]) -> Result<Message, StreamError> {
-        Message::from_logger(buf)
+    fn parse_message(source: &SourceIdentity, buf: &[u8]) -> Result<Message, StreamError> {
+        Message::from_logger(source, buf)
     }
 }
 
 impl Encoding for StructuredEncoding {
-    fn parse_message(buf: &[u8]) -> Result<Message, StreamError> {
-        Message::from_structured(buf)
+    fn parse_message(source: &SourceIdentity, buf: &[u8]) -> Result<Message, StreamError> {
+        Message::from_structured(source, buf)
     }
 }
 
@@ -102,7 +102,7 @@ where
         }
 
         let msg_bytes = &self.buffer[..len];
-        let message = E::parse_message(msg_bytes)?;
+        let message = E::parse_message(&self.source, msg_bytes)?;
         self.forwarder.maybe_send(msg_bytes);
         Ok(message)
     }
@@ -138,7 +138,7 @@ impl<E> Forwarder<E> {
 mod tests {
     use super::super::message::{
         fx_log_packet_t, LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE,
-        PLACEHOLDER_MONIKER, PLACEHOLDER_URL,
+        TEST_IDENTITY,
     };
     use super::*;
     use diagnostics_stream::{
@@ -156,17 +156,14 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let mut ls =
-            LogMessageSocket::new(sout, Arc::new(SourceIdentity::empty()), Forwarder::new())
-                .unwrap();
+        let mut ls = LogMessageSocket::new(sout, TEST_IDENTITY.clone(), Forwarder::new()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let expected_p = Message::new(
             zx::Time::from_nanos(packet.metadata.time),
             Severity::Info,
             METADATA_SIZE + 6 /* tag */+ 6, /* msg */
             packet.metadata.dropped_logs as u64,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![
@@ -211,8 +208,7 @@ mod tests {
             Severity::Fatal,
             encoded.len(),
             0, // dropped logs
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![
@@ -223,12 +219,9 @@ mod tests {
             ),
         );
 
-        let mut stream = LogMessageSocket::new_structured(
-            sout,
-            Arc::new(SourceIdentity::empty()),
-            Forwarder::new(),
-        )
-        .unwrap();
+        let mut stream =
+            LogMessageSocket::new_structured(sout, TEST_IDENTITY.clone(), Forwarder::new())
+                .unwrap();
 
         sin.write(encoded).unwrap();
         let result_message = stream.next().await.unwrap();

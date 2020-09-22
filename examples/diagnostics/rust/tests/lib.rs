@@ -26,6 +26,8 @@ async fn launch_example_and_read_hello_world() {
     assert_ne!(next.tid, 0);
 
     assert_eq!(new_next.metadata.severity, Severity::Debug);
+    assert_eq!(new_next.metadata.component_url, url);
+    assert_eq!(new_next.moniker, "rust-logs-example.cmx");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "tag": "rust_logs_example",
         "message": "should print ",
@@ -39,6 +41,8 @@ async fn launch_example_and_read_hello_world() {
     assert_ne!(next.tid, 0);
 
     assert_eq!(new_next.metadata.severity, Severity::Info);
+    assert_eq!(new_next.metadata.component_url, url);
+    assert_eq!(new_next.moniker, "rust-logs-example.cmx");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "tag": "rust_logs_example",
         // note that the frontend is still stringifying the structured fields, will tackle soon
@@ -53,6 +57,8 @@ async fn launch_example_and_read_hello_world() {
     assert_ne!(next.tid, 0);
 
     assert_eq!(new_next.metadata.severity, Severity::Warn);
+    assert_eq!(new_next.metadata.component_url, url);
+    assert_eq!(new_next.moniker, "rust-logs-example.cmx");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "tag": "rust_logs_example",
         "message": "warning: using old api",

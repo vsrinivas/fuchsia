@@ -397,7 +397,7 @@ async fn timestamp_sorting_for_batches() {
             time: p.metadata.time,
             dropped_logs: 0,
             msg: "timing log".to_owned(),
-            tags: vec![],
+            tags: vec!["UNKNOWN".to_owned()],
             pid: p.metadata.pid,
             tid: p.metadata.tid,
         })

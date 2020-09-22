@@ -9,13 +9,23 @@ use anyhow::Error;
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
+use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
+use lazy_static::lazy_static;
 use log::error;
 
 const KERNEL_URL: &str = "fuchsia-boot://kernel";
+lazy_static! {
+    pub static ref KERNEL_IDENTITY: SourceIdentity = {
+        let mut identity = SourceIdentity::empty();
+        identity.component_name = Some("klog".to_string());
+        identity.component_url = Some(KERNEL_URL.to_string());
+        identity
+    };
+}
 
 #[async_trait]
 pub trait DebugLog {
@@ -155,14 +165,12 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         severity,
         size,
         0, // TODO(fxbug.dev/48548) dropped_logs
-        "klog",
-        KERNEL_URL,
+        &*KERNEL_IDENTITY,
         LogsHierarchy::new(
             "root",
             vec![
                 LogsProperty::Uint(LogsField::ProcessId, pid),
                 LogsProperty::Uint(LogsField::ThreadId, tid),
-                LogsProperty::String(LogsField::Tag, "klog".to_string()),
                 LogsProperty::String(LogsField::Msg, contents),
             ],
             vec![],
@@ -175,6 +183,7 @@ mod tests {
     use super::*;
     use crate::logs::testing::*;
 
+    use fidl_fuchsia_logger::LogMessage;
     use futures::stream::TryStreamExt;
 
     #[test]
@@ -188,19 +197,30 @@ mod tests {
                 Severity::Info,
                 METADATA_SIZE + 6 + "test log".len(),
                 0, // dropped logs
-                "klog",
-                KERNEL_URL,
+                &*KERNEL_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(LogsField::Msg, "test log".to_string())
                     ],
                     vec![]
                 ),
             )
+        );
+        // make sure the `klog` tag still shows up for legacy listeners
+        assert_eq!(
+            log_message.for_listener(),
+            LogMessage {
+                pid: klog.pid,
+                tid: klog.tid,
+                time: klog.timestamp,
+                severity: fuchsia_syslog::levels::INFO,
+                dropped_logs: 0,
+                tags: vec!["klog".to_string()],
+                msg: "test log".to_string(),
+            }
         );
 
         // maximum allowed klog size
@@ -213,14 +233,12 @@ mod tests {
                 Severity::Info,
                 METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
                 0, // dropped logs
-                "klog",
-                KERNEL_URL,
+                &*KERNEL_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(
                             LogsField::Msg,
                             String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
@@ -242,14 +260,12 @@ mod tests {
                 Severity::Info,
                 METADATA_SIZE + 6,
                 0, // dropped logs
-                "klog",
-                KERNEL_URL,
+                &*KERNEL_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(LogsField::Msg, "".to_string())
                     ],
                     vec![]
@@ -285,14 +301,12 @@ mod tests {
                 Severity::Info,
                 METADATA_SIZE + 6 + "test log".len(),
                 0, // dropped logs
-                "klog",
-                KERNEL_URL,
+                &*KERNEL_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(LogsField::Msg, "test log".to_string())
                     ],
                     vec![]

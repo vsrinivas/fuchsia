@@ -19,9 +19,7 @@ PID, a TID, a count of prior dropped logs, and a list of string tags.
 
 Unless a component's parent realm provides its own `LogSink`, diagnostics also
 includes trusted [SourceIdentity] metadata for incoming log connections. This
-information is not yet exposed to clients of the logs but resolves limitations
-of using writer-reported PIDs, TIDs, and tags to make policy decisions within
-the diagnostics platform itself.
+information is used to provide a default tag for messages without tags.
 
 ## Storage
 

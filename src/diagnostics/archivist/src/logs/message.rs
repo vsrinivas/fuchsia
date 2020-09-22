@@ -7,8 +7,10 @@ use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
 use diagnostics_stream::{Severity as StreamSeverity, Value};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
+use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_inspect_node_hierarchy::NodeHierarchy;
 use fuchsia_zircon as zx;
+use lazy_static::lazy_static;
 use libc::{c_char, c_int};
 use serde::Serialize;
 use std::{
@@ -17,6 +19,7 @@ use std::{
     mem,
     ops::{Deref, DerefMut},
     str,
+    sync::Arc,
 };
 
 pub use diagnostics_data::{
@@ -29,12 +32,6 @@ pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
 pub const MAX_DATAGRAM_LEN: usize = MAX_DATAGRAM_LEN_BYTES as _;
 pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
-
-/// The moniker reported by log accessor during our initial migrations.
-pub const PLACEHOLDER_MONIKER: &str = "TODO(monikers)";
-
-/// The URL reported by log accessor during our initial migrations.
-pub const PLACEHOLDER_URL: &str = "fuchsia-pkg://todo#populate-real-urls.cmx";
 
 /// Our internal representation for a log message.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -52,8 +49,7 @@ impl Message {
         severity: impl Into<Severity>,
         size_bytes: usize,
         dropped_before: u64,
-        moniker: impl Into<String>,
-        component_url: impl Into<String>,
+        source: &SourceIdentity,
         mut payload: NodeHierarchy<LogsField>,
     ) -> Self {
         payload.sort();
@@ -62,10 +58,10 @@ impl Message {
             errors.push(LogError::DroppedLogs { count: dropped_before });
         }
         Self(LogsData::for_logs(
-            moniker,
+            source.moniker(),
             Some(payload),
             timestamp,
-            component_url,
+            source.url(),
             severity,
             size_bytes,
             errors,
@@ -76,10 +72,10 @@ impl Message {
     // TODO(fxbug.dev/47661) require moniker and URL here
     pub fn for_dropped(count: u64) -> Self {
         Self(LogsData::for_logs(
-            PLACEHOLDER_MONIKER,
+            EMPTY_IDENTITY.moniker(),
             None, // payload
             zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
-            PLACEHOLDER_URL,
+            EMPTY_IDENTITY.url(),
             Severity::Warn,
             0, // size_bytes
             vec![LogError::DroppedLogs { count }],
@@ -92,7 +88,7 @@ impl Message {
     /// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
     ///
     /// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
-    pub(super) fn from_logger(bytes: &[u8]) -> Result<Self, StreamError> {
+    pub(super) fn from_logger(source: &SourceIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
         if bytes.len() < MIN_PACKET_SIZE {
             return Err(StreamError::ShortRead { len: bytes.len() });
         }
@@ -162,8 +158,7 @@ impl Message {
                     severity,
                     cursor + message_len + 1,
                     dropped_logs,
-                    PLACEHOLDER_MONIKER,
-                    PLACEHOLDER_URL,
+                    source,
                     contents,
                 );
 
@@ -183,7 +178,7 @@ impl Message {
     /// are in the format specified as in the [log encoding].
     ///
     /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
-    pub fn from_structured(bytes: &[u8]) -> Result<Self, StreamError> {
+    pub fn from_structured(source: &SourceIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
         let (record, _) = diagnostics_stream::parse::parse_record(bytes)?;
 
         let mut properties = vec![];
@@ -220,8 +215,7 @@ impl Message {
             record.severity,
             bytes.len(),
             dropped_logs,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            source,
             LogsHierarchy::new("root", properties, vec![]),
         ))
     }
@@ -347,6 +341,11 @@ impl Message {
         })
     }
 
+    /// The name of the component from which this message originated.
+    pub fn component_name(&self) -> &str {
+        self.moniker.rsplit("/").next().unwrap_or("UNKNOWN")
+    }
+
     /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
     pub fn for_listener(&self) -> LogMessage {
         let mut msg = self.msg().unwrap_or("").to_string();
@@ -355,13 +354,18 @@ impl Message {
             write!(&mut msg, " {}", property).expect("allocations have to fail for this to fail");
         }
 
+        let mut tags: Vec<_> = self.tags().map(String::from).collect();
+        if tags.is_empty() {
+            tags.push(self.component_name().to_string());
+        }
+
         LogMessage {
             pid: self.pid().unwrap_or(zx::sys::ZX_KOID_INVALID),
             tid: self.tid().unwrap_or(zx::sys::ZX_KOID_INVALID),
             time: self.metadata.timestamp.into(),
             severity: self.legacy_severity().for_listener(),
             dropped_logs: self.dropped_logs().unwrap_or(0) as _,
-            tags: self.tags().map(String::from).collect(),
+            tags,
             msg,
         }
     }
@@ -377,6 +381,44 @@ impl Deref for Message {
 impl DerefMut for Message {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+lazy_static! {
+    pub static ref EMPTY_IDENTITY: SourceIdentity = SourceIdentity::empty();
+    pub static ref TEST_IDENTITY: Arc<SourceIdentity> = {
+        let mut identity = SourceIdentity::empty();
+        identity.realm_path = Some(vec!["fake-test-env".to_string()]);
+        identity.component_name = Some("test-component.cm".to_string());
+        identity.component_url =
+            Some("fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string());
+        Arc::new(identity)
+    };
+}
+
+trait IdentityExt {
+    fn name(&self) -> &str;
+    fn url(&self) -> &str;
+    fn moniker(&self) -> String;
+}
+
+impl IdentityExt for SourceIdentity {
+    fn name(&self) -> &str {
+        self.component_name.as_ref().map(String::as_str).unwrap_or("UNKNOWN")
+    }
+
+    fn url(&self) -> &str {
+        self.component_url.as_ref().map(String::as_str).unwrap_or("UNKNOWN")
+    }
+
+    fn moniker(&self) -> String {
+        let realm = self.realm_path.as_ref().map(|p| p.join("/")).unwrap_or_default();
+
+        if !realm.is_empty() {
+            format!("{}/{}", realm, self.name())
+        } else {
+            self.name().to_string()
+        }
     }
 }
 
@@ -602,9 +644,15 @@ mod tests {
         let one_short = &packet.as_bytes()[..METADATA_SIZE];
         let two_short = &packet.as_bytes()[..METADATA_SIZE - 1];
 
-        assert_eq!(Message::from_logger(one_short), Err(StreamError::ShortRead { len: 32 }));
+        assert_eq!(
+            Message::from_logger(&*TEST_IDENTITY, one_short),
+            Err(StreamError::ShortRead { len: 32 })
+        );
 
-        assert_eq!(Message::from_logger(two_short), Err(StreamError::ShortRead { len: 31 }));
+        assert_eq!(
+            Message::from_logger(&*TEST_IDENTITY, two_short),
+            Err(StreamError::ShortRead { len: 31 })
+        );
     }
 
     #[test]
@@ -614,7 +662,7 @@ mod tests {
         packet.data[end] = 1;
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end];
-        let parsed = Message::from_logger(buffer);
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer);
 
         assert_eq!(parsed, Err(StreamError::NotNullTerminated { terminator: 1 }));
     }
@@ -628,7 +676,7 @@ mod tests {
         packet.data[end] = 0;
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end]; // omit null-terminated
-        let parsed = Message::from_logger(buffer);
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer);
 
         assert_eq!(parsed, Err(StreamError::OutOfBounds));
     }
@@ -652,14 +700,13 @@ mod tests {
         let data_size = b_start + b_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminate message
-        let parsed = Message::from_logger(buffer).unwrap();
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         let expected = Message::new(
             packet.metadata.time,
             Severity::Debug,
             METADATA_SIZE + data_size,
             packet.metadata.dropped_logs as _,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![
@@ -673,6 +720,24 @@ mod tests {
         );
 
         assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn component_identity_preserved() {
+        let test_message = Message::new(
+            0i64, // time
+            Severity::Debug,
+            0usize, // size
+            0u64,   // dropped
+            &*TEST_IDENTITY,
+            LogsHierarchy::new("root", vec![], vec![]),
+        );
+        assert_eq!(test_message.component_name(), TEST_IDENTITY.component_name.as_ref().unwrap());
+        assert_eq!(&test_message.moniker, &TEST_IDENTITY.moniker());
+        assert_eq!(
+            &test_message.metadata.component_url,
+            TEST_IDENTITY.component_url.as_ref().unwrap()
+        );
     }
 
     #[test]
@@ -693,7 +758,7 @@ mod tests {
         packet.fill_data(b_start..b_end, 'B' as _);
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + b_end];
-        let parsed = Message::from_logger(buffer);
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer);
 
         assert_eq!(parsed, Err(StreamError::OutOfBounds));
     }
@@ -723,14 +788,13 @@ mod tests {
         let data_size = c_start + c_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
-        let parsed = Message::from_logger(buffer).unwrap();
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         let expected = Message::new(
             packet.metadata.time,
             Severity::Debug,
             METADATA_SIZE + data_size,
             packet.metadata.dropped_logs as u64,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![
@@ -772,8 +836,8 @@ mod tests {
         let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
         let full_buffer = &packet.as_bytes()[..];
 
-        let min_parsed = Message::from_logger(min_buffer).unwrap();
-        let full_parsed = Message::from_logger(full_buffer).unwrap();
+        let min_parsed = Message::from_logger(&*TEST_IDENTITY, min_buffer).unwrap();
+        let full_parsed = Message::from_logger(&*TEST_IDENTITY, full_buffer).unwrap();
 
         let mut expected_properties = vec![
             LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
@@ -802,8 +866,7 @@ mod tests {
             Severity::Debug,
             METADATA_SIZE + msg_end,
             packet.metadata.dropped_logs as u64,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             expected_contents,
         );
 
@@ -830,13 +893,13 @@ mod tests {
 
         let buffer_missing_terminator = &packet.as_bytes()[..METADATA_SIZE + msg_start];
         assert_eq!(
-            Message::from_logger(buffer_missing_terminator),
+            Message::from_logger(&*TEST_IDENTITY, buffer_missing_terminator),
             Err(StreamError::OutOfBounds),
             "can't parse an empty message without a nul terminator"
         );
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
-        let parsed = Message::from_logger(buffer).unwrap();
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
 
         let mut expected_contents = LogsHierarchy::new(
             "root",
@@ -865,8 +928,7 @@ mod tests {
                 Severity::Debug,
                 METADATA_SIZE + msg_start,
                 packet.metadata.dropped_logs as u64,
-                PLACEHOLDER_MONIKER,
-                PLACEHOLDER_URL,
+                &*TEST_IDENTITY,
                 expected_contents,
             ),
         );
@@ -881,7 +943,7 @@ mod tests {
         packet.data[3] = 0;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + 4]; // 0 tag size + 2 byte message + null
-        let parsed = Message::from_logger(buffer).unwrap();
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
 
         assert_eq!(
             parsed,
@@ -890,8 +952,7 @@ mod tests {
                 Severity::Debug,
                 METADATA_SIZE + 3,
                 packet.metadata.dropped_logs as u64,
-                PLACEHOLDER_MONIKER,
-                PLACEHOLDER_URL,
+                &*TEST_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
@@ -913,14 +974,13 @@ mod tests {
         packet.data[1] = 0; // null terminated
 
         let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
-        let mut parsed = Message::from_logger(buffer).unwrap();
+        let mut parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         let mut expected_message = Message::new(
             packet.metadata.time,
             Severity::Info,
             METADATA_SIZE + 1,
             packet.metadata.dropped_logs as u64,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![
@@ -936,28 +996,28 @@ mod tests {
 
         packet.metadata.severity = LogLevelFilter::Trace as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.metadata.severity = Severity::Trace;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = LogLevelFilter::Debug as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.metadata.severity = Severity::Debug;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = LogLevelFilter::Warn as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.metadata.severity = Severity::Warn;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = LogLevelFilter::Error as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.metadata.severity = Severity::Error;
 
         assert_eq!(parsed, expected_message);
@@ -972,14 +1032,13 @@ mod tests {
         packet.data[1] = 0; // null terminated
 
         let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
-        let mut parsed = Message::from_logger(buffer).unwrap();
+        let mut parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         let mut expected_message = Message::new(
             zx::Time::from_nanos(packet.metadata.time),
             Severity::Debug,
             METADATA_SIZE + 1,
             packet.metadata.dropped_logs as u64,
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![
@@ -998,7 +1057,7 @@ mod tests {
         // legacy verbosity where v=2
         packet.metadata.severity = LogLevelFilter::Info as i32 - 2;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.clear_legacy_verbosity();
         expected_message.set_legacy_verbosity(2);
 
@@ -1007,7 +1066,7 @@ mod tests {
         // legacy verbosity where v=1
         packet.metadata.severity = LogLevelFilter::Info as i32 - 1;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.clear_legacy_verbosity();
         expected_message.set_legacy_verbosity(1);
 
@@ -1015,7 +1074,7 @@ mod tests {
 
         packet.metadata.severity = 0; // legacy severity
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.clear_legacy_verbosity();
         expected_message.metadata.severity = Severity::Info;
 
@@ -1023,7 +1082,7 @@ mod tests {
 
         packet.metadata.severity = 1; // legacy severity
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(buffer).unwrap();
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.metadata.severity = Severity::Warn;
 
         assert_eq!(parsed, expected_message);
@@ -1048,7 +1107,7 @@ mod tests {
         let mut encoder = Encoder::new(&mut buffer);
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
-        let parsed = Message::from_structured(encoded).unwrap();
+        let parsed = Message::from_structured(&*TEST_IDENTITY, encoded).unwrap();
         assert_eq!(
             parsed,
             Message::new(
@@ -1056,8 +1115,7 @@ mod tests {
                 Severity::Error,
                 encoded.len(),
                 2, // dropped
-                PLACEHOLDER_MONIKER,
-                PLACEHOLDER_URL,
+                &*TEST_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
@@ -1098,7 +1156,7 @@ mod tests {
         let mut encoder = Encoder::new(&mut buffer);
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
-        let parsed = Message::from_structured(encoded).unwrap();
+        let parsed = Message::from_structured(&*TEST_IDENTITY, encoded).unwrap();
         assert_eq!(
             parsed,
             Message::new(
@@ -1106,8 +1164,7 @@ mod tests {
                 Severity::Error,
                 encoded.len(),
                 0, // dropped
-                PLACEHOLDER_MONIKER,
-                PLACEHOLDER_URL,
+                &*TEST_IDENTITY,
                 LogsHierarchy::new(
                     "root",
                     vec![
@@ -1126,7 +1183,7 @@ mod tests {
         let mut encoder = Encoder::new(&mut buffer);
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
-        let parsed = Message::from_structured(encoded).unwrap();
+        let parsed = Message::from_structured(&*TEST_IDENTITY, encoded).unwrap();
         assert_eq!(
             parsed,
             Message::new(
@@ -1134,15 +1191,14 @@ mod tests {
                 Severity::Error,
                 encoded.len(),
                 0, // dropped
-                PLACEHOLDER_MONIKER,
-                PLACEHOLDER_URL,
+                &*TEST_IDENTITY,
                 LogsHierarchy::new("root", vec![], vec![],)
             )
         );
 
         // parse error
         assert!(matches!(
-            Message::from_structured(&vec![]).unwrap_err(),
+            Message::from_structured(&*TEST_IDENTITY, &vec![]).unwrap_err(),
             StreamError::ParseError { .. }
         ));
     }
@@ -1154,10 +1210,9 @@ mod tests {
             let mut msg = Message::new(
                 0i64, // timestamp
                 severity,
-                1,  // size
-                0,  // dropped logs
-                "", // moniker
-                "", // url
+                1, // size
+                0, // dropped logs
+                &*TEST_IDENTITY,
                 LogsHierarchy::new("root", vec![], vec![]),
             );
             if let Some(v) = verbosity {

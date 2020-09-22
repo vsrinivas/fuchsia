@@ -953,8 +953,7 @@ mod tests {
             severity,
             METADATA_SIZE + 1 + msg.len(),
             0, // dropped
-            PLACEHOLDER_MONIKER,
-            PLACEHOLDER_URL,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![LogsProperty::String(LogsField::Msg, msg.to_string())],
