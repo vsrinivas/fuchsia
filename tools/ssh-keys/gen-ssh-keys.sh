@@ -21,7 +21,13 @@ function copy_ssh_keys {
     umask 177
     cp "${orig_key}" "${dest_key}"
     umask 133
-    cp "${orig_key}.pub" "${dest_key}.pub"
+
+    # Documentation previously recommended copying default SSH identity files
+    # (private keys) and authorized_keys files, but not public key files. When
+    # missing, these are skipped.
+    if [[ -f "${orig_key}.pub" ]]; then
+      cp "${orig_key}.pub" "${dest_key}.pub"
+    fi
     cat "${orig_auth_keys}" >>"${dest_auth_keys}"
   )
 }
