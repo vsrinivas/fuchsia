@@ -1887,9 +1887,15 @@ mod tests {
 
     #[test]
     fn test_byte_slice_impl_buffer() {
-        // Box::leak allows us to create a static slice reference, which is the
-        // only way we can return a slice reference from a function like this.
-        test_parse_buffer::<&[u8], _>(|len| Box::leak(Box::new(ascending(len))));
+        let mut avoid_leaks = Vec::new();
+        test_parse_buffer::<&[u8], _>(|len| {
+            let v = ascending(len);
+            // Requires that |avoid_leaks| outlives this reference. In this case, we know
+            // |test_parse_buffer| does not retain the reference beyond its run.
+            let s = unsafe { std::slice::from_raw_parts(v.as_ptr(), v.len()) };
+            let () = avoid_leaks.push(v);
+            s
+        });
         let buf = ascending(10);
         let mut buf: &[u8] = buf.as_ref();
         test_buffer_view::<&[u8], _>(&mut buf);
@@ -1897,9 +1903,15 @@ mod tests {
 
     #[test]
     fn test_byte_slice_mut_impl_buffer() {
-        // Box::leak allows us to create a static slice reference, which is the
-        // only way we can return a slice reference from a function like this.
-        test_parse_buffer::<&mut [u8], _>(|len| Box::<Vec<u8>>::leak(Box::new(ascending(len))));
+        let mut avoid_leaks = Vec::new();
+        test_parse_buffer::<&mut [u8], _>(|len| {
+            let mut v = ascending(len);
+            // Requires that |avoid_leaks| outlives this reference. In this case, we know
+            // |test_parse_buffer| does not retain the reference beyond its run.
+            let s = unsafe { std::slice::from_raw_parts_mut(v.as_mut_ptr(), v.len()) };
+            let () = avoid_leaks.push(v);
+            s
+        });
         let mut buf = ascending(10);
         let mut buf: &mut [u8] = buf.as_mut();
         test_buffer_view::<&mut [u8], _>(&mut buf);
@@ -1991,7 +2003,7 @@ mod tests {
     // Test a ParseBuffer implementation. 'new_buf' is a function which
     // constructs a buffer of length n, and initializes its contents to [0, 1,
     // 2, ..., n -1].
-    fn test_parse_buffer<B: ParseBuffer, N: Fn(u8) -> B>(new_buf: N) {
+    fn test_parse_buffer<B: ParseBuffer, N: FnMut(u8) -> B>(new_buf: N) {
         test_parse_buffer_inner(new_buf, |buf, _, len, _, _, contents| {
             assert_eq!(buf.len(), len);
             assert_eq!(buf.as_ref(), contents);
@@ -2010,10 +2022,10 @@ mod tests {
     // respectively.
     fn test_parse_buffer_inner<
         B: ParseBuffer,
-        N: Fn(u8) -> B,
+        N: FnMut(u8) -> B,
         A: Fn(&B, usize, usize, usize, usize, &[u8]),
     >(
-        new_buf: N,
+        mut new_buf: N,
         assert: A,
     ) -> B {
         let mut at_once = new_buf(10);
