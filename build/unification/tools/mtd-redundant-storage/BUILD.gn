@@ -1,9 +1,0 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# This alias is used to soft-transition references to the tool.
-group("linux-arm64") {
-  public_deps =
-      [ "//zircon/tools/mtd-redundant-storage($linux_arm64_toolchain)" ]
-}
