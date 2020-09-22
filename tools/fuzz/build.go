@@ -139,6 +139,31 @@ func NewLocalFuchsiaBuild() (Build, error) {
 
 	clangDir := filepath.Join(prebuiltDir, "third_party/clang", platform)
 	qemuDir := filepath.Join(prebuiltDir, "third_party/qemu", platform)
+
+	f, err := os.Open(filepath.Join(fuchsiaDir, ".fx-ssh-path"))
+	if err != nil {
+		return nil, fmt.Errorf("wanted SSH manifest, couldn't open: %v", err)
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	if !s.Scan() {
+		// File format must have two lines.
+		return nil, fmt.Errorf("expected 2 lines in .fx-ssh-path, found 0")
+	}
+	if err := s.Err(); err != nil {
+		return nil, fmt.Errorf("error reading SSH key paths: %v", err)
+	}
+
+	sshid := s.Text()
+	if !s.Scan() {
+		// File format must have two lines.
+		return nil, fmt.Errorf("expected 2 lines in .fx-ssh-path, found 1")
+	}
+	if err := s.Err(); err != nil {
+		return nil, fmt.Errorf("error reading SSH key paths: %v", err)
+	}
+	authkeys := s.Text()
+
 	build := &BaseBuild{
 		Paths: map[string]string{
 			"zbi":             filepath.Join(buildDir, "fuchsia.zbi"),
@@ -150,7 +175,8 @@ func NewLocalFuchsiaBuild() (Build, error) {
 			"symbolize":       filepath.Join(buildDir, hostDir, "symbolize"),
 			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
 			"fuzzers.json":    filepath.Join(buildDir, "fuzzers.json"),
-			"sshdir":          filepath.Join(fuchsiaDir, ".ssh"),
+			"authkeys":        authkeys,
+			"sshid":           sshid,
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build-id"),

@@ -138,17 +138,17 @@ func (q *QemuLauncher) Prepare() error {
 		q.TmpDir = tmpDir
 	}
 
-	paths, err := q.build.Path("zbi", "fvm", "blk", "sshdir", "zbitool")
+	paths, err := q.build.Path("zbi", "fvm", "blk", "authkeys", "zbitool")
 	if err != nil {
 		return fmt.Errorf("Error resolving qemu dependencies: %s", err)
 	}
-	zbi, fvm, blk, sshdir, zbitool := paths[0], paths[1], paths[2], paths[3], paths[4]
+	zbi, fvm, blk, authkeys, zbitool := paths[0], paths[1], paths[2], paths[3], paths[4]
 
 	// Stick our SSH key into the authorized_keys files
 	initrd := path.Join(q.TmpDir, "ssh-"+path.Base(zbi))
 	if !fileExists(initrd) {
 		// TODO(fxb/45424): generate ssh key per-instance
-		entry := "data/ssh/authorized_keys=" + path.Join(sshdir, "authorized_keys")
+		entry := "data/ssh/authorized_keys=" + authkeys
 		if err := CreateProcessForeground(zbitool, "-o", initrd, zbi, "-e", entry); err != nil {
 			return fmt.Errorf("adding ssh key failed: %s", err)
 		}
@@ -187,11 +187,11 @@ func (q *QemuLauncher) Start() (Connector, error) {
 		return nil, fmt.Errorf("Error while preparing to start: %s", err)
 	}
 
-	paths, err := q.build.Path("qemu", "kernel", "sshdir")
+	paths, err := q.build.Path("qemu", "kernel", "sshid")
 	if err != nil {
 		return nil, fmt.Errorf("Error resolving qemu dependencies: %s", err)
 	}
-	binary, kernel, sshdir := paths[0], paths[1], paths[2]
+	binary, kernel, sshid := paths[0], paths[1], paths[2]
 
 	port, err := getFreePort()
 	if err != nil {
@@ -265,7 +265,7 @@ func (q *QemuLauncher) Start() (Connector, error) {
 	// Detach from the child, since we will never wait on it
 	cmd.Process.Release()
 
-	return &SSHConnector{Host: "localhost", Port: port, Key: path.Join(sshdir, "pkey")}, nil
+	return &SSHConnector{Host: "localhost", Port: port, Key: sshid}, nil
 }
 
 // IsRunning checks if the qemu process is alive

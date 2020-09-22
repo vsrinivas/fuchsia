@@ -46,8 +46,7 @@ func TestQemuLauncherWithMissingDeps(t *testing.T) {
 	ExecCommand = mockCommand
 	defer func() { ExecCommand = exec.Command }()
 
-	for _, dep := range []string{"zbi", "fvm", "blk", "sshdir", "zbitool", "qemu",
-		"kernel", "sshdir"} {
+	for _, dep := range []string{"zbi", "fvm", "blk", "zbitool", "qemu", "kernel", "authkeys"} {
 		// This awkward error-discarding and casting is due to the need for the
 		// signature of newMockBuild to match the other Build-creating functions
 		build, _ := newMockBuild()
