@@ -12,6 +12,7 @@
             "fuchsia.memorypressure.Provider",
             "fuchsia.netstack.Netstack",
             "fuchsia.process.Launcher",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.test.ui.ResponseListener",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",

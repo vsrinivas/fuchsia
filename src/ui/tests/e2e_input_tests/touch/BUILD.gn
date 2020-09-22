@@ -18,6 +18,7 @@ group("tests") {
     "//src/graphics/bin/vulkan_loader",
 
     # TODO(24643): remove
+    "//src/chromium:web_engine",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/scenic",
