@@ -25,6 +25,7 @@ use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_inspect::component;
 use fuchsia_syslog::fx_log_warn;
 use futures::{channel::mpsc, prelude::*};
+use std::sync::Arc;
 
 type Result<T> = std::result::Result<T, Error>;
 type SessionId = u64;
@@ -48,7 +49,7 @@ async fn main() {
 
     let mut server = ServiceFs::new_local();
     let inspector = component::inspector();
-    let root = inspector.root();
+    let player_list = Arc::new(inspector.root().create_child("players"));
 
     let (player_sink, player_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
     let (discovery_request_sink, discovery_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
@@ -82,8 +83,7 @@ async fn main() {
         .dir("svc")
         .add_fidl_service(move |request_stream| {
             spawn_log_error(
-                Publisher::new(player_sink.clone(), root.create_child("players"))
-                    .serve(request_stream),
+                Publisher::new(player_sink.clone(), player_list.clone()).serve(request_stream),
             )
         })
         .add_fidl_service(move |request_stream: DiscoveryRequestStream| {

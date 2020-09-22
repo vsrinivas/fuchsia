@@ -8,17 +8,18 @@ use fidl_fuchsia_media_sessions2::*;
 use fuchsia_inspect as inspect;
 use fuchsia_syslog::fx_log_warn;
 use futures::{channel::mpsc, prelude::*};
+use std::sync::Arc;
 
 const LOG_TAG: &str = "publisher";
 
 /// Implements `fuchsia.media.session2.Publisher`.
 pub struct Publisher {
-    player_list: inspect::Node,
+    player_list: Arc<inspect::Node>,
     player_sink: mpsc::Sender<Player>,
 }
 
 impl Publisher {
-    pub fn new(player_sink: mpsc::Sender<Player>, player_list: inspect::Node) -> Self {
+    pub fn new(player_sink: mpsc::Sender<Player>, player_list: Arc<inspect::Node>) -> Self {
         Self { player_sink, player_list }
     }
 

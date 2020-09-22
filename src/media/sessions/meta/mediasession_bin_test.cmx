@@ -3,6 +3,9 @@
         "binary": "test/mediasession_bin_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",

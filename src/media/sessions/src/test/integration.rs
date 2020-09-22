@@ -4,14 +4,19 @@
 
 use crate::{Result, SessionId};
 use anyhow::Context as _;
+use fdio;
 use fidl::encoding::Decodable;
+use fidl::endpoints::DiscoverableService;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
+use fidl_fuchsia_inspect::*;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
+use fidl_fuchsia_sys::ComponentControllerEvent;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
 use fuchsia_component::server::*;
+use fuchsia_inspect as inspect;
 use futures::{
     self,
     channel::mpsc,
@@ -19,11 +24,13 @@ use futures::{
     sink::SinkExt,
     stream::{StreamExt, TryStreamExt},
 };
+use glob::glob;
 use lazy_static::lazy_static;
 use matches::assert_matches;
 use std::collections::HashMap;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
+const MEDIASESSION_CMX: &str = "mediasession.cmx";
 
 lazy_static! {
     static ref LOGGER: () = {
@@ -156,6 +163,46 @@ impl TestService {
                 .expect("Sending interruption stop to service under test");
         } else {
             panic!("Can't stop interruption; no watcher is registered for usage {:?}", usage)
+        }
+    }
+
+    async fn read_inspect(&mut self) -> inspect::NodeHierarchy {
+        let mut component_stream = self.app.controller().take_event_stream();
+        match component_stream
+            .next()
+            .await
+            .expect("component event stream ended before termination event")
+            .expect("event stream returned error")
+        {
+            ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
+                panic!(
+                    "Component terminated unexpectedly. Code: {}. Reason: {:?}",
+                    return_code, termination_reason
+                );
+            }
+            ComponentControllerEvent::OnDirectoryReady {} => {
+                let pattern = format!(
+                    "/hub/r/*/*/c/{}/*/out/diagnostics/{}",
+                    MEDIASESSION_CMX,
+                    TreeMarker::SERVICE_NAME
+                );
+                let path = glob(&pattern)
+                    .expect("glob")
+                    .next()
+                    .expect("failed to get pattern match")
+                    .expect("failed to parse glob");
+                let (tree, server_end) =
+                    fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
+                fdio::service_connect(
+                    &path.to_string_lossy().to_string(),
+                    server_end.into_channel(),
+                )
+                .expect("failed to connect to service");
+
+                inspect::reader::read_from_tree(&tree)
+                    .await
+                    .expect("failed to get inspect hierarchy")
+            }
         }
     }
 }
@@ -979,6 +1026,22 @@ test!(active_session_falls_back_when_session_removed, || async {
     drop(player1);
     let _ = watcher.wait_for_removal().await?;
     assert!(session.watch_status().await.is_err());
+
+    Ok(())
+});
+
+test!(inspect_tree_correct, || async {
+    let mut service = TestService::new()?;
+    let player1 = TestPlayer::new(&service).await?;
+    let player2 = TestPlayer::new(&service).await?;
+
+    let hierarchy = service.read_inspect().await;
+    assert_eq!(hierarchy.children.len(), 1);
+    let players = &hierarchy.children[0];
+    assert_eq!(players.name, "players");
+    assert_eq!(players.children.len(), 2);
+    assert_eq!(players.children[0].name, format!("{}", player2.id));
+    assert_eq!(players.children[1].name, format!("{}", player1.id));
 
     Ok(())
 });
