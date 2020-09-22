@@ -22,10 +22,13 @@ CODE_SYSRET_\name\()_VIA_\caller\():
     //
     // https://sourceware.org/bugzilla/attachment.cgi?id=12223 for the bug report/details.
     //
-    // The barrier is skipped on return, by advancing $PC by 8. It only needs to constrain
+    // The barrier is skipped on return, by advancing $PC by 12. It only needs to constrain
     // speculative, not real executions.
 0:  dsb nsh
     isb
+    // Add a BRK to the barrier, to 'assert' that its skipped. If this BRK is hit, the 'assert' will
+    // trip, visibly, indicating a kernel/vDSO mismatch/error.
+    brk 0
 1:
 .ifne 1b - 0b - ARM64_SYSCALL_SPECULATION_BARRIER_SIZE
 .error "code size of speculation barrier is not ARM64_SYSCALL_SPECULATION_BARRIER_SIZE"

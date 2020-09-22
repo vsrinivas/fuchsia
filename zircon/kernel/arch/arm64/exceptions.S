@@ -452,8 +452,8 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     // Spectre: ARM64 CPUs may speculatively execute instructions after an SVC instruction.
     // The userspace entry code has a speculation barrier; advance ELR_EL1 past in on the return
     // since it has already done its job.
-.ifne ARM64_SYSCALL_SPECULATION_BARRIER_SIZE - 8
-.error "Syscall speculation barrier must be 8 bytes"
+.ifne ARM64_SYSCALL_SPECULATION_BARRIER_SIZE - 12
+.error "Syscall speculation barrier must be 12 bytes"
 .endif
     ldr  x10, [sp, #(regsave_elr_el1_offset)]
     add  x10, x10, ARM64_SYSCALL_SPECULATION_BARRIER_SIZE
