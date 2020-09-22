@@ -1,4 +1,4 @@
-# Copyright 2013 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,72 +8,48 @@ Utilities for requesting information for a Gerrit server via HTTPS.
 https://gerrit-review.googlesource.com/Documentation/rest-api.html
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import base64
-import contextlib
-import httplib2
+import http.client
+import http.cookiejar as cookielib
+import io
 import json
 import logging
-import netrc
 import os
-import random
 import re
-import socket
-import stat
+import subprocess
 import sys
-import tempfile
-import time
-from multiprocessing.pool import ThreadPool
+import urllib
+import urllib.error
+import urllib.parse
+import urllib.request
 
-import auth
-import gclient_utils
-import metrics
-import metrics_utils
-import subprocess2
+from typing import Tuple, Dict, Optional, List, Any, FrozenSet, Set, cast
 
-from third_party import six
-from six.moves import urllib
+import util
 
-if sys.version_info.major == 2:
-  import cookielib
-  from StringIO import StringIO
-else:
-  import http.cookiejar as cookielib
-  from io import StringIO
 
 LOGGER = logging.getLogger()
-# With a starting sleep time of 10.0 seconds, x <= [1.8-2.2]x backoff, and five
-# total tries, the sleep time between the first and last tries will be ~7 min.
-TRY_LIMIT = 5
-SLEEP_TIME = 10.0
-MAX_BACKOFF = 2.2
-MIN_BACKOFF = 1.8
+
+# Maximum number of times to retry a failing HTTP request.
+_MAX_HTTP_RETRIES = 5
 
 # Controls the transport protocol used to communicate with Gerrit.
 # This is parameterized primarily to enable GerritTestCase.
 GERRIT_PROTOCOL = 'https'
 
 
-def time_sleep(seconds):
-  # Use this so that it can be mocked in tests without interfering with python
-  # system machinery.
-  return time.sleep(seconds)
-
-
-def time_time():
-  # Use this so that it can be mocked in tests without interfering with python
-  # system machinery.
-  return time.time()
+def read_file(path: str) -> str:
+  """Read the contents of the given file as a string."""
+  with open(path, 'rb') as f:
+    return f.read().decode('utf-8', errors='surrogateescape')
 
 
 class GerritError(Exception):
   """Exception class for errors commuicating with the gerrit-on-borg service."""
-  def __init__(self, http_status, message, *args, **kwargs):
-    super(GerritError, self).__init__(*args, **kwargs)
+  def __init__(self, http_status: int, message: str):
     self.http_status = http_status
     self.message = '(%d) %s' % (self.http_status, message)
+    super().__init__(self.message)
 
 
 def _QueryString(params, first_param=None):
@@ -86,60 +62,25 @@ def _QueryString(params, first_param=None):
   return '+'.join(q)
 
 
-class Authenticator(object):
-  """Base authenticator class for authenticator implementations to subclass."""
+class Authenticator:
+  """Authenticator implementation that uses ".gitcookies" for token."""
 
-  def get_auth_header(self, host):
-    raise NotImplementedError()
-
-  @staticmethod
-  def get():
-    """Returns: (Authenticator) The identified Authenticator to use.
-
-    Probes the local system and its environment and identifies the
-    Authenticator instance to use.
-    """
-    # LUCI Context takes priority since it's normally present only on bots,
-    # which then must use it.
-    if LuciContextAuthenticator.is_luci():
-      return LuciContextAuthenticator()
-    # TODO(crbug.com/1059384): Automatically detect when running on cloudtop,
-    # and use CookiesAuthenticator instead.
-    if GceAuthenticator.is_gce():
-      return GceAuthenticator()
-    return CookiesAuthenticator()
-
-
-class CookiesAuthenticator(Authenticator):
-  """Authenticator implementation that uses ".netrc" or ".gitcookies" for token.
-
-  Expected case for developer workstations.
-  """
-
-  _EMPTY = object()
-
-  def __init__(self):
+  def __init__(self) -> None:
     # Credentials will be loaded lazily on first use. This ensures Authenticator
     # get() can always construct an authenticator, even if something is broken.
     # This allows 'creds-check' to proceed to actually checking creds later,
     # rigorously (instead of blowing up with a cryptic error if they are wrong).
-    self._netrc = self._EMPTY
-    self._gitcookies = self._EMPTY
+    self._gitcookies: Optional[Dict[str, Tuple[str, str]]] = None
 
   @property
-  def netrc(self):
-    if self._netrc is self._EMPTY:
-      self._netrc = self._get_netrc()
-    return self._netrc
-
-  @property
-  def gitcookies(self):
-    if self._gitcookies is self._EMPTY:
+  def gitcookies(self) -> Dict[str, Tuple[str, str]]:
+    if self._gitcookies is None:
       self._gitcookies = self._get_gitcookies()
     return self._gitcookies
 
   @classmethod
-  def get_new_password_url(cls, host):
+  def get_new_password_url(cls, host: str) -> str:
+    """Generate a URL to instructions for setting up a ".gitcookies" entry."""
     assert not host.startswith('http')
     # Assume *.googlesource.com pattern.
     parts = host.split('.')
@@ -148,7 +89,7 @@ class CookiesAuthenticator(Authenticator):
     return 'https://%s/new-password' % ('.'.join(parts))
 
   @classmethod
-  def get_new_password_message(cls, host):
+  def get_new_password_message(cls, host: str) -> str:
     if host is None:
       return ('Git host for Gerrit upload is unknown. Check your remote '
               'and the branch your branch is tracking. This tool assumes '
@@ -157,73 +98,35 @@ class CookiesAuthenticator(Authenticator):
     return 'You can (re)generate your credentials by visiting %s' % url
 
   @classmethod
-  def get_netrc_path(cls):
-    path = '_netrc' if sys.platform.startswith('win') else '.netrc'
-    return os.path.expanduser(os.path.join('~', path))
+  def get_gitcookies_path(cls) -> str:
+    # Read from the environment.
+    env_path = os.getenv('GIT_COOKIES_PATH')
+    if env_path is not None:
+      return env_path
 
-  @classmethod
-  def _get_netrc(cls):
-    # Buffer the '.netrc' path. Use an empty file if it doesn't exist.
-    path = cls.get_netrc_path()
-    if not os.path.exists(path):
-      return netrc.netrc(os.devnull)
-
-    st = os.stat(path)
-    if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
-      print(
-          'WARNING: netrc file %s cannot be used because its file '
-          'permissions are insecure.  netrc file permissions should be '
-          '600.' % path, file=sys.stderr)
-    with open(path) as fd:
-      content = fd.read()
-
-    # Load the '.netrc' file. We strip comments from it because processing them
-    # can trigger a bug in Windows. See crbug.com/664664.
-    content = '\n'.join(l for l in content.splitlines()
-                        if l.strip() and not l.strip().startswith('#'))
-    with tempdir() as tdir:
-      netrc_path = os.path.join(tdir, 'netrc')
-      with open(netrc_path, 'w') as fd:
-        fd.write(content)
-      os.chmod(netrc_path, (stat.S_IRUSR | stat.S_IWUSR))
-      return cls._get_netrc_from_path(netrc_path)
-
-  @classmethod
-  def _get_netrc_from_path(cls, path):
+    # Attempt to read from git's config.
     try:
-      return netrc.netrc(path)
-    except IOError:
-      print('WARNING: Could not read netrc file %s' % path, file=sys.stderr)
-      return netrc.netrc(os.devnull)
-    except netrc.NetrcParseError as e:
-      print('ERROR: Cannot use netrc file %s due to a parsing error: %s' %
-          (path, e), file=sys.stderr)
-      return netrc.netrc(os.devnull)
-
-  @classmethod
-  def get_gitcookies_path(cls):
-    if os.getenv('GIT_COOKIES_PATH'):
-      return os.getenv('GIT_COOKIES_PATH')
-    try:
-      path = subprocess2.check_output(
+      path = subprocess.check_output(
           ['git', 'config', '--path', 'http.cookiefile'])
       return path.decode('utf-8', 'ignore').strip()
-    except subprocess2.CalledProcessError:
+    except subprocess.CalledProcessError:
+      # Guess a default.
       return os.path.expanduser(os.path.join('~', '.gitcookies'))
 
   @classmethod
-  def _get_gitcookies(cls):
-    gitcookies = {}
+  def _get_gitcookies(cls) -> Dict[str, Tuple[str, str]]:
+    # Read the cookies file.
     path = cls.get_gitcookies_path()
     if not os.path.exists(path):
-      return gitcookies
-
+      return {}
     try:
-      f = gclient_utils.FileRead(path, 'rb').splitlines()
+      f = read_file(path)
     except IOError:
-      return gitcookies
+      return {}
 
-    for line in f:
+    # Parse each line.
+    gitcookies: Dict[str, Tuple[str, str]] = {}
+    for line in f.splitlines():
       try:
         fields = line.strip().split('\t')
         if line.strip().startswith('#') or len(fields) != 7:
@@ -239,23 +142,23 @@ class CookiesAuthenticator(Authenticator):
         LOGGER.warning(exc)
     return gitcookies
 
-  def _get_auth_for_host(self, host):
+  def _get_auth_for_host(self, host: str) -> Optional[Tuple[str, str]]:
     for domain, creds in self.gitcookies.items():
-      if cookielib.domain_match(host, domain):
-        return (creds[0], None, creds[1])
-    return self.netrc.authenticators(host)
+      if cookielib.domain_match(host, domain): # type: ignore
+        return creds
+    return None
 
-  def get_auth_header(self, host):
+  def get_auth_header(self, host: str) -> Optional[str]:
     a = self._get_auth_for_host(host)
     if a:
       if a[0]:
-        secret = base64.b64encode(('%s:%s' % (a[0], a[2])).encode('utf-8'))
+        secret = base64.b64encode(('%s:%s' % (a[0], a[1])).encode('utf-8'))
         return 'Basic %s' % secret.decode('utf-8')
       else:
-        return 'Bearer %s' % a[2]
+        return 'Bearer %s' % a[1]
     return None
 
-  def get_auth_email(self, host):
+  def get_auth_email(self, host: str) -> Optional[str]:
     """Best effort parsing of email to be used for auth for the given host."""
     a = self._get_auth_for_host(host)
     if not a:
@@ -268,119 +171,86 @@ class CookiesAuthenticator(Authenticator):
     return '%s@%s' % (username, domain)
 
 
-# Backwards compatibility just in case somebody imports this outside of
-# depot_tools.
-NetrcAuthenticator = CookiesAuthenticator
+def EnsureAuthenticated(host: str) -> None:
+  """Attempt to determine if we are authenticated with Gerrit server."""
+  # See if we have an authentication header available for the given host.
+  auth = Authenticator()
+  if auth.get_auth_header(host):
+    return
+
+  # If not, print instructions and quit.
+  print(
+      'Could not find credentials for host "%(host)s".\n'
+      '\n'
+      'Credentials are read from %(filename)s.\n'
+      '\n'
+      '%(instructions)s' % {
+        'host': host,
+        'filename': auth.get_gitcookies_path(),
+        'instructions': auth.get_new_password_message(host),
+      })
+  sys.exit(1)
 
 
-class GceAuthenticator(Authenticator):
-  """Authenticator implementation that uses GCE metadata service for token.
+class GerritHttpRequest:
+  """A HTTP request to a URL that can be issued multiple times."""
+
+  def __init__(self, url: str, data: bytes = None,
+               headers: Optional[Dict[str, str]] = None, method:str = 'GET'):
+    self.url = url
+    self.data = data
+    self.headers = headers or {}
+    self.method = method
+
+  @property
+  def host(self) -> str:
+    return urllib.parse.urlparse(self.url).netloc
+
+  def execute(self) -> Tuple[http.client.HTTPResponse, bytes]:
+    request = urllib.request.Request(self.url, data=self.data,
+        headers=self.headers, method=self.method)
+    try:
+      response = urllib.request.urlopen(request)
+      return (response, response.read())
+    except urllib.error.HTTPError as e:
+      return (cast(http.client.HTTPResponse, e), e.read())
+
+
+def _SendGerritHttpRequest(
+    host: str,
+    path: str,
+    reqtype: str = 'GET',
+    headers: Optional[Dict[str, str]] = None,
+    body: Any = None,
+    accept_statuses: FrozenSet[int] = frozenset([200]),
+) -> io.StringIO:
+  """Send a request to the given Gerrit host.
+
+  Args:
+    host: Gerrit host to connect to.
+    path: Path to send request to.
+    reqtype: HTTP request type (or, "HTTP verb").
+    body: JSON-encodable object to send.
+    accept_statuses: Treat any of these statuses as success. Default: [200]
+                     Common additions include 204, 400, and 404.
+
+  Returns: A string buffer containing the connection's reply.
   """
-
-  _INFO_URL = 'http://metadata.google.internal'
-  _ACQUIRE_URL = ('%s/computeMetadata/v1/instance/'
-                  'service-accounts/default/token' % _INFO_URL)
-  _ACQUIRE_HEADERS = {"Metadata-Flavor": "Google"}
-
-  _cache_is_gce = None
-  _token_cache = None
-  _token_expiration = None
-
-  @classmethod
-  def is_gce(cls):
-    if os.getenv('SKIP_GCE_AUTH_FOR_GIT'):
-      return False
-    if cls._cache_is_gce is None:
-      cls._cache_is_gce = cls._test_is_gce()
-    return cls._cache_is_gce
-
-  @classmethod
-  def _test_is_gce(cls):
-    # Based on https://cloud.google.com/compute/docs/metadata#runninggce
-    resp, _ = cls._get(cls._INFO_URL)
-    if resp is None:
-      return False
-    return resp.get('metadata-flavor') == 'Google'
-
-  @staticmethod
-  def _get(url, **kwargs):
-    next_delay_sec = 1.0
-    for i in range(TRY_LIMIT):
-      p = urllib.parse.urlparse(url)
-      if p.scheme not in ('http', 'https'):
-        raise RuntimeError(
-            "Don't know how to work with protocol '%s'" % protocol)
-      try:
-        resp, contents = httplib2.Http().request(url, 'GET', **kwargs)
-      except (socket.error, httplib2.HttpLib2Error) as e:
-        LOGGER.debug('GET [%s] raised %s', url, e)
-        return None, None
-      LOGGER.debug('GET [%s] #%d/%d (%d)', url, i+1, TRY_LIMIT, resp.status)
-      if resp.status < 500:
-        return (resp, contents)
-
-      # Retry server error status codes.
-      LOGGER.warn('Encountered server error')
-      if TRY_LIMIT - i > 1:
-        LOGGER.info('Will retry in %d seconds (%d more times)...',
-                    next_delay_sec, TRY_LIMIT - i - 1)
-        time_sleep(next_delay_sec)
-        next_delay_sec *= random.uniform(MIN_BACKOFF, MAX_BACKOFF)
-    return None, None
-
-  @classmethod
-  def _get_token_dict(cls):
-    # If cached token is valid for at least 25 seconds, return it.
-    if cls._token_cache and time_time() + 25 < cls._token_expiration:
-      return cls._token_cache
-
-    resp, contents = cls._get(cls._ACQUIRE_URL, headers=cls._ACQUIRE_HEADERS)
-    if resp is None or resp.status != 200:
-      return None
-    cls._token_cache = json.loads(contents)
-    cls._token_expiration = cls._token_cache['expires_in'] + time_time()
-    return cls._token_cache
-
-  def get_auth_header(self, _host):
-    token_dict = self._get_token_dict()
-    if not token_dict:
-      return None
-    return '%(token_type)s %(access_token)s' % token_dict
-
-
-class LuciContextAuthenticator(Authenticator):
-  """Authenticator implementation that uses LUCI_CONTEXT ambient local auth.
-  """
-
-  @staticmethod
-  def is_luci():
-    return auth.has_luci_context_local_auth()
-
-  def __init__(self):
-    self._authenticator = auth.Authenticator(
-        ' '.join([auth.OAUTH_SCOPE_EMAIL, auth.OAUTH_SCOPE_GERRIT]))
-
-  def get_auth_header(self, _host):
-    return 'Bearer %s' % self._authenticator.get_access_token().token
-
-
-def CreateHttpConn(host, path, reqtype='GET', headers=None, body=None):
-  """Opens an HTTPS connection to a Gerrit service, and sends a request."""
   headers = headers or {}
   bare_host = host.partition(':')[0]
 
-  a = Authenticator.get()
-  # TODO(crbug.com/1059384): Automatically detect when running on cloudtop.
-  if isinstance(a, GceAuthenticator):
-    print('If you\'re on a cloudtop instance, export '
-          'SKIP_GCE_AUTH_FOR_GIT=1 in your env.')
-
-  a = a.get_auth_header(bare_host)
+  # Set authentication header if available.
+  a = Authenticator().get_auth_header(bare_host)
   if a:
     headers.setdefault('Authorization', a)
-  else:
-    LOGGER.debug('No authorization found for %s.' % bare_host)
 
+  # If we have an authentication header, use an authenticated URL path.
+  #
+  # From Gerrit docs: "Users (and programs) can authenticate with HTTP
+  # passwords by prefixing the endpoint URL with /a/. For example to
+  # authenticate to /projects/, request the URL /a/projects/. Gerrit will use
+  # HTTP basic authentication with the HTTP password from the user’s account
+  # settings page".
   url = path
   if not url.startswith('/'):
     url = '/' + url
@@ -390,114 +260,92 @@ def CreateHttpConn(host, path, reqtype='GET', headers=None, body=None):
   if body:
     body = json.dumps(body, sort_keys=True)
     headers.setdefault('Content-Type', 'application/json')
-  if LOGGER.isEnabledFor(logging.DEBUG):
-    LOGGER.debug('%s %s://%s%s' % (reqtype, GERRIT_PROTOCOL, host, url))
-    for key, val in headers.items():
-      if key == 'Authorization':
-        val = 'HIDDEN'
-      LOGGER.debug('%s: %s' % (key, val))
-    if body:
-      LOGGER.debug(body)
-  conn = httplib2.Http()
-  # HACK: httplib2.Http has no such attribute; we store req_host here for later
-  # use in ReadHttpResponse.
-  conn.req_host = host
-  conn.req_params = {
-      'uri': urllib.parse.urljoin('%s://%s' % (GERRIT_PROTOCOL, host), url),
-      'method': reqtype,
-      'headers': headers,
-      'body': body,
-  }
-  return conn
+
+  # Create a request
+  request = GerritHttpRequest(
+      urllib.parse.urljoin('%s://%s' % (GERRIT_PROTOCOL, host), url),
+      data=body,
+      headers=headers,
+      method=reqtype)
+
+  # Send the request, retrying if there are transient errors.
+  backoff = util.ExponentialBackoff(
+      util.Clock(), min_poll_seconds=10., max_poll_seconds=600.)
+  attempts = 0
+  while True:
+    attempts += 1
+
+    # Attempt to perform the fetch.
+    response, contents_bytes = request.execute()
+    contents = contents_bytes.decode('utf-8', 'replace')
+
+    # If we have a valid status, return the contents.
+    if response.status in accept_statuses:
+      return io.StringIO(contents)
+
+    # If the error looks transient, retry.
+    #
+    # We treat the following errors as transient:
+    #   * Internal server errors (>= 500)
+    #   * Errors caused by conflicts (409 "conflict").
+    #   * Quota issues (429 "too many requests")
+    if ((response.status >= 500 or response.status in [409, 429]) and
+        attempts < _MAX_HTTP_RETRIES):
+      LOGGER.warn('A transient error occurred while querying %s (%s): %s',
+                  request.url, request.method, response.msg)
+      backoff.wait()
+      continue
+
+    LOGGER.debug('got response %d for %s %s', response.status, request.method,
+                 request.url)
+
+    # If we got a 400 error ("bad request"), that may indicate bad authentication.
+    #
+    # Add some more context.
+    if response.status == 400:
+      raise GerritError(
+          response.status, 'HTTP Error: %s: %s.\n\n'
+          'This may indicate a bad request (likely caused by a bug) '
+          'or that authentication failed (Check your ".gitcookies" file.)' %
+          (response.msg, contents.strip()))
+
+    # Otherwise, throw a generic error.
+    raise GerritError(response.status,
+                      'HTTP Error: %s: %s' % (response.msg, contents.strip()))
 
 
-def ReadHttpResponse(conn, accept_statuses=frozenset([200])):
-  """Reads an HTTP response from a connection into a string buffer.
+def _SendGerritJsonRequest(
+    host: str,
+    path: str,
+    reqtype: str = 'GET',
+    headers: Optional[Dict[str, str]] = None,
+    body: Any = None,
+    accept_statuses: FrozenSet[int] = frozenset([200]),
+) -> Any:
+  """Send a request to Gerrit, expecting a JSON response."""
+  result = _SendGerritHttpRequest(
+      host, path, reqtype, headers, body, accept_statuses)
 
-  Args:
-    conn: An Http object created by CreateHttpConn above.
-    accept_statuses: Treat any of these statuses as success. Default: [200]
-                     Common additions include 204, 400, and 404.
-  Returns: A string buffer containing the connection's reply.
-  """
-  sleep_time = SLEEP_TIME
-  for idx in range(TRY_LIMIT):
-    before_response = time.time()
-    response, contents = conn.request(**conn.req_params)
-    contents = contents.decode('utf-8', 'replace')
-
-    response_time = time.time() - before_response
-    metrics.collector.add_repeated(
-        'http_requests',
-        metrics_utils.extract_http_metrics(
-            conn.req_params['uri'], conn.req_params['method'], response.status,
-            response_time))
-
-    # If response.status is an accepted status,
-    # or response.status < 500 then the result is final; break retry loop.
-    # If the response is 404/409 it might be because of replication lag,
-    # so keep trying anyway. If it is 429, it is generally ok to retry after
-    # a backoff.
-    if (response.status in accept_statuses
-        or response.status < 500 and response.status not in [404, 409, 429]):
-      LOGGER.debug('got response %d for %s %s', response.status,
-                   conn.req_params['method'], conn.req_params['uri'])
-      # If 404 was in accept_statuses, then it's expected that the file might
-      # not exist, so don't return the gitiles error page because that's not
-      # the "content" that was actually requested.
-      if response.status == 404:
-        contents = ''
-      break
-
-    # A status >=500 is assumed to be a possible transient error; retry.
-    http_version = 'HTTP/%s' % ('1.1' if response.version == 11 else '1.0')
-    LOGGER.warn('A transient error occurred while querying %s:\n'
-                '%s %s %s\n'
-                '%s %d %s',
-                conn.req_host, conn.req_params['method'],
-                conn.req_params['uri'],
-                http_version, http_version, response.status, response.reason)
-
-    if idx < TRY_LIMIT - 1:
-      LOGGER.info('Will retry in %d seconds (%d more times)...',
-                  sleep_time, TRY_LIMIT - idx - 1)
-      time_sleep(sleep_time)
-      sleep_time *= random.uniform(MIN_BACKOFF, MAX_BACKOFF)
-  # end of retries loop
-
-  if response.status in accept_statuses:
-    return StringIO(contents)
-
-  if response.status in (302, 401, 403):
-    www_authenticate = response.get('www-authenticate')
-    if not www_authenticate:
-      print('Your Gerrit credentials might be misconfigured.')
-    else:
-      auth_match = re.search('realm="([^"]+)"', www_authenticate, re.I)
-      host = auth_match.group(1) if auth_match else conn.req_host
-      print('Authentication failed. Please make sure your .gitcookies '
-            'file has credentials for %s.' % host)
-    print('Try:\n  git cl creds-check')
-
-  reason = '%s: %s' % (response.reason, contents)
-  raise GerritError(response.status, reason)
-
-
-def ReadHttpJsonResponse(conn, accept_statuses=frozenset([200])):
-  """Parses an https response as json."""
-  fh = ReadHttpResponse(conn, accept_statuses)
   # The first line of the response should always be: )]}'
-  s = fh.readline()
+  s = result.readline()
   if s and s.rstrip() != ")]}'":
     raise GerritError(200, 'Unexpected json output: %s' % s)
-  s = fh.read()
+
+  # Read the rest of the response.
+  s = result.read()
   if not s:
     return None
   return json.loads(s)
 
 
-def QueryChanges(host, params, first_param=None, limit=None, o_params=None,
-                 start=None):
+def QueryChanges(
+    host: str,
+    params: List[Tuple[str, str]],
+    first_param: Optional[Any] = None,
+    limit: Optional[int] = None,
+    o_params: Optional[List[Any]] = None,
+    start: Optional[int] = None
+) -> List[Any]:
   """
   Queries a gerrit-on-borg server for changes matching query terms.
 
@@ -524,95 +372,13 @@ def QueryChanges(host, params, first_param=None, limit=None, o_params=None,
     path = '%s&n=%d' % (path, limit)
   if o_params:
     path = '%s&%s' % (path, '&'.join(['o=%s' % p for p in o_params]))
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
-
-
-def GenerateAllChanges(host, params, first_param=None, limit=500,
-                       o_params=None, start=None):
-  """Queries a gerrit-on-borg server for all the changes matching the query
-  terms.
-
-  WARNING: this is unreliable if a change matching the query is modified while
-  this function is being called.
-
-  A single query to gerrit-on-borg is limited on the number of results by the
-  limit parameter on the request (see QueryChanges) and the server maximum
-  limit.
-
-  Args:
-    params, first_param: Refer to QueryChanges().
-    limit: Maximum number of requested changes per query.
-    o_params: Refer to QueryChanges().
-    start: Refer to QueryChanges().
-
-  Returns:
-    A generator object to the list of returned changes.
-  """
-  already_returned = set()
-
-  def at_most_once(cls):
-    for cl in cls:
-      if cl['_number'] not in already_returned:
-        already_returned.add(cl['_number'])
-        yield cl
-
-  start = start or 0
-  cur_start = start
-  more_changes = True
-
-  while more_changes:
-    # This will fetch changes[start..start+limit] sorted by most recently
-    # updated. Since the rank of any change in this list can be changed any time
-    # (say user posting comment), subsequent calls may overalp like this:
-    #   > initial order ABCDEFGH
-    #   query[0..3]  => ABC
-    #   > E gets updated. New order: EABCDFGH
-    #   query[3..6] => CDF   # C is a dup
-    #   query[6..9] => GH    # E is missed.
-    page = QueryChanges(host, params, first_param, limit, o_params,
-                        cur_start)
-    for cl in at_most_once(page):
-      yield cl
-
-    more_changes = [cl for cl in page if '_more_changes' in cl]
-    if len(more_changes) > 1:
-      raise GerritError(
-          200,
-          'Received %d changes with a _more_changes attribute set but should '
-          'receive at most one.' % len(more_changes))
-    if more_changes:
-      cur_start += len(page)
-
-  # If we paged through, query again the first page which in most circumstances
-  # will fetch all changes that were modified while this function was run.
-  if start != cur_start:
-    page = QueryChanges(host, params, first_param, limit, o_params, start)
-    for cl in at_most_once(page):
-      yield cl
-
-
-def MultiQueryChanges(host, params, change_list, limit=None, o_params=None,
-                      start=None):
-  """Initiate a query composed of multiple sets of query parameters."""
-  if not change_list:
-    raise RuntimeError(
-        "MultiQueryChanges requires a list of change numbers/id's")
-  q = ['q=%s' % '+OR+'.join([urllib.parse.quote(str(x)) for x in change_list])]
-  if params:
-    q.append(_QueryString(params))
-  if limit:
-    q.append('n=%d' % limit)
-  if start:
-    q.append('S=%s' % start)
-  if o_params:
-    q.extend(['o=%s' % p for p in o_params])
-  path = 'changes/?%s' % '&'.join(q)
   try:
-    result = ReadHttpJsonResponse(CreateHttpConn(host, path))
+    return _SendGerritJsonRequest(host, path)
   except GerritError as e:
-    msg = '%s:\n%s' % (e.message, path)
-    raise GerritError(e.http_status, msg)
-  return result
+    if e.http_status == 404:
+      # Not found.
+      return []
+    raise
 
 
 def GetGerritFetchUrl(host):
@@ -621,8 +387,7 @@ def GetGerritFetchUrl(host):
 
 
 def GetCodeReviewTbrScore(host, project):
-  """Given a Gerrit host name and project, return the Code-Review score for TBR.
-  """
+  """Given a Gerrit host name and project, return the Code-Review score for TBR."""
   conn = CreateHttpConn(
       host, '/projects/%s' % urllib.parse.quote(project, ''))
   project = ReadHttpJsonResponse(conn)
@@ -646,7 +411,7 @@ def GetChangeUrl(host, change):
 def GetChange(host, change):
   """Queries a Gerrit server for information about a single change."""
   path = 'changes/%s' % change
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
+  return _SendGerritJsonRequest(host, path)
 
 
 def GetChangeDetail(host, change, o_params=None):
@@ -654,13 +419,13 @@ def GetChangeDetail(host, change, o_params=None):
   path = 'changes/%s/detail' % change
   if o_params:
     path += '?%s' % '&'.join(['o=%s' % p for p in o_params])
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
+  return _SendGerritJsonRequest(host, path)
 
 
 def GetChangeCommit(host, change, revision='current'):
   """Query a Gerrit server for a revision associated with a change."""
   path = 'changes/%s/revisions/%s/commit?links' % (change, revision)
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
+  return _SendGerritJsonRequest(host, path)
 
 
 def GetChangeCurrentRevision(host, change):
@@ -683,41 +448,19 @@ def GetChangeReview(host, change, revision=None):
       raise GerritError(200, 'Multiple changes found for ChangeId %s.' % change)
     revision = jmsg[0]['current_revision']
   path = 'changes/%s/revisions/%s/review'
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
+  return _SendGerritJsonRequest(host, path)
 
 
 def GetChangeComments(host, change):
   """Get the line- and file-level comments on a change."""
   path = 'changes/%s/comments' % change
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
+  return _SendGerritJsonRequest(host, path)
 
 
-def GetChangeRobotComments(host, change):
-  """Gets the line- and file-level robot comments on a change."""
-  path = 'changes/%s/robotcomments' % change
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
-
-
-def GetRelatedChanges(host, change, revision='current'):
+def GetRelatedChanges(host: str, change: str, revision: str = 'current') -> Any:
   """Gets information about changes related to a given change."""
   path = 'changes/%s/revisions/%s/related' % (change, revision)
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
-
-
-def AbandonChange(host, change, msg=''):
-  """Abandons a Gerrit change."""
-  path = 'changes/%s/abandon' % change
-  body = {'message': msg} if msg else {}
-  conn = CreateHttpConn(host, path, reqtype='POST', body=body)
-  return ReadHttpJsonResponse(conn)
-
-
-def RestoreChange(host, change, msg=''):
-  """Restores a previously abandoned change."""
-  path = 'changes/%s/restore' % change
-  body = {'message': msg} if msg else {}
-  conn = CreateHttpConn(host, path, reqtype='POST', body=body)
-  return ReadHttpJsonResponse(conn)
+  return _SendGerritJsonRequest(host, path)
 
 
 def SubmitChange(host, change, wait_for_merge=True):
@@ -728,111 +471,28 @@ def SubmitChange(host, change, wait_for_merge=True):
   return ReadHttpJsonResponse(conn)
 
 
-def HasPendingChangeEdit(host, change):
-  conn = CreateHttpConn(host, 'changes/%s/edit' % change)
-  try:
-    ReadHttpResponse(conn)
-  except GerritError as e:
-    # 204 No Content means no pending change.
-    if e.http_status == 204:
-      return False
-    raise
-  return True
-
-
-def DeletePendingChangeEdit(host, change):
-  conn = CreateHttpConn(host, 'changes/%s/edit' % change, reqtype='DELETE')
-  # On success, Gerrit returns status 204; if the edit was already deleted it
-  # returns 404.  Anything else is an error.
-  ReadHttpResponse(conn, accept_statuses=[204, 404])
-
-
-def SetCommitMessage(host, change, description, notify='ALL'):
-  """Updates a commit message."""
-  assert notify in ('ALL', 'NONE')
-  path = 'changes/%s/message' % change
-  body = {'message': description, 'notify': notify}
-  conn = CreateHttpConn(host, path, reqtype='PUT', body=body)
-  try:
-    ReadHttpResponse(conn, accept_statuses=[200, 204])
-  except GerritError as e:
-    raise GerritError(
-        e.http_status,
-        'Received unexpected http status while editing message '
-        'in change %s' % change)
-
-
-def GetReviewers(host, change):
-  """Gets information about all reviewers attached to a change."""
-  path = 'changes/%s/reviewers' % change
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
-
-
-def GetReview(host, change, revision):
-  """Gets review information about a specific revision of a change."""
-  path = 'changes/%s/revisions/%s/review' % (change, revision)
-  return ReadHttpJsonResponse(CreateHttpConn(host, path))
-
-
-def AddReviewers(host, change, reviewers=None, ccs=None, notify=True,
-                 accept_statuses=frozenset([200, 400, 422])):
-  """Add reviewers to a change."""
-  if not reviewers and not ccs:
-    return None
-  if not change:
-    return None
-  reviewers = frozenset(reviewers or [])
-  ccs = frozenset(ccs or [])
-  path = 'changes/%s/revisions/current/review' % change
-
-  body = {
-    'drafts': 'KEEP',
-    'reviewers': [],
-    'notify': 'ALL' if notify else 'NONE',
-  }
-  for r in sorted(reviewers | ccs):
-    state = 'REVIEWER' if r in reviewers else 'CC'
-    body['reviewers'].append({
-     'reviewer': r,
-     'state': state,
-     'notify': 'NONE',  # We handled `notify` argument above.
-    })
-
-  conn = CreateHttpConn(host, path, reqtype='POST', body=body)
-  # Gerrit will return 400 if one or more of the requested reviewers are
-  # unprocessable. We read the response object to see which were rejected,
-  # warn about them, and retry with the remainder.
-  resp = ReadHttpJsonResponse(conn, accept_statuses=accept_statuses)
-
-  errored = set()
-  for result in resp.get('reviewers', {}).values():
-    r = result.get('input')
-    state = 'REVIEWER' if r in reviewers else 'CC'
-    if result.get('error'):
-      errored.add(r)
-      LOGGER.warn('Note: "%s" not added as a %s' % (r, state.lower()))
-  if errored:
-    # Try again, adding only those that didn't fail, and only accepting 200.
-    AddReviewers(host, change, reviewers=(reviewers-errored),
-                 ccs=(ccs-errored), notify=notify, accept_statuses=[200])
-
-
-def SetReview(host, change, msg=None, labels=None, notify=None, ready=None):
+def SetReview(
+    host: str,
+    change: str,
+    msg: Optional[str] = None,
+    labels: Optional[Dict[str, Any]] = None,
+    notify: bool = False,
+    ready: bool = False
+) -> None:
   """Sets labels and/or adds a message to a code review."""
   if not msg and not labels:
     return
   path = 'changes/%s/revisions/current/review' % change
-  body = {'drafts': 'KEEP'}
+  body: Dict[str, Any] = {'drafts': 'KEEP'}
   if msg:
     body['message'] = msg
   if labels:
     body['labels'] = labels
-  if notify is not None:
+  if notify:
     body['notify'] = 'ALL' if notify else 'NONE'
   if ready:
     body['ready'] = True
-  conn = CreateHttpConn(host, path, reqtype='POST', body=body)
-  response = ReadHttpJsonResponse(conn)
+  response = _SendGerritJsonRequest(host, path, reqtype='POST', body=body)
   if labels:
     for key, val in labels.items():
       if ('labels' not in response or key not in response['labels'] or
@@ -841,154 +501,16 @@ def SetReview(host, change, msg=None, labels=None, notify=None, ready=None):
             key, change))
 
 
-def ResetReviewLabels(host, change, label, value='0', message=None,
-                      notify=None):
-  """Resets the value of a given label for all reviewers on a change."""
-  # This is tricky, because we want to work on the "current revision", but
-  # there's always the risk that "current revision" will change in between
-  # API calls.  So, we check "current revision" at the beginning and end; if
-  # it has changed, raise an exception.
-  jmsg = GetChangeCurrentRevision(host, change)
-  if not jmsg:
-    raise GerritError(
-        200, 'Could not get review information for change "%s"' % change)
-  value = str(value)
-  revision = jmsg[0]['current_revision']
+def GetReviewers(host, change):
+  """Gets information about all reviewers attached to a change."""
+  path = 'changes/%s/reviewers' % change
+  return _SendGerritJsonRequest(host, path)
+
+
+def GetReview(host, change, revision):
+  """Gets review information about a specific revision of a change."""
   path = 'changes/%s/revisions/%s/review' % (change, revision)
-  message = message or (
-      '%s label set to %s programmatically.' % (label, value))
-  jmsg = GetReview(host, change, revision)
-  if not jmsg:
-    raise GerritError(200, 'Could not get review information for revision %s '
-                   'of change %s' % (revision, change))
-  for review in jmsg.get('labels', {}).get(label, {}).get('all', []):
-    if str(review.get('value', value)) != value:
-      body = {
-          'drafts': 'KEEP',
-          'message': message,
-          'labels': {label: value},
-          'on_behalf_of': review['_account_id'],
-      }
-      if notify:
-        body['notify'] = notify
-      conn = CreateHttpConn(
-          host, path, reqtype='POST', body=body)
-      response = ReadHttpJsonResponse(conn)
-      if str(response['labels'][label]) != value:
-        username = review.get('email', jmsg.get('name', ''))
-        raise GerritError(200, 'Unable to set %s label for user "%s"'
-                       ' on change %s.' % (label, username, change))
-  jmsg = GetChangeCurrentRevision(host, change)
-  if not jmsg:
-    raise GerritError(
-        200, 'Could not get review information for change "%s"' % change)
-  elif jmsg[0]['current_revision'] != revision:
-    raise GerritError(200, 'While resetting labels on change "%s", '
-                   'a new patchset was uploaded.' % change)
-
-
-def CreateGerritBranch(host, project, branch, commit):
-  """Creates a new branch from given project and commit
-
-  https://gerrit-review.googlesource.com/Documentation/rest-api-projects.html#create-branch
-
-  Returns:
-    A JSON object with 'ref' key.
-  """
-  path = 'projects/%s/branches/%s' % (project, branch)
-  body = {'revision': commit}
-  conn = CreateHttpConn(host, path, reqtype='PUT', body=body)
-  response = ReadHttpJsonResponse(conn, accept_statuses=[201])
-  if response:
-    return response
-  raise GerritError(200, 'Unable to create gerrit branch')
-
-
-def GetGerritBranch(host, project, branch):
-  """Gets a branch from given project and commit.
-
-  See:
-  https://gerrit-review.googlesource.com/Documentation/rest-api-projects.html#get-branch
-
-  Returns:
-    A JSON object with 'revision' key.
-  """
-  path = 'projects/%s/branches/%s' % (project, branch)
-  conn = CreateHttpConn(host, path, reqtype='GET')
-  response = ReadHttpJsonResponse(conn)
-  if response:
-    return response
-  raise GerritError(200, 'Unable to get gerrit branch')
-
-
-def GetAccountDetails(host, account_id='self'):
-  """Returns details of the account.
-
-  If account_id is not given, uses magic value 'self' which corresponds to
-  whichever account user is authenticating as.
-
-  Documentation:
-  https://gerrit-review.googlesource.com/Documentation/rest-api-accounts.html#get-account
-
-  Returns None if account is not found (i.e., Gerrit returned 404).
-  """
-  conn = CreateHttpConn(host, '/accounts/%s' % account_id)
-  return ReadHttpJsonResponse(conn, accept_statuses=[200, 404])
-
-
-def ValidAccounts(host, accounts, max_threads=10):
-  """Returns a mapping from valid account to its details.
-
-  Invalid accounts, either not existing or without unique match,
-  are not present as returned dictionary keys.
-  """
-  assert not isinstance(accounts, str), type(accounts)
-  accounts = list(set(accounts))
-  if not accounts:
-    return {}
-
-  def get_one(account):
-    try:
-      return account, GetAccountDetails(host, account)
-    except GerritError:
-      return None, None
-
-  valid = {}
-  with contextlib.closing(ThreadPool(min(max_threads, len(accounts)))) as pool:
-    for account, details in pool.map(get_one, accounts):
-      if account and details:
-        valid[account] = details
-  return valid
-
-
-def PercentEncodeForGitRef(original):
-  """Applies percent-encoding for strings sent to Gerrit via git ref metadata.
-
-  The encoding used is based on but stricter than URL encoding (Section 2.1 of
-  RFC 3986). The only non-escaped characters are alphanumerics, and 'SPACE'
-  (U+0020) can be represented as 'LOW LINE' (U+005F) or 'PLUS SIGN' (U+002B).
-
-  For more information, see the Gerrit docs here:
-
-  https://gerrit-review.googlesource.com/Documentation/user-upload.html#message
-  """
-  safe = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '
-  encoded = ''.join(c if c in safe else '%%%02X' % ord(c) for c in original)
-
-  # Spaces are not allowed in git refs; gerrit will interpret either '_' or
-  # '+' (or '%20') as space. Use '_' since that has been supported the longest.
-  return encoded.replace(' ', '_')
-
-
-@contextlib.contextmanager
-def tempdir():
-  tdir = None
-  try:
-    tdir = tempfile.mkdtemp(suffix='gerrit_util')
-    yield tdir
-  finally:
-    if tdir:
-      gclient_utils.rmtree(tdir)
+  return _SendGerritJsonRequest(host, path)
 
 
 def ChangeIdentifier(project, change_number):
