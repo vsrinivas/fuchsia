@@ -4,6 +4,7 @@
 
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl/llcpp/heap_allocator.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/sysmem-make-tracking/make_tracking.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
@@ -42,10 +43,7 @@ class LinearSnap {
   // This value is similar to an in-place decode received LLCPP message, in that it can be moved out
   // syntatically, but really any tracking_ptr<>(s) are non-owned, so callers should take care to
   // not use the returned logical FidlType& (even if syntatically moved out) beyond ~LinearSnap.
-  FidlType& value() {
-    ZX_ASSERT(value_.is_valid());
-    return *value_.message();
-  }
+  FidlType& value() { return *reinterpret_cast<FidlType*>(&linear_data_); }
 
   const fidl::BytePart snap_bytes() const {
     return fidl::BytePart(const_cast<uint8_t*>(&snap_data_[0]), snap_data_size_, snap_data_size_);
@@ -56,58 +54,46 @@ class LinearSnap {
                             snap_handles_count_);
   }
 
-  ~LinearSnap() {
-    if constexpr (FidlType::HasPointer) {
-      fidl_close_handles(FidlType::Type, &linear_data_, nullptr);
-    }
-    // else ~maybe_linear_ will close any handles
-  }
+  ~LinearSnap() { fidl_close_handles(FidlType::Type, &linear_data_, nullptr); }
 
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
-    maybe_linear_ = std::move(to_move_in);
-    fidl::EncodeResult<FidlType> encode_result;
-    if constexpr (FidlType::HasPointer) {
-      fidl::BytePart linear_part(&linear_data_[0], kMaxDataSize);
-      // If this path is taken, this is the last time maybe_linear_ is really used, and there won't
-      // be any more handles in maybe_linear_ from this call onward.
-      encode_result = fidl::LinearizeAndEncode(&maybe_linear_, linear_part);
-      ZX_ASSERT(encode_result.status == ZX_OK);
-      ZX_ASSERT(!encode_result.error);
-    } else {
-      // In this path, the handles end up back in maybe_linear_ after Decode() below.
-      auto linearize_result =
-          fidl::LinearizeResult(ZX_OK, nullptr,
-                                fidl::DecodedMessage<FidlType>(fidl::BytePart(
-                                    reinterpret_cast<uint8_t*>(&maybe_linear_),
-                                    FidlAlign(sizeof(FidlType)), FidlAlign(sizeof(FidlType)))));
-      encode_result = fidl::Encode(std::move(linearize_result.message));
+    alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    fidl::internal::FidlMessage message(linear_data_, kMaxDataSize, 0, handles,
+                                        ZX_CHANNEL_MAX_MSG_HANDLES, 0);
+
+    message.LinearizeAndEncode(FidlType::Type, &aligned);
+    if (!message.ok()) {
+      printf("Encoded error: %s\n", (message.error() == nullptr) ? "" : message.error());
     }
-    ZX_ASSERT(encode_result.status == ZX_OK);
-    ZX_ASSERT(!encode_result.error);
-    fidl::EncodedMessage<FidlType> encoded_message = std::move(encode_result.message);
-    ZX_ASSERT(encoded_message.bytes().actual() <= sizeof(linear_data_));
-    memcpy(&snap_data_[0], encoded_message.bytes().data(), encoded_message.bytes().actual());
-    ZX_ASSERT(encoded_message.handles().actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
-    memcpy(&snap_handles_[0], encoded_message.handles().data(),
-           encoded_message.handles().actual() * sizeof(zx_handle_t));
-    snap_data_size_ = encoded_message.bytes().actual();
-    snap_handles_count_ = encoded_message.handles().actual();
+    ZX_ASSERT(message.ok());
+    ZX_ASSERT(message.error() == nullptr);
+
+    ZX_ASSERT(message.bytes().actual() <= sizeof(snap_data_));
+    memcpy(snap_data_, message.bytes().data(), message.bytes().actual());
+    snap_data_size_ = message.bytes().actual();
+
+    ZX_ASSERT(message.handles().actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
+    memcpy(snap_handles_, message.handles().data(),
+           message.handles().actual() * sizeof(zx_handle_t));
+    snap_handles_count_ = message.handles().actual();
+
     // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
-    fidl::DecodeResult<FidlType> decode_result = fidl::Decode(std::move(encoded_message));
-    ZX_ASSERT(decode_result.status == ZX_OK);
-    ZX_ASSERT(!decode_result.error);
-    value_ = std::move(decode_result.message);
-    // At this point, the handles are in linear_data_ if FidlType::HasPointer, or in maybe_linear_
-    // if !FidlType::HasPointer (not in both), and value_'s message() is stored directly in
-    // linear_data_ or maybe_linear_.
+    const char* error = nullptr;
+    zx_status_t status =
+        fidl_decode(FidlType::Type, message.bytes().data(), message.bytes().actual(),
+                    message.handles().data(), message.handles().actual(), &error);
+    ZX_ASSERT(status == ZX_OK);
+    ZX_ASSERT(error == nullptr);
+
+    // At this point, the handles are in linear_data_ and value_'s message() is stored directly in
+    // linear_data_.
   }
 
   // During MoveFrom, used for linearizing, encoding, decoding.  After MoveFrom(), holds the
   // linearized decoded message (including owned handles).
   alignas(FIDL_ALIGNMENT) uint8_t linear_data_[kMaxDataSize] = {};
-  FidlType maybe_linear_ = {};
-  fidl::DecodedMessage<FidlType> value_ = {};
 
   alignas(FIDL_ALIGNMENT) uint8_t snap_data_[kMaxDataSize] = {};
   zx_handle_t snap_handles_[kMaxHandleCount] = {};
