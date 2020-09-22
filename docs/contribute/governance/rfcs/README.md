@@ -8,18 +8,19 @@ Note: Documents are sorted by date reviewed.
 
 ## Accepted proposals
 
-RFC | Submitted  | Reviewed   | Title
-----|------------|------------|------
-[RFC-0001](0001_rfc_process.md) | 2020-02-20 | 2020-02-27 | Fuchsia Request for Comments (RFC) process
+RFC                                     | Submitted  | Reviewed   | Title
+--------------------------------------- | ---------- | ---------- | -----
+[RFC-0001](0001_rfc_process.md)         | 2020-02-20 | 2020-02-27 | Fuchsia Request for Comments (RFC) process
 [RFC-0002](0002_platform_versioning.md) | 2020-03-30 | 2020-04-23 | Fuchsia Platform Versioning
-[RFC-0003](0003_logging.md) | 2020-06-03 | 2020-06-10 | Fuchsia Logging Guidelines
-[RFC-0004](0004_units_of_bytes.md) | 2020-06-09 | 2020-07-31 | Units of Bytes
+[RFC-0003](0003_logging.md)             | 2020-06-03 | 2020-06-10 | Fuchsia Logging Guidelines
+[RFC-0004](0004_units_of_bytes.md)      | 2020-06-09 | 2020-07-31 | Units of Bytes
+[RFC-0005](0005_blobfs_snapshots.md)    | 2020-09-07 | 2020-09-19 | Blobfs Snapshots
 
 ## Rejected proposals
 
-RFC | Submitted  | Reviewed   | Title
-----|------------|------------|------
-_(none)_ | &nbsp; | &nbsp; | &nbsp;
+RFC      | Submitted | Reviewed | Title
+-------- | --------- | -------- | ------
+_(none)_ | &nbsp;    | &nbsp;   | &nbsp;
 
 ## Process
 

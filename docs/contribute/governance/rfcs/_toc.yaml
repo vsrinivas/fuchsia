@@ -12,5 +12,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0003_logging.md
 - title: "RFC-0004: Units of Bytes"
   path: /docs/contribute/governance/rfcs/0004_units_of_bytes.md
+- title: "RFC-0005: Blobfs Snapshots"
+  path: /docs/contribute/governance/rfcs/0005_blobfs_snapshots.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
