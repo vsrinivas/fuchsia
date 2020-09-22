@@ -85,7 +85,7 @@ test_package("semantics-integration-tests") {
 
   data_deps = [
     "//garnet/packages/prod:scenic",
-    "//src/chromium:web_engine",
+    "//src/chromium",
     "//src/ui/a11y/bin/demo:a11y-demo",
   ]
 
