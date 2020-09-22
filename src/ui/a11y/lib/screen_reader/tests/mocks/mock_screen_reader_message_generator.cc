@@ -37,7 +37,8 @@ MockScreenReaderMessageGenerator::DescribeNode(
 
 a11y::ScreenReaderMessageGenerator::UtteranceAndContext
 MockScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
-    fuchsia::intl::l10n::MessageIds message_id, zx::duration delay) {
+    fuchsia::intl::l10n::MessageIds message_id, zx::duration delay,
+    const std::vector<std::string>& arg_names, const std::vector<std::string>& arg_values) {
   UtteranceAndContext utterance;
   if (messages_.find(message_id) != messages_.end()) {
     utterance = std::move(messages_[message_id]);

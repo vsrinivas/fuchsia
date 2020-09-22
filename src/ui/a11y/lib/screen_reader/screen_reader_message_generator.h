@@ -41,15 +41,22 @@ class ScreenReaderMessageGenerator {
   virtual std::vector<UtteranceAndContext> DescribeNode(
       const fuchsia::accessibility::semantics::Node* node);
 
-  // Returns an utterance for a message retrieved by message ID.
+  // Returns an utterance for a message retrieved by message ID. If the message contains positional
+  // named arguments, they must be passed in |arg_names|, with corresponding values in |arg_values|.
+  // Please see MessageFormatter for a full documentation on named arguments.
   virtual UtteranceAndContext GenerateUtteranceByMessageId(
-      fuchsia::intl::l10n::MessageIds message_id, zx::duration delay = zx::msec(0));
+      fuchsia::intl::l10n::MessageIds message_id, zx::duration delay = zx::msec(0),
+      const std::vector<std::string>& arg_names = std::vector<std::string>(),
+      const std::vector<std::string>& arg_values = std::vector<std::string>());
 
  protected:
   // Constructor for mock only.
   ScreenReaderMessageGenerator() = default;
 
  private:
+  // Helper method to describe a node that is a radio button.
+  UtteranceAndContext DescribeRadioButton(const fuchsia::accessibility::semantics::Node* node);
+
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
 };
 

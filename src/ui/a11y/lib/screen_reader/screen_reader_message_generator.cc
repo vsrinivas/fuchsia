@@ -57,15 +57,20 @@ std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
   std::vector<UtteranceAndContext> description;
   {
-    Utterance utterance;
-    if (node->has_attributes() && node->attributes().has_label()) {
-      utterance.set_message(node->attributes().label());
+    // If this node is a radio button, the label is part of the whole message that describes it.
+    if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
+      description.emplace_back(DescribeRadioButton(node));
+    } else {
+      Utterance utterance;
+      if (node->has_attributes() && node->attributes().has_label()) {
+        utterance.set_message(node->attributes().label());
+      }
+      // Note that empty descriptions (no labels), are allowed. It is common for developers forget
+      // to add accessible labels to their UI elements, which causes them to not have one. It is
+      // desirable still to tell the user what the node is (a button), so the Screen Reader can read
+      // something like: (pause) button.
+      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
     }
-    // Note that empty descriptions (no labels), are allowed. It is common for developers forget to
-    // add accessible labels to their UI elements, which causes them to not have one. It is
-    // desirable still to tell the user what the node is (a button), so the Screen Reader can read
-    // something like: (pause) button.
-    description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
   }
   {
     Utterance utterance;
@@ -95,13 +100,29 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
 
 ScreenReaderMessageGenerator::UtteranceAndContext
 ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
-    fuchsia::intl::l10n::MessageIds message_id, zx::duration delay) {
+    MessageIds message_id, zx::duration delay, const std::vector<std::string>& arg_names,
+    const std::vector<std::string>& arg_values) {
   UtteranceAndContext utterance;
-  auto message = message_formatter_->FormatStringById(static_cast<uint64_t>(message_id));
+  auto message = message_formatter_->FormatStringById(static_cast<uint64_t>(message_id), arg_names,
+                                                      arg_values);
   FX_DCHECK(message);
   utterance.utterance.set_message(std::move(*message));
   utterance.delay = delay;
   return utterance;
+}
+
+ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::DescribeRadioButton(
+    const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() &&
+            node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON);
+  const auto message_id =
+      node->has_states() && node->states().has_selected() && node->states().selected()
+          ? MessageIds::RADIO_BUTTON_SELECTED
+          : MessageIds::RADIO_BUTTON_UNSELECTED;
+  const auto name_value =
+      node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
+  return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
+                                      {name_value});
 }
 
 }  // namespace a11y

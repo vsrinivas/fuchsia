@@ -36,8 +36,10 @@ class MockScreenReaderMessageGenerator : public a11y::ScreenReaderMessageGenerat
       const fuchsia::accessibility::semantics::Node* node) override;
 
   // |ScreenReaderMessageGenerator|
-  UtteranceAndContext GenerateUtteranceByMessageId(fuchsia::intl::l10n::MessageIds message_id,
-                                                   zx::duration delay = zx::msec(0)) override;
+  UtteranceAndContext GenerateUtteranceByMessageId(
+      fuchsia::intl::l10n::MessageIds message_id, zx::duration delay = zx::msec(0),
+      const std::vector<std::string>& arg_names = std::vector<std::string>(),
+      const std::vector<std::string>& arg_values = std::vector<std::string>()) override;
 
  private:
   std::optional<std::vector<UtteranceAndContext>> description_;

@@ -139,5 +139,31 @@ TEST_F(ScreenReaderMessageGeneratorTest, ClickableNode) {
   ASSERT_EQ(result[2].utterance.message(), "double tap to activate");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, NodeRadioButtonSelected) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::RADIO_BUTTON);
+  node.mutable_states()->set_selected(true);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::RADIO_BUTTON_SELECTED), "foo radio button selected");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo radio button selected");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeRadioButtonUnselected) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::RADIO_BUTTON);
+  node.mutable_states()->set_selected(false);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::RADIO_BUTTON_UNSELECTED), "foo radio button unselected");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo radio button unselected");
+}
+
 }  // namespace
 }  // namespace accessibility_test
