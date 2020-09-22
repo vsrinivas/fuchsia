@@ -1,6 +1,10 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/hardware-display-controller-provider#meta/hdcp.cmx",
+                "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
+            },
             "system-services": [
                 "fuchsia.sysmem.Allocator"
             ]
@@ -10,10 +14,8 @@
         "binary": "test/flatland_engine_unittests"
     },
     "sandbox": {
-        "dev": [
-            "class/display-controller"
-        ],
         "services": [
+            "fuchsia.hardware.display.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator"
         ]
