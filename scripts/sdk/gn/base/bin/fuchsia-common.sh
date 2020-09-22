@@ -331,7 +331,7 @@ function check-fuchsia-ssh-config {
   # This script checks for the private key file being referenced in the sshconfig and
   # the matching version tag. If they are not present, the sshconfig file is regenerated.
   # The ssh configuration should not be modified.
-  local SSHCONFIG_TAG="Fuchsia SDK config version 3 tag"
+  local SSHCONFIG_TAG="Fuchsia SDK config version 4 tag"
 
   if [[ ! -d "${HOME}" ]]; then
     fx-error "\$HOME must be set to use these commands."
@@ -409,7 +409,7 @@ ServerAliveCountMax 10
 # Try to keep the master connection open to speed reconnecting.
 ControlMaster auto
 ControlPersist yes
-ControlPath=/tmp/fuchsia--%r@%h:%p
+ControlPath=~/.ssh/fuchsia--%r@%h:%p
 
 # Connect with user, use the identity specified.
 User fuchsia
