@@ -74,16 +74,21 @@ void main(List<String> args) {
 
     test('input multi-finger taps', () async {
       final fingers = [
-        {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0},
-        {'finger_id': 2, 'x': 20, 'y': 20, 'width': 0, 'height': 0},
-        {'finger_id': 3, 'x': 40, 'y': 40, 'width': 0, 'height': 0},
-        {'finger_id': 4, 'x': 60, 'y': 60, 'width': 0, 'height': 0},
+        Point(0, 0),
+        Point(20, 20),
+        Point(40, 40),
+        Point(60, 60),
       ];
 
       await input.multiFingerTap(fingers, tapEventCount: 10, duration: 100);
 
       verify(sl4f.request('input_facade.MultiFingerTap', {
-        'fingers': fingers,
+        'fingers': [
+          {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0},
+          {'finger_id': 2, 'x': 20, 'y': 20, 'width': 0, 'height': 0},
+          {'finger_id': 3, 'x': 40, 'y': 40, 'width': 0, 'height': 0},
+          {'finger_id': 4, 'x': 60, 'y': 60, 'width': 0, 'height': 0},
+        ],
         'tap_event_count': 10,
         'duration': 100,
       })).called(1);

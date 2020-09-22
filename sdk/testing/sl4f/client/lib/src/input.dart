@@ -57,17 +57,7 @@ class Input {
 
   /// Multi-Finger taps on the screen.
   ///
-  /// [fingers] are represented by a list of [dynamic] json that represents
-  /// the FIDL struct `Touch` defined in
-  /// sdk/fidl/fuchsia.ui.input/input_reports.fidl
-  /// Example:
-  /// fingers = [
-  ///   {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0},
-  ///   {'finger_id': 2, 'x': 20, 'y': 20, 'width': 0, 'height': 0},
-  /// ]
-  ///
-  /// TODO(fxbug.dev/59254): Switch from List<dynamic> to list<fidl_input.Touch>
-  /// for fingers when dart_test targets can include //sdk/fidl deps.
+  /// [fingers] are represented by a list of [Point]
   ///
   /// Each finger x, y must be in the range of [0, 1000] and
   /// are scaled to the screen size on the device, and they
@@ -77,16 +67,28 @@ class Input {
   /// over the tap events). Defaults to 1.
   /// [duration]: Duration of the event(s) in milliseconds. Defaults to 0.
   /// These defaults are set in the input facade.
-  Future<bool> multiFingerTap(List<dynamic> fingers,
+  Future<bool> multiFingerTap(List<Point<int>> fingers,
       {Rotation screenRotation, int tapEventCount, int duration}) async {
+    // Convert each Point finger to Touch json matching the FIDL struct `Touch`
+    // defined in sdk/fidl/fuchsia.ui.input/input_reports.fidl
+    // Example:
+    //   {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0}
+    List<Map<String, int>> fingersJson = [];
+    for (var i = 0; i < fingers.length; i++) {
+      final tcoord = _rotate(fingers[i], screenRotation ?? _screenRotation);
+
+      fingersJson.add({
+        'finger_id': i + 1, // finger_id starts at 1.
+        'x': tcoord.x,
+        'y': tcoord.y,
+        // width and height are required. We default them to 0 size.
+        'width': 0,
+        'height': 0,
+      });
+    }
+
     final result = await _sl4f.request('input_facade.MultiFingerTap', {
-      'fingers': fingers.map((finger) {
-        final tcoord = _rotate(Point<int>(finger['x'], finger['y']),
-            screenRotation ?? _screenRotation);
-        finger['x'] = tcoord.x;
-        finger['y'] = tcoord.y;
-        return finger;
-      }).toList(),
+      'fingers': fingersJson,
       if (tapEventCount != null) 'tap_event_count': tapEventCount,
       if (duration != null) 'duration': duration,
     });
