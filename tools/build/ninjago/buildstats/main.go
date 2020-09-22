@@ -57,6 +57,7 @@ type paths struct {
 // All fields are exported so this struct can be serialized by json.
 type action struct {
 	Command    string
+	Outputs    []string
 	Start, End time.Duration
 	Rule       string
 	Category   string
@@ -186,6 +187,7 @@ func extractBuildStats(g graph, steps []ninjalog.Step) (buildStats, error) {
 
 func toAction(s ninjalog.Step) action {
 	a := action{
+		Outputs:  append(s.Outs, s.Out),
 		Start:    s.Start,
 		End:      s.End,
 		Category: s.Category(),

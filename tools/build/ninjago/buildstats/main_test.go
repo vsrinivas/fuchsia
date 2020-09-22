@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
@@ -82,11 +83,14 @@ func TestExtractStats(t *testing.T) {
 				criticalPath: []ninjalog.Step{
 					{
 						CmdHash: 1,
+						Out:     "a.o",
+						Outs:    []string{"aa.o", "aaa.o"},
 						End:     3 * time.Second,
 						Command: &compdb.Command{Command: "gomacc a.cc"},
 					},
 					{
 						CmdHash: 2,
+						Out:     "b.o",
 						Start:   3 * time.Second,
 						End:     5 * time.Second,
 						Command: &compdb.Command{Command: "rustc b.rs"},
@@ -96,17 +100,21 @@ func TestExtractStats(t *testing.T) {
 			steps: []ninjalog.Step{
 				{
 					CmdHash: 1,
+					Out:     "a.o",
+					Outs:    []string{"aa.o", "aaa.o"},
 					End:     3 * time.Second,
 					Command: &compdb.Command{Command: "gomacc a.cc"},
 				},
 				{
 					CmdHash: 2,
+					Out:     "b.o",
 					Start:   3 * time.Second,
 					End:     5 * time.Second,
 					Command: &compdb.Command{Command: "rustc b.rs"},
 				},
 				{
 					CmdHash: 3,
+					Out:     "c.o",
 					Start:   9 * time.Second,
 					End:     10 * time.Second,
 					Command: &compdb.Command{Command: "gomacc c.cc"},
@@ -114,13 +122,41 @@ func TestExtractStats(t *testing.T) {
 			},
 			want: buildStats{
 				CriticalPath: []action{
-					{Command: "gomacc a.cc", End: 3 * time.Second, Category: "gomacc"},
-					{Command: "rustc b.rs", Start: 3 * time.Second, End: 5 * time.Second, Category: "rustc"},
+					{
+						Command:  "gomacc a.cc",
+						Outputs:  []string{"aa.o", "aaa.o", "a.o"},
+						End:      3 * time.Second,
+						Category: "gomacc",
+					},
+					{
+						Command:  "rustc b.rs",
+						Outputs:  []string{"b.o"},
+						Start:    3 * time.Second,
+						End:      5 * time.Second,
+						Category: "rustc",
+					},
 				},
 				Slowests: []action{
-					{Command: "gomacc a.cc", End: 3 * time.Second, Category: "gomacc"},
-					{Command: "rustc b.rs", Start: 3 * time.Second, End: 5 * time.Second, Category: "rustc"},
-					{Command: "gomacc c.cc", Start: 9 * time.Second, End: 10 * time.Second, Category: "gomacc"},
+					{
+						Command:  "gomacc a.cc",
+						Outputs:  []string{"aa.o", "aaa.o", "a.o"},
+						End:      3 * time.Second,
+						Category: "gomacc",
+					},
+					{
+						Command:  "rustc b.rs",
+						Outputs:  []string{"b.o"},
+						Start:    3 * time.Second,
+						End:      5 * time.Second,
+						Category: "rustc",
+					},
+					{
+						Command:  "gomacc c.cc",
+						Outputs:  []string{"c.o"},
+						Start:    9 * time.Second,
+						End:      10 * time.Second,
+						Category: "gomacc",
+					},
 				},
 				CatBuildTimes: []catBuildTime{
 					{
@@ -148,7 +184,7 @@ func TestExtractStats(t *testing.T) {
 			if err != nil {
 				t.Fatalf("extractBuildStats(%#v, %#v) got error: %v", v.g, v.steps, err)
 			}
-			if diff := cmp.Diff(v.want, gotStats); diff != "" {
+			if diff := cmp.Diff(v.want, gotStats, cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("extractBuildStats(%#v, %#v) got stats diff (-want +got):\n%s", v.g, v.steps, diff)
 			}
 		})
