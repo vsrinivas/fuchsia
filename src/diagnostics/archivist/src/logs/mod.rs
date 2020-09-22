@@ -107,7 +107,7 @@ impl LogManager {
         };
         messages.sort_by_key(|m| m.metadata.timestamp);
         for message in messages {
-            component_log_stats.lock().await.record_log(&message);
+            component_log_stats.record_log(&message);
             self.ingest_message(message, LogSource::Kernel).await;
         }
 
@@ -115,7 +115,7 @@ impl LogManager {
             .listen()
             .try_for_each(|message| {
                 async {
-                    component_log_stats.clone().lock().await.record_log(&message);
+                    component_log_stats.clone().record_log(&message);
                     self.ingest_message(message, LogSource::Kernel).await
                 }
                 .map(Ok)
@@ -248,7 +248,7 @@ impl LogManager {
         loop {
             match log_stream.next().await {
                 Ok(message) => {
-                    component_log_stats.lock().await.record_log(&message);
+                    component_log_stats.record_log(&message);
                     self.ingest_message(message, stats::LogSource::LogSink).await;
                 }
                 Err(error::StreamError::Closed) => return,
@@ -563,7 +563,7 @@ mod tests {
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
                     unattributed_log_sinks: 1u64,
-                    by_component: { "(unattributed)": {
+                    by_component: { "(unattributed)": contains {
                         total_logs: 5u64,
                         trace_logs: 0u64,
                         debug_logs: 0u64,
@@ -626,7 +626,7 @@ mod tests {
                     closed_streams: 0u64,
                     unattributed_log_sinks: 0u64,
                     by_component: {
-                        "http://foo.com": {
+                        "http://foo.com": contains {
                             total_logs: 1u64,
                             trace_logs: 0u64,
                             debug_logs: 0u64,
@@ -635,7 +635,7 @@ mod tests {
                             error_logs: 0u64,
                             fatal_logs: 0u64,
                         },
-                        "http://bar.com": {
+                        "http://bar.com": contains {
                             total_logs: 1u64,
                             trace_logs: 0u64,
                             debug_logs: 0u64,
@@ -788,7 +788,7 @@ mod tests {
                     closed_streams: 0u64,
                     unattributed_log_sinks: 0u64,
                     by_component: {
-                        "http://foo.com": {
+                        "http://foo.com": contains {
                             total_logs: 2u64,
                             trace_logs: 0u64,
                             debug_logs: 0u64,
@@ -1173,7 +1173,7 @@ mod tests {
                     closed_streams: 0u64,
                     unattributed_log_sinks: 0u64,
                     by_component: {
-                        "fuchsia-boot://klog": {
+                        "fuchsia-boot://klog": contains {
                             total_logs: 3u64,
                             trace_logs: 0u64,
                             debug_logs: 0u64,

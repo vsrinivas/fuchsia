@@ -8,17 +8,24 @@ use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_derive::Inspect;
+use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use regex::Regex;
 use std::collections::{hash_map::Entry, HashMap, VecDeque};
 use std::convert::TryFrom;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 // Maximum number of GranularLogStatsRecords kept in a GranularLogStatsBucket.
 const MAX_RECORDS_PER_BUCKET: usize = 100;
 
 // Length of the interval corresdponding to a GranularLogStatsBucket.
 const BUCKET_INTERVAL_IN_MINUTES: u64 = 15;
+
+// Interval between per-component stats garbage collection runs to clean up stale stats.
+const COMPONENT_STATS_GC_INTERVAL_HOURS: i64 = 1;
+
+// `limit` in `stats_are_stale = freshness < fasync::Time::now() - zx::Duration::from_hours(limit)`.
+const COMPONENT_STATS_FRESHNESS_EXPIRY_HOURS: i64 = 1;
 
 /// Structure that holds stats for the log manager.
 #[derive(Default, Inspect)]
@@ -38,33 +45,78 @@ pub(super) struct LogManagerStats {
     unattributed_log_sinks: inspect::UintProperty,
 }
 
-#[derive(Default, Inspect)]
+#[derive(Inspect)]
 struct LogStatsByComponent {
     // Note: This field is manually managed as the Inspect derive macro does
     // not yet support collections.
     #[inspect(skip)]
-    components: Arc<Mutex<HashMap<String, Weak<Mutex<ComponentLogStats>>>>>,
+    components: Arc<Mutex<HashMap<String, Arc<ComponentLogStats>>>>,
     inspect_node: inspect::Node,
+
+    // Maintain reference to periodic task that GCs stale `LogStatsByComponentGC`. This ensures that
+    // the task will be aborted when this `LogStatsByComponent` is dropped.
+    #[inspect(skip)]
+    _gc_task: fasync::Task<()>,
 }
 
 impl LogStatsByComponent {
+    fn new(gc_timeout: zx::Duration, inspect_node: inspect::Node) -> Self {
+        let components = Arc::new(Mutex::new(HashMap::new()));
+        let gc_components = components.clone();
+        Self {
+            components,
+            inspect_node,
+            _gc_task: fasync::Task::spawn(async move {
+                loop {
+                    {
+                        let mut components = gc_components.lock().await;
+                        let limit = (fasync::Time::now()
+                            - zx::Duration::from_hours(COMPONENT_STATS_FRESHNESS_EXPIRY_HOURS))
+                        .into_nanos();
+                        components.retain(|_, stats| {
+                            // TODO(fxbug.dev/56527): Report failure to access freshness somewhere.
+                            //For now, assume failure to indicate a bad state and garbage collect
+                            // such components (i.e., `false` below).
+                            stats
+                                .last_log_monotonic_nanos
+                                .get()
+                                .map_or(false, |freshness| freshness >= limit)
+                        });
+                    };
+                    // Release `log_stats_component_gc` lock while waiting on timer.
+
+                    fasync::Timer::new(fasync::Time::after(gc_timeout)).await;
+                }
+            }),
+        }
+    }
+
     pub async fn get_component_log_stats(
         &self,
         identity: &SourceIdentity,
-    ) -> Arc<Mutex<ComponentLogStats>> {
+    ) -> Arc<ComponentLogStats> {
         let url = identity.component_url.clone().unwrap_or("(unattributed)".to_string());
         let mut components = self.components.lock().await;
-        if let Some(component_log_stats) =
-            components.get(&url).map(|value| value.upgrade()).flatten()
-        {
-            component_log_stats
-        } else {
-            let mut component_log_stats = ComponentLogStats::default();
-            let _ = component_log_stats.iattach(&self.inspect_node, url.clone());
-            let component_log_stats = Arc::new(Mutex::new(component_log_stats));
-            components.insert(url, Arc::downgrade(&component_log_stats));
-            component_log_stats
+        match components.get(&url) {
+            Some(stats) => stats.clone(),
+            None => {
+                let mut stats = ComponentLogStats::default();
+                // TODO(fxbug.dev/60396): Report failure to attach somewhere.
+                let _ = stats.iattach(&self.inspect_node, url.clone());
+                let stats = Arc::new(stats);
+                components.insert(url, stats.clone());
+                stats
+            }
         }
+    }
+}
+
+impl Default for LogStatsByComponent {
+    fn default() -> Self {
+        Self::new(
+            zx::Duration::from_hours(COMPONENT_STATS_GC_INTERVAL_HOURS),
+            inspect::Node::default(),
+        )
     }
 }
 
@@ -173,6 +225,7 @@ impl GranularLogStatsBucket {
 
 #[derive(Inspect, Default)]
 pub struct ComponentLogStats {
+    last_log_monotonic_nanos: inspect::IntProperty,
     total_logs: inspect::UintProperty,
     trace_logs: inspect::UintProperty,
     debug_logs: inspect::UintProperty,
@@ -180,11 +233,13 @@ pub struct ComponentLogStats {
     warning_logs: inspect::UintProperty,
     error_logs: inspect::UintProperty,
     fatal_logs: inspect::UintProperty,
+
     inspect_node: inspect::Node,
 }
 
 impl ComponentLogStats {
     pub fn record_log(&self, msg: &Message) {
+        self.last_log_monotonic_nanos.set(fasync::Time::now().into_nanos());
         self.total_logs.add(1);
         match msg.metadata.severity {
             Severity::Trace => self.trace_logs.add(1),
@@ -232,7 +287,7 @@ impl LogManagerStats {
     pub async fn get_component_log_stats(
         &self,
         identity: &SourceIdentity,
-    ) -> Arc<Mutex<ComponentLogStats>> {
+    ) -> Arc<ComponentLogStats> {
         self.by_component.get_component_log_stats(identity).await
     }
 
@@ -259,29 +314,34 @@ pub(super) enum LogSource {
 mod tests {
     use {
         super::*, crate::logs::message::*, fuchsia_async as fasync, fuchsia_inspect::testing::*,
-        fuchsia_inspect::*, fuchsia_zircon as zx, proptest::prelude::*, std::panic,
+        fuchsia_inspect::*, fuchsia_zircon as zx, futures::Future, proptest::prelude::*,
+        std::panic,
     };
 
-    struct TestState {
+    struct GranularTestState {
         exec: fasync::Executor,
         granular_stats: GranularLogStats,
         inspector: Inspector,
     }
 
-    impl TestState {
-        fn new() -> Result<TestState, anyhow::Error> {
+    impl GranularTestState {
+        fn new() -> Result<GranularTestState, anyhow::Error> {
             let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
             exec.set_fake_time(fasync::Time::from_nanos(0));
             let inspector = Inspector::new();
             let mut granular_stats = GranularLogStats::default();
             granular_stats.iattach(inspector.root(), "granular_stats")?;
-            Ok(TestState { exec: exec, granular_stats: granular_stats, inspector: inspector })
+            Ok(GranularTestState {
+                exec: exec,
+                granular_stats: granular_stats,
+                inspector: inspector,
+            })
         }
     }
 
     #[test]
     fn granular_stats() -> Result<(), anyhow::Error> {
-        let mut state = TestState::new()?;
+        let mut state = GranularTestState::new()?;
 
         let msg1 = create_message("[path/to/file.cpp(123)] Hello");
         let msg2 = create_message("[another_file.h(1)]");
@@ -469,7 +529,7 @@ mod tests {
 
     #[test]
     fn different_severities() -> Result<(), anyhow::Error> {
-        let mut state = TestState::new()?;
+        let mut state = GranularTestState::new()?;
 
         let fatal_msg =
             create_message_with_severity("[path/to/file.cpp(121)] Hello", Severity::Fatal);
@@ -606,7 +666,7 @@ mod tests {
 
     #[test]
     fn too_many_logs() -> Result<(), anyhow::Error> {
-        let mut state = TestState::new()?;
+        let mut state = GranularTestState::new()?;
 
         for i in 1..MAX_RECORDS_PER_BUCKET + 2 {
             let msg_str = format!("[path/to/file.cpp({})] Hello", i);
@@ -683,6 +743,193 @@ mod tests {
         Ok(())
     }
 
+    struct ComponentTestState {
+        executor: fasync::Executor,
+        max_run_until_stalled_iterations: u32,
+    }
+
+    impl ComponentTestState {
+        fn new(max_run_until_stalled_iterations: u32) -> Result<ComponentTestState, anyhow::Error> {
+            let executor = fasync::Executor::new_with_fake_time().expect("executor should build");
+            executor.set_fake_time(fasync::Time::from_nanos(0));
+            Ok(ComponentTestState { executor, max_run_until_stalled_iterations })
+        }
+
+        fn set_time(&mut self, time: i64) {
+            self.executor.set_fake_time(fasync::Time::from_nanos(time));
+        }
+
+        fn run<F>(&mut self, fut: &mut F)
+        where
+            F: Future + Unpin,
+        {
+            assert!(self.executor.run_until_stalled(fut).is_ready());
+        }
+
+        fn run_timers(&mut self) {
+            assert!(self.executor.wake_expired_timers());
+            self.sync();
+        }
+
+        fn sync(&mut self) {
+            let mut i = 0;
+            while self.executor.is_waiting() == fasync::WaitState::Ready {
+                assert!(self.executor.run_until_stalled(&mut Box::pin(async {})).is_ready());
+                i += 1;
+                assert!(i < self.max_run_until_stalled_iterations);
+            }
+        }
+
+        fn set_time_and_run_timers(&mut self, time: i64) {
+            self.set_time(time);
+            self.run_timers();
+        }
+
+        fn assert_no_timers(&mut self) {
+            assert_eq!(None, self.executor.wake_next_timer());
+        }
+
+        fn assert_next_timer_at(&mut self, time: i64) {
+            assert_eq!(
+                fasync::WaitState::Waiting(fasync::Time::from_nanos(time)),
+                self.executor.is_waiting()
+            );
+        }
+    }
+
+    #[test]
+    fn component_stats_retained_then_dropped() -> Result<(), anyhow::Error> {
+        // Setup clean state with predictable executor.
+        let mut state = ComponentTestState::new(1000)?;
+        state.assert_no_timers();
+
+        let inspector = Inspector::new();
+        let mut component_stats = LogStatsByComponent::default();
+        component_stats.iattach(inspector.root(), "component_stats")?;
+        let component_a = source_id_with_url("a");
+        let gc_interval_nanos =
+            zx::Duration::from_hours(COMPONENT_STATS_GC_INTERVAL_HOURS).into_nanos();
+
+        // Allow GC task to spin unp, then assert first GC timer set.
+        state.sync();
+        state.assert_next_timer_at(gc_interval_nanos);
+
+        println!("About to run 1st access");
+
+        // 1st access: stats lazily created.
+        state.run(&mut Box::pin(async {
+            println!("Started 1st access");
+            let component_stats = component_stats.get_component_log_stats(&component_a).await;
+            println!("Component stats unlocked");
+            let msg = create_message_with_severity("[path/to/file.cpp(123)] Hello", Severity::Info);
+            component_stats.record_log(&msg);
+            println!("Log recorded");
+            // Do not retain Arc; it should be kept alive by the timeout mechanism.
+            drop(component_stats);
+            println!("Component stats Arc dropped");
+        }));
+        assert_inspect_tree!(inspector,
+            root: {
+                component_stats: {
+                    a: {
+                        "last_log_monotonic_nanos": 0i64,
+                        "total_logs": 1u64,
+                        "trace_logs": 0u64,
+                        "debug_logs": 0u64,
+                        "info_logs": 1u64,
+                        "warning_logs": 0u64,
+                        "error_logs": 0u64,
+                        "fatal_logs": 0u64,
+                    }
+                }
+            }
+        );
+
+        // Advance to t=timeout: timer should fire, marking stats for GC, but not deleting them.
+        state.set_time_and_run_timers(gc_interval_nanos);
+        state.assert_next_timer_at(2 * gc_interval_nanos);
+
+        // 2nd access: stats un-marked for GC.
+        state.run(&mut Box::pin(async {
+            let component_stats = component_stats.get_component_log_stats(&component_a).await;
+            let msg = create_message_with_severity("[path/to/file.cpp(123)] Hello", Severity::Info);
+            component_stats.record_log(&msg);
+            // Do not retain Arc; it should be kept alive by the timeout mechanism.
+            drop(component_stats);
+        }));
+
+        // Advance to t=2*timeout: timer should fire, marking stats (again) for GC.
+        state.set_time_and_run_timers(2 * gc_interval_nanos);
+        state.assert_next_timer_at(3 * gc_interval_nanos);
+
+        // Access from another component, "b". Should not be GC'd in the next cycle (but rather,
+        // the following) cycle.
+        let component_b = source_id_with_url("b");
+        state.run(&mut Box::pin(async {
+            let component_stats = component_stats.get_component_log_stats(&component_b).await;
+            let msg =
+                create_message_with_severity("[some/other/file.rs(456)] Goodbye", Severity::Info);
+            component_stats.record_log(&msg);
+            // Do not retain Arc; it should be kept alive by the timeout mechanism.
+            drop(component_stats);
+        }));
+
+        // Both logs are in stats; freshness matches time of last recorded log.
+        assert_inspect_tree!(inspector,
+            root: {
+                component_stats: {
+                    a: {
+                        "last_log_monotonic_nanos": gc_interval_nanos,
+                        "total_logs": 2u64,
+                        "trace_logs": 0u64,
+                        "debug_logs": 0u64,
+                        "info_logs": 2u64,
+                        "warning_logs": 0u64,
+                        "error_logs": 0u64,
+                        "fatal_logs": 0u64,
+                    },
+                    b: {
+                        "last_log_monotonic_nanos": 2 * gc_interval_nanos,
+                        "total_logs": 1u64,
+                        "trace_logs": 0u64,
+                        "debug_logs": 0u64,
+                        "info_logs": 1u64,
+                        "warning_logs": 0u64,
+                        "error_logs": 0u64,
+                        "fatal_logs": 0u64,
+                    }
+                }
+            }
+        );
+
+        // Advance to t=3*timeout: timer should fire, deleting "a" stats as garbage.
+        state.set_time_and_run_timers(3 * gc_interval_nanos);
+        state.assert_next_timer_at(4 * gc_interval_nanos);
+        assert_inspect_tree!(inspector, root: {
+            "component_stats": {
+                b: {
+                    "last_log_monotonic_nanos": 2 * gc_interval_nanos,
+                    "total_logs": 1u64,
+                    "trace_logs": 0u64,
+                    "debug_logs": 0u64,
+                    "info_logs": 1u64,
+                    "warning_logs": 0u64,
+                    "error_logs": 0u64,
+                    "fatal_logs": 0u64,
+                }
+            }
+        });
+
+        // Advance to t=4*timeout: timer should fire, deleting "b" stats as garbage.
+        state.set_time_and_run_timers(4 * gc_interval_nanos);
+        state.assert_next_timer_at(5 * gc_interval_nanos);
+        assert_inspect_tree!(inspector, root: {
+            "component_stats": {}
+        });
+
+        Ok(())
+    }
+
     proptest! {
         #[test]
         fn random_string(string in r"\p{Any}*") {
@@ -717,7 +964,7 @@ mod tests {
     }
 
     fn verify_message_ignored(msg_str: &str) -> Result<(), anyhow::Error> {
-        let mut state = TestState::new()?;
+        let mut state = GranularTestState::new()?;
         let msg = create_message(msg_str);
         state.granular_stats.record_log(&msg);
         let tree_assertion = tree_assertion!(
@@ -736,7 +983,7 @@ mod tests {
     }
 
     fn verify_file_and_line(msg_str: &str, file: &str, line: u64) -> Result<(), anyhow::Error> {
-        let mut state = TestState::new()?;
+        let mut state = GranularTestState::new()?;
         let msg = create_message(msg_str);
         state.granular_stats.record_log(&msg);
         let tree_assertion = tree_assertion!(
@@ -756,6 +1003,15 @@ mod tests {
         match tree_assertion.run(state.inspector.get_node_hierarchy().as_ref()) {
             Ok(()) => Ok(()),
             Err(e) => Err(format_err!("Parsing failed for message: {} \n {}", msg_str, e)),
+        }
+    }
+
+    fn source_id_with_url(component_url: &str) -> SourceIdentity {
+        SourceIdentity {
+            realm_path: None,
+            component_url: Some(component_url.to_string()),
+            component_name: None,
+            instance_id: None,
         }
     }
 }
