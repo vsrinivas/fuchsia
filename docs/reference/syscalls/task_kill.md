@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Kill the provided task (job, process, or thread).
+Kill the provided task (job or process).
 
 ## SYNOPSIS
 
@@ -18,8 +18,9 @@ zx_status_t zx_task_kill(zx_handle_t handle);
 
 ## DESCRIPTION
 
-This asynchronously kills the given process, thread or job and its children
-recursively, until the entire task tree rooted at *handle* is dead.
+This asynchronously kills the given process or job and its children recursively,
+until the entire task tree rooted at *handle* is dead.
+Killing a thread is not supported.
 
 It is possible to wait for the task to be dead via the **ZX_TASK_TERMINATED**
 signal. When the procedure completes, as observed by the signal, the task and
@@ -44,7 +45,7 @@ Processes and Jobs can also be killed by other agents such as the Job policy wit
 
 ## RETURN VALUE
 
-On success, `zx_task_kill()` returns **ZX_OK**. If a process or thread uses
+On success, `zx_task_kill()` returns **ZX_OK**. If a process uses
 this syscall to kill itself, this syscall does not return.
 
 ## ERRORS
