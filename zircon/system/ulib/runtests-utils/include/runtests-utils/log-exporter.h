@@ -5,20 +5,21 @@
 // Code for listening to logger service and dumping the logs.
 // This implements LogListener interface for logger fidl @ //zircon/system/fidl/fuchsia-logger.
 
-#ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
-#define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
+#ifndef RUNTESTS_UTILS_LOG_EXPORTER_H_
+#define RUNTESTS_UTILS_LOG_EXPORTER_H_
 
-#include <memory>
-
-#include <fbl/function.h>
-#include <fbl/string.h>
-#include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
+
+#include <memory>
+
+#include <fbl/function.h>
+#include <fbl/string.h>
+#include <fbl/vector.h>
 
 // TODO(fxbug.dev/7519): Remove this once fixed.
 typedef zx_handle_t fuchsia_logger_LogListener;
@@ -140,4 +141,4 @@ std::unique_ptr<LogExporter> LaunchLogExporter(fbl::StringPiece syslog_path,
 
 }  // namespace runtests
 
-#endif  // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
+#endif  // RUNTESTS_UTILS_LOG_EXPORTER_H_

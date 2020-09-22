@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/service.h>
-
 #include <fuchsia/io/llcpp/fidl.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
 
+#include <fs/service.h>
 #include <fs/vfs_types.h>
 
 namespace fio = ::llcpp::fuchsia::io;

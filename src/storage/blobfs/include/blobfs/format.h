@@ -105,7 +105,7 @@ struct __PACKED Superblock {
   // NOTE: prior to https://fuchsia-review.googlesource.com/c/fuchsia/+/404619, |reserved2| was
   // explicitly required to be zero. This field may be used for other purposes, but doing so is a
   // backwards-incompatible change.
-  uint64_t reserved2;            // Unused.
+  uint64_t reserved2;  // Unused.
 
   // The following fields are only valid with (flags & kBlobFlagFVM):
   uint64_t slice_size;      // Underlying slice size.

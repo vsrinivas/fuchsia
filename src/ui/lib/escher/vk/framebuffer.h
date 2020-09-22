@@ -5,10 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_FRAMEBUFFER_H_
 #define SRC_UI_LIB_ESCHER_VK_FRAMEBUFFER_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 

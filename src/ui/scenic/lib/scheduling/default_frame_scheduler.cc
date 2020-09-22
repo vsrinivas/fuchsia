@@ -222,7 +222,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     return;
   }
 
-  // TODO(fxbug.dev/24531) Remove the render_pending_ check, and pipeline frames within a VSYNC interval.
+  // TODO(fxbug.dev/24531) Remove the render_pending_ check, and pipeline frames within a VSYNC
+  // interval.
   if (currently_rendering_) {
     render_pending_ = true;
     return;

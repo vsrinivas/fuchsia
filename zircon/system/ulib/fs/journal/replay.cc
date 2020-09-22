@@ -208,8 +208,8 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
 
   // Initialize and read the journal superblock and journal buffer.
   auto journal_superblock_buffer = std::make_unique<storage::VmoBuffer>();
-  zx_status_t status = journal_superblock_buffer->Initialize(
-      registry, kJournalMetadataBlocks, block_size, "journal-superblock");
+  zx_status_t status = journal_superblock_buffer->Initialize(registry, kJournalMetadataBlocks,
+                                                             block_size, "journal-superblock");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot initialize journal info block: %d\n", status);
     return status;
@@ -217,8 +217,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   // Initialize and read the journal itself.
   FS_TRACE_INFO("replay: Initializing journal buffer (%zu blocks)\n", journal_entry_blocks);
   storage::VmoBuffer journal_buffer;
-  status = journal_buffer.Initialize(registry, journal_entry_blocks,
-                                     block_size, "journal-buffer");
+  status = journal_buffer.Initialize(registry, journal_entry_blocks, block_size, "journal-buffer");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot initialize journal buffer: %d\n", status);
     return status;
@@ -227,16 +226,16 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   FS_TRACE_DEBUG("replay: Reading from storage\n");
   fs::BufferedOperationsBuilder builder;
   builder
-      .Add(storage::Operation{
-              .type = storage::OperationType::kRead,
-              .vmo_offset = 0,
-              .dev_offset = journal_start,
-              .length = kJournalMetadataBlocks}, journal_superblock_buffer.get())
-      .Add(storage::Operation{
-              .type = storage::OperationType::kRead,
-              .vmo_offset = 0,
-              .dev_offset = journal_entry_start,
-              .length = journal_entry_blocks}, &journal_buffer);
+      .Add(storage::Operation{.type = storage::OperationType::kRead,
+                              .vmo_offset = 0,
+                              .dev_offset = journal_start,
+                              .length = kJournalMetadataBlocks},
+           journal_superblock_buffer.get())
+      .Add(storage::Operation{.type = storage::OperationType::kRead,
+                              .vmo_offset = 0,
+                              .dev_offset = journal_entry_start,
+                              .length = journal_entry_blocks},
+           &journal_buffer);
   status = transaction_handler->RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot load journal: %d\n", status);

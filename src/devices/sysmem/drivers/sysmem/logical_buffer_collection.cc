@@ -726,9 +726,10 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
       // case the initiator might want to continue using the BufferCollection without the
       // participant.
       //
-      // TODO(fxbug.dev/33670): Provide a way to mark a BufferCollection view as expendable without implying
-      // that the channel is closing, so that the client can still detect when the BufferCollection
-      // VMOs need to be closed based on BufferCollection channel closure by sysmem.
+      // TODO(fxbug.dev/33670): Provide a way to mark a BufferCollection view as expendable without
+      // implying that the channel is closing, so that the client can still detect when the
+      // BufferCollection VMOs need to be closed based on BufferCollection channel closure by
+      // sysmem.
       //
       // In rare cases, an initiator might choose to use Close() to avoid this failure, but more
       // typically initiators will just close their BufferCollection view without Close() first, and

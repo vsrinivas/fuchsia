@@ -56,9 +56,7 @@ kernel_cmdline_args += [
 #
 # TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
 # universe like the tests.
-cache_package_labels += [
-  "//src/tests/end_to_end/bundles:end_to_end_deps",
-]
+cache_package_labels += [ "//src/tests/end_to_end/bundles:end_to_end_deps" ]
 
 cache_package_labels -=
     [ "//src/tests/end_to_end/bundles:terminal_end_to_end_deps" ]

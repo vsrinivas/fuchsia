@@ -4,12 +4,13 @@
 
 #include "wlantap-mac.h"
 
+#include <fuchsia/wlan/device/cpp/fidl.h>
+
 #include <mutex>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddktl/protocol/wlan/mac.h>
-#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/channel.h>
 
 #include "utils.h"
@@ -204,9 +205,7 @@ struct WlantapMacImpl : WlantapMac {
     device_unbind_reply(device_);
   }
 
-  virtual void RemoveDevice() override {
-    device_async_remove(device_);
-  }
+  virtual void RemoveDevice() override { device_async_remove(device_); }
 
   zx_device_t* device_ = nullptr;
   uint16_t id_;

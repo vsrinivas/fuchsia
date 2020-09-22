@@ -178,8 +178,8 @@ IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec) {
   pos[6] = vec3(1, 0, 1);
   pos[7] = vec3(0, 0, 1);
 
-  // TODO(fxbug.dev/7307): Add separate box mesh type with split verts and proper uv coords. Since this
-  // box is currently only being used for wireframe rendering, it doesn't need texcoords.
+  // TODO(fxbug.dev/7307): Add separate box mesh type with split verts and proper uv coords. Since
+  // this box is currently only being used for wireframe rendering, it doesn't need texcoords.
   for (size_t t = 0; t < vertex_count; t++) {
     uv[t] = vec2(0.f, 0.f);
   }

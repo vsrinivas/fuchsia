@@ -115,7 +115,8 @@ zx_status_t Nelson::SpiInit() {
   gpio_impl_.ConfigIn(S905D2_GPIOH(7), GPIO_PULL_DOWN);  // SCLK
   gpio_impl_.SetAltFunction(S905D2_GPIOH(7), 3);         // SCLK
 
-  // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the dividers
+  // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the
+  // dividers
   {
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());

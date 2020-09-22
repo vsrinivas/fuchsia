@@ -18,8 +18,8 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
     : Resource(resource_recycler), is_immutable_(false) {
   auto device = resource_recycler->vulkan_context().device;
 
-  // TODO(fxbug.dev/24595): eG8B8R82Plane420Unorm/eG8B8G8R8422Unorm is not enough to assume NV12, but
-  // they're currently the only formats we support at the sampler level.
+  // TODO(fxbug.dev/24595): eG8B8R82Plane420Unorm/eG8B8G8R8422Unorm is not enough to assume NV12,
+  // but they're currently the only formats we support at the sampler level.
   if (image_utils::IsYuvFormat(format)) {
     FX_DCHECK(resource_recycler->caps().allow_ycbcr);
 

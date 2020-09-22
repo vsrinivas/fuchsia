@@ -53,9 +53,9 @@ class View final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // TODO(fxbug.dev/24687):  The caller must ensure that |error_reporter| and |event_reporter| outlive the
-  // constructed |View|.  Currently, these both have the same lifetime as |session|; this invariant
-  // must be maintained.  However, it would be better to pass strong pointers.
+  // TODO(fxbug.dev/24687):  The caller must ensure that |error_reporter| and |event_reporter|
+  // outlive the constructed |View|.  Currently, these both have the same lifetime as |session|;
+  // this invariant must be maintained.  However, it would be better to pass strong pointers.
   View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl control_ref,
        fuchsia::ui::views::ViewRef view_ref, std::string debug_name,
        std::shared_ptr<ErrorReporter> error_reporter,

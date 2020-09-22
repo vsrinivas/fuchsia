@@ -24,8 +24,8 @@ class CompositeDeviceTest : public IntegrationTest {
  protected:
   // Create the fragments for the well-known composite that the mock sysdev creates.
   Promise<void> CreateFragmentDevices(std::unique_ptr<RootMockDevice>* root_device,
-                                       std::unique_ptr<MockDevice>* child1_device,
-                                       std::unique_ptr<MockDevice>* child2_device) {
+                                      std::unique_ptr<MockDevice>* child1_device,
+                                      std::unique_ptr<MockDevice>* child2_device) {
     fit::bridge<void, Error> child1_bridge;
     fit::bridge<void, Error> child2_bridge;
     return ExpectBind(root_device,

@@ -110,10 +110,9 @@ std::optional<std::string> VulkanInstance::GetValidationLayerName() {
   const std::string kDeprecatedLayerName = "VK_LAYER_LUNARG_standard_validation";
   const std::string kNewLayerName = "VK_LAYER_KHRONOS_validation";
 
-  return ValidateLayers({kNewLayerName})
-             ? std::make_optional(kNewLayerName)
-             : ValidateLayers({kDeprecatedLayerName}) ? std::make_optional(kDeprecatedLayerName)
-                                                      : std::nullopt;
+  return ValidateLayers({kNewLayerName})          ? std::make_optional(kNewLayerName)
+         : ValidateLayers({kDeprecatedLayerName}) ? std::make_optional(kDeprecatedLayerName)
+                                                  : std::nullopt;
 }
 
 bool VulkanInstance::ValidateLayers(const std::set<std::string> &required_layer_names) {

@@ -6,14 +6,13 @@
 // The API for initializing the trace provider for a process.
 //
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_PROVIDER_PROVIDER_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_PROVIDER_PROVIDER_H_
+#ifndef LIB_TRACE_PROVIDER_PROVIDER_H_
+#define LIB_TRACE_PROVIDER_PROVIDER_H_
 
 #include <assert.h>
+#include <lib/async/dispatcher.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <lib/async/dispatcher.h>
 
 __BEGIN_CDECLS
 
@@ -216,4 +215,4 @@ class TraceProviderWithFdio : public TraceProvider {
 
 #endif  // __cplusplus
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_PROVIDER_PROVIDER_H_
+#endif  // LIB_TRACE_PROVIDER_PROVIDER_H_

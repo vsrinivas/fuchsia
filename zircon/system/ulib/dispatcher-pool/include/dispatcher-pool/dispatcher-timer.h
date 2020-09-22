@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DISPATCHER_POOL_DISPATCHER_TIMER_H_
+#define DISPATCHER_POOL_DISPATCHER_TIMER_H_
 
-#include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <dispatcher-pool/dispatcher-event-source.h>
+#include <fbl/ref_ptr.h>
 
 namespace dispatcher {
 
@@ -95,3 +96,5 @@ class Timer : public EventSource {
 };
 
 }  // namespace dispatcher
+
+#endif  // DISPATCHER_POOL_DISPATCHER_TIMER_H_

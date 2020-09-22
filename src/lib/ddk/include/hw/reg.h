@@ -54,8 +54,8 @@ static inline uint64_t readll(const volatile void* a) {
 }
 
 #else
-// TODO(fxbug.dev/12611): Similar to arm64 above, the Fuchsia hypervisor's instruction decoder does not
-// support MMIO access via load/store instructions that use writeback, which the compiler may
+// TODO(fxbug.dev/12611): Similar to arm64 above, the Fuchsia hypervisor's instruction decoder does
+// not support MMIO access via load/store instructions that use writeback, which the compiler may
 // generate. Until support is implemented, we use inline assembly definitions here to ensure that
 // only the non-writeback move instructions are used.
 

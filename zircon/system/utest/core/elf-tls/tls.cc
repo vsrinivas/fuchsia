@@ -8,8 +8,8 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <vector>
 #include <limits>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 

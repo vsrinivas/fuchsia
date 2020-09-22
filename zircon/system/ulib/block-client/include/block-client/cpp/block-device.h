@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
+#define BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -48,3 +49,5 @@ class BlockDevice : public storage::VmoidRegistry {
 };
 
 }  // namespace block_client
+
+#endif  // BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_

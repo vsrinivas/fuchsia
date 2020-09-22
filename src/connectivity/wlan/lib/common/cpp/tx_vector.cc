@@ -139,7 +139,8 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_INFO_PHY_TYPE_HT: {
       uint8_t group_idx = (idx - kHtStartIdx) / kHtNumMcs;
       wlan_gi_t gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI__400NS : WLAN_GI__800NS);
-      wlan_channel_bandwidth_t cbw = (group_idx % kHtNumCbw == 0 ? WLAN_CHANNEL_BANDWIDTH__20 : WLAN_CHANNEL_BANDWIDTH__40);
+      wlan_channel_bandwidth_t cbw =
+          (group_idx % kHtNumCbw == 0 ? WLAN_CHANNEL_BANDWIDTH__20 : WLAN_CHANNEL_BANDWIDTH__40);
       uint8_t mcs_idx = (idx - kHtStartIdx) % kHtNumMcs;
 
       *tx_vec = TxVector{

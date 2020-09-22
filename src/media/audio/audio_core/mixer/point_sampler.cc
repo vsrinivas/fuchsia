@@ -557,7 +557,8 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
   TRACE_DURATION("audio", "PointSampler::Select");
 
   // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
-  // TODO(fxbug.dev/13361): eliminate the NxN mixers, replacing with flexible rechannelization (see below).
+  // TODO(fxbug.dev/13361): eliminate the NxN mixers, replacing with flexible rechannelization (see
+  // below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
     return SelectNxNPSM(src_format);
   }
@@ -580,7 +581,8 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
       // Audio formats do not include info needed to filter frequencies or locate channels in 3D
       // space.
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
-      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
+      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo
+      // woofer+tweeter).
       return SelectPSM<4>(src_format, dest_format);
     default:
       return nullptr;

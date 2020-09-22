@@ -716,7 +716,8 @@ std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamTy
       // Audio formats do not include info needed to filter frequencies or locate channels in 3D
       // space.
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
-      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
+      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo
+      // woofer+tweeter).
       return SelectLSM<4>(src_format, dest_format);
     default:
       return nullptr;

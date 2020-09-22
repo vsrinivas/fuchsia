@@ -531,8 +531,9 @@ zx_status_t AudioDriverV1::ProcessStreamChannelMessage() {
       } else {
         plug_state = ((msg.pd_resp.flags & AUDIO_PDNF_PLUGGED) != 0);
         if ((msg.pd_resp.flags & AUDIO_PDNF_CAN_NOTIFY) == 0) {
-          // TODO(fxbug.dev/13669): If we encounter hardware which must be polled for plug detection, set
-          // a timer to periodically check this; don't just assume that output is always plugged in.
+          // TODO(fxbug.dev/13669): If we encounter hardware which must be polled for plug
+          // detection, set a timer to periodically check this; don't just assume that output is
+          // always plugged in.
           FX_LOGS(WARNING) << "Stream is incapable of async plug detection notifications. Assuming "
                               "that the stream is always plugged in for now.";
           plug_state = true;
@@ -748,7 +749,8 @@ zx_status_t AudioDriverV1::ProcessSetFormatResponse(const audio_stream_cmd_set_f
     return resp.result;
   }
 
-  // TODO(fxbug.dev/13347): Update AudioCapturers and outputs to incorporate external delay when resampling.
+  // TODO(fxbug.dev/13347): Update AudioCapturers and outputs to incorporate external delay when
+  // resampling.
   external_delay_ = zx::nsec(resp.external_delay_nsec);
 
   // Setup async wait on channel.

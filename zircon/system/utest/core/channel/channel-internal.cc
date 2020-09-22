@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <thread>
-
-#include <fbl/auto_call.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
-#include <mini-process/mini-process.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
+
+#include <thread>
+
+#include <fbl/auto_call.h>
+#include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

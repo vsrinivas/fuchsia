@@ -7,6 +7,7 @@
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/vmo.h>
+
 #include <virtio/gpu.h>
 
 #include "src/virtualization/bin/vmm/device/gpu.h"

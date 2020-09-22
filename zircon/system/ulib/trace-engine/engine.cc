@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <stdio.h>
-#include <string.h>
-#include <utility>
-#include <vector>
-
-#include <zircon/assert.h>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/trace-engine/handler.h>
 #include <lib/trace-engine/instrumentation.h>
 #include <lib/zx/event.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/assert.h>
+
+#include <atomic>
+#include <utility>
+#include <vector>
 
 #include "context_impl.h"
 

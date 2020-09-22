@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_DEPRECATED_FS_FIDL_HANDLER_FIDL_HANDLER_H_
+#define SRC_STORAGE_DEPRECATED_FS_FIDL_HANDLER_FIDL_HANDLER_H_
 
 #include <lib/fdio/limits.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/fidl.h>
+#include <zircon/types.h>
 
 #include <type_traits>
 
 #include <fbl/function.h>
-#include <zircon/compiler.h>
-#include <zircon/fidl.h>
-#include <zircon/types.h>
 
 // Fuchsia-io limits.
 //
@@ -107,3 +108,5 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch);
 zx_status_t CloseMessage(FidlDispatchFunction dispatch);
 
 }  // namespace fs
+
+#endif  // SRC_STORAGE_DEPRECATED_FS_FIDL_HANDLER_FIDL_HANDLER_H_

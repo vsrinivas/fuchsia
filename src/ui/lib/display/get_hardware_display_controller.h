@@ -10,8 +10,8 @@
 
 namespace ui_display {
 
-// TODO(fxbug.dev/33675): 'display-controller.fidl' requires the client to keep |dc_device| open; it is
-// otherwise unused.  Eventually, only |controller| will be required.
+// TODO(fxbug.dev/33675): 'display-controller.fidl' requires the client to keep |dc_device| open; it
+// is otherwise unused.  Eventually, only |controller| will be required.
 struct DisplayControllerHandles {
   fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller;
   zx::channel dc_device;

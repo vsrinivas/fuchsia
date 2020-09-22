@@ -113,8 +113,8 @@ class BlobfsMetrics {
   // we add more data in the future.
   // WARNING: When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
   // TODO(59043): Inspect should print warnings about overflowing the maximum size of a VMO.
-  inspect::Inspector inspector_ = inspect::Inspector(
-      inspect::InspectSettings{.maximum_size = 65536});
+  inspect::Inspector inspector_ =
+      inspect::Inspector(inspect::InspectSettings{.maximum_size = 65536});
   inspect::Node& root_ = inspector_.GetRoot();
 
   // ALLOCATION STATS

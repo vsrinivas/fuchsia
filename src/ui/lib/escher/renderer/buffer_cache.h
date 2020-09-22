@@ -8,7 +8,6 @@
 #include <chrono>
 #include <list>
 #include <map>
-#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/escher.h"
@@ -16,6 +15,8 @@
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 

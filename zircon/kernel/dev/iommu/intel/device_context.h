@@ -63,6 +63,7 @@ class DeviceContext : public fbl::DoublyLinkedListable<ktl::unique_ptr<DeviceCon
   // Removes all mappings from the device context. This is only intended to be done just prior to
   // destruction as we need to perform unmapping whilst holding the parent lock.
   void SecondLevelUnmapAllLocked();
+
  private:
   DeviceContext(ds::Bdf bdf, uint32_t domain_id, IommuImpl* parent,
                 volatile ds::ExtendedContextEntry* context_entry);

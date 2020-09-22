@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/assert.h>
+
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
-#include <zircon/assert.h>
 
 bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs) {
   // TODO(porce): Support 802.11ac Wave2 by lhs.secondary80 == rhs.secondary80

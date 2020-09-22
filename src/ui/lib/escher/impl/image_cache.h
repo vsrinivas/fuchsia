@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_ESCHER_IMPL_IMAGE_CACHE_H_
 
 #include <queue>
-#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -16,6 +15,8 @@
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace impl {

@@ -48,8 +48,8 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // TODO(fxbug.dev/24687): this blocks the removal of Session* from resource.
   EventReporter* event_reporter() const;
 
-  // TODO(fxbug.dev/24687): this blocks the removal of Session* from resource.  Should we stash one of
-  // these in the resource?  Only for some resources?
+  // TODO(fxbug.dev/24687): this blocks the removal of Session* from resource.  Should we stash one
+  // of these in the resource?  Only for some resources?
   const ResourceContext& resource_context() const;
 
   // The diagnostic label.

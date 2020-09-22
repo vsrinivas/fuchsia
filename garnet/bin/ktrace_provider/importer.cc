@@ -1082,12 +1082,12 @@ bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_
 }
 
 bool Importer::HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
-                             uint32_t group, bool cpu_trace, trace_flow_id_t flow_id) {
+                              uint32_t group, bool cpu_trace, trace_flow_id_t flow_id) {
   trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_flow_step_event_record(context_, event_time, &thread_ref, &category_ref,
-                                            &name_ref, flow_id, nullptr, 0u);
+                                             &name_ref, flow_id, nullptr, 0u);
 
   return true;
 }

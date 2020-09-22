@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef UNITTEST_UNITTEST_H_
+#define UNITTEST_UNITTEST_H_
 
 /*
  * The Unittest API.
@@ -67,7 +68,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <zircon/compiler.h>
 
 #ifdef __Fuchsia__
@@ -357,14 +357,14 @@ void unittest_cancel_timeout(void);
 #define AUTO_TYPE_VAR(type) __typeof__(type)
 #endif
 
-#define RET_FALSE             \
-  do {                        \
-    unittest_fails();         \
-    return false;             \
+#define RET_FALSE     \
+  do {                \
+    unittest_fails(); \
+    return false;     \
   } while (0)
-#define DONOT_RET             \
-  do {                        \
-    unittest_fails();         \
+#define DONOT_RET     \
+  do {                \
+    unittest_fails(); \
   } while (0)
 
 #define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)                                     \
@@ -672,3 +672,5 @@ death_test_result_t unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
 #endif  // UNITTEST_DEATH_TEST_SUPPORTED
 
 __END_CDECLS
+
+#endif  // UNITTEST_UNITTEST_H_

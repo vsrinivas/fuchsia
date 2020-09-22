@@ -205,17 +205,18 @@ template("sdk_shared_library") {
   lib_name = "lib$output_name.so"
   link_lib = "$prebuilt_base/lib/$lib_name"
   dist_lib = "$prebuilt_base/dist/$lib_name"
-  sdk_files = sdk_header_files + [
-                {
-                  # TODO(fxbug.dev/2875): put ABI stubs under lib/, not the full thing.
-                  source = "$shared_out_dir/$lib_name"
-                  dest = link_lib
-                },
-                {
-                  source = "$shared_out_dir/$lib_name"
-                  dest = dist_lib
-                },
-              ]
+  sdk_files =
+      sdk_header_files + [
+        {
+          # TODO(fxbug.dev/2875): put ABI stubs under lib/, not the full thing.
+          source = "$shared_out_dir/$lib_name"
+          dest = link_lib
+        },
+        {
+          source = "$shared_out_dir/$lib_name"
+          dest = dist_lib
+        },
+      ]
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
   debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"

@@ -5,15 +5,13 @@
 #include "session.h"
 
 #include <inttypes.h>
-#include <stdio.h>
-
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-
 #include <lib/async/cpp/task.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/vmar.h>
+#include <stdio.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <utility>
 

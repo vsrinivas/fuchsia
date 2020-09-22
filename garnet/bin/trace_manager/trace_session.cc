@@ -216,8 +216,8 @@ void TraceSession::CheckAllProvidersStarted() {
       std::accumulate(tracees_.begin(), tracees_.end(), true, [](bool value, const auto& tracee) {
         bool ready = (tracee->state() == Tracee::State::kStarted ||
                       // If a provider fails to start continue tracing.
-                      // TODO(fxbug.dev/22873): We should still record what providers failed to start
-                      // (but is that done in timeout handling?).
+                      // TODO(fxbug.dev/22873): We should still record what providers failed to
+                      // start (but is that done in timeout handling?).
                       tracee->state() == Tracee::State::kStopped);
         FX_VLOGS(5) << "tracee " << *tracee->bundle() << (ready ? "" : " not") << " ready";
         return value && ready;

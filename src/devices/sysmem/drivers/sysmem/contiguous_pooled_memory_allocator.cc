@@ -144,10 +144,10 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
   if (info.cache_policy != desired_cache_policy) {
     status = local_contiguous_vmo.set_cache_policy(desired_cache_policy);
     if (status != ZX_OK) {
-      // TODO(fxbug.dev/34580): Ideally we'd set ZX_CACHE_POLICY_UNCACHED when !is_cpu_accessible_, since
-      // IIUC on aarch64 it's possible for a cached mapping to secure/protected memory + speculative
-      // execution to cause random faults, while an uncached mapping only faults if the uncached
-      // mapping is actually touched.  However, currently for a VMO created with
+      // TODO(fxbug.dev/34580): Ideally we'd set ZX_CACHE_POLICY_UNCACHED when !is_cpu_accessible_,
+      // since IIUC on aarch64 it's possible for a cached mapping to secure/protected memory +
+      // speculative execution to cause random faults, while an uncached mapping only faults if the
+      // uncached mapping is actually touched.  However, currently for a VMO created with
       // zx::vmo::create_contiguous(), the .set_cache_policy() doesn't work because the VMO already
       // has pages.  Cases where !is_cpu_accessible_ include both Init() and InitPhysical(), so we
       // can't rely on local_contiguous_vmo being a physical VMO.

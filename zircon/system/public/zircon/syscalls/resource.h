@@ -6,7 +6,6 @@
 #define SYSROOT_ZIRCON_SYSCALLS_RESOURCE_H_
 
 #include <stdint.h>
-
 #include <zircon/compiler.h>
 
 // Resources that require a region allocator to handle exclusive reservations

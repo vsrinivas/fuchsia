@@ -691,8 +691,8 @@ template("library") {
     targets = true
     source_set("${_library_name}._sources") {
       visibility = [
-        ":${_library_name}.static",
         ":${_library_name}.shared",
+        ":${_library_name}.static",
       ]
       forward_variables_from(invoker,
                              "*",
@@ -884,9 +884,9 @@ template("library") {
       visibility += [ ":$_library_name" ]
       if (!is_kernel) {
         visibility += [
+          ":${_library_name}.shared",
           ":${_library_name}.sources",
           ":${_library_name}.static",
-          ":${_library_name}.shared",
         ]
       }
     }
