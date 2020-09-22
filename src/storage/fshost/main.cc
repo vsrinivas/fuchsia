@@ -74,7 +74,7 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
     return ZX_OK;
   }
 
-  zx::vmo ramdisk_vmo = std::move(*static_cast<zx::vmo*>(cookie));
+  zx::vmo ramdisk_vmo(static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(cookie)));
 
   zbi_header_t header;
   zx_status_t status = ramdisk_vmo.read(&header, 0, sizeof(header));
@@ -276,7 +276,11 @@ int main(int argc, char** argv) {
     printf("fshost: failed to get ramdisk: %s\n", zx_status_get_string(status));
   } else if (ramdisk_vmo.is_valid()) {
     thrd_t t;
-    int err = thrd_create_with_name(&t, &devmgr::RamctlWatcher, &ramdisk_vmo, "ramctl-filesystems");
+
+    int err = thrd_create_with_name(
+        &t, &devmgr::RamctlWatcher,
+        reinterpret_cast<void*>(static_cast<uintptr_t>(ramdisk_vmo.release())),
+        "ramctl-filesystems");
     if (err != thrd_success) {
       printf("fshost: failed to start ramctl-filesystems: %d\n", err);
     }
