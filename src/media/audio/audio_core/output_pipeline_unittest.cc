@@ -314,8 +314,21 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-  ASSERT_EQ(loopback_buf->length().Floor(), 48u);
-  CheckBuffer(loopback_buf->payload(), 1.0, 96);
+  ASSERT_LE(loopback_buf->length().Floor(), 48u);
+  CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length().Floor() * 2);
+
+  if (loopback_buf->length().Floor() < 48u) {
+    // The loopback read might need to wrap around the ring buffer. When this happens,
+    // the first ReadLock returns fewer frames that we asked for. Verify we can read the
+    // remaining frames instantly.
+    loopback_frame += loopback_buf->length().Floor();
+    auto frames_remaining = 48 - loopback_buf->length().Floor();
+    loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), frames_remaining);
+    ASSERT_TRUE(loopback_buf);
+    ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
+    ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);
+    CheckBuffer(loopback_buf->payload(), 1.0, frames_remaining * 2);
+  }
 }
 
 // Identical to |Loopback|, except we run mix and linearize stages at different rates.
