@@ -4,7 +4,7 @@
 
 use anyhow::Context as _;
 use futures::stream::{self, StreamExt, TryStreamExt};
-use net_declare::fidl_ip;
+use net_declare::{fidl_ip, fidl_subnet};
 use netstack_testing_macros::variants_test;
 
 use crate::environments::{KnownServices, Netstack2, TestSandboxExt as _};
@@ -48,10 +48,7 @@ async fn acquire_dhcp<E: netemul::Endpoint>(name: &str) -> Result {
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addr: Some(fidl_fuchsia_net::Subnet {
-                        addr: fidl_ip!(192.168.0.1),
-                        prefix_len: 24,
-                    }),
+                    static_addr: Some(fidl_subnet!(192.168.0.1/24)),
                     want_addr: None,
                 },
                 DhcpTestEndpoint {
@@ -78,10 +75,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addr: Some(fidl_fuchsia_net::Subnet {
-                        addr: fidl_ip!(192.168.0.1),
-                        prefix_len: 24,
-                    }),
+                    static_addr: Some(fidl_subnet!(192.168.0.1/24)),
                     want_addr: None,
                 },
                 DhcpTestEndpoint {
@@ -109,10 +103,7 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     DhcpTestEndpoint {
                         name: "server-ep1",
                         env: DhcpTestEnv::Server,
-                        static_addr: Some(fidl_fuchsia_net::Subnet {
-                            addr: fidl_ip!(192.168.0.1),
-                            prefix_len: 24,
-                        }),
+                        static_addr: Some(fidl_subnet!(192.168.0.1/24)),
                         want_addr: None,
                     },
                     DhcpTestEndpoint {
@@ -129,10 +120,7 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     DhcpTestEndpoint {
                         name: "server-ep2",
                         env: DhcpTestEnv::Server,
-                        static_addr: Some(fidl_fuchsia_net::Subnet {
-                            addr: fidl_ip!(192.168.1.1),
-                            prefix_len: 24,
-                        }),
+                        static_addr: Some(fidl_subnet!(192.168.1.1/24)),
                         want_addr: None,
                     },
                     DhcpTestEndpoint {

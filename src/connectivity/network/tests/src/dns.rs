@@ -15,7 +15,7 @@ use fuchsia_zircon as zx;
 use anyhow::Context as _;
 use futures::future::{self, FusedFuture, Future, FutureExt as _};
 use futures::stream::TryStreamExt as _;
-use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip_v6};
+use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6};
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use net_types::Witness;
@@ -78,7 +78,7 @@ async fn poll_lookup_admin<
 /// configures the Lookup service.
 #[variants_test]
 async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
-    const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+    const SERVER_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
     /// DNS server served by DHCP.
     const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.56);
     /// DNS server served by NDP.
@@ -123,10 +123,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .join_network::<E, _>(
             &network,
             "server-ep",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: SERVER_IP,
-                prefix_len: 24,
-            }),
+            netemul::InterfaceConfig::StaticIp(SERVER_ADDR),
         )
         .await
         .context("failed to configure server networking")?;

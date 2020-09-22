@@ -8,7 +8,7 @@ use fidl_fuchsia_logger;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 use fuchsia_async::TimeoutExt as _;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip, std_ip};
+use net_declare::{fidl_ip, fidl_subnet, std_ip};
 use netemul::EnvironmentUdpSocket as _;
 use netstack_testing_macros::variants_test;
 
@@ -216,8 +216,7 @@ async fn add_del_interface_address() -> Result {
                 .contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
         })
         .ok_or(anyhow::format_err!("failed to find loopback"))?;
-    let mut interface_address =
-        fidl_fuchsia_net::Subnet { addr: fidl_ip!(1.1.1.1), prefix_len: 32 };
+    let mut interface_address = fidl_subnet!(1.1.1.1/32);
     let res = stack
         .add_interface_address(loopback.id, &mut interface_address)
         .await
@@ -265,7 +264,7 @@ async fn add_remove_interface_address_errors() -> Result {
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let mut interface_address = fidl_fuchsia_net::Subnet { addr: fidl_ip!(0.0.0.0), prefix_len: 0 };
+    let mut interface_address = fidl_subnet!(0.0.0.0/0);
 
     // Don't crash on interface not found.
 
@@ -641,8 +640,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
 
     // NOTE: We only run this test with IPv4 sockets since we only care about
     // exciting the tx path, the domain is irrelevant.
-    const DEVICE_ADDRESS: fidl_fuchsia_net::Subnet =
-        fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.2), prefix_len: 24 };
+    const DEVICE_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
     // We're going to send data over a UDP socket to a multicast address so we
     // skip ARP resolution.
     const MCAST_ADDR: std::net::IpAddr = std_ip!(224.0.0.1);
@@ -771,7 +769,7 @@ async fn test_interfaces_changed_race() -> Result {
             .await
             .context("failed to install in environment")?;
 
-        const ADDR: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+        const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
 
         // Bring the link up, enable the interface, and add an IP address
         // "non-sequentially" (as much as possible) to cause races in Netstack
@@ -779,8 +777,7 @@ async fn test_interfaces_changed_race() -> Result {
         let ((), (), ()) = futures::future::try_join3(
             ep.set_link_up(true).map(|r| r.context("failed to bring link up")),
             ep.enable_interface().map(|r| r.context("failed to enable interface")),
-            ep.add_ip_addr(fidl_fuchsia_net::Subnet { addr: ADDR, prefix_len: 24 })
-                .map(|r| r.context("failed to add address")),
+            ep.add_ip_addr(ADDR).map(|r| r.context("failed to add address")),
         )
         .await?;
 
@@ -802,7 +799,7 @@ async fn test_interfaces_changed_race() -> Result {
                         (
                             true,
                             iface.flags.contains(fidl_fuchsia_netstack::Flags::Up),
-                            iface.addr == ADDR,
+                            iface.addr == ADDR.addr,
                         )
                     } else {
                         (false, false, false)
@@ -873,8 +870,7 @@ async fn test_interfaces_watcher_race() -> Result {
             .await
             .context("failed to install in environment")?;
 
-        const ADDR: fidl_fuchsia_net::Subnet =
-            fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 24 };
+        const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
 
         // Bring the link up, enable the interface, and add an IP address
         // "non-sequentially" (as much as possible) to cause races in Netstack
@@ -1102,7 +1098,7 @@ async fn test_interfaces_watcher() -> Result {
 
     // Add an address.
     let () = assert_blocked(&mut blocking_watcher).await?;
-    let mut subnet = fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 };
+    let mut subnet = fidl_subnet!(192.168.0.1/16);
     let () = stack
         .add_interface_address(id, &mut subnet)
         .await
@@ -1125,7 +1121,7 @@ async fn test_interfaces_watcher() -> Result {
 
     // Add a default route.
     let () = assert_blocked(&mut blocking_watcher).await?;
-    let mut default_v4_subnet = fidl_fuchsia_net::Subnet { addr: fidl_ip!(0.0.0.0), prefix_len: 0 };
+    let mut default_v4_subnet = fidl_subnet!(0.0.0.0/0);
     let () = stack
         .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
             subnet: default_v4_subnet,

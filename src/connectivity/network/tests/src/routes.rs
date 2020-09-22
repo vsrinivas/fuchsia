@@ -6,16 +6,15 @@ use crate::environments::{Netstack2, TestSandboxExt as _};
 use crate::Result;
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
-use net_declare::fidl_ip;
+use net_declare::{fidl_ip, fidl_subnet};
 use std::convert::TryFrom as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_resolve_route() -> Result {
-    const HOST_IP_V4: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.2);
-    const GATEWAY_IP_V4: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
-    const GATEWAY_IP_V6: fidl_fuchsia_net::IpAddress = fidl_ip!(3080::1);
-    const HOST_IP_V6: fidl_fuchsia_net::IpAddress = fidl_ip!(3080::2);
-    const SUBNET_PREFIX: u8 = 24;
+    const HOST_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
+    const GATEWAY_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
+    const GATEWAY_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(3080::1/64);
+    const HOST_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(3080::2/64);
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
@@ -33,20 +32,15 @@ async fn test_resolve_route() -> Result {
         .join_network::<netemul::NetworkDevice, _>(
             &net,
             "host",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: HOST_IP_V4,
-                prefix_len: SUBNET_PREFIX,
-            }),
+            netemul::InterfaceConfig::StaticIp(HOST_IP_V4),
         )
         .await
         .context("host failed to join network")?;
-    let () = host_ep
-        .add_ip_addr(fidl_fuchsia_net::Subnet { addr: HOST_IP_V6, prefix_len: SUBNET_PREFIX })
-        .await
-        .context("failed to add IPv6 to host")?;
-    let () = crate::wait_for_addresses(&host_netstack, host_ep.id(), std::iter::once(HOST_IP_V6))
-        .await
-        .context("failed to observe host IPv6")?;
+    let () = host_ep.add_ip_addr(HOST_IP_V6).await.context("failed to add IPv6 address to host")?;
+    let () =
+        crate::wait_for_addresses(&host_netstack, host_ep.id(), std::iter::once(HOST_IP_V6.addr))
+            .await
+            .context("failed to observe host IPv6 address assignment")?;
 
     // Configure a gateway.
     let gateway = sandbox
@@ -61,24 +55,21 @@ async fn test_resolve_route() -> Result {
         .join_network::<netemul::NetworkDevice, _>(
             &net,
             "gateway",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: GATEWAY_IP_V4,
-                prefix_len: SUBNET_PREFIX,
-            }),
+            netemul::InterfaceConfig::StaticIp(GATEWAY_IP_V4),
         )
         .await
         .context("gateway failed to join network")?;
     let () = gateway_ep
-        .add_ip_addr(fidl_fuchsia_net::Subnet { addr: GATEWAY_IP_V6, prefix_len: SUBNET_PREFIX })
+        .add_ip_addr(GATEWAY_IP_V6)
         .await
-        .context("failed to add IPv6 to gateway")?;
+        .context("failed to add IPv6 address to gateway")?;
     let () = crate::wait_for_addresses(
         &gateway_netstack,
         gateway_ep.id(),
-        std::iter::once(GATEWAY_IP_V6),
+        std::iter::once(GATEWAY_IP_V6.addr),
     )
     .await
-    .context("failed to observe gateway IPv6")?;
+    .context("failed to observe gateway IPv6 address assignment")?;
 
     let gateway_mac = fidl_fuchsia_net::MacAddress {
         octets: gateway
@@ -180,13 +171,19 @@ async fn test_resolve_route() -> Result {
         Result::Ok(())
     };
 
-    let () = do_test(GATEWAY_IP_V4, fidl_ip!(192.168.0.3), fidl_ip!(0.0.0.0), fidl_ip!(8.8.8.8))
-        .await
-        .context("ipv4 route lookup failed")?;
     let () =
-        do_test(GATEWAY_IP_V6, fidl_ip!(3080::3), fidl_ip!(::), fidl_ip!(2001:4860:4860::8888))
+        do_test(GATEWAY_IP_V4.addr, fidl_ip!(192.168.0.3), fidl_ip!(0.0.0.0), fidl_ip!(8.8.8.8))
             .await
-            .context("ipv6 route lookup failed")?;
+            .context("IPv4 route lookup failed")?;
+
+    let () = do_test(
+        GATEWAY_IP_V6.addr,
+        fidl_ip!(3080::3),
+        fidl_ip!(::),
+        fidl_ip!(2001:4860:4860::8888),
+    )
+    .await
+    .context("IPv6 route lookup failed")?;
 
     Ok(())
 }

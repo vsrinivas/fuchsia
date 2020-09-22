@@ -10,7 +10,7 @@ use futures::{
     io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, TryFutureExt as _,
     TryStreamExt as _,
 };
-use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
+use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
 use netemul::{EnvironmentTcpListener as _, EnvironmentTcpStream as _, EnvironmentUdpSocket as _};
 use netstack_testing_macros::variants_test;
 use packet::Serializer;
@@ -72,35 +72,22 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
         .context("failed to create client environment")?;
 
-    const CLIENT_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.2);
-    const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
+    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
+
     let _client_ep = client
-        .join_network::<E, _>(
-            &net,
-            "client",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: CLIENT_IP,
-                prefix_len: 24,
-            }),
-        )
+        .join_network::<E, _>(&net, "client", netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
         .await
         .context("client failed to join network")?;
     let server = sandbox
         .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
         .context("failed to create server environment")?;
     let _server_ep = server
-        .join_network::<E, _>(
-            &net,
-            "server",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: SERVER_IP,
-                prefix_len: 24,
-            }),
-        )
+        .join_network::<E, _>(&net, "server", netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
         .await
         .context("server failed to join network")?;
 
-    run_udp_socket_test(&server, SERVER_IP, &client, CLIENT_IP).await
+    run_udp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
 
 async fn run_tcp_socket_test(
@@ -167,8 +154,8 @@ async fn run_tcp_socket_test(
 
 #[variants_test]
 async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
-    const CLIENT_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.2);
-    const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
+    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
@@ -177,14 +164,7 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
         .context("failed to create client environment")?;
     let _client_ep = client
-        .join_network::<E, _>(
-            &net,
-            "client",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: CLIENT_IP,
-                prefix_len: 24,
-            }),
-        )
+        .join_network::<E, _>(&net, "client", netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
         .await
         .context("client failed to join network")?;
 
@@ -192,18 +172,11 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
         .context("failed to create server environment")?;
     let _server_ep = server
-        .join_network::<E, _>(
-            &net,
-            "server",
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: SERVER_IP,
-                prefix_len: 24,
-            }),
-        )
+        .join_network::<E, _>(&net, "server", netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
         .await
         .context("server failed to join network")?;
 
-    run_tcp_socket_test(&server, SERVER_IP, &client, CLIENT_IP).await
+    run_tcp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
 
 // Helper function to add ip device to stack.
@@ -309,17 +282,11 @@ async fn test_ip_endpoints_socket() -> Result {
         })
         .context("connect protocols failed")?;
 
-    const V4_PREFIX_LEN: u8 = 24;
-    const V6_PREFIX_LEN: u8 = 120;
     // Addresses must be in the same subnet.
-    const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet =
-        fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: V4_PREFIX_LEN };
-    const SERVER_ADDR_V6: fidl_fuchsia_net::Subnet =
-        fidl_fuchsia_net::Subnet { addr: fidl_ip!(2001::1), prefix_len: V6_PREFIX_LEN };
-    const CLIENT_ADDR_V4: fidl_fuchsia_net::Subnet =
-        fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.2), prefix_len: V4_PREFIX_LEN };
-    const CLIENT_ADDR_V6: fidl_fuchsia_net::Subnet =
-        fidl_fuchsia_net::Subnet { addr: fidl_ip!(2001::2), prefix_len: V6_PREFIX_LEN };;
+    const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
+    const SERVER_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(2001::1/120);
+    const CLIENT_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
+    const CLIENT_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(2001::2/120);
 
     // We install both devices in parallel because a DevicePair will only have
     // its link signal set to up once both sides have sessions attached. This

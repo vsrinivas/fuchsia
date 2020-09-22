@@ -7,7 +7,7 @@ use crate::Result;
 use anyhow::Context as _;
 use fuchsia_inspect_node_hierarchy::Property;
 use futures::TryStreamExt as _;
-use net_declare::{fidl_ip, fidl_mac};
+use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use std::convert::TryInto as _;
 
@@ -153,10 +153,7 @@ async fn inspect_nic() -> Result {
             &network,
             "eth-ep",
             netemul::Ethernet::make_config(netemul::DEFAULT_MTU, Some(ETH_MAC)),
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: fidl_ip!(192.168.0.1),
-                prefix_len: 24,
-            }),
+            netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.1/24)),
         )
         .await
         .context("failed to join network with ethernet endpoint")?;
@@ -165,10 +162,7 @@ async fn inspect_nic() -> Result {
             &network,
             "netdev-ep",
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(NETDEV_MAC)),
-            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                addr: fidl_ip!(192.168.0.2),
-                prefix_len: 24,
-            }),
+            netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.2/24)),
         )
         .await
         .context("failed to join network with netdevice endpoint")?;
