@@ -5,8 +5,12 @@
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":process-builder-tests" ]
+}
 
 rustc_library("process_builder") {
   with_unit_tests = true
@@ -59,12 +63,6 @@ rustc_library("process_builder") {
   ]
 }
 
-group("tests") {
-  testonly = true
-
-  data_deps = [ ":process_builder_tests" ]
-}
-
 rustc_binary("root_job_test_runner") {
   testonly = true
   edition = "2018"
@@ -91,8 +89,7 @@ rustc_binary("root_job_test_runner") {
 }
 
 fidl("test-util-fidl") {
-  # TODO(TC-582): Still can't use testonly here :(
-  # testonly = true
+  testonly = true
   name = "test.processbuilder"
 
   sources = [ "test_util.test.fidl" ]
@@ -148,31 +145,12 @@ executable("static_pie_test_util") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("process_builder_tests") {
+fuchsia_unittest_package("process-builder-tests") {
+  manifest = "meta/process-builder-tests.cmx"
   deps = [
     ":process_builder_test",
     ":root_job_test_runner",
     ":static_pie_test_util",
     ":test_util",
-  ]
-
-  binaries = [
-    {
-      name = "root_job_test_runner"
-    },
-    {
-      name = "process_builder_test_util"
-    },
-    {
-      name = "static_pie_test_util"
-    },
-  ]
-
-  tests = [
-    {
-      name = "process_builder_lib_test"
-      dest = "process_builder_tests"
-      environments = basic_envs
-    },
   ]
 }

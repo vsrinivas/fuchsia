@@ -8,7 +8,7 @@
     },
     "program": {
         "args": [
-            "/pkg/test/process_builder_tests",
+            "/pkg/bin/process_builder_lib_test",
             "-Zunstable-options",
             "--force-run-in-process"
         ],

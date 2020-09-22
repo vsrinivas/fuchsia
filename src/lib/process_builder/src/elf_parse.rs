@@ -446,7 +446,7 @@ mod tests {
     fn test_parse_program_headers() -> Result<(), Error> {
         // Let's try to parse ourselves!
         // Ideally we'd use std::env::current_exe but that doesn't seem to be implemented (yet?)
-        let file = File::open("/pkg/test/process_builder_tests")?;
+        let file = File::open("/pkg/bin/process_builder_lib_test")?;
         let vmo = fdio::get_vmo_copy_from_file(&file)?;
 
         let headers = Elf64Headers::from_vmo(&vmo)?;

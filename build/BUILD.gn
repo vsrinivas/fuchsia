@@ -373,7 +373,6 @@ group("deprecated_package_underscore") {
     "//src/lib/network_wrapper:network_wrapper_tests",
     "//src/lib/pkg_url:pkg_url_fuzzers_pkg",
     "//src/lib/pkg_url:pkg_url_unittests",
-    "//src/lib/process_builder:process_builder_tests",
     "//src/lib/storage:vfs_tests",
     "//src/lib/storage/fs_management:fs_management_tests",
     "//src/lib/storage/ramdevice_client:ramdevice_client_tests",
