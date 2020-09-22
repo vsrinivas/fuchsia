@@ -42,6 +42,7 @@ source_set("shared") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/fsl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

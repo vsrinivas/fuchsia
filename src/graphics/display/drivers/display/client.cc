@@ -37,6 +37,7 @@
 #include "lib/fidl/llcpp/server.h"
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace fhd = llcpp::fuchsia::hardware::display;
 namespace sysmem = llcpp::fuchsia::sysmem;
@@ -1502,6 +1503,8 @@ zx_status_t Client::Init(zx::channel server_channel) {
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
     sysmem_allocator_ = sysmem::Allocator::SyncClient(std::move(sysmem_allocator_client));
+    sysmem_allocator_.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+                                         fsl::GetCurrentProcessKoid());
   }
 
   return ZX_OK;
