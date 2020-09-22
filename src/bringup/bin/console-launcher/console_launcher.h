@@ -6,6 +6,7 @@
 #define SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_CONSOLE_LAUNCHER_H_
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <lib/zx/status.h>
 
 #include <optional>
 #include <string>
@@ -26,6 +27,8 @@ std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClien
 
 class ConsoleLauncher {
  public:
+  static zx::status<ConsoleLauncher> Create();
+  zx_status_t Init();
   zx_status_t LaunchShell(const Arguments& args);
   zx_status_t WaitForShellExit();
 
@@ -35,6 +38,8 @@ class ConsoleLauncher {
   std::optional<fbl::unique_fd> GetVirtioFd(const Arguments& args, fbl::unique_fd device_fd);
 
   zx::process shell_process_;
+  // TODO(ZX-4177): Remove all uses of the root job.
+  zx::job root_job_;
 };
 
 }  // namespace console_launcher

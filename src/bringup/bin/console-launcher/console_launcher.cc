@@ -5,11 +5,13 @@
 #include "src/bringup/bin/console-launcher/console_launcher.h"
 
 #include <fcntl.h>
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <lib/zircon-internal/paths.h>
@@ -20,6 +22,17 @@
 namespace console_launcher {
 
 namespace {
+
+// Get the root job from the root job service.
+zx_status_t GetRootJob(zx::job* root_job) {
+  auto svc_dir = sys::ServiceDirectory::CreateFromNamespace();
+  fuchsia::boot::RootJobSyncPtr root_job_ptr;
+  zx_status_t status = svc_dir->Connect(root_job_ptr.NewRequest());
+  if (status != ZX_OK) {
+    return status;
+  }
+  return root_job_ptr->Get(root_job);
+}
 
 // Wait for the requested file.  Its parent directory must exist.
 zx_status_t WaitForFile(const char* path, zx::time deadline) {
@@ -62,6 +75,18 @@ zx_status_t WaitForFile(const char* path, zx::time deadline) {
 }
 
 }  // namespace
+
+zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
+  ConsoleLauncher launcher;
+
+  // TODO(ZX-4177): Remove all uses of the root job.
+  zx_status_t status = GetRootJob(&launcher.root_job_);
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+  return zx::ok(std::move(launcher));
+}
 
 std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   Arguments ret;
@@ -184,8 +209,11 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
 
   FX_LOGF(INFO, nullptr, "Launching %s (%s)\n", argv[0], actions[0].name.data);
+  // WARNING: This process is created directly from the root job with no additional job policy
+  // restrictions. We only create it when 'console.shell' is enabled to help protect against
+  // accidental usage.
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, environ, 2, actions,
+  status = fdio_spawn_etc(root_job_.get(), flags, argv[0], argv, environ, 2, actions,
                           shell_process_.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     printf("console-launcher: failed to launch console shell: %s: %d (%s)\n", err_msg, status,

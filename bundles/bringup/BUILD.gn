@@ -10,6 +10,8 @@ group("tests") {
 
   deps += [
     "//src/bringup/bin/console:bootfs-test",
+    "//src/bringup/bin/console-launcher:shell-permissions-test",
+    "//src/bringup/bin/console-launcher/qemu-tests:tests",
     "//src/bringup/bin/ptysvc:ptysvc-test-bootfs-test",
     "//src/bringup/bin/svchost:crashsvc-test-bootfs-test",
     "//src/bringup/bin/sysinfo:sysinfo-bootfs-test",

@@ -83,7 +83,14 @@ int main(int argv, char** argc) {
     }
   }
 
-  console_launcher::ConsoleLauncher launcher;
+  zx::status<console_launcher::ConsoleLauncher> result =
+      console_launcher::ConsoleLauncher::Create();
+  if (!result.is_ok()) {
+    FX_LOGF(ERROR, "Failed to create ConsoleLauncher: %s", result.status_string());
+    return result.status_value();
+  }
+  auto& launcher = result.value();
+
   while (true) {
     status = launcher.LaunchShell(*args);
     if (status != ZX_OK) {

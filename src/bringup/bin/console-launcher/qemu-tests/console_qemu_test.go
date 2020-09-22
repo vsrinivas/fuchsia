@@ -21,7 +21,7 @@ func zbiPath(t *testing.T) string {
 		return ""
 	}
 	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
+	return filepath.Join(exPath, "../bringup.zbi")
 }
 
 func TestConsoleIsLaunched(t *testing.T) {
@@ -67,4 +67,11 @@ func TestConsoleIsLaunched(t *testing.T) {
 
 	// See that it was printed.
 	i.WaitForLogMessage("MY_TEST_STRING2")
+
+	// Run the permissions test.
+	i.RunCommand("runtests -n shell-permissions-test")
+
+	// See that it succeeded.
+	i.WaitForLogMessage("[runtests][PASSED]")
+
 }
