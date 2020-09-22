@@ -61,6 +61,9 @@ rustc_binary("bin") {
 
   test_deps = [ "//third_party/rust_crates:futures-test" ]
 
+  # TODO(56138): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   sources = [
     "src/avrcp_relay.rs",
     "src/connected_peers.rs",
