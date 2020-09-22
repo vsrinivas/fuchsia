@@ -52,7 +52,7 @@ macro_rules! inspect_log {
         match $bounded_list_node.create_entry() {
             mut node_writer => {
                 node_writer.create_time("@time");
-                inspect_insert!(node_writer, $($args)+);
+                inspect_insert!(@internal_inspect_log node_writer, $($args)+);
             }
         }
     }};
@@ -112,6 +112,19 @@ macro_rules! inspect_insert {
         inspect_insert!(@internal $node_writer, var key?: $($rest)+);
     }};
 
+    // Entry point: from inspect_log! (mainly to allow empty event)
+    (@internal_inspect_log $node_writer:expr, { $($args:tt)* }) => {{
+        // User may specify an empty event, so `WriteInspect` may not always
+        // be used.
+        #[allow(unused_imports)]
+        use $crate::log::WriteInspect;
+        inspect_insert!(@internal $node_writer, $($args)*);
+    }};
+    (@internal_inspect_log $node_writer:expr, $($args:tt)+) => {{
+        use $crate::log::WriteInspect;
+        inspect_insert!(@internal $node_writer, $($args)+);
+    }};
+
     // Entry point: block syntax
     ($node_writer:expr, { $($args:tt)+ }) => {{
         use $crate::log::WriteInspect;
@@ -151,11 +164,15 @@ mod tests {
             uint: &13u8,
         });
 
+        // Logging empty event
+        inspect_log!(node, {});
+
         assert_inspect_tree!(inspector, root: {
             list_node: {
                 "0": { "@time": AnyProperty, k1: "1", meaning_of_life: 42u64, k3: 3i64, k4: 4f64 },
                 "1": { "@time": AnyProperty, small_uint: 1u64, small_int: 2i64, float: 3f64 },
                 "2": { "@time": AnyProperty, s: "str", uint: 13u64 },
+                "3": { "@time": AnyProperty },
             }
         });
     }
