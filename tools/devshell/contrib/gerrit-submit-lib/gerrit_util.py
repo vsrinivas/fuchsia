@@ -196,11 +196,11 @@ class GerritHttpRequest:
   """A HTTP request to a URL that can be issued multiple times."""
 
   def __init__(self, url: str, data: bytes = None,
-               headers: Optional[Dict[str, str]] = None, method:str = 'GET'):
-    self.url = url
-    self.data = data
-    self.headers = headers or {}
-    self.method = method
+               headers: Optional[Dict[str, str]] = None, method: str = 'GET'):
+    self.url: str = url
+    self.data: Optional[bytes] = data
+    self.headers: Dict[str, str] = headers or {}
+    self.method: str = method
 
   @property
   def host(self) -> str:
@@ -257,14 +257,15 @@ def _SendGerritHttpRequest(
   if 'Authorization' in headers and not url.startswith('/a/'):
     url = '/a%s' % url
 
+  body_bytes: Optional[bytes] = None
   if body:
-    body = json.dumps(body, sort_keys=True)
+    body_bytes = json.dumps(body, sort_keys=True).encode('utf-8')
     headers.setdefault('Content-Type', 'application/json')
 
   # Create a request
   request = GerritHttpRequest(
       urllib.parse.urljoin('%s://%s' % (GERRIT_PROTOCOL, host), url),
-      data=body,
+      data=body_bytes,
       headers=headers,
       method=reqtype)
 
@@ -321,7 +322,7 @@ def _SendGerritJsonRequest(
     headers: Optional[Dict[str, str]] = None,
     body: Any = None,
     accept_statuses: FrozenSet[int] = frozenset([200]),
-) -> Any:
+) -> Optional[Any]:
   """Send a request to Gerrit, expecting a JSON response."""
   result = _SendGerritHttpRequest(
       host, path, reqtype, headers, body, accept_statuses)
@@ -373,12 +374,15 @@ def QueryChanges(
   if o_params:
     path = '%s&%s' % (path, '&'.join(['o=%s' % p for p in o_params]))
   try:
-    return _SendGerritJsonRequest(host, path)
+    response = _SendGerritJsonRequest(host, path)
   except GerritError as e:
     if e.http_status == 404:
       # Not found.
       return []
     raise
+  if response is None:
+    raise GerritError(200, 'No response from Gerrit.')
+  return response
 
 
 def GetGerritFetchUrl(host):
@@ -493,6 +497,8 @@ def SetReview(
   if ready:
     body['ready'] = True
   response = _SendGerritJsonRequest(host, path, reqtype='POST', body=body)
+  if response is None:
+      raise GerritError(200, 'No response from Gerrit.')
   if labels:
     for key, val in labels.items():
       if ('labels' not in response or key not in response['labels'] or
