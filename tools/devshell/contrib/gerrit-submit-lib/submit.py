@@ -188,44 +188,41 @@ def submit_changes(
   # Submit the changes in order.
   for cl in changes:
     backoff = util.ExponentialBackoff(clock)
-    num_attempts = num_retries + 1
-    id = cl.change_id
-    print("Submitting %s (%s)..." % (cl.subject, cl.change_id))
-    success = False
+    max_attempts = num_retries + 1
+    num_attempts = 0
+    print()
+    print("Submitting CL %d: %s" % (cl.id, cl.subject))
 
     while True:
       # Fetch the latest information about the CL.
-      current_cl = server.fetch_change(id)
+      current_cl = server.fetch_change(cl.change_id)
 
       # Check it still exists.
       if current_cl is None:
-        raise SubmitError("CL %s could not be found." % id)
+        raise SubmitError("CL %s could not be found." % cl.id)
 
       # If it is merged, we are done.
       if current_cl.status == 'MERGED':
-        success = True
         break
 
       # If it is not in CQ, add it to CQ.
       if current_cl.cq_votes() < 2:
-        if num_attempts > 0:
-          print("  adding to CQ.")
-          num_attempts -= 1
-          server.set_cq_state(id, 2)
+        if num_attempts == 0:
+          print("  Adding to CQ.")
+        elif num_attempts < max_attempts:
+          print("  CL failed in CQ. Retrying...")
         else:
-          print("  ran out of attempts.")
-          success = False
-          break
+          print("  CL failed in CQ. Aborting.")
+          return
+        num_attempts += 1
+        server.set_cq_state(cl.change_id, 2)
 
       # wait.
       backoff.wait()
-      print('Polling...')
+      print('  Polling...')
 
     # Did we fail?
-    if not success:
-      print("Failed")
-      break
-    print("Submitted!")
+    print("  Submitted!")
 
 
 def parse_args() -> Any:
@@ -361,6 +358,7 @@ def main() -> int:
   if not args.dry_run:
     if args.batch or should_continue():
       submit_changes(util.Clock(), server, changes, num_retries=args.num_retries)
+      print()
       print('All changes submitted.')
 
   return 0

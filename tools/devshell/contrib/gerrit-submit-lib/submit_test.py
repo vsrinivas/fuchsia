@@ -110,6 +110,28 @@ class TestSubmit(unittest.TestCase):
     assert server.set_cq_state.call_count == 2
 
 
+  def test_submit_cls_too_many_retries(self) -> None:
+    server = mock.Mock(spec=submit.GerritServer)
+    server.fetch_change.side_effect = [
+        # Initially, not on the queue.
+        submit.Change('42', {}),
+        # When we next poll, we have been kicked out of the queue again. We should retry.
+        submit.Change('42', {}),
+        # And again. Retry again.
+        submit.Change('42', {}),
+        # And again. We should give up.
+        submit.Change('42', {}),
+    ]
+    submit.submit_changes(
+        util.FakeClock(),
+        server, [submit.Change('42', {'submittable': True})],
+        num_retries=2)
+
+    # Should have added to CQ twice.
+    server.set_cq_state.assert_called_with('42', 2)
+    assert server.set_cq_state.call_count == 3
+
+
   def test_submit_cls_upgrade_to_approved(self) -> None:
     server = mock.Mock(spec=submit.GerritServer)
     server.fetch_change.side_effect = [
