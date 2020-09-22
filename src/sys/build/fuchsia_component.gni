@@ -38,7 +38,7 @@ import("//tools/cmc/build/cmx.gni")
 # The component above will have the following launch URL:
 # `fuchsia-pkg://fuchsia.com/my-package#meta/my-component.cm`
 #
-# Since the component depends on the exeuctable target, the binary produced by
+# Since the component depends on the executable target, the binary produced by
 # the executable will be packaged with the manifest. Therefore the manifest
 # author can reference the path `bin/my_program`.
 #
