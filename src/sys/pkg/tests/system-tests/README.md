@@ -43,7 +43,7 @@ You should be able to run the tests with:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
   --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
@@ -57,7 +57,7 @@ determine the build ids from the downgrade and upgrade builds, then run:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --downgrade-build-id 123456789... \
   --upgrade-build-id 987654321...
 ```
@@ -66,7 +66,7 @@ Or you can combine these options:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --downgrade-build-id 123456789... \
   --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
@@ -82,7 +82,7 @@ can be done by running:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_reboot \
-  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
@@ -100,7 +100,7 @@ occurs. This can be done by running:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_tracking \
-  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
   --upgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only
 ```
@@ -169,7 +169,7 @@ In a new terminal, run the tests. For example, to run the upgrade tests:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
   --upgrade-fuchsia-build-dir $(fx get-build-dir) \
   --device step-atom-yard-juicy

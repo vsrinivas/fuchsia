@@ -82,7 +82,7 @@ PARTITION_SIZE=$(( 2 * 1024 * 1024 * 1024))
 # Start the paver in the background.
 "${FUCHSIA_BUILD_DIR}/pave.sh" \
   -n 'step-atom-yard-juicy' \
-  --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" \
+  --authorized-keys "$(get-ssh-authkeys)" \
   -1 &
 
 # Launch QEMU.
