@@ -40,9 +40,6 @@ rustc_binary("bt-integration-tests") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # TODO(46537): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/harness/access.rs",
     "src/harness/bootstrap.rs",
