@@ -251,7 +251,7 @@ From //vdso/vdso.gni:7
 
 **Current value (from the default):** `false`
 
-From //system/ulib/fidl/BUILD.zircon.gn:8
+From //system/ulib/fidl/BUILD.zircon.gn:14
 
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
