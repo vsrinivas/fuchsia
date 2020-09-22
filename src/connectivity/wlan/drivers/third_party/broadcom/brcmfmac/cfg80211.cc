@@ -870,6 +870,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   if (request->scan_type == WLAN_SCAN_TYPE_ACTIVE) {
     params_le->scan_type = BRCMF_SCANTYPE_ACTIVE;
     params_le->active_time = request->min_channel_time;
+    params_le->nprobes = BRCMF_ACTIVE_SCAN_NUM_PROBES;
     params_le->passive_time = -1;
   } else {
     params_le->scan_type = BRCMF_SCANTYPE_PASSIVE;
@@ -877,7 +878,6 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
     params_le->active_time = -1;
   }
   params_le->channel_num = 0;
-  params_le->nprobes = -1;
   params_le->home_time = -1;
 
   if (request->ssid.len > IEEE80211_MAX_SSID_LEN) {

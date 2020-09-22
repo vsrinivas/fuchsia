@@ -149,6 +149,7 @@
 
 #define BRCMF_VIF_EVENT_TIMEOUT_MSEC (1500)
 
+#define BRCMF_ACTIVE_SCAN_NUM_PROBES 3
 /**
  * enum brcmf_scan_status - scan engine status
  *

@@ -54,6 +54,8 @@ class ActiveScanTest : public SimTest {
 
   void GetFirmwarePfnMac();
 
+  uint32_t GetNumProbeReqsSeen() { return num_probe_reqs_seen; };
+
  protected:
   // This is the interface we will use for our single client interface
   ClientIfc client_ifc_;
@@ -70,6 +72,7 @@ class ActiveScanTest : public SimTest {
   common::MacAddr sim_fw_mac_;
   common::MacAddr last_pfn_mac_ = common::kZeroMac;
   std::optional<common::MacAddr> sim_fw_pfn_mac_;
+  uint32_t num_probe_reqs_seen = 0;
 };
 
 void ClientIfc::OnScanResult(const wlanif_scan_result_t* result) {
@@ -184,6 +187,7 @@ void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
     auto probe_req = std::static_pointer_cast<const simulation::SimProbeReqFrame>(mgmt_frame);
     EXPECT_NE(probe_req->src_addr_, sim_fw_mac_);
     EXPECT_EQ(probe_req->src_addr_, *sim_fw_pfn_mac_);
+    num_probe_reqs_seen++;
   }
 
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP) {
@@ -274,6 +278,33 @@ TEST_F(ActiveScanTest, ScanTwice) {
   env_->Run();
 
   VerifyScanResults();
+  EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
+}
+
+// Ensure that the FW sends out the max # probe requests set by the
+// driver (as there are no APs in the environment).
+TEST_F(ActiveScanTest, CheckNumProbeReqsSent) {
+  constexpr zx::duration kScanStartTime = zx::sec(1);
+  constexpr zx::duration kDefaultTestDuration = zx::sec(5);
+
+  Init();
+
+  wlanif_scan_req_t req = {
+      .txn_id = ++client_ifc_.scan_txn_id_,
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .num_channels = 1,
+      .channel_list = {1, 2, 3, 4, 5},
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+      .num_ssids = 0,
+  };
+
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
+  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
+
+  env_->Run();
+  EXPECT_EQ(GetNumProbeReqsSeen(), (uint32_t)BRCMF_ACTIVE_SCAN_NUM_PROBES);
   EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
 }
 

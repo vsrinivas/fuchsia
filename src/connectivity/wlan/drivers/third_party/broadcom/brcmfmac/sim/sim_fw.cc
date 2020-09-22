@@ -1362,7 +1362,14 @@ zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len) 
     if (join_params->scan_le.active_time == 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    scan_opts->dwell_time = zx::msec(join_params->scan_le.active_time);
+    int32_t nprobes = (int32_t)join_params->scan_le.nprobes;
+    scan_opts->active_scan_max_attempts = nprobes <= 0 ? 1 : nprobes;
+    // Dwell time is equally split across the # of attempts
+    scan_opts->dwell_time =
+        zx::msec(join_params->scan_le.active_time) / scan_opts->active_scan_max_attempts;
+    BRCMF_DBG(SIM, "Join req - active scan: act time: %u nprobes: %d dwell: %zu",
+              join_params->scan_le.active_time, join_params->scan_le.nprobes,
+              scan_opts->dwell_time.get());
   } else if (join_params->scan_le.passive_time == static_cast<uint32_t>(-1)) {
     // Use default passive time
     if (default_passive_time_ == static_cast<uint32_t>(-1)) {
@@ -1970,19 +1977,23 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
 
   // Do an active scan using random mac
   if (scan_state_.opts->is_active) {
+    scan_state_.active_scan_attempts = 1;
     simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
     hw_.Tx(probe_req_frame);
   }
   hw_.EnableRx();
 
   auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::ScanNextChannel, this);
+  *callback = std::bind(&SimFirmware::ScanContinue, this);
   hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
   return ZX_OK;
 }
 
-// If a scan is in progress, switch to the next channel.
-void SimFirmware::ScanNextChannel() {
+// Continue or stop scanning based on scan type.
+// Active scan - continue with current channel until max attempts of probes sent
+// or else switch to next channel
+// Passive scan - switch to next channel
+void SimFirmware::ScanContinue() {
   switch (scan_state_.state) {
     case ScanState::STOPPED:
       // We may see this event if a scan was cancelled -- just ignore it
@@ -1991,6 +2002,21 @@ void SimFirmware::ScanNextChannel() {
       // We don't yet support intermittent scanning
       return;
     case ScanState::SCANNING:
+      // If active scan, check and resend probe request if max attempts not reached.
+      if (scan_state_.opts->is_active &&
+          scan_state_.active_scan_attempts < scan_state_.opts->active_scan_max_attempts) {
+        BRCMF_DBG(SIM, "active scan continue: %d att: %d max: %d", scan_state_.opts->is_active,
+                  scan_state_.active_scan_attempts, scan_state_.opts->active_scan_max_attempts);
+        // Note that the channel remains the same
+        scan_state_.active_scan_attempts++;
+        simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
+        hw_.Tx(probe_req_frame);
+        auto callback = std::make_unique<std::function<void()>>();
+        *callback = std::bind(&SimFirmware::ScanContinue, this);
+        hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
+        return;
+      }
+
       if (scan_state_.channel_index >= scan_state_.opts->channels.size()) {
         // Scanning complete
         if (scan_state_.opts->is_active) {
@@ -2016,12 +2042,14 @@ void SimFirmware::ScanNextChannel() {
         wlan_channel_t channel;
         chanspec_to_channel(&d11_inf_, chanspec, &channel);
         hw_.SetChannel(channel);
+        BRCMF_DBG(SIM, "Continue scan - next chanspec: 0x%x", chanspec);
         if (scan_state_.opts->is_active) {
+          scan_state_.active_scan_attempts = 1;
           simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
           hw_.Tx(probe_req_frame);
         }
         auto callback = std::make_unique<std::function<void()>>();
-        *callback = std::bind(&SimFirmware::ScanNextChannel, this);
+        *callback = std::bind(&SimFirmware::ScanContinue, this);
         hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
       }
   }
@@ -2070,7 +2098,13 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
         BRCMF_ERR("No active scan time in parameter");
         return ZX_ERR_INVALID_ARGS;
       } else {
-        scan_opts->dwell_time = zx::msec(params->active_time);
+        int32_t nprobes = (int32_t)params->nprobes;
+        scan_opts->active_scan_max_attempts = nprobes <= 0 ? 1 : nprobes;
+        // Dwell time is equally split across the # of attempts
+        scan_opts->dwell_time = zx::msec(params->active_time) / scan_opts->active_scan_max_attempts;
+        BRCMF_DBG(SIM, "Active scan req: act time: %u nprobes: %d act time: %d dwell: %zu",
+                  params->active_time, params->nprobes, params->active_time,
+                  scan_opts->dwell_time.get());
       }
       break;
     case BRCMF_SCANTYPE_PASSIVE:

@@ -111,6 +111,9 @@ class SimFirmware {
 
     // Function to call when we have finished scanning
     ScanDoneHandler on_done_fn;
+
+    // Maximum number of probe requests sent per channel during active scan.
+    uint16_t active_scan_max_attempts;
   };
 
   struct AssocOpts {
@@ -128,6 +131,8 @@ class SimFirmware {
     size_t channel_index;
     // The interface idx on which the scan is being done
     uint16_t ifidx;
+    // Number of probe requests sent in the current channel so far during active scan.
+    uint16_t active_scan_attempts;
   };
 
   struct AssocState {
@@ -316,7 +321,7 @@ class SimFirmware {
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
-  void ScanNextChannel();
+  void ScanContinue();
 
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);
