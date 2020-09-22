@@ -160,15 +160,12 @@ bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
       continue;
     }
 
-    // Look for '\n' if it exists, otherwise take the whole string.
     uint32_t len;
     for (len = 0; len < sizeof(Descriptor::Monitor::data) && it->monitor.data[len] != 0x0A; ++len) {
       // Empty body
     }
 
-    // Copy the string and remember to null-terminate.
-    memcpy(dest, it->monitor.data, len);
-    dest[len + 1] = '\0';
+    snprintf(dest, len + 1, "%s", it->monitor.data);
   }
 
   // If we didn't find a valid serial descriptor, use the base serial number
