@@ -3,16 +3,16 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [ "//src/connectivity/ppp/drivers/serial-ppp" ]
+  deps = [ "drivers/serial-ppp" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "//src/connectivity/ppp/drivers/serial-ppp:driver-test",
-    "//src/connectivity/ppp/lib:tests",
-    "//src/connectivity/ppp/lib/ppp_packet:ppp-packet-tests",
-    "//src/connectivity/ppp/lib/ppp_protocol:ppp-protocol-tests",
+    "drivers/serial-ppp:tests",
+    "lib:tests",
+    "lib/ppp_packet:ppp-packet-tests",
+    "lib/ppp_protocol:ppp-protocol-tests",
   ]
 }
 
