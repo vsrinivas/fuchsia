@@ -35,8 +35,8 @@ class LogValue {
   LogValue(T t) : LogValue(std::move(ToLogValue(t))) {}
 
   std::string ToString(bool quote_if_string = false) const;
-  void Log(::syslog::LogSeverity severity, const char* file, size_t line, const char* condition,
-           const char* tag) const;
+  void Log(::syslog::LogSeverity severity, const char* file, unsigned int line,
+           const char* condition, const char* tag) const;
 
   operator bool() const { return !fit::holds_alternative<std::nullptr_t>(value_); }
 

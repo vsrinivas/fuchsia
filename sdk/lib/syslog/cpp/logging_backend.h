@@ -17,11 +17,11 @@ void SetLogSettings(const syslog::LogSettings& settings,
 
 syslog::LogSeverity GetMinLogLevel();
 
-void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line, const char* tag,
               const char* condition, const std::string& msg);
 
-void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
-                   const char* condition, const syslog::LogValue& msg);
+void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
+                   const char* tag, const char* condition, const syslog::LogValue& msg);
 
 }  // namespace syslog_backend
 

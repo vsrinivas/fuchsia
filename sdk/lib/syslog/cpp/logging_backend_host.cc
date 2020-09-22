@@ -79,12 +79,12 @@ void SetLogTags(const std::initializer_list<std::string>& tags) {
 
 syslog::LogSeverity GetMinLogLevel() { return g_log_settings.min_log_level; }
 
-void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
-                   const char* condition, const syslog::LogValue& msg) {
+void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
+                   const char* tag, const char* condition, const syslog::LogValue& msg) {
   WriteLog(severity, file, line, tag, condition, msg.ToString());
 }
 
-void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line, const char* tag,
               const char* condition, const std::string& msg) {
   if (tag)
     std::cerr << "[" << tag << "] ";

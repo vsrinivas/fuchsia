@@ -27,11 +27,6 @@ sdk_source_set("cpp") {
   public_deps = [ "//zircon/public/lib/fit" ]
 
   public_configs = [ "//sdk/config" ]
-
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 sdk_source_set("backend_host") {
@@ -77,9 +72,6 @@ sdk_source_set("backend_legacy") {
   } else {
     public_deps = [ ":backend_host" ]
   }
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 sdk_shared_library("backend_fuchsia_globals") {
@@ -121,9 +113,6 @@ sdk_source_set("backend") {
   } else {
     public_deps = [ ":backend_host" ]
   }
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("logging_cpp_unittests") {
@@ -146,11 +135,6 @@ executable("logging_cpp_unittests") {
     sources += [ "logging_socket_unittest.cc" ]
     deps += [ ":backend_legacy" ]
   }
-
-  configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 executable("logging_cpp_unittests_structured") {

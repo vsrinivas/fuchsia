@@ -111,18 +111,18 @@ class LogState {
   syslog::LogSeverity min_severity() const { return min_severity_; }
 
   template <typename T>
-  void WriteLog(syslog::LogSeverity severity, const char* file_name, int line, const char* tag,
-                const char* condition, const T& msg) const;
+  void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
+                const char* tag, const char* condition, const T& msg) const;
 
  private:
   LogState(const syslog::LogSettings& settings, const std::initializer_list<std::string>& tags);
 
   template <typename T>
   bool WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
-                        syslog::LogSeverity severity, const char* file_name, int line,
+                        syslog::LogSeverity severity, const char* file_name, unsigned int line,
                         const char* tag, const char* condition, const T& msg) const;
   bool WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
-                      syslog::LogSeverity severity, const char* file_name, int line,
+                      syslog::LogSeverity severity, const char* file_name, unsigned int line,
                       const char* tag, const char* condition, const std::string& msg) const;
 
   syslog::LogSeverity min_severity_;
@@ -136,7 +136,7 @@ class LogState {
 template <typename T>
 bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid,
                                 zx_koid_t tid, syslog::LogSeverity severity, const char* file_name,
-                                int line, const char* tag, const char* condition,
+                                unsigned int line, const char* tag, const char* condition,
                                 const T& msg) const {
   ::fuchsia::diagnostics::stream::Record record;
   record.severity = ::fuchsia::diagnostics::Severity(severity);
@@ -196,8 +196,8 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
 }
 
 bool LogState::WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
-                              syslog::LogSeverity severity, const char* file_name, int line,
-                              const char* tag, const char* condition,
+                              syslog::LogSeverity severity, const char* file_name,
+                              unsigned int line, const char* tag, const char* condition,
                               const std::string& msg) const {
   auto& file = *file_ptr;
   file << "[" << std::setw(5) << std::setfill('0') << time / 1000000000UL << "." << std::setw(6)
@@ -324,7 +324,7 @@ LogState::LogState(const syslog::LogSettings& settings,
 }
 
 template <typename T>
-void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, int line,
+void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
                         const char* tag, const char* condition, const T& msg) const {
   zx_koid_t tid = GetCurrentThreadKoid();
   zx_time_t time = zx_clock_get_monotonic();
@@ -364,13 +364,13 @@ void SetLogSettings(const syslog::LogSettings& settings,
 
 syslog::LogSeverity GetMinLogLevel() { return LogState::Get().min_severity(); }
 
-void WriteLogValue(syslog::LogSeverity severity, const char* file_name, int line, const char* tag,
-                   const char* condition, const syslog::LogValue& msg) {
+void WriteLogValue(syslog::LogSeverity severity, const char* file_name, unsigned int line,
+                   const char* tag, const char* condition, const syslog::LogValue& msg) {
   LogState::Get().WriteLog(severity, file_name, line, tag, condition, msg);
 }
 
-void WriteLog(syslog::LogSeverity severity, const char* file_name, int line, const char* tag,
-              const char* condition, const std::string& msg) {
+void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
+              const char* tag, const char* condition, const std::string& msg) {
   LogState::Get().WriteLog(severity, file_name, line, tag, condition, msg);
 }
 
