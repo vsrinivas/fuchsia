@@ -19,7 +19,10 @@ if (current_toolchain == default_toolchain) {
     with_shared = false
     toolchain_variant_args = {
       configs = [ "//zircon/kernel/arch/arm64:physmem_config" ]
-      tags = [ "kernel" ]
+      tags = [
+        "kernel",
+        "strict-align",
+      ]
     }
     exclude_variant_tags = [ "instrumented" ]
   }

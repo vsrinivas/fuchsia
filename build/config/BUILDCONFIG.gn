@@ -516,8 +516,7 @@ if (toolchain_variant.with_shared) {
         # shared libraries, instead of putting them into exe.unstripped. This can be
         # changed after build unification completes.
         if (zircon_toolchain != false) {
-          link_output_file = "$output_dir/$output_file_name" +
-                             zircon_toolchain.link_output_suffix
+          link_output_file = output_file + zircon_toolchain.link_output_suffix
         } else {
           link_output_file = "$output_dir/lib.unstripped/$output_file_name"
         }
@@ -618,8 +617,7 @@ if (toolchain_variant.with_shared) {
         # shared libraries, instead of putting them into exe.unstripped. This can be
         # changed after build unification completes.
         if (zircon_toolchain != false) {
-          link_output_file = "$output_dir/$output_file_name" +
-                             zircon_toolchain.link_output_suffix
+          link_output_file = output_file + zircon_toolchain.link_output_suffix
         } else {
           link_output_file = "$output_dir/lib.unstripped/$output_file_name"
         }
@@ -1632,8 +1630,7 @@ template("executable") {
     # executables, instead of putting them into exe.unstripped. This can be
     # changed after build unification completes.
     if (zircon_toolchain != false) {
-      link_output_file =
-          "$output_dir/$output_name" + zircon_toolchain.link_output_suffix
+      link_output_file = output_file + zircon_toolchain.link_output_suffix
     } else {
       link_output_file = "$output_dir/exe.unstripped/$output_name"
     }
