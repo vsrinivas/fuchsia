@@ -512,11 +512,10 @@ fn test_shutdown() {
     let mut shutdown_verified = false;
     for _ in 0..3600 {
         test.iterate_n_times(1);
-        if test.sim.borrow().cpu_temperature.0 >= shutdown_temperature.0 {
-            // Now that the simulated CPU temperature is above the shutdown threshold, run for
-            // 20 more seconds to allow the policy's temperature filter to reach the threshold
-            // as well.
-            test.iterate_n_times(20);
+
+        // Since thermal shutdown uses raw temperature rather than filtered, shutdown will occur as
+        // soon as the simulated temperature exceeds the shutdown threshold.
+        if test.sim.borrow().cpu_temperature >= shutdown_temperature {
             assert!(test.sim.borrow().shutdown_applied);
             shutdown_verified = true;
             break;

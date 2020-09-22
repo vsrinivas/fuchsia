@@ -350,7 +350,7 @@ impl ThermalPolicy {
         );
 
         // If the new temperature is above the critical threshold then shut down the system
-        let result = self.check_critical_temperature(timestamp, temperature.filtered).await;
+        let result = self.check_critical_temperature(timestamp, temperature.raw).await;
         log_if_err!(result, "Error checking critical temperature");
         fuchsia_trace::instant!(
             "power_manager",
