@@ -11,8 +11,12 @@ namespace flatland {
 // |UberStructSystem| implementations.
 
 TransformHandle::InstanceId UberStructSystem::GetNextInstanceId() {
-  latest_instance_id_ = scheduling::GetNextSessionId();
-  return latest_instance_id_;
+  // |latest_instance_id_| is only used for tests, but returning a member value can result in
+  // threads "stealing" instance IDs from each other, so we return a local value here instead,
+  // which does not have the same risk.
+  auto next_instance_id = scheduling::GetNextSessionId();
+  latest_instance_id_ = next_instance_id;
+  return next_instance_id;
 }
 
 std::shared_ptr<UberStructSystem::UberStructQueue> UberStructSystem::AllocateQueueForSession(

@@ -55,17 +55,16 @@ TEST(UberStructSystemTest, InstanceIdUniqueness) {
 
   static constexpr uint64_t kNumThreads = 10;
   static constexpr uint64_t kNumInstanceIds = 100;
-  static constexpr uint64_t kNumHandles = 10;
 
   std::mutex mutex;
-  std::set<TransformHandle> handles;
+  std::set<TransformHandle::InstanceId> ids;
   std::vector<std::thread> threads;
 
   const auto now = std::chrono::steady_clock::now();
   const auto then = now + std::chrono::milliseconds(50);
 
   for (uint64_t t = 0; t < kNumThreads; ++t) {
-    std::thread thread([then, &system, &handles, &mutex]() {
+    std::thread thread([then, &system, &ids, &mutex]() {
       // Because each of the threads do a fixed amount of work, they may trigger in succession
       // without overlap. In order to bombard the system with concurrent instance ID requests, we
       // stall thread execution to a synchronized time.
@@ -85,9 +84,7 @@ TEST(UberStructSystemTest, InstanceIdUniqueness) {
       {
         std::scoped_lock lock(mutex);
         for (const auto& id : instance_ids) {
-          for (uint64_t h = 0; h < kNumHandles; ++h) {
-            handles.insert({id, h});
-          }
+          ids.insert(id);
         }
       }
     });
@@ -99,9 +96,8 @@ TEST(UberStructSystemTest, InstanceIdUniqueness) {
     t.join();
   }
 
-  // If all the handles are unique, the set's size should be equal to the number of handles
-  // created.
-  EXPECT_EQ(handles.size(), kNumThreads * kNumInstanceIds * kNumHandles);
+  // If all the IDs are unique, the set's size should be equal to the number of IDs fetched.
+  EXPECT_EQ(ids.size(), kNumThreads * kNumInstanceIds);
 }
 
 TEST(UberStructSystemTest, RemoveSessionCleansUpSession) {
