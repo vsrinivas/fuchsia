@@ -254,6 +254,7 @@ const char* NdmBaseDriver::CreateNdmVolumeWithLogger(const Volume* ftl_volume,
   ftl.cached_map_pages = options.num_blocks * (options.block_size / options.page_size);
   ftl.extra_free = 6;  // Over-provision 6% of the device.
   xfs.ftl_volume = const_cast<Volume*>(ftl_volume);
+  ftl.logger = ndm_->logger;
 
   partition.exploded.basic_data.num_blocks = ndmGetNumVBlocks(ndm_);
   strncpy(partition.exploded.basic_data.name, "ftl", sizeof(partition.exploded.basic_data.name));

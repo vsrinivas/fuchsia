@@ -183,6 +183,18 @@ typedef struct {
 typedef struct ndm* NDM;
 typedef const struct ndm* CNDM;
 
+typedef void (*LogFunction)(const char*, ...) __PRINTFLIKE(1, 2);
+
+typedef struct {
+  // Logger interface for different log levels.
+  LogFunction trace;
+  LogFunction debug;
+  LogFunction info;
+  LogFunction warning;
+  LogFunction error;
+  LogFunction fatal;
+} Logger;
+
 // FTL NDM structure holding all driver information.
 typedef struct {
   uint32_t block_size;        // Size of a block in bytes.
@@ -195,19 +207,8 @@ typedef struct {
   uint32_t read_wear_limit;   // Device read-wear limit.
   void* ndm;                  // Driver's NDM pointer.
   uint32_t flags;             // Option flags.
+  Logger logger;
 } FtlNdmVol;
-
-typedef void (*LogFunction)(const char*, ...) __PRINTFLIKE(1, 2);
-
-typedef struct {
-  // Logger interface for different log levels.
-  LogFunction trace;
-  LogFunction debug;
-  LogFunction info;
-  LogFunction warning;
-  LogFunction error;
-  LogFunction fatal;
-} Logger;
 
 // TargetNDM Configuration Structure.
 typedef struct NDMDrvr {

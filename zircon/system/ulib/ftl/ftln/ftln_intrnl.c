@@ -269,14 +269,18 @@ static int wr_vol_page(FTLN ftl, ui32 vpn, void* buf, ui32 old_ppn) {
 #if INC_ELIST
   // If list of erased blocks/wear counts exists, erase it now.
   if (ftl->elist_blk != (ui32)-1)
-    if (FtlnEraseBlk(ftl, ftl->elist_blk))
+    if (FtlnEraseBlk(ftl, ftl->elist_blk)) {
+      ftl->logger.error("Failed to erase block list at block %u.", ftl->elist_blk);
       return -1;
+    }
 #endif
 
   // Allocate next free volume page. Return -1 if error.
   ppn = next_free_vpg(ftl);
-  if (ppn == (ui32)-1)
+  if (ppn == (ui32)-1) {
+    ftl->logger.error("Failed to allocate a volume page.");
     return -1;
+  }
 
   // Calculate the block's erase wear count.
   b = ppn / ftl->pgs_per_blk;
@@ -301,8 +305,10 @@ static int wr_vol_page(FTLN ftl, ui32 vpn, void* buf, ui32 old_ppn) {
   }
 
   // Return -1 for any error. Any write error is fatal.
-  if (rc)
+  if (rc) {
+    ftl->logger.error("Failed to write volume page %u at %u.", vpn, ftl->start_pn + ppn);
     return FtlnFatErr(ftl);
+  }
 
   // Increment block's used pages count.
   PfAssert(!IS_FREE(ftl->bdata[b]) && !IS_MAP_BLK(ftl->bdata[b]));
@@ -453,8 +459,8 @@ static ui32 block_selector(FTLN ftl, ui32 b, int should_boost_low_wear) {
   priority = pages_gained * 256 + ftl->blk_wc_lag[b];
 
   // Boost a block's priority if requested and considered low wear.
-  if (should_boost_low_wear && (ftl->blk_wc_lag[b] + FTL_LOW_WEAR_BOOST_LAG
-                                > ftl->wear_data.cur_max_lag)) {
+  if (should_boost_low_wear &&
+      (ftl->blk_wc_lag[b] + FTL_LOW_WEAR_BOOST_LAG > ftl->wear_data.cur_max_lag)) {
     priority += 0x100000;
   }
 
@@ -597,9 +603,10 @@ static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
 
     // Return -1 if fatal error, skip page if ECC error on spare read.
     if (rc) {
-      if (rc == -2)
+      if (rc == -2) {
+        ftl->logger.error("Failed to read spare area from block %u.", recycle_b);
         return FtlnFatErr(ftl);
-      else
+      } else
         continue;
     }
 
@@ -617,13 +624,17 @@ static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
       continue;
 
     // Write page to new flash block. Return -1 if error.
-    if (wr_vol_page(ftl, vpn, NULL, pn))
+    if (wr_vol_page(ftl, vpn, NULL, pn)) {
+      ftl->logger.error("Failed to transfer page %u to physical page %u.", vpn, pn);
       return -1;
+    }
   }
 
   // Save MPGs modified by volume page transfers. Return -1 if error.
-  if (ftlmcFlushMap(ftl->map_cache))
+  if (ftlmcFlushMap(ftl->map_cache)) {
+    ftl->logger.error("Failed to flush map cache.");
     return -1;
+  }
 
 #if INC_FTL_NDM_MLC
   // For MLC devices, advance free_vpn pointer so next volume page
@@ -705,6 +716,7 @@ static int flush_pending_writes(FTLN ftl, StagedWr* staged) {
   ftl->stats.write_page += staged->cnt;
   if (ndmWritePages(ftl->start_pn + staged->ppn0, staged->cnt, staged->buf, ftl->spare_buf,
                     ftl->ndm)) {
+    ftl->logger.error("Failed to stage writes.");
     return FtlnFatErr(ftl);
   }
 
@@ -984,7 +996,11 @@ int FtlnMetaWr(FTLN ftl, ui32 type) {
   WR32_LE(type, &ftl->main_buf[FTLN_META_TYP_LOC]);
 
   // Issue meta page write.
-  return FtlnMapWr(ftl, ftl->num_map_pgs - 1, ftl->main_buf);
+  int result = FtlnMapWr(ftl, ftl->num_map_pgs - 1, ftl->main_buf);
+  if (result < 0) {
+    ftl->logger.error("FTL failed to write meta map page.");
+  }
+  return result;
 }
 
 // FtlnRecCheck: Prepare to write page(s) by reclaiming dirty blocks

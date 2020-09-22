@@ -43,8 +43,9 @@ static int format_ftl(FTLN ftl) {
 
   // Write meta page, to indicate that format is in progress.
   memset(ftl->main_buf, 0xFF, ftl->page_size);
-  if (FtlnMetaWr(ftl, CONT_FORMAT))
+  if (FtlnMetaWr(ftl, CONT_FORMAT)) {
     return -1;
+  }
 
   // Erase all map blocks, mark all blocks free, and reset the FTL.
   return FtlnFormat(ftl, meta_block);
@@ -62,8 +63,9 @@ static ui32 first_free_blk(CFTLN ftl) {
   // Search for first free block.
   for (b = 0;; ++b) {
     // Return error if no block is free.
-    if (b == ftl->num_blks)
+    if (b == ftl->num_blks) {
       return (ui32)FsError2(FTL_NO_FREE_BLK, ENOSPC);
+    }
 
     // If block is free, return its block number.
     if (IS_FREE(ftl->bdata[b]))
@@ -96,8 +98,9 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       ui32 b;
 
       // Return error if volume is mounted.
-      if (ftl->flags & FTLN_MOUNTED)
+      if (ftl->flags & FTLN_MOUNTED) {
         return FsError2(FTL_MOUNTED, EEXIST);
+      }
 
       // Format volume. Return -1 if error.
       if (format_ftl(ftl))
@@ -120,8 +123,10 @@ int FtlnReport(void* vol, ui32 msg, ...) {
     case FS_FORMAT:
     case FS_FORMAT_RESET_WC: {
       // Format volume. Return -1 if error.
-      if (format_ftl(ftl))
+      if (format_ftl(ftl)) {
+        ftl->logger.error("FTL format failed.");
         return -1;
+      }
 
       // Check if we're to equalize the wear counts (for benchmarking).
       if (msg == FS_FORMAT_RESET_WC) {
@@ -460,8 +465,10 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
 
   // Call driver to erase block. Return -1 if error.
   ++ftl->stats.erase_block;
-  if (ndmEraseBlock(ftl->start_pn + b * ftl->pgs_per_blk, ftl->ndm))
+  if (ndmEraseBlock(ftl->start_pn + b * ftl->pgs_per_blk, ftl->ndm)) {
+    ftl->logger.error("FTL failed to erase block %u.", ftl->start_pn / ftl->pgs_per_blk + b);
     return FtlnFatErr(ftl);
+  }
 
   // If not free, increment free blocks count. Mark free and erased.
   if (IS_FREE(ftl->bdata[b]) == FALSE)

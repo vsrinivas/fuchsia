@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FTL_FTLN_FTLNP_H_
+#define ZIRCON_SYSTEM_ULIB_FTL_FTLN_FTLNP_H_
 
 #include <errno.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@
 #define INC_ELIST TRUE    // If true, write erased blocks list.
 #define DEBUG_ELIST FALSE
 #ifndef FTLN_DEBUG
-#define FTLN_DEBUG 1      // 0, 1, 2, or 3.
+#define FTLN_DEBUG 1  // 0, 1, 2, or 3.
 #endif
 #ifndef FTLN_DEBUG_PTR
 #define FTLN_DEBUG_PTR FALSE
@@ -70,8 +71,8 @@
 #define FREE_BLK_FLAG 0x80000000
 #define ERASED_BLK_FLAG 0x40000000  // Applies only to free blocks.
 #define MAP_BLK_STATE 0x40000000
-#define USED_MASK 0x3FF00000        // Applies to map/vol blocks.
-#define RC_MASK 0x000FFFFF          // Applies to map/vol blocks.
+#define USED_MASK 0x3FF00000  // Applies to map/vol blocks.
+#define RC_MASK 0x000FFFFF    // Applies to map/vol blocks.
 
 #define PGS_PER_BLK_MAX (USED_MASK >> 20)
 
@@ -161,21 +162,21 @@
 typedef struct ftln* FTLN;
 typedef const struct ftln* CFTLN;
 struct ftln {
-  CircLink link;          // Volume list link.
+  CircLink link;  // Volume list link.
 
   // Driver Dependent Variables.
-  ui32 num_pages;         // Total number of pages.
-  ui32 pgs_per_blk;       // Number of pages in a block.
-  ui32 block_size;        // Block size in bytes.
-  ui32 num_blks;          // Number of blocks.
-  ui32 page_size;         // Page size in bytes.
-  ui32 start_pn;          // First page on device for volume.
-  void* ndm;              // Pointer to NDM this FTL belongs to.
+  ui32 num_pages;    // Total number of pages.
+  ui32 pgs_per_blk;  // Number of pages in a block.
+  ui32 block_size;   // Block size in bytes.
+  ui32 num_blks;     // Number of blocks.
+  ui32 page_size;    // Page size in bytes.
+  ui32 start_pn;     // First page on device for volume.
+  void* ndm;         // Pointer to NDM this FTL belongs to.
 
-  ui32 flags;             // Holds various FTL flags.
-  ui32* bdata;            // Block metadata: flags and counts.
-  ui8* blk_wc_lag;        // Amount block erase counts lag 'high_wc'.
-  ui32* mpns;             // Array holding phy page # of map pages.
+  ui32 flags;       // Holds various FTL flags.
+  ui32* bdata;      // Block metadata: flags and counts.
+  ui8* blk_wc_lag;  // Amount block erase counts lag 'high_wc'.
+  ui32* mpns;       // Array holding phy page # of map pages.
 
   FTLMC* map_cache;       // Handle to map page cache.
   ui32 free_vpn;          // Next free page for volume page write.
@@ -194,7 +195,7 @@ struct ftln {
   ui32 resume_tblk;       // Tmp blk for interrupted recycle recovery.
   ui32 resume_po;         // Resume vblk's highest used page offset.
 #if INC_ELIST
-  ui32 elist_blk;         // If valid, # of block holding erased list.
+  ui32 elist_blk;  // If valid, # of block holding erased list.
 #endif
   ui32 vol_pg_writes;     // Metrics: sum of volume page writes.
   ui32 fl_pg_writes;      // Metrics: sum of flash page writes.
@@ -203,16 +204,19 @@ struct ftln {
   ftl_ndm_stats stats;    // Driver call counts.
   FtlWearData wear_data;  // Wear leveling metrics.
 
-  ui8* main_buf;          // NAND main page buffer.
-  ui8* spare_buf;         // Spare buffer for single/multi-pg access.
+  ui8* main_buf;   // NAND main page buffer.
+  ui8* spare_buf;  // Spare buffer for single/multi-pg access.
 
-  ui8 eb_size;            // Spare area size in bytes.
-  ui8 copy_end_found;     // Vblk resume copy-end mark found.
-  ui8 deferment;          // # of recycles before applying wear limit.
+  ui8 eb_size;         // Spare area size in bytes.
+  ui8 copy_end_found;  // Vblk resume copy-end mark found.
+  ui8 deferment;       // # of recycles before applying wear limit.
 #if FS_ASSERT
   ui8 assert_no_recycle;  // Test no recycle changes physical page #.
 #endif
   char vol_name[FTL_NAME_MAX];  // Volume name.
+
+  // Logger used by the FTL.
+  Logger logger;
 };
 
 __BEGIN_CDECLS
@@ -265,3 +269,5 @@ void FtlnShowBlks(void);
 void FtlnCheckBlank(FTLN ftl, ui32 b);
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_ULIB_FTL_FTLN_FTLNP_H_
