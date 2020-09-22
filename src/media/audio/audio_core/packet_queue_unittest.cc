@@ -310,5 +310,27 @@ TEST_F(PacketQueueTest, Trim) {
   EXPECT_EQ(std::vector<int64_t>({0, 1, 2, 3}), released_packets());
 }
 
+TEST_F(PacketQueueTest, ReportUnderflowWithZeroedTimelineFunction) {
+  // Ensure we don't divide-by-zero crash when reporting an underflow while paused.
+  auto zero_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(0, 1)));
+  auto packet_queue = std::make_unique<PacketQueue>(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value(),
+      std::move(zero_function), AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
+
+  bool called = false;
+  packet_queue->SetUnderflowReporter([&called](zx::time start_time, zx::time end_time) {
+    EXPECT_EQ(end_time - start_time, zx::msec(10));
+    called = true;
+  });
+  packet_queue->ReportUnderflow(Fixed(0), Fixed(1), zx::msec(10));
+  EXPECT_TRUE(called);
+}
+
 }  // namespace
 }  // namespace media::audio

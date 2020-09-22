@@ -184,9 +184,17 @@ void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
   if (underflow_reporter_) {
-    auto fixed_to_ref_time = timeline_function_->get().first.Inverse();
-    auto start_ref_time = zx::time(fixed_to_ref_time.Apply(frac_source_start.raw_value()));
-    auto start_mono_time = audio_clock_.MonotonicTimeFromReferenceTime(start_ref_time);
+    zx::time start_mono_time;
+    // If the renderer is paused concurrently with a mix, the timeline_function may be zeroed.
+    // If that happens, estimate start_mono_time using now - underflow_duration.
+    auto ref_time_to_fixed = timeline_function_->get().first;
+    if (ref_time_to_fixed.invertible()) {
+      auto fixed_to_ref_time = ref_time_to_fixed.Inverse();
+      auto start_ref_time = zx::time(fixed_to_ref_time.Apply(frac_source_start.raw_value()));
+      start_mono_time = audio_clock_.MonotonicTimeFromReferenceTime(start_ref_time);
+    } else {
+      start_mono_time = zx::clock::get_monotonic() - underflow_duration;
+    }
     underflow_reporter_(start_mono_time, start_mono_time + underflow_duration);
   }
 
