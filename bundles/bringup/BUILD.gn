@@ -100,7 +100,6 @@ group("tests") {
     "//zircon/system/ulib/fs/test:fs-vnode-bootfs-test",
     "//zircon/system/ulib/fs/test_support/test:fs_test_support-bootfs-test",
     "//zircon/system/ulib/fs/transaction/test:fs-transaction-bootfs-test",
-    "//zircon/system/ulib/fvm/test:fvm-unit-bootfs-test",
     "//zircon/system/ulib/gpt/test:gpt-unit-bootfs-test",
     "//zircon/system/ulib/hwreg/test:libhwreg-bootfs-test",
     "//zircon/system/ulib/hwreg/test:libhwreg-i2c-bootfs-test",

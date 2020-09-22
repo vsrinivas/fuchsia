@@ -13,24 +13,15 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/components.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":fvm-unit" ]
+  deps = [ ":test-package" ]
 }
 
 test("fvm-unit") {
   output_name = "fvm-unit-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [
     "format-info-test.cc",
     "integrity-validation-test.cc",
@@ -52,7 +43,16 @@ test("fvm-unit") {
   }
 }
 
-bootfs_test("fvm-unit-bootfs-test") {
-  name = "fvm-unit-test"
+fuchsia_component("fvm-unit-test-component") {
+  component_name = "fvm-unit-test"
+  testonly = true
+
+  manifest = "fvm-unit-test.cmx"
+
   deps = [ ":fvm-unit" ]
+}
+
+fuchsia_test_package("test-package") {
+  package_name = "fvm-tests"
+  test_components = [ ":fvm-unit-test-component" ]
 }

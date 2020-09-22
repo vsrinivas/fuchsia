@@ -1,0 +1,11 @@
+{
+    "program" : {
+        "binary" : "test/fvm-unit-test"
+    },
+    "sandbox" : {
+        "services" : [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

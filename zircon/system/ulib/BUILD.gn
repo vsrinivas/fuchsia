@@ -16,6 +16,7 @@ group("tests") {
     "edid:tests",
     "fs/journal/test",
     "ftl/test:tests",
+    "fvm/test:tests",
     "fzl:tests",
     "hid-parser/test:tests",
     "inspect:tests",
