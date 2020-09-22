@@ -52,7 +52,7 @@ zx_status_t BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
     duplicate_rights_attenuation_mask &= rights_attenuation_mask;
   }
   parent()->CreateBufferCollectionToken(parent_, duplicate_rights_attenuation_mask,
-                                        std::move(buffer_collection_token_request));
+                                        std::move(buffer_collection_token_request), &debug_info_);
   return ZX_OK;
 }
 
@@ -94,6 +94,10 @@ void BufferCollectionToken::SetServerKoid(zx_koid_t server_koid) {
   ZX_DEBUG_ASSERT(server_koid != ZX_KOID_INVALID);
   server_koid_ = server_koid;
   parent_device_->TrackToken(this);
+  if (parent_device_->TryRemoveKoidFromUnfoundTokenList(server_koid_)) {
+    was_unfound_token_ = true;
+    // LogicalBufferCollection will print an error, since it might have useful client information
+  }
 }
 
 zx_koid_t BufferCollectionToken::server_koid() { return server_koid_; }
@@ -117,10 +121,16 @@ zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
 
 zx_status_t BufferCollectionToken::SetDebugClientInfo(const char* name_data, size_t name_size,
                                                       uint64_t id) {
-  debug_name_ = std::string(name_data, name_size);
-  debug_id_ = id;
-  debug_id_property_ = node_.CreateUint("debug_id", debug_id_);
-  debug_name_property_ = node_.CreateString("debug_name", debug_name_);
+  debug_info_.name = std::string(name_data, name_size);
+  debug_info_.id = id;
+  debug_id_property_ = node_.CreateUint("debug_id", debug_info_.id);
+  debug_name_property_ = node_.CreateString("debug_name", debug_info_.name);
+  if (was_unfound_token_) {
+    // Output the debug info now that we have it, since we previously said bad things about this
+    // token's server_koid not being found when it should have been, but at that time we didn't have
+    // the debug info.
+    parent_->LogClientError(&debug_info_, "Got debug info for token %ld", server_koid_);
+  }
   return ZX_OK;
 }
 

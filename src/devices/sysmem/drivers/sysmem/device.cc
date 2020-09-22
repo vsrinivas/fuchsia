@@ -642,9 +642,26 @@ void Device::UntrackToken(BufferCollectionToken* token) {
   tokens_by_koid_.erase(iter);
 }
 
+bool Device::TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid) {
+  // unfound_token_koids_ is limited to kMaxUnfoundTokenCount (and likely empty), so a loop over it
+  // should be efficient enough.
+  for (auto it = unfound_token_koids_.begin(); it != unfound_token_koids_.end(); ++it) {
+    if (*it == token_server_koid) {
+      unfound_token_koids_.erase(it);
+      return true;
+    }
+  }
+  return false;
+}
+
 BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_server_koid) {
   auto iter = tokens_by_koid_.find(token_server_koid);
   if (iter == tokens_by_koid_.end()) {
+    unfound_token_koids_.push_back(token_server_koid);
+    constexpr uint32_t kMaxUnfoundTokenCount = 8;
+    while (unfound_token_koids_.size() > kMaxUnfoundTokenCount) {
+      unfound_token_koids_.pop_front();
+    }
     return nullptr;
   }
   return iter->second;

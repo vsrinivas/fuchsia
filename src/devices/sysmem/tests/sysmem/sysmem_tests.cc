@@ -828,6 +828,95 @@ TEST(Sysmem, NoToken) {
   }
 }
 
+TEST(Sysmem, NoSync) {
+  zx_status_t status;
+  zx::channel allocator2_client_1;
+  status = connect_to_sysmem_driver(&allocator2_client_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_1;
+  zx::channel token_server_1;
+  status = zx::channel::create(0, &token_client_1, &token_server_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  // Client 1 creates a token and new LogicalBufferCollection using
+  // AllocateSharedCollection().
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
+                                                            token_server_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  const char* kAllocatorName = "TestAllocator";
+  fuchsia_sysmem_AllocatorSetDebugClientInfo(allocator2_client_1.get(), kAllocatorName,
+                                             strlen(kAllocatorName), 1u);
+
+  const char* kClientName = "TestClient";
+  fuchsia_sysmem_BufferCollectionTokenSetDebugClientInfo(token_client_1.get(), kClientName,
+                                                         strlen(kClientName), 2u);
+
+  // Make another token so we can bind it and set a name on the collection.
+  zx::channel collection_client_3;
+
+  {
+    zx::channel token_client_3;
+    zx::channel token_server_3;
+    status = zx::channel::create(0, &token_client_3, &token_server_3);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_server_3;
+    status = zx::channel::create(0, &collection_client_3, &collection_server_3);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
+        token_client_1.get(), ZX_RIGHT_SAME_RIGHTS, token_server_3.release());
+    EXPECT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_BufferCollectionTokenSync(token_client_1.get());
+    EXPECT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator2_client_1.get(), token_client_3.release(), collection_server_3.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    const char* kCollectionName = "TestCollection";
+    fuchsia_sysmem_BufferCollectionSetName(collection_client_3.get(), 1ul, kCollectionName,
+                                           strlen(kCollectionName));
+  }
+
+  zx::channel token_client_2;
+  zx::channel token_server_2;
+  status = zx::channel::create(0, &token_client_2, &token_server_2);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  const char* kClient2Name = "TestClient2";
+  fuchsia_sysmem_BufferCollectionTokenSetDebugClientInfo(token_client_2.get(), kClient2Name,
+                                                         strlen(kClient2Name), 3u);
+
+  // Close to prevent Sync on token_client_1 from failing later due to LogicalBufferCollection
+  // failure caused by the token handle closing.
+  fuchsia_sysmem_BufferCollectionTokenClose(token_client_2.get());
+
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_1.get(), token_client_2.release(), collection_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  // Duplicate has not been sent (or received) so this should fail.
+  status = fuchsia_sysmem_BufferCollectionSync(collection_client.get());
+  EXPECT_NE(status, ZX_OK, "");
+
+  // The duplicate/sync should print out an errror message but succeed.
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_BufferCollectionTokenSync(token_client_1.get());
+  EXPECT_EQ(status, ZX_OK, "");
+}
+
 TEST(Sysmem, MultipleParticipants) {
   zx_status_t status;
   zx::channel allocator2_client_1;

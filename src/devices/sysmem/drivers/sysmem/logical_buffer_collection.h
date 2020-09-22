@@ -31,7 +31,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
  public:
   struct ClientInfo {
     std::string name;
-    zx_koid_t id;
+    zx_koid_t id{};
   };
 
   // In sysmem_tests, the max needed was observed to be 12400 bytes, so if we wanted to avoid heap
@@ -78,7 +78,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // not just the headers) which isn't available in Zircon so far.
   void CreateBufferCollectionToken(fbl::RefPtr<LogicalBufferCollection> self,
                                    uint32_t rights_attenuation_mask,
-                                   zx::channel buffer_collection_token_request);
+                                   zx::channel buffer_collection_token_request,
+                                   const ClientInfo* client_info);
 
   void OnSetConstraints();
 
@@ -125,7 +126,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void Fail(const char* format, ...);
 
   static void LogInfo(const char* format, ...);
-  static void LogErrorStatic(const char* format, ...) __PRINTFLIKE(1, 2);
+  static void LogErrorStatic(const ClientInfo* client_info, const char* format, ...)
+      __PRINTFLIKE(2, 3);
 
   // Uses the implicit |current_client_info_| to identify which client has an error.
   void LogError(const char* format, ...) __PRINTFLIKE(2, 3);

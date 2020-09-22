@@ -91,6 +91,9 @@ class Device final : public DdkDeviceType,
   void TrackToken(BufferCollectionToken* token);
   void UntrackToken(BufferCollectionToken* token);
 
+  // Finds and removes token_server_koid from unfound_token_koids_.
+  bool TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid);
+
   // Find the BufferCollectionToken (if any) by the koid of the server end of
   // its FIDL channel.
   BufferCollectionToken* FindTokenByServerChannelKoid(zx_koid_t token_server_koid);
@@ -162,6 +165,8 @@ class Device final : public DdkDeviceType,
   // This map allows us to look up the BufferCollectionToken by the koid of
   // the server end of a BufferCollectionToken channel.
   std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
+
+  std::deque<zx_koid_t> unfound_token_koids_;
 
   // Used to allocate memory to store FIDL tables for MemoryAllocator.
   fidl::HeapAllocator fidl_allocator_;

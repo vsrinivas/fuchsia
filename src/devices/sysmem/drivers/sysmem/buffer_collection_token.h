@@ -39,12 +39,14 @@ class BufferCollectionToken
 
   bool is_done();
 
+  bool was_unfound_token() const { return was_unfound_token_; }
+
   void SetBufferCollectionRequest(zx::channel buffer_collection_request);
 
   zx::channel TakeBufferCollectionRequest();
 
-  const std::string& debug_name() const { return debug_name_; }
-  uint64_t debug_id() const { return debug_id_; }
+  const std::string& debug_name() const { return debug_info_.name; }
+  uint64_t debug_id() const { return debug_info_.id; }
 
  private:
   friend class FidlServer;
@@ -68,6 +70,8 @@ class BufferCollectionToken
   // BufferCollectionToken and fatal to the LogicalBufferCollection.
   bool is_done_ = false;
 
+  bool was_unfound_token_ = false;
+
   // This is set up to once during
   // LogicalBufferCollection::BindSharedCollection(), and essentially curries
   // the buffer_collection_request past the processing of any remaining
@@ -78,8 +82,7 @@ class BufferCollectionToken
   // buffers too soon before all tokens are gone).
   zx::channel buffer_collection_request_;
 
-  std::string debug_name_;
-  uint64_t debug_id_;
+  LogicalBufferCollection::ClientInfo debug_info_;
   inspect::Node node_;
   inspect::UintProperty debug_id_property_;
   inspect::StringProperty debug_name_property_;

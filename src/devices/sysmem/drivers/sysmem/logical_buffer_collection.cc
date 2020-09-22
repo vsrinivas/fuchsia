@@ -211,7 +211,7 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
   LogInfo("LogicalBufferCollection::Create()");
   logical_buffer_collection->CreateBufferCollectionToken(
       logical_buffer_collection, std::numeric_limits<uint32_t>::max(),
-      std::move(buffer_collection_token_request));
+      std::move(buffer_collection_token_request), nullptr);
 }
 
 // static
@@ -245,7 +245,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   zx_status_t status =
       get_channel_koids(buffer_collection_token, &token_client_koid, &token_server_koid);
   if (status != ZX_OK) {
-    LogErrorStatic("Failed to get channel koids");
+    LogErrorStatic(client_info, "Failed to get channel koids");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -255,7 +255,10 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   if (!token) {
     // The most likely scenario for why the token was not found is that Sync() was not called on
     // either the BufferCollectionToken or the BufferCollection.
-    LogErrorStatic("Could not find token by server channel koid");
+    LogErrorStatic(client_info,
+                   "BindSharedCollection could not find token from server channel koid %ld; "
+                   "perhaps BufferCollectionToken.Sync() was not called",
+                   token_server_koid);
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -291,7 +294,7 @@ zx_status_t LogicalBufferCollection::ValidateBufferCollectionToken(Device* paren
 
 void LogicalBufferCollection::CreateBufferCollectionToken(
     fbl::RefPtr<LogicalBufferCollection> self, uint32_t rights_attenuation_mask,
-    zx::channel buffer_collection_token_request) {
+    zx::channel buffer_collection_token_request, const ClientInfo* client_info) {
   ZX_DEBUG_ASSERT(buffer_collection_token_request.get());
   auto token = BufferCollectionToken::Create(parent_device_, self, rights_attenuation_mask);
   token->SetErrorHandler([this, token_ptr = token.get()](zx_status_t status) {
@@ -372,6 +375,14 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
     return;
   }
   token_ptr->SetServerKoid(server_koid);
+  if (token_ptr->was_unfound_token()) {
+    LogClientError(client_info,
+                   "BufferCollectionToken.Duplicate() received for creating token with server koid"
+                   "%ld after BindSharedCollection() previously received attempting to use same"
+                   "token.  Client sequence should be Duplicate(), Sync(), BindSharedCollection()."
+                   "Missing Sync()?",
+                   server_koid);
+  }
 
   LogInfo("CreateBufferCollectionToken() - server_koid: %lu", token_ptr->server_koid());
   token_ptr->Bind(std::move(buffer_collection_token_request));
@@ -504,10 +515,18 @@ void LogicalBufferCollection::LogInfo(const char* format, ...) {
   va_end(args);
 }
 
-void LogicalBufferCollection::LogErrorStatic(const char* format, ...) {
+void LogicalBufferCollection::LogErrorStatic(const ClientInfo* client_info, const char* format,
+                                             ...) {
   va_list args;
   va_start(args, format);
-  vLog(true, "LogicalBufferCollection", "error", format, args);
+  fbl::String formatted = fbl::StringVPrintf(format, args);
+  if (client_info && !client_info->name.empty()) {
+    fbl::String client_name =
+        fbl::StringPrintf(" - client \"%s\" id %ld", client_info->name.c_str(), client_info->id);
+
+    formatted = fbl::String::Concat({formatted, client_name});
+  }
+  zxlogf(ERROR, "[LogicalBufferCollection error] %s", formatted.c_str());
   va_end(args);
 }
 
@@ -2233,7 +2252,7 @@ zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait(async_dispatche
   ZX_DEBUG_ASSERT(!waiting_);
   zx_status_t status = zero_children_wait_.Begin(dispatcher);
   if (status != ZX_OK) {
-    LogErrorStatic("zero_children_wait_.Begin() failed - status: %d", status);
+    LogErrorStatic(nullptr, "zero_children_wait_.Begin() failed - status: %d", status);
     return status;
   }
   waiting_ = true;
