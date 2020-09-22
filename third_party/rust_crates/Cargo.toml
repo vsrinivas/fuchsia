@@ -458,3 +458,26 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 [gn.package.syn."1.0.21"]
 [gn.package.test-case."1.0.0"]
 [gn.package.wasm-bindgen."0.2.60"]
+
+
+# This section defines GN binary targets that should be generated from Cargo binary targets. (By
+# default, cargo-gnaw will only generate targets for libraries and proc-macros.)
+#
+# Example:
+#
+#   [gn.package.cargo-package-name."1.2.3".binary.cargo-target-name]
+#   output_name = "gn-name"
+#   rustflags = [ ... ]
+#   configs = [ ... ]
+#
+#
+# In the above example, "gn-name" will become both the name of the group target to depend
+# upon and the executable's output_name, so usages can assume output_name == target_name (and must
+# since get_target_outputs only works within the same file).
+#
+# "cargo-target-name" is the name of the Cargo binary target within "cargo-package-name".
+#
+# Keep this sorted alphabetically, please.
+
+[gn.package.cxxbridge-cmd."0.3.5".binary.cxxbridge]
+output_name = "cxxbridge"

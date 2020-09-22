@@ -820,6 +820,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("cxxbridge") {
+  deps = [ ":cxxbridge-cmd-cxxbridge-v0_3_5" ]
+}
+
 rust_library("adler32-v1_0_4") {
   crate_name = "adler32"
   crate_root = "//third_party/rust_crates/vendor/adler32/src/lib.rs"
@@ -844,7 +848,7 @@ rust_library("adler32-v1_0_4") {
 rust_library("aho-corasick-v0_7_10") {
   crate_name = "aho_corasick"
   crate_root = "//third_party/rust_crates/vendor/aho-corasick/src/lib.rs"
-  output_name = "aho_corasick-fe50af6a16f014ba"
+  output_name = "aho_corasick-4442fbca81319248"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -858,8 +862,8 @@ rust_library("aho-corasick-v0_7_10") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=fe50af6a16f014ba",
-    "-Cextra-filename=-fe50af6a16f014ba",
+    "-Cmetadata=4442fbca81319248",
+    "-Cextra-filename=-4442fbca81319248",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2328,6 +2332,33 @@ rust_library("cxx-v0_3_5") {
     "-Cmetadata=a0e30dc94fbcc11c",
     "-Cextra-filename=-a0e30dc94fbcc11c",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+executable("cxxbridge-cmd-cxxbridge-v0_3_5") {
+  crate_name = "cxxbridge"
+  crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/main.rs"
+  output_name = "cxxbridge"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":anyhow-v1_0_25" ]
+  deps += [ ":clap-v2_33_0" ]
+  deps += [ ":codespan-reporting-v0_9_5" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_21" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=d39229e7a5f9e4f1",
+    "-Cextra-filename=-d39229e7a5f9e4f1",
   ]
 }
 
@@ -4633,7 +4664,7 @@ rust_library("num-complex-v0_2_1") {
 rust_proc_macro("num-derive-v0_2_4") {
   crate_name = "num_derive"
   crate_root = "//third_party/rust_crates/vendor/num-derive/src/lib.rs"
-  output_name = "num_derive-e75273d0ebcf1af3"
+  output_name = "num_derive-2401d71751fbb28b"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -4649,8 +4680,8 @@ rust_proc_macro("num-derive-v0_2_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=e75273d0ebcf1af3",
-    "-Cextra-filename=-e75273d0ebcf1af3",
+    "-Cmetadata=2401d71751fbb28b",
+    "-Cextra-filename=-2401d71751fbb28b",
     "--cfg=has_i128",
   ]
 }
@@ -5489,7 +5520,7 @@ rust_library("pretty_assertions-v0_5_1") {
 rust_library("prettytable-rs-v0_8_0") {
   crate_name = "prettytable"
   crate_root = "//third_party/rust_crates/vendor/prettytable-rs/src/lib.rs"
-  output_name = "prettytable-7f7c01207fcbc28d"
+  output_name = "prettytable-1855933ce08984ad"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -5508,8 +5539,8 @@ rust_library("prettytable-rs-v0_8_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=7f7c01207fcbc28d",
-    "-Cextra-filename=-7f7c01207fcbc28d",
+    "-Cmetadata=1855933ce08984ad",
+    "-Cextra-filename=-1855933ce08984ad",
     "--cfg=feature=\"csv\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"win_crlf\"",
@@ -6409,7 +6440,7 @@ rust_library("rdrand-v0_4_0") {
 rust_library("redox_syscall-v0_1_51") {
   crate_name = "syscall"
   crate_root = "//third_party/rust_crates/vendor/redox_syscall/src/lib.rs"
-  output_name = "syscall-23d5cea1a557a7af"
+  output_name = "syscall-744b5901ce7227f5"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6422,8 +6453,8 @@ rust_library("redox_syscall-v0_1_51") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=23d5cea1a557a7af",
-    "-Cextra-filename=-23d5cea1a557a7af",
+    "-Cmetadata=744b5901ce7227f5",
+    "-Cextra-filename=-744b5901ce7227f5",
   ]
 }
 
@@ -6710,7 +6741,7 @@ rust_library("rouille-v3_0_0") {
 rust_library("rust-crypto-v0_2_36") {
   crate_name = "crypto"
   crate_root = "//third_party/rust-mirrors/rust-crypto/src/lib.rs"
-  output_name = "crypto-a8e75d2b9766ddb7"
+  output_name = "crypto-6b666b5d7cfb935b"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6727,8 +6758,8 @@ rust_library("rust-crypto-v0_2_36") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=a8e75d2b9766ddb7",
-    "-Cextra-filename=-a8e75d2b9766ddb7",
+    "-Cmetadata=6b666b5d7cfb935b",
+    "-Cextra-filename=-6b666b5d7cfb935b",
   ]
 }
 
@@ -7554,7 +7585,7 @@ rust_library("servo-freetype-sys-v4_0_5") {
   crate_name = "freetype_sys"
   crate_root =
       "//third_party/rust_crates/tiny_mirrors/servo-freetype-sys/src/lib.rs"
-  output_name = "freetype_sys-e1fd76a775a364ef"
+  output_name = "freetype_sys-b176f3e101aab84"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7567,8 +7598,8 @@ rust_library("servo-freetype-sys-v4_0_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=e1fd76a775a364ef",
-    "-Cextra-filename=-e1fd76a775a364ef",
+    "-Cmetadata=b176f3e101aab84",
+    "-Cextra-filename=-b176f3e101aab84",
   ]
 }
 
@@ -8868,7 +8899,7 @@ rust_library("tracing-subscriber-v0_2_7") {
 rust_library("trust-dns-proto-v0_19_2") {
   crate_name = "trust_dns_proto"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-proto/src/lib.rs"
-  output_name = "trust_dns_proto-fb47e36b3bae247a"
+  output_name = "trust_dns_proto-f1194200ce4c7ef0"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8892,8 +8923,8 @@ rust_library("trust-dns-proto-v0_19_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=fb47e36b3bae247a",
-    "-Cextra-filename=-fb47e36b3bae247a",
+    "-Cmetadata=f1194200ce4c7ef0",
+    "-Cextra-filename=-f1194200ce4c7ef0",
     "--cfg=feature=\"testing\"",
   ]
 }
@@ -8901,7 +8932,7 @@ rust_library("trust-dns-proto-v0_19_2") {
 rust_library("trust-dns-resolver-v0_19_2") {
   crate_name = "trust_dns_resolver"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
-  output_name = "trust_dns_resolver-a99b11721b9b5ef8"
+  output_name = "trust_dns_resolver-b1fe29499f1925ce"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8923,8 +8954,8 @@ rust_library("trust-dns-resolver-v0_19_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=a99b11721b9b5ef8",
-    "-Cextra-filename=-a99b11721b9b5ef8",
+    "-Cmetadata=b1fe29499f1925ce",
+    "-Cextra-filename=-b1fe29499f1925ce",
     "--cfg=feature=\"testing\"",
   ]
 }
@@ -9027,7 +9058,7 @@ rust_library("twoway-v0_1_8") {
 rust_library("typed-arena-v1_4_1") {
   crate_name = "typed_arena"
   crate_root = "//third_party/rust_crates/vendor/typed-arena/src/lib.rs"
-  output_name = "typed_arena-ac595f153985a983"
+  output_name = "typed_arena-18c1bf68df33fe8c"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9040,8 +9071,8 @@ rust_library("typed-arena-v1_4_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=ac595f153985a983",
-    "-Cextra-filename=-ac595f153985a983",
+    "-Cmetadata=18c1bf68df33fe8c",
+    "-Cextra-filename=-18c1bf68df33fe8c",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -9252,7 +9283,7 @@ rust_library("unicase-v2_5_1") {
 rust_library("unicode-bidi-v0_3_4") {
   crate_name = "unicode_bidi"
   crate_root = "//third_party/rust_crates/vendor/unicode-bidi/src/lib.rs"
-  output_name = "unicode_bidi-29cb3fce6b8017f7"
+  output_name = "unicode_bidi-6196d3d9fc63e289"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9266,8 +9297,8 @@ rust_library("unicode-bidi-v0_3_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=29cb3fce6b8017f7",
-    "-Cextra-filename=-29cb3fce6b8017f7",
+    "-Cmetadata=6196d3d9fc63e289",
+    "-Cextra-filename=-6196d3d9fc63e289",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -10056,7 +10087,7 @@ rust_library("xattr-v0_2_2") {
 rust_library("xml-rs-v0_8_0") {
   crate_name = "xml"
   crate_root = "//third_party/rust_crates/vendor/xml-rs/src/lib.rs"
-  output_name = "xml-b4c35f2449a37a92"
+  output_name = "xml-9187c9c232fb3a0e"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -10069,8 +10100,8 @@ rust_library("xml-rs-v0_8_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=b4c35f2449a37a92",
-    "-Cextra-filename=-b4c35f2449a37a92",
+    "-Cmetadata=9187c9c232fb3a0e",
+    "-Cextra-filename=-9187c9c232fb3a0e",
   ]
 }
 

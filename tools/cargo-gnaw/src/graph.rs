@@ -37,6 +37,20 @@ impl<'a> GnBuildGraph<'a> {
         })
     }
 
+    pub fn find_binary_target(
+        &self,
+        package: &str,
+        version: &str,
+        target: &str,
+    ) -> Option<&GnTarget<'_>> {
+        self.targets().find(|t| match t.target_type {
+            GnRustType::Binary => {
+                t.pkg_name == package && t.version() == version && t.target_name == target
+            }
+            _ => false,
+        })
+    }
+
     /// Add a cargo package to the target list. If the dependencies
     /// are not already in the target graph, add them as well
     pub fn add_cargo_package(&mut self, cargo_pkg_id: PackageId) -> Result<(), Error> {
@@ -106,7 +120,10 @@ impl<'a> GnBuildGraph<'a> {
             for rust_target in package.targets.iter() {
                 let target_type = GnRustType::try_from(&rust_target.kind)?;
                 match target_type {
-                    GnRustType::StaticLibrary | GnRustType::Library | GnRustType::ProcMacro => {
+                    GnRustType::StaticLibrary
+                    | GnRustType::Library
+                    | GnRustType::ProcMacro
+                    | GnRustType::Binary => {
                         let gn_target = GnTarget::new(
                             &node.id,
                             &rust_target.name,
@@ -124,8 +141,7 @@ impl<'a> GnBuildGraph<'a> {
                     // BuildScripts are handled as part of the targets
                     // TODO support building tests. Should integrate with whatever GN
                     // metadata collection system used by the main build.
-                    GnRustType::Binary
-                    | GnRustType::Example
+                    GnRustType::Example
                     | GnRustType::Bench
                     | GnRustType::Test
                     | GnRustType::BuildScript => (),

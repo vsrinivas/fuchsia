@@ -7,6 +7,7 @@ use {
     crate::types::*,
     cargo_metadata::{Package, PackageId},
     semver::Version,
+    std::borrow::Cow,
     std::cmp::Ordering,
     std::collections::{hash_map::DefaultHasher, HashMap},
     std::hash::{Hash, Hasher},
@@ -25,7 +26,7 @@ pub struct GnTarget<'a> {
     /// Version of the Package from Cargo
     version: &'a Version,
     /// Name of the target given in Cargo.toml
-    target_name: &'a str,
+    pub target_name: &'a str,
     /// Name of the package given in Cargo.toml
     pub pkg_name: &'a str,
     /// Path to the root of the crate
@@ -47,17 +48,22 @@ pub struct GnTarget<'a> {
 
 impl std::fmt::Debug for GnTarget<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.build_script.is_some() {
-            write!(f, "{:?} with custom-build: {}", self.target_type, self.pkg_name)
+        let display_name = if self.target_name != self.pkg_name {
+            Cow::Owned(format!("{}.{}", self.pkg_name, self.target_name))
         } else {
-            write!(f, "{:?}: {}", self.target_type, self.pkg_name)
+            Cow::Borrowed(self.pkg_name)
+        };
+        if self.build_script.is_some() {
+            write!(f, "{:?} with custom-build: {}", self.target_type, display_name)
+        } else {
+            write!(f, "{:?}: {}", self.target_type, display_name)
         }
     }
 }
 
 impl PartialEq for GnTarget<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.cargo_pkg_id == other.cargo_pkg_id
+        self.cargo_pkg_id == other.cargo_pkg_id && self.target_name == other.target_name
     }
 }
 impl Eq for GnTarget<'_> {}
@@ -70,13 +76,14 @@ impl PartialOrd for GnTarget<'_> {
 
 impl Ord for GnTarget<'_> {
     fn cmp(&self, other: &GnTarget<'_>) -> Ordering {
-        self.cargo_pkg_id.cmp(&other.cargo_pkg_id)
+        self.cargo_pkg_id.cmp(&other.cargo_pkg_id).then(self.target_name.cmp(&other.target_name))
     }
 }
 
 impl Hash for GnTarget<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.cargo_pkg_id.hash(state);
+        self.target_name.hash(state);
     }
 }
 
@@ -127,13 +134,16 @@ impl<'a> GnTarget<'a> {
         format!("{:x}", hasher.finish())
     }
 
-    pub fn gn_pkg_name(&self) -> String {
-        add_version_suffix(&self.pkg_name, &self.version)
-    }
-
     /// with version
     pub fn gn_target_name(&self) -> String {
-        add_version_suffix(&self.target_name, &self.version)
+        let prefix = match self.target_type {
+            GnRustType::Library | GnRustType::ProcMacro | GnRustType::StaticLibrary => {
+                Cow::Borrowed(self.pkg_name)
+            }
+            GnRustType::Binary => Cow::Owned(format!("{}-{}", self.pkg_name, self.target_name)),
+            ty => panic!("Don't know how to represent this type \"{:?}\" in GN", ty),
+        };
+        add_version_suffix(&prefix, &self.version)
     }
 
     pub fn gn_target_type(&self) -> String {

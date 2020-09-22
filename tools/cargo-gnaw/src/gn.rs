@@ -7,7 +7,8 @@ use {
     crate::{cfg::cfg_to_gn_conditional, target::GnTarget, types::*, CombinedTargetCfg},
     anyhow::{Context, Error},
     cargo_metadata::Package,
-    std::collections::HashMap,
+    std::borrow::Cow,
+    std::collections::BTreeMap,
     std::fmt::Display,
     std::io,
     std::path::Path,
@@ -64,11 +65,38 @@ pub fn write_top_level_rule<'a, W: io::Write>(
     Ok(())
 }
 
+/// Writes rules at the top of the GN file that don't have the version appended
+pub fn write_binary_top_level_rule<'a, W: io::Write>(
+    output: &mut W,
+    platform: Option<String>,
+    rule_name: &str,
+    target: &GnTarget<'a>,
+) -> Result<(), Error> {
+    if let Some(ref platform) = platform {
+        writeln!(
+            output,
+            "if ({conditional}) {{\n",
+            conditional = cfg_to_gn_conditional(&platform)?
+        )?;
+    }
+    writeln!(
+        output,
+        include_str!("../templates/entry_gn_rules.template"),
+        group_name = rule_name,
+        dep_name = target.gn_target_name(),
+    )?;
+    if platform.is_some() {
+        writeln!(output, "}}\n")?;
+    }
+    Ok(())
+}
+
 struct GnField {
     ty: String,
     exists: bool,
-    add_fields: HashMap<Option<Platform>, Vec<String>>,
-    remove_fields: HashMap<Option<Platform>, Vec<String>>,
+    // Use BTreeMap so that iteration over platforms is stable.
+    add_fields: BTreeMap<Option<Platform>, Vec<String>>,
+    remove_fields: BTreeMap<Option<Platform>, Vec<String>>,
 }
 impl GnField {
     /// If defining a new field in the template
@@ -76,19 +104,14 @@ impl GnField {
         GnField {
             ty: ty.to_string(),
             exists: false,
-            add_fields: HashMap::new(),
-            remove_fields: HashMap::new(),
+            add_fields: BTreeMap::new(),
+            remove_fields: BTreeMap::new(),
         }
     }
 
     /// If the field already exists in the template
     pub fn exists(ty: &str) -> GnField {
-        GnField {
-            ty: ty.to_string(),
-            exists: true,
-            add_fields: HashMap::new(),
-            remove_fields: HashMap::new(),
-        }
+        GnField { exists: true, ..Self::new(ty) }
     }
 
     pub fn add_platform_cfg<T: AsRef<str> + Display>(&mut self, platform: Option<String>, cfg: T) {
@@ -178,7 +201,8 @@ pub fn write_rule<W: io::Write>(
     target: &GnTarget<'_>,
     project_root: &Path,
     global_target_cfgs: Option<&GlobalTargetCfgs>,
-    custom_build: Option<&CombinedTargetCfg>,
+    custom_build: Option<&CombinedTargetCfg<'_>>,
+    output_name: Option<&str>,
 ) -> Result<(), Error> {
     // Generate a section for dependencies that is paramaterized on toolchain
     let mut dependencies = String::from("deps = []\n");
@@ -273,17 +297,17 @@ pub fn write_rule<W: io::Write>(
             }
             if let Some(ref flags) = cfg.rustflags {
                 for flag in flags {
-                    rustflags.add_platform_cfg(platform.clone(), flag.to_string());
+                    rustflags.add_platform_cfg(platform.cloned(), flag.to_string());
                 }
             }
             if let Some(ref env_vars) = cfg.env_vars {
                 for flag in env_vars {
-                    rustenv.add_platform_cfg(platform.clone(), flag.to_string());
+                    rustenv.add_platform_cfg(platform.cloned(), flag.to_string());
                 }
             }
             if let Some(ref crate_configs) = cfg.configs {
                 for config in crate_configs {
-                    configs.add_platform_cfg(platform.clone(), config);
+                    configs.add_platform_cfg(platform.cloned(), config);
                 }
             }
         }
@@ -308,13 +332,17 @@ pub fn write_rule<W: io::Write>(
             ))?
             .to_string_lossy()
     );
+    let output_name = output_name.map_or_else(
+        || Cow::Owned(format!("{}-{}", target.name().replace("-", "_"), target.metadata_hash())),
+        |n| Cow::Borrowed(n),
+    );
     writeln!(
         output,
         include_str!("../templates/gn_rule.template"),
         gn_rule = target.gn_target_type(),
-        target_name = target.gn_pkg_name(),
+        target_name = target.gn_target_name(),
         crate_name = target.name().replace("-", "_"),
-        output_name = format!("{}-{}", target.name().replace("-", "_"), target.metadata_hash()),
+        output_name = output_name,
         root_path = root_relative_path,
         aliased_deps = aliased_deps_str,
         dependencies = dependencies,
@@ -325,42 +353,88 @@ pub fn write_rule<W: io::Write>(
     .map_err(Into::into)
 }
 
-#[test]
-fn simple_target() {
-    let pkg_id = cargo_metadata::PackageId { repr: String::from("42") };
-    let version = semver::Version::new(0, 1, 0);
-    let target = GnTarget::new(
-        &pkg_id,
-        "test_target",
-        "test_package",
-        "2018",
-        Path::new("somewhere/over/the/rainbow.rs"),
-        &version,
-        GnRustType::Library,
-        &[],
-        None,
-        HashMap::new(),
-    );
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
 
-    let mut output = vec![];
-    write_rule(&mut output, &target, Path::new("somewhere/over"), None, None).unwrap();
-    let output = String::from_utf8(output).unwrap();
-    assert_eq!(
-        output,
-        r#"rust_library("test_package-v0_1_0") {
+    #[test]
+    fn simple_target() {
+        let pkg_id = cargo_metadata::PackageId { repr: String::from("42") };
+        let version = semver::Version::new(0, 1, 0);
+        let target = GnTarget::new(
+            &pkg_id,
+            "test_target",
+            "test_package",
+            "2018",
+            Path::new("somewhere/over/the/rainbow.rs"),
+            &version,
+            GnRustType::Library,
+            &[],
+            None,
+            HashMap::new(),
+        );
+
+        let mut output = vec![];
+        write_rule(&mut output, &target, Path::new("somewhere/over"), None, None, None).unwrap();
+        let output = String::from_utf8(output).unwrap();
+        assert_eq!(
+            output,
+            r#"rust_library("test_package-v0_1_0") {
   crate_name = "test_target"
   crate_root = "//the/rainbow.rs"
-  output_name = "test_target-b9ab75307aed635c"
+  output_name = "test_target-c5bf97c44457465a"
   
   deps = []
 
   rustenv = []
 
-  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=b9ab75307aed635c","-Cextra-filename=-b9ab75307aed635c"]
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=c5bf97c44457465a","-Cextra-filename=-c5bf97c44457465a"]
 
   
 }
 
 "#
-    );
+        );
+    }
+    #[test]
+    fn binary_target() {
+        let pkg_id = cargo_metadata::PackageId { repr: String::from("42") };
+        let version = semver::Version::new(0, 1, 0);
+        let target = GnTarget::new(
+            &pkg_id,
+            "test_target",
+            "test_package",
+            "2018",
+            Path::new("somewhere/over/the/rainbow.rs"),
+            &version,
+            GnRustType::Binary,
+            &[],
+            None,
+            HashMap::new(),
+        );
+
+        let outname = Some("rainbow_binary");
+        let mut output = vec![];
+        write_rule(&mut output, &target, Path::new("somewhere/over"), None, None, outname).unwrap();
+        let output = String::from_utf8(output).unwrap();
+        assert_eq!(
+            output,
+            r#"executable("test_package-test_target-v0_1_0") {
+  crate_name = "test_target"
+  crate_root = "//the/rainbow.rs"
+  output_name = "rainbow_binary"
+  
+  deps = []
+
+  rustenv = []
+
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=bf8f4a806276c599","-Cextra-filename=-bf8f4a806276c599"]
+
+  
+}
+
+"#
+        );
+    }
 }

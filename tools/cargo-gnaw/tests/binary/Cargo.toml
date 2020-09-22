@@ -1,0 +1,19 @@
+[package]
+name = "package-with-bin"
+version = "0.1.0"
+authors = ["Bryan Henry <bryanhenry@google.com>"]
+edition = "2018"
+
+[[bin]]
+name = "foo-binary"
+path = "src/main.rs"
+
+[gn.package.package-with-bin."0.1.0".binary.foo-binary]
+output_name = "foo-output"
+
+[gn.package.package-with-bin."0.1.0".binary.foo-binary.platform."cfg(unix)"]
+configs = [ "//applied/to/all" ]
+
+[gn.package.package-with-bin."0.1.0".binary.foo-binary.platform."cfg(target_os = \"fuchsia\")"]
+configs = [ "//extra/fuchsia/config" ]
+

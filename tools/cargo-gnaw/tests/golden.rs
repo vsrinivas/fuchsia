@@ -155,6 +155,11 @@ fn build_file_generation_test() {
             golden_expected_filename: vec!["platform_deps", "BUILD.gn"],
             skip_root: true,
         },
+        TestCase {
+            manifest_path: vec!["binary", "Cargo.toml"],
+            golden_expected_filename: vec!["binary", "BUILD.gn"],
+            skip_root: false,
+        },
     ];
 
     for test in tests {

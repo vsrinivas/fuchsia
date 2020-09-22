@@ -40,6 +40,11 @@ if (is_host) {
 
   host_test_data("cargo_gnaw_tests") {
     sources = [
+      "binary/BUILD.gn",
+      "binary/Cargo.lock",
+      "binary/Cargo.toml",
+      "binary/src/lib.rs",
+      "binary/src/main.rs",
       "golden.rs",
       "platform_deps/.cargo/config",
       "platform_deps/BUILD.gn",

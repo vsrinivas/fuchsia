@@ -10,7 +10,7 @@ use {
     argh::FromArgs,
     cargo_metadata::DependencyKind,
     serde_derive::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::collections::{BTreeMap, HashMap, HashSet},
     std::{
         fs::File,
         io::{self, Read, Write},
@@ -54,6 +54,7 @@ struct Opt {
 }
 
 type PackageName = String;
+type TargetName = String;
 type Version = String;
 
 /// Per-target metadata in the Cargo.toml for Rust crates that
@@ -73,6 +74,20 @@ pub struct TargetCfg {
     configs: Option<Vec<String>>,
 }
 
+/// Configuration for a single GN executable target to generate from a Cargo binary target.
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct BinaryCfg {
+    /// Name to use as both the top-level GN group target and the executable's output name.
+    output_name: String,
+    /// Binary target configuration for all platforms.
+    #[serde(default, flatten)]
+    default_cfg: TargetCfg,
+    /// Per-platform binary target configuration.
+    #[serde(default)]
+    #[serde(rename = "platform")]
+    platform_cfg: HashMap<Platform, TargetCfg>,
+}
+
 // Configuration for a Cargo package. Contains configuration for its (single) library target at the
 // top level and optionally zero or more binaries to generate.
 #[derive(Default, Clone, Serialize, Deserialize, Debug)]
@@ -84,6 +99,9 @@ pub struct PackageCfg {
     /// Per-platform library target configuration.
     #[serde(rename = "platform")]
     platform_cfg: HashMap<Platform, TargetCfg>,
+    /// Configuration for GN binary targets to generate from one of the package's binary targets.
+    /// The map key identifies the cargo target name within this cargo package.
+    binary: HashMap<TargetName, BinaryCfg>,
 }
 
 /// Configs added to all GN targets in the BUILD.gn
@@ -108,16 +126,17 @@ struct BuildMetadata {
     gn: Option<GnBuildMetadata>,
 }
 
-type CombinedTargetCfg = HashMap<Option<Platform>, TargetCfg>;
+// Use BTreeMap so that iteration over platforms is stable.
+type CombinedTargetCfg<'a> = BTreeMap<Option<&'a Platform>, &'a TargetCfg>;
 
 macro_rules! define_combined_cfg {
     ($t:ty) => {
         impl $t {
-            fn combined_target_cfg(&self) -> CombinedTargetCfg {
-                let mut combined: CombinedTargetCfg =
-                    self.platform_cfg.clone().into_iter().map(|(k, v)| (Some(k), v)).collect();
+            fn combined_target_cfg(&self) -> CombinedTargetCfg<'_> {
+                let mut combined: CombinedTargetCfg<'_> =
+                    self.platform_cfg.iter().map(|(k, v)| (Some(k), v)).collect();
                 assert!(
-                    combined.insert(None, self.default_cfg.clone()).is_none(),
+                    combined.insert(None, &self.default_cfg).is_none(),
                     "Default platform (None) already present in combined cfg"
                 );
                 combined
@@ -126,6 +145,7 @@ macro_rules! define_combined_cfg {
     };
 }
 define_combined_cfg!(PackageCfg);
+define_combined_cfg!(BinaryCfg);
 
 pub fn generate_from_manifest<W: io::Write>(
     mut output: &mut W,
@@ -208,7 +228,8 @@ pub fn generate_from_manifest<W: io::Write>(
 
     // Iterate through the target configs, verifying that the build graph contains the configured
     // targets, then save off a mapping of GnTarget to the target config.
-    let mut target_cfgs = HashMap::<&GnTarget<'_>, CombinedTargetCfg>::new();
+    let mut target_cfgs = HashMap::<&GnTarget<'_>, CombinedTargetCfg<'_>>::new();
+    let mut binary_names = HashMap::<&GnTarget<'_>, &str>::new();
     let mut unused_configs = String::new();
     if let Some(gn_pkg_cfgs) = gn_pkg_cfgs {
         for (pkg_name, versions) in gn_pkg_cfgs {
@@ -225,6 +246,36 @@ pub fn generate_from_manifest<W: io::Write>(
                         pkg_name, pkg_version
                     ));
                 }
+
+                // Handle binaries that should be built for this package, similarly searching the
+                // build graph for the binary targets.
+                for (bin_cargo_target, bin_cfg) in &pkg_cfg.binary {
+                    if let Some(target) =
+                        build_graph.find_binary_target(pkg_name, pkg_version, bin_cargo_target)
+                    {
+                        if let Some(old_name) = binary_names.insert(target, &bin_cfg.output_name) {
+                            anyhow::bail!(
+                                "A given binary target ({} in package {} version {}) can only be \
+                                used for a single GN target, but multiple exist, including {} \
+                                and {}",
+                                bin_cargo_target,
+                                pkg_name,
+                                pkg_version,
+                                &bin_cfg.output_name,
+                                old_name
+                            );
+                        }
+                        assert!(
+                            target_cfgs.insert(target, bin_cfg.combined_target_cfg()).is_none(),
+                            "Should have bailed above"
+                        );
+                    } else {
+                        unused_configs.push_str(&format!(
+                            "binary crate {}, package {} version {}\n",
+                            bin_cargo_target, pkg_name, pkg_version
+                        ));
+                    }
+                }
             }
         }
     }
@@ -235,8 +286,35 @@ pub fn generate_from_manifest<W: io::Write>(
         );
     }
 
+    // Write the top-level GN rules for binaries. Verify that the names are unique, otherwise a
+    // build failure will result.
+    {
+        let mut names = HashSet::new();
+        for (target, bin_name) in &binary_names {
+            if !names.insert(bin_name) {
+                anyhow::bail!(
+                    "Multiple targets are configured to generate executables named \"{}\"",
+                    bin_name
+                );
+            }
+
+            gn::write_binary_top_level_rule(&mut output, None, bin_name, target)?;
+        }
+    }
+
     // Write out a GN rule for each target in the build graph
     for target in graph_targets {
+        // Check whether we should generate a target if this is a binary.
+        let binary_name = if let GnRustType::Binary = target.target_type {
+            let name = binary_names.get(target).map(|s| *s);
+            if name.is_none() {
+                continue;
+            }
+            name
+        } else {
+            None
+        };
+
         let target_cfg = target_cfgs.get(target);
         if target.uses_build_script() && target_cfg.is_none() {
             let build_output = BuildScript::compile(target).and_then(|s| s.execute());
@@ -262,7 +340,14 @@ pub fn generate_from_manifest<W: io::Write>(
             }
         }
 
-        let _ = gn::write_rule(&mut output, &target, &project_root, global_config, target_cfg)?;
+        let _ = gn::write_rule(
+            &mut output,
+            &target,
+            &project_root,
+            global_config,
+            target_cfg,
+            binary_name,
+        )?;
     }
     Ok(())
 }
