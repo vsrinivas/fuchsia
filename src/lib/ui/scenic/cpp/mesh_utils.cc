@@ -24,14 +24,14 @@ std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<fl
 
   ZX_DEBUG_ASSERT(*std::max_element(indices.begin(), indices.end()) < num_vertices);
 
-  // TODO(SCN-558) vertex_elements should be 3.
+  // TODO(fxbug.dev/23785) vertex_elements should be 3.
   uint64_t vertex_elements = 5;
 
   uint64_t vertex_size = vertex_elements * sizeof(float);
   uint64_t vertex_buffer_size = num_vertices * vertex_size;
   uint64_t index_buffer_size = indices.size() * sizeof(uint32_t);
 
-  // TODO(SCN-558) This whole block is a workaround and should be removed.
+  // TODO(fxbug.dev/23785) This whole block is a workaround and should be removed.
   std::vector<float> vertices_scn_558;
   vertices_scn_558.reserve(vertex_buffer_size / sizeof(float));
   for (uint64_t i = 0; i < num_vertices; i++) {
@@ -43,7 +43,7 @@ std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<fl
     vertex_out[3] = 0;
     vertex_out[4] = 0;
   }
-  // END TODO(SCN-558)
+  // END TODO(fxbug.dev/23785)
 
   // Copy data to VMO and create buffers
   uint64_t vmo_size = vertex_buffer_size + index_buffer_size;
@@ -51,7 +51,7 @@ std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<fl
   zx_status_t status;
   status = zx::vmo::create(vmo_size, 0u, &vmo);
 
-  // TODO(SCN-558) uses vertices.data()
+  // TODO(fxbug.dev/23785) uses vertices.data()
   status = vmo.write(vertices_scn_558.data(), 0, vertex_buffer_size);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   status = vmo.write(indices.data(), vertex_buffer_size, index_buffer_size);

@@ -42,7 +42,7 @@ using zx;
 ///   changes using other Scenic interfaces such as `fuchsia.ui.Scenic`
 ///   and `fuchsia.ui.SessionListener`.
 ///
-///  TODO(SCN-1198): Migrate all implementations of `ViewProvider` to use `View`.
+///  TODO(fxbug.dev/24402): Migrate all implementations of `ViewProvider` to use `View`.
 [Discoverable]
 protocol View {
     /// Updates the View's configuration.

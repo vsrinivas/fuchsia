@@ -124,7 +124,7 @@ class {{ .Name }}::Builder final {
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
-    {{- /* TODO(FIDL-677): The elem pointer should be const if it has no handles. */}}
+    {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
   Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}> elem) {
     frame_ptr_->{{ .Name }}_.data = std::move(elem);
     if (max_ordinal_ < {{ .Ordinal }}) {
@@ -195,7 +195,7 @@ public:
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
-    {{- /* TODO(FIDL-677): The elem pointer should be const if it has no handles. */}}
+    {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
   UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}> elem) {
     ZX_ASSERT(elem);
     frame_.{{ .Name }}_.data = std::move(elem);

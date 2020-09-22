@@ -127,7 +127,7 @@ class TraceReader {
     ProviderId id;
     fbl::String name;
 
-    // TODO(ZX-1056): It would be more efficient to use something like
+    // TODO(fxbug.dev/30999): It would be more efficient to use something like
     // std::unordered_map<> here.  In particular, the table entries are
     // small enough that it doesn't make sense to heap allocate them
     // individually.

@@ -1043,7 +1043,7 @@ dowait(int block, struct job *job)
 				state = JOBRUNNING;
 				break;
 			}
-			// TODO(ZX-1564) This is called A LOT - find a way to do this without polling
+			// TODO(fxbug.dev/31451) This is called A LOT - find a way to do this without polling
 			status = process_await_termination (sp->pid, jp->zx_job_hndl, false);
 			if (status != ZX_ERR_TIMED_OUT) {
 				// Convert status to something that looks

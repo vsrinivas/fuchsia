@@ -187,7 +187,7 @@ TEST_F(MinfsFvmTest, QueryInfo) {
 
   ExpectedQueryInfo expected_info = {};
   expected_info.total_bytes = fs().options().fvm_slice_size;
-  // TODO(ZX-1372): Adjust this once minfs accounting on truncate is fixed.
+  // TODO(fxbug.dev/31276): Adjust this once minfs accounting on truncate is fixed.
   expected_info.used_bytes = 2 * minfs::kMinfsBlockSize;
   // The inode table's implementation is currently a flat array on disk.
   expected_info.total_nodes = fs().options().fvm_slice_size / sizeof(minfs::Inode);

@@ -12,7 +12,7 @@
 
 namespace escher {
 
-// TODO(ES-77): RenderPass and Framebuffer are deprecated, to be replaced by
+// TODO(fxbug.dev/7170): RenderPass and Framebuffer are deprecated, to be replaced by
 // impl::RenderPass and impl::Framebuffer.  The latter two aren't visible to
 // Escher clients; they are an implementation detail of escher::CommandBuffer
 // (note: NOT escher::impl::CommandBuffer, which is also deprecated).

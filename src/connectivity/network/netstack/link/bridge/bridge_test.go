@@ -645,7 +645,7 @@ func TestBridge(t *testing.T) {
 						// forward a packet to all constituent links when the link address that
 						// the packet is addressed to isn't found on the bridge.
 						//
-						// TODO(NET-690): When we implement learning, we should be able to
+						// TODO(fxbug.dev/20778): When we implement learning, we should be able to
 						// modify this test setup to get to zero invalid addresses received.
 						// With the current test setup, once learning is implemented, the
 						// bridge would indiscriminately forward the first packet addressed to

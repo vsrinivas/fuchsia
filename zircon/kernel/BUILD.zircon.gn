@@ -88,7 +88,7 @@ if (current_toolchain == default_toolchain) {
       tags = [ "standalone" ]
 
       if (cpu == "x64") {
-        # TODO(TC-598): x86 kernel can't be built without --gc-sections
+        # TODO(fxbug.dev/27321): x86 kernel can't be built without --gc-sections
         # because of crufty acpica code, and some compiler instrumentation
         # is broken wrt --gc-sections semantics.
         exclude_variant_tags = [ "breaks-gc-sections" ]

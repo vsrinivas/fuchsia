@@ -19,7 +19,7 @@ Inspect data may be read from components using the
 [iquery](https://fuchsia.dev/fuchsia-src/development/inspect/iquery.md)
 tool.
 
-TODO(CF-668): sys\_inspect will be available in the SDK.
+TODO(fxbug.dev/4548): sys\_inspect will be available in the SDK.
 
 ## Testing
 

@@ -334,7 +334,7 @@ class CommandBufferPipelineState {
 
   impl::RenderPass* render_pass_ = nullptr;
 
-  // TODO(ES-83): need support for updating current subpass.
+  // TODO(fxbug.dev/7174): need support for updating current subpass.
   uint32_t current_subpass_ = 0;
 
   StaticState static_state_ = {};

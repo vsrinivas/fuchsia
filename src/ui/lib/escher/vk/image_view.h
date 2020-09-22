@@ -31,7 +31,7 @@ class ImageView : public Resource {
   static ImageViewPtr New(ImagePtr image,
                           vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
 
-  // TODO(ES-83): unfortunately we can't just get the recycler from
+  // TODO(fxbug.dev/7174): unfortunately we can't just get the recycler from
   // image->escher(), because that is null for Vulkan swapchain images.
   static ImageViewPtr New(ResourceRecycler* resource_recycler, ImagePtr image,
                           vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
@@ -39,7 +39,7 @@ class ImageView : public Resource {
   const ImagePtr& image() const { return image_; }
   vk::ImageView vk() const { return image_view_; }
 
-  // TODO(ES-83): for a depth-stencil texture, we may want to sample the
+  // TODO(fxbug.dev/7174): for a depth-stencil texture, we may want to sample the
   // depth as floating point and the stencil as integer.  In such cases, we
   // could return a separate view for each, e.g.
   //   return float_image_view_ ? float_image_view_ : image_view_.

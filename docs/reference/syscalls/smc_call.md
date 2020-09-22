@@ -40,7 +40,7 @@ http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0028b/index.html)
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

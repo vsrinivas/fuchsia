@@ -79,7 +79,7 @@ zx_status_t DeviceProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-// TODO(ZX-3927): Convert this to using a better wire format when we no longer
+// TODO(fxbug.dev/33713): Convert this to using a better wire format when we no longer
 // have to support the kernel driver.
 zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
   PciRpcMsg req = {};

@@ -562,7 +562,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       int buffers_to_send = FitCommands(llcpp::fuchsia::gpu::magma::kReceiveBufferSize, num_buffers,
                                         buffers, buffers_sent, &command_bytes, &num_semaphores);
 
-      // TODO(MA-536): Figure out how to move command and semaphore bytes across the FIDL
+      // TODO(fxbug.dev/13144): Figure out how to move command and semaphore bytes across the FIDL
       //               interface without copying.
       std::vector<uint8_t> command_vec;
       command_vec.reserve(command_bytes);

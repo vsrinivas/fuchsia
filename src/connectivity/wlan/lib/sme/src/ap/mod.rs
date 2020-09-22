@@ -401,7 +401,7 @@ impl super::Station for ApSme {
                     MlmeEvent::EapolInd { ind } => bss.handle_eapol_ind(ind),
                     MlmeEvent::EapolConf { resp } => {
                         if resp.result_code != fidl_mlme::EapolResultCodes::Success {
-                            // TODO(NET-1634) - Handle unsuccessful EAPoL confirmation. It doesn't
+                            // TODO(fxbug.dev/29301) - Handle unsuccessful EAPoL confirmation. It doesn't
                             //                  include client address, though. Maybe we can just
                             //                  ignore these messages and just set a handshake
                             //                  timeout instead
@@ -746,7 +746,7 @@ fn create_start_request(
         cap: capabilities.raw(),
         rates: rates.to_vec(),
         country: fidl_mlme::Country {
-            // TODO(WLAN-870): Get config from wlancfg
+            // TODO(fxbug.dev/29490): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
             suffix: fidl_mlme::COUNTRY_ENVIRON_ALL,
         },

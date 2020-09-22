@@ -197,7 +197,7 @@ void App::InitializeServices() {
     safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
 
     // Globally disable parallel dispatch of input events.
-    // TODO(SCN-1047): Enable parallel dispatch.
+    // TODO(fxbug.dev/24258): Enable parallel dispatch.
     {
       fuchsia::ui::input::SetParallelDispatchCmd cmd;
       cmd.parallel_dispatch = false;

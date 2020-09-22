@@ -140,7 +140,7 @@ void ShaderModuleTemplate::UnregisterVariant(Variant* variant) {
 }
 
 void ShaderModuleTemplate::ScheduleVariantCompilation(fxl::WeakPtr<Variant> variant) {
-  // TODO(SCN-672): Recompile immediately.  Eventually we might want to
+  // TODO(fxbug.dev/23897): Recompile immediately.  Eventually we might want to
   // momentarily defer this, so that we don't recompile multiple times if
   // several files are changing at once (as when all changed files are pushed to
   // the device in rapid succession).
@@ -208,7 +208,7 @@ bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output)
   }
   options.SetOptimizationLevel(shaderc_optimization_level_performance);
   options.SetIncluder(std::make_unique<Includer>(filesystem_watcher_.get()));
-  // TODO(SCN-665): update this once we can rely upon Vulkan 1.1.
+  // TODO(fxbug.dev/23890): update this once we can rely upon Vulkan 1.1.
   options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
   options.SetWarningsAsErrors();
 

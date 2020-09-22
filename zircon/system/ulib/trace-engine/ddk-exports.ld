@@ -10,7 +10,7 @@
  * pulled in unless they are referenced. 
  * This file injects synthetic references to keep the symbols alive.
  *
- * TODO(ZX-2884): Some of these might go away. And some symbols that aren't
+ * TODO(fxbug.dev/32728): Some of these might go away. And some symbols that aren't
  * here may still be exported due to being referenced somewhere (these need
  * to either be removed, renamed to something internal, or be added here).
  */

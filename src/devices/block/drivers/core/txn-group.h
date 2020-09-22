@@ -15,7 +15,7 @@
 // Should a response be sent when we hit ctr?
 constexpr uint32_t kTxnFlagRespond = 0x00000001;
 
-// TODO(ZX-1586): Reduce the locking of TransactionGroup.
+// TODO(fxbug.dev/31470): Reduce the locking of TransactionGroup.
 class TransactionGroup {
  public:
   TransactionGroup();

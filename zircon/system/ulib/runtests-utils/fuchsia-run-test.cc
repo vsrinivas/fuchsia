@@ -500,7 +500,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   // "/system" or "/boot" to discern where they are running, and modify paths
   // accordingly.
   //
-  // TODO(BLD-463): The hard-coded set of prefixes is not ideal. Ideally, this
+  // TODO(fxbug.dev/3260): The hard-coded set of prefixes is not ideal. Ideally, this
   // would instead set the "root" to the parent directory of the "test/"
   // subdirectory where globbing was done to collect the set of tests in
   // DiscoverAndRunTests().  But then it's not clear what should happen if

@@ -54,7 +54,7 @@ constexpr uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDi
 
 // It is not possible to have a block at or past this one due to the limitations of the inode and
 // indirect blocks.
-// TODO(ZX-1523): Remove this artificial cap when MinFS can safely deal with files larger than 4GB.
+// TODO(fxbug.dev/31412): Remove this artificial cap when MinFS can safely deal with files larger than 4GB.
 constexpr uint64_t kMinfsMaxFileBlock =
     (std::numeric_limits<uint32_t>::max() / kMinfsBlockSize) - 1;
 

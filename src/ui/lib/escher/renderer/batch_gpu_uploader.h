@@ -36,7 +36,7 @@ namespace escher {
 // being signaled when command buffer finishes execution, which can be used for
 // synchronization.
 //
-// TODO(SCN-1197) Add memory barriers so the BatchGpuUploader and
+// TODO(fxbug.dev/24401) Add memory barriers so the BatchGpuUploader and
 // BatchGpuDownloader can handle synchronization of reads and writes on the same
 // Resource.
 //

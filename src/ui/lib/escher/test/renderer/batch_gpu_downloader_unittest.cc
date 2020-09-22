@@ -380,7 +380,7 @@ VK_TEST_F(BatchGpuDownloaderTest, MultipleReadToSameBuffer) {
 }
 
 VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
-  // TODO(SCN-1197) Enable once memory barriers are added to the
+  // TODO(fxbug.dev/24401) Enable once memory barriers are added to the
   // BatchGpuDownloader and it can be used for reads and writes on the same
   // resource.
 

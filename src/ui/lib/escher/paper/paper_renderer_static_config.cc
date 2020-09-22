@@ -29,7 +29,7 @@ const ShaderProgramData kAmbientLightProgramData = {
     .args = ShaderVariantArgs({
         {"USE_ATTRIBUTE_UV", "1"},
         {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-        // TODO(ES-153): currently required by main.vert.
+        // TODO(fxbug.dev/7244): currently required by main.vert.
         {"NO_SHADOW_LIGHTING_PASS", "1"},
     }),
 };
@@ -40,7 +40,7 @@ const ShaderProgramData kNoLightingProgramData = {
     .args = ShaderVariantArgs({
         {"USE_ATTRIBUTE_UV", "1"},
         {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-        // TODO(ES-153): currently required by main.vert.
+        // TODO(fxbug.dev/7244): currently required by main.vert.
         {"NO_SHADOW_LIGHTING_PASS", "1"},
     }),
 };

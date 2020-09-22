@@ -281,7 +281,7 @@ table MediaAttributes {
     6: string:MAX_ATTRIBUTE_VALUE_LENGTH genre;
     /// The length of the media in milliseconds (ms).
     7: string:MAX_ATTRIBUTE_VALUE_LENGTH playing_time;
-    // TODO(BT-729): Add BIP cover art handle.
+    // TODO(fxbug.dev/1322): Add BIP cover art handle.
 };
 
 /// Status of currently playing media on the TG.

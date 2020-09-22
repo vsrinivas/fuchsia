@@ -116,7 +116,7 @@ void ViewHolder::LinkInvalidated(bool on_link_destruction) {
 }
 
 // Generates an escher::BoundingBox from the given view properties.
-// TODO(SCN-1495) Create internal ViewProperties type.
+// TODO(fxbug.dev/24680) Create internal ViewProperties type.
 escher::BoundingBox ViewHolder::GetLocalBoundingBox() const {
   escher::vec3 min =
       Unwrap(view_properties_.bounding_box.min) + Unwrap(view_properties_.inset_from_min);

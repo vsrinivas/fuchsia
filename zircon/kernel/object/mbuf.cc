@@ -78,7 +78,7 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
     if constexpr (ktl::is_const<T>::value) {
       ++iter;
     } else {
-      // TODO(ZX-4366): Note, we're advancing (consuming data) after each copy.  This means
+      // TODO(fxbug.dev/34143): Note, we're advancing (consuming data) after each copy.  This means
       // that if a subsequent copy fails (perhaps because a the write to the user buffer
       // faults) data will be "dropped".  Consider changing this function to only advance (and
       // free) once all data has been successfully copied.
@@ -190,7 +190,7 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size
     }
     zx_status_t status = src.byte_offset(pos).copy_array_from_user(dst, copy_len);
     if (status != ZX_OK) {
-      // TODO(ZX-4366): Note, we're not indicating to the caller that data added so far in
+      // TODO(fxbug.dev/34143): Note, we're not indicating to the caller that data added so far in
       // previous copies was written successfully.  This means the caller may try to re-send
       // the same data again, leading to duplicate data.  Consider changing this function to
       // report that some data was written so far, or consider not committing any of the new

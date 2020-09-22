@@ -22,7 +22,7 @@
 
 // For this simple implementation, all categories are always enabled.
 //
-// TODO(ES-85): Add support for additional trace arguments. Currently, they are
+// TODO(fxbug.dev/7176): Add support for additional trace arguments. Currently, they are
 // silently dropped.
 #define TRACE_INTERNAL_DURATION(category, name, args...)                     \
   escher::impl::TraceEndOnScopeClose TRACE_INTERNAL_EVENT_UID(profileScope); \

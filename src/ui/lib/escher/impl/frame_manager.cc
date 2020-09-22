@@ -12,7 +12,7 @@ namespace impl {
 
 FrameManager::FrameManager(EscherWeakPtr escher)
     : ResourceManager(escher),
-      // TODO(ES-103): the intention here was to use UniformBufferPool's
+      // TODO(fxbug.dev/7194): the intention here was to use UniformBufferPool's
       // recently-added ring-based recycling to manage resource reclamation.
       // However, this would conflict with upcoming GpuUploader changes; see
       // SCN-842.

@@ -373,7 +373,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
                               &result),
                 ZX_OK);
 
-      // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
+      // TODO(fxbug.dev/12594): The virtio-block driver on Zircon currently doesn't inform
       // the rest of the system when the device is read only.
       if (this->GetGuestKernel() == GuestKernel::LINUX &&
           device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
@@ -492,7 +492,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteQcow) {
                               &result),
                 ZX_OK);
 
-      // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
+      // TODO(fxbug.dev/12594): The virtio-block driver on Zircon currently doesn't inform
       // the rest of the system when the device is read only.
       if (this->GetGuestKernel() == GuestKernel::LINUX &&
           device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {

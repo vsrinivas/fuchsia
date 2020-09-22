@@ -229,7 +229,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateTypeAndFromTypeAlias(*value.subtype_ctor);
-    // TODO(FIDL-324): When all numbers are wrapped as string, we can simply
+    // TODO(fxbug.dev/7660): When all numbers are wrapped as string, we can simply
     // call GenerateObjectMember directly.
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("mask");
@@ -266,7 +266,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    // TODO(FIDL-324): Due to legacy reasons, the 'type' of enums is actually
+    // TODO(fxbug.dev/7660): Due to legacy reasons, the 'type' of enums is actually
     // the primitive subtype, and therefore cannot use
     // GenerateTypeAndFromTypeAlias here.
     GenerateObjectMember("type", value.type->name);
@@ -456,7 +456,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
-      // TODO(FIDL-609): Support defaults on tables.
+      // TODO(fxbug.dev/7932): Support defaults on tables.
     } else {
       assert(value.span);
       GenerateObjectMember("reserved", true);

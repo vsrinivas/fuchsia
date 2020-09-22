@@ -27,7 +27,7 @@ constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
 // need to make them into durations in order to have them link-able with flow.
 // We fudge this for now by making them very short duration events.
 //
-// TODO(PT-152): Use the appropriate async event when ready.
+// TODO(fxbug.dev/23013): Use the appropriate async event when ready.
 constexpr trace_ticks_t kInheritPriorityDurationWidth = 50;
 constexpr trace_ticks_t kInheritPriorityFlowOffset = 10;
 
@@ -1157,7 +1157,7 @@ const trace_thread_ref_t& Importer::GetThreadRef(zx_koid_t thread) {
   return it->second;
 }
 
-// TODO(TO-106): Revisit using pseudo thread references to support per-CPU
+// TODO(fxbug.dev/27430): Revisit using pseudo thread references to support per-CPU
 // events.
 const trace_thread_ref_t& Importer::GetCpuPseudoThreadRef(trace_cpu_number_t cpu) {
   const zx_koid_t thread = kKernelPseudoCpuBase + cpu;

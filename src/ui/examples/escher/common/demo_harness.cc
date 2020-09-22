@@ -504,7 +504,7 @@ double DemoHarness::ComputeFps() {
   // pipelines.  We subtract 2 instead of 1 because we just incremented it in
   // DrawFrame().
   //
-  // TODO(ES-157): This could be improved.  For example, when called from the
+  // TODO(fxbug.dev/7248): This could be improved.  For example, when called from the
   // destructor we don't know how much time has elapsed since the last
   // DrawFrame(); it might be more accurate to subtract 1 instead of 2.  Also,
   // on Linux the swapchain allows us to queue up many DrawFrame() calls so if

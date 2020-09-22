@@ -2236,7 +2236,7 @@ err_power_down:
 
 // When the parent (PHY) is removed, this is called to remove MAC itself from the device list.
 static void ath10k_core_mac_unbind(void* ctx) {
-  // TODO(WLAN-641): for support multiple.
+  // TODO(fxbug.dev/29263): for support multiple.
   struct ath10k* ar = ctx;
 
   device_unbind_reply(ar->zxdev_mac);
@@ -2250,7 +2250,7 @@ static void ath10k_core_mac_release(void* ctx) {
 
   // The MAC interface has been released, advance the ID so that next creating interface we can
   // assign a different number.
-  // TODO(WLAN-641): for support multiple.
+  // TODO(fxbug.dev/29263): for support multiple.
   ar->iface_id++;
 }
 
@@ -2305,7 +2305,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create
 
   mtx_lock(&ar->iface_lock);
 
-  // Currently we only support one interface. TODO(WLAN-641): for support multiple.
+  // Currently we only support one interface. TODO(fxbug.dev/29263): for support multiple.
   if (ar->num_mac_ifaces) {
     ath10k_err("MAC interface had been created. num_mac_ifaces=%d\n", ar->num_mac_ifaces);
     status = ZX_ERR_ALREADY_BOUND;
@@ -2318,7 +2318,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create
   //
   // Currently we only support one interface, so that it is okay to save MAC role in *ar*.
   // We have to review this when we want to support mulitple interfaces.
-  // TODO(WLAN-641): for support multiple.
+  // TODO(fxbug.dev/29263): for support multiple.
   ar->mac_role = req->role;
   ar->sme_channel = req->sme_channel;
 

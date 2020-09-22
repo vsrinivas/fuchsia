@@ -211,7 +211,7 @@ static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uin
     exception_die(iframe, esr, __arm_rsr64("far_el1"),
                   "software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
-  // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
+  // TODO(fxbug.dev/32872): Is it worth separating this into two separate exceptions?
   try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
 }
 

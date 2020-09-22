@@ -569,7 +569,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
   test_reporter->TestStart();
 
   // Now that the driver has closed the channel, read all of the messages.
-  // TODO(ZX-4374): Handle the case where the channel fills up before we begin reading.
+  // TODO(fxbug.dev/34151): Handle the case where the channel fills up before we begin reading.
   while (true) {
     uint8_t msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];

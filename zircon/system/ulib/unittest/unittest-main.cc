@@ -9,7 +9,7 @@
 // come from a library like any other.  Naturally, if the main program provides
 // its own main function, the library's function will be ignored.
 
-// TODO(BLD-353): It shouldn't be necessary for this to be weak.
+// TODO(fxbug.dev/3156): It shouldn't be necessary for this to be weak.
 // But the legacy Fuchsia GN build's "SDK import" logic turns a "source"
 // library into a source_set() rather than an actual static library.
 __EXPORT

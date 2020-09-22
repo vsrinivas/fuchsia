@@ -158,7 +158,7 @@ zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
   }
   name[out_name_size] = '\0';
 
-  // TODO(ZX-3193): We should be able to open relative to ctl->fd(), but
+  // TODO(fxbug.dev/33003): We should be able to open relative to ctl->fd(), but
   // due to a bug, we have to be relative to devfs_root instead.
   fbl::StringBuffer<PATH_MAX> path;
   path.Append("misc/nand-ctl/");

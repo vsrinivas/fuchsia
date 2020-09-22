@@ -15,7 +15,7 @@ namespace scheduling {
 // pessmistic approach that determines the "most pessmistic duration" based on
 // the last N measurements, where N is a range of values set by the client.
 //
-// TODO(SCN-1415) When Scenic has priority gpu vk queues, revisit this
+// TODO(fxbug.dev/24606) When Scenic has priority gpu vk queues, revisit this
 // prediction strategy. Scenic currently cannot report accurate GPU duration
 // measurements because it currently has no way to preempt work on the GPU.
 // This causes render durations to be very noisy and not representative of the

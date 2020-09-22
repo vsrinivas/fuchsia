@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <vulkan/vulkan.hpp>
 
-// TODO(ES-153): possibly delete.  See comment below about NUM_CLIP_PLANES.
+// TODO(fxbug.dev/7244): possibly delete.  See comment below about NUM_CLIP_PLANES.
 #include "src/ui/lib/escher/debug/debug_font.h"
 #include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/escher.h"
@@ -44,7 +44,7 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
       config_(config),
       draw_call_factory_(weak_escher, config),
       shape_cache_(std::move(weak_escher), config),
-      // TODO(ES-151): (probably) move programs into PaperDrawCallFactory.
+      // TODO(fxbug.dev/7242): (probably) move programs into PaperDrawCallFactory.
       ambient_light_program_(escher()->GetProgram(kAmbientLightProgramData)),
       no_lighting_program_(escher()->GetProgram(kNoLightingProgramData)),
       point_light_program_(escher()->GetProgram(kPointLightProgramData)),
@@ -242,7 +242,7 @@ void PaperRenderer::FinalizeFrame() {
   // We may need to lazily instantiate |debug_font|, or delete it. If the former, this needs to be
   // done before we submit the GPU uploader's tasks.
 
-  // TODO(ES-224): Clean up lazy instantiation. Right now, DebugFont and DebugRects are
+  // TODO(fxbug.dev/7313): Clean up lazy instantiation. Right now, DebugFont and DebugRects are
   // created/destroyed from frame-to-frame.
   if (config_.debug_frame_number) {
     DrawDebugText(std::to_string(frame_data_->frame->frame_number()), {10, 10}, 4);
@@ -313,7 +313,7 @@ void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t
   FX_DCHECK(frame_data_);
   FX_DCHECK(!frame_data_->scene_finalized);
 
-  // TODO(ES-245): Add error checking to make sure math will not cause negative
+  // TODO(fxbug.dev/7334): Add error checking to make sure math will not cause negative
   // values or the bars to go off screen.
   frame_data_->texts.push_back({text, offset, scale});
 }
@@ -448,7 +448,7 @@ void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialP
     return;
   }
   if (material->texture()) {
-    FX_LOGS(ERROR) << "TODO(ES-218): Box meshes do not currently support textures.";
+    FX_LOGS(ERROR) << "TODO(fxbug.dev/7307): Box meshes do not currently support textures.";
     return;
   }
 
@@ -471,7 +471,7 @@ void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& materi
   draw_call_factory_.DrawMesh(mesh, *material.get(), flags);
 }
 
-// TODO(ES-154): in "no shadows" mode, should we:
+// TODO(fxbug.dev/7245): in "no shadows" mode, should we:
 // - not use the other lights, and boost the ambient intensity?
 // - still use the lights, allowing a BRDF, distance-based-falloff etc.
 // The right answer is probably to separate the shadow algorithm from the

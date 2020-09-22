@@ -81,7 +81,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>&
             },
             /* write_handler= */
             [this, path](std::vector<uint8_t> input) {
-              // TODO(ES-98): The file is successfully updated, but the
+              // TODO(fxbug.dev/7189): The file is successfully updated, but the
               // terminal would complain "truncate: Invalid argument".
               HackFileContents content(input.size(), 0);
               std::copy(input.begin(), input.begin() + input.size(), content.begin());

@@ -68,7 +68,7 @@ pub struct GetPlayStatusResponse {
 }
 
 impl GetPlayStatusResponse {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     /// Time is encoded as milliseconds. Max value is (2^32 – 1)
     pub fn new(
         song_length: u32,

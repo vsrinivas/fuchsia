@@ -11,7 +11,7 @@
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/graphics/lib/magma/src/libmagma_linux/virtmagma_util.h"
 
-// TODO(MA-623): support an object that is a parent of magma_connection_t
+// TODO(fxbug.dev/13228): support an object that is a parent of magma_connection_t
 // This class is a temporary workaround to support magma APIs that do not
 // pass in generic objects capable of holding file descriptors, e.g.
 // magma_duplicate_handle.

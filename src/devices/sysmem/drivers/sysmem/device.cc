@@ -368,7 +368,7 @@ zx_status_t Device::Bind() {
   // We should only pbus_register_protocol() if device_add() succeeded, but if
   // pbus_register_protocol() fails, we should remove the device without it
   // ever being visible.
-  // TODO(ZX-3746) Remove this after all clients have switched to using composite protocol.
+  // TODO(fxbug.dev/33536) Remove this after all clients have switched to using composite protocol.
   status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
                                  sizeof(in_proc_sysmem_protocol_));
   if (status != ZX_OK) {

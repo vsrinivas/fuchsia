@@ -135,7 +135,7 @@ class AddressSpaceChildDriver
   ddk::IoBuffer io_buffer_;
   const uint32_t handle_;
 
-  // TODO(TC-383): This should be std::unordered_map.
+  // TODO(fxbug.dev/3213): This should be std::unordered_map.
   using BlockMap = std::map<uint64_t, Block>;
   BlockMap allocated_blocks_;
   BlockMap claimed_blocks_;

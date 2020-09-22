@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_SCENIC_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_SCENIC_SYSTEM_H_
 
-// TODO(SCN-453): Don't support GetDisplayInfo in scenic fidl API.
+// TODO(fxbug.dev/23687): Don't support GetDisplayInfo in scenic fidl API.
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
 

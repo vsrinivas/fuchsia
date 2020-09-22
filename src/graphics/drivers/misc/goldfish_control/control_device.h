@@ -134,7 +134,7 @@ class Control : public ControlType,
   std::unique_ptr<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient>
       address_space_child_;
 
-  // TODO(TC-383): This should be std::unordered_map.
+  // TODO(fxbug.dev/3213): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
   std::map<uint32_t, llcpp::fuchsia::hardware::goldfish::BufferHandleType> buffer_handle_types_
       TA_GUARDED(lock_);

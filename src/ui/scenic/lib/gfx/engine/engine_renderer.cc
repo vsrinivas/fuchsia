@@ -27,7 +27,7 @@
 #include "src/ui/scenic/lib/gfx/resources/stereo_camera.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
-// TODO(SCN-1113): Move this someplace.  PoseBufferLatchingShader assumes this,
+// TODO(fxbug.dev/24320): Move this someplace.  PoseBufferLatchingShader assumes this,
 // but we can't put it there because it lives in a Zircon-ignorant part of
 // Escher.
 #include <type_traits>
@@ -70,7 +70,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
   // Render each layer, except the bottom one. Create an escher::Object for
   // each layer, which will be composited as part of rendering the final
   // layer.
-  // TODO(SCN-1254): the efficiency of this GPU compositing could be
+  // TODO(fxbug.dev/24455): the efficiency of this GPU compositing could be
   // improved on tile-based GPUs by generating each layer in a subpass and
   // compositing it into |output_image| in another subpass.
   std::vector<escher::Object> overlay_objects;
@@ -82,13 +82,13 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
       auto texture = escher::Texture::New(
           escher_->resource_recycler(),
           GetLayerFramebufferImage(layer->width(), layer->height(), frame->use_protected_memory()),
-          // TODO(SCN-1270): shouldn't need linear filter, since this is
+          // TODO(fxbug.dev/24469): shouldn't need linear filter, since this is
           // 1-1 pixel mapping.  Verify when re-enabling multi-layer support.
           vk::Filter::eLinear);
 
       DrawLayer(frame, target_presentation_time, layer, {.output_image = texture->image()}, {});
 
-      // TODO(SCN-1093): it would be preferable to insert barriers instead of
+      // TODO(fxbug.dev/24301): it would be preferable to insert barriers instead of
       // using semaphores.
       if (i == layers.size() - 1) {
         // After rendering the "final" (non-bottom) layer, we wait for them all to complete before
@@ -110,7 +110,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
     }
   }
 
-  // TODO(SCN-1270): add support for multiple layers.
+  // TODO(fxbug.dev/24469): add support for multiple layers.
   if (layers.size() > 1) {
     FX_LOGS(ERROR) << "EngineRenderer::RenderLayers(): only a single Layer is supported.";
     overlay_objects.clear();
@@ -149,16 +149,16 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_pr
   float stage_height = static_cast<float>(render_target.output_image->height());
 
   if (layer->size().x != stage_width || layer->size().y != stage_height) {
-    // TODO(SCN-248): Should be able to render into a viewport of the
+    // TODO(fxbug.dev/23494): Should be able to render into a viewport of the
     // output image, but we're not that fancy yet.
-    FX_LOGS(ERROR) << "TODO(SCN-248): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
+    FX_LOGS(ERROR) << "TODO(fxbug.dev/23494): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
                    << layer->size().x << "x" << layer->size().y
                    << " does not match output image size of " << stage_width << "x" << stage_height
                    << "... not drawing.";
     return;
   }
 
-  // TODO(SCN-1273): add pixel tests for various shadow modes (particularly
+  // TODO(fxbug.dev/24472): add pixel tests for various shadow modes (particularly
   // those implemented by PaperRenderer).
   escher::PaperRendererShadowType shadow_type =
       GetPaperRendererShadowType(layer->renderer()->shadow_technique());
@@ -263,7 +263,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
                                             target_presentation_time),
       render_target.output_image);
 
-  // TODO(SCN-1256): scene-visitation should generate cameras, collect
+  // TODO(fxbug.dev/24457): scene-visitation should generate cameras, collect
   // lights, etc.
   // Using resources allocated with protected memory on non-protected CommandBuffers is not allowed.
 
@@ -275,7 +275,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
       hide_protected_memory ? GetReplacementMaterial(gpu_uploader.get()) : nullptr);
   visitor.Visit(camera->scene().get());
 
-  // TODO(SCN-1270): support for multiple layers.
+  // TODO(fxbug.dev/24469): support for multiple layers.
   FX_DCHECK(overlay_model.objects().empty());
 
   paper_renderer_->FinalizeFrame();

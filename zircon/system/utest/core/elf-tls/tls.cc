@@ -289,14 +289,14 @@ struct AlignmentInfo {
 
 int GetAlignment(void* arg) {
   auto info = reinterpret_cast<AlignmentInfo*>(arg);
-  // TODO(ZX-1646): Make this work on ARM64.
+  // TODO(fxbug.dev/31523): Make this work on ARM64.
   info->aligned_var_value = aligned_var;
   info->aligned_var_addr = &aligned_var;
   return 0;
 }
 
 void VerifyAlignment(AlignmentInfo const* const info, const char* error_message) {
-  // TODO(ZX-1646): Make this work on ARM64.
+  // TODO(fxbug.dev/31523): Make this work on ARM64.
   EXPECT_EQ(reinterpret_cast<uintptr_t>(info->aligned_var_addr) % 0x1000, 0, "%s", error_message);
   EXPECT_EQ(info->aligned_var_value, 123, "%s", error_message);
 }

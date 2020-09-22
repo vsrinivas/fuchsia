@@ -192,7 +192,7 @@ static uint32_t press_or_release(fuchsia::ui::input::PointerEventPhase phase) {
 // incoming event coordinates are expected to be in the floating-point 0..1
 // range, which are mapped to the nearest integer in 0..kAbsMax[X/Y].
 //
-// TODO(SCN-921): pointer event positions outside view boundaries.
+// TODO(fxbug.dev/24138): pointer event positions outside view boundaries.
 static uint32_t x_coordinate(float x, float width) {
   if (x < 0.0f || x > width) {
     FX_LOGS(WARNING) << "PointerEvent::x out of range (" << std::fixed << std::setprecision(7) << x

@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 executable("virtmagma_unit_tests_linux") {
-  # TODO(MA-586): formalize guest-targeted tests
+  # TODO(fxbug.dev/13193): formalize guest-targeted tests
   testonly = true
 
   deps = [

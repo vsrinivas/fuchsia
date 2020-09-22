@@ -22,7 +22,7 @@ executable("integration_tests") {
     "multithreaded_breakpoint_test.cc",
     "watchpoint_test.cc",
 
-    # TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
+    # TODO(fxbug.dev/5753): Some HW capabilities (like HW breakpoints) are not well
     #               emulated by QEMU without KVM. This will sometimes make tests
     #               fail or even crash QEMU.
     #               The tests will be re-enabled when there is way to express

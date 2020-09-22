@@ -23,7 +23,7 @@ use std::convert::TryInto;
 #[derive(Debug)]
 struct InnerBleAdvertiseFacade {
     /// Advertisement ID of device, only one advertisement at a time.
-    // TODO(NET-1290): Potentially scale up to storing multiple AdvertisingHandles. We may want to
+    // TODO(fxbug.dev/807): Potentially scale up to storing multiple AdvertisingHandles. We may want to
     // generate unique identifiers for each advertisement and to allow RPC clients to manage them.
     adv_handle: Option<ClientEnd<AdvertisingHandleMarker>>,
 

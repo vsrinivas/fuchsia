@@ -11,7 +11,7 @@
 
 // Contains utilities for converting from various formats to BGRA_8, which is
 // what is needed to render.
-// TODO(SCN-547): Merge with existing image conversion libraries in media:
+// TODO(fxbug.dev/23774): Merge with existing image conversion libraries in media:
 // bin/media/video/video_converter.h
 
 namespace scenic_impl {

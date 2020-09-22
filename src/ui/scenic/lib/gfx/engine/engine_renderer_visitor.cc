@@ -59,7 +59,7 @@ void EngineRendererVisitor::Visit(ViewNode* r) {
 
   bool view_is_rendering_element = draw_call_count_ > previous_count;
   if (r->GetView() && view_is_rendering_element) {
-    // TODO(SCN-1099) Add a test to ensure this signal isn't triggered when this
+    // TODO(fxbug.dev/24307) Add a test to ensure this signal isn't triggered when this
     // view is not rendering.
     r->GetView()->SignalRender();
   }

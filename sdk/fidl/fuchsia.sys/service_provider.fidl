@@ -13,7 +13,7 @@ using zx;
 ///
 /// This interface is deprecated.  Services should be published as directory
 /// entries instead, just like files.
-// TODO(ZX-1358): Point to the FIDL interface for file I/O once RIO is migrated.
+// TODO(fxbug.dev/31262): Point to the FIDL interface for file I/O once RIO is migrated.
 protocol ServiceProvider {
     /// Asks the host to provide the service identified by `service_name` through
     /// the `channel` endpoint supplied by the caller. If the host is not willing

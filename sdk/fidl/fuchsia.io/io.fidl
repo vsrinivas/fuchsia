@@ -443,7 +443,7 @@ const uint32 WATCH_MASK_IDLE = 0x00000010;
 /// Used by `Directory.Watch`. Requests transmission of all watcher events.
 const uint32 WATCH_MASK_ALL = 0x0000001F;
 
-// TODO(ZX-2645): Unused.
+// TODO(fxbug.dev/7903): Unused.
 /// WatchedEvent describes events returned from a DirectoryWatcher.
 struct WatchedEvent {
     uint8 event;
@@ -451,7 +451,7 @@ struct WatchedEvent {
     vector<uint8>:MAX_FILENAME name;
 };
 
-// TODO(ZX-2645): Unused.
+// TODO(fxbug.dev/7903): Unused.
 /// DirectoryWatcher transmits messages from a filesystem server
 /// about events happening in the filesystem. Clients can register
 /// new watchers using the `Directory.Watch` method, where they can

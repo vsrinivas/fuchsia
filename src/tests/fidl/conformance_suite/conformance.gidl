@@ -158,7 +158,7 @@ success("TableWithStringAndVectorNoVectorContent") {
     },
 }
 
-// TODO(FIDL-626): Create test with TableWithStringAndVectorHasVectorContent.
+// TODO(fxbug.dev/7948): Create test with TableWithStringAndVectorHasVectorContent.
 
 success("SimpleTableThenUint64") {
     value = SimpleTableThenUint64 {
@@ -730,7 +730,7 @@ success("AddEthernetDeviceRequest") {
                 dhcp: true,
             },
         },
-        // TODO(FIDL-625): This should be a handle.
+        // TODO(fxbug.dev/7947): This should be a handle.
         this_should_be_a_handle: 0xffffffff,
     },
     bytes = {

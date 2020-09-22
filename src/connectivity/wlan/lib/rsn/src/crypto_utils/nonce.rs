@@ -28,7 +28,7 @@ impl NonceReader {
         // For the time being, follow IEEE's recommendation for nonce generation.
         // IEEE Std 802.11-2016, 12.7.5 recommends using a time in NTP format.
         // Fuchsia has no support for NTP yet; instead use a regular timestamp.
-        // TODO(NET-430): Use time in NTP format once Fuchsia added support.
+        // TODO(fxbug.dev/4804): Use time in NTP format once Fuchsia added support.
         let mut buf = BytesMut::with_capacity(14);
         buf.put_u64_le(time::precise_time_ns());
         buf.put_slice(sta_addr);

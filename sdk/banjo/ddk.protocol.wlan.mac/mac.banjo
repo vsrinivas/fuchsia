@@ -67,7 +67,7 @@ enum WlanTxInfoFlags : uint8 {
     /// _reliably_ rather than fast, and is exempt from rate probing
     FAVOR_RELIABILITY = 0x2;
     /// Indicate that this packet should be sent out with QoS header when possible (11n+).
-    // TODO(WLAN-1002): remove this when MLME supports QoS tag.
+    // TODO(fxbug.dev/29622): remove this when MLME supports QoS tag.
     QOS = 0x4;
 };
 
@@ -283,7 +283,7 @@ protocol Wlanmac {
 
     /// Configures a Beacon frame in hardware to announce the BSS' existence.
     /// * pkt: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
-    /// TODO(NET-1565): Rename to update_beacon.
+    /// TODO(fxbug.dev/29298): Rename to update_beacon.
     ConfigureBeacon(uint32 options, WlanTxPacket pkt) -> (zx.status st);
 
     /// Specify a key for frame protection.

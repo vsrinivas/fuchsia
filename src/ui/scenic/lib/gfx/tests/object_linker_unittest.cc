@@ -264,7 +264,7 @@ TEST_F(ObjectLinkerTest, LinkDeathRemovesImport) {
   EXPECT_EQ(0u, object_linker_.ImportCount());
 }
 
-// TODO(ES-179): Only fails in debug builds.
+// TODO(fxbug.dev/24571): Only fails in debug builds.
 TEST_F(ObjectLinkerTest, DISABLED_InitializingLinkTwiceCausesDeath) {
   TestExportObj export_obj(kExportValue);
   zx::eventpair export_token, import_token;

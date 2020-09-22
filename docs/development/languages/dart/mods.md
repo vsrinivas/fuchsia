@@ -1,6 +1,6 @@
 # Flutter Module Development
 
-TODO(MS-2346): Update documentation below.
+TODO(fxbug.dev/15912): Update documentation below.
 
 This directory demonstrates how you create modules with Dart and Flutter. At the
 moment this document assumes that every module gets built as part of the core

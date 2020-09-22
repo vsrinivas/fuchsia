@@ -162,7 +162,7 @@ def match_sentence_form(sentence, arg_names):
             'WAITITEMMEMBER', 'field', 'with', 'RIGHT', '.'
         ],
 
-        # TODO(ZX-2399) TODO(scottmg): This is a hack specifically for
+        # TODO(fxbug.dev/32253) TODO(scottmg): This is a hack specifically for
         # zx_channel_call_args_t. Trying to make a pseudo-generic case (that
         # handles the length from wr_num_handles, etc.) for this doesn't seem
         # worth the trouble at the moment, since it's only checking that the
@@ -304,7 +304,7 @@ def to_markdown(req, arguments, warn):
     sentences = break_into_sentences(req)
 
     if not sentences:
-        rights = ['TODO(ZX-2399)', '']
+        rights = ['TODO(fxbug.dev/32253)', '']
     else:
         rights = []
     for sentence in sentences:

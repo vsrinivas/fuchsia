@@ -387,7 +387,7 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
       // which can potentially have pa(s) outside physmap, in contrast to
       // VmObjectPaged whose pa(s) are always in physmap.
       if (unlikely(!is_physmap_phys_addr(pa))) {
-        // TODO(ZX-4071): Consider whether to keep or remove op_range
+        // TODO(fxbug.dev/33855): Consider whether to keep or remove op_range
         // for cache ops for phsyical VMOs. If we keep, possibly we'd
         // want to obtain a mapping somehow here instead of failing.
         return ZX_ERR_NOT_SUPPORTED;

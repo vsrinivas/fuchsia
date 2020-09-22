@@ -239,7 +239,7 @@ func (d *packageDir) Read() ([]fs.Dirent, error) {
 			}
 
 		} else {
-			// TODO(PKG-44): fix the potential for discrepancies here
+			// TODO(fxbug.dev/22014): fix the potential for discrepancies here
 			// most of the time there are no pointers in contents for dirs, but the
 			// exception is the meta pointer which this would mistake for a file, so we
 			// must check for a name collision here too.
@@ -257,7 +257,7 @@ func (d *packageDir) Stat() (int64, time.Time, time.Time, error) {
 }
 
 func (d *packageDir) Blobs() []string {
-	// TODO(PKG-273) consider preallocation which would over-allocate, but cause less thrash
+	// TODO(fxbug.dev/22235) consider preallocation which would over-allocate, but cause less thrash
 	blobs := []string{}
 	for path, blob := range d.contents {
 		if strings.HasPrefix(path, "meta/") {

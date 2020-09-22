@@ -193,7 +193,7 @@ zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request
   zx::vmo exported_vmo(static_cast<zx_handle_t>(response->buffer_handle_out));
   response->buffer_handle_out = 0;
   uint32_t vfd_id = 0;
-  // TODO(MA-657): improvement backlog
+  // TODO(fxbug.dev/13261): improvement backlog
   // Perform a blocking import of the VMO, then return the VFD ID in the response.
   // Note that since the virtio-magma device is fully synchronous anyway, this does
   // not impact performance. Ideally, the device would stash the response chain and

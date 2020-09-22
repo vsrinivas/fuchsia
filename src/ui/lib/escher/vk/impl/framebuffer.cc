@@ -27,7 +27,7 @@ Framebuffer::Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
 
   FX_DCHECK(pass_info.num_color_attachments || pass_info.depth_stencil_attachment);
 
-  // TODO(ES-79): handle LOD (whatever that means, precisely).  Perhaps LOD
+  // TODO(fxbug.dev/7172): handle LOD (whatever that means, precisely).  Perhaps LOD
   // should be added explicitly so that e.g. if Scenic wants to render a
   // hypothetical ScreenResource, a LOD can be provided depending of the scale
   // that the Screen will be rendered at in the Scene.  OTOH, in that case

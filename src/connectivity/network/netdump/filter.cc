@@ -21,7 +21,7 @@ void Packet::populate(const void* buffer, uint16_t length) {
   }
   memcpy(&eth_storage_, next, sizeof(eth_storage_));
   eth = &eth_storage_;
-  // TODO(CONN-143): Handle VLAN encapsulation.
+  // TODO(fxbug.dev/4893): Handle VLAN encapsulation.
   next += sizeof(eth_storage_);
 
   uint16_t ethtype = ntohs(eth->h_proto);

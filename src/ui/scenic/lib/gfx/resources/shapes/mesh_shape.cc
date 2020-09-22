@@ -18,7 +18,7 @@ MeshShape::MeshShape(Session* session, SessionId session_id, ResourceId id)
 
 bool MeshShape::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   FX_DCHECK(out_distance);
-  // TODO(SCN-274): implement mesh-ray intersection.
+  // TODO(fxbug.dev/23518): implement mesh-ray intersection.
   escher::Interval interval;
   bool hit = IntersectRayBox(ray, bounding_box_, &interval);
   if (hit) {
@@ -34,9 +34,9 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
                             uint64_t vertex_offset, uint32_t vertex_count,
                             escher::BoundingBox bounding_box, ErrorReporter* error_reporter) {
   if (index_format != ::fuchsia::ui::gfx::MeshIndexFormat::kUint32) {
-    // TODO(SCN-275): only 32-bit indices are supported.
+    // TODO(fxbug.dev/23519): only 32-bit indices are supported.
     error_reporter->ERROR()
-        << "BindBuffers::BindBuffers(): TODO(SCN-275): only 32-bit indices are supported.";
+        << "BindBuffers::BindBuffers(): TODO(fxbug.dev/23519): only 32-bit indices are supported.";
     return false;
   }
   escher::MeshSpec spec;

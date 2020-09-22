@@ -77,10 +77,10 @@ resource union Command {
     /// Debugging commands.
     44: SetDisableClippingCmd set_disable_clipping;
 
-    // TODO(SCN-1026): Remove this.
+    // TODO(fxbug.dev/24238): Remove this.
     45: SetImportFocusCmdDEPRECATED set_import_focus;
 
-    // TODO(SCN-1225): Move these where they belong.  They're added to the end of
+    // TODO(fxbug.dev/24428): Move these where they belong.  They're added to the end of
     // the struct temporarily until we transition to xunions.
     46: SetClipPlanesCmd set_clip_planes;
     47: SetPointLightPositionCmd set_point_light_position;
@@ -634,7 +634,7 @@ struct SetColorCmd {
 ///   - the 3D position occupies bytes 0-11 (3 dimensions * 4 bytes per float32).
 ///   - the UV coords occupy bytes 12-19, since no surface normal is provided.
 enum MeshIndexFormat {
-    // TODO(SCN-275): only kUint32 is currently supported.
+    // TODO(fxbug.dev/23519): only kUint32 is currently supported.
     kUint16 = 1;
     kUint32 = 2;
 };
@@ -762,7 +762,7 @@ struct SetDisableClippingCmd {
     bool disable_clipping;
 };
 
-// TODO(SCN-1026): Remove this.
+// TODO(fxbug.dev/24238): Remove this.
 struct SetImportFocusCmdDEPRECATED {
 };
 
@@ -788,7 +788,7 @@ struct SetPointLightPositionCmd {
 /// value of 0.0 means that the radiance of a surface is not dependant on
 /// its distance from the light.
 ///
-// TODO(SCN-528): need to formalize the units of light intensity and distance used
+// TODO(fxbug.dev/23755): need to formalize the units of light intensity and distance used
 // to compute fall-off.  Currently the unit is pips; consequently a falloff of 1.0
 // causes light to attenuate far too rapidly.  Meters would be more appropriate.
 struct SetPointLightFalloffCmd {

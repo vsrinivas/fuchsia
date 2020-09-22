@@ -86,7 +86,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
   escher_image_info.is_external = true;
   escher_image_info.is_mutable = is_mutable;
-  // TODO(SCN-1182): Add unit tests to verify this logic.
+  // TODO(fxbug.dev/24387): Add unit tests to verify this logic.
   switch (image_info.tiling) {
     case fuchsia::images::Tiling::LINEAR:
       escher_image_info.tiling = vk::ImageTiling::eLinear;
@@ -95,7 +95,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
       escher_image_info.tiling = vk::ImageTiling::eOptimal;
       break;
   }
-  // TODO(SCN-1012): Don't hardcode this -- use the data on the memory
+  // TODO(fxbug.dev/24225): Don't hardcode this -- use the data on the memory
   // object once we support a bitmask instead of an enum.
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 

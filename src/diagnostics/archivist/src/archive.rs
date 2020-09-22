@@ -750,7 +750,7 @@ async fn archive_event(
     //                 vmo.read(&mut contents[..], 0)?;
 
     //                 // Truncate the bytes down to the last non-zero 4096-byte page of data.
-    //                 // TODO(CF-830): Handle truncation of VMOs without reading the whole thing.
+    //                 // TODO(fxbug.dev/4703): Handle truncation of VMOs without reading the whole thing.
     //                 let mut last_nonzero = 0;
     //                 for (i, v) in contents.iter().enumerate() {
     //                     if *v != 0 {

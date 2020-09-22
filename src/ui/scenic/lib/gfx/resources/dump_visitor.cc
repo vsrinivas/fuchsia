@@ -320,7 +320,7 @@ void DumpVisitor::Visit(Layer* r) {
     r->renderer()->Accept(this);
     EndSection();
   } else {
-    // TODO(SCN-249): Texture or ImagePipe or whatever.
+    // TODO(fxbug.dev/23495): Texture or ImagePipe or whatever.
   }
   VisitResource(r);
   EndItem();

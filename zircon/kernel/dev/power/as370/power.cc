@@ -22,13 +22,13 @@ static constexpr uint32_t kDwWdtCrEnable = 0x01;
 static constexpr uint32_t kDwWdtCrrRestartValue = 0x76;
 
 static void as370_reboot(enum reboot_flags flags) {
-  // TODO(ZX-4651): Handle REBOOT_BOOTLOADER and REBOOT_RECOVERY cases.
+  // TODO(fxbug.dev/34426): Handle REBOOT_BOOTLOADER and REBOOT_RECOVERY cases.
   writel(kDwWdtCrEnable | kDwWdtCrRpl8Pclk, periph_paddr_to_vaddr(kDwWdt0Cr));
   writel(kDwWdtCrrRestartValue, periph_paddr_to_vaddr(kDwWdt0Crr));
 }
 
 static void as370_shutdown() {
-  // TODO(ZX-4703): Make this work.
+  // TODO(fxbug.dev/34477): Make this work.
   psci_system_off();
 }
 

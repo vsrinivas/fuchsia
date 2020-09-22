@@ -194,7 +194,7 @@ bool Node::SetScale(Vector3VariablePtr scale_variable, ErrorReporter* error_repo
 }
 
 bool Node::SetRotation(const escher::quat& rotation, ErrorReporter* error_reporter) {
-  // TODO(SCN-967): Safer handling of quats.  Put DCHECK here; validation
+  // TODO(fxbug.dev/24183): Safer handling of quats.  Put DCHECK here; validation
   // should happen elsewhere, before reaching this point.
   if (!(type_flags() & kHasTransform)) {
     error_reporter->ERROR() << "scenic::gfx::Node::SetRotation(): node of type " << type_name()

@@ -14,7 +14,7 @@
 
 namespace {
 int64_t InputEventTimestampNow() { return zx::clock::get_monotonic().get(); }
-// TODO(SCN-1278): Remove this.
+// TODO(fxbug.dev/24476): Remove this.
 // Turn 64-bit id into two floats: high bits and low bits.
 void PointerTraceHACK(trace_async_id_t id, float* fa, float* fb) {
   uint32_t ia, ib;
@@ -218,7 +218,7 @@ void MouseState::Update(fuchsia::ui::input::InputReport input_report,
   buttons_ = input_report.mouse->pressed_buttons;
 
   // TODO(jpoichet) Update once we have an API to capture mouse.
-  // TODO(SCN-385): Quantize the mouse value to the range [0, display_width -
+  // TODO(fxbug.dev/23622): Quantize the mouse value to the range [0, display_width -
   // mouse_resolution]
   position_.x = std::max(0.0f, std::min(position_.x + input_report.mouse->rel_x,
                                         static_cast<float>(display_size.width)));
@@ -384,7 +384,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
     pt.x = x;
     pt.y = y;
 
-    // TODO(SCN-1278): Use proper trace_id field for tracing flow.
+    // TODO(fxbug.dev/24476): Use proper trace_id field for tracing flow.
     trace_async_id_t pt_async_id = TRACE_NONCE();
     PointerTraceHACK(pt_async_id, &pt.radius_major, &pt.radius_minor);
 
@@ -395,7 +395,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
       fuchsia::ui::input::PointerEvent add = fidl::Clone(pt);
       add.phase = fuchsia::ui::input::PointerEventPhase::ADD;
 
-      // TODO(SCN-1278): Use proper trace_id field for tracing flow.
+      // TODO(fxbug.dev/24476): Use proper trace_id field for tracing flow.
       trace_async_id_t add_async_id = TRACE_NONCE();
       PointerTraceHACK(add_async_id, &add.radius_major, &add.radius_minor);
       TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", add_async_id);
@@ -418,7 +418,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
       old.phase = fuchsia::ui::input::PointerEventPhase::UP;
       old.event_time = now;
 
-      // TODO(SCN-1278): Use proper trace_id field for tracing flow.
+      // TODO(fxbug.dev/24476): Use proper trace_id field for tracing flow.
       trace_async_id_t old_id = TRACE_NONCE();
       PointerTraceHACK(old_id, &old.radius_major, &old.radius_minor);
       TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", old_id);
@@ -433,7 +433,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
       old.phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
       old.event_time = now;
 
-      // TODO(SCN-1278): Use proper trace_id field for tracing flow.
+      // TODO(fxbug.dev/24476): Use proper trace_id field for tracing flow.
       trace_async_id_t old_id = TRACE_NONCE();
       PointerTraceHACK(old_id, &old.radius_major, &old.radius_minor);
       TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", old_id);

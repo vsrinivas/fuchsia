@@ -16,7 +16,7 @@ if (_is_fuchsia_tree) {
 graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 
 # A target providing access to Vulkan at compile time when added to deps.
-# TODO(SPN-14): Change this to a more recent upstream.
+# TODO(fxbug.dev/25488): Change this to a more recent upstream.
 graphics_compute_vulkan_loader_target = "${graphics_compute_dir}/gn/host:vulkan"
 
 # NOTE: These definitions are used by those in build_rules.gni.

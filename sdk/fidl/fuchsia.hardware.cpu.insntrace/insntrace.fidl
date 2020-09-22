@@ -92,7 +92,7 @@ protocol Controller {
     /// May be called multiple times.
     /// This can only fail when tracing in THREAD mode where tracing is
     /// terminated differently, in which case the error is `ZX_ERR_BAD_STATE`.
-    // TODO(ZX-892): Support terminating the trace in THREAD mode.
+    // TODO(fxbug.dev/30840): Support terminating the trace in THREAD mode.
     Terminate() -> () error zx.status;
 
     /// Return the trace allocation configuration.
@@ -130,6 +130,6 @@ protocol Controller {
     /// May be called any time after `Allocate()` has been called and before
     /// `Free()`. If called at other times the call is ignored.
     /// May be called multiple times.
-    // TODO(ZX-892): Support terminating the trace in THREAD mode.
+    // TODO(fxbug.dev/30840): Support terminating the trace in THREAD mode.
     Stop() -> ();
 };

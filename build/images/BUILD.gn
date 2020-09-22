@@ -614,7 +614,7 @@ migrated_zbi("fuchsia") {
         archive = true
         bootserver_pave = []
 
-        # TODO(ZX-2069): we want to reduce the usage of mexec, but currently we
+        # TODO(fxbug.dev/31931): we want to reduce the usage of mexec, but currently we
         # do not have sufficient boot control on x64.
         if (target_cpu == "x64") {
           bootserver_pave += [ "--boot" ]
@@ -622,7 +622,7 @@ migrated_zbi("fuchsia") {
         if (custom_signing_script == "" && !use_vboot) {
           bootserver_pave += [
             "--zircona",
-            # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
+            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
             # zircon-r, so for now zedboot is being paved to this slot.
             # "--zirconb",
           ]
@@ -1952,13 +1952,13 @@ action("update.manifest") {
     }
 
     if (defined(entry.sources)) {
-      # TODO(BLD-354): We should only have single source
+      # TODO(fxbug.dev/3157): We should only have single source
       sources = []
       sources += entry.sources
       entry_source = sources[0]
     } else if (defined(entry.deps)) {
       foreach(label, entry.deps) {
-        # TODO(BLD-354): We should only have single output
+        # TODO(fxbug.dev/3157): We should only have single output
         dep_outputs = []
         dep_outputs += get_target_outputs(label)
         entry_source = dep_outputs[0]

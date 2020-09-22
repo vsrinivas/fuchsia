@@ -134,7 +134,7 @@ pub fn build_aac_endpoint(
 
 /// Builds the set of streams which we currently support, streaming from the source_type given.
 fn build_local_streams(source_type: AudioSourceType) -> avdtp::Result<stream::Streams> {
-    // TODO(BT-533): detect codecs, add streams for each codec
+    // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
 
     let source_task_builder = source_task::SourceTaskBuilder::new(source_type);
     let mut streams = stream::Streams::new();

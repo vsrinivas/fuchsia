@@ -74,7 +74,7 @@ library fuchsia.ui.views;
 ///
 /// See also: `fuchsia.intl.PropertyProvider`, `fuchsia.accessibility.PropertyProvider`.
 ///
-/// TODO(SCN-1198): Migrate all implementations of `ViewProvider` to use `View`.
+/// TODO(fxbug.dev/24402): Migrate all implementations of `ViewProvider` to use `View`.
 [Discoverable]
 protocol View {
 
@@ -91,7 +91,7 @@ protocol View {
     /// had already been called before), then it should terminate the connection
     /// with an error.
     ///
-    /// TODO(SCN-1271): Allow re-parenting `View`s with a new `Present()` call.
+    /// TODO(fxbug.dev/24470): Allow re-parenting `View`s with a new `Present()` call.
     [Transitional]
     Present(ViewToken view_token);
 };

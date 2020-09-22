@@ -19,7 +19,7 @@ protocol Sessionmgr {
     /// environment with a pre-existing name, because the services sessionmgr
     /// tries to access won't be available.
     ///
-    // TODO(MF-287): Address issues around client-generated session_id and
+    // TODO(fxbug.dev/16221): Address issues around client-generated session_id and
     // initialization pattern of sessionmgr.
     Initialize(string session_id,
                fuchsia.modular.session.AppConfig session_shell,

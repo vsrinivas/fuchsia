@@ -239,10 +239,10 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width, uint3
   usage_flags |= (pair.first || pair.second) ? vk::ImageUsageFlagBits::eDepthStencilAttachment
                                              : vk::ImageUsageFlagBits::eColorAttachment;
   if (is_transient_attachment) {
-    // TODO(SCN-634): when specifying that it is being used as a transient
+    // TODO(fxbug.dev/23860): when specifying that it is being used as a transient
     // attachment, we should use lazy memory if supported by the Vulkan
     // device... but only if no non-attachment flags are present.
-    // TODO(SCN-634): also, clients should probably just add this usage flag
+    // TODO(fxbug.dev/23860): also, clients should probably just add this usage flag
     // themselves, rather than having a separate bool to do it.
     usage_flags |= vk::ImageUsageFlagBits::eTransientAttachment;
   }
@@ -266,9 +266,9 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool
   // Check the type before cycling the framebuffer/descriptor-set allocators.
   // Without these checks it is possible to write into a Vulkan resource before
   // it is finished being used in a previous frame.
-  // TODO(ES-103): The correct solution is not to use multiple Frames per frame.
+  // TODO(fxbug.dev/7194): The correct solution is not to use multiple Frames per frame.
   if (requested_type != CommandBuffer::Type::kTransfer) {
-    // TODO(ES-199): Nothing calls Clear() on the DescriptorSetAllocators, so
+    // TODO(fxbug.dev/7288): Nothing calls Clear() on the DescriptorSetAllocators, so
     // their internal allocations are currently able to grow without bound.
     // DescriptorSets are not managed by ResourceRecyclers, so just
     // adding a call to Clear() here would be dangerous.

@@ -30,7 +30,7 @@ DisplayControllerListener::DisplayControllerListener(
     wait_controller_closed_.Begin(async_get_default_dispatcher());
 
     // Listen for events
-    // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
+    // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
     wait_event_msg_.set_object(controller_channel_handle_);
     wait_event_msg_.set_trigger(ZX_CHANNEL_READABLE);
     wait_event_msg_.Begin(async_get_default_dispatcher());
@@ -59,7 +59,7 @@ void DisplayControllerListener::InitializeCallbacks(
 
   on_invalid_cb_ = std::move(on_invalid);
 
-  // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
+  // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
   auto event_dispatcher =
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
   event_dispatcher->OnDisplaysChanged = std::move(on_displays_changed_cb);
@@ -76,7 +76,7 @@ void DisplayControllerListener::ClearCallbacks() {
 }
 
 void DisplayControllerListener::SetOnVsyncCallback(OnVsyncCallback on_vsync_cb) {
-  // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
+  // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
   auto event_dispatcher =
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
   event_dispatcher->OnVsync = std::move(on_vsync_cb);
@@ -115,7 +115,7 @@ void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher
 void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
                                                 async::WaitBase* self, zx_status_t status,
                                                 const zx_packet_signal_t* signal) {
-  // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
+  // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
   if (status != ZX_OK) {
     FX_LOGS(WARNING)
         << "scenic_impl::gfx::DisplayControllerImpl: Error while waiting on ZX_CHANNEL_READABLE: "

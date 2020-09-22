@@ -60,7 +60,7 @@ class Hasher {
   }
 
   inline void u32(const uint32_t value) {
-// TODO(SCN-646): This uses a modified FNV-1a hash.  Instead of operating on
+// TODO(fxbug.dev/23872): This uses a modified FNV-1a hash.  Instead of operating on
 // bytes, it operates on 4-byte chunks, resulting in a significant speedup.
 // Not sure what this does to the hash quality; it doesn't appear to cause
 // additional collisions. It's worth revisiting eventually.

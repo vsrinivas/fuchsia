@@ -181,7 +181,7 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         // TODO(29468): Use actual rates from device here.
         rates: vec![],
         country: fidl_mlme::Country {
-            // TODO(WLAN-870): Get config from wlancfg
+            // TODO(fxbug.dev/29490): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
             suffix: fidl_mlme::COUNTRY_ENVIRON_ALL,
         },

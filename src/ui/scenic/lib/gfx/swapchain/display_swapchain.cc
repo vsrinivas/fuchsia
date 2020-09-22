@@ -24,7 +24,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-// TODO(SCN-400): Don't triple buffer.  This is done to avoid "tearing", but it
+// TODO(fxbug.dev/23637): Don't triple buffer.  This is done to avoid "tearing", but it
 // wastes memory, and can result in the "permanent" addition of an extra Vsync
 // period of latency.  An alternative would be to use an acquire fence; this
 // saves memory, but can still result in the permanent extra latency.  Here's
@@ -272,7 +272,7 @@ void DisplaySwapchain::UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_rec
         OnFrameRendered(index, zx::time(signal->timestamp));
       });
 
-  // TODO(SCN-244): What to do if rendering fails?
+  // TODO(fxbug.dev/23490): What to do if rendering fails?
   frame_record->render_finished_wait->Begin(async_get_default_dispatcher());
 }
 
@@ -311,10 +311,10 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
 
   // Render the scene.
   size_t num_hardware_layers = hla.items.size();
-  // TODO(SCN-1088): handle more hardware layers.
+  // TODO(fxbug.dev/24296): handle more hardware layers.
   FX_DCHECK(num_hardware_layers == 1);
 
-  // TODO(SCN-1098): we'd like to validate that the layer ID is supported
+  // TODO(fxbug.dev/24306): we'd like to validate that the layer ID is supported
   // by the display/display-controller, but the DisplayManager API doesn't
   // currently expose it, and rather than hack in an accessor for |layer_id_|
   // we should fix this "properly", whatever that means.
@@ -328,7 +328,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
     escher::SemaphorePtr render_finished_escher_semaphore =
         (i + 1 == num_hardware_layers) ? frame_record->render_finished_escher_semaphore
                                        : escher::SemaphorePtr();
-    // TODO(SCN-1088): handle more hardware layers: the single image from
+    // TODO(fxbug.dev/24296): handle more hardware layers: the single image from
     // buffer.escher_image is not enough; we need one for each layer.
     draw_callback(frame_timings->target_presentation_time(), frame_record->buffer->escher_image,
                   hla.items[i], escher::SemaphorePtr(), render_finished_escher_semaphore);
@@ -502,14 +502,14 @@ void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_
   zx_status_t status =
       (*display_controller_)
           ->SetLayerImage(layer_id, buffer, render_finished_event_id, signal_event_id);
-  // TODO(SCN-244): handle this more robustly.
+  // TODO(fxbug.dev/23490): handle this more robustly.
   FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 
   auto before = zx::clock::get_monotonic();
 
   status = (*display_controller_)->ApplyConfig();
 
-  // TODO(SCN-244): handle this more robustly.
+  // TODO(fxbug.dev/23490): handle this more robustly.
   FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
                             << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
 }

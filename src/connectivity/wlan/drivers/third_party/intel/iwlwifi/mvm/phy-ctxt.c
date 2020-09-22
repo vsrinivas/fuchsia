@@ -92,7 +92,7 @@ uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef) {
     return PHY_VHT_CTRL_POS_1_BELOW;
   }
 
-  // TODO(WLAN-1216): move out the center freq calculation into a shared lib.
+  // TODO(fxbug.dev/29830): move out the center freq calculation into a shared lib.
 
   if (36 <= primary && primary <= 64) {
     base = 36;

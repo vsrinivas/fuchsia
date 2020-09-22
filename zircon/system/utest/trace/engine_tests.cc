@@ -134,7 +134,7 @@ TEST(EngineTests, TestAcquireContextForCategory) {
   END_TRACE_TEST;
 }
 
-// TODO(FLK-389): deflake and reenable this test.
+// TODO(fxbug.dev/8493): deflake and reenable this test.
 /* Commented out because the test is currently disabled due to a flake.
 
 TEST(EngineTests, TestAcquireContextForCategoryCached) {

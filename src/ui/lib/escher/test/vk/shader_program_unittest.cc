@@ -8,7 +8,7 @@
 #include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
-// TODO(ES-183): remove PaperRenderer shader dependency.
+// TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
@@ -41,7 +41,7 @@
 namespace {
 using namespace escher;
 
-// TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
+// TODO(fxbug.dev/24580): This number needs to be queried via sysmem or vulkan.
 const uint32_t kYuvSize = 64;
 
 class ShaderProgramTest : public ::testing::Test, public VulkanTester {
@@ -72,7 +72,7 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     auto escher = test::GetEscher();
     EXPECT_TRUE(escher->Cleanup());
 
-    // TODO(ES-183): remove PaperRenderer shader dependency.
+    // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
     auto factory = escher->shader_program_factory();
     bool success = factory->filesystem()->InitializeWithRealFiles({
         "shaders/model_renderer/default_position.vert",
@@ -251,7 +251,7 @@ VK_TEST_F(ShaderProgramTest, SpirvNotChangedTest) {
 VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();
 
-  // TODO(ES-183): remove PaperRenderer shader dependency.
+  // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
   ShaderVariantArgs variant1({{"USE_ATTRIBUTE_UV", "1"},
                               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
                               {"NO_SHADOW_LIGHTING_PASS", "1"}});
@@ -351,7 +351,7 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
   auto escher = test::GetEscher();
 
   // 1), 2): obtain the ShaderProgram and the corresponding PipelineLayout.
-  // TODO(ES-183): remove PaperRenderer shader dependency.
+  // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
   auto program = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
   EXPECT_TRUE(program);
   PipelineLayoutPtr pipeline_layout =
@@ -441,7 +441,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   auto escher = test::GetEscher();
 
   // 1), 2): obtain the ShaderPrograms and the corresponding PipelineLayouts.
-  // TODO(ES-183): remove PaperRenderer shader dependency.
+  // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
   auto program1 = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
   auto program2 = ClearPipelineStash(escher->GetProgram(escher::kPointLightProgramData));
   EXPECT_TRUE(program1);
@@ -600,7 +600,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   }
 }
 
-// TODO(ES-83): we need to set up so many meshes, materials, framebuffers, etc.
+// TODO(fxbug.dev/7174): we need to set up so many meshes, materials, framebuffers, etc.
 // before we can obtain pipelines, we might as well just make this an end-to-end
 // test and actually render.  Or, go the other direction and manually set up
 // state in a standalone CommandBufferPipelineState object.
@@ -617,7 +617,7 @@ VK_TEST_F(ShaderProgramTest,
 ) {
   auto escher = test::GetEscher();
 
-  // TODO(ES-183): remove PaperRenderer shader dependency.
+  // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
   auto program = escher->GetProgram(escher::kNoLightingProgramData);
   EXPECT_TRUE(program);
 
@@ -633,7 +633,7 @@ VK_TEST_F(ShaderProgramTest,
                                                              vk::Filter::eNearest)
                               : TexturePtr();
 
-  // TODO(ES-83): add support for setting an initial image layout (is there
+  // TODO(fxbug.dev/7174): add support for setting an initial image layout (is there
   // already a bug for this?  If not, add one).  Then, use this so we don't need
   // to immediately set a barrier on the new color attachment.
   // Alternately/additionally, note that we don't need to do this for the depth
@@ -663,7 +663,7 @@ VK_TEST_F(ShaderProgramTest,
   RenderPassInfo::InitRenderPassAttachmentInfosFromImages(&render_pass_info);
   EXPECT_TRUE(render_pass_info.Validate());
 
-  // TODO(ES-83): move into ShaderProgramTest.
+  // TODO(fxbug.dev/7174): move into ShaderProgramTest.
   BatchGpuUploader gpu_uploader(escher->GetWeakPtr(), 0);
   auto noise_image = image_utils::NewNoiseImage(escher->image_cache(), &gpu_uploader, 512, 512);
   auto upload_semaphore = escher::Semaphore::New(escher->vk_device());
@@ -790,7 +790,7 @@ VK_TEST_F(ShaderProgramTest,
 
   cb->EndRenderPass();
 
-  // TODO(ES-83): ideally only submitted CommandBuffers would need to be
+  // TODO(fxbug.dev/7174): ideally only submitted CommandBuffers would need to be
   // cleaned up: if a never-submitted CB is destroyed, then it shouldn't
   // keep anything alive, and it shouldn't cause problems in e.g.
   // CommandBufferPool due to a forever-straggling buffer.

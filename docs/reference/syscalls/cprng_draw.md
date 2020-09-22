@@ -28,7 +28,7 @@ bytes to seed a user-space random number generator for better performance.
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## NOTES
 

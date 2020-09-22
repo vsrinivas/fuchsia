@@ -814,7 +814,7 @@ bool CodecClient::ConfigurePortBufferCollection(
   settings.set_sysmem_token(std::move(codec_sysmem_token));
 
   fuchsia::sysmem::BufferCollectionConstraints constraints;
-  // TODO(SCN-1388): Hardcoded to read/write to allow direct Vulkan import on
+  // TODO(fxbug.dev/24581): Hardcoded to read/write to allow direct Vulkan import on
   // UMA platforms.
   if (!is_output && is_input_secure_) {
     constraints.usage.video = fuchsia::sysmem::videoUsageDecryptorOutput;

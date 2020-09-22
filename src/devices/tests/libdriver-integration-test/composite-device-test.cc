@@ -82,7 +82,7 @@ TEST_F(CompositeDeviceTest, CreateTest) {
   RunPromise(std::move(promise));
 }
 
-// TODO(FLK-344): Re-enable once flake is fixed.
+// TODO(fxbug.dev/8452): Re-enable once flake is fixed.
 //
 // This test creates the well-known composite, and force binds a test driver
 // stack to the composite.  It then forces one of the fragments to unbind.

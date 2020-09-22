@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-// This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(WLAN-730) for
+// This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(fxbug.dev/29351) for
 // efficiency.
 
 bool brcmf_test_and_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {

@@ -78,7 +78,7 @@ pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
         phy: 0,
         data_rate: 0,
         chan: WlanChan {
-            // TODO(FIDL-54): use clone()
+            // TODO(fxbug.dev/7391): use clone()
             primary: channel.primary,
             cbw: channel.cbw,
             secondary80: channel.secondary80,

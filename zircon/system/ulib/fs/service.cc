@@ -22,7 +22,7 @@ Service::~Service() = default;
 VnodeProtocolSet Service::GetProtocols() const { return VnodeProtocol::kConnector; }
 
 zx_status_t Service::GetAttributes(VnodeAttributes* attr) {
-  // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
+  // TODO(fxbug.dev/31095): V_TYPE_FILE isn't right, we should use a type for services
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE;
   attr->inode = fio::INO_UNKNOWN;

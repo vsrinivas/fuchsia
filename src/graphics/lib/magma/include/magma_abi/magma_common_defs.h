@@ -16,7 +16,7 @@ extern "C" {
 // vendor ID otherwise.
 #define MAGMA_QUERY_VENDOR_ID 0
 #define MAGMA_QUERY_DEVICE_ID 1
-// TODO(MA-518): remove this
+// TODO(fxbug.dev/13126): remove this
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
 #define MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED 3
 #define MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS 4

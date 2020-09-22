@@ -3492,7 +3492,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
 
   /* Start the watchdog timer */
   bus->sdcnt.tickcnt = 0;
-  // TODO(NET-1495): This call apparently has no effect because the state isn't BRCMF_SDIOD_DATA.
+  // TODO(fxbug.dev/29365): This call apparently has no effect because the state isn't BRCMF_SDIOD_DATA.
   // This was in the original driver. Once interrupts are working, figure out what's going on.
   brcmf_sdio_wd_timer(bus, true);
 
@@ -3568,7 +3568,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
   if (err == ZX_OK) {
     /* Allow full data communication using DPC from now on. */
     brcmf_sdiod_change_state(bus->sdiodev, BRCMF_SDIOD_DATA);
-    // TODO(NET-1495): The next line was added to enable watchdog to take effect immediately,
+    // TODO(fxbug.dev/29365): The next line was added to enable watchdog to take effect immediately,
     // since it currently handles all interrupt conditions. This may or may not make the
     // previous call to brcmf_sdio_wd_timer() unnecessary; that call apparently had no effect
     // because the state wasn't BRCMF_SDIOD_DATA yet. Once interrupts are working, revisit
@@ -3598,7 +3598,7 @@ release:
 fail:
   BRCMF_DBG(TRACE, "failed: dev=%s, err=%d", device_get_name(sdiodev->drvr->zxdev), err);
   BRCMF_ERR("Need to implement driver release logic (WLAN-888)");
-  // TODO(WLAN-888)
+  // TODO(fxbug.dev/29508)
   // device_release_driver(&sdiodev->func2->dev);
   // device_release_driver(dev);
 

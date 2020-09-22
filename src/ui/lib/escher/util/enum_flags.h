@@ -10,7 +10,7 @@
 namespace escher {
 
 // Wrapper to allow bitwise operations on the members of an enum class.
-// TODO(ES-148): write unit tests.
+// TODO(fxbug.dev/7239): write unit tests.
 template <typename BitT>
 class EnumFlags {
  public:

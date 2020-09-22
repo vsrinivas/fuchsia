@@ -376,7 +376,7 @@ template("library") {
     static = !kernel
   }
   if (defined(invoker.sdk)) {
-    # TODO(BLD-353): This is currently used for the legacy build integration.
+    # TODO(fxbug.dev/3156): This is currently used for the legacy build integration.
     # Eventually it will instead drive the proper SDK production directly, but
     # it's likely the details will change when that happens.  For now it's not
     # meant to be very clean, just to do what works in the legacy build.
@@ -435,7 +435,7 @@ template("library") {
   # A specialized toolchain might not support shared libraries.
   shared = shared && defined(toolchain.shlib)
 
-  # TODO(BLD-353): temporary hacks
+  # TODO(fxbug.dev/3156): temporary hacks
   if (sdk != false && !sdk_migrated &&
       ((toolchain.environment == "user" &&
         current_toolchain == toolchain.shlib) ||
@@ -483,7 +483,7 @@ template("library") {
           },
         ]
 
-        # TODO(TC-446): The stripped binary doesn't even have section
+        # TODO(fxbug.dev/27181): The stripped binary doesn't even have section
         # headers, so the linker can't handle it.  Eventually we'll have
         # linker stubs.  For now, just use the unstripped library to link.
         link_file = "${libs_file}.debug"
@@ -660,7 +660,7 @@ template("library") {
         }
         public_deps += [ ":${_library_name}.headers" ]
 
-        # TODO(BLD-353): temporary hacks
+        # TODO(fxbug.dev/3156): temporary hacks
         metadata = legacy_metadata
       }
     } else {
@@ -738,7 +738,7 @@ template("library") {
         public_deps += [ ":${_library_name}.headers" ]
         deps = [ ":${_library_name}._sources" ]
 
-        # TODO(BLD-353): temporary hacks
+        # TODO(fxbug.dev/3156): temporary hacks
         metadata = legacy_metadata
       }
     }
@@ -809,7 +809,7 @@ template("library") {
             manifest_lines = [ manifest_line ]
           }
 
-          # TODO(BLD-353): temporary hacks
+          # TODO(fxbug.dev/3156): temporary hacks
           forward_variables_from(legacy_metadata, "*")
           if (defined(invoker.metadata)) {
             forward_variables_from(invoker.metadata, [ "legacy_sysroot" ])
@@ -1721,7 +1721,7 @@ template("host_tool") {
         }
         host_tool_rspfile += [ run_file ]
 
-        # TODO(BLD-353): Temporary hacks for integrating with the legacy
+        # TODO(fxbug.dev/3156): Temporary hacks for integrating with the legacy
         # Fuchsia GN build.
         if (!sdk_migrated) {
           legacy_barrier = []
@@ -1897,7 +1897,7 @@ template("loadable_module") {
 # Parameters
 #
 #   deprecated_inhibit_driver_shlib_allowlist
-#     Optional: TODO(ZX-2863): If set (must be true), disable the
+#     Optional: TODO(fxbug.dev/32708): If set (must be true), disable the
 #     shared library deps policy check for this driver.  Remove this ASAP!
 #
 #   install_path
@@ -1924,7 +1924,7 @@ template("driver") {
                              "testonly",
                              "visibility",
 
-                             # TODO(ZX-2863): Remove this ASAP!
+                             # TODO(fxbug.dev/32708): Remove this ASAP!
                              "deprecated_inhibit_driver_shlib_allowlist",
                            ])
     forward_variables_from(invoker,
@@ -1968,7 +1968,7 @@ template("driver") {
                              "testonly",
                            ])
 
-    # TODO(ZX-2863): Remove this ASAP.
+    # TODO(fxbug.dev/32708): Remove this ASAP.
     if (defined(invoker.deprecated_inhibit_driver_shlib_allowlist)) {
       assert(invoker.deprecated_inhibit_driver_shlib_allowlist,
              "omit deprecated_inhibit_driver_shlib_allowlist unless true")

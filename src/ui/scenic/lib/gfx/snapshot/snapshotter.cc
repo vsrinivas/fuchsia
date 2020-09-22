@@ -166,7 +166,7 @@ void Snapshotter::Visit(ShapeNode* r) {
 }
 
 void Snapshotter::Visit(Scene* r) {
-  // TODO(SCN-1221): Should handle Scene better, e.g. storing the lights.
+  // TODO(fxbug.dev/24424): Should handle Scene better, e.g. storing the lights.
   VisitNode(r);
 }
 

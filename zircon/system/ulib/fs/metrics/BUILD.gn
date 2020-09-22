@@ -65,7 +65,7 @@ zx_library("metrics-inspect") {
 }
 
 # Helper library that uses both cobalt and inspect to record metrics.
-# TODO(ZX-3150): Remove once inspect broker service is complete.
+# TODO(fxbug.dev/32982): Remove once inspect broker service is complete.
 zx_library("metrics-composite-latency-event") {
   sdk = "source"
   sdk_headers = [ "fs/metrics/composite_latency_event.h" ]

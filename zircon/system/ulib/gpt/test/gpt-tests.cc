@@ -81,7 +81,7 @@ void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_co
               "Failed to pwrite");
   }
   // fsync is not supported in rpc-server.cpp
-  // TODO(ZX-3294) to fix this
+  // TODO(fxbug.dev/33099) to fix this
   // ASSERT_EQ(fsync(fd), 0, "Failed to fsync");
 }
 

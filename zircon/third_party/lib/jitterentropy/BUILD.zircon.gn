@@ -11,7 +11,7 @@ zx_library("jitterentropy") {
   # According to its documentation, jitterentropy must be compiled at
   # optimization level -O0.
   #
-  # TODO(SEC-14): Test the code generated at various optimization
+  # TODO(fxbug.dev/24745): Test the code generated at various optimization
   # levels. If there is a significant difference in entropy quality,
   # replace the relevant C code by assembly code to protect against future
   # compiler changes.

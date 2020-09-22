@@ -335,7 +335,7 @@ template("zircon_library") {
     lib_to_extract_symbols = ""
     foreach(file, invoker.install) {
       if (get_path_info(file.dest, "dir") == "lib") {
-        # TODO(DX-688): formulate a policy around and handle static archives
+        # TODO(fxbug.dev/5538): formulate a policy around and handle static archives
         if (get_path_info(file.dest, "extension") != "a") {
           assert(lib_to_extract_symbols == "",
                  "There should be only one entry under lib")

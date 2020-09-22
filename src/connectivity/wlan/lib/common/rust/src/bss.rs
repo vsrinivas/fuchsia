@@ -12,11 +12,11 @@ use {
     std::{collections::HashMap, fmt, hash::Hash},
 };
 
-// TODO(WLAN-1273): Represent this as bitfield instead.
+// TODO(fxbug.dev/29885): Represent this as bitfield instead.
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum Protection {
     /// Higher number on Protection enum indicates a more preferred protection type for our SME.
-    /// TODO(WLAN-1264): Move all ordering logic to SME.
+    /// TODO(fxbug.dev/29877): Move all ordering logic to SME.
     Unknown = 0,
     Open = 1,
     Wep = 2,

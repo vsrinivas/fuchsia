@@ -18,7 +18,7 @@
 
 #define LOCAL_TRACE 0
 
-// TODO(ZX-2419): Take another look at validation and consider returning
+// TODO(fxbug.dev/32272): Take another look at validation and consider returning
 // dispatchers or move validation into the parent dispatcher itself.
 
 // Check if the resource referenced by |handle| is of kind |kind|, or ZX_RSRC_KIND_ROOT.

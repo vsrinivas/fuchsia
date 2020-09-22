@@ -38,7 +38,7 @@ class Mesh;
 class Model;
 class Object;
 class PipelineBuilder;
-// TODO(ES-83): move to vk/impl.  Cannot do this yet because there is already
+// TODO(fxbug.dev/7174): move to vk/impl.  Cannot do this yet because there is already
 // a PipelineLayout in impl/vk.
 class PipelineLayout;
 class PaperRenderer;
@@ -76,7 +76,7 @@ typedef fxl::RefPtr<Material> MaterialPtr;
 typedef fxl::RefPtr<Mesh> MeshPtr;
 typedef fxl::RefPtr<MeshBuilder> MeshBuilderPtr;
 typedef fxl::RefPtr<PaperRenderer> PaperRendererPtr;
-// TODO(ES-83): move to vk/impl.  Cannot do this yet because there is already
+// TODO(fxbug.dev/7174): move to vk/impl.  Cannot do this yet because there is already
 // a PipelineLayout in impl/vk.
 typedef fxl::RefPtr<PipelineLayout> PipelineLayoutPtr;
 typedef fxl::RefPtr<Resource> ResourcePtr;

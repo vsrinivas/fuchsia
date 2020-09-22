@@ -20,7 +20,7 @@ CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo&
   cap_info.set_short_preamble(lhs.short_preamble() & rhs.short_preamble());
   cap_info.set_spectrum_mgmt(lhs.spectrum_mgmt() & rhs.spectrum_mgmt());
   cap_info.set_qos(lhs.qos() & rhs.qos());
-  // TODO(NET-1267): Revisit short slot time when necessary.
+  // TODO(fxbug.dev/29404): Revisit short slot time when necessary.
   // IEEE 802.11-2016 11.1.3.2 and 9.4.1.4
   cap_info.set_short_slot_time(lhs.short_slot_time() & rhs.short_slot_time());
   cap_info.set_apsd(lhs.apsd() & rhs.apsd());

@@ -42,7 +42,7 @@ namespace impl {
 // NOTE: When interpreting DescriptorSetLayouts, various code assumes that
 // uniform buffers use dynamic offsets and storage buffers use static offsets.
 //
-// TODO(SCN-699): Consider allowing both static/dynamic offsets for both storage
+// TODO(fxbug.dev/23921): Consider allowing both static/dynamic offsets for both storage
 // and uniform buffers.
 struct DescriptorSetLayout {
   uint32_t sampled_image_mask = 0;

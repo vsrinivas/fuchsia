@@ -36,7 +36,7 @@ bool IsStencilFormat(vk::Format format);
 // Currently these include:
 //   - eG8B8G8R8422Unorm
 //   - eG8B8R82Plane420Unorm
-// TODO(SCN-1403): use of these formats is not enough to assume NV12, but they're currently the
+// TODO(fxbug.dev/24595): use of these formats is not enough to assume NV12, but they're currently the
 // only formats we support at the sampler level.
 bool IsYuvFormat(vk::Format format);
 

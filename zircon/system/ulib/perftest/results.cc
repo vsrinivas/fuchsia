@@ -95,7 +95,7 @@ void WriteJSONString(FILE* out_file, const char* string) {
       // Escape non-printable characters (<32) and top-bit-set
       // characters (>=128).
       //
-      // TODO(TO-824): Handle top-bit-set characters better.  Ideally
+      // TODO(fxbug.dev/7365): Handle top-bit-set characters better.  Ideally
       // we should treat the input string as UTF-8 and preserve the
       // encoded Unicode in the JSON.  We could interpret the UTF-8
       // sequences and convert them to \uXXXX escape sequences.

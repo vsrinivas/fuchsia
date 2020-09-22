@@ -88,7 +88,7 @@ def main():
             data = json.load(spec_file)
         type = data['type']
         name = data['name']
-        # TODO(DX-498): verify that source libraries are header-only.
+        # TODO(fxbug.dev/5365): verify that source libraries are header-only.
         if type == 'cc_source_library' or type == 'cc_prebuilt_library':
             deps.append(name)
         else:

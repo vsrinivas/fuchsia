@@ -17,7 +17,7 @@ struct PixelFormat {
     FormatModifier format_modifier;
 };
 
-// TODO(ZX-2270): add more formats.
+// TODO(fxbug.dev/32128): add more formats.
 /// The ordering of the channels in the format name reflects how
 /// the actual layout of the channel.
 ///

@@ -322,7 +322,7 @@ zx_status_t Alc5663Device::InitializeDevice() {
 
   // Power on everything.
   //
-  // TODO(ZX-1538): Only turn on subsystems as/if they are needed.
+  // TODO(fxbug.dev/31426): Only turn on subsystems as/if they are needed.
   status = MapRegister<PowerManagementControl1Reg>(&client_, [](auto reg) {
     return reg.set_en_i2s1(1)
         .set_pow_dac_l_1(1)

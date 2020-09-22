@@ -85,7 +85,7 @@ static inline cpu_num_t arch_curr_cpu_num(void) {
   return arm64_read_percpu_u32(offsetof(struct arm64_percpu, cpu_num));
 }
 
-// TODO(ZX-3068) get num_cpus from topology.
+// TODO(fxbug.dev/32903) get num_cpus from topology.
 // This needs to be set very early (before arch_init).
 static inline void arch_set_num_cpus(uint cpu_count) {
   extern uint arm_num_cpus;

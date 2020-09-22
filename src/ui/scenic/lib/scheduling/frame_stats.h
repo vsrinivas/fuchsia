@@ -94,7 +94,7 @@ class FrameStats {
     }
   };
 
-  // TODO(SCN-1501) Record all frame times to VMO, separate from Inspect.
+  // TODO(fxbug.dev/24685) Record all frame times to VMO, separate from Inspect.
   static void FrameTimingsOutputToCsv(const std::deque<const FrameTimings::Timestamps>& timestamps,
                                       std::ostream* output);
 

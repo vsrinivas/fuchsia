@@ -8,13 +8,13 @@ using zx;
 using fuchsia.net;
 
 /// Information about PPP device configuration.
-// TODO(CONN-166): Change this to a table when LLCPP supports it.
+// TODO(fxbug.dev/4912): Change this to a table when LLCPP supports it.
 struct Info {
     uint16 mtu; // bytes
 };
 
 /// Options for a PPP connection.
-// TODO(CONN-166): Change this to a table when LLCPP supports it.
+// TODO(fxbug.dev/4912): Change this to a table when LLCPP supports it.
 struct ConnectionOptions {
     /// Enable Link Control Protocol Magic Numbers for loopback detection.
     bool magic_number;

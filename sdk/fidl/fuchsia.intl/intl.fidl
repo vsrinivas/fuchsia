@@ -100,7 +100,7 @@ table Profile {
     /// used.
     4: TemperatureUnit temperature_unit;
 
-    // TODO(CF-168): Other properties that don't fit into locale IDs. Examples:
+    // TODO(fxbug.dev/4065): Other properties that don't fit into locale IDs. Examples:
     // - User date format overrides, like d/mmm/y
     // - User currency overrides
     // - User number overrides (grouping, decimal point)

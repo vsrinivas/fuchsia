@@ -557,7 +557,7 @@ impl GattClientFacade {
         // Set the central proxy if necessary
         GattClientFacade::set_central_proxy(self.inner.clone());
 
-        // TODO(NET-1026): Move to private method?
+        // TODO(fxbug.dev/875): Move to private method?
         // Create server endpoints
         let (proxy, server_end) = match fidl::endpoints::create_proxy() {
             Err(e) => {
@@ -617,7 +617,7 @@ impl GattClientFacade {
     }
 
     // Given the devices accrued from scan, returns list of (id, name) devices
-    // TODO(NET-1291): Return list of RemoteDevices (unsupported right now
+    // TODO(fxbug.dev/869): Return list of RemoteDevices (unsupported right now
     // because Clone() not implemented for RemoteDevice)
     pub fn get_devices(&self) -> Vec<BleScanResponse> {
         const EMPTY_DEVICE: &str = "";

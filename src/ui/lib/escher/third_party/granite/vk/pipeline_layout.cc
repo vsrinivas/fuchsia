@@ -41,7 +41,7 @@ PipelineLayout::PipelineLayout(ResourceRecycler* resource_recycler,
   vk::DescriptorSetLayout set_layouts[VulkanLimits::kNumDescriptorSets] = {};
   unsigned num_set_layouts = 0;
   for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; i++) {
-    // TODO(ES-83): don't ask for an allocator if the set is masked?
+    // TODO(fxbug.dev/7174): don't ask for an allocator if the set is masked?
     // Would be nice, but then we wouldn't have a layout available for the
     // skipped sets.
     descriptor_set_allocators_[i] =

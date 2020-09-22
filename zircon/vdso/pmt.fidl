@@ -6,7 +6,7 @@ library zx;
 
 [Transport = "Syscall"]
 protocol pmt {
-    // TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
+    // TODO(fxbug.dev/32803): handle ZX_OBJ_TYPE_PMT; No rights required?
     /// Unpin pages and revoke device access to them.
     pmt_unpin(handle:PMT handle) -> (status status);
 };

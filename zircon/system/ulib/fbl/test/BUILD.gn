@@ -81,7 +81,7 @@ test("fbl") {
     # ensure that certain actions result in program termination.  Again,
     # this is not currently supported in the host test environment.
     #
-    # See: TODO(ZX-1053)
+    # See: TODO(fxbug.dev/30996)
     sources += [
       "alloc_checker_tests.cc",
       "condition_variable_tests.cc",

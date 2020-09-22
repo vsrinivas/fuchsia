@@ -114,7 +114,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   }
 
   // Native-specific annotations.
-  // TODO(DX-1785): add module annotations from minidump.
+  // TODO(fxbug.dev/6564): add module annotations from minidump.
 
   // Default attachments common to all crash reports.
   if (report.has_attachments()) {

@@ -452,7 +452,7 @@ func (ns *Netstack) onInterfacesChanged() {
 	// We must hold a lock through the entire process of preparing the event so
 	// we guarantee events cannot be reordered.
 	ns.netstackService.mu.Lock()
-	// TODO(NET-2078): Switch to the new NetInterface struct once Chromium stops
+	// TODO(fxbug.dev/21079): Switch to the new NetInterface struct once Chromium stops
 	// using netstack.fidl.
 	interfaces := interfaces2ListToInterfacesList(ns.getNetInterfaces2())
 	for pxy := range ns.netstackService.mu.proxies {

@@ -45,7 +45,7 @@ if (current_toolchain == default_toolchain) {
     ]
 
     if (!is_gcc) {
-      # TODO(TC-237): cflags += [ "-mcmodel=tiny" ]
+      # TODO(fxbug.dev/26997): cflags += [ "-mcmodel=tiny" ]
     }
 
     include_dirs = [ "include" ]

@@ -726,7 +726,7 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
       // case the initiator might want to continue using the BufferCollection without the
       // participant.
       //
-      // TODO(ZX-3884): Provide a way to mark a BufferCollection view as expendable without implying
+      // TODO(fxbug.dev/33670): Provide a way to mark a BufferCollection view as expendable without implying
       // that the channel is closing, so that the client can still detect when the BufferCollection
       // VMOs need to be closed based on BufferCollection channel closure by sysmem.
       //
@@ -2010,7 +2010,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   // pre-zeroed VMOs.  And/or zero allocator backing space async during deallocation, but wait on
   // deallocations to be done before failing an new allocation.
   //
-  // TODO(ZX-4817): Zero secure/protected VMOs.
+  // TODO(fxbug.dev/34590): Zero secure/protected VMOs.
   const auto& heap_properties = allocator->heap_properties();
   ZX_DEBUG_ASSERT(heap_properties.has_coherency_domain_support());
   ZX_DEBUG_ASSERT(heap_properties.has_need_clear());

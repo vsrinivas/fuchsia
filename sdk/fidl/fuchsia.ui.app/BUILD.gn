@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-# TODO(SCN-697): Move this something better when the FIDL directories are
+# TODO(fxbug.dev/23919): Move this something better when the FIDL directories are
 # reorganized.
 fidl("fuchsia.ui.app") {
   sdk_category = "partner"

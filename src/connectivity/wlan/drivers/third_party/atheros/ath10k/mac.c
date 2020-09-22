@@ -1467,7 +1467,7 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
           phymode = MODE_11AC_VHT160;
           break;
         case WLAN_CHANNEL_BANDWIDTH__80P80:
-          // TODO(WLAN-837): Returns 2 center freqs.
+          // TODO(fxbug.dev/29457): Returns 2 center freqs.
           return ZX_ERR_NOT_SUPPORTED;
         default:
           ath10k_err("attempt to start with invalid CBW %d at 5 GHz band\n", cbw);
@@ -2307,7 +2307,7 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar, const wlan_assoc_ctx_t*
 
 static void ath10k_peer_assoc_h_crypto(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                        struct wmi_peer_assoc_complete_arg* arg) {
-  // TODO(WLAN-493): Come back later when we want to enable the security feature on AP mode.
+  // TODO(fxbug.dev/29115): Come back later when we want to enable the security feature on AP mode.
 #if 0   // NEEDS PORTING
     struct ieee80211_bss_conf* info = &vif->bss_conf;
     struct cfg80211_chan_def def;

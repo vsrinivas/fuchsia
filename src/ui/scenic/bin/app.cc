@@ -30,7 +30,7 @@ namespace {
 // Wait for /dev/class/display-controller on x86 as that's sufficient for Intel GPU driver and
 // supports AEMU and swiftshader, which don't depend on devices in /dev/class/gpu.
 //
-// TODO(SCN-568): Scenic should not be aware of these type of dependencies.
+// TODO(fxbug.dev/23795): Scenic should not be aware of these type of dependencies.
 #if defined(__x86_64__)
 static const std::string kDependencyDir = "/dev/class/display-controller";
 #else

@@ -342,7 +342,7 @@ bool GfxCommandApplier::ApplyAddChildCmd(Session* session, fuchsia::ui::gfx::Add
   // - Nodes to Nodes
   // - ViewHolders to Nodes
   // - Nodes to Views' ViewNodes
-  // TODO(SCN-795): Split these out into separate commands? or just allow node
+  // TODO(fxbug.dev/24013): Split these out into separate commands? or just allow node
   // to handle these??
   auto child = session->resources()->FindResource<Node>(command.child_id);
   if (!child) {
@@ -575,7 +575,7 @@ bool GfxCommandApplier::ApplySetMaterialCmd(Session* session,
 
 bool GfxCommandApplier::ApplySetClipCmd(Session* session, fuchsia::ui::gfx::SetClipCmd command) {
   if (command.clip_id != 0) {
-    // TODO(SCN-167): Support non-zero clip_id.
+    // TODO(fxbug.dev/23420): Support non-zero clip_id.
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplySetClipCmd(): only "
            "clip_to_self is implemented.";
@@ -775,7 +775,7 @@ bool GfxCommandApplier::ApplySetEventMaskCmd(Session* session,
 
 bool GfxCommandApplier::ApplySetCameraTransformCmd(
     Session* session, fuchsia::ui::gfx::SetCameraTransformCmd command) {
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (IsVariable(command.eye_position) || IsVariable(command.eye_look_at) ||
       IsVariable(command.eye_up)) {
     session->error_reporter()->ERROR()
@@ -792,7 +792,7 @@ bool GfxCommandApplier::ApplySetCameraTransformCmd(
 
 bool GfxCommandApplier::ApplySetCameraProjectionCmd(
     Session* session, fuchsia::ui::gfx::SetCameraProjectionCmd command) {
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (IsVariable(command.fovy)) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplySetCameraProjectionCmd(): unimplemented: "
@@ -875,7 +875,7 @@ bool GfxCommandApplier::ApplySetCameraPoseBufferCmd(
 
 bool GfxCommandApplier::ApplySetLightColorCmd(Session* session,
                                               fuchsia::ui::gfx::SetLightColorCmd command) {
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (command.color.variable_id) {
     session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
                                           "ApplySetLightColorCmd(): unimplemented: variable color.";
@@ -888,7 +888,7 @@ bool GfxCommandApplier::ApplySetLightColorCmd(Session* session,
 
 bool GfxCommandApplier::ApplySetLightDirectionCmd(Session* session,
                                                   fuchsia::ui::gfx::SetLightDirectionCmd command) {
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (command.direction.variable_id) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplySetLightDirectionCmd(): unimplemented: "
@@ -902,7 +902,7 @@ bool GfxCommandApplier::ApplySetLightDirectionCmd(Session* session,
 
 bool GfxCommandApplier::ApplySetPointLightPositionCmd(
     Session* session, fuchsia::ui::gfx::SetPointLightPositionCmd command) {
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (command.position.variable_id) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplySetPointLightPositionCmd(): unimplemented: "
@@ -916,7 +916,7 @@ bool GfxCommandApplier::ApplySetPointLightPositionCmd(
 
 bool GfxCommandApplier::ApplySetPointLightFalloffCmd(
     Session* session, fuchsia::ui::gfx::SetPointLightFalloffCmd command) {
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (command.falloff.variable_id) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplySetPointLightFalloffCmd(): unimplemented: "
@@ -1100,7 +1100,7 @@ bool GfxCommandApplier::ApplyCreateAmbientLight(Session* session, ResourceId id,
 
 bool GfxCommandApplier::ApplyCreateDirectionalLight(Session* session, ResourceId id,
                                                     fuchsia::ui::gfx::DirectionalLightArgs args) {
-  // TODO(SCN-1255): temporarily disable directional light creation ASAP, so
+  // TODO(fxbug.dev/24456): temporarily disable directional light creation ASAP, so
   // that people don't try to use them before we decide whether we want them.
   // They are currently only used by RootPresenter and example programs.
   // session->error_reporter()->ERROR()
@@ -1124,7 +1124,7 @@ bool GfxCommandApplier::ApplyCreateRectangle(Session* session, ResourceId id,
     return false;
   }
 
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (IsVariable(args.width) || IsVariable(args.height)) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateRectangle(): unimplemented: variable "
@@ -1155,7 +1155,7 @@ bool GfxCommandApplier::ApplyCreateRoundedRectangle(Session* session,
     return false;
   }
 
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (IsVariable(args.width) || IsVariable(args.height) || IsVariable(args.top_left_radius) ||
       IsVariable(args.top_right_radius) || IsVariable(args.bottom_left_radius) ||
       IsVariable(args.bottom_right_radius)) {
@@ -1193,7 +1193,7 @@ bool GfxCommandApplier::ApplyCreateCircle(Session* session, ResourceId id,
     return false;
   }
 
-  // TODO(SCN-123): support variables.
+  // TODO(fxbug.dev/23378): support variables.
   if (IsVariable(args.radius)) {
     session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateCircle()"
                                           ": unimplemented: variable radius.";
@@ -1210,7 +1210,7 @@ bool GfxCommandApplier::ApplyCreateCircle(Session* session, ResourceId id,
   }
 
   // Emit a warning that the radius is too small.
-  // TODO(FLK-467): Convert warning to error and kill the session if the
+  // TODO(fxbug.dev/8569): Convert warning to error and kill the session if the
   // code enters this path.
   if (radius <= escher::kEpsilon) {
     session->error_reporter()->WARN() << "Circle radius is too small " << args.radius.vector1();
@@ -1242,7 +1242,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [SCN-1249].";
-      // TODO(SCN-1249) Return false and report the error in this case, and
+      // TODO(fxbug.dev/24450) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
     }
@@ -1262,7 +1262,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [SCN-1249].";
-      // TODO(SCN-1249) Return false and report the error in this case, and
+      // TODO(fxbug.dev/24450) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
     }
@@ -1423,7 +1423,7 @@ ResourcePtr GfxCommandApplier::CreatePointLight(Session* session, ResourceId id)
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::ViewArgs args) {
-  // TODO(SCN-1410): Deprecate in favor of ViewArgs3.
+  // TODO(fxbug.dev/24602): Deprecate in favor of ViewArgs3.
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
 
   // Create a View and Link, then connect and return if the Link is valid.
@@ -1545,7 +1545,7 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
 
 ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(
     Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
-  // TODO(SCN-179)
+  // TODO(fxbug.dev/23430)
   session->error_reporter()->ERROR()
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateImagePipeCompositor() is unimplemented "
          "(SCN-179)";

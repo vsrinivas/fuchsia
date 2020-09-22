@@ -70,7 +70,7 @@ TEST(FakeBti, CreateContiguousVmo) {
   ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
 }
 
-// TODO(ZX-3131): when functionality is available, check that pinning a
+// TODO(fxbug.dev/32963): when functionality is available, check that pinning a
 // vmo with the ZX_BTI_CONTIGUOUS flag fails if the vmo was not created with
 // zx_vmo_create_contiguous.
 

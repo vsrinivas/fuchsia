@@ -12,7 +12,7 @@ enum ZxPixelFormat : uint32 {
 };
 
 // using ZxUnownedHandle = uint32;
-// TODO(ZX-3369) replace with normal banjo type.
+// TODO(fxbug.dev/33170) replace with normal banjo type.
 enum ZxUnownedHandle : uint32 {
 };
 

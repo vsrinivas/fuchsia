@@ -32,7 +32,7 @@ class EngineRendererVisitor : public ResourceVisitor {
                         escher::MaterialPtr replacement_material);
 
   // Main entry point.
-  // TODO(SCN-1256): EngineRenderer should visit the whole scene-graph, not just
+  // TODO(fxbug.dev/24457): EngineRenderer should visit the whole scene-graph, not just
   // a single Scene.  In this case, the class comment would need to be modified,
   // because this would be responsible for calling BeginFrame()/EndFrame, etc.
   void Visit(Scene* r) override;

@@ -98,7 +98,7 @@ FUNCTION(_start)
     msr     sctlr_el1, tmp
 
     // This can be any arbitrary (page-aligned) address >= KERNEL_ASPACE_BASE.
-    // TODO(SEC-31): Choose it randomly.
+    // TODO(fxbug.dev/24762): Choose it randomly.
     adr_global  tmp, kernel_relocated_base
     ldr     kernel_vaddr, [tmp]
 

@@ -506,7 +506,7 @@ void brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip, uint32_
 #endif  // !defined(NDEBUG)
 
 #ifdef USE_PLATFORM_DATA
-  // TODO(WLAN-731): Do we need to do this?
+  // TODO(fxbug.dev/29352): Do we need to do this?
   struct brcmfmac_pd_device {
     uint32_t bus_type;
     uint32_t id;

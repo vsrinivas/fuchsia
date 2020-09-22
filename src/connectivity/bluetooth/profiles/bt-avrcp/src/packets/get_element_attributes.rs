@@ -24,7 +24,7 @@ impl GetElementAttributesCommand {
         Self { attributes: MediaAttributeId::VARIANTS.to_vec() }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn from_attributes(attributes: &[MediaAttributeId]) -> GetElementAttributesCommand {
         if attributes.len() == 0 {
             return Self::all_attributes();
@@ -32,7 +32,7 @@ impl GetElementAttributesCommand {
         Self { attributes: attributes.to_vec() }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn attributes(&self) -> &[MediaAttributeId] {
         return &self.attributes[..];
     }
@@ -174,7 +174,7 @@ impl Decodable for GetElementAttributesResponse {
             let attribute = MediaAttributeId::try_from(attribute_header[ATTRIBUTE_ID_OFFSET])?;
             let _charset_id = ((attribute_header[ATTRIBUTE_CHARSET_OFFSET] as u16) << 8)
                 | (attribute_header[ATTRIBUTE_CHARSET_OFFSET + 1] as u16);
-            // TODO(BT-2219): Properly handle non-ASCII and UTF-8 charsets.
+            // TODO(fxbug.dev/2742): Properly handle non-ASCII and UTF-8 charsets.
             let attribute_len = (((attribute_header[ATTRIBUTE_PAYLOAD_LEN_OFFSET] as u16) << 8)
                 | (attribute_header[ATTRIBUTE_PAYLOAD_LEN_OFFSET + 1] as u16))
                 as usize;
@@ -184,7 +184,7 @@ impl Decodable for GetElementAttributesResponse {
                 let attribute_value =
                     buf.get(offset..offset + attribute_len).ok_or(Error::InvalidMessageLength)?;
 
-                // TODO(BT-2219): validate charset_id is UTF8 or ASCII
+                // TODO(fxbug.dev/2742): validate charset_id is UTF8 or ASCII
                 let attribute_string = String::from_utf8_lossy(attribute_value).to_string();
 
                 match attribute {

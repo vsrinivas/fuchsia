@@ -53,7 +53,7 @@ AudioDriverV1::AudioDriverV1(AudioDevice* owner, DriverTimeoutHandler timeout_ha
 
 zx_status_t AudioDriverV1::Init(zx::channel stream_channel) {
   TRACE_DURATION("audio", "AudioDriverV1::Init");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   FX_DCHECK(state_ == State::Uninitialized);
 
@@ -98,7 +98,7 @@ zx_status_t AudioDriverV1::Init(zx::channel stream_channel) {
 
 void AudioDriverV1::Cleanup() {
   TRACE_DURATION("audio", "AudioDriverV1::Cleanup");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   std::shared_ptr<ReadableRingBuffer> readable_ring_buffer;
   std::shared_ptr<WritableRingBuffer> writable_ring_buffer;
@@ -125,7 +125,7 @@ std::optional<Format> AudioDriverV1::GetFormat() const {
 
 zx_status_t AudioDriverV1::GetDriverInfo() {
   TRACE_DURATION("audio", "AudioDriverV1::GetDriverInfo");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // We have to be operational in order to fetch supported formats.
@@ -231,7 +231,7 @@ zx_status_t AudioDriverV1::GetDriverInfo() {
 
 zx_status_t AudioDriverV1::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
   TRACE_DURATION("audio", "AudioDriverV1::Configure");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   uint32_t channels = format.channels();
@@ -251,7 +251,7 @@ zx_status_t AudioDriverV1::Configure(const Format& format, zx::duration min_ring
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // TODO(MTWN-386): sanity check the min_ring_buffer_duration.
+  // TODO(fxbug.dev/13666): sanity check the min_ring_buffer_duration.
 
   // Check our known format list for compatibility.
   bool found_format = false;
@@ -271,7 +271,7 @@ zx_status_t AudioDriverV1::Configure(const Format& format, zx::duration min_ring
   }
 
   // We must be in Unconfigured state to change formats.
-  // TODO(MTWN-387): Also permit this if we are in Configured state.
+  // TODO(fxbug.dev/13667): Also permit this if we are in Configured state.
   if (state_ != State::Unconfigured) {
     FX_LOGS(ERROR) << "Bad state while attempting to configure for " << frames_per_second << " Hz "
                    << channels << " Ch Fmt 0x" << std::hex << static_cast<uint32_t>(sample_format)
@@ -311,7 +311,7 @@ zx_status_t AudioDriverV1::Configure(const Format& format, zx::duration min_ring
 
 zx_status_t AudioDriverV1::Start() {
   TRACE_DURATION("audio", "AudioDriverV1::Start");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // In order to start, we must be in the Configured state.
@@ -345,11 +345,11 @@ zx_status_t AudioDriverV1::Start() {
 
 zx_status_t AudioDriverV1::Stop() {
   TRACE_DURATION("audio", "AudioDriverV1::Stop");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // In order to stop, we must be in the Started state.
-  // TODO(MTWN-388): make Stop idempotent. Allow Stop when Configured/Stopping; disallow if
+  // TODO(fxbug.dev/13668): make Stop idempotent. Allow Stop when Configured/Stopping; disallow if
   // Shutdown; consider what to do if Uninitialized/MissingDriverInfo/Unconfigured/Configuring. Most
   // importantly, if driver is Starting, queue the request until Start completes (as we cannot
   // cancel driver commands). Finally, handle multiple Stop calls to be in-flight concurrently.
@@ -385,7 +385,7 @@ zx_status_t AudioDriverV1::Stop() {
 
 zx_status_t AudioDriverV1::SetPlugDetectEnabled(bool enabled) {
   TRACE_DURATION("audio", "AudioDriverV1::SetPlugDetectEnabled");
-  // TODO(MTWN-385): Figure out a better way to assert this!
+  // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   if (enabled == pd_enabled_) {
@@ -531,7 +531,7 @@ zx_status_t AudioDriverV1::ProcessStreamChannelMessage() {
       } else {
         plug_state = ((msg.pd_resp.flags & AUDIO_PDNF_PLUGGED) != 0);
         if ((msg.pd_resp.flags & AUDIO_PDNF_CAN_NOTIFY) == 0) {
-          // TODO(MTWN-389): If we encounter hardware which must be polled for plug detection, set
+          // TODO(fxbug.dev/13669): If we encounter hardware which must be polled for plug detection, set
           // a timer to periodically check this; don't just assume that output is always plugged in.
           FX_LOGS(WARNING) << "Stream is incapable of async plug detection notifications. Assuming "
                               "that the stream is always plugged in for now.";
@@ -748,7 +748,7 @@ zx_status_t AudioDriverV1::ProcessSetFormatResponse(const audio_stream_cmd_set_f
     return resp.result;
   }
 
-  // TODO(MTWN-61): Update AudioCapturers and outputs to incorporate external delay when resampling.
+  // TODO(fxbug.dev/13347): Update AudioCapturers and outputs to incorporate external delay when resampling.
   external_delay_ = zx::nsec(resp.external_delay_nsec);
 
   // Setup async wait on channel.

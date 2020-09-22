@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-// TODO(TC-535): support shaders as a first-class target type
+// TODO(fxbug.dev/27262): support shaders as a first-class target type
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnewline-eof"
 #include "src/graphics/lib/magma/tests_linux/unit_tests/basic_compute.h"
@@ -189,7 +189,7 @@ class VirtMagmaTest : public ::testing::Test {
 
 // Tests that a device can be created on the first reported graphics queue.
 TEST_F(VirtMagmaTest, CreateGraphicsDevice) {
-  // TODO(MA-619): support per-device gtests
+  // TODO(fxbug.dev/13224): support per-device gtests
   for (auto& physical_device : physical_devices_) {
     VkDeviceQueueCreateInfo device_queue_create_info{};
     device_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -222,7 +222,7 @@ TEST_F(VirtMagmaTest, BasicCompute) {
   const uint32_t num_elements = kBufferSize / sizeof(uint32_t);
   const uint32_t num_groups = num_elements / kGroupSize;
 
-  // TODO(MA-619): support per-device gtests
+  // TODO(fxbug.dev/13224): support per-device gtests
   for (auto& physical_device : physical_devices_) {
     VkDeviceQueueCreateInfo device_queue_create_info{};
     device_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;

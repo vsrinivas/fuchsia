@@ -24,10 +24,10 @@
 namespace root_presenter {
 namespace {
 
-// TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
+// TODO(fxbug.dev/24474): Don't hardcode Z bounds in multiple locations.
 constexpr float kDefaultRootViewDepth = 1000;
 
-// TODO(SCN-1278): Remove this.
+// TODO(fxbug.dev/24476): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;
@@ -68,7 +68,7 @@ Presentation::Presentation(
   layer_.SetRenderer(renderer_);
 
   // Create the root view's scene.
-  // TODO(SCN-1255): we add a directional light and a point light, expecting
+  // TODO(fxbug.dev/24456): we add a directional light and a point light, expecting
   // only one of them to be active at a time.  This logic is implicit in
   // EngineRenderer, since no shadow-mode supports both directional and point
   // lights (either one or the other).  When directional light support is added
@@ -391,7 +391,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
     return;
   }
 
-  // TODO(SCN-1278): Use proper trace_id for tracing flow.
+  // TODO(fxbug.dev/24476): Use proper trace_id for tracing flow.
   const trace_flow_id_t trace_id =
       PointerTraceHACK(event.pointer().radius_major, event.pointer().radius_minor);
   TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);

@@ -75,7 +75,7 @@ zx_status_t PciRegionAllocator::AllocateWindow(zx_paddr_t base, size_t size,
   }
 
   zx::resource out_resource;
-  // TODO(ZX-3146): When the resource subset CL lands, make this a smaller resource.
+  // TODO(fxbug.dev/32978): When the resource subset CL lands, make this a smaller resource.
   status = backing_alloc_->resource().duplicate(ZX_DEFAULT_RESOURCE_RIGHTS, &out_resource);
   if (status != ZX_OK) {
     return status;

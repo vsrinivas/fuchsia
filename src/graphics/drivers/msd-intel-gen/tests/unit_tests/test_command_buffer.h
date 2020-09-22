@@ -59,12 +59,12 @@ class TestCommandBuffer {
     return command_buffer->exec_resources_;
   }
 
-  // TODO(MA-208) - move this
+  // TODO(fxbug.dev/12827) - move this
   static RenderEngineCommandStreamer* render_engine(MsdIntelDevice* device) {
     return device->render_engine_cs();
   }
 
-  // TODO(MA-208) - move this
+  // TODO(fxbug.dev/12827) - move this
   static void StartDeviceThread(MsdIntelDevice* device) { device->StartDeviceThread(); }
 
   static bool InitContextForRender(MsdIntelDevice* device, MsdIntelContext* context) {

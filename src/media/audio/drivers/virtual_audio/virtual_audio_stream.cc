@@ -480,7 +480,7 @@ void VirtualAudioStream::ProcessRingNotification() {
   auto monotonic_time = target_notification_time_.get();
   ZX_DEBUG_ASSERT(monotonic_time > 0);
 
-  // TODO(MTWN-57): use a proper Timeline object here.
+  // TODO(fxbug.dev/13343): use a proper Timeline object here.
   auto running_duration = target_notification_time_ - start_time_;
   uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
   uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
@@ -511,7 +511,7 @@ void VirtualAudioStream::ProcessAltRingNotification() {
   auto monotonic_time = target_alt_notification_time_.get();
   ZX_DEBUG_ASSERT(monotonic_time > 0);
 
-  // TODO(MTWN-57): use a proper Timeline object here.
+  // TODO(fxbug.dev/13343): use a proper Timeline object here.
   auto running_duration = target_alt_notification_time_ - start_time_;
   uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
   uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;

@@ -2811,7 +2811,7 @@ TEST(MakeJournal, SmallBUffer) {
   ASSERT_EQ(MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize - 1), ZX_ERR_IO_OVERRUN);
 }
 
-// TODO(ZX-4775): Test abandoning promises. This may require additional barrier support.
+// TODO(fxbug.dev/34548): Test abandoning promises. This may require additional barrier support.
 
 }  // namespace
 }  // namespace fs

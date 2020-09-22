@@ -77,7 +77,7 @@ magma_status_t magma_create_connection2(magma_device_t device, magma_connection_
 }
 
 void magma_release_connection(magma_connection_t connection) {
-  // TODO(MA-109): close the connection
+  // TODO(fxbug.dev/12731): close the connection
   delete magma::PlatformConnectionClient::cast(connection);
 }
 

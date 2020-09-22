@@ -24,14 +24,14 @@ namespace gfx {
 // Commit() is called.  Eventually, this class may do more work if performance
 // profiling suggests to.
 //
-// TODO(SCN-709): Unify SessionHandler and Session.
+// TODO(fxbug.dev/23931): Unify SessionHandler and Session.
 class SessionHandler : public TempSessionDelegate {
  public:
   SessionHandler(CommandDispatcherContext context, SessionContext session_context,
                  std::shared_ptr<EventReporter> event_reporter,
                  std::shared_ptr<ErrorReporter> error_reporter,
                  inspect::Node inspect_node = inspect::Node());
-  // TODO(SCN-1485): along with ~Session(), this ensures that the contents are
+  // TODO(fxbug.dev/24672): along with ~Session(), this ensures that the contents are
   // properly removed from the scene-graph.  However, it doesn't trigger another
   // frame to show the updated scene-graph.
   ~SessionHandler() = default;
@@ -68,7 +68,7 @@ class SessionHandler : public TempSessionDelegate {
  private:
   std::unique_ptr<Session> session_;
 
-  // TODO(SCN-710): We reallocate this everytime we std::move it into
+  // TODO(fxbug.dev/23932): We reallocate this everytime we std::move it into
   // ScheduleUpdate().  The bug has some ideas about how to do better.
   std::vector<::fuchsia::ui::gfx::Command> buffered_commands_;
 };

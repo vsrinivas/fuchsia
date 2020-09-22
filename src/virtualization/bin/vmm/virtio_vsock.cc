@@ -395,7 +395,7 @@ void VirtioVsock::ChannelConnection::OnReady(zx_status_t status, const zx_packet
 }
 
 zx_status_t VirtioVsock::ChannelConnection::WriteCredit(virtio_vsock_hdr_t* header) {
-  // TODO(PD-171): Once channel back-pressure has been implemented, we should
+  // TODO(fxbug.dev/12377): Once channel back-pressure has been implemented, we should
   // implement credit handling.
   constexpr size_t max = ZX_CHANNEL_MAX_MSG_BYTES;
   constexpr size_t used = 0;
@@ -423,7 +423,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsoc
       //
       // In both cases, we should stop and return ZX_OK.
       //
-      // TODO(PD-171): Figure out the best way to handle channel messages that
+      // TODO(fxbug.dev/12377): Figure out the best way to handle channel messages that
       // are larger than a single descriptor.
       if (status == ZX_ERR_SHOULD_WAIT ||
           (status == ZX_ERR_BUFFER_TOO_SMALL && desc->len > PeerFree())) {

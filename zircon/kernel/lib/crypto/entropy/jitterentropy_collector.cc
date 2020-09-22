@@ -60,7 +60,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
   }
 }
 
-// TODO(ZX-1024): Test jitterentropy in different environments (especially on
+// TODO(fxbug.dev/30968): Test jitterentropy in different environments (especially on
 // different platforms/architectures, and in multi-threaded mode). Ensure
 // entropy estimate is safe enough.
 
@@ -71,7 +71,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
 // bytes of random data.
 JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
     : Collector("jitterentropy", /* entropy_per_1000_bytes */ 50) {
-  // TODO(ZX-1022): optimize default jitterentropy parameters, then update
+  // TODO(fxbug.dev/30967): optimize default jitterentropy parameters, then update
   // values here and in docs/kernel_cmdline.md.
   uint32_t bs = gCmdline.GetUInt32("kernel.jitterentropy.bs", 64);
   uint32_t bc = gCmdline.GetUInt32("kernel.jitterentropy.bc", 512);
@@ -84,7 +84,7 @@ JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
 }
 
 size_t JitterentropyCollector::DrawEntropy(uint8_t* buf, size_t len) {
-  // TODO(ZX-1024): Test jitterentropy in multi-CPU environment. Disable
+  // TODO(fxbug.dev/30968): Test jitterentropy in multi-CPU environment. Disable
   // interrupts, or otherwise ensure that jitterentropy still performs well in
   // multi-threaded systems.
   Guard<Mutex> guard(&lock_);

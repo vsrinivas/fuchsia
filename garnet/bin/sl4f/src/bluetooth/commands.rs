@@ -58,7 +58,7 @@ fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String),
     let type_ = parse_arg!(args_raw, as_str, "type")?;
     let local_service_id = parse_arg!(args_raw, as_str, "local_service_id")?;
 
-    // TODO(NET-1293): Add support for GATT characterstics and includes
+    // TODO(fxbug.dev/883): Add support for GATT characterstics and includes
     let characteristics = None;
     let includes = None;
 

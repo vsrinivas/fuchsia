@@ -319,7 +319,7 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(ZX-971): finer grained validation
+  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
   if (result != ZX_OK)
     return result;

@@ -26,7 +26,7 @@ bytes of entropy at a time.
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

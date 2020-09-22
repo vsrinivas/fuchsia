@@ -199,7 +199,7 @@ protocol Provider {
     /// connection to `device` will also close the `controller` interface. If
     /// the display device already has a virtcon controller then this method
     /// will return `ZX_ERR_ALREADY_BOUND`.
-    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify `device` and
+    // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
     OpenVirtconController(zx.handle:CHANNEL device, request<Controller> controller) -> (zx.status s);
 
@@ -210,7 +210,7 @@ protocol Provider {
     /// connection to `device` will also close the `controller` interface. If
     /// the display device already has a primary controller then this method
     /// will return `ZX_ERR_ALREADY_BOUND`.
-    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify `device` and
+    // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
     OpenController(zx.handle:CHANNEL device, request<Controller> controller) -> (zx.status s);
 };

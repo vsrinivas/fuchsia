@@ -24,7 +24,7 @@ protocol Bootstrap {
     /// Adds identities to be added to the unpopulated Bluetooth stack.
     ///
     /// Repeated calls will append identities.
-    // TODO(BT-711): If necessary, paginate bonding data to allow an arbitrary number of bonds for
+    // TODO(fxbug.dev/1304): If necessary, paginate bonding data to allow an arbitrary number of bonds for
     // each identity, e.g. AddBonds(adapter_id, bonds).
     AddIdentities(vector<Identity> identities);
 

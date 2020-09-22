@@ -77,7 +77,7 @@ ExceptionType DecodeException(uint32_t code, const X64ExceptionInfo& info) {
   if (!regs.has_value())
     return ExceptionType::kSingleStep;
 
-  // TODO(DX-1445): This permits only one trigger per exception, when overlaps
+  // TODO(fxbug.dev/6246): This permits only one trigger per exception, when overlaps
   //                could occur. For a first pass this is acceptable.
 
   if (X86_DBG_STATUS_BS_GET(regs->dr6))

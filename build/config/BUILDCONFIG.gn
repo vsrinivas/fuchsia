@@ -1640,7 +1640,7 @@ template("executable") {
 
     # This ensures that non-Zircon host executables get __zx_panic.
     #
-    # TODO(ZX-4798): This will likely no longer be needed at some point.  See
+    # TODO(fxbug.dev/34571): This will likely no longer be needed at some point.  See
     # the bug for more info/discussion.
     if (is_host) {
       deps += [ "//zircon/system/ulib/zx-panic-libc" ]

@@ -5,7 +5,7 @@ significantly, but the approximate source code layout remains the same. The
 source can be found in
 [`zircon/third_party/ulib/musl`](/zircon/third_party/ulib/musl).
 
-TODO(ZX-1598) Type more here.
+TODO(fxbug.dev/31481) Type more here.
 
 ## Standards
 

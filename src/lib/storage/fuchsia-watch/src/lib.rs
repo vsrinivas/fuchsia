@@ -95,7 +95,7 @@ impl AsRef<Path> for PathEvent {
 ///
 /// Returns a stream of PathEvents if a watcher could be installed on the path successfully.
 ///
-/// TODO(TC-555): This should generate a stream rather than spawning tasks.
+/// TODO(fxbug.dev/27279): This should generate a stream rather than spawning tasks.
 pub async fn watch(path: impl Into<PathBuf>) -> Result<BoxStream<'static, PathEvent>, Error> {
     inner_watch(path.into()).await
 }

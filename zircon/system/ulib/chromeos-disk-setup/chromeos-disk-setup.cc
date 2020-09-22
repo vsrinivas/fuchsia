@@ -263,7 +263,7 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
     return ZX_OK;
   }
 
-  // TODO(ZX-1396): The gpt_device_t may not be valid for modification if it
+  // TODO(fxbug.dev/31298): The gpt_device_t may not be valid for modification if it
   // is a newly initialized GPT which has never had gpt_device_finalize or
   // gpt_device_sync called.
   if (gpt->Finalize() != ZX_OK) {

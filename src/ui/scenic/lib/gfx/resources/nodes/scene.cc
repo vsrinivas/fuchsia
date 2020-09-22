@@ -100,15 +100,15 @@ void Scene::OnSceneChanged() {
 
 bool Scene::AddLight(const LightPtr& light, ErrorReporter* error_reporter) {
   if (light->IsKindOf<AmbientLight>()) {
-    // TODO(SCN-1217): check for duplicates.
+    // TODO(fxbug.dev/24420): check for duplicates.
     ambient_lights_.push_back(light->As<AmbientLight>());
     return true;
   } else if (light->IsKindOf<DirectionalLight>()) {
-    // TODO(SCN-1217): check for duplicates.
+    // TODO(fxbug.dev/24420): check for duplicates.
     directional_lights_.push_back(light->As<DirectionalLight>());
     return true;
   } else if (light->IsKindOf<PointLight>()) {
-    // TODO(SCN-1217): check for duplicates.
+    // TODO(fxbug.dev/24420): check for duplicates.
     point_lights_.push_back(light->As<PointLight>());
     return true;
   }

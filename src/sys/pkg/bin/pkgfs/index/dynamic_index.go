@@ -99,7 +99,7 @@ func (idx *DynamicIndex) addLocked(p pkg.Package, root string) error {
 	}
 
 	if _, found := idx.static.Get(p); found {
-		// TODO(PKG-19): this needs to be removed as the static package set should not
+		// TODO(fxbug.dev/21991): this needs to be removed as the static package set should not
 		// be updated dynamically in future.
 		err := idx.static.Set(p, root)
 

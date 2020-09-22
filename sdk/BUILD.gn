@@ -76,7 +76,7 @@ sdk("zircon_sysroot") {
 }
 
 sdk("e2e_testing") {
-  # TODO(DX-1314): this id should not be necessary.
+  # TODO(fxbug.dev/6128): this id should not be necessary.
   id = sdk_id
 
   category = "partner"

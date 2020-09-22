@@ -58,7 +58,7 @@ struct is_nullable<void> : public std::false_type {};
 // - sizeof(fit::nullable<int>) == sizeof(struct { bool; int; })
 // - sizeof(std::optional<int>) == sizeof(struct { bool; int; })
 //
-// TODO(CF-806): fit::nullable does not precisely mirror fit::optional now that
+// TODO(fxbug.dev/4681): fit::nullable does not precisely mirror fit::optional now that
 // fit::optional is closer to standards compliant. This should be corrected to
 // avoid surprises when switching between the types.
 template <typename T, bool = (is_nullable<T>::value && std::is_constructible<T, T&&>::value &&

@@ -340,7 +340,7 @@ if (current_toolchain == dart_toolchain) {
       dart_analyzer_binary = "$dart_sdk/bin/dartanalyzer"
 
       # Creates a script which can be used to manually perform analysis.
-      # TODO(BLD-256): remove this target.
+      # TODO(fxbug.dev/3065): remove this target.
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 

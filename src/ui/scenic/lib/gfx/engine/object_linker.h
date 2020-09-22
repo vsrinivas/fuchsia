@@ -142,7 +142,7 @@ class ObjectLinkerBase {
 //
 // Attempts to register either half of the kernel object multiple times, even
 // through cloned handles, will result in an error.
-// TODO(SCN-769): Allow multiple Imports.
+// TODO(fxbug.dev/23989): Allow multiple Imports.
 //
 // This class is thread-hostile.  It requires the owning thread to have a
 // default async loop.

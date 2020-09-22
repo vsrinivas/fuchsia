@@ -5,7 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_SHAPE_MESH_SPEC_H_
 #define SRC_UI_LIB_ESCHER_SHAPE_MESH_SPEC_H_
 
-// TODO(ES-132): Add Flags type so that MeshAttribute doesn't need vk::Flags.
+// TODO(fxbug.dev/7223): Add Flags type so that MeshAttribute doesn't need vk::Flags.
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
 
 #include <vulkan/vulkan.hpp>

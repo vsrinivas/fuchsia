@@ -71,7 +71,7 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
   // Scale the background node such that the scanout resource sub-region
   // matches the image size. Ideally, this would just be a scale transform of
   // the material itself.
-  // TODO(SCN-958): Materials should support transforms
+  // TODO(fxbug.dev/24174): Materials should support transforms
   background_.SetAnchor(-center_x, -center_y, 0.0f);
   background_.SetTranslation(center_x, center_y, 0.0f);
   background_.SetScale(scale_x, scale_y, 1.0f);

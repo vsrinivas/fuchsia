@@ -379,7 +379,7 @@ int main(int argc, char** argv) {
   // Setup magma device.
   VirtioMagma magma(guest.phys_mem());
   if (launch_info.magma_device || cfg->virtio_magma()) {
-    // TODO(MAC-259): simplify vmm launch configs
+    // TODO(fxbug.dev/12619): simplify vmm launch configs
     size_t magma_dev_mem_size = 16 * 1024 * 1024 * 1024ull;
     if (launch_info.magma_device) {
       magma_dev_mem_size = launch_info.magma_device->memory;

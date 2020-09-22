@@ -18,7 +18,7 @@ use std::collections::HashMap;
 pub type PeerFactoryMap = HashMap<String, PeerControllerProxy>;
 
 /// BleScan result type
-/// TODO(NET-1026): Add support for RemoteDevices when clone() is implemented
+/// TODO(fxbug.dev/875): Add support for RemoteDevices when clone() is implemented
 #[derive(Serialize, Clone, Debug)]
 pub struct BleScanResponse {
     pub id: String,
@@ -33,7 +33,7 @@ impl BleScanResponse {
 }
 
 /// BleAdvertise result type (only uuid)
-/// TODO(NET-1026): Add support for AdvertisingData when clone() is implemented
+/// TODO(fxbug.dev/875): Add support for AdvertisingData when clone() is implemented
 #[derive(Serialize, Clone, Debug)]
 pub struct BleAdvertiseResponse {
     pub name: Option<String>,
@@ -161,7 +161,7 @@ impl GattcDiscoverCharacteristicResponse {
 }
 
 /// BleConnectPeripheral response (aka ServiceInfo)
-/// TODO(NET-1026): Add support for ServiceInfo when clone(), serialize(), derived
+/// TODO(fxbug.dev/875): Add support for ServiceInfo when clone(), serialize(), derived
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BleConnectPeripheralResponse {
     pub id: u64,

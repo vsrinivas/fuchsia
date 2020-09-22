@@ -10,7 +10,7 @@ protocol process {
     [noreturn]
     process_exit(int64 retcode);
 
-    // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
+    // TODO(fxbug.dev/32803): job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new process.
     /// Rights: job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
     process_create(handle:JOB job, string name, uint32 options)

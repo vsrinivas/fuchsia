@@ -775,7 +775,7 @@ class Library {
                                    const raw::AttributeList* attributes);
   void ValidateAttributesConstraints(const Decl* decl, const raw::AttributeList* attributes);
 
-  // TODO(FIDL-596): Rationalize the use of names. Here, a simple name is
+  // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
   // is guaranteed to be unique within the library, and a derived name is one
   // that is library scoped but derived from the concatenated components using
@@ -899,7 +899,7 @@ class Library {
   std::vector<Decl*> declaration_order_;
 
  private:
-  // TODO(FIDL-389): Remove when canonicalizing types.
+  // TODO(fxbug.dev/7724): Remove when canonicalizing types.
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
 

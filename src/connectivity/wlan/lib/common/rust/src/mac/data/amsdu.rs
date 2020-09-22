@@ -28,7 +28,7 @@ pub struct AmsduSubframe<B> {
 
 /// Parse an A-MSDU subframe from the byte stream and advance the cursor in the `BufferReader` if
 /// successful. Parsing is only successful if the byte stream starts with a valid subframe.
-/// TODO(WLAN-995): The received AMSDU should not be greater than `max_amsdu_len`, specified in
+/// TODO(fxbug.dev/29615): The received AMSDU should not be greater than `max_amsdu_len`, specified in
 /// HtCapabilities IE of Association. Warn or discard if violated.
 impl<B: ByteSlice> AmsduSubframe<B> {
     pub fn parse(buffer_reader: &mut BufferReader<B>) -> Option<Self> {

@@ -38,7 +38,7 @@ struct PaperRendererConfig {
   uint8_t msaa_sample_count = 1;
 
   // Specify how many depth buffers the renderer should round-robin through.
-  // TODO(SCN-486): this type of transient resource should be provided by a
+  // TODO(fxbug.dev/7331): this type of transient resource should be provided by a
   // "FrameGraph" which has global knowledge of the entire frame.
   uint8_t num_depth_buffers = 1;
 

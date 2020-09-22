@@ -132,7 +132,7 @@ to the directory containing the `BUILD.gn` file where the path string appears.
 They can also be "source-absolute", meaning relative to the root of the source
 tree.  Source-absolute paths begin with `//` in GN.
 
-**TODO(BLD-353): _This is a hold-over from the "layer cake" design and will
+**TODO(fxbug.dev/3156): _This is a hold-over from the "layer cake" design and will
 probably change soon:_** Generically, an absolute path will look like
 `//path/to/dir`.  However, in order to maintain both the standalone Zircon
 build and the integrated Fuchsia build, *all absolute paths in Zircon will look

@@ -66,7 +66,7 @@ func (s *Service) getIO() fidlio.NodeWithCtx {
 }
 
 func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
-	// TODO(ZX-3805): this does not implement the node protocol correctly,
+	// TODO(fxbug.dev/33595): this does not implement the node protocol correctly,
 	// but matches the behaviour of SDK VFS.
 	if flags&fidlio.OpenFlagNodeReference != 0 {
 		stub := fidlio.NodeWithCtxStub{Impl: s}

@@ -123,7 +123,7 @@ template("sdk") {
       rebase_path(computed_api_file),
     ]
 
-    # TODO(DX-685): always set this argument.
+    # TODO(fxbug.dev/5535): always set this argument.
     if (defined(invoker.api)) {
       inputs += [ invoker.api ]
       args += [

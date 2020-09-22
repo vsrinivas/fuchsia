@@ -577,7 +577,7 @@ config("no_fuzzer") {
   }
 }
 
-# TODO(TC-539) Remove this once the warning with fit::variant/fit::optional is addressed.
+# TODO(fxbug.dev/27266) Remove this once the warning with fit::variant/fit::optional is addressed.
 config("no_maybe_uninitialized") {
   if (is_gcc) {
     cflags = [ "-Wno-maybe-uninitialized" ]
@@ -623,7 +623,7 @@ config("machine") {
     ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
   }
   if (is_fuchsia) {
-    # TODO(ZX-2300): Really need to get this nailed down once and for all
+    # TODO(fxbug.dev/32157): Really need to get this nailed down once and for all
     # and set by default in the compiler driver (Clang at least).
     ldflags += [ "-Wl,-z,max-page-size=4096" ]
   }
@@ -681,7 +681,7 @@ config("static-libc++") {
   } else {
     ldflags = [ "-static-libstdc++" ]
 
-    # TODO(TC-74): The implicitly linked static libc++.a depends on these.
+    # TODO(fxbug.dev/26846): The implicitly linked static libc++.a depends on these.
     if (current_os == "linux") {
       libs = [
         "dl",

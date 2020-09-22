@@ -269,10 +269,10 @@ int unittest_set_verbosity_level(int new_level);
  * regressions.
  */
 
-// TODO(INTK-312): Need to fine tune these. The current values are quite
+// TODO(fxbug.dev/10732): Need to fine tune these. The current values are quite
 // conservative until the bots provide more appropriate values for bot
 // purposes.
-// TODO(ZX-2104): An alternative is to machine generate timeouts for each
+// TODO(fxbug.dev/31966): An alternative is to machine generate timeouts for each
 // test via training runs. Taking that on will require more research.
 #if __has_feature(address_sanitizer)
 // With ASAN tests run slower and since none of the todos above have
@@ -284,11 +284,11 @@ int unittest_set_verbosity_level(int new_level);
 
 // Timeout scale for each of the test classes, from the base timeout.
 #define TEST_TIMEOUT_FACTOR_SMALL 1
-// TODO(ZX-2103): fvm-test:TestSliceAccessNonContiguousPhysical is a medium
+// TODO(fxbug.dev/31965): fvm-test:TestSliceAccessNonContiguousPhysical is a medium
 // test that runs for 130 seconds. IWBN to make the medium timeout factor
 // smaller.
 #define TEST_TIMEOUT_FACTOR_MEDIUM 10
-// TODO(ZX-2107): Some large tests are really large.
+// TODO(fxbug.dev/31969): Some large tests are really large.
 #define TEST_TIMEOUT_FACTOR_LARGE 100
 #define TEST_TIMEOUT_FACTOR_PERFORMANCE 100
 

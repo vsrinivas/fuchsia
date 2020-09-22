@@ -18,7 +18,7 @@ bool Gesture::Delta::operator==(const Delta& other) const {
 }
 
 void Gesture::AddPointer(PointerId pointer_id, const glm::vec2& position) {
-  // TODO(SCN-1404): This is sometimes violated.
+  // TODO(fxbug.dev/24596): This is sometimes violated.
   // FX_DCHECK(pointers_.find(pointer_id) == pointers_.end());
 
   pointers_[pointer_id] = {.absolute = position, .relative = {}, .distance = 0};
@@ -27,7 +27,7 @@ void Gesture::AddPointer(PointerId pointer_id, const glm::vec2& position) {
 }
 
 Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id, const glm::vec2& position) {
-  // TODO(SCN-1404): This is sometimes violated.
+  // TODO(fxbug.dev/24596): This is sometimes violated.
   // FX_DCHECK(pointers_.find(pointer_id) != pointers_.end());
   auto it = pointers_.find(pointer_id);
   if (it == pointers_.end()) {

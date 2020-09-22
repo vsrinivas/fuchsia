@@ -42,7 +42,7 @@ type captureTraceConfig struct {
 func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 	config := &captureTraceConfig{}
 
-	// TODO(TO-400): It would be nice to be able to specify +category or
+	// TODO(fxbug.dev/27610): It would be nice to be able to specify +category or
 	// -category to add or subtract from the default set.
 	f.StringVar(&config.Categories, "categories", defaultCategories,
 		"Comma separated list of categories to trace. \"all\" for all categories.")
@@ -64,7 +64,7 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"Capture trace in binary format on the target.")
 	f.BoolVar(&config.Stream, "stream", false,
 		"Stream trace output to a local file, instead of saving to target disk and then copying it.")
-	// TODO(PT-125): Update this message when compressed binary (fxt) traces are supported.
+	// TODO(fxbug.dev/22986): Update this message when compressed binary (fxt) traces are supported.
 	f.BoolVar(&config.Compress, "compress", false,
 		"Compress the trace output before writing to disk. This option is currently ignored if -stream or -binary is specified.")
 	f.BoolVar(&config.Detach, "detach", false,
@@ -187,19 +187,19 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 	}
 
 	// The program to run must appear last.
-	// TODO(PT-130): The handling of embedded spaces in the command
+	// TODO(fxbug.dev/22991): The handling of embedded spaces in the command
 	// and its arguments could be better.
 	if len(config.Command) > 0 {
 		// There is a difference between the trace failing and the
 		// child failing, we need to know if trace fails.
-		// TODO(PT-95): If we talk to trace-manager directly to get
+		// TODO(fxbug.dev/22958): If we talk to trace-manager directly to get
 		// trace data and then talk to some other service to launch the
 		// child then there's no conflating of return codes.
 		cmd = append(cmd, "--return-child-result=false")
 		cmd = append(cmd, config.Command...)
 	}
 
-	// TODO(TO-401): The target `trace` command's output is misleading.
+	// TODO(fxbug.dev/27611): The target `trace` command's output is misleading.
 	// Specifically it says "Trace file written to /tmp/trace.json" which
 	// references where the file is written to on the target not on the host.
 	// We should wrap this and offer less confusing status.

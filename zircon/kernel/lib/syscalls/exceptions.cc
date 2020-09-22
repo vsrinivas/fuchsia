@@ -56,7 +56,7 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
   // |handle| so we are sure not to grant any additional rights the caller
   // didn't already have.
   //
-  // TODO(ZX-3208): thread/process/job rights don't always map 1:1.
+  // TODO(fxbug.dev/33015): thread/process/job rights don't always map 1:1.
   zx_rights_t process_rights = task_rights;
   zx_rights_t thread_rights = task_rights;
 

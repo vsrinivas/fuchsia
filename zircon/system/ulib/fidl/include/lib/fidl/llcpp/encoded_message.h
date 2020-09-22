@@ -82,7 +82,7 @@ class RawMessage {
 // Because this class does not own the underlying message buffer, the caller
 // must make sure the lifetime of this class does not extend over that of the buffer.
 //
-// TODO(FIDL-771): Right now we assume EncodedMessage is always used in a |kReceiving| context,
+// TODO(fxbug.dev/8093): Right now we assume EncodedMessage is always used in a |kReceiving| context,
 // which over-allocates bytes and handles for flexible messages. To be more frugal with allocation,
 // we should plumb the context through EncodedMessage.
 template <typename FidlType>

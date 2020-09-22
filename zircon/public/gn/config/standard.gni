@@ -417,7 +417,7 @@ standard_variants += [
       tags = [
         "instrumented",
 
-        # TODO(TC-598): The instrumentation metadata sections are not put
+        # TODO(fxbug.dev/27321): The instrumentation metadata sections are not put
         # into section groups properly under -ffunction-sections.  This
         # means that links (like the x86 kernel's) that rely for their
         # correctness on --gc-sections pruning dead code with dangling

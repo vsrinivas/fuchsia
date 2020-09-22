@@ -384,7 +384,7 @@ zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value, const vo
       // promiscuous mode enabled.
       //               So we give a warning and return OK here to continue the
       //               bridging.
-      // TODO(NET-1930): To implement the real promiscuous mode.
+      // TODO(fxbug.dev/29113): To implement the real promiscuous mode.
       if (value == 1) {  // Only warn when enabling.
         warnf("WLAN promiscuous not supported yet. see NET-1930\n");
       }
@@ -500,7 +500,7 @@ TxVector GetTxVector(const std::unique_ptr<MinstrelRateSelector>& minstrel,
     // 1. Does not support tx status report. i.e.
     // WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT NOT set
     // 2. Hornors our instruction on tx_vector to use.
-    // TODO(NET-645): Choose an optimal MCS for management frames
+    // TODO(fxbug.dev/28893): Choose an optimal MCS for management frames
     const uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
     return {
         .phy = WLAN_INFO_PHY_TYPE_ERP,
@@ -642,7 +642,7 @@ zx_status_t Device::StartHwScan(const wlan_hw_scan_config_t* scan_config) {
 
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
   ZX_DEBUG_ASSERT(assoc_ctx != nullptr);
-  // TODO(NET-1385): Minstrel only supports client mode. Add AP mode support
+  // TODO(fxbug.dev/28959): Minstrel only supports client mode. Add AP mode support
   // later.
   AddMinstrelPeer(*assoc_ctx);
   return wlanmac_proxy_.ConfigureAssoc(0u, assoc_ctx);

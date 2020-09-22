@@ -22,7 +22,7 @@ namespace wlan {
 //
 //  Note: MCS_IDX is explained in the definition of TxVector.
 //
-// TODO(NET-1451) VHT will be inserted between HT and ERP.
+// TODO(fxbug.dev/20947) VHT will be inserted between HT and ERP.
 
 zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector* tx_vec) {
   if (tx_vec == nullptr) {
@@ -201,7 +201,7 @@ bool TxVector::IsValid() const {
       return 0 <= mcs_idx && mcs_idx < kErpNumTxVector;
     case WLAN_INFO_PHY_TYPE_VHT:
       // fall through
-      // TODO(NET-1541): GI 800ns, 400ns or 200ns, BW any, MCS 0-9
+      // TODO(fxbug.dev/28964): GI 800ns, 400ns or 200ns, BW any, MCS 0-9
     default:
       return false;
   }
@@ -234,7 +234,7 @@ zx_status_t TxVector::ToIdx(tx_vec_idx_t* idx) const {
       break;
     case WLAN_INFO_PHY_TYPE_VHT:
       // fall-through, will never reach because TxVector is always valid.
-      // TODO(NET-1541)
+      // TODO(fxbug.dev/28964)
     default:
       break;
   }

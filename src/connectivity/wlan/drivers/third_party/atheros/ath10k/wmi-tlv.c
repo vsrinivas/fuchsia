@@ -18,7 +18,7 @@
 // The way how macros in wmi.h and wmi-tlv.h are working (read carefully how MSG() is defined before
 // ath10k_msg_type and how ATH10K_MSG_TYPE_WMI is *referred* in wmi.h) is that the .c code must
 // include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
-// properly. TODO(WLAN-606): Cleanup ath10k msg_buf
+// properly. TODO(fxbug.dev/29228): Cleanup ath10k msg_buf
 #include <inttypes.h>
 #include <zircon/status.h>
 

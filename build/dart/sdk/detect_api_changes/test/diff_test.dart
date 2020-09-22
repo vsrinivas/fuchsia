@@ -10,7 +10,7 @@ import 'package:detect_api_changes/src/diff.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-// TODO(DX-1760): Currently, API changes are detected using simple string comparison. In
+// TODO(fxbug.dev/6541): Currently, API changes are detected using simple string comparison. In
 // the future we want to be able to provide detailed error messages. i.e.
 //   "Method 'foo' used to have return type 'void', now has return type 'int'"
 // These tests are skipped until that functionality is implemented.

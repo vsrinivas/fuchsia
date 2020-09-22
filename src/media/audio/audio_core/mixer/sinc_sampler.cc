@@ -361,8 +361,8 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
       // Audio formats do not include info needed to filter frequencies or locate channels in 3D
       // space.
-      // TODO(MTWN-399): enable the mixer to rechannelize in a more sophisticated way.
-      // TODO(MTWN-402): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
+      // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
+      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
       return SelectSSM<4>(src_format, dest_format);
     default:
       return nullptr;

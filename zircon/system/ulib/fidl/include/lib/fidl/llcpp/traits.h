@@ -206,7 +206,7 @@ struct HasResponseType<FidlType, void_t<typename FidlType::ResponseType>> : std:
 
 // Calculates the maximum possible message size for a FIDL type,
 // clamped at the Zircon channel transport packet size.
-// TODO(FIDL-771): users of this API should always specify a meaningful direction.
+// TODO(fxbug.dev/8093): users of this API should always specify a meaningful direction.
 template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
@@ -229,7 +229,7 @@ constexpr uint32_t ClampedMessageSize() {
 
 // Calculates the maximum possible handle count for a FIDL type,
 // clamped at the Zircon channel transport handle limit.
-// TODO(FIDL-771): users of this API should always specify a meaningful direction.
+// TODO(fxbug.dev/8093): users of this API should always specify a meaningful direction.
 template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedHandleCount() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");

@@ -44,7 +44,7 @@ void ClipWorldSpaceAndOutputScreenSpaceCoords(vec4 world_pos) {
 }
 
 #ifdef SHADOW_MAP_LIGHTING_PASS
-// TODO(ES-109):
+// TODO(fxbug.dev/7200):
 // |light_transform| is not currently defined.  There should be a light
 // transform per light.  In the untested/unfinished code below, the transform is
 // applied to the model-space vertex position; this requires the CPU to compute
@@ -118,7 +118,7 @@ void main() {
   vec4 world_pos = model_transform * ComputeVertexPosition();
   vec4 light_position =
       point_lights[PaperShaderPushConstants.light_index].position;
-  // TODO(ES-160): optimize length of extrusion vec so that it doesn't
+  // TODO(fxbug.dev/7251): optimize length of extrusion vec so that it doesn't
   // extend far below the floor of the stage.  This can improve performance
   // by reducing the number of stencil-buffer pixels that are touched.  On the
   // other hand, ensure that it extends far enough: there will be artifacts when

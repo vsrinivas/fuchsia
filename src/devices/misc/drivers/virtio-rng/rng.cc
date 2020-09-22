@@ -64,7 +64,7 @@ zx_status_t RngDevice::Init() {
   }
   device_ = zxdev();
 
-  // TODO(SEC-29): The kernel should trigger entropy requests, instead of relying on this
+  // TODO(fxbug.dev/24760): The kernel should trigger entropy requests, instead of relying on this
   // userspace thread to push entropy whenever it wants to. As a temporary hack, this thread
   // pushes entropy to the kernel every 300 seconds instead.
   thrd_create_with_name(&seed_thread_, RngDevice::SeedThreadEntry, this, "virtio-rng-seed-thread");

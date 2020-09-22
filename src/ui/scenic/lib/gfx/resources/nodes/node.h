@@ -162,7 +162,7 @@ class Node : public Resource {
 
   Node* parent_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
-  // TODO(SCN-1299) Split out child behavior into ContainerNode class.
+  // TODO(fxbug.dev/24497) Split out child behavior into ContainerNode class.
   std::vector<NodePtr> children_;
 
   std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>> bound_variables_;

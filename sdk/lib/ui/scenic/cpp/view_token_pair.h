@@ -30,7 +30,7 @@ ViewTokenStdPair NewViewTokenPair();
 // Convenience functions which allow converting from raw eventpair-based tokens
 // easily.
 // TEMPORARY; for transition purposes only.
-// TODO(SCN-1287): Remove.
+// TODO(fxbug.dev/24485): Remove.
 fuchsia::ui::views::ViewToken ToViewToken(zx::eventpair raw_token);
 fuchsia::ui::views::ViewHolderToken ToViewHolderToken(zx::eventpair raw_token);
 

@@ -9,7 +9,7 @@
 
 static constexpr uint32_t kButtonTouchCode = 0x14a;
 
-// TODO(MAC-164): Use real touch/pen digitizer resolutions.
+// TODO(fxbug.dev/12526): Use real touch/pen digitizer resolutions.
 static constexpr uint32_t kInputAbsMaxX = UINT16_MAX;
 static constexpr uint32_t kInputAbsMaxY = UINT16_MAX;
 

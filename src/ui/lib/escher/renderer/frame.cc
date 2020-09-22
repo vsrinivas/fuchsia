@@ -177,8 +177,8 @@ void Frame::EndFrame(const std::vector<SemaphorePtr>& semaphores,
 
   // Keep per-frame uniform buffers alive until frame is finished rendering.
   for (auto& buf : uniform_block_allocator_.TakeBuffers()) {
-    // TODO(ES-103): reconsider this keep-alive scheme.
-    // TODO(ES-106): test that blocks make it back to the pool but only after
+    // TODO(fxbug.dev/7194): reconsider this keep-alive scheme.
+    // TODO(fxbug.dev/7197): test that blocks make it back to the pool but only after
     // the frame is finished rendering.
     KeepAlive(std::move(buf));
   }

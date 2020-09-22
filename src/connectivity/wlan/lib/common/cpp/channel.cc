@@ -293,7 +293,7 @@ std::string GetPhyStr(wlan_info_phy_type_t phy) {
 }
 
 wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy) {
-  // TODO(NET-1845): Streamline the enum values
+  // TODO(fxbug.dev/29293): Streamline the enum values
   switch (phy) {
     case wlan_common::PHY::HR:
       return WLAN_INFO_PHY_TYPE_CCK;
@@ -313,7 +313,7 @@ wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy) {
 }
 
 ::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy) {
-  // TODO(NET-1845): Streamline the enum values
+  // TODO(fxbug.dev/29293): Streamline the enum values
   switch (phy) {
     case WLAN_INFO_PHY_TYPE_CCK:
       return wlan_common::PHY::HR;

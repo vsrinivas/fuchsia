@@ -38,7 +38,7 @@ void TraceProviderImpl::Initialize(trace_buffering_mode_t buffering_mode, zx::vm
 
 void TraceProviderImpl::Start(trace_start_mode_t start_mode,
                               std::vector<std::string> additional_categories) {
-  // TODO(PT-112): Add support for additional categories.
+  // TODO(fxbug.dev/22973): Add support for additional categories.
   Session::StartEngine(start_mode);
 }
 

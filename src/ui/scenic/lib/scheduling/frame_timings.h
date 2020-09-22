@@ -19,11 +19,11 @@ namespace scheduling {
 // the frame.  Once all swapchains have finished rendering/presenting, the
 // FrameScheduler is notified via OnFramePresented().
 //
-// TODO(SCN-1324) This class currently handles one frame scheduler outputting to
+// TODO(fxbug.dev/24518) This class currently handles one frame scheduler outputting to
 // n swapchains, and computes the slowest time values for any swapchain. Figure
 // out how to decouple multiple swapchains.
 //
-// TODO(SCN-1443) Refactor FrameTimings, FrameScheduler, and Swapchain
+// TODO(fxbug.dev/24632) Refactor FrameTimings, FrameScheduler, and Swapchain
 // interactions. There are implicit assumptions about when a swapchain is added
 // to FrameTimings, and the availability of swapchain buffers that should be
 // formalized and properly handled.

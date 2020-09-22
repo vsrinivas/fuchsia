@@ -238,7 +238,7 @@ zx_status_t Mt8167I2c::DoDummyTransactions() {
 
   // Do one dummy write on each bus. This works around an issue where the first transaction after
   // enabling the VGP1 regulator gets a NACK error.
-  // TODO(ZX-3486): Figure out a fix for this instead of working around it.
+  // TODO(fxbug.dev/33282): Figure out a fix for this instead of working around it.
   for (uint32_t id = 0; id < bus_count_; id++) {
     uint8_t byte = 0;
     i2c_impl_op_t ops = {.address = 0x00,

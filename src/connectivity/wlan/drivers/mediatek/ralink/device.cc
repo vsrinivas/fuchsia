@@ -173,7 +173,7 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     },
     .configure_assoc = [](void* ctx, uint32_t options,
                           const wlan_assoc_ctx* assoc_ctx) -> zx_status_t {
-      // TODO(NET-1265): Configure the chipset for this association
+      // TODO(fxbug.dev/28925): Configure the chipset for this association
       return ZX_OK;
     },
     .clear_assoc = [](void* ctx, uint32_t options, const uint8_t* mac, size_t mac_len)
@@ -3058,7 +3058,7 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
   zx_status_t status = ReadBbp(&b1);
   CHECK_READ(BBP1, status);
 
-  b1.set_tx_power_ctrl(0);  // TODO(NET-697): Investigate the register effect.
+  b1.set_tx_power_ctrl(0);  // TODO(fxbug.dev/28777): Investigate the register effect.
 
   status = WriteBbp(b1);
   CHECK_WRITE(BBP1, status);
@@ -3615,7 +3615,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
           },
       .vht_supported = false,
       .vht_caps = {},
-      // TODO(NET-1375):
+      // TODO(fxbug.dev/28891):
       // Unmark the "BasicRate" bit for the first 4 rates.
       // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
       .rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
@@ -3669,7 +3669,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
             },
         .vht_supported = false,
         .vht_caps = {},
-        // TODO(NET-1375):
+        // TODO(fxbug.dev/28891):
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
         .rates = {0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
         .supported_channels =
@@ -4180,7 +4180,7 @@ void Device::WlanmacStop() {
   // TODO(tkilbourn) disable radios, stop queues, etc.
 }
 
-// TODO(NET-1570): Extract into a common library.
+// TODO(fxbug.dev/29193): Extract into a common library.
 uint16_t GetMacHdrLength(const uint8_t* buf, uint16_t len) {
   if (len < sizeof(wlan::FrameControl)) {
     return 0;
@@ -4234,7 +4234,7 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
   size_t dest_offset = 0;
   auto l2pad_len = RoundUp(frame_hdr_len, 4) - frame_hdr_len;
 
-  // TODO(NET-649): Augument BulkoutAggregation with pointers and lengths.
+  // TODO(fxbug.dev/29200): Augument BulkoutAggregation with pointers and lengths.
   if (l2pad_len == 0) {
     std::memcpy(dest, head_data, head_len);
     dest_offset += head_len;
@@ -4580,7 +4580,7 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, const wlan_tx_pack
   txwi0.set_cfack(0);
   txwi0.set_ts(0);  // TODO(porce): Set it 1 for beacon or proberesp.
 
-  // TODO(NET-567): Use the outcome of the association negotiation
+  // TODO(fxbug.dev/29011): Use the outcome of the association negotiation
   txwi0.set_ampdu(1);
   txwi0.set_mpdu_density(Txwi0::kFourUsec);  // Aruba
   txwi0.set_txop(Txwi0::kHtTxop);
@@ -5216,7 +5216,7 @@ void Device::WriteRequestComplete(void* ctx, usb_request_t* request) {
 }
 
 uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_pkt) {
-  // TODO(NET-571): Honor what MLME instructs the chipset for this particular wlan_pkt
+  // TODO(fxbug.dev/29242): Honor what MLME instructs the chipset for this particular wlan_pkt
   // whether to wait for an acknowledgement from the recipient or not.
   // It appears that Ralink has its own logic to override the instruction
   // specified in txwi1.ack field. It shall be recorded here as it's found.

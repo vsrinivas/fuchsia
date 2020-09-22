@@ -178,7 +178,7 @@ IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec) {
   pos[6] = vec3(1, 0, 1);
   pos[7] = vec3(0, 0, 1);
 
-  // TODO(ES-218): Add separate box mesh type with split verts and proper uv coords. Since this
+  // TODO(fxbug.dev/7307): Add separate box mesh type with split verts and proper uv coords. Since this
   // box is currently only being used for wireframe rendering, it doesn't need texcoords.
   for (size_t t = 0; t < vertex_count; t++) {
     uv[t] = vec2(0.f, 0.f);
@@ -333,7 +333,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
       //   - the vk::SamplerAddressMode is eRepeat
       //   - the vk::Filter is eLinear
       (*vertex_p.uv) = 0.49f * (dir + vec2(1.f, 1.02f));
-      // TODO(ES-108): once we can specify a SamplerAddressMode of eClampToEdge,
+      // TODO(fxbug.dev/7199): once we can specify a SamplerAddressMode of eClampToEdge,
       // remove the hack above and replace it with the code below:
       // (*vertex_p.uv) = 0.5f * (dir + vec2(1.f, 1.f));
     }
@@ -503,7 +503,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
       .AddTriangle(7, 4, 3)
       .AddTriangle(8, 1, 4);
 
-  // TODO(ES-32): this is a hack to ease implementation.  We don't currently
+  // TODO(fxbug.dev/7329): this is a hack to ease implementation.  We don't currently
   // need any tessellated spheres; this is just a way to verify that 3D meshes
   // are working properly.
   FX_DCHECK(spec.attributes[0] == (MeshAttribute::kPosition3D | MeshAttribute::kUV))
@@ -513,7 +513,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   while (subdivisions-- > 0) {
     // For each level of subdivision, iterate over all existing triangles and
     // split them into three.
-    // TODO(ES-32): see comment in header file... this approach is broken, but
+    // TODO(fxbug.dev/7329): see comment in header file... this approach is broken, but
     // sufficient for our current purpose.
     const size_t subdiv_triangle_count = builder->index_count() / 3;
     FX_DCHECK(subdiv_triangle_count * 3 == builder->index_count());

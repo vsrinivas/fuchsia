@@ -16,7 +16,7 @@ namespace image_formats {
 namespace {
 
 // Takes 4 bytes of YUY2 and writes 8 bytes of RGBA
-// TODO(SCN-547): do this better with a lookup table
+// TODO(fxbug.dev/23774): do this better with a lookup table
 void Yuy2ToBgra(const uint8_t* yuy2, uint8_t* bgra1, uint8_t* bgra2) {
   uint8_t y1 = yuy2[0];
   uint8_t u = yuy2[1];
@@ -178,7 +178,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
         };
       }
       break;
-    // TODO(SCN-551): support vertical flipping
+    // TODO(fxbug.dev/23778): support vertical flipping
     case fuchsia::images::PixelFormat::YUY2:
       if (image_info.transform == fuchsia::images::Transform::FLIP_HORIZONTAL) {
         return [](void* out, const void* in, uint32_t width, uint32_t height) {

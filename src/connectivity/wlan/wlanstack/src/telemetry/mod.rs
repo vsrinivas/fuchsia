@@ -55,7 +55,7 @@ const NEIGHBOR_NETWORKS_STANDARD_MAPPING: [(Standard, NeighborNetworksMetricStan
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
 pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
-    // TODO(NET-1386): Make this module resilient to Wlanstack2 downtime.
+    // TODO(fxbug.dev/28800): Make this module resilient to Wlanstack2 downtime.
 
     let mut last_reported_stats: HashMap<u16, StatsRef> = HashMap::new();
     let mut interval_stream = fasync::Interval::new(REPORT_PERIOD_MINUTES.minutes());
@@ -806,7 +806,7 @@ mod tests {
         });
         let _ = exec.run_until_stalled(&mut stats_server);
 
-        // TODO(WLAN-1113): For some reason, telemetry skips logging the first stats response
+        // TODO(fxbug.dev/29730): For some reason, telemetry skips logging the first stats response
         // Schedule the next stats request
         let _ = exec.run_until_stalled(&mut telemetry_fut);
         assert!(exec.wake_next_timer().is_some());

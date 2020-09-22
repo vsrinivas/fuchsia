@@ -303,7 +303,7 @@ zx_status_t DwI2cBus::Transmit() {
 
   tx_limit = tx_fifo_depth_ - TxFifoLevelReg::Get().ReadFrom(&mmio_).tx_fifo_level();
 
-  // TODO(ZX-4628)
+  // TODO(fxbug.dev/34403)
   // If IC_EMPTYFIFO_HOLD_MASTER_EN = 0, then STOP is sent on TX_EMPTY. All commands should be
   // queued up as soon as possible to avoid this. Possible race leading to failed
   // transaction, if the irq thread is deschedule in the midst for tx command queuing.

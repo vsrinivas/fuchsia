@@ -276,7 +276,7 @@ bool ViewTree::IsStateValid() const {
     if (connected_non_root_koid > 1) {
       FX_LOGS(ERROR) << "Count of scene-connected ViewRefs for session " << session_id
                      << " exceeds 1. Reference SCN-1249.";
-      // TODO(SCN-1249): Enable invariant check when one-view-per-session is enforced.
+      // TODO(fxbug.dev/24450): Enable invariant check when one-view-per-session is enforced.
       // return false;
     }
   }

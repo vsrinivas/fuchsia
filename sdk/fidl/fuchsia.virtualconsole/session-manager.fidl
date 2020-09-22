@@ -11,7 +11,7 @@ using fuchsia.hardware.pty;
 [Discoverable, ForDeprecatedCBindings]
 protocol SessionManager {
     /// Create a new virtual console session.
-    // TODO(ZX-3407): Remove response status and debug why this doesn't work async when we switch
+    // TODO(fxbug.dev/33204): Remove response status and debug why this doesn't work async when we switch
     // to new pty impl.
     CreateSession(request<fuchsia.hardware.pty.Device> session) -> (zx.status status);
 

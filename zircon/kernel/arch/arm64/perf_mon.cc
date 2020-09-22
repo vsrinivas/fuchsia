@@ -8,8 +8,8 @@
 // "event", but some events are not counters. Internally, we use the
 // term "counter" when we know the event is a counter.
 //
-// TODO(ZX-3304): combine common parts with x86 (after things settle)
-// TODO(ZX-3305): chain event handling
+// TODO(fxbug.dev/33108): combine common parts with x86 (after things settle)
+// TODO(fxbug.dev/33109): chain event handling
 
 #include <assert.h>
 #include <err.h>
@@ -584,7 +584,7 @@ static void arm64_perfmon_start_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
   __arm_wsr64("pmcntenset_el0", state->pm_counter_ctrl);
   __arm_wsr64("pmintenset_el1", state->pmintenset_el1);
 
-  // TODO(ZX-3302): arm64_pmu_enable_our_irq(true); - needs irq support
+  // TODO(fxbug.dev/33106): arm64_pmu_enable_our_irq(true); - needs irq support
 
   // Enable counters as late as possible so that our setup doesn't contribute
   // to the data.
@@ -721,7 +721,7 @@ static void arm64_perfmon_finalize_buffer(PerfmonState* state,
 static void arm64_perfmon_stop_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
   // Disable all counters ASAP.
   disable_counters();
-  // TODO(ZX-3302): arm64_pmu_enable_our_irq(false); - needs irq support
+  // TODO(fxbug.dev/33106): arm64_pmu_enable_our_irq(false); - needs irq support
 
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(!atomic_load(&perfmon_active));
@@ -789,7 +789,7 @@ static void arm64_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
   // Also, reset the counters, don't leave old values lying around.
   uint32_t pmcr = ARM64_PMCR_EL0_P_MASK | ARM64_PMCR_EL0_C_MASK;
   __arm_wsr64("pmcr_el0", pmcr);
-  // TODO(ZX-3302): arm64_pmu_enable_our_irq(false); - needs irq support
+  // TODO(fxbug.dev/33106): arm64_pmu_enable_our_irq(false); - needs irq support
   arm64_perfmon_clear_overflow_indicators();
 
   __arm_wsr64("pmcntenclr_el0", ~0u);

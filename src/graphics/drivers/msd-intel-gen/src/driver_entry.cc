@@ -169,7 +169,7 @@ static zx_status_t sysdrv_gpu_message(void* context, fidl_msg_t* message, fidl_t
 }
 
 static void sysdrv_gpu_release(void* ctx) {
-  // TODO(ZX-1170) - when testable:
+  // TODO(fxbug.dev/31113) - when testable:
   // Free context if sysdrv_display_release has already been called
   DASSERT(false);
 }

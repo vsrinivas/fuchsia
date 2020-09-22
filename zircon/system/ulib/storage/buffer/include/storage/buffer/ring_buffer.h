@@ -100,7 +100,7 @@ class RingBufferState {
   // The units of all the following are "filesystem blocks".
   size_t reserved_start_ __TA_GUARDED(lock_) = 0;
   size_t reserved_length_ __TA_GUARDED(lock_) = 0;
-  // TODO(ZX-4033): Replace fbl::Vector with a friendlier std container when possible.
+  // TODO(fxbug.dev/33819): Replace fbl::Vector with a friendlier std container when possible.
   fbl::Vector<Range> pending_free_ __TA_GUARDED(lock_);
 };
 

@@ -38,7 +38,7 @@ class LinearSamplerImpl : public LinearSampler {
   float filter_data_[DestChanCount] = {0.0f};
 };
 
-// TODO(MTWN-75): refactor to minimize code duplication, or even better eliminate NxN
+// TODO(fxbug.dev/13361): refactor to minimize code duplication, or even better eliminate NxN
 // implementations altogether, replaced by flexible rechannelization (MTWN-399).
 template <typename SrcSampleType>
 class NxNLinearSamplerImpl : public LinearSampler {
@@ -692,7 +692,7 @@ std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamTy
   TRACE_DURATION("audio", "LinearSampler::Select");
 
   // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
-  // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see
+  // TODO(fxbug.dev/13361): eliminate the NxN mixers, replacing with flexible rechannelization (see
   // below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
     return SelectNxNLSM(src_format);
@@ -715,8 +715,8 @@ std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamTy
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
       // Audio formats do not include info needed to filter frequencies or locate channels in 3D
       // space.
-      // TODO(MTWN-399): enable the mixer to rechannelize in a more sophisticated way.
-      // TODO(MTWN-402): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
+      // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
+      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
       return SelectLSM<4>(src_format, dest_format);
     default:
       return nullptr;

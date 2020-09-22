@@ -124,8 +124,8 @@ void RenderPassInfo::InitRenderPassAttachmentInfosFromImages(RenderPassInfo* rpi
   }
 }
 
-// TODO(ES-83): unit-tests for validation.
-// TODO(ES-83): what other validation should be performed?
+// TODO(fxbug.dev/7174): unit-tests for validation.
+// TODO(fxbug.dev/7174): what other validation should be performed?
 bool RenderPassInfo::Validate() const {
   bool success = true;
 

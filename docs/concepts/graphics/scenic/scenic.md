@@ -237,7 +237,7 @@ them with wireframe rendering, and explains how view bounds interact with hit te
 
 ## Fences {#fences}
 
-TODO(SCN-1228): Talk about synchronization.
+TODO(fxbug.dev/24431): Talk about synchronization.
 
 # Frame Scheduling {#frame-scheduling}
 

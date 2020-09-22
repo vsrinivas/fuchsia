@@ -33,7 +33,7 @@ void Present1Helper::SignalCallbacksUpTo(PresentId present_id, PresentTimestamps
   FX_DCHECK(std::distance(begin_it, end_it) >= 0);
   std::for_each(begin_it, end_it,
                 [presentation_info](std::pair<const PresentId, OnFramePresentedCallback>& pair) {
-                  // TODO(SCN-1346): Make this unique per session via id().
+                  // TODO(fxbug.dev/24540): Make this unique per session via id().
                   TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
                   auto& callback = pair.second;
                   callback(presentation_info);

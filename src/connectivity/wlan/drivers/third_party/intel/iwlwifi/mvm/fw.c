@@ -1171,7 +1171,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
   }
 
 #if 0  // NEEDS_PORTING
-    // TODO(WLAN-1204): port iwl_mvm_add_aux_sta later.
+    // TODO(fxbug.dev/29818): port iwl_mvm_add_aux_sta later.
     /* Add auxiliary station for scanning */
     ret = iwl_mvm_add_aux_sta(mvm);
     if (ret) { goto error; }

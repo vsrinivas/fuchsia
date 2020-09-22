@@ -17,7 +17,7 @@ namespace component {
 
 // Connects to a service located at a path within the directory and binds it to
 // an untyped interface request.
-// TODO(ZX-1358): Replace use of bare directory channel with suitable interface
+// TODO(fxbug.dev/31262): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
 void ConnectToService(const zx::channel& directory, zx::channel request,
                       const std::string& service_path);
@@ -25,7 +25,7 @@ void ConnectToService(const zx::channel& directory, zx::channel request,
 // Connects to a service located at a path within the directory and binds it to
 // a fully-typed interface request.
 // By default, uses the interface name as the service's path.
-// TODO(ZX-1358): Replace use of bare directory channel with suitable interface
+// TODO(fxbug.dev/31262): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
 template <typename Interface>
 inline void ConnectToService(const zx::channel& directory,
@@ -37,7 +37,7 @@ inline void ConnectToService(const zx::channel& directory,
 // Connects to a service located at a path within the directory and returns a
 // fully-typed interface pointer.
 // By default, uses the interface name as the service's path.
-// TODO(ZX-1358): Replace use of bare directory channel with suitable interface
+// TODO(fxbug.dev/31262): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
 template <typename Interface>
 inline fidl::InterfacePtr<Interface> ConnectToService(

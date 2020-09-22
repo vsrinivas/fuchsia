@@ -714,7 +714,7 @@ mod tests {
             response.phy_ownership
         );
 
-        // TODO(WLAN-927): response.mlme_channel use and talk to it
+        // TODO(fxbug.dev/29547): response.mlme_channel use and talk to it
     }
 
     #[test]

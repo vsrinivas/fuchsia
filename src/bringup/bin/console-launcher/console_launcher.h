@@ -38,7 +38,7 @@ class ConsoleLauncher {
   std::optional<fbl::unique_fd> GetVirtioFd(const Arguments& args, fbl::unique_fd device_fd);
 
   zx::process shell_process_;
-  // TODO(ZX-4177): Remove all uses of the root job.
+  // TODO(fxbug.dev/33957): Remove all uses of the root job.
   zx::job root_job_;
 };
 

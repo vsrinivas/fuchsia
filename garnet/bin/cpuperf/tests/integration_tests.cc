@@ -25,7 +25,7 @@ static void RunAndVerify(const char* spec_path) {
 
 TEST(Cpuperf, FixedCounters) { RunAndVerify("/pkg/data/fixed_counters.cpspec"); }
 
-// TODO(FLK-397): Re-enable.
+// TODO(fxbug.dev/8501): Re-enable.
 TEST(Cpuperf, DISABLED_OsFlag) { RunAndVerify("/pkg/data/os_flag.cpspec"); }
 
 TEST(Cpuperf, ProgrammableCounters) { RunAndVerify("/pkg/data/programmable_counters.cpspec"); }

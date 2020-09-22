@@ -35,7 +35,7 @@ zx_status_t FlushRequests(LegacyTransactionHandler* transaction_handler,
     blk_reqs[i].vmo_offset = operations[i].op.vmo_offset * block_per_fs_block;
     blk_reqs[i].dev_offset = operations[i].op.dev_offset * block_per_fs_block;
     uint64_t length = operations[i].op.length * block_per_fs_block;
-    // TODO(ZX-2253): Requests this long, although unlikely, should be
+    // TODO(fxbug.dev/32112): Requests this long, although unlikely, should be
     // handled more gracefully.
     ZX_ASSERT_MSG(length < UINT32_MAX, "Request size too large");
     blk_reqs[i].length = static_cast<uint32_t>(length);

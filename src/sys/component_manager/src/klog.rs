@@ -72,7 +72,7 @@ impl KernelLogger {
         let mut msg = format!("[component_manager] {}: {}", level, args);
 
         while msg.len() > 0 {
-            // TODO(ZX-3187): zx_debuglog_write also accepts options and the possible options include
+            // TODO(fxbug.dev/32998): zx_debuglog_write also accepts options and the possible options include
             // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
             // along log level yet.
             if let Err(s) = self.debuglog.write(msg.as_bytes()) {
@@ -112,7 +112,7 @@ mod tests {
         for _ in 0..10000 {
             match debuglog.read(&mut record) {
                 Ok(()) => {
-                    // TODO(ZX-3187): Manually unpack log record until zx::DebugLog::read returns
+                    // TODO(fxbug.dev/32998): Manually unpack log record until zx::DebugLog::read returns
                     // an wrapper type.
                     let mut len_bytes = [0; 2];
                     len_bytes.copy_from_slice(&record[4..6]);

@@ -71,7 +71,7 @@ wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_cha
   }
 
   // This overrides Secondary Channel Offset.
-  // TODO(NET-677): Conditionally apply
+  // TODO(fxbug.dev/29392): Conditionally apply
   if (ht_op->head.sta_chan_width() == to_enum_type(HtOpInfoHead::StaChanWidth::TWENTY)) {
     chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
     return chan;

@@ -106,7 +106,7 @@ std::vector<uint32_t> CompileToSpirv(shaderc::Compiler* compiler, std::string co
   // Initialize compilation options.
   shaderc::CompileOptions options;
   options.SetOptimizationLevel(shaderc_optimization_level_performance);
-  // TODO(SCN-665): update this once we can rely upon Vulkan 1.1.
+  // TODO(fxbug.dev/23890): update this once we can rely upon Vulkan 1.1.
   options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
   options.SetWarningsAsErrors();
 

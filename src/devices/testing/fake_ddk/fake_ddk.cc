@@ -64,7 +64,7 @@ bool Bind::Ok() {
   EXPECT_TRUE(remove_called_);
   EXPECT_FALSE(bad_parent_);
   EXPECT_FALSE(bad_device_);
-  // TODO(ZX-4568): Remove and make void once all dependent tests migrate to zxtest.
+  // TODO(fxbug.dev/34344): Remove and make void once all dependent tests migrate to zxtest.
   return !zxtest::Runner::GetInstance()->CurrentTestHasFailures();
 }
 

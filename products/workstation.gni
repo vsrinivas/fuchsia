@@ -54,7 +54,7 @@ kernel_cmdline_args += [
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
 # not universe, so the test can run on bots where there is no package server.
 #
-# TODO(IN-1097): Support a package server on bots so this can be added to
+# TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
 # universe like the tests.
 cache_package_labels += [
   "//src/tests/end_to_end/bundles:end_to_end_deps",

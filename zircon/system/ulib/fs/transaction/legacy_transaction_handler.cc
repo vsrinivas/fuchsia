@@ -12,7 +12,7 @@ BlockTxn::~BlockTxn() { Transact(); }
 
 void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset, uint64_t dev_offset,
                                 uint64_t nblocks) {
-  // TODO(ZX-2253): Remove this assertion.
+  // TODO(fxbug.dev/32112): Remove this assertion.
   ZX_ASSERT_MSG(nblocks < UINT32_MAX, "Too many blocks");
   uint32_t blocks = static_cast<uint32_t>(nblocks);
   for (size_t i = 0; i < requests_.size(); i++) {
@@ -57,7 +57,7 @@ zx_status_t BlockTxn::Transact() {
   for (size_t i = 0; i < requests_.size(); i++) {
     requests_[i].vmo_offset *= kBlockFactor;
     requests_[i].dev_offset *= kBlockFactor;
-    // TODO(ZX-2253): Remove this assertion.
+    // TODO(fxbug.dev/32112): Remove this assertion.
     uint64_t length = requests_[i].length * kBlockFactor;
     ZX_ASSERT_MSG(length < UINT32_MAX, "Too many blocks");
     requests_[i].length = static_cast<uint32_t>(length);

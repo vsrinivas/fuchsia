@@ -1,6 +1,6 @@
 // #included by main.frag
 
-// TODO(ES-109): this code was extracted from the old ad-hoc shader generation
+// TODO(fxbug.dev/7200): this code was extracted from the old ad-hoc shader generation
 // classes so that whoever implements this doesn't have to work though that
 // twisted logic.  But it hasn't ever been tested or run.
 #error Not implemented.
@@ -21,7 +21,7 @@ layout(set = 0, binding = 1) uniform sampler2D shadow_map_tex;
 
 layout(set = 1, binding = 0) uniform PerObject {
   mat4 camera_transform;
-  // TODO(ES-109): See comment in main.vert: perhaps this shouldn't be per-obj.
+  // TODO(fxbug.dev/7200): See comment in main.vert: perhaps this shouldn't be per-obj.
   // Anyway, it's not defined in the vertex shaders, so it needs to go somewhere
   // else.
   // mat4 light_transform;

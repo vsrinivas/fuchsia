@@ -128,14 +128,14 @@ table TraceConfig {
     1: vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES categories;
 
     /// Suggested size of trace buffer which each provider should receive.
-    // TODO(FIDL-609): Default to 4.
+    // TODO(fxbug.dev/7932): Default to 4.
     2: uint32 buffer_size_megabytes_hint;
 
     /// Acknowledge start request after at most `start_timeout_milliseconds`.
-    // TODO(FIDL-609): Default to 5000.
+    // TODO(fxbug.dev/7932): Default to 5000.
     3: uint64 start_timeout_milliseconds;
 
-    // TODO(FIDL-609), TODO(FIDL-486): Default to BufferingMode.ONESHOT.
+    // TODO(fxbug.dev/7932), TODO(fxbug.dev/7810): Default to BufferingMode.ONESHOT.
     4: BufferingMode buffering_mode;
 
     /// Overrides for particular providers.

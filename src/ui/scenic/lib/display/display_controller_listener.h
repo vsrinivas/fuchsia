@@ -86,7 +86,7 @@ class DisplayControllerListener {
       wait_controller_closed_{this};
 
   // Used for dispatching events that we receive over the controller channel.
-  // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
+  // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
   fidl::InterfacePtr<fuchsia::hardware::display::Controller> event_dispatcher_;
 };
 

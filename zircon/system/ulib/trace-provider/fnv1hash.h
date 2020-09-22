@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(PT-218): De-dupe this.
+// TODO(fxbug.dev/23079): De-dupe this.
 
 #ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_FNV1HASH_H_
 #define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_FNV1HASH_H_

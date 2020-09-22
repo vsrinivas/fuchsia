@@ -42,7 +42,7 @@ test("lazy_init-test") {
     # use of the ASSERT_DEATH macro to ensure that certain actions result
     # in program termination, which is not currently supported in the
     # host test environment.
-    # See: TODO(ZX-1053)
+    # See: TODO(fxbug.dev/30996)
     sources += [ "lazy_init_tests.cc" ]
     deps += [
       "//sdk/lib/fdio",

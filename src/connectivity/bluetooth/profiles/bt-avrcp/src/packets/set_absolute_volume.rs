@@ -20,7 +20,7 @@ impl SetAbsoluteVolumeCommand {
         Ok(Self { requested_volume })
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn volume(self) -> u8 {
         self.requested_volume
     }
@@ -78,7 +78,7 @@ pub struct SetAbsoluteVolumeResponse {
 }
 
 impl SetAbsoluteVolumeResponse {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(volume: u8) -> Result<SetAbsoluteVolumeResponse, Error> {
         if volume >= 0x80 {
             return Err(Error::InvalidMessage);

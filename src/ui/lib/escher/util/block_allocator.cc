@@ -43,7 +43,7 @@ void BlockAllocator::Reset() {
 
 BlockAllocator::BlockList::iterator BlockAllocator::InsertLargeBlock(size_t size,
                                                                      size_t alignment) {
-  // TODO(ES-89): Is there a standard way to find/specify alignment of data in
+  // TODO(fxbug.dev/7180): Is there a standard way to find/specify alignment of data in
   // std::vector?.  If we had this we wouldn't need to overallocate in many
   // cases.  Another approach would be to not use vectors for large block data;
   // maybe simple malloced ptrs?

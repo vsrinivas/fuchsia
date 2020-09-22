@@ -1478,11 +1478,11 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteDataFile) {
-  // TODO(ZX-4007): Figure out a way to test this.
+  // TODO(fxbug.dev/33793): Figure out a way to test this.
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteVolumes) {
-  // TODO(ZX-4007): Figure out a way to test this.
+  // TODO(fxbug.dev/33793): Figure out a way to test this.
 }
 
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {

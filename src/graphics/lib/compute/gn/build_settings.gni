@@ -4,7 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 
-# TODO(SPN-35): Move these to a build_overrides/ file to support the
+# TODO(fxbug.dev/25509): Move these to a build_overrides/ file to support the
 # standalone build as well.
 
 # Top-level directory of the graphics compute source repository.

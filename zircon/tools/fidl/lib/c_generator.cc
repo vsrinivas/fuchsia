@@ -923,7 +923,7 @@ std::map<const flat::Decl*, CGenerator::NamedBits> CGenerator::NameBits(
   return named_bits;
 }
 
-// TODO(TO-702) These should maybe check for global name
+// TODO(fxbug.dev/27764) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
 std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(
     const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
@@ -1021,7 +1021,7 @@ void CGenerator::ProduceBitsForwardDeclaration(const NamedBits& named_bits) {
 }
 
 void CGenerator::ProduceConstForwardDeclaration(const NamedConst& named_const) {
-  // TODO(TO-702)
+  // TODO(fxbug.dev/27764)
 }
 
 void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
@@ -1294,7 +1294,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       }
 
       if (decode_response) {
-        // TODO(FIDL-162): Validate the response ordinal. C++ bindings also need to do that.
+        // TODO(fxbug.dev/7499): Validate the response ordinal. C++ bindings also need to do that.
         switch (named_protocol.transport) {
           case Transport::Channel:
             file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
@@ -1635,7 +1635,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         // Do nothing.
         break;
       case flat::Decl::Kind::kTypeAlias:
-        // TODO(FIDL-483): Do more than nothing.
+        // TODO(fxbug.dev/7807): Do more than nothing.
         break;
       case flat::Decl::Kind::kUnion:
         // Do nothing.
@@ -1719,7 +1719,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         // Do nothing.
         break;
       case flat::Decl::Kind::kTypeAlias:
-        // TODO(FIDL-483): Do more than nothing.
+        // TODO(fxbug.dev/7807): Do more than nothing.
         break;
       case flat::Decl::Kind::kUnion:
         // Do nothing.

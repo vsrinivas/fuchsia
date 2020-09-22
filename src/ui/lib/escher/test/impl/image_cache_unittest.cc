@@ -35,7 +35,7 @@ TEST(ImageCache, SmokeTest) {
 
   EXPECT_EQ(0u, allocator.GetTotalBytesAllocated());
 
-  // TODO(ES-7): ImageCache holds onto every image allocated. So we only need to
+  // TODO(fxbug.dev/23725): ImageCache holds onto every image allocated. So we only need to
   // test for the high memory watermark.
   auto image0 = cache.NewImage(info);
   EXPECT_EQ(kMemorySize, allocator.GetTotalBytesAllocated());

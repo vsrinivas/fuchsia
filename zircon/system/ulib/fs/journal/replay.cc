@@ -164,7 +164,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
     }
 
     if (entry->header().ObjectType() == JournalObjectType::kRevocation) {
-      // TODO(ZX-4752): Revocation records advise us to avoid replaying the provided
+      // TODO(fxbug.dev/34525): Revocation records advise us to avoid replaying the provided
       // operations.
       //
       // We should implement this by:

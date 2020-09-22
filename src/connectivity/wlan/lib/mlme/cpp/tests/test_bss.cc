@@ -473,7 +473,7 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ct
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
-  // TODO(NET-2007): Implement a common frame builder
+  // TODO(fxbug.dev/29264): Implement a common frame builder
   BufferWriter w(*packet);
   auto mgmt_hdr = w.Write<MgmtFrameHeader>();
   mgmt_hdr->fc.set_type(FrameType::kManagement);

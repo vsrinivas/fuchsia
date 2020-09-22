@@ -120,11 +120,11 @@ void Engine::InitializeInspectObjects() {
 
 // Helper for RenderFrame().  Generate a mapping between a Compositor's Layer
 // resources and the hardware layers they should be displayed on.
-// TODO(SCN-1088): there should be a separate mechanism that is responsible
+// TODO(fxbug.dev/24296): there should be a separate mechanism that is responsible
 // for inspecting the compositor's resource tree and optimizing the assignment
 // of rendered content to hardware display layers.
 std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Compositor& compositor) {
-  // TODO(SCN-1098): this is a placeholder; currently only a single hardware
+  // TODO(fxbug.dev/24306): this is a placeholder; currently only a single hardware
   // layer is supported, and we don't know its ID (it is hidden within the
   // DisplayManager implementation), so we just say 0.
   std::vector<Layer*> layers = compositor.GetDrawableLayers();
@@ -153,7 +153,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
 
   UpdateAndDeliverMetrics(presentation_time);
 
-  // TODO(SCN-1089): the FrameTimings are passed to the Compositor's swapchain
+  // TODO(fxbug.dev/24297): the FrameTimings are passed to the Compositor's swapchain
   // to notify when the frame is finished rendering, presented, dropped, etc.
   // This doesn't make any sense if there are multiple compositors.
   FX_DCHECK(scene_graph_.compositors().size() <= 1);
@@ -257,7 +257,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
         });
   }
   if (!success) {
-    // TODO(SCN-1089): what is the proper behavior when some swapchains
+    // TODO(fxbug.dev/24297): what is the proper behavior when some swapchains
     // are displayed and others aren't?  This isn't currently an issue because
     // there is only one Compositor; see above.
     FX_DCHECK(hlas.size() == 1);
@@ -314,7 +314,7 @@ void Engine::UpdateAndDeliverMetrics(zx::time presentation_time) {
   if (scenes.empty())
     return;
 
-  // TODO(SCN-216): Traversing the whole graph just to compute this is pretty
+  // TODO(fxbug.dev/23464): Traversing the whole graph just to compute this is pretty
   // inefficient.  We should optimize this.
   fuchsia::ui::gfx::Metrics metrics;
   metrics.scale_x = 1.f;
@@ -325,7 +325,7 @@ void Engine::UpdateAndDeliverMetrics(zx::time presentation_time) {
     UpdateMetrics(scene, metrics, &updated_nodes);
   }
 
-  // TODO(SCN-216): Deliver events to sessions in batches.
+  // TODO(fxbug.dev/23464): Deliver events to sessions in batches.
   // We probably want delivery to happen somewhere else which can also
   // handle delivery of other kinds of events.  We should probably also
   // have some kind of backpointer from a session to its handler.

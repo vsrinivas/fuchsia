@@ -122,7 +122,7 @@ class FakeViewComponent : public fuchsia::ui::app::testing::ViewProvider_TestBas
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) final {
     // Wait on the passed-in |ViewToken| so we can detect if the peer token is destroyed.
-    // TODO(SCN-982): Follow up on __ZX_OBJECT_PEER_CLOSED with Zircon.
+    // TODO(fxbug.dev/24197): Follow up on __ZX_OBJECT_PEER_CLOSED with Zircon.
     token_waiter_ =
         std::make_unique<async::Wait>(view_token.get(), __ZX_OBJECT_PEER_CLOSED, 0,
                                       std::bind([this]() { token_peer_disconnected_ = true; }));

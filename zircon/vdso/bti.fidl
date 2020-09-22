@@ -8,7 +8,7 @@ library zx;
 protocol bti {
     /// Create a new bus transaction initiator.
     /// Rights: iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
-    // TODO(ZX-2967): This is an unusual rights spec.
+    // TODO(fxbug.dev/32803): This is an unusual rights spec.
     bti_create(handle:IOMMU iommu, uint32 options, uint64 bti_id) -> (status status, handle:BTI out);
 
     /// Pin pages and grant devices access to them.

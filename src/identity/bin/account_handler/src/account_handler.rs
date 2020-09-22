@@ -409,7 +409,7 @@ impl AccountHandler {
     }
 
     /// Remove the active account. This method should not be retried on failure.
-    // TODO(AUTH-212): Implement graceful account removal.
+    // TODO(fxbug.dev/555): Implement graceful account removal.
     async fn remove_account(&self, force: bool) -> Result<(), ApiError> {
         if force == false {
             warn!("Graceful (non-force) account removal not yet implemented.");
@@ -431,7 +431,7 @@ impl AccountHandler {
                 return Err(ApiError::FailedPrecondition);
             }
         };
-        // TODO(AUTH-212): After this point, error recovery might include putting the account back
+        // TODO(fxbug.dev/555): After this point, error recovery might include putting the account back
         // in the lock.
         if let Err(TaskGroupError::AlreadyCancelled) = account_arc.task_group().cancel().await {
             warn!("Task group was already cancelled prior to account removal.");

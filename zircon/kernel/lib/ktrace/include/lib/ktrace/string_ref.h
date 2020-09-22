@@ -34,7 +34,7 @@ struct StringRef {
   static StringRef* head() { return head_.load(ktl::memory_order_acquire); }
 
  private:
-  // TODO(ZX-3498): Replace runtime lock-free linked list with comdat linker
+  // TODO(fxbug.dev/33293): Replace runtime lock-free linked list with comdat linker
   // sections once the toolchain supports it.
   static int Register(StringRef* string_ref);
 
@@ -50,7 +50,7 @@ struct StringRef {
 // This implementation uses the N3599 extension supported by Clang and GCC.
 // C++20 ratified a slightly different syntax that is simple to switch to, once
 // available, without affecting call sites.
-// TODO(ZX-3488): Update to C++20 syntax when available.
+// TODO(fxbug.dev/33284): Update to C++20 syntax when available.
 //
 // References:
 //     http://open-std.org/JTC1/SC22/WG21/docs/papers/2013/n3599.html

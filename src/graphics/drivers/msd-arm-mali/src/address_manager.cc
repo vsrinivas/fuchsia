@@ -182,7 +182,7 @@ std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpa
         return AssignToSlot(connection, i);
     }
 
-    // TODO(MA-386): Evict the LRU slot.
+    // TODO(fxbug.dev/12997): Evict the LRU slot.
     for (size_t i = 0; i < address_slots_.size(); ++i) {
       if (address_slots_[i].mapping.expired())
         return AssignToSlot(connection, i);

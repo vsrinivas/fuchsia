@@ -257,7 +257,7 @@ package("virtio_magma") {
     "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
   ]
 
-  # TODO(MA-520): don't hard-code the driver
+  # TODO(fxbug.dev/13128): don't hard-code the driver
   resources = [
     {
       path =

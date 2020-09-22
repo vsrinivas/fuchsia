@@ -1033,7 +1033,7 @@ impl VhtMcsSet {
 // IEEE Std 802.11-2016, 9.4.2.159
 #[repr(C, packed)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
-// TODO(WLAN-1051): Derive phy parameters based on Table 9-250 and 9-253.
+// TODO(fxbug.dev/29669): Derive phy parameters based on Table 9-250 and 9-253.
 pub struct VhtOperation {
     pub vht_cbw: VhtChannelBandwidth, // u8
     pub center_freq_seg0: u8,         // Channel index

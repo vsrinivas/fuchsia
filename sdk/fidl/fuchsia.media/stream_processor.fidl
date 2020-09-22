@@ -550,10 +550,10 @@ resource table StreamBufferPartialSettings {
     /// non-set, or can both be set and consistent with correpsonding fields in
     /// StreamBufferConstraints.  If not set, the value used for the fields in
     /// the "max" expression above is 0, so buffer_count.
-    // TODO(FIDL-609): Default to 0.
+    // TODO(fxbug.dev/7932): Default to 0.
     4: uint32 packet_count_for_server;
 
-    // TODO(FIDL-609): Default to 0.
+    // TODO(fxbug.dev/7932): Default to 0.
     5: uint32 packet_count_for_client;
 
     /// The client end of a BufferCollectionToken channel, which the
@@ -716,7 +716,7 @@ table Packet {
     /// TODO(dustingreen): Try to make FIDL table defaults have meaning, and not
     /// complain about !has when accessing the field.  For now the default
     /// specified here does nothing.
-    // TODO(FIDL-609): Default to 0x80000000.
+    // TODO(fxbug.dev/7932): Default to 0x80000000.
     2: uint32 buffer_index;
 
     /// The value 1 is the lowest permitted value after stream processor

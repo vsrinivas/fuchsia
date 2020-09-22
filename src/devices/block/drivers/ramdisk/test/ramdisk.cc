@@ -56,7 +56,7 @@ using devmgr_integration_test::RecursiveWaitForFile;
 
 static void fill_random(uint8_t* buf, uint64_t size) {
   static unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-  // TODO(US-286): Make this easier to reproduce with reliably generated prng.
+  // TODO(fxbug.dev/28197): Make this easier to reproduce with reliably generated prng.
   printf("fill_random of %zu bytes with seed: %u\n", size, seed);
   for (size_t i = 0; i < size; i++) {
     buf[i] = static_cast<uint8_t>(rand_r(&seed));

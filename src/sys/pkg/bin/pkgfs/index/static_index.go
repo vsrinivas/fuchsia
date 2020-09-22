@@ -206,7 +206,7 @@ func (idx *StaticIndex) HasStaticRoot(root string) bool {
 	return false
 }
 
-// Set sets the given package to the given root. TODO(PKG-16) This method should
+// Set sets the given package to the given root. TODO(fxbug.dev/21988) This method should
 // be removed in future, the static index should only be updated as a whole unit
 // via Load.
 func (idx *StaticIndex) Set(p pkg.Package, root string) error {

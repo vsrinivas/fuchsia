@@ -166,7 +166,7 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   void DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& material,
                 PaperDrawableFlags flags = {});
 
-  // TODO(ES-203) - We will remove this once PaperDrawCallFactory becomes
+  // TODO(fxbug.dev/7292) - We will remove this once PaperDrawCallFactory becomes
   // injectable. We should never have to access this directly from the
   // renderer - it should be completely opaque.
   PaperDrawCallFactory* draw_call_factory() { return &draw_call_factory_; }

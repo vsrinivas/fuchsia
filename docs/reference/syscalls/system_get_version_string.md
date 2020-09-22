@@ -38,7 +38,7 @@ returned is "git-8a07d52603404521038d8866b297f99de36f9162".
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

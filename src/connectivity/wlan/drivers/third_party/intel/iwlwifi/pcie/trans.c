@@ -252,7 +252,7 @@ static void iwl_pcie_set_pwr(struct iwl_trans* trans, bool vaux) {
 void iwl_pcie_apm_config(struct iwl_trans* trans) {
 #if 1  // NEEDS_PORTING
   // Always disable L0S since it is more stable although it costs more power.
-  // TODO(WLAN-1125): save more power.
+  // TODO(fxbug.dev/29742): save more power.
   iwl_set_bit(trans, CSR_GIO_REG, CSR_GIO_REG_VAL_L0S_ENABLED);
   trans->pm_support = false;
   trans->ltr_enabled = false;
@@ -2249,14 +2249,14 @@ static void iwl_trans_pcie_ref(struct iwl_trans* trans) {
   // This function is to tell the power management core that we are going to use the device,
   // please do not put the device into the power saving mode.
   //
-  // TODO(WLAN-1118): supports power management in Fuchsia.
+  // TODO(fxbug.dev/29735): supports power management in Fuchsia.
 }
 
 static void iwl_trans_pcie_unref(struct iwl_trans* trans) {
   // This function is to tell the power management core that we no longer use this device,
   // feel free to put the device into the power saving mode.
   //
-  // TODO(WLAN-1118): supports power management in Fuchsia.
+  // TODO(fxbug.dev/29735): supports power management in Fuchsia.
 }
 
 #if 0  // NEEDS_PORTING

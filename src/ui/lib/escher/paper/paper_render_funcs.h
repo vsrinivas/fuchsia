@@ -49,7 +49,7 @@ class PaperRenderFuncs : public RenderFuncs {
     uint32_t uniform_binding_count;
     UniformBinding* uniform_bindings;
 
-    // TODO(ES-159): Texture bindings, not just one texture hardcoded to (1,1).
+    // TODO(fxbug.dev/7250): Texture bindings, not just one texture hardcoded to (1,1).
     Texture* texture;
 
     void Bind(CommandBuffer* cb) const;

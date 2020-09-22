@@ -26,7 +26,7 @@ class CommandBufferTest : public ::testing::Test, public VulkanTester {
 // - GetAndClearDirty() both obtains the right values, and doesn't stomp other
 //   values as it clears the previously-dirty ones.
 //
-// TODO(ES-83): this could be extended to test the following:
+// TODO(fxbug.dev/7174): this could be extended to test the following:
 // - that various state-setters (e.g. SetCullMode()) dirty the correct bits
 // - that GetAndClearDirty() can be used for multiple bits simultaneously.
 VK_TEST_F(CommandBufferTest, Dirtyness) {
@@ -71,7 +71,7 @@ VK_TEST_F(CommandBufferTest, Dirtyness) {
   EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyPushConstantsBit), 0u);
   EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyDynamicBits), 0u);
 
-  // TODO(ES-83): ideally only submitted CommandBuffers would need to be cleaned
+  // TODO(fxbug.dev/7174): ideally only submitted CommandBuffers would need to be cleaned
   // up: if a never-submitted CB is destroyed, then it shouldn't keep anything
   // alive, and it shouldn't cause problems in e.g. CommandBufferPool due to a
   // forever-straggling buffer.
@@ -99,7 +99,7 @@ VK_TEST_F(CommandBufferTest, StaticStateSetting) {
     }
   }
 
-  // TODO(ES-83): ideally only submitted CommandBuffers would need to be cleaned
+  // TODO(fxbug.dev/7174): ideally only submitted CommandBuffers would need to be cleaned
   // up: if a never-submitted CB is destroyed, then it shouldn't keep anything
   // alive, and it shouldn't cause problems in e.g. CommandBufferPool due to a
   // forever-straggling buffer.
@@ -327,7 +327,7 @@ VK_TEST_F(CommandBufferTest, StaticStateSettingMatches) {
 #undef TEST_SETTER3
 #undef TEST_SETTER4
 
-  // TODO(ES-83): ideally only submitted CommandBuffers would need to be cleaned
+  // TODO(fxbug.dev/7174): ideally only submitted CommandBuffers would need to be cleaned
   // up: if a never-submitted CB is destroyed, then it shouldn't keep anything
   // alive, and it shouldn't cause problems in e.g. CommandBufferPool due to a
   // forever-straggling buffer.

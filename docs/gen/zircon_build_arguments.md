@@ -91,7 +91,7 @@ From //public/gn/config/levels.gni:47
 
 ### default_deps
 Defines the `//:default` target: what `ninja` with no arguments does.
-TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
+TODO(fxbug.dev/3156): This must be set by the controlling Fuchsia GN build.
 
 **Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-x64", "//tools:all-hosts"]`
 

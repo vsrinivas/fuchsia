@@ -168,7 +168,7 @@ func (c ContextPresenter) Process(line OutputLine, out chan<- OutputLine) {
 		sort.Slice(sortedInfo, func(i, j int) bool {
 			return sortedInfo[i].id < sortedInfo[j].id
 		})
-		// TODO(TC-615): We'd really like something more like the following:
+		// TODO(fxbug.dev/27338): We'd really like something more like the following:
 		// [[[ELF module #0 "libc.so" BuildID=1234abcdef 0x12345000(r)-0x12356000(rx)-0x12378000(rw)-0x12389000]]]
 		// but this requires a fair bit more work to track.
 		for _, dInfo := range sortedInfo {

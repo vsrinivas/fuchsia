@@ -63,7 +63,7 @@ std::map<uint32_t, size_t> Histogram(const fuchsia::ui::scenic::ScreenshotData& 
 // See src/ui/tools/input/README.md or `input --help` for usage details.
 // Commands used here:
 //  * tap <x> <y> (scaled out of 1000)
-// TODO(SCN-1262): Expose as a FIDL service.
+// TODO(fxbug.dev/24462): Expose as a FIDL service.
 void Input(std::vector<const char*> args) {
   // start with proc name, end with nullptr
   args.insert(args.begin(), "input");

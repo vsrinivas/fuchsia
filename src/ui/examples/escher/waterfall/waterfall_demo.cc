@@ -399,7 +399,7 @@ static void UpdateLighting(PaperScene* paper_scene, const escher::Stopwatch& sto
 
     // Choose a light intensity that looks good with the falloff.  If an object
     // is too close to the light it will appear washed out.
-    // TODO(ES-170): add HDR support to address this.
+    // TODO(fxbug.dev/7260): add HDR support to address this.
     pl.color *= 2.5f;
     pl.falloff = 0.001f;
   }

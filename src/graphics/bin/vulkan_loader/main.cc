@@ -36,7 +36,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
  private:
   // fuchsia::vulkan::loader::Loader impl
   void Get(std::string name, GetCallback callback) {
-    // TODO(MA-470): Load this from a package's data directory, not /system/lib
+    // TODO(fxbug.dev/13078): Load this from a package's data directory, not /system/lib
     std::string load_path = "/system/lib/" + name;
     int fd;
     zx_status_t status =

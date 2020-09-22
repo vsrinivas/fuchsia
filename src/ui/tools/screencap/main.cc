@@ -36,7 +36,7 @@ class ScreenshotTaker {
     FX_LOGS(INFO) << "start TakeScreenshot";
     // If we wait for a call back from GetDisplayInfo, we are guaranteed that
     // the GFX system is initialized, which is a prerequisite for taking a
-    // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
+    // screenshot. TODO(fxbug.dev/23901): Remove call to GetDisplayInfo once bug done.
     scenic_->GetDisplayInfo(
         [this](fuchsia::ui::gfx::DisplayInfo /*unused*/) { TakeScreenshotInternal(); });
   }

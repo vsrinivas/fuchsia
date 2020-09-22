@@ -43,7 +43,7 @@ protocol InputMethodEditor {
     SetState(TextInputState state);
     InjectInput(InputEvent event);
 
-    // TODO(TEXT-19): remove these in a later change, after PlatformView has been
+    // TODO(fxbug.dev/26729): remove these in a later change, after PlatformView has been
     // switched over to open/close on the input_connection_ instead.
     Show();
     Hide();

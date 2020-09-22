@@ -32,7 +32,7 @@ group("noop-tests.instrumented") {
   # Those all have their own libprefix so they can coexist in the
   # filesystem with other variants.  Other variants would need to be
   # tested in separate filesystem namespaces.
-  # TODO(BLD-448): Test all variants when we have sandboxed packages
+  # TODO(fxbug.dev/3246): Test all variants when we have sandboxed packages
   # and can put each variant in its own package.
   foreach(selector, toolchain.variant_selectors) {
     if (selector.tags + [ "instrumented" ] - [ "instrumented" ] !=

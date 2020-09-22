@@ -6,7 +6,7 @@ library zx;
 
 [Transport = "Syscall"]
 protocol debuglog {
-    // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
+    // TODO(fxbug.dev/32803): handle == ZX_HANDLE_INVALID accepted.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     debuglog_create(handle:RESOURCE resource, uint32 options)
         -> (status status, handle:LOG out);

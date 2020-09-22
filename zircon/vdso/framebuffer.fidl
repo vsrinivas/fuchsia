@@ -10,7 +10,7 @@ protocol framebuffer {
     framebuffer_get_info(handle:RESOURCE resource)
         -> (status status, uint32 format, uint32 width, uint32 height, uint32 stride);
 
-    // TODO(ZX-2967): vmo ZX_OBJ_TYPE_VMO; No rights required?
+    // TODO(fxbug.dev/32803): vmo ZX_OBJ_TYPE_VMO; No rights required?
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     framebuffer_set_range(handle:RESOURCE resource,
                           handle:VMO vmo,

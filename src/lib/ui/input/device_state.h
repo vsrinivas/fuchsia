@@ -111,7 +111,7 @@ class SensorState : public State {
 
  private:
   DeviceState* device_state_;
-  // TODO(SCN-627): Remember sampling frequency and physical units.
+  // TODO(fxbug.dev/23853): Remember sampling frequency and physical units.
 };
 
 class MediaButtonState : public State {

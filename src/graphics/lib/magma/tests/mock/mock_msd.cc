@@ -27,7 +27,7 @@ msd_device_t* msd_driver_create_device(msd_driver_t* drv, void* device) {
 }
 
 void msd_device_destroy(msd_device_t* dev) {
-  // TODO(MA-28) should be
+  // TODO(fxbug.dev/12650) should be
   // MsdMockDriver::cast(drv)->DestroyDevice(MsdMockDevice::cast(dev));
   delete MsdMockDevice::cast(dev);
 }

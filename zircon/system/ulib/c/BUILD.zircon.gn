@@ -40,7 +40,7 @@ zx_library("c") {
     driver_shlib_denylist = []
     driver_shlib_denylist_barrier = []
 
-    # TODO(BLD-353): temporary kludges; see //zircon/public/sysroot
+    # TODO(fxbug.dev/3156): temporary kludges; see //zircon/public/sysroot
     legacy_sysroot = [
       {
         libc = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
@@ -312,7 +312,7 @@ zx_library("c") {
       },
       {
         sdk = {
-          # TODO(TC-446): The stripped binary doesn't even have section
+          # TODO(fxbug.dev/27181): The stripped binary doesn't even have section
           # headers, so the linker can't handle it.  Eventually we'll have
           # linker stubs.  For now, just use the unstripped library to link
           # against.  This matches what library() gives the SDK via
@@ -370,7 +370,7 @@ source_set("crt1") {
   # they are always used eagerly anyway.
   cflags = [ "-fno-plt" ]
 
-  # TODO(BLD-353): temporary kludges
+  # TODO(fxbug.dev/3156): temporary kludges
   metadata = {
     legacy_sysroot = [
       {

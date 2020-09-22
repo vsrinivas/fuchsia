@@ -66,7 +66,7 @@ class InputCommandDispatcher : public CommandDispatcher {
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
   InputSystem* const input_system_ = nullptr;
 
-  // TODO(SCN-1047): Remove when gesture disambiguation is the default.
+  // TODO(fxbug.dev/24258): Remove when gesture disambiguation is the default.
   bool parallel_dispatch_ = true;
 };
 

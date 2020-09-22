@@ -19,7 +19,7 @@
 #define TEST_NAME(SUFFIX) \
   std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()) + "_" #SUFFIX;
 
-// TODO(MF-435): Use modular_testing::AddModToStory() throughout the test.
+// TODO(fxbug.dev/16363): Use modular_testing::AddModToStory() throughout the test.
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;
 using fuchsia::modular::StoryInfo2;

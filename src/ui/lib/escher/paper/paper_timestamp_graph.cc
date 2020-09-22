@@ -68,7 +68,7 @@ void PaperTimestampGraph::DrawGraphContentOn(PaperRenderer* r, vk::Rect2D bounds
                      middle_bar - (h_interval * presentation_time), w_interval);
       }
     } else {
-      // TODO(ES-246): Delete and replace values in array
+      // TODO(fxbug.dev/7335): Delete and replace values in array
     }
   }
 }

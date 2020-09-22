@@ -1498,7 +1498,7 @@ zx_status_t Client::Init(zx::channel server_channel) {
   status = controller_->dc()->GetSysmemConnection(std::move(sysmem_allocator_request));
   if (status != ZX_OK) {
     // Not a fatal error, but BufferCollection functions won't work.
-    // TODO(ZX-3355) TODO: Fail creation once all drivers implement this.
+    // TODO(fxbug.dev/33157) TODO: Fail creation once all drivers implement this.
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
     sysmem_allocator_ = sysmem::Allocator::SyncClient(std::move(sysmem_allocator_client));

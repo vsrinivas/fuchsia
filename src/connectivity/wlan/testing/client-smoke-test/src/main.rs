@@ -125,7 +125,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec(),
                 )
-                // TODO(WLAN-1268): when this bug is fixed, consider removing this timeout
+                // TODO(fxbug.dev/29881): when this bug is fixed, consider removing this timeout
                 .on_timeout(WLAN_CONNECT_TIMEOUT_SECONDS.seconds().after_now(), || {
                     Err(format_err!("connect did not complete in time"))
                 })
@@ -178,7 +178,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             // if we got an ip addr, go ahead and check a download
             if wlan_iface.dhcp_success {
-                // TODO(NET-1095): add ping check to verify connectivity
+                // TODO(fxbug.dev/29175): add ping check to verify connectivity
                 fx_log_info!("downloading file");
                 wlan_iface.data_transfer = can_download_data(&http_svc).await;
                 fx_log_info!("finished download on iface {}", iface_id);
@@ -220,7 +220,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
         // Now test a download over the underlying connection - may be ethernet or an
         // existing wlan connection.
-        // TODO(WLAN-1271): The test will currently report failure if there is not an
+        // TODO(fxbug.dev/29883): The test will currently report failure if there is not an
         // operational base connection available.  This should be switched to a conditional
         // check based on the result of a reachability check after the wlan interfaces
         // are tested.

@@ -19,7 +19,7 @@ namespace block_client {
 // An interface which virtualizes the connection to the underlying block device.
 class BlockDevice : public storage::VmoidRegistry {
  public:
-  // TODO(ZX-4128): Deprecate this interface. Favor reading over the FIFO
+  // TODO(fxbug.dev/33909): Deprecate this interface. Favor reading over the FIFO
   // protocol instead.
   virtual zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const = 0;
 

@@ -264,7 +264,7 @@ resource struct ServiceList {
     Provider? provider;
 
     // A channel to the directory hosting the services in `names`.
-    // TODO(CP-124): Support `host_directory` for CreateComponent and deprecate
+    // TODO(fxbug.dev/ZX-1358	31262): Support `host_directory` for CreateComponent and deprecate
     // `provider`.
     zx.handle:CHANNEL? host_directory;
 };
@@ -373,7 +373,7 @@ protocol Runner {
 //
 // This interface is deprecated.  Services should be published as directory
 // entries instead, just like files.
-// TODO(ZX-1358): Point to the FIDL interface for file I/O once RIO is migrated.
+// TODO(fxbug.dev/31262): Point to the FIDL interface for file I/O once RIO is migrated.
 protocol Provider {
     // Asks the host to provide the service identified by `service_name` through
     // the `channel` endpoint supplied by the caller. If the host is not willing

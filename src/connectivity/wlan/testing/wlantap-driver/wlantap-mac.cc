@@ -145,7 +145,7 @@ struct WlantapMacImpl : WlantapMac {
     }
     // This is the test driver, so we can just pretend the association was configured.
     (void)assoc_ctx;
-    // TODO(NET-1270): Evalute the use and implement
+    // TODO(fxbug.dev/28907): Evalute the use and implement
     return ZX_OK;
   }
 
@@ -157,7 +157,7 @@ struct WlantapMacImpl : WlantapMac {
     if (!mac) {
       return ZX_ERR_INVALID_ARGS;
     }
-    // TODO(NET-1270): Evalute the use and implement
+    // TODO(fxbug.dev/28907): Evalute the use and implement
     return ZX_OK;
   }
 

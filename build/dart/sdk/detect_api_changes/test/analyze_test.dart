@@ -10,7 +10,7 @@ import 'package:detect_api_changes/diff.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-// TODO(DX-1760): Parse the JSON file into an intermediate format, and check a few
+// TODO(fxbug.dev/6541): Parse the JSON file into an intermediate format, and check a few
 // pieces of the data instead of verifying a large block of text.
 
 void main() async {

@@ -20,7 +20,7 @@
 #include <lib/zx/channel.h>
 #include <stdint.h>
 
-// TODO(FIDL-182): Remove this once fixed.
+// TODO(fxbug.dev/7519): Remove this once fixed.
 typedef zx_handle_t fuchsia_logger_LogListener;
 #include <fuchsia/logger/c/fidl.h>
 

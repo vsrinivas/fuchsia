@@ -276,7 +276,7 @@ template("sdk_static_library") {
 
   # Verify that the SDK manifest for this target includes all of the expected
   # runtime dependencies.
-  # TODO(DX-498): also check that everything in there is either prebuilt or
+  # TODO(fxbug.dev/5365): also check that everything in there is either prebuilt or
   # headers only.
   action(verify_target_name) {
     script = "//build/cpp/verify_runtime_deps.py"

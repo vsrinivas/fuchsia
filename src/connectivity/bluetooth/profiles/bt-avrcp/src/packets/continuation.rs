@@ -15,7 +15,7 @@ impl RequestContinuingResponseCommand {
         Self { pdu_id: u8::from(pdu_id) }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn pdu_id_response(&self) -> u8 {
         self.pdu_id
     }
@@ -61,7 +61,7 @@ impl Encodable for RequestContinuingResponseCommand {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+#[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
 /// AVRCP 1.6.1 section 6.8 Continuation PDUs - AbortContinuingResponse
 pub struct AbortContinuingResponseCommand {
     pdu_id: u8,
@@ -119,7 +119,7 @@ impl Encodable for AbortContinuingResponseCommand {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+#[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
 /// AVRCP 1.6.1 section 6.8 Continuation PDUs - AbortContinuingResponse
 pub struct AbortContinuingResponseResponse {}
 

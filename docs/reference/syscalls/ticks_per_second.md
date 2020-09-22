@@ -31,7 +31,7 @@ this value is guaranteed not to change.
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

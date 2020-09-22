@@ -793,7 +793,7 @@ static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
   return ZX_OK;
 }
 
-// TODO(ZX-974): determine complete correct mapping
+// TODO(fxbug.dev/30921): determine complete correct mapping
 int fdio_status_to_errno(zx_status_t status) {
   switch (status) {
     case ZX_ERR_NOT_FOUND:
@@ -1083,7 +1083,7 @@ int dup3(int oldfd, int newfd, int flags) {
     return ERRNO(EINVAL);
   }
 
-  // TODO(ZX-973) Implement O_CLOEXEC.
+  // TODO(fxbug.dev/30920) Implement O_CLOEXEC.
   return fdio_dup(oldfd, newfd, 0);
 }
 
@@ -1101,7 +1101,7 @@ int fcntl(int fd, int cmd, ...) {
   switch (cmd) {
     case F_DUPFD:
     case F_DUPFD_CLOEXEC: {
-      // TODO(ZX-973) Implement CLOEXEC.
+      // TODO(fxbug.dev/30920) Implement CLOEXEC.
       GET_INT_ARG(starting_fd);
       return fdio_dup(fd, -1, starting_fd);
     }
@@ -1122,7 +1122,7 @@ int fcntl(int fd, int cmd, ...) {
         return ERRNO(EBADF);
       }
       GET_INT_ARG(flags);
-      // TODO(ZX-973) Implement CLOEXEC.
+      // TODO(fxbug.dev/30920) Implement CLOEXEC.
       *fdio_get_ioflag(io) &= ~IOFLAG_FD_FLAGS;
       *fdio_get_ioflag(io) |= (uint32_t)flags & IOFLAG_FD_FLAGS;
       fdio_release(io);

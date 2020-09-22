@@ -104,7 +104,7 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
       return ZX_ERR_STOP;
     }
   } else {
-    // TODO(ZX-4824): The old code ignored uncompressed items too, and
+    // TODO(fxbug.dev/34597): The old code ignored uncompressed items too, and
     // silently.  Really the protocol should be cleaned up so the VMO arrives
     // without the header in it and then it could just be used here directly
     // if uncompressed (or maybe bootsvc deals with decompression in the first

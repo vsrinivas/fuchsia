@@ -29,7 +29,7 @@ protocol vmo {
     ArgReorder = "handle, buffer, offset, buffer_size"]
     vmo_write(handle:VMO handle, vector_void buffer, uint64 offset) -> (status status);
 
-    // TODO(ZX-2967): No rights required?
+    // TODO(fxbug.dev/32803): No rights required?
     /// Read the current size of a VMO object.
     vmo_get_size(handle:VMO handle) -> (status status, uint64 size);
 
@@ -61,8 +61,8 @@ protocol vmo {
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
     vmo_set_cache_policy(handle:VMO handle, uint32 cache_policy) -> (status status);
 
-    // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
-    // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
+    // TODO(fxbug.dev/32803): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
+    // TODO(fxbug.dev/32803): vmex == ZX_HANDLE_INVALID also accepted.
     /// Add execute rights to a VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO.
     /// Rights: vmex must have resource kind ZX_RSRC_KIND_VMEX.

@@ -1075,7 +1075,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
   config.address_space().set(atom->address_slot_mapping()->slot_number());
   config.start_flush_clean().set(true);
   config.start_flush_invalidate().set(true);
-  // TODO(MA-367): Enable flush reduction optimization.
+  // TODO(fxbug.dev/12981): Enable flush reduction optimization.
   config.thread_priority().set(8);
   config.end_flush_clean().set(true);
   config.end_flush_invalidate().set(true);
@@ -1254,7 +1254,7 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
 
 bool MsdArmDevice::IsProtectedModeSupported() {
   uint32_t gpu_product_id = gpu_features_.gpu_id.product_id().get();
-  // TODO(MA-522): Support protected mode when using ACE cache coherency. Apparently
+  // TODO(fxbug.dev/13130): Support protected mode when using ACE cache coherency. Apparently
   // the L2 needs to be powered down then switched to ACE Lite in that mode.
   if (cache_coherency_status_ == kArmMaliCacheCoherencyAce)
     return false;
@@ -1264,7 +1264,7 @@ bool MsdArmDevice::IsProtectedModeSupported() {
 
 void MsdArmDevice::EnterProtectedMode() {
   TRACE_DURATION("magma", "MsdArmDevice::EnterProtectedMode");
-  // TODO(MA-522): If cache-coherency is enabled, power down L2 and wait for the
+  // TODO(fxbug.dev/13130): If cache-coherency is enabled, power down L2 and wait for the
   // completion of that.
   register_io_->Write32(registers::GpuCommand::kOffset,
                         registers::GpuCommand::kCmdSetProtectedMode);

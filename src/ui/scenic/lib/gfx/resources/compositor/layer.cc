@@ -26,7 +26,7 @@ Layer::Layer(Session* session, SessionId session_id, ResourceId id)
 Layer::~Layer() = default;
 
 bool Layer::SetRenderer(RendererPtr renderer) {
-  // TODO(SCN-249): if layer content is already specified as an image, clear it
+  // TODO(fxbug.dev/23495): if layer content is already specified as an image, clear it
   // before setting the renderer.  Or call it an error, and require the client
   // to explicitly clear it first.
   renderer_ = std::move(renderer);
@@ -76,12 +76,12 @@ bool Layer::IsDrawable() const {
     return false;
   }
 
-  // TODO(SCN-249): Layers can also have a material or image pipe.
+  // TODO(fxbug.dev/23495): Layers can also have a material or image pipe.
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
 }
 
 escher::ViewingVolume Layer::GetViewingVolume() const {
-  // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
+  // TODO(fxbug.dev/24474): Don't hardcode Z bounds in multiple locations.
   constexpr float kTop = -1000;
   constexpr float kBottom = 0;
   return escher::ViewingVolume(size_.x, size_.y, kTop, kBottom);

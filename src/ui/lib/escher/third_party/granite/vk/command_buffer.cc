@@ -40,7 +40,7 @@
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
-// TODO(ES-83): We currently wrap an old-style impl::CommandBuffer.  This
+// TODO(fxbug.dev/7174): We currently wrap an old-style impl::CommandBuffer.  This
 // facilitates making the same "keep alive" functionality available to users of
 // the old and new CommandBuffer classes.  Once there are no direct users of the
 // old-style CommandBuffers, fold the necessary functionality into this class
@@ -320,7 +320,7 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, const Text
 
   vk::ImageLayout vk_layout = image->layout();
   if (texture->uid() == set->uids[binding] && b->image.fp.imageLayout == vk_layout &&
-      // TODO(ES-83): if we reify Samplers as a separate resource type, then use
+      // TODO(fxbug.dev/7174): if we reify Samplers as a separate resource type, then use
       // the sampler's uid instead of the texture.
       texture->uid() == set->secondary_uids[binding]) {
     // The image, layout, and sampler are all unchanged, so we do not need to
@@ -335,7 +335,7 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, const Text
   b->image.integer.imageView = texture->vk_integer_view();
   b->image.integer.sampler = texture->sampler()->vk();
   set->uids[binding] = texture->uid();
-  // TODO(ES-83): if we reify Samplers as a separate resource type,
+  // TODO(fxbug.dev/7174): if we reify Samplers as a separate resource type,
   // then use the sampler's uid instead of the texture.
   set->secondary_uids[binding] = texture->uid();
   dirty_descriptor_sets_ |= 1u << set_index;

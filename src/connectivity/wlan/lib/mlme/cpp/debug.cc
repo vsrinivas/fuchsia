@@ -542,7 +542,7 @@ std::string Describe(const ieee80211_ht_capabilities& ht_caps) {
 
 std::string Describe(const VhtCapabilitiesInfo& vci) {
   std::ostringstream oss;
-  oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+  oss << std::setfill(' ');  // TODO(fxbug.dev/27030): Delete this line
   oss << "max_mpdu_len:" << +vci.max_mpdu_len();
   oss << " supported_cbw_set:" << +vci.supported_cbw_set();
   oss << " rx_ldpc:" << +vci.rx_ldpc();
@@ -569,7 +569,7 @@ std::string Describe(const VhtCapabilitiesInfo& vci) {
 
 std::string Describe(const VhtMcsNss& vmn) {
   std::ostringstream oss;
-  oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+  oss << std::setfill(' ');  // TODO(fxbug.dev/27030): Delete this line
   oss << " [rx_max_mcs]";
   oss << " ss1:" << +vmn.rx_max_mcs_ss1();
   oss << " ss2:" << +vmn.rx_max_mcs_ss2();
@@ -599,7 +599,7 @@ std::string Describe(const VhtMcsNss& vmn) {
 
 std::string Describe(const VhtCapabilities& vht_cap) {
   std::ostringstream oss;
-  oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+  oss << std::setfill(' ');  // TODO(fxbug.dev/27030): Delete this line
   oss << "vci:[" << Describe(vht_cap.vht_cap_info).c_str() << "] ";
   oss << "mcs_nss:[" << Describe(vht_cap.vht_mcs_nss).c_str() << "]";
   return oss.str();
@@ -607,7 +607,7 @@ std::string Describe(const VhtCapabilities& vht_cap) {
 
 std::string Describe(const BasicVhtMcsNss& bvmn) {
   std::ostringstream oss;
-  oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+  oss << std::setfill(' ');  // TODO(fxbug.dev/27030): Delete this line
   oss << " ss1:" << +bvmn.ss1();
   oss << " ss2:" << +bvmn.ss2();
   oss << " ss3:" << +bvmn.ss3();
@@ -621,7 +621,7 @@ std::string Describe(const BasicVhtMcsNss& bvmn) {
 
 std::string Describe(const VhtOperation& vht_op) {
   std::ostringstream oss;
-  oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+  oss << std::setfill(' ');  // TODO(fxbug.dev/27030): Delete this line
   oss << "vht_cbw:" << +vht_op.vht_cbw;
   oss << " center_freq_seg0:" << +vht_op.center_freq_seg0;
   oss << " center_freq_seg1:" << +vht_op.center_freq_seg1;

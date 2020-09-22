@@ -31,7 +31,7 @@ class PaperRenderQueueContext final : public RenderQueueContext {
   PaperRendererDrawMode draw_mode() const { return draw_mode_; }
   void set_draw_mode(PaperRendererDrawMode draw_mode) { draw_mode_ = draw_mode; }
 
-  // TODO(ES-158): Providing the shader-program to the render-func via the
+  // TODO(fxbug.dev/7249): Providing the shader-program to the render-func via the
   // context works fine for now, but we will need a new approach.
   ShaderProgram* shader_program() const { return shader_program_.get(); }
   void set_shader_program(ShaderProgramPtr program);

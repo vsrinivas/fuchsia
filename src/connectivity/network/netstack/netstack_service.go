@@ -135,7 +135,7 @@ func (ns *Netstack) getInterfaces2() []netstack.NetInterface2 {
 }
 
 // GetInterfaces2 returns a list of interfaces.
-// TODO(NET-2078): Move this to GetInterfaces once Chromium stops using
+// TODO(fxbug.dev/21079): Move this to GetInterfaces once Chromium stops using
 // netstack.fidl.
 func (ni *netstackImpl) GetInterfaces2(fidl.Context) ([]netstack.NetInterface2, error) {
 	return ni.ns.getInterfaces2(), nil
@@ -150,7 +150,7 @@ func (ni *netstackImpl) GetInterfaces(fidl.Context) ([]netstack.NetInterface, er
 	return interfaces2ListToInterfacesList(ni.ns.getInterfaces2()), nil
 }
 
-// TODO(NET-2078): Move this to GetRouteTable once Chromium stops using
+// TODO(fxbug.dev/21079): Move this to GetRouteTable once Chromium stops using
 // netstack.fidl.
 func (ni *netstackImpl) GetRouteTable2(fidl.Context) ([]netstack.RouteTableEntry2, error) {
 	return nsToRouteTable2(ni.ns.GetExtendedRouteTable()), nil

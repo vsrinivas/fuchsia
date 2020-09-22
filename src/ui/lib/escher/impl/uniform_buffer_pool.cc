@@ -103,7 +103,7 @@ void UniformBufferPool::BeginFrame() {
   // The ring cleared above is moved to the back, and all others are moved one
   // forward.
   //
-  // TODO(ES-101): This is a constant amount of cache-friendly work per frame
+  // TODO(fxbug.dev/7192): This is a constant amount of cache-friendly work per frame
   // (just swapping pointers in the vectors), so it's probably not a performance
   // issue, but is worth looking into later.
   for (size_t i = 2; i < ring_size_; ++i) {

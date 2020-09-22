@@ -286,7 +286,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
     return status;
   }
 
-  // TODO(ZX-3530): svchost needs the root resource to talk to
+  // TODO(fxbug.dev/33324): svchost needs the root resource to talk to
   // zx_debug_send_command. Remove this once zx_debug_send_command no longer
   // requires the root resource.
   zx::resource root_resource_copy;
@@ -755,7 +755,7 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   return 0;
 }
 
-// TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
+// TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost loader service!
 zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
   zx::channel remote;
   zx_status_t status = zx::channel::create(0, loader, &remote);

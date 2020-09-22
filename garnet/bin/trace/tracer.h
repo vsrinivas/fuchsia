@@ -47,7 +47,7 @@ class Tracer {
   // Initialize tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops and |fail_callback| upon failure.
-  // TODO(PT-113): Remove |binary,record_consumer,error_handler|
+  // TODO(fxbug.dev/22974): Remove |binary,record_consumer,error_handler|
   void Initialize(controller::TraceConfig config, bool binary, BytesConsumer bytes_consumer,
                   RecordConsumer record_consumer, ErrorHandler error_handler,
                   FailCallback fail_callback, DoneCallback done_callback,

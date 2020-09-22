@@ -329,7 +329,7 @@ template("unittest_package") {
     generated_file(manifest_label) {
       outputs = [ test_manifest ]
 
-      # TODO(CF-879): As of today, CMX files require the args list to be either
+      # TODO(fxbug.dev/4748): As of today, CMX files require the args list to be either
       # absent or of at least one element. There is a case to be made to relax
       # this constraint, and simply allow empty lists as well. Depending on
       # decision by CF team, the code below could be simplified to avoid

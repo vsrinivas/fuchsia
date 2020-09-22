@@ -14,4 +14,4 @@ Whenever the llcpp codegen in Garnet is updated, these files should be re-genera
 
 As soon as the merger between the Garnet repo and Zircon happens, we should modify the build system
 to automatically generate llcpp code, at which point we can remove this directory.
-TODO(FIDL-427): replace manual code generation with automated solution.
+TODO(fxbug.dev/3240): replace manual code generation with automated solution.

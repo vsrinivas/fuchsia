@@ -33,7 +33,7 @@
 // |TA_POINTER| for pointer values (records the memory address, not the target). Use |TA_KOID| for
 // kernel object ids, required in C++.
 //
-// TODO(PT-66): Re-add |TA_STRING_LITERAL|.
+// TODO(fxbug.dev/22929): Re-add |TA_STRING_LITERAL|.
 //
 // C or C++ Usage: (argument type macros required in C)
 //

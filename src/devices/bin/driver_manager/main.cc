@@ -253,12 +253,12 @@ int main(int argc, char** argv) {
   config.fs_provider = &system_instance;
   config.path_prefix = devmgr_args.path_prefix;
 
-  // TODO(ZX-4178): Remove all uses of the root resource.
+  // TODO(fxbug.dev/33958): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);
   if (status != ZX_OK) {
     LOGF(INFO, "Failed to get root resource, assuming test environment and continuing");
   }
-  // TODO(ZX-4177): Remove all uses of the root job.
+  // TODO(fxbug.dev/33957): Remove all uses of the root job.
   zx::job root_job;
   status = get_root_job(&root_job);
   if (status != ZX_OK) {

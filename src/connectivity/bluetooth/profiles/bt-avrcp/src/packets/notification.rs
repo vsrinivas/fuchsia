@@ -133,7 +133,7 @@ impl RegisterNotificationCommand {
         &self.event_id
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn playback_interval(&self) -> u32 {
         self.playback_interval
     }
@@ -194,12 +194,12 @@ pub struct VolumeChangedNotificationResponse {
 }
 
 impl VolumeChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(volume: u8) -> Self {
         Self { volume }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn volume(&self) -> u8 {
         self.volume
     }
@@ -249,7 +249,7 @@ pub struct PlaybackStatusChangedNotificationResponse {
 }
 
 impl PlaybackStatusChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(playback_status: PlaybackStatus) -> Self {
         Self { playback_status }
     }
@@ -303,17 +303,17 @@ pub struct TrackChangedNotificationResponse {
 }
 
 impl TrackChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(identifier: u64) -> Self {
         Self { identifier }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn unknown() -> Self {
         Self::new(0x0)
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn none() -> Self {
         Self::new(u64::MAX)
     }
@@ -371,12 +371,12 @@ pub struct PlaybackPosChangedNotificationResponse {
 }
 
 impl PlaybackPosChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(position: u32) -> Self {
         Self { position }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn no_track() -> Self {
         Self::new(0xFFFFFFFF)
     }

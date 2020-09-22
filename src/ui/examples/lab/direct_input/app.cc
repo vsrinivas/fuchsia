@@ -213,7 +213,7 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
   using Phase = fuchsia::ui::input::PointerEventPhase;
 
   if (event.type == Type::TOUCH) {
-    // TODO(SCN-920): Reduce the very noticeable tracking lag.
+    // TODO(fxbug.dev/24137): Reduce the very noticeable tracking lag.
     if (focused_ && event.phase == Phase::DOWN) {
       // Nice to meet you. Add to known-fingers list.
       size_t idx = find_idx(pointer_id_, kNoFinger);

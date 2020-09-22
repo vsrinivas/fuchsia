@@ -40,7 +40,7 @@ config("compiler") {
     cflags = [ "-fPIE" ]
   }
 
-  # TODO(TC-74) The implicitly linked static libc++.a depends on these.
+  # TODO(fxbug.dev/26846) The implicitly linked static libc++.a depends on these.
   libs = [
     "dl",
     "pthread",

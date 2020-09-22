@@ -67,7 +67,7 @@ zx_library("ddk") {
     "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/syslog:syslog-headers",
 
-    # TODO(BLD-353): Exporting this dependency causes problems in the legacy
+    # TODO(fxbug.dev/3156): Exporting this dependency causes problems in the legacy
     # build.  Instead, users of the ddk library that actually use this header
     # have to also express a dependency on the trace library.
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.

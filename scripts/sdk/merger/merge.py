@@ -197,7 +197,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     '''
     meta_one = _get_meta(element, source_dir_one)
     meta_two = _get_meta(element, source_dir_two)
-    # TODO(DX-495): verify that the common parts of the metadata files are in
+    # TODO(fxbug.dev/5362): verify that the common parts of the metadata files are in
     # fact identical.
     type = meta_one['type']
     meta = {}
@@ -385,7 +385,7 @@ def main():
             print('Error: could not write manifest file')
             has_errors = True
 
-        # TODO(DX-495): verify that metadata files are valid.
+        # TODO(fxbug.dev/5362): verify that metadata files are valid.
 
     return 1 if has_errors else 0
 

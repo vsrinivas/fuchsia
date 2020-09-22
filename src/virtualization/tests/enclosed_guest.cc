@@ -31,7 +31,7 @@
 static constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
 static constexpr char kRealm[] = "realmguestintegrationtest";
-// TODO(MAC-229): Use consistent naming for the test utils here.
+// TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 static constexpr char kFuchsiaTestUtilsUrl[] =
     "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 static constexpr char kDebianTestUtilDir[] = "/test_utils";

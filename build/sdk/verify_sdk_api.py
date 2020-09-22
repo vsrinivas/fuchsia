@@ -11,7 +11,7 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    # TODO(DX-685): make this argument required.
+    # TODO(fxbug.dev/5535): make this argument required.
     parser.add_argument(
         '--reference', help='Path to the golden API file', required=False)
     parser.add_argument(
@@ -36,7 +36,7 @@ def main():
     ids = [a['id'] for a in manifest['atoms']]
 
     # Ignore images which are very architecture-dependent.
-    # TODO(DX-981): remove this exception when obsolete.
+    # TODO(fxbug.dev/5824): remove this exception when obsolete.
     ids = [i for i in ids if not (i.startswith('sdk://images'))]
 
     with open(args.updated, 'w') as updated_file:

@@ -12,7 +12,7 @@ String diffTwoFiles(String leftPath, String rightPath) {
     return null;
   }
 
-  // TODO(DX-1760): Describe the differences.
+  // TODO(fxbug.dev/6541): Describe the differences.
 
   var message = 'Error: API has changed!\n'
       'Please acknowledge this change by running:\n'

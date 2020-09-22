@@ -68,7 +68,7 @@ class AvIoContextOpaque {
   // Performs a synchronous seek.
   int64_t Seek(int64_t offset, int whence);
 
-  // TODO(US-452): Re-enable thread safety analysis once unique_lock has proper
+  // TODO(fxbug.dev/27120): Re-enable thread safety analysis once unique_lock has proper
   // annotations.
   void WaitForCallback() FXL_NO_THREAD_SAFETY_ANALYSIS {
     std::unique_lock<std::mutex> locker(mutex_);

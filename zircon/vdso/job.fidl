@@ -6,7 +6,7 @@ library zx;
 
 [Transport = "Syscall"]
 protocol job {
-    // TODO(ZX-2967): parent_job with ZX_RIGHT_WRITE is also accepted.
+    // TODO(fxbug.dev/32803): parent_job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new job.
     /// Rights: parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB.
     job_create(handle:JOB parent_job, uint32 options) -> (status status, handle:JOB out);

@@ -128,7 +128,7 @@ VK_TEST(BufferCache, RecycleMany) {
   uint64_t big_buffer3_id = big_buffer3->uid();
   if (big_buffer_id == big_buffer2_id || big_buffer_id == big_buffer3_id ||
       big_buffer2_id == big_buffer3_id) {
-    // TODO(SCN-526) It seems that the allocator is allocating garbage
+    // TODO(fxbug.dev/23753) It seems that the allocator is allocating garbage
     // memory, and then later filling multiple BufferPtrs with the same
     // buffer, allocated later. Allocating buffers with the same ID will
     // crash the BufferCache (as the invariant that buffer IDs are unique)

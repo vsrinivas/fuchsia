@@ -13,12 +13,12 @@ import("$zx/public/gn/zbi.gni")
 
 declare_args() {
   # Defines the `//:default` target: what `ninja` with no arguments does.
-  # TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
+  # TODO(fxbug.dev/3156): This must be set by the controlling Fuchsia GN build.
   default_deps = false
 }
 
 assert(default_deps != false,
-       "TODO(BLD-353): Zircon build must be driven by Fuchsia build")
+       "TODO(fxbug.dev/3156): Zircon build must be driven by Fuchsia build")
 
 ###
 ### Build API modules.
@@ -28,7 +28,7 @@ assert(default_deps != false,
 # Each element of the list is the simple name of the API module; the
 # module's contents are found at "$root_build_dir/$target_name.json".
 #
-# TODO(BLD-353): Note this does not include build_api_module() uses meant
+# TODO(fxbug.dev/3156): Note this does not include build_api_module() uses meant
 # just for legacy build integration.  We don't consider those to be actual
 # build API modules; using build_api_module() is just a convenience for
 # creating them.  Importantly, they are not part of the API contract with
@@ -329,7 +329,7 @@ group("default") {
 }
 
 ###
-### TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
+### TODO(fxbug.dev/3156): Temporary hacks for integrating with the legacy Fuchsia
 ### GN build.
 ###
 

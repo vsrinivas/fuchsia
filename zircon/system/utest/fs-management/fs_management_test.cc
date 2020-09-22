@@ -140,7 +140,7 @@ TEST(FmountFunmountCase, FmountFunmount) {
   ASSERT_EQ(unlink(mount_path), 0);
 }
 
-// TODO(FLK-371): Re-enable once deflaked.
+// TODO(fxbug.dev/8478): Re-enable once deflaked.
 #if 0
 // All "parent" filesystems attempt to mount a MinFS ramdisk under malicious
 // conditions.
@@ -244,7 +244,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
 }
 #endif
 
-// TODO(FLK-371): Re-enable once deflaked.
+// TODO(fxbug.dev/8478): Re-enable once deflaked.
 // TEST(MountEvilMemfsCase, MountEvilMemfs) {
 //   const char* mount_path = "/tmp/mount_evil";
 //   ASSERT_NO_FATAL_FAILURES(DoMountEvil("memfs", mount_path));

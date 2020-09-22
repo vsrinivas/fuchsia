@@ -59,7 +59,7 @@ class Timer : public EventSource {
   // |slack_type| specifies the type of slack that may be applied to the
   // deadline.
   //
-  // TODO(ZX-3311): Remove the default for slack_type and pass the correct
+  // TODO(fxbug.dev/33115): Remove the default for slack_type and pass the correct
   // value based on the needs of the callers.
   zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain, ProcessHandler process_handler,
                        uint32_t slack_type = ZX_TIMER_SLACK_LATE);
@@ -68,7 +68,7 @@ class Timer : public EventSource {
   // Arm a timer object to fire at the |deadline| adjusted by the
   // |slack_amount| and the |slack_type| used to Activate.
   //
-  // TODO(ZX-3311): Remove the default for slack_amount and pass the correct
+  // TODO(fxbug.dev/33115): Remove the default for slack_amount and pass the correct
   // value based on the needs of the callers.
   zx_status_t Arm(zx_time_t deadline, zx_duration_t slack_amount = 0);
   void Cancel();

@@ -17,7 +17,7 @@ namespace display_configuration {
 // |height_in_px| the height of the display in pixels.
 // |model| the model object to initialize, must not be null.
 //
-// TODO(SCN-16): This is a placeholder for more sophisticated configuration
+// TODO(fxbug.dev/23273): This is a placeholder for more sophisticated configuration
 // mechanisms we'll need in the future.
 void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px, DisplayModel* model);
 

@@ -228,7 +228,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      // TODO(ZX-4087): Astro can have one of two possible touch screens
+      // TODO(fxbug.dev/33871): Astro can have one of two possible touch screens
       // so we can't just test that one of them is bound. That is why the
       // following test is disabled.
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
@@ -313,7 +313,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      // TODO(ZX-4087): Nelson can have one of two possible touch screens
+      // TODO(fxbug.dev/33871): Nelson can have one of two possible touch screens
       // so we can't just test that one of them is bound. That is why the
       // following test is disabled.
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",

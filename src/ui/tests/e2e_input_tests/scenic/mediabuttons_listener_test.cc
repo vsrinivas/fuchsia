@@ -136,7 +136,7 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
         EXPECT_EQ(observed.volume(), 0);
 
         QuitLoop();
-        // TODO(SCN-1449): Cleanly break the View/ViewHolder connection.
+        // TODO(fxbug.dev/24638): Cleanly break the View/ViewHolder connection.
       };
 
   // Register the MediaButtons listener against Root Presenter.

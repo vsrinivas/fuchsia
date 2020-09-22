@@ -103,7 +103,7 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	} else if err := checkStatus(status, "SetClientName"); err != nil {
 		return nil, err
 	}
-	// TODO(NET-57): once we support IGMP, don't automatically set multicast promisc true
+	// TODO(fxbug.dev/20540): once we support IGMP, don't automatically set multicast promisc true
 	if status, err := device.ConfigMulticastSetPromiscuousMode(context.Background(), true); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "ConfigMulticastSetPromiscuousMode"); err != nil {

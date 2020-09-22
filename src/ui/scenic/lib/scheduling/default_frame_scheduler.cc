@@ -212,7 +212,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     inspect_last_successful_update_start_time_.Set(update_start_time.get());
   }
 
-  // TODO(SCN-1482) Revisit how we do this.
+  // TODO(fxbug.dev/24669) Revisit how we do this.
   const zx::time update_end_time = zx::time(async_now(dispatcher_));
   frame_predictor_->ReportUpdateDuration(zx::duration(update_end_time - update_start_time));
 
@@ -222,7 +222,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     return;
   }
 
-  // TODO(SCN-1337) Remove the render_pending_ check, and pipeline frames within a VSYNC interval.
+  // TODO(fxbug.dev/24531) Remove the render_pending_ check, and pipeline frames within a VSYNC interval.
   if (currently_rendering_) {
     render_pending_ = true;
     return;
@@ -265,7 +265,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   auto frame_timings = std::make_unique<FrameTimings>(
       frame_number, target_presentation_time, wakeup_time_, frame_render_start_time,
       std::move(timings_rendered_callback), std::move(timings_presented_callback));
-  // TODO(SCN-1482) Revisit how we do this.
+  // TODO(fxbug.dev/24669) Revisit how we do this.
   frame_timings->OnFrameUpdated(update_end_time);
 
   inspect_frame_number_.Set(frame_number);
@@ -291,7 +291,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
       inspect_last_successful_render_start_time_.Set(target_presentation_time.get());
       break;
     case kRenderFailed:
-      // TODO(SCN-1344): Handle failed rendering somehow.
+      // TODO(fxbug.dev/24538): Handle failed rendering somehow.
       FX_LOGS(WARNING) << "RenderFrame failed. "
                        << "There may not be any calls to OnFrameRendered or OnFramePresented, and "
                           "no callbacks may be invoked.";
@@ -391,7 +391,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
   FX_DCHECK(!outstanding_frames_.empty());
 
-  // TODO(SCN-400): how should we handle this case?  It is theoretically possible, but if it
+  // TODO(fxbug.dev/23637): how should we handle this case?  It is theoretically possible, but if it
   // happens then it means that the EventTimestamper is receiving signals out-of-order and is
   // therefore generating bogus data.
   FX_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
@@ -624,7 +624,7 @@ void DefaultFrameScheduler::SignalPresent1CallbacksUpTo(
     std::for_each(
         begin_it, end_it,
         [presentation_info](std::pair<const SchedulingIdPair, OnPresentedCallback>& pair) {
-          // TODO(SCN-1346): Make this unique per session via id().
+          // TODO(fxbug.dev/24540): Make this unique per session via id().
           TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
           auto& callback = pair.second;
           callback(presentation_info);
@@ -648,7 +648,7 @@ void DefaultFrameScheduler::SignalPresent2CallbackForInfosUpTo(SchedulingIdPair 
         });
     present2_infos_.erase(begin_it, end_it);
 
-    // TODO(SCN-1346): Make this unique per session via id().
+    // TODO(fxbug.dev/24540): Make this unique per session via id().
     TRACE_FLOW_BEGIN("gfx", "present_callback", presented_time.get());
     fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info =
         Present2Info::CoalescePresent2Infos(std::move(present2_infos_for_session), presented_time);

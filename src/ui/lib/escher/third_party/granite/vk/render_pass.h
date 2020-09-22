@@ -46,7 +46,7 @@ using RenderPassPtr = fxl::RefPtr<RenderPass>;
 // NOTE: this class is an implementation detail of CommandBuffer; Escher clients
 // are never directly exposed to it.  Instead, they use RenderPassInfo.
 //
-// TODO(ES-77): RenderPass and Framebuffer are deprecated, to be replaced by
+// TODO(fxbug.dev/7170): RenderPass and Framebuffer are deprecated, to be replaced by
 // impl::RenderPass and impl::Framebuffer.  The latter two aren't visible to
 // Escher clients; they are an implementation detail of escher::CommandBuffer
 // (NOTE: NOT escher::impl::CommandBuffer, which is also deprecated).

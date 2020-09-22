@@ -9,5 +9,5 @@ pub const COMMAND_DELIMITER: &str = ".";
 pub const COMMAND_SIZE: usize = 2;
 
 // Maximum number of requests to handle concurrently
-// TODO(CONN-6) figure out a good parallel value for this
+// TODO(fxbug.dev/4783) figure out a good parallel value for this
 pub const CONCURRENT_REQ_LIMIT: usize = 10;

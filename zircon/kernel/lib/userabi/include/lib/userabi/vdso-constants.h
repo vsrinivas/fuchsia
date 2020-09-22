@@ -50,7 +50,7 @@ struct vdso_constants {
 
   // Bit map indicating features.  For specific feature bits, see
   // zircon/features.h.
-  // TODO(ZX-458): This struct may need to grow over time as new features
+  // TODO(fxbug.dev/30418): This struct may need to grow over time as new features
   // are added and/or supported.  A mask may be needed to indicate which
   // bits are valid.
   struct {

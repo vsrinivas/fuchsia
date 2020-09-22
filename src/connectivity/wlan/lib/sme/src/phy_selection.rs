@@ -64,7 +64,7 @@ fn derive_cbw_vht(
         derive_cbw_ht(client_ht_cap, bss_ht_op)
     };
 
-    // TODO(NET-1575): Support CBW160 and CBW80P80
+    // TODO(fxbug.dev/29000): Support CBW160 and CBW80P80
     // See IEEE Std 802.11-2016 table 9-250 for full decoding
     let client_cbw = fidl_common::Cbw::Cbw80;
 

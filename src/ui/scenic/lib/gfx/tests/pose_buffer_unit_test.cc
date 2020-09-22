@@ -35,7 +35,7 @@ VK_TEST_F(PoseBufferTest, Validation) {
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
-  // TODO(SCN-1369): Scenic may use a different set of bits when creating a
+  // TODO(fxbug.dev/24563): Scenic may use a different set of bits when creating a
   // buffer, resulting in a memory pool mismatch.
   const vk::BufferUsageFlags kUsageFlags =
       vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |

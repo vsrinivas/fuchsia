@@ -49,7 +49,7 @@ UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb, UvcForm
     : UsbVideoStreamBase(parent),
       usb_(*usb),
       format_list_(std::move(format_list)),
-      // TODO(CAM-13): Cleanup passing of settings
+      // TODO(fxbug.dev/3398): Cleanup passing of settings
       streaming_settings_(std::move(*settings)),
       parent_req_size_(parent_req_size),
       device_info_(std::move(device_info)) {

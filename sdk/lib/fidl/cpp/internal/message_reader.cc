@@ -218,7 +218,7 @@ zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
     // error handlers should be invoked. Note the epitaph error is stored as a
     // struct{int32} in the message payload
 
-    // TODO(FIDL-322): Use a different error code to distinguish remote encoding
+    // TODO(fxbug.dev/7658): Use a different error code to distinguish remote encoding
     // errors from local ones.
     if (message.bytes().actual() != sizeof(fidl_epitaph_t)) {
       NotifyError(ZX_ERR_INVALID_ARGS);

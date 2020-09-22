@@ -55,7 +55,7 @@ class {{ .Name }} final {
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   {{ if .IsFlexible -}}
     kUnknown = 0,
-    {{- /* TODO(FIDL-728): Remove the Empty tag below. */}}
+    {{- /* TODO(fxbug.dev/8050): Remove the Empty tag below. */}}
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   {{ end -}}
   {{- range .Members }}
@@ -424,7 +424,7 @@ struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
   static constexpr size_t inline_size_v1_no_ee = {{ .InlineSize }};
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
-    {{/* TODO(FIDL-481): Disallow empty xunions (but permit nullable/optional
+    {{/* TODO(fxbug.dev/7805): Disallow empty xunions (but permit nullable/optional
          xunions). */ -}}
 
     auto&& p_xunion = *value;

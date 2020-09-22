@@ -102,7 +102,7 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnInterrupt) {
   // Disable this test because some versions of non-KVM QEMU don't
   // implement the part of IRET described above.
   //
-  // TODO(ZX-4594): Replace this return statement with ZXTEST_SKIP.
+  // TODO(fxbug.dev/34369): Replace this return statement with ZXTEST_SKIP.
   return;
 
   // We skip setting %fs because that breaks libc's TLS.

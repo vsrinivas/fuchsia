@@ -17,11 +17,11 @@ protocol vmar {
     vmar_allocate(handle:VMAR parent_vmar, VmOption options, usize offset, usize size)
         -> (status status, handle:VMAR child_vmar, vaddr child_addr);
 
-    // TODO(ZX-2967): handle No rights required?
+    // TODO(fxbug.dev/32803): handle No rights required?
     /// Destroy a virtual memory address region.
     vmar_destroy(handle:VMAR handle) -> (status status);
 
-    // TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
+    // TODO(fxbug.dev/32253): TODO handle and vmo and options must all match, and options can't specify them.
     /// Add a memory mapping.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMAR.
     /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
@@ -30,7 +30,7 @@ protocol vmar {
              usize len)
         -> (status status, vaddr mapped_addr);
 
-    // TODO(ZX-2967): handle No rights required?
+    // TODO(fxbug.dev/32803): handle No rights required?
     /// Unmap virtual memory pages.
     vmar_unmap(handle:VMO handle, vaddr addr, usize len) -> (status status);
 

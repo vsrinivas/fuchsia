@@ -122,7 +122,7 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const NodeValue&>
 ::testing::Matcher<const Hierarchy&> NodeMatches(NodeMatcher matcher);
 
 // DEPRECATED: Compatibility for downstream clients.
-// TODO(CF-702): Remove this.
+// TODO(fxbug.dev/4582): Remove this.
 ::testing::Matcher<const Hierarchy&> ObjectMatches(NodeMatcher matcher);
 
 // Matcher for the base path inside an Hierarchy.

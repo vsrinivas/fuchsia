@@ -357,7 +357,7 @@ void FfmpegDemuxImpl::Worker() {
     if (packet_requested) {
       size_t stream_index{};
       PacketPtr packet = PullPacket(&stream_index);
-      // TODO(MTWN-247): Replace check with DCHECK.
+      // TODO(fxbug.dev/13528): Replace check with DCHECK.
       // We should always get a packet from |PullPacket|. See the comment in
       // |PullEndOfStreamPacket|.
       if (packet) {
@@ -373,7 +373,7 @@ void FfmpegDemuxImpl::NotifyInitComplete() {
 
 bool FfmpegDemuxImpl::Wait(bool* packet_requested, int64_t* seek_position,
                            SeekCallback* seek_callback)
-    // TODO(US-452): Re-enable thread safety analysis once unique_lock
+    // TODO(fxbug.dev/27120): Re-enable thread safety analysis once unique_lock
     // has proper annotations.
     FXL_NO_THREAD_SAFETY_ANALYSIS {
   std::unique_lock<std::mutex> locker(mutex_);
@@ -467,7 +467,7 @@ PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
     // This shouldn't happen if downstream nodes are behaving properly, but
     // it's not fatal. We DLOG at ERROR level to avoid test failures until
     // this is resolved.
-    // TODO(MTWN-247): Restore DCHECK.
+    // TODO(fxbug.dev/13528): Restore DCHECK.
     FX_LOGS(ERROR) << "PullPacket called after all streams have ended";
     return nullptr;
   }

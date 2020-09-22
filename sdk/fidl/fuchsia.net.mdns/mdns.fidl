@@ -18,7 +18,7 @@ using zx;
 // 4) Transition all clients to the original names.
 // 5) Remove the '2' versions.
 
-// TODO(FIDL-580): Make these alias comments doc comments.
+// TODO(fxbug.dev/7904): Make these alias comments doc comments.
 
 /// Identifies a host. Host names consist of one or more labels separated by
 /// '.'s. A host name must not end with a '.'. Labels must each be 63 characters

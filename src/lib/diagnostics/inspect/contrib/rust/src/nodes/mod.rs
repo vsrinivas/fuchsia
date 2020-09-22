@@ -29,7 +29,7 @@ impl NodeExt for Node {
 }
 
 pub struct TimeProperty {
-    // TODO(WLAN-1010) - if we have something to post-process Inspect JSON dump, it would be
+    // TODO(fxbug.dev/29628) - if we have something to post-process Inspect JSON dump, it would be
     //                   better to log timestamp as Uint.
     pub(crate) inner: StringProperty,
 }

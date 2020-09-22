@@ -50,7 +50,7 @@ void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::I
   } else {
     for (uint64_t id : removed) {
       if (default_display_->display_id() == id) {
-        // TODO(SCN-244): handle this more robustly.
+        // TODO(fxbug.dev/23490): handle this more robustly.
         FX_CHECK(false) << "Display disconnected";
         return;
       }

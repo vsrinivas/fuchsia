@@ -84,7 +84,7 @@ migrated_zbi("bringup") {
         if (custom_signing_script == "" && !use_vboot) {
           bootserver_pave += [
             "--zircona",
-            # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
+            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
             # zircon-r, so for now zedboot is being paved to this slot.
             # "--zirconb",
           ]

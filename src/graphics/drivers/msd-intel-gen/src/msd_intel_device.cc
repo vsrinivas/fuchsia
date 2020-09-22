@@ -378,7 +378,7 @@ int MsdIntelDevice::DeviceThreadLoop() {
       default:
         MAGMA_LOG(WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
         DASSERT(false);
-        // TODO(MA-683): should we trigger a restart of the driver?
+        // TODO(fxbug.dev/13287): should we trigger a restart of the driver?
         std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 

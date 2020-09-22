@@ -76,7 +76,7 @@ def main():
 
     current_sources = []
     if args.sources:
-        # TODO(BLD-228): verify that the sources are in a single folder.
+        # TODO(fxbug.dev/3037): verify that the sources are in a single folder.
         for source in args.sources:
             current_sources.append(
                 Source(

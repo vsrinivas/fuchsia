@@ -72,7 +72,7 @@ constexpr uint32_t kEndOfStreamHeight = 52;
 // A client using the min shouldn't necessarily expect performance to be
 // acceptable when running higher bit-rates.
 //
-// TODO(MTWN-249): Set this to ~8k or so.  For now, we boost the
+// TODO(fxbug.dev/13530): Set this to ~8k or so.  For now, we boost the
 // per-packet buffer size to avoid sysmem picking the min buffer size.  The VP9
 // conformance streams have AUs that are > 512KiB, so boosting this to 2MiB
 // until the decoder handles split AUs on input. We need to be able to fit at
@@ -276,7 +276,7 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
-    // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
+    // TODO(fxbug.dev/13532): confirm that REC709 is always what we want here, or plumb
     // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
     // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
     // only other potential possibility here.

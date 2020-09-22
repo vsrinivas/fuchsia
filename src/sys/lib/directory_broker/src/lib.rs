@@ -15,7 +15,7 @@ use {
 
 pub type RoutingFn = Box<dyn FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send + Sync>;
 
-// TODO(ZX-3606): move this into the pseudo dir fs crate.
+// TODO(fxbug.dev/33398): move this into the pseudo dir fs crate.
 /// DirectoryBroker exists to hold a slot in a fuchsia_vfs_pseudo_fs directory and proxy open
 /// requests. A DirectoryBroker holds a closure provided at creation time, and whenever an open
 /// request for this directory entry is received the given ServerEnd is passed into the closure,

@@ -1,7 +1,7 @@
 GN support for Zircon
 =====================
 
-TODO(BLD-353): This will go away when the build is fully unified.
+TODO(fxbug.dev/3156): This will go away when the build is fully unified.
 
 Code in //build/config/fuchsia/zircon.gni populates the
 [`//zircon/public`](../../zircon/public) directory tree with links to

@@ -43,7 +43,7 @@ uint arm_num_cpus = 1;
 arm64_percpu arm64_percpu_array[SMP_MAX_CPUS];
 
 void arch_register_mpid(uint cpu_id, uint64_t mpid) {
-  // TODO(ZX-3068) transition off of these maps to the topology.
+  // TODO(fxbug.dev/32903) transition off of these maps to the topology.
   arm64_cpu_cluster_ids[cpu_id] = (mpid & 0xFF00) >> MPIDR_AFF1_SHIFT;  // "cluster" here is AFF1.
   arm64_cpu_cpu_ids[cpu_id] = mpid & 0xFF;                              // "cpu" here is AFF0.
 

@@ -242,7 +242,7 @@ void convert_std_to_timing(const BaseEdid& edid, const StandardTimingDescriptor&
                            timing_params* params) {
   // Pick the largest resolution advertised by the display and then use the
   // generalized timing formula to compute the timing parameters.
-  // TODO(ZX-1413): Handle secondary GTF and CVT
+  // TODO(fxbug.dev/31310): Handle secondary GTF and CVT
   // TODO(stevensd): Support interlaced modes and margins
   uint32_t width = std.horizontal_resolution();
   uint32_t height = std.vertical_resolution(edid.edid_version, edid.edid_revision);
@@ -299,7 +299,7 @@ void convert_std_to_timing(const BaseEdid& edid, const StandardTimingDescriptor&
   params->vertical_sync_pulse = kVsyncRequired;
   params->vertical_blanking = vsync_bp + kMinPorch;
 
-  // TODO(ZX-1413): Set these depending on if we use default/secondary GTF
+  // TODO(fxbug.dev/31310): Set these depending on if we use default/secondary GTF
   params->flags = timing_params::kPositiveVsync;
 
   params->vertical_refresh_e2 = static_cast<uint32_t>(v_field_rate * 100 + .5);

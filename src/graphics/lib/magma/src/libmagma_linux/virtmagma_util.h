@@ -121,7 +121,7 @@ typedef VirtmagmaObject<magma_semaphore_t, magma_connection_t, 0x3333> virtmagma
 typedef VirtmagmaObject<magma_handle_t, int32_t, 0x4444> virtmagma_handle_t;
 typedef VirtmagmaObject<magma_device_t, OwnedFd, 0x5555> virtmagma_device_t;
 
-// TODO(MA-623): support an object that is a parent of magma_connection_t
+// TODO(fxbug.dev/13228): support an object that is a parent of magma_connection_t
 // This class is a temporary workaround to support magma APIs that do not
 // pass in generic objects capable of holding file descriptors, e.g.
 // magma_duplicate_handle.

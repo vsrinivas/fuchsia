@@ -117,7 +117,7 @@ impl BluetoothFacade {
             return Left(fready(Err(Sl4fError::new("Proxy key already exists, aborting.").into())));
         }
 
-        // TODO(NET-1289): Ensure unwrap() safety
+        // TODO(fxbug.dev/811): Ensure unwrap() safety
         let (service_local, service_remote) = zx::Channel::create().unwrap();
         let service_local = fasync::Channel::from_channel(service_local).unwrap();
         let service_server = fidl::endpoints::ServerEnd::<LocalServiceMarker>::new(service_remote);

@@ -50,14 +50,14 @@ const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(
     h.u64(info.depth_stencil_attachment->uid());
   }
 
-  // TODO(ES-74): track cache hit/miss rates.
+  // TODO(fxbug.dev/7167): track cache hit/miss rates.
   Hash hash = h.value();
   auto pair = framebuffer_cache_.Obtain(hash);
   if (!pair.second) {
     // The cache didn't already have a Framebuffer so it returns an empty
     // FramebufferPtr that we will point at a newly-created Framebuffer.
     //
-    // TODO(ES-76): it smells weird to use an ObjectPool to hold possibly-null
+    // TODO(fxbug.dev/7169): it smells weird to use an ObjectPool to hold possibly-null
     // RefPtrs and then fill them in here.  Maybe ObjectPool can be rejiggered
     // to make this more elegant?
     TRACE_DURATION("gfx", "escher::FramebufferAllocator::ObtainFramebuffer (creation)");

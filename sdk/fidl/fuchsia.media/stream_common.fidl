@@ -438,7 +438,7 @@ table EncryptedFormat {
 /// sent by the StreamProcessor server prior to the delivery of output packets.
 /// Currently, there is no additional format details for decrypted output.
 table DecryptedFormat {
-    // TODO(FIDL-709): Empty tables cause dart analysis error. Remove this
+    // TODO(fxbug.dev/8031): Empty tables cause dart analysis error. Remove this
     // unused field once the issue is resolved.
     1: bool ignore_this_field;
 };

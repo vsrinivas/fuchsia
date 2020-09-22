@@ -113,7 +113,7 @@ void RenderFuncs::ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& fra
       msaa_texture = nullptr;
     } else {
       TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new msaa)");
-      // TODO(SCN-634): use lazy memory allocation and transient attachments
+      // TODO(fxbug.dev/23860): use lazy memory allocation and transient attachments
       // when available.
       msaa_texture = escher->NewAttachmentTexture(
           info.format, info.width, info.height, msaa_sample_count, vk::Filter::eLinear,
@@ -121,7 +121,7 @@ void RenderFuncs::ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& fra
           /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
           frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
                                         : vk::MemoryPropertyFlags()
-          // TODO(ES-73): , vk::ImageUsageFlagBits::eTransientAttachment
+          // TODO(fxbug.dev/7166): , vk::ImageUsageFlagBits::eTransientAttachment
       );
 
       frame->cmds()->ImageBarrier(msaa_texture->image(), vk::ImageLayout::eUndefined,

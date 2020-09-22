@@ -579,7 +579,7 @@ void RenderEngineCommandStreamer::ScheduleContext() {
     mapped_batch->scheduled();
     context->pending_batch_queue().pop();
 
-    // TODO(MA-142) - MoveBatchToInflight should not fail.  Scheduler should verify there is
+    // TODO(fxbug.dev/12764) - MoveBatchToInflight should not fail.  Scheduler should verify there is
     // sufficient room in the ringbuffer before selecting a context.
     // For now, drop the command buffer and try another context.
     if (!MoveBatchToInflight(std::move(mapped_batch))) {

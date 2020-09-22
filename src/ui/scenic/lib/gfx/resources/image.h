@@ -44,7 +44,7 @@ class Image : public ImageBase {
   const escher::ImagePtr& GetEscherImage() override;
   bool use_protected_memory() override { return image_->use_protected_memory(); }
 
-  // TODO(SCN-1010): Determine proper signaling for marking images as dirty.
+  // TODO(fxbug.dev/24223): Determine proper signaling for marking images as dirty.
   void MarkAsDirty() { dirty_ = true; }
 
  protected:

@@ -56,5 +56,5 @@ struct ImageSpec {
     /// Color space.
     ColorSpace color_space;
 
-    // TODO(ZX-2270): Add tiling formats.
+    // TODO(fxbug.dev/32128): Add tiling formats.
 };

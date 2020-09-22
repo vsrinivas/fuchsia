@@ -523,7 +523,7 @@ fit::result<Hierarchy> ReadFromVmo(const zx::vmo& vmo) {
 fit::result<Hierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
   inspect::Snapshot snapshot;
   if (inspect::Snapshot::Create(std::move(buffer), &snapshot) != ZX_OK) {
-    // TODO(CF-865): Best-effort read of invalid snapshots.
+    // TODO(fxbug.dev/4734): Best-effort read of invalid snapshots.
     return fit::error();
   }
   return ReadFromSnapshot(std::move(snapshot));

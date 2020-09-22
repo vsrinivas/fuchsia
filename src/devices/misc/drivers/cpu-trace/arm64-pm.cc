@@ -107,7 +107,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   if (rate == 0) {
     ocfg->fixed_initial_value[ss->num_fixed] = 0;
   } else {
-#if 0  // TODO(ZX-3302): Disable until overflow interrupts are working.
+#if 0  // TODO(fxbug.dev/33106): Disable until overflow interrupts are working.
        // The cycle counter is 64 bits so there's no need to check
        // |icfg->rate[ii]| here.
         ZX_DEBUG_ASSERT(ss->max_fixed_value == UINT64_MAX);
@@ -119,7 +119,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
 #endif
   }
 
-  // TODO(ZX-3302): Disable until overflow interrupts are working.
+  // TODO(fxbug.dev/33106): Disable until overflow interrupts are working.
   if (uses_timebase) {
     zxlogf(ERROR, "%s: data collection rates not supported yet", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -132,7 +132,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   if (flags & fidl_perfmon::EventConfigFlags::COLLECT_USER) {
     pmu_flags |= kPmuConfigFlagUser;
   }
-  // TODO(ZX-3302): PC flag.
+  // TODO(fxbug.dev/33106): PC flag.
   ocfg->fixed_flags[ss->num_fixed] = pmu_flags;
 
   ++ss->num_fixed;
@@ -159,7 +159,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   if (rate == 0) {
     ocfg->programmable_initial_value[ss->num_programmable] = 0;
   } else {
-#if 0  // TODO(ZX-3302): Disable until overflow interrupts are working.
+#if 0  // TODO(fxbug.dev/33106): Disable until overflow interrupts are working.
        // The cycle counter is 64 bits so there's no need to check
        // |icfg->rate[ii]| here.
         if (icfg->rate[ii] > ss->max_programmable_value) {
@@ -196,7 +196,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
 
   ocfg->programmable_hw_events[ss->num_programmable] = details->event;
 
-  // TODO(ZX-3302): Disable until overflow interrupts are working.
+  // TODO(fxbug.dev/33106): Disable until overflow interrupts are working.
   if (uses_timebase) {
     zxlogf(ERROR, "%s: data collection rates not supported yet", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -209,7 +209,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   if (flags & fidl_perfmon::EventConfigFlags::COLLECT_USER) {
     pmu_flags |= kPmuConfigFlagUser;
   }
-  // TODO(ZX-3302): PC flag.
+  // TODO(fxbug.dev/33106): PC flag.
   ocfg->programmable_flags[ss->num_programmable] = pmu_flags;
 
   ++ss->num_programmable;

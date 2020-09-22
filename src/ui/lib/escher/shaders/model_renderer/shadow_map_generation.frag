@@ -1,6 +1,6 @@
 // #included by main.frag
 
-// TODO(ES-109): this code was extracted from the old ad-hoc shader generation
+// TODO(fxbug.dev/7200): this code was extracted from the old ad-hoc shader generation
 // classes so that whoever implements this doesn't have to work though that
 // twisted logic.  But it hasn't ever been tested or run.
 #error Not implemented.

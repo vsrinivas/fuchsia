@@ -38,7 +38,7 @@ paddr_t boot_alloc_end;
 // aspace where asan shadow isn't mapped.
 NO_ASAN __NO_SAFESTACK void boot_alloc_init() {
   boot_alloc_start = reinterpret_cast<paddr_t>(_end);
-  // TODO(ZX-2563): This is a compile-time no-op that defeats any compiler
+  // TODO(fxbug.dev/32414): This is a compile-time no-op that defeats any compiler
   // optimizations based on its knowledge/assumption that `&_end` is a
   // constant here that equals the `&_end` constant as computed elsewhere.
   // Without this, the compiler can see that boot_alloc_start is never set to

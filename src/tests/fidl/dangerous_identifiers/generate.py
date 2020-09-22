@@ -104,7 +104,7 @@ def struct_types(f, idents):
   # structs with every dangerous name
   f.write('using membertype = uint32;\n')
   for ident in idents:
-    # TODO(FIDL-720): Having a declaration with same same name as what is
+    # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
     # aliased causes a cycle.
     if ident == "uint32":
       continue
@@ -126,14 +126,14 @@ def struct_names(f, idents):
     f.write('  uint32 %s;\n' % ident)
   f.write('};\n')
 
-# TODO(FIDL-759)
+# TODO(fxbug.dev/8081)
 # Temporarily disabled due to superlinear compiler time and peak memory usage.
 # @use
 # def union_names(f, idents):
 #   # unions with every dangerous name
 #   f.write('using membertype = uint32;\n')
 #   for ident in idents:
-#     # TODO(FIDL-720): Having a declaration with same same name as what is
+#     # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
 #     # aliased causes a cycle.
 #     if ident == "uint32":
 #       continue
@@ -161,7 +161,7 @@ def table_names(f, idents):
   # tables with every dangerous name
   f.write('using membertype = uint32;\n')
   for ident in idents:
-    # TODO(FIDL-720): Having a declaration with same same name as what is
+    # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
     # aliased causes a cycle.
     if ident == "uint32":
       continue

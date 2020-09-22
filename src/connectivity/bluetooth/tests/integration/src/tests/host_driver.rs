@@ -299,7 +299,7 @@ async fn wait_for_test_peer(
     Ok((peer_id, proxy))
 }
 
-// TODO(BT-932) - Add a test for disconnect failure when a connection attempt is outgoing, provided
+// TODO(fxbug.dev/1525) - Add a test for disconnect failure when a connection attempt is outgoing, provided
 // that we can provide a manner of doing so that will not flake.
 
 /// Disconnecting from an unknown device should succeed
@@ -361,7 +361,7 @@ async fn test_forget(harness: HostDriverHarness) -> Result<(), Error> {
     expect_eq!(Ok(()), status)?;
     expect_no_peer(&harness, id.into()).await?;
 
-    // TODO(BT-879): Test that the link closes by querying fake HCI.
+    // TODO(fxbug.dev/1472): Test that the link closes by querying fake HCI.
 
     Ok(())
 }

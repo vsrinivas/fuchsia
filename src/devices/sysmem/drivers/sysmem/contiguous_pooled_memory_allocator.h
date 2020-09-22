@@ -30,7 +30,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // Default to page alignment.
   zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
 
-  // TODO(MTWN-329): Use this for VDEC.
+  // TODO(fxbug.dev/13609): Use this for VDEC.
   //
   // This uses a physical VMO as the parent VMO.
   zx_status_t InitPhysical(zx_paddr_t paddr);

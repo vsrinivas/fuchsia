@@ -60,7 +60,7 @@ protocol Session {
     // to other clocks separately.  That would make it possible to present
     // content (animations, media, and UI) in "slow mode" simply by varying the
     // timing relation, assuming clients play along.
-    // TODO(SCN-400): document invariants that apply to `presentation_info`.  Is it
+    // TODO(fxbug.dev/23637): document invariants that apply to `presentation_info`.  Is it
     // strong enough to guarantee that receiving the response means that all
     // previously-enqueued Commands have been applied?  Or does it need to be stronger,
     // e.g. that all frames based on previous presentations are completely done,

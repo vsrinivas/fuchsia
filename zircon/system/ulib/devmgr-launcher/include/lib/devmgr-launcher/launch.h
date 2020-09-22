@@ -51,7 +51,7 @@ struct Args {
   bool no_exit_after_suspend = false;
 
   // The following arguments are for devmgr_integration_test::IsolatedDevmgr only.
-  // TODO(ZX-4590): Clean this up, devmgr-launcher shouldn't define arguments that are consumed
+  // TODO(fxbug.dev/34365): Clean this up, devmgr-launcher shouldn't define arguments that are consumed
   // by a different library higher up the stack.
 
   // Function to handle requests for boot items.

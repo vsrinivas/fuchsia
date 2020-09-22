@@ -698,7 +698,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 		e.Members = append(e.Members, EnumMember{
 			Attributes: v.Attributes,
 			Name:       compileCamelIdentifier(v.Name),
-			// TODO(FIDL-324): When we expose types consistently in the IR, we
+			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
 			Value: c.compileConstant(v.Value, types.Type{
 				Kind:             types.PrimitiveType,

@@ -88,7 +88,7 @@ fbl::unique_fd FindGpt() {
     path[PATH_MAX - 1] = '\0';
     strncpy(path, r.path.data(), std::min<size_t>(PATH_MAX, r.path.size()));
 
-    // TODO(ZX-1344): This is a hack, but practically, will work for our
+    // TODO(fxbug.dev/31250): This is a hack, but practically, will work for our
     // usage.
     //
     // The GPT which will contain an FVM should be the first non-removable

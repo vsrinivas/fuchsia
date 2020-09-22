@@ -72,7 +72,7 @@ test("tests") {
     "//garnet/public/lib/fostr/fidl/fuchsia.example.fostr",
     "//src/lib/fsl",
 
-    # TODO(FIDL-623): Remove dependency on fuchsia.sys. We should instead be
+    # TODO(fxbug.dev/7945): Remove dependency on fuchsia.sys. We should instead be
     # using the fuchsia.example.fostr library to avoid changes in unrelated code
     # to break tests here.
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",

@@ -104,13 +104,13 @@ struct BondingData {
 };
 
 /// Represents persistent local host data.
-// TODO(BT-813): Consider using a table instead of struct.
+// TODO(fxbug.dev/1406): Consider using a table instead of struct.
 struct HostData {
     /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
     /// Addresses when privacy is enabled.
     ///
     /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
     /// care to assign an IRK that consistent with the local bt-host identity.
-    // TODO(BT-815): Document behavior once there is a better privacy policy when `irk` is null.
+    // TODO(fxbug.dev/1408): Document behavior once there is a better privacy policy when `irk` is null.
     LocalKey? irk;
 };

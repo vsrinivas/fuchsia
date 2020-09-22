@@ -87,7 +87,7 @@ void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
 }
 
 uint32_t OpcodeToCommand(uint32_t opcode) {
-  // TODO(ZX-1826): Unify block protocol and block device interface
+  // TODO(fxbug.dev/31695): Unify block protocol and block device interface
   static_assert(BLOCK_OP_READ == BLOCKIO_READ, "");
   static_assert(BLOCK_OP_WRITE == BLOCKIO_WRITE, "");
   static_assert(BLOCK_OP_FLUSH == BLOCKIO_FLUSH, "");
@@ -294,7 +294,7 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
 
   bp->Query(&bs->info_, &bs->block_op_size_);
 
-  // TODO(ZX-1583): Allocate BlockMsg arena based on block_op_size_.
+  // TODO(fxbug.dev/31467): Allocate BlockMsg arena based on block_op_size_.
 
   *out = std::move(bs);
   return ZX_OK;
@@ -303,7 +303,7 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
 zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   groupid_t group = request->group;
 
-  // TODO(ZX-1586): Reduce the usage of this lock (only used to protect
+  // TODO(fxbug.dev/31470): Reduce the usage of this lock (only used to protect
   // IoBuffers).
   fbl::AutoLock server_lock(&server_lock_);
 

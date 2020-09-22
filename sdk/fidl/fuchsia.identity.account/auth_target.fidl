@@ -57,7 +57,7 @@ protocol AuthTarget {
         AuthChangeGranularity granularity)
         -> () error Error;
 
-    // TODO(AUTH-220): Add methods that request in increase in the authentication
+    // TODO(fxbug.dev/562): Add methods that request in increase in the authentication
     //                 state or authentication for a particular event.
 };
 
@@ -101,7 +101,7 @@ protocol Account {
     /// `persona` The server end of a `Persona` channel
     GetPersona(LocalPersonaId id, request<Persona> persona) -> () error Error;
 
-    // TODO(AUTH-221): Add methods to create, delete, and manage personae.
+    // TODO(fxbug.dev/563): Add methods to create, delete, and manage personae.
 
     /// Returns the service provider account that can be used to access the
     /// Fuchsia account if more direct methods of authentication are not
@@ -191,7 +191,7 @@ protocol Persona {
     ///                   tokens that they created.
     /// `token_manager` The server end of a `TokenManager` channel
     GetTokenManager(
-        // TODO(AUTH-218): Migrate token manager to a more appropriate form
+        // TODO(fxbug.dev/560): Migrate token manager to a more appropriate form
         // of software identity. This is likely to be some verifiable
         // representation of the organization that wrote the software, such as
         // a URL domain.
@@ -211,7 +211,7 @@ protocol Persona {
     ///                   their own keys.
     /// `key_manager` The server end of a `KeyManager` channel
     GetKeyManager(
-        // TODO(AUTH-218): Migrate key manager to a more appropriate form
+        // TODO(fxbug.dev/560): Migrate key manager to a more appropriate form
         // of software identity. This might be a set of whitelisted URLs or a
         // simple enum.
         fuchsia.sys.component_url application_url,

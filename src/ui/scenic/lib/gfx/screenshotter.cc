@@ -31,7 +31,7 @@ namespace {
 // HACK(SCN-1253): The FIDL requires a valid VMO (even in failure cases).
 fuchsia::ui::scenic::ScreenshotData EmptyScreenshot() {
   fuchsia::ui::scenic::ScreenshotData screenshot;
-  // TODO(SCN-1253): If we can't create an empty VMO, bail because otherwise the
+  // TODO(fxbug.dev/24454): If we can't create an empty VMO, bail because otherwise the
   // caller will hang indefinitely.
   FX_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
   return screenshot;
@@ -168,7 +168,7 @@ void Screenshotter::TakeScreenshot(
   image_info.usage = vk::ImageUsageFlagBits::eColorAttachment |
                      vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 
-  // TODO(ES-7): cache is never trimmed.
+  // TODO(fxbug.dev/23725): cache is never trimmed.
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
   escher::FramePtr frame = escher->NewFrame("Scenic Compositor", 0);
 
@@ -194,13 +194,13 @@ void Screenshotter::TakeScreenshot(
       vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eFragmentShader |
           vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer);
 
-  // TODO(SCN-1096): Nobody signals this semaphore, so there's no point.  One
+  // TODO(fxbug.dev/24304): Nobody signals this semaphore, so there's no point.  One
   // way that it could be used is export it as a zx::event and watch for that to
   // be signaled instead of adding a completion-callback to the command-buffer.
   auto frame_done_semaphore = escher::Semaphore::New(escher->vk_device());
   frame->EndFrame(frame_done_semaphore, nullptr);
 
-  // TODO(SCN-1096): instead of submitting another command buffer, this could be
+  // TODO(fxbug.dev/24304): instead of submitting another command buffer, this could be
   // done as part of the same Frame above.
 
   vk::Queue queue = escher->command_buffer_pool()->queue();

@@ -49,7 +49,7 @@ HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& r
   SET_BITFIELD_AND(ht_cap_info, ldpc_coding_cap);
   SET_BITFIELD_AND(ht_cap_info, chan_width_set);
 
-  // TODO(NET-1267): Revisit SM power save mode when necessary. IEEE
+  // TODO(fxbug.dev/29404): Revisit SM power save mode when necessary. IEEE
   // 802.11-2016 11.2.6
   if (lhs.ht_cap_info.sm_power_save() == HtCapabilityInfo::SmPowerSave::DISABLED ||
       rhs.ht_cap_info.sm_power_save() == HtCapabilityInfo::SmPowerSave::DISABLED) {
@@ -140,7 +140,7 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 
   auto& vht_cap_info = vhtc.vht_cap_info;
   SET_BITFIELD_MIN(vht_cap_info, max_mpdu_len);
-  // TODO(NET-1267): IEEE 802.11-2016 Table 9-250. Revisit when necessary
+  // TODO(fxbug.dev/29404): IEEE 802.11-2016 Table 9-250. Revisit when necessary
   // supported_cbw_set needs to be considered in conjunction with ext_nss_bw
   // below
   SET_BITFIELD_MIN(vht_cap_info, supported_cbw_set);

@@ -51,7 +51,7 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) 
     }
   }
 
-  // TODO(SCN-16): Need to have a database of devices and a more robust way
+  // TODO(fxbug.dev/23273): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {
     // Assume that the device is an Acer Switch 12 Alpha.
@@ -75,7 +75,7 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) 
     FX_LOGS(INFO) << "RootPresenter: treating device as a 27in 2k monitor.";
     return 5.22f;
   } else {
-    // TODO(SCN-384): Don't lie.
+    // TODO(fxbug.dev/23621): Don't lie.
     FX_LOGS(WARNING) << "RootPresenter: unrecognized display.";
     return 9.f;
   }
@@ -83,7 +83,7 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) 
 
 fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
                                                                uint32_t height_in_px) {
-  // TODO(SCN-16): Need to have a database of devices and a more robust way
+  // TODO(fxbug.dev/23273): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   {
     std::string raw_display_usage;
@@ -118,7 +118,7 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in
     // Assume the display is a 24in monitor.
     return fuchsia::ui::policy::DisplayUsage::kNear;
   } else {
-    // TODO(SCN-384): Don't lie.
+    // TODO(fxbug.dev/23621): Don't lie.
     return fuchsia::ui::policy::DisplayUsage::kClose;
   }
 }

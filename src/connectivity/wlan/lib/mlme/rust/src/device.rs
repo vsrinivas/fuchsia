@@ -37,7 +37,7 @@ impl TxFlags {
     pub const NONE: Self = Self(0);
     pub const PROTECTED: Self = Self(1);
     pub const FAVOR_RELIABILITY: Self = Self(1 << 1);
-    // TODO(WLAN-1002): remove once MLME supports QoS tag.
+    // TODO(fxbug.dev/29622): remove once MLME supports QoS tag.
     pub const QOS: Self = Self(1 << 2);
 }
 

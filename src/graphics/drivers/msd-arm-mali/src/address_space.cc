@@ -81,10 +81,10 @@ bool AddressSpace::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* b
   if (start_page_index + num_pages > bus_mapping->page_offset() + bus_mapping->page_count())
     return DRETF(false, "invalid bus mapping");
 
-  // TODO(MA-352): ensure the range isn't currently in use.
+  // TODO(fxbug.dev/12966): ensure the range isn't currently in use.
 
   for (uint64_t i = 0; i < num_pages; i++) {
-    // TODO(MA-364): optimize walk to not get page table every time.
+    // TODO(fxbug.dev/12978): optimize walk to not get page table every time.
     uint64_t page_index = i + addr / PAGE_SIZE;
     PageTable* page_table = root_page_directory_->GetPageTableLevel0(page_index, true);
     if (!page_table)
@@ -113,7 +113,7 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length) {
 
   std::vector<std::unique_ptr<PageTable>> empty_tables;
   for (uint64_t i = 0; i < num_pages; i++) {
-    // TODO(MA-364): optimize walk to not get page table every time.
+    // TODO(fxbug.dev/12978): optimize walk to not get page table every time.
     uint64_t page_index = i + start_page_index;
     PageTable* page_table = root_page_directory_->GetPageTableLevel0(page_index, false);
     if (!page_table)

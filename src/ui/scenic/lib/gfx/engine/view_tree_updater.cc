@@ -54,7 +54,7 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
       if (curr->IsKindOf<ViewNode>() && curr->As<ViewNode>()->GetView()) {
         root = curr->As<ViewNode>()->GetView()->view_ref_koid();
         FX_DCHECK(root != ZX_KOID_INVALID) << "invariant";
-        // TODO(SCN-1249): Enable following check when one-view-per-session is enforced.
+        // TODO(fxbug.dev/24450): Enable following check when one-view-per-session is enforced.
         // FX_DCHECK(root_view_ && root_view_->view_ref_koid() == root)
         //    << "invariant: session's root-view-discovered and root-view-purported must match.";
         now_connected = true;

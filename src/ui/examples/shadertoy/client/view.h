@@ -19,7 +19,7 @@
 
 namespace shadertoy_client {
 
-// TODO(SCN-1521): Should be folded back into ShadertoyClientView. This used to
+// TODO(fxbug.dev/24703): Should be folded back into ShadertoyClientView. This used to
 // be common functionality for |ShadertoyClientView| and a different View class
 // that used the old Views API.
 class ViewImpl {

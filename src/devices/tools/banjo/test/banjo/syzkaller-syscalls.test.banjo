@@ -113,7 +113,7 @@ enum zx_object_wait_async_options : uint32 {
     ZX_WAIT_ASYNC_TIMESTAMP = 1;
 };
 
-// TODO(SEC-368): conditional declaration
+// TODO(fxbug.dev/25090): conditional declaration
 enum zx_object_property_values : uint32 {
     ZX_PROP_NAME = 3;
     // if __x86_64__
@@ -387,7 +387,7 @@ enum zx_info_maps_type_vals : uint32 {
     ZX_INFO_MAPS_TYPE_MAPPING = 3;
 };
 
-// TODO(SEC-369): nested named union
+// TODO(fxbug.dev/25091): nested named union
 [valueset = "type zx_info_maps_type_vals",
  argtype = "name IN"]
 struct zx_info_maps {
@@ -564,7 +564,7 @@ enum thread_state_kind : uint32 {
     ZX_THREAD_X86_REGISTER_GS = 7;
 };
 
-// TODO(SEC-368): These unions need the architecture
+// TODO(fxbug.dev/25090): These unions need the architecture
 // dependent struct declarations to be present
 
 //// 1-1 mapping with thread_state_kind
@@ -603,7 +603,7 @@ enum thread_state_kind : uint32 {
     //array<uint32>:1 type7;
 //};
 
-// TODO(SEC-368): conditional declaration
+// TODO(fxbug.dev/25090): conditional declaration
 //#if defined(__x86_64__)
 //struct zx_thread_state_general_regs {
     //uint64 rax;
@@ -781,7 +781,7 @@ struct zx_packet_guest_bell {
     uint64 reserved2;
 };
 
-// TODO(SEC-368): conditional declaration
+// TODO(fxbug.dev/25090): conditional declaration
 [argtype = "inst_buf IN",
  argtype = "reserved IN"]
 struct zx_packet_guest_mem {
@@ -801,7 +801,7 @@ struct zx_packet_guest_mem {
 //#endif
 };
 
-// TODO(SEC-369): anonymous union
+// TODO(fxbug.dev/25091): anonymous union
 struct zx_packet_guest_io {
     uint16 port;
     uint8 access_size;
@@ -817,7 +817,7 @@ struct zx_packet_guest_io {
     uint64 reserved2;
 };
 
-// TODO(SEC-369): anonymous union
+// TODO(fxbug.dev/25091): anonymous union
 struct zx_packet_guest_vcpu {
     //union {
         //struct {
@@ -849,7 +849,7 @@ struct zx_packet_page_request {
     uint64 reserved1;
 };
 
-// TODO(SEC-369): anonymous union
+// TODO(fxbug.dev/25091): anonymous union
 [valueset = "type zx_port_packet"]
 struct zx_port_packet {
     uint64 key;
@@ -995,7 +995,7 @@ struct zx_profile_scheduler {
 };
 
 
-// TODO(SEC-369): anonymous union
+// TODO(fxbug.dev/25091): anonymous union
 [valueset = "type zx_profile_info_type"]
 struct zx_profile_info {
     uint32 type;
@@ -1199,7 +1199,7 @@ union zx_vcpu_write_state_types {
     array<zx_vcpu_io>:1 type2;
 };
 
-// TODO(SEC-368): conditional declaration
+// TODO(fxbug.dev/25090): conditional declaration
 struct zx_vcpu_state {
 //#if __aarch64__
     //array<uint64>:31 x;
@@ -1228,7 +1228,7 @@ struct zx_vcpu_state {
 //#endif
 };
 
-// TODO(SEC-369): anonymous union
+// TODO(fxbug.dev/25091): anonymous union
 struct zx_vcpu_io {
     uint8 access_size;
     //union {
@@ -1446,7 +1446,7 @@ protocol Api {
     /// Set various properties of various kernel objects.
     [rights="handle must have ZX_RIGHT_SET_PROPERTY.",
      rights="If property is ZX_PROP_PROCESS_DEBUG_ADDR, handle must be of type ZX_OBJ_TYPE_PROCESS.",
-    // TODO(ZX-2967): TODO(scottmg): Why is the above useful?
+    // TODO(fxbug.dev/32803): TODO(scottmg): Why is the above useful?
      rights="If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.",
      rights="If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.",
      rights="If property is ZX_PROP_JOB_KILL_ON_OOM, handle must be of type ZX_OBJ_TYPE_JOB.",
@@ -1471,7 +1471,7 @@ protocol Api {
      rights="If topic is ZX_INFO_PROCESS_MAPS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
      rights="If topic is ZX_INFO_PROCESS_VMOS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
      rights="If topic is ZX_INFO_VMO, handle must be of type ZX_OBJ_TYPE_VMO.",
-    // TODO(ZX-2967),   Should this require INSPECT?
+    // TODO(fxbug.dev/32803),   Should this require INSPECT?
      rights="If topic is ZX_INFO_VMAR, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_INSPECT.",
      rights="If topic is ZX_INFO_CPU_STATS, handle must have resource kind ZX_RSRC_KIND_ROOT.",
      rights="If topic is ZX_INFO_KMEM_STATS, handle must have resource kind ZX_RSRC_KIND_ROOT.",
@@ -1495,7 +1495,7 @@ protocol Api {
     /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
     [rights="handle must have ZX_RIGHT_ENUMERATE.",
      valueset="rights zx_rights"]
-    // TODO(ZX-2399): handle rights must be the same or greater than |rights|
+    // TODO(fxbug.dev/32253): handle rights must be the same or greater than |rights|
     object_get_child(handle handle, zx.koid koid, zx.rights rights) ->
         (zx.status status, handle out);
 
@@ -1614,7 +1614,7 @@ protocol Api {
      argtype="name IN",
      argtype="proc_handle handle_acquire",
      argtype="vmar_handle handle_acquire"]
-    // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
+    // TODO(fxbug.dev/32803): job with ZX_RIGHT_WRITE is also accepted.
     process_create(handle<job> job, string:name_size name, usize name_size, uint32 options) ->
         (zx.status status, handle<process> proc_handle, handle<vmar> vmar_handle);
 
@@ -1652,7 +1652,7 @@ protocol Api {
     /// Create a new job.
     [rights="parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB.",
      argtype="out handle_acquire"]
-    // TODO(ZX-2967): parent_job with ZX_RIGHT_WRITE is also accepted.
+    // TODO(fxbug.dev/32803): parent_job with ZX_RIGHT_WRITE is also accepted.
     job_create(handle<job> parent_job, uint32 options) -> (zx.status status, handle<job> out);
 
     /// Set job security and resource policies.
@@ -1859,7 +1859,7 @@ protocol Api {
         -> (zx.status status);
 
     /// Read the current size of a VMO object.
-    // TODO(ZX-2967): No rights required?
+    // TODO(fxbug.dev/32803): No rights required?
     vmo_get_size(handle<vmo> handle) -> (zx.status status, uint64 size);
 
     /// Resize a VMO object.
@@ -1897,8 +1897,8 @@ protocol Api {
      rights="vmex must have resource kind ZX_RSRC_KIND_VMEX.",
      argtype="handle handle_release_always",
      argtype="out handle_acquire"]
-    // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
-    // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
+    // TODO(fxbug.dev/32803): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
+    // TODO(fxbug.dev/32803): vmex == ZX_HANDLE_INVALID also accepted.
     vmo_replace_as_executable(handle<vmo> handle, handle<resource> vmex) ->
         (zx.status status, handle<vmo> out);
 
@@ -1919,21 +1919,21 @@ protocol Api {
         (zx.status status, handle<vmar> child_vmar, zx.vaddr child_addr);
 
     /// Destroy a virtual memory address region.
-    // TODO(ZX-2967): handle No rights required?
+    // TODO(fxbug.dev/32803): handle No rights required?
     vmar_destroy(handle<vmar> handle) -> (zx.status status);
 
     /// Add a memory mapping.
     [rights="handle must be of type ZX_OBJ_TYPE_VMAR.",
      rights="vmo must be of type ZX_OBJ_TYPE_VMO.",
      valueset="options zx_vmar_allocate_map_options"]
-    // TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
+    // TODO(fxbug.dev/32253): TODO handle and vmo and options must all match, and options can't specify them.
     vmar_map(handle<vmar> handle, zx.vm_option options, uint64 vmar_offset,
              handle<vmo> vmo, uint64 vmo_offset,
              uint64 len) ->
         (zx.status status, zx.vaddr mapped_addr);
 
     /// Unmap virtual memory pages.
-    // TODO(ZX-2967): handle No rights required?
+    // TODO(fxbug.dev/32803): handle No rights required?
     vmar_unmap(handle<vmo> handle, zx.vaddr addr, uint64 len) -> (zx.status status);
 
     /// Set protection of virtual memory pages.
@@ -2018,7 +2018,7 @@ protocol Api {
     /// Unmap memory, close handle, exit.
     [vdsocall,
      argtype="close_handle handle_release"]
-    // TODO(ZX-2399): ???
+    // TODO(fxbug.dev/32253): ???
     vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
                                         zx.vaddr addr, usize size,
                                         handle close_handle) ->
@@ -2041,7 +2041,7 @@ protocol Api {
     //
     //
 
-    // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
+    // TODO(fxbug.dev/32803): handle == ZX_HANDLE_INVALID accepted.
     [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
      argtype="out handle_acquire",
      valueset="options zx_debuglog_create_options"]
@@ -2141,7 +2141,7 @@ protocol Api {
     interrupt_wait(handle<interrupt> handle) -> (zx.status status, zx.time out_timestamp);
 
     /// Destroys an interrupt object.
-    // TODO(ZX-2967): No DESTROY rights here.
+    // TODO(fxbug.dev/32803): No DESTROY rights here.
     interrupt_destroy(handle<interrupt> handle) -> (zx.status status);
 
     /// Acknowledge an interrupt and re-arm it.
@@ -2202,7 +2202,7 @@ protocol Api {
     /// Create a new bus transaction initiator.
     [rights="iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.",
      argtype="out handle_acquire"]
-    // TODO(ZX-2967): This is unusual.
+    // TODO(fxbug.dev/32803): This is unusual.
     bti_create(handle<iommu> iommu, uint32 options, uint64 bti_id) ->
         (zx.status status, handle<bti> out);
 
@@ -2226,7 +2226,7 @@ protocol Api {
 
     /// Unpin pages and revoke device access to them.
     [argtype="handle handle_release_always"]
-    // TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
+    // TODO(fxbug.dev/32803): handle ZX_OBJ_TYPE_PMT; No rights required?
     pmt_unpin(handle<pmt> handle) -> (zx.status status);
 
 
@@ -2241,7 +2241,7 @@ protocol Api {
         (zx.status status, uint32 format, uint32 width, uint32 height, uint32 stride);
 
     [rights="resource must have resource kind ZX_RSRC_KIND_ROOT."]
-    // TODO(ZX-2967): vmo ZX_OBJ_TYPE_VMO; No rights required?
+    // TODO(fxbug.dev/32803): vmo ZX_OBJ_TYPE_VMO; No rights required?
     framebuffer_set_range(handle<resource> resource,
                           handle<vmo> vmo, uint32 len, uint32 format,
                           uint32 width, uint32 height, uint32 stride) ->
@@ -2336,7 +2336,7 @@ protocol Api {
     /// Make Secure Monitor Call (SMC) from user space.
     [argtype="parameters IN",
      argtype="out_smc_result OUT"]
-    // TODO(ZX-2967): handle No rights required?
+    // TODO(fxbug.dev/32803): handle No rights required?
     smc_call(handle handle, array<zx_smc_parameters>:1 parameters) ->
         (zx.status status, zx_smc_result out_smc_result);
 

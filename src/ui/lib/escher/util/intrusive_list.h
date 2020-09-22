@@ -13,7 +13,7 @@ namespace escher {
 
 // Base class for items that can be stored in an IntrusiveList.
 //
-// TODO(SCN-693): A fancier implementation would make next/prev private.  Until
+// TODO(fxbug.dev/23915): A fancier implementation would make next/prev private.  Until
 // then, we trust Escher clients to not frob these pointers.
 template <typename T>
 struct IntrusiveListItem {

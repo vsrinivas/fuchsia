@@ -850,7 +850,7 @@ impl HostDispatcher {
         // TODO(armansito): Make sure that the bt-host device is left in a well-known state if any
         // of these operations fails.
 
-        // TODO(PKG-47): The following code applies a number of configurations to the bt-host by
+        // TODO(fxbug.dev/22017): The following code applies a number of configurations to the bt-host by
         // default. We should tie these to a package configuration (once it is possible), as some of these
         // are undesirable in certain situations, e.g when running PTS tests.
         //

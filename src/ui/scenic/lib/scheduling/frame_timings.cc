@@ -56,7 +56,7 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
     return;
   }
 
-  // TODO(SCN-1324): We currently only return the time of the longest received
+  // TODO(fxbug.dev/24518): We currently only return the time of the longest received
   // render time. This is not a problem right now, since we only have cases with
   // a single swapchain/display, but need to figure out how to handle the
   // general case.
@@ -99,7 +99,7 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx::time time) {
   if (!received_all_frame_presented_callbacks()) {
     return;
   }
-  // TODO(SCN-1324): We currently only return the time of the longest received
+  // TODO(fxbug.dev/24518): We currently only return the time of the longest received
   // render time. This is not a problem right now, since we only have cases with
   // a single swapchain/display, but need to figure out how to handle the
   // general case.

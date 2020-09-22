@@ -246,7 +246,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 
 	// If we do not load a kernel into RAM, then we reboot back into the first kernel
 	// partition; else we boot directly from RAM.
-	// TODO(ZX-2069): Eventually, no such kernel should be present.
+	// TODO(fxbug.dev/31931): Eventually, no such kernel should be present.
 	hasRAMKernel := files[len(files)-1].name == constants.KernelNetsvcName
 	return hasRAMKernel, err
 }

@@ -82,7 +82,7 @@ fn write_block(
     block_dev.seek(SeekFrom::Start(offset * block_size as u64))?;
     let data: Vec<u8> = vec![value; block_size as usize];
     block_dev.write_all(&data)?;
-    // TODO(ZX-3294): We may want to support sync through the block
+    // TODO(fxbug.dev/33099): We may want to support sync through the block
     // protocol, but in the interim, it is unsupported.
     // block_dev.sync_all()?;
     Ok(())

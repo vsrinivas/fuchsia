@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-// TODO(ZX-992): Need to be able to r/w MSRs.
+// TODO(fxbug.dev/30938): Need to be able to r/w MSRs.
 // The thought is to use resources (as in ResourceDispatcher), at which point
 // this will all get rewritten. Until such time, the goal here is KISS.
 // This file contains the lower part of Intel Processor Trace support that must
@@ -220,7 +220,7 @@ zx_status_t x86_ipt_free_trace() {
   // Terminating tracing in thread mode is done differently: Tracing state
   // is recorded, in part, with traced threads.
   // This is the only situation where this fails.
-  // TODO(ZX-892): We could take a more heavy-handed approach here and
+  // TODO(fxbug.dev/30840): We could take a more heavy-handed approach here and
   // do the work necessary to clear out tracing on all threads. It's a bit
   // of work, but the resulting functionality would simplify the u/i.
   if (trace_mode == IPT_MODE_THREAD) {
@@ -351,7 +351,7 @@ zx_status_t x86_ipt_stop() {
   // Stopping tracing in thread mode is done differently: Tracing state
   // is recorded, in part, with traced threads.
   // This is the only situation where this fails.
-  // TODO(ZX-892): We could take a more heavy-handed approach here and
+  // TODO(fxbug.dev/30840): We could take a more heavy-handed approach here and
   // do the work necessary to clear out tracing on all threads. It's a bit
   // of work, but the resulting functionality would simplify the u/i.
   if (trace_mode == IPT_MODE_THREAD) {

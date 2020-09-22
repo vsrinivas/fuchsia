@@ -72,7 +72,7 @@ class FrameRenderer {
   // FrameTimings::OnFrameRendered/Presented/Dropped(). Otherwise, rendering did not occur for some
   // reason, and the FrameScheduler should not expect to receive any timing information for that
   // frame.
-  // TODO(SCN-1089): these return value semantics are not ideal.  See comments in
+  // TODO(fxbug.dev/24297): these return value semantics are not ideal.  See comments in
   // Engine::RenderFrame() regarding this same issue.
   virtual RenderFrameResult RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
                                         zx::time presentation_time) = 0;

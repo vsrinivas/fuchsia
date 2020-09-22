@@ -290,7 +290,7 @@ impl DisplayMetrics {
     /// The display pixel density used for a 27 inch monitor.
     const MONITOR_27_IN_2K_DENSITY: f32 = 5.22;
 
-    // TODO(SCN-384): Don't lie.
+    // TODO(fxbug.dev/23621): Don't lie.
     /// The display pixel density used as default when no other default device matches.
     const DEFAULT_DENSITY: f32 = 9.0;
 

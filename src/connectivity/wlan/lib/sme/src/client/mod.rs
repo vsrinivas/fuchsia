@@ -133,7 +133,7 @@ impl ConnectFailure {
         //       For association, we don't have a failure type for timeout, so cannot deduce
         //       whether an association failure is due to timeout.
         //
-        // TODO(WLAN-1286): Change JOIN_FAILURE_TIMEOUT -> JOIN_FAILURE
+        // TODO(fxbug.dev/29897): Change JOIN_FAILURE_TIMEOUT -> JOIN_FAILURE
         match self {
             ConnectFailure::AuthenticationFailure(failure) => match failure {
                 fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => true,

@@ -11,7 +11,7 @@
 
 namespace minfs {
 
-// TODO(ZX-2781): Break up transactions into chunks so that journal size
+// TODO(fxbug.dev/32627): Break up transactions into chunks so that journal size
 //                is not dependent on block bitmap size.
 
 // Calculates and returns the maximum number of block bitmap blocks, based on |info_|.

@@ -329,7 +329,7 @@ class Using final : public SourceElement {
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<CompoundIdentifier> using_path;
   std::unique_ptr<Identifier> maybe_alias;
-  // TODO(FIDL-483): Use a special purpose AST element, as is the case in the
+  // TODO(fxbug.dev/7807): Use a special purpose AST element, as is the case in the
   // flat AST.
   std::unique_ptr<TypeConstructor> maybe_type_ctor;
 };

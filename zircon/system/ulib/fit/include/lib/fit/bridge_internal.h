@@ -74,7 +74,7 @@ class bridge_state final {
   std::atomic<uint32_t> ref_count_{2};
 
   // The disposition of the bridge.
-  // TODO(CF-246): It should be possible to implement a lock-free algorithm
+  // TODO(fxbug.dev/4139): It should be possible to implement a lock-free algorithm
   // so as to eliminate the re-entrance hazards by introducing additional
   // intermediate dispositions such that |task_| and |result| could be
   // safely accessed while in those states.

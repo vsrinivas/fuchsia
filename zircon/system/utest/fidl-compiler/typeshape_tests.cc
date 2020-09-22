@@ -1663,7 +1663,7 @@ flexible union PaddingCheck {
                          .max_out_of_line = 56,
                          .depth = 1,
                          // xunion always have padding, because its ordinal is 32 bits.
-                         // TODO(FIDL-648): increase the ordinal size to 64 bits, such that
+                         // TODO(fxbug.dev/7970): increase the ordinal size to 64 bits, such that
                          // there is no padding.
                          .has_padding = true,
                          .has_flexible_envelope = true,

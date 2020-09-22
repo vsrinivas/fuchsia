@@ -79,7 +79,7 @@ void WaitForThreadState(zx_handle_t thread_handle, zx_thread_state_t state) {
 }
 
 // Test current behavior when transferring a channel with pending calls out of the current process.
-// TODO(ZX-4233): This test ensures that currently undefined behavior does not change
+// TODO(fxbug.dev/34013): This test ensures that currently undefined behavior does not change
 // unexpectedly. Once the behavior is properly undefined, this test should be updated.
 TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
   constexpr uint32_t kRequestPayload = 0xc0ffee;

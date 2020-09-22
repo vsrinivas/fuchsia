@@ -83,7 +83,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
     glyph_bits[i] = 0x1ffffff;
   }
 
-  // TODO(ES-208): glyphs for ASCII 0x0 - 0x1F
+  // TODO(fxbug.dev/7297): glyphs for ASCII 0x0 - 0x1F
 
   // 'space'
   // .....
@@ -123,7 +123,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 1010 1111 1010 1011 1110 1010
   glyph_bits[int32_t{'#'}] = 0xafabea;
 
-  // TODO(ES-208): glyphs for $%&\()*+
+  // TODO(fxbug.dev/7297): glyphs for $%&\()*+
 
   // '-'
   // .....
@@ -244,7 +244,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 0001 1111 1000 1111 1100 0011 1111
   glyph_bits[int32_t{'9'}] = 0x1f8fc3f;
 
-  // TODO(ES-208): glyphs for ASCII 0x3A - 0x40 and 0x44 - 0x7F
+  // TODO(fxbug.dev/7297): glyphs for ASCII 0x3A - 0x40 and 0x44 - 0x7F
 
   // ‘A’
   // ..1..
@@ -300,7 +300,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 11111 10000 11110 10000 10000
   glyph_bits[int32_t{'F'}] = 0x1F87A10;
 
-  // TODO(ES-208): glyphs for ASCII 0x47 - 0x48
+  // TODO(fxbug.dev/7297): glyphs for ASCII 0x47 - 0x48
 
   // ‘I’
   // 11111
@@ -311,7 +311,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 11111 00100 00100 00100 11111
   glyph_bits[int32_t{'I'}] = 0x1F2109F;
 
-  // TODO(ES-208): glyphs for ASCII 0x4A - 0x4C
+  // TODO(fxbug.dev/7297): glyphs for ASCII 0x4A - 0x4C
 
   // ‘M’
   // .1.1.
@@ -340,7 +340,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 01110 10001 10001 10001 01110
   glyph_bits[int32_t{'O'}] = 0xE8C62E;
 
-  // // TODO(ES-208): glyphs for ASCII 0x50 - 0x51
+  // // TODO(fxbug.dev/7297): glyphs for ASCII 0x50 - 0x51
 
   // ‘R'
   // 1111.
@@ -369,7 +369,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 11111 00100 00100 00100 00100
   glyph_bits[int32_t{'T'}] = 0x1F21084;
 
-  // TODO(ES-208): glyphs for ASCII 0x55 - 0x7F
+  // TODO(fxbug.dev/7297): glyphs for ASCII 0x55 - 0x7F
 
   // Process the bits that describe each glyph, turning them into black
   // and white pixels.

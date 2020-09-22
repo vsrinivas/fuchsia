@@ -16,7 +16,7 @@
 
 // Fuchsia-io limits.
 //
-// TODO(FIDL-127): Compute these values with the "union of all fuchsia-io"
+// TODO(fxbug.dev/7464): Compute these values with the "union of all fuchsia-io"
 // messages.
 #define ZXFIDL_MAX_MSG_BYTES (FDIO_CHUNK_SIZE * 2)
 #define ZXFIDL_MAX_MSG_HANDLES (16)

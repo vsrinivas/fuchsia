@@ -23,7 +23,7 @@ protocol PipeDevice {
     /// Open pipe. A protocol request `pipe_request` provides an interface
     /// to the pipe. Multiple pipes can be opened for a single device.
     /// Closing the device connection will also close all pipe connections.
-    /// TODO(DX-1766): Unify `device` and `pipe`.
+    /// TODO(fxbug.dev/6547): Unify `device` and `pipe`.
     OpenPipe(request<Pipe> pipe_request);
 };
 

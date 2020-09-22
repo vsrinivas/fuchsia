@@ -1,6 +1,6 @@
 # blackout - power failure testing for the filesystems
 
-TODO(ZX-4721): write a guide for writing additional power failure tests using this framework.
+TODO(fxbug.dev/34494): write a guide for writing additional power failure tests using this framework.
 
 ## Running power failure tests
 

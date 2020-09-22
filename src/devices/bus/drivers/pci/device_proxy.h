@@ -31,7 +31,7 @@ enum PciRpcOp : uint32_t {
   PCI_OP_MAX,
 };
 
-// TODO(ZX-3146): When the kernel driver is removed we should consolidate the pci banjo
+// TODO(fxbug.dev/32978): When the kernel driver is removed we should consolidate the pci banjo
 // definitions and these rpc messages to avoid duplication.
 struct PciMsgCfg {
   uint16_t offset;
@@ -71,7 +71,7 @@ struct PciMsgCapability {
 const uint16_t kPciCapOffsetFirst = UINT8_MAX;
 const uint16_t kPciExtCapOffsetFirst = UINT16_MAX;
 
-// TODO(ZX-3927): port this to non-zx_pcie structures
+// TODO(fxbug.dev/33713): port this to non-zx_pcie structures
 using PciMsgDeviceInfo = zx_pcie_device_info_t;
 
 struct PciRpcMsg {

@@ -179,7 +179,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
       resp.role = wlan_mlme::MacRole::MESH;
       break;
     default:
-      // TODO(NET-1116): return an error!
+      // TODO(fxbug.dev/28723): return an error!
       break;
   }
 

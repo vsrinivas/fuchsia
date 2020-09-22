@@ -293,7 +293,7 @@ an updated metrics event containing values which are scaled up by 200%.
 This informs the node that it may need to allocate higher resolution textures
 to maintain optimum fidelity.
 
-TODO(SCN-378): Node metrics currently do not take into account the effects
+TODO(fxbug.dev/23615): Node metrics currently do not take into account the effects
 of certain transformations such as perspective projections and rotations
 which could affect the necessary level of detail required to maintain optimum
 fidelity or the accuracy of physical registration.  We should consider
@@ -320,7 +320,7 @@ missing information during setup to optimize fidelity.
 
 Refer to the **DisplayModel** class for more details.
 
-TODO(SCN-379): Document specific calibration procedures and expected accuracy
+TODO(fxbug.dev/23616): Document specific calibration procedures and expected accuracy
 bounds for each model parameter.
 
 ### Display Information

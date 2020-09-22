@@ -29,7 +29,7 @@ struct TextFieldMultiplexerState {
 }
 
 impl TextFieldMultiplexer {
-    // TODO(TEXT-63): need way to close out a multiplexer's connections, right now Arc<Mutex<>> will
+    // TODO(fxbug.dev/26771): need way to close out a multiplexer's connections, right now Arc<Mutex<>> will
     // cause it to persist even if a new text field is focused.
     pub fn new(proxy: txt::TextFieldProxy) -> TextFieldMultiplexer {
         let mut event_stream = proxy.take_event_stream();

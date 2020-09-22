@@ -16,7 +16,7 @@ struct PaperAmbientLight {
   // and a material with color (1,1,1) will result in an on-screen RGB pixel
   // with intensity (255,255,255).
   //
-  // TODO(ES-162): define physically-based units of light intensity.
+  // TODO(fxbug.dev/7253): define physically-based units of light intensity.
   vec3 color;
 };
 
@@ -26,7 +26,7 @@ struct PaperAmbientLight {
 // properties such as a primary direction and angular falloff (although in that
 // case, maybe this would be renamed to PaperSpotLight?).
 //
-// TODO(ES-162): define physically based units of light intensity.
+// TODO(fxbug.dev/7253): define physically based units of light intensity.
 struct PaperPointLight {
   vec3 position;
 
@@ -36,7 +36,7 @@ struct PaperPointLight {
   // coefficients (1,1,1) lit by a point light at distance 100 will result in
   // an on-screen RGB pixel with intensity (255, 255, 255).
   //
-  // TODO(ES-162): define physically-based units of light intensity.
+  // TODO(fxbug.dev/7253): define physically-based units of light intensity.
   vec3 color;
 
   // The intensity of a light upon a surface is attenuated proportional to the

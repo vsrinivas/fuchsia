@@ -313,7 +313,7 @@ template("zircon_toolchain") {
       tool_prefix = "llvm-"
       version_string = clang_version_string
 
-      # TODO(TC-605): The MSVC target in the clang driver never uses the
+      # TODO(fxbug.dev/27328): The MSVC target in the clang driver never uses the
       # -stdlib=libc++ switch or the toolchain's own libc++ include path.
       if (invoker.os == "win") {
         include_dirs = [ rebase_path(

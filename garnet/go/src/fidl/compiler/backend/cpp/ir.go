@@ -116,7 +116,7 @@ func (t Type) IsPrimitiveType() bool {
 }
 
 func (t Type) Identifier() string {
-	// TODO(FIDL-762): The logic to determine whether the type qualifier is necessary in this method
+	// TODO(fxbug.dev/8084): The logic to determine whether the type qualifier is necessary in this method
 	// probably isn't correct in all cases due to the complexity of C++'s grammar rules, and could
 	// be improved.
 
@@ -879,7 +879,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 			// value cannot be represented as a nonnegative number in 64-bits.
 			return "(-9223372036854775807ll-1)"
 		}
-		// TODO(FIDL-486): Once we expose resolved constants for defaults, e.g.
+		// TODO(fxbug.dev/7810): Once we expose resolved constants for defaults, e.g.
 		// in structs, we will not need ignore hex and binary values.
 		if strings.HasPrefix(val.Value, "0x") || strings.HasPrefix(val.Value, "0b") {
 			return val.Value
@@ -1116,7 +1116,7 @@ func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 		r.Members = append(r.Members, EnumMember{
 			Attributes: v.Attributes,
 			Name:       changeIfReserved(v.Name, ""),
-			// TODO(FIDL-324): When we expose types consistently in the IR, we
+			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
 			Value: c.compileConstant(v.Value, nil, types.Type{
 				Kind:             types.PrimitiveType,

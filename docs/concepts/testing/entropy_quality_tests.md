@@ -151,7 +151,7 @@ rpi3 can take around a minute, depending on the parameter values.
 
 ## Run-time tests
 
-*TODO(SEC-29): discuss actual user-mode test process*
+*TODO(fxbug.dev/24760): discuss actual user-mode test process*
 
 *Current rough ideas: only the kernel can trigger hwrng reads. To test,
 userspace issues a kernel command (e.g. `k hwrng test`), with some arguments to

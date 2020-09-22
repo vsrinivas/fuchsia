@@ -108,7 +108,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
 
   // Each test fixture defines its own test display parameters.  It's needed
   // both here (to define the display), and in the client (to define the size of
-  // a layer (TODO(SCN-248)).
+  // a layer (TODO(fxbug.dev/23494)).
   virtual uint32_t test_display_width_px() const = 0;
   virtual uint32_t test_display_height_px() const = 0;
 

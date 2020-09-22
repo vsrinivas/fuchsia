@@ -23,7 +23,7 @@ using LayerPtr = fxl::RefPtr<Layer>;
 using RendererPtr = fxl::RefPtr<Renderer>;
 
 // A Layer can appear in a LayerStack, and be displayed by a Compositor.
-// TODO(SCN-249): Layers can currently only use a rendered scene as content, but
+// TODO(fxbug.dev/23495): Layers can currently only use a rendered scene as content, but
 // should also be able to directly use an Image/ImagePipe.
 class Layer : public Resource {
  public:
@@ -63,7 +63,7 @@ class Layer : public Resource {
   uint32_t width() const { return static_cast<uint32_t>(size_.x); }
   uint32_t height() const { return static_cast<uint32_t>(size_.y); }
 
-  // TODO(SCN-250): support detecting and/or setting layer opacity.
+  // TODO(fxbug.dev/23496): support detecting and/or setting layer opacity.
   bool opaque() const { return false; }
 
   // Returns the current viewing volume of the layer. Used by the compositor

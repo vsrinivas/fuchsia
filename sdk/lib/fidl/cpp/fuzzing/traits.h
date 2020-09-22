@@ -50,7 +50,7 @@ struct Allocate<StringPtr> {
 // Caveat: When MinSize<T>() = 0, treat T-instances as though they will
 // allocate 8 bytes, enough for a 64-bit pointer.
 //
-// TODO(SEC-331): Consume some input bytes to allocate pseudorandom number of items.
+// TODO(fxbug.dev/25053): Consume some input bytes to allocate pseudorandom number of items.
 template <typename T>
 struct MinSize<VectorPtr<T>> {
   constexpr operator size_t() const { return 0; }

@@ -34,7 +34,7 @@ protocol Scenic {
                    request<fuchsia.ui.views.Focuser>? view_focuser);
 
     /// Get information about the Scenic's primary display.
-    // TODO(SCN-453): in the future there will probably be a DisplayManager, and
+    // TODO(fxbug.dev/23687): in the future there will probably be a DisplayManager, and
     // info about which displays to use will be provided to the Scenic.
     GetDisplayInfo() -> (fuchsia.ui.gfx.DisplayInfo info);
     /// Gets an event signaled with displayOwnedSignal or displayNotOwnedSignal
@@ -43,7 +43,7 @@ protocol Scenic {
 
     /// Take a screenshot and return the data in `img_data`. `img_data` will
     /// not contain BGRA data if `success` is false.
-    // TODO(SCN-678): The permissions here are too wide (anyone can take a
+    // TODO(fxbug.dev/23901): The permissions here are too wide (anyone can take a
     // screenshot), we should narrow them.
     TakeScreenshot() -> (ScreenshotData img_data, bool success);
 };

@@ -192,7 +192,7 @@ std::unordered_set<tx_vec_idx_t> AddErp(std::unordered_map<tx_vec_idx_t, TxStats
 
 void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapabilities& ht_cap) {
   tx_vec_idx_t max_size = kHtNumMcs;
-  // TODO(NET-1726): Enable CBW40 support once its information is available from
+  // TODO(fxbug.dev/28744): Enable CBW40 support once its information is available from
   // AssocCtx
   const uint8_t assoc_chan_width = WLAN_CHANNEL_BANDWIDTH__20;
   const bool sgi_20 = ht_cap.ht_cap_info.short_gi_20() == 1;
@@ -340,7 +340,7 @@ inline constexpr bool TxStats::PhyPreferredOver(const wlan::TxStats& other) cons
   // based on experiment, If HT is supported, it is better not to use ERP for
   // data frames. With ralink RT5592 and Netgear Nighthawk X10, approximately 80
   // feet away, HT/ERP tx throughput < 1 Mbps, HT only tx 4-8 Mbps
-  // TODO(WLAN-868): Revisit with VHT support.
+  // TODO(fxbug.dev/29488): Revisit with VHT support.
   return IsHt(tx_vector_idx) && !IsHt(other.tx_vector_idx);
 }
 

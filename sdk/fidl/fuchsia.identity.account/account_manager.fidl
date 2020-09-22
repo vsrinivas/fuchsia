@@ -60,7 +60,7 @@ protocol AccountManager {
         AccountListenerOptions options)
         -> () error Error;
 
-    // TODO(AUTH-219): Define methods to managed locked accounts, i.e. those
+    // TODO(fxbug.dev/561): Define methods to managed locked accounts, i.e. those
     // where data decryption keys are not currently available.
 
     /// Removes a provisioned Fuchsia account from the current device, revoking

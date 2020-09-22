@@ -131,7 +131,7 @@ TEST_F(ShapeTest, Rectangle) {
       ray4{vec4(15.1f, -20.1f, 0.f, 1.f) - 40.f * kAngledVector, kAngledVector}, &distance));
 }
 
-// TODO(SCN-159): This test needs a rounded rect factory to run but it is
+// TODO(fxbug.dev/23412): This test needs a rounded rect factory to run but it is
 // not currently available in the engine for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
   const ResourceId id = 1;

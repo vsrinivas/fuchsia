@@ -709,7 +709,7 @@ This reduces performance but increases the ability to generate good
 stack traces, especially when we have bugs around unwind table generation.
 It applies only for Fuchsia targets (see below where it is unset).
 
-TODO(ZX-2361): Theoretically unwind tables should be good enough so we can
+TODO(fxbug.dev/32216): Theoretically unwind tables should be good enough so we can
 remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`

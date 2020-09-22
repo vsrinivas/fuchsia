@@ -74,7 +74,7 @@ class PaperDrawCallFactory final {
   friend class PaperTester;
 
   // Called by |PaperRenderer::SetConfig()|.
-  // TODO(ES-151): Currently a no-op.  In order to support other rendering
+  // TODO(fxbug.dev/7242): Currently a no-op.  In order to support other rendering
   // techniques, |PaperDrawCallFactory| will need to be in charge of managing
   // shader variations.
   void SetConfig(const PaperRendererConfig& config);

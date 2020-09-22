@@ -76,7 +76,7 @@ class ViewTest : public SessionTest {
   std::unique_ptr<ViewLinker> view_linker_;
 };
 
-// TODO(ES-179): Only seems to die in debug builds.
+// TODO(fxbug.dev/24571): Only seems to die in debug builds.
 TEST_F(ViewTest, DISABLED_CreateViewWithBadTokenDies) {
   EXPECT_DEATH_IF_SUPPORTED(Apply(scenic::NewCreateViewCmd(1, fuchsia::ui::views::ViewToken(), "")),
                             "");

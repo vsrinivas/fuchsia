@@ -23,7 +23,7 @@ macro_rules! assert_matches(
     )
 );
 
-// TODO(PKG-597) allow newline once meta/contents supports it in blob paths
+// TODO(fxbug.dev/22531) allow newline once meta/contents supports it in blob paths
 pub(crate) const ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE: &str = "[^/\0\\.\n]";
 
 prop_compose! {

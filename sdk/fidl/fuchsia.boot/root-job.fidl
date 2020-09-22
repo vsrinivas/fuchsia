@@ -8,7 +8,7 @@ using zx;
 
 /// Protocol for providing the root job.
 ///
-/// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
+/// TODO(fxbug.dev/33856): Do not use this without first consulting the Zircon team.
 [Discoverable, ForDeprecatedCBindings]
 protocol RootJob {
     /// Get the root `job`.

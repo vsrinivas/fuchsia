@@ -36,7 +36,7 @@ class GpuScanout {
   // command, the scanout will copy data from the source resource into the
   // target. The target will be written using the native pixel format of the
   // guest driver.
-  // TODO(MAC-168): expose pixel format to scanout clients
+  // TODO(fxbug.dev/12530): expose pixel format to scanout clients
   zx_status_t SetFlushTarget(zx::vmo vmo, uint64_t size, uint32_t width, uint32_t height,
                              uint32_t stride);
 

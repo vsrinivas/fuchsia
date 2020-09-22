@@ -90,7 +90,7 @@ class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTempla
     const fxl::RefPtr<ShaderModuleTemplate> template_;
     ShaderVariantArgs args_;
 
-    // TODO(SCN-664): this means that every Variant has a copy of every path
+    // TODO(fxbug.dev/23889): this means that every Variant has a copy of every path
     // that it uses.  This might add up; consider addressing when replacing
     // HackFilesystem.
     std::unique_ptr<HackFilesystemWatcher> filesystem_watcher_;
@@ -103,7 +103,7 @@ class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTempla
 
   void ScheduleVariantCompilation(fxl::WeakPtr<Variant> variant);
 
-  // TODO(SCN-663): enforce lifecycle constraints, e.g. all instances must be
+  // TODO(fxbug.dev/23888): enforce lifecycle constraints, e.g. all instances must be
   // destroyed before the device/compiler (hence before the Escher, assuming
   // that's where they came from).
   vk::Device device_;

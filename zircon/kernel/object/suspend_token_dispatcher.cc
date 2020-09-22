@@ -21,7 +21,7 @@ KCOUNTER(dispatcher_suspend_token_destroy_count, "dispatcher.suspend_token.destr
 namespace {
 
 // Suspends a process or thread.
-// TODO(ZX-858): Add support for jobs.
+// TODO(fxbug.dev/30807): Add support for jobs.
 zx_status_t SuspendTask(fbl::RefPtr<Dispatcher> task) {
   if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task)) {
     if (thread.get() == ThreadDispatcher::GetCurrent())
@@ -39,7 +39,7 @@ zx_status_t SuspendTask(fbl::RefPtr<Dispatcher> task) {
 }
 
 // Resumes a process or thread.
-// TODO(ZX-858): Add support for jobs.
+// TODO(fxbug.dev/30807): Add support for jobs.
 void ResumeTask(fbl::RefPtr<Dispatcher> task) {
   if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task)) {
     thread->Resume();

@@ -28,7 +28,7 @@ impl Default for SettingsState {
                 addr: NetAddress::V4([0, 0, 0, 0], 32),
                 dynamically_assigned: false,
             }),
-            // TODO(NET-1429): Secure defaults for this.
+            // TODO(fxbug.dev/29244): Secure defaults for this.
             dhcp_config: Some(DHCPConfiguration {
                 dns_server_addr: NetAddress::V4([8, 8, 8, 8], 32),
                 netmask: NetAddress::V4([192, 168, 41, 0], 24),
@@ -37,7 +37,7 @@ impl Default for SettingsState {
                     NetAddress::V4([192, 168, 41, 255], 32),
                 ),
             }),
-            // TODO(NET-1429): Secure defaults for this.
+            // TODO(fxbug.dev/29244): Secure defaults for this.
             ap_config: Some(APConfiguration {
                 ssid: String::from("Basking Rootwalla").into_bytes(),
                 password: String::from(""),
@@ -56,7 +56,7 @@ impl SettingsServer {
         SettingsServer { page: frontend_webpage, current_settings: SettingsState::default() }
     }
 
-    // TODO(NET-1430): Hook up to wlancfg FIDL endpoints.
+    // TODO(fxbug.dev/29233): Hook up to wlancfg FIDL endpoints.
     fn set_wan_config(&mut self, config: WANConfiguration) {
         self.current_settings.wan_config = Some(config);
     }
@@ -65,7 +65,7 @@ impl SettingsServer {
         self.current_settings.wan_config.as_ref().cloned()
     }
 
-    // TODO(NET-1430): Hook up to netcfg FIDL endpoints.
+    // TODO(fxbug.dev/29233): Hook up to netcfg FIDL endpoints.
     fn set_dhcp_config(&mut self, config: DHCPConfiguration) {
         self.current_settings.dhcp_config = Some(config);
     }
@@ -74,7 +74,7 @@ impl SettingsServer {
         self.current_settings.dhcp_config.as_ref().cloned()
     }
 
-    // TODO(NET-1430): Hook up to wlancfg FIDL endpoints.
+    // TODO(fxbug.dev/29233): Hook up to wlancfg FIDL endpoints.
     fn set_ap_config(&mut self, config: APConfiguration) {
         self.current_settings.ap_config = Some(config);
     }

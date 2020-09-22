@@ -14,7 +14,7 @@ class RenderPass;
 typedef fxl::RefPtr<RenderPass> RenderPassPtr;
 
 // Escher's standard interface to Vulkan render pass objects.
-// TODO(ES-83): deprecated.  Render passes will soon be handled transparently
+// TODO(fxbug.dev/7174): deprecated.  Render passes will soon be handled transparently
 // by the new CommandBuffer object.
 class RenderPass : public Resource {
  public:

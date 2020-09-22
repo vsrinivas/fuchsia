@@ -30,7 +30,7 @@ The root VMAR, as obtained by `zx_process_create()`, cannot be destroyed.
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

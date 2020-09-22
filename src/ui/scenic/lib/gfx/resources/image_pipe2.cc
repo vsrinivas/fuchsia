@@ -324,7 +324,7 @@ ImagePipeUpdateResults ImagePipe2::Update(scheduling::PresentId present_id) {
     return results;
   }
 
-  // TODO(SCN-151): This code, and the code below that marks an image as dirty,
+  // TODO(fxbug.dev/23406): This code, and the code below that marks an image as dirty,
   // assumes that the same image cannot be presented twice in a row on the same
   // image pipe, while also requiring a call to UpdatePixels(). If not, this
   // needs a new test.
@@ -335,7 +335,7 @@ ImagePipeUpdateResults ImagePipe2::Update(scheduling::PresentId present_id) {
   }
 
   current_image_id_ = next_image_id;
-  // TODO(SCN-1010): Determine proper signaling for marking images as dirty.
+  // TODO(fxbug.dev/24223): Determine proper signaling for marking images as dirty.
   // For now, mark all released images as dirty, with the assumption that the
   // client will likely write into the buffer before submitting it again.
   if (current_image_) {

@@ -474,7 +474,7 @@ void MessageLoopTarget::OnProcessTerminated(const WatchInfo& info, zx_signals_t 
 void MessageLoopTarget::OnJobException(const WatchInfo& info, zx::exception exception,
                                        zx_exception_info_t exception_info) {
   // Currently job exceptions only track process starting exceptions.
-  // TODO(ZX-4391): Debugger job exception ports should receive all exceptions.
+  // TODO(fxbug.dev/34167): Debugger job exception ports should receive all exceptions.
   if (exception_info.type != ZX_EXCP_PROCESS_STARTING) {
     FX_NOTREACHED();
     return;

@@ -24,7 +24,7 @@ zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

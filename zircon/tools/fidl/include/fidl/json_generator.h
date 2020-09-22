@@ -22,7 +22,7 @@ struct NameSpan {
     span.SourceLine(&position);
   }
 
-  // TODO(FIDL-596): We are incorrectly assuming that the provided name is not
+  // TODO(fxbug.dev/7920): We are incorrectly assuming that the provided name is not
   // anonymous, and relying on callers to avoid derefencing a nullptr
   // location.
   explicit NameSpan(const flat::Name& name) : NameSpan(name.span().value()) {

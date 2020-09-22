@@ -296,7 +296,7 @@ zx_status_t ScsiDevice::WorkerThread() {
   }
 
   // Execute TEST UNIT READY on every possible target to find potential disks.
-  // TODO(ZX-2314): For SCSI-3 targets, we could optimize this by using REPORT LUNS.
+  // TODO(fxbug.dev/32170): For SCSI-3 targets, we could optimize this by using REPORT LUNS.
   //
   // virtio-scsi nominally supports multiple channels, but the device support is not
   // complete. The device encoding for targets in commands does not allow encoding the
@@ -306,7 +306,7 @@ zx_status_t ScsiDevice::WorkerThread() {
   // QEMU's max_target/max_lun refer to the last valid whereas GCE's refers to the first
   // invalid target/lun. Use <= to handle both.
   //
-  // TODO(ZX-2314): Move probe sequence to ScsiLib -- have it call down into LLDs to execute
+  // TODO(fxbug.dev/32170): Move probe sequence to ScsiLib -- have it call down into LLDs to execute
   // commands.
   for (uint8_t target = 0u; target <= max_target; target++) {
     const uint32_t luns_on_this_target = CountLuns(this, target);

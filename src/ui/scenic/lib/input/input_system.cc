@@ -533,7 +533,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, S
                                view_tree);
     }
     if (!parallel_dispatch) {
-      break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
+      break;  // TODO(fxbug.dev/24258): Remove when gesture disambiguation is ready.
     }
   }
 
@@ -612,7 +612,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, S
 //    owned by the root presenter. The nodes associated with visible mouse
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
-// TODO(SCN-1078): Enhance trackpad support.
+// TODO(fxbug.dev/24288): Enhance trackpad support.
 void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   FX_DCHECK(scene_graph_);
   const gfx::ViewTree& view_tree = scene_graph_->view_tree();

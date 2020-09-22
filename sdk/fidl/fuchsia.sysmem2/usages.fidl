@@ -67,7 +67,7 @@ const uint32 DISPLAY_USAGE_LAYER = 1;
 const uint32 DISPLAY_USAGE_CURSOR = 2;
 
 // Flags for "video" usage.
-// TODO(ZX-2259): Add more specific HwDecoder flags if needed.
+// TODO(fxbug.dev/32118): Add more specific HwDecoder flags if needed.
 const uint32 VIDEO_USAGE_HW_DECODER = 1;
 const uint32 VIDEO_USAGE_HW_ENCODER = 2;
 // TODO(34192): This bit is redundant with secure_required and supported heaps.  This bit will

@@ -403,7 +403,7 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(ZX-2541): We may go back to ask the kernel to copy the data for us
+  // TODO(fxbug.dev/32393): We may go back to ask the kernel to copy the data for us
   // if that ends up being more efficient.
   fzl::VmoMapper mapper;
   zx_status_t status = mapper.Map(*zx::unowned_vmo(operation->rw.vmo), addr, length,

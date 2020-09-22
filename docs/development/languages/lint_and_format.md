@@ -174,7 +174,7 @@ prebuilt/third_party/rust_tools/${HOST_PLATFORM}/bin/rustfmt \
 $FILES
 ```
 
-TODO(TC-588): Document clippy once implementation details are finalized.
+TODO(fxbug.dev/27311): Document clippy once implementation details are finalized.
 
 ## Go
 
@@ -187,7 +187,7 @@ distributed in the Go host toolchain prebuilts.
 prebuilt/third_party/go/$HOST_PLATFORM/bin/gofmt -s -w $FILES
 ```
 
-TODO(TC-587): Document go vet once implementation details are finalized.
+TODO(fxbug.dev/27310): Document go vet once implementation details are finalized.
 
 ## Dart
 

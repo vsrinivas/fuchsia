@@ -14,7 +14,7 @@
 #include "src/ui/scenic/lib/gfx/util/image_formats.h"
 
 namespace {
-// TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
+// TODO(fxbug.dev/24580): This number needs to be queried via sysmem or vulkan.
 constexpr uint32_t kYuvStrideRequirement = 64;
 }  // namespace
 
@@ -116,7 +116,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
       escher_image_info.tiling = vk::ImageTiling::eLinear;
       escher_image_info.is_mutable = false;
       escher_image_info.is_external = true;
-      // TODO(SCN-1012): This code assumes that Memory::GetGpuMem() will only
+      // TODO(fxbug.dev/24225): This code assumes that Memory::GetGpuMem() will only
       // return device local memory.
       escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
@@ -141,7 +141,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
     }
   }
 
-  // TODO(SCN-141): Support non-minimal strides for all formats.  For now, NV12
+  // TODO(fxbug.dev/23396): Support non-minimal strides for all formats.  For now, NV12
   // is ok because it will have image_conversion_function_ and for formats with
   // image_conversion_function_, the stride is really only the input data stride
   // not the output data stride (which ends up being minimal thanks to the

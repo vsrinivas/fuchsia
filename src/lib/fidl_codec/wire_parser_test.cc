@@ -1221,7 +1221,7 @@ TEST_DECODE_WIRE(Table7, Table,
                       "i":"2"})",
                  TablePretty(1, "harpo", "groucho", 42, 2), GetTable(1, "harpo", "groucho", 42), 2)
 
-// TODO(DX-1476): Add a test that exercises what happens when we encounter an
+// TODO(fxbug.dev/6274): Add a test that exercises what happens when we encounter an
 // unknown type in a table.
 
 // Handle Tests

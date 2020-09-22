@@ -2528,7 +2528,7 @@ static bool vmo_attribution_dedup_test() {
   END_TEST;
 }
 
-// TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
+// TODO(fxbug.dev/31326): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
 #define MMU_EXPECT_EQ(exp, act, msg) EXPECT_EQ(ZX_ERR_INTERNAL, act, msg)

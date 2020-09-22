@@ -173,6 +173,6 @@ protocol Host {
     /// Notifies when bonding data for a device has been updated.
     -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);
 
-    // TODO(BT-194): Introduce a "OnBondRemoved()" event to notify when existing
+    // TODO(fxbug.dev/787): Introduce a "OnBondRemoved()" event to notify when existing
     // keys become stale.
 };

@@ -35,18 +35,18 @@ class DirectionalLight {
   const vec2& polar_direction() const { return polar_direction_; }
 
   // The angular variance in the light, in radians.
-  // TODO(ES-46): it's not well-defined how rendering should/will respond to
+  // TODO(fxbug.dev/23754): it's not well-defined how rendering should/will respond to
   // this value. Its meaning is implicitly defined by implementation of
   // SsdoSampler, but it's not clear how/if it will be taken into account for
   // e.g. shadow-map-based soft shadows.
   float dispersion() const { return dispersion_; }
 
   // The amount of light emitted.
-  // TODO(ES-47): In what units?
+  // TODO(fxbug.dev/23755): In what units?
   const vec3& color() const { return color_; }
   void set_color(vec3 color) { color_ = color; }
 
-  // TODO(ES-48): deprecated.  Only used for SSDO shadows, and white lights.
+  // TODO(fxbug.dev/23736): deprecated.  Only used for SSDO shadows, and white lights.
   float intensity() const { return color_.r; }
 
  private:

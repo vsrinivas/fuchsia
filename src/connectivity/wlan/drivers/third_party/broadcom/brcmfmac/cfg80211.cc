@@ -1637,7 +1637,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     }
   }
 
-  // TODO(WLAN-733): We should be getting the IEs from SME. Passing a null entry seems
+  // TODO(fxbug.dev/29354): We should be getting the IEs from SME. Passing a null entry seems
   // to work for now, presumably because the firmware uses its defaults.
   err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, NULL, 0);
   if (err != ZX_OK) {
@@ -5023,7 +5023,7 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
   uint32_t roam_delta[2];
 
   if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
-    return ZX_OK;  // TODO(WLAN-733) Find out why, and document.
+    return ZX_OK;  // TODO(fxbug.dev/29354) Find out why, and document.
   }
   /* Configure beacon timeout value based upon roaming setting */
   if (ifp->drvr->settings->roamoff) {

@@ -304,7 +304,7 @@ TEST(TransformTestCase, Compose) {
 
         // F(Identity(a)) == F(a)
         //
-        // TODO(MTWN-6): Note that this does not currently produce the exact
+        // TODO(fxbug.dev/13293): Note that this does not currently produce the exact
         // same result, or even an equivalent result.  The intermediate offset
         // of the composition of bc(ab(a)) is -12345, and the current
         // composition implementation always attempts to move this to the
@@ -369,7 +369,7 @@ TEST(TransformTestCase, Compose) {
             Exact::Yes
         },
 
-        // TODO(MTWN-6): Right now, it is impossible to under/overflow saturate
+        // TODO(fxbug.dev/13293): Right now, it is impossible to under/overflow saturate
         // the AC.a_offset side of the composed function, because the current
         // implementation always distributes the intermediate offset entirely to
         // the C side of the equation.  When this changes, we need to add test

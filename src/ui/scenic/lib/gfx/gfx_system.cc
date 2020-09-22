@@ -62,7 +62,7 @@ CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
 }
 
 escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_context) {
-  // TODO(SCN-1109): VulkanIsSupported() should not be used in production.
+  // TODO(fxbug.dev/24317): VulkanIsSupported() should not be used in production.
   // It tries to create a VkInstance and VkDevice, and immediately deletes them
   // regardless of success/failure.
   if (!escher::VulkanIsSupported()) {

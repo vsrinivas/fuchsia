@@ -17,8 +17,8 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 
-	// TODO(TO-398): Add 'run' command.
-	// TODO(TO-399): Add 'benchmark' command.
+	// TODO(fxbug.dev/27608): Add 'run' command.
+	// TODO(fxbug.dev/27609): Add 'benchmark' command.
 	subcommands.Register(NewCmdRecord(), "")
 	subcommands.Register(NewCmdConvert(), "")
 

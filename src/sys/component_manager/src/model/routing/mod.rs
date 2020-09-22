@@ -46,7 +46,7 @@ const SERVICE_OPEN_FLAGS: u32 =
 /// Describes the source of a capability, for any type of capability.
 #[derive(Debug)]
 enum OfferSource<'a> {
-    // TODO(CF-908): Enable this once unified services are implemented.
+    // TODO(fxbug.dev/4776): Enable this once unified services are implemented.
     #[allow(dead_code)]
     Service(&'a OfferServiceSource),
     Protocol(&'a OfferServiceSource),

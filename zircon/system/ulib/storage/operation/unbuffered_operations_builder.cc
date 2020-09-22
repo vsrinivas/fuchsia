@@ -42,7 +42,7 @@ void UnbufferedOperationsBuilder::Add(const UnbufferedOperation& new_operation) 
       continue;
     }
 
-    // TODO(ZX-4238): Merge/coalesce is more involved than this. One enqueue can encompass from
+    // TODO(fxbug.dev/34018): Merge/coalesce is more involved than this. One enqueue can encompass from
     //                one to all existing requests - leading to popping out operations.
     auto old_range =
         Range<uint64_t>(operation.op.vmo_offset, operation.op.vmo_offset + operation.op.length);

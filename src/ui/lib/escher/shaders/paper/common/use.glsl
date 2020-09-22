@@ -62,7 +62,7 @@ struct PaperShaderPointLight {
 };
 
 layout(set = 0, binding = 2) uniform PointLightUniforms {
-  // TODO(ES-153): don't clamp to 2.  Should provide the number of lights as
+  // TODO(fxbug.dev/7244): don't clamp to 2.  Should provide the number of lights as
   // a pre-processor constant (this doesn't mean that we need to use them all).
   PaperShaderPointLight point_lights[2];
 };
@@ -76,7 +76,7 @@ layout(set = 1, binding = 0) uniform PaperShaderMeshInstance {
 #endif  // USE_PAPER_SHADER_MESH_INSTANCE
 
 #ifdef USE_PAPER_SHADER_MESH_MATERIAL
-// TODO(ES-159): paper_shader_structs.h gives us a decent framework for
+// TODO(fxbug.dev/7250): paper_shader_structs.h gives us a decent framework for
 // uniform bindings, but not for texture bindings.
 layout(set = 1, binding = 1) uniform sampler2D material_tex;
 #endif  // USE_PAPER_SHADER_MESH_MATERIAL

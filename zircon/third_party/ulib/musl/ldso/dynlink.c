@@ -1245,7 +1245,7 @@ __NO_SAFESTACK static void trace_load(struct dso* p) {
   // The output is in multiple lines to cope with damn line wrapping.
   // N.B. Programs like the Intel Processor Trace decoder parse this output.
   // Do not change without coordination with consumers.
-  // TODO(ZX-519): Switch to official tracing mechanism when ready.
+  // TODO(fxbug.dev/30479): Switch to official tracing mechanism when ready.
   static int seqno;
   debugmsg("@trace_load: %" PRIu64 ":%da %p %p %p", pid, seqno, p->l_map.l_addr, p->map,
            p->map + p->map_len);

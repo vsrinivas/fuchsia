@@ -103,7 +103,7 @@ void View::LoadShape(scenic::EntityNode& parent_node, const snapshot::Node* flat
     } break;
 
     default:
-      // TODO(SCN-978): Return an error to the caller for invalid data.
+      // TODO(fxbug.dev/24193): Return an error to the caller for invalid data.
       FX_DCHECK(false) << "Unknown node type encountered. Corrupt flatbuffer?";
       return;
   }

@@ -93,7 +93,7 @@ any element in *handles* does not have **ZX_RIGHT_TRANSFER**.
 **ZX_ERR_PEER_CLOSED**  The other side of the channel was closed or became
 closed while waiting for the reply.
 
-**ZX_ERR_CANCELED**  *handle* was closed while waiting for a reply. TODO(ZX-4233):
+**ZX_ERR_CANCELED**  *handle* was closed while waiting for a reply. TODO(fxbug.dev/34013):
 Transferring a channel with pending calls currently leads to undefined behavior. With
 the current implementation, transferring such a channel does not interrupt the
 pending calls, as it does not close the underlying channel endpoint. Programs should

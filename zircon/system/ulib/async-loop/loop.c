@@ -679,7 +679,7 @@ static zx_status_t async_loop_cancel_paged_vmo(async_paged_vmo_t* paged_vmo) {
 }
 
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task) {
-  // TODO(ZX-976): We assume that tasks are inserted in quasi-monotonic order and
+  // TODO(fxbug.dev/30923): We assume that tasks are inserted in quasi-monotonic order and
   // that insertion into the task queue will typically take no more than a few steps.
   // If this assumption proves false and the cost of insertion becomes a problem, we
   // should consider using a more efficient representation for maintaining order.

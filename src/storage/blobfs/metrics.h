@@ -43,7 +43,7 @@ class BlobfsMetrics {
 
   // Print information about metrics to stdout.
   //
-  // TODO(ZX-1999): This is a stop-gap solution; long-term, this information
+  // TODO(fxbug.dev/31862): This is a stop-gap solution; long-term, this information
   // should be extracted from devices.
   void Dump();
 

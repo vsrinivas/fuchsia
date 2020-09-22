@@ -23,7 +23,7 @@ void main() {
       fail('SERVER_IP environment variable not set.');
     }
 
-    // TODO(IN-1252): Figure out how to get data into CI to actually test.  For
+    // TODO(fxbug.dev/10031): Figure out how to get data into CI to actually test.  For
     //                now, we'll just leave that to the user.
     final fileName = Platform.environment['MEDIA_FILE'];
     if (fileName == null) {

@@ -16,8 +16,8 @@ accomplishes this by publishing two distinct devices:
   and [ddk.protocol.bt-hci](//zircon/system/banjo/ddk.protocol.bt.hci/bt-hci.banjo).
 
 ## Usage
-TODO(BT-229): Document the driver's device publishing behavior once implement,
+TODO(fxbug.dev/822): Document the driver's device publishing behavior once implement,
 with a usage example.
 
 ## Library Utilities
-TODO(BT-229): Document Rust library utilities.
+TODO(fxbug.dev/822): Document Rust library utilities.

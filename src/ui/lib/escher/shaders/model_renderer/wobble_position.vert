@@ -13,7 +13,7 @@ float EvalSineParams(SineParams params) {
   return params.amplitude * sin(arg);
 }
 
-// TODO(ES-153):  PerObject binds to the same point as PaperShaderMeshInstance.
+// TODO(fxbug.dev/7244):  PerObject binds to the same point as PaperShaderMeshInstance.
 // The additional wobble parameters should be moved into a different object,
 // probably bound at set(1, 1).  Or we could get fancy about ensuring that only
 // one of PerObject and PaperShaderMeshInstance are bound.  Anyway, this isn't

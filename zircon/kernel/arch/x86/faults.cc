@@ -131,7 +131,7 @@ static void x86_debug_handler(x86_iframe_t* frame) {
   x86_read_debug_status(&thread->arch().debug_state.dr6);
 
   // NOTE: a HW breakpoint exception can also represent a single step.
-  // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
+  // TODO(fxbug.dev/32872): Is it worth separating this into two separate exceptions?
   if (try_dispatch_user_exception(frame, ZX_EXCP_HW_BREAKPOINT)) {
     // If the exception was successfully handled, we mask the debug the single step bit, as the cpu
     // doesn't automatically do it.

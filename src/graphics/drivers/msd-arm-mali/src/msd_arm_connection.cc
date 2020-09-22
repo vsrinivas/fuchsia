@@ -344,7 +344,7 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
     // address, so we'd need to update the GPU address space to represent
     // that. However, on current systems (amlogic) that doesn't
     // happen.
-    // TODO(ZX-2924): Shrink existing PMTs when that's supported.
+    // TODO(fxbug.dev/32763): Shrink existing PMTs when that's supported.
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
         owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(), mapping->page_offset(),
                                                 committed_page_count);
@@ -432,7 +432,7 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
   auto buffer = mapping.buffer().lock();
   DASSERT(buffer);
 
-  // TODO(MA-417): Look into growing the buffer on a different thread.
+  // TODO(fxbug.dev/13028): Look into growing the buffer on a different thread.
 
   // Try to grow in units of 64 pages to avoid needing to fault too often.
   constexpr uint64_t kPagesToGrow = 64;

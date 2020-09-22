@@ -23,7 +23,7 @@ const uint32_t kVmoSize = 65536;
 // scenic_pixel_test.cc is also updated. Unlike this unit test,
 // scenic_pixel_test.cc has no way to confirm that it is going through the
 // direct-to-GPU path.
-// TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
+// TODO(fxbug.dev/24580): This number needs to be queried via sysmem or vulkan.
 const uint32_t kSize = 64;
 const uint32_t kMemoryId = 1;
 const uint32_t kImageId = 2;

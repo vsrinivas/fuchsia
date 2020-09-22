@@ -1,6 +1,6 @@
 # GN integration for Zircon
 
-TODO(BLD-353): This is a temporary solution to make selected modules from the
+TODO(fxbug.dev/3156): This is a temporary solution to make selected modules from the
 separate Zircon GN build available to the Fuchsia GN build before the two builds
 are unified.
 

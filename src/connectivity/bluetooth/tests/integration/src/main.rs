@@ -12,11 +12,11 @@ mod tests;
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).expect("Initializing syslog should not fail");
 
-    // TODO(BT-805): Add test cases for LE privacy
-    // TODO(BT-806): Add test cases for LE auto-connect/background-scan
-    // TODO(BT-20): Add test cases for GATT client role
-    // TODO(BT-20): Add test cases for GATT server role
-    // TODO(BT-20): Add test cases for BR/EDR and dual-mode connections
+    // TODO(fxbug.dev/1398): Add test cases for LE privacy
+    // TODO(fxbug.dev/1399): Add test cases for LE auto-connect/background-scan
+    // TODO(fxbug.dev/613): Add test cases for GATT client role
+    // TODO(fxbug.dev/613): Add test cases for GATT server role
+    // TODO(fxbug.dev/613): Add test cases for BR/EDR and dual-mode connections
     vec![
         // Tests that require bt-gap.cmx to not be running. Run these tests first as bt-gap
         // interferes with their operation.

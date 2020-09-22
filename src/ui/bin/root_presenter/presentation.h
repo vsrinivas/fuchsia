@@ -114,7 +114,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   //       |
   // [3] client view
 
-  // TODO(SCN-254): put camera before scene.
+  // TODO(fxbug.dev/23500): put camera before scene.
   scenic::Scene scene_;
   scenic::Camera camera_;
   std::optional<scenic::View> root_view_;
@@ -148,7 +148,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // Valid values are ... -180, -90, 0, 90, 180, ...
   //
   // Used when the native display orientation is reported incorrectly.
-  // TODO(SCN-857) - Make this less of a hack.
+  // TODO(fxbug.dev/24074) - Make this less of a hack.
   int32_t display_startup_rotation_adjustment_;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;

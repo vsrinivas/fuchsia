@@ -125,7 +125,7 @@ if (current_toolchain == default_toolchain) {
       "-Wl,-e,_zx_process_exit",
     ]
 
-    # TODO(BLD-353): The SDK exports this as part of the sysroot rather
+    # TODO(fxbug.dev/3156): The SDK exports this as part of the sysroot rather
     # than as an independent library.  Legacy integration likewise does not
     # use a //zircon/public/lib/zircon buts instead uses libs=["zircon"].
     # See //zircon/public/sysroot.
@@ -196,7 +196,7 @@ if (current_toolchain == default_toolchain) {
         },
       ]
 
-      # TODO(BLD-353): This is not actually for the SDK (see above).  This
+      # TODO(fxbug.dev/3156): This is not actually for the SDK (see above).  This
       # is special-cased so no //zircon/public/lib/zircon gets made, but
       # //build/config/fuchsia:compiler_sysroot can look up the metadata to
       # find the right lib_dirs.

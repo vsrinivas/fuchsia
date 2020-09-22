@@ -35,7 +35,7 @@ class MaxFileTest : public BaseFilesystemTest, public testing::WithParamInterfac
 
 // Test writing as much as we can to a file until we run out of space.
 TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
-  // TODO(ZX-1735): We avoid making files that consume more than half
+  // TODO(fxbug.dev/31604): We avoid making files that consume more than half
   // of physical memory. When we can page out files, this restriction
   // should be removed.
   const size_t physmem = zx_system_get_physmem();
@@ -131,7 +131,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
 // block allocation policies, this will create two large files with non-contiguous block
 // allocations.
 TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
-  // TODO(ZX-1735): We avoid making files that consume more than half
+  // TODO(fxbug.dev/31604): We avoid making files that consume more than half
   // of physical memory. When we can page out files, this restriction
   // should be removed.
   const size_t physmem = zx_system_get_physmem();

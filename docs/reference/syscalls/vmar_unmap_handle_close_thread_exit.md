@@ -40,7 +40,7 @@ fails, then the thread takes a trap (as if by `__builtin_trap();`).
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

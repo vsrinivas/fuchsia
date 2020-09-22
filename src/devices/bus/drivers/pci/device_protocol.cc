@@ -12,7 +12,7 @@
 
 #include "common.h"
 #include "device.h"
-// TODO(ZX-3927): Stop depending on the types in this file.
+// TODO(fxbug.dev/33713): Stop depending on the types in this file.
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>

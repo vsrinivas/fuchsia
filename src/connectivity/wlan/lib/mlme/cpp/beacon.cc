@@ -45,7 +45,7 @@ static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_o
 }
 
 static void WriteCountry(BufferWriter* w, const BeaconConfig& config) {
-  // TODO(NET-799): Read from dot11CountryString MIB
+  // TODO(fxbug.dev/29328): Read from dot11CountryString MIB
   const Country kCountry = {{'U', 'S', ' '}};
 
   std::vector<SubbandTriplet> subbands;

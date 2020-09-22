@@ -172,7 +172,7 @@ func TestOutput(t *testing.T) {
 	})
 
 	t.Run("ambiguous match: `ifconfig \"\"` should return 0 interfaces", func(t *testing.T) {
-		// TODO(NET-1749): add an interface to ensure there are at least 2 interfaces.
+		// TODO(fxbug.dev/20973): add an interface to ensure there are at least 2 interfaces.
 	})
 }
 

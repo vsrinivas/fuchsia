@@ -612,7 +612,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   BRCMF_DBG(TRACE, "Enter");
 
   /* add primary networking interface */
-  // TODO(WLAN-740): Name uniqueness
+  // TODO(fxbug.dev/29361): Name uniqueness
   ret = brcmf_add_if(drvr, 0, 0, kPrimaryNetworkInterfaceName, NULL, &ifp);
   if (ret != ZX_OK) {
     return ret;

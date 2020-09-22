@@ -18,7 +18,7 @@ declare_args() {
 #  -o  the path to the image file to be output
 #  -B  the path to the zircon build directory
 #
-# TODO(BLD-323): add flags for producing depfiles
+# TODO(fxbug.dev/3128): add flags for producing depfiles
 # TODO(raggi): add support for custom flags (e.g. to switch keys)
 #
 # Paramters

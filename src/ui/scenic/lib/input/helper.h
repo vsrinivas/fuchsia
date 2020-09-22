@@ -25,11 +25,11 @@ glm::vec2 PointerCoords(const fuchsia::ui::input::PointerEvent& event);
 // Applies |transform| to |pointer|.
 glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform);
 
-// TODO(SCN-1278): Remove this.
+// TODO(fxbug.dev/24476): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
 trace_flow_id_t PointerTraceHACK(float fa, float fb);
 
-// TODO(SCN-1278): Remove this.
+// TODO(fxbug.dev/24476): Remove this.
 // Turn a 64-bit uint to two floats (high bits, low bits).
 std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
 

@@ -159,7 +159,7 @@ impl Vmo {
     /// [zx_vmo_replace_as_executable](https://fuchsia.dev/fuchsia-src/reference/syscalls/vmo_replace_as_executable.md)
     /// syscall.
     pub fn replace_as_executable(self) -> Result<Vmo, Status> {
-        // TODO(SEC-42): Add resource argument for exec setter.
+        // TODO(fxbug.dev/24770): Add resource argument for exec setter.
         let vmex = Handle::invalid();
 
         let mut out = 0;
@@ -336,7 +336,7 @@ mod tests {
         assert_eq!(&read_buffer[0..5], b"three");
     }
 
-    // TODO(SEC-42): In the near-ish future zx_vmo_replace_as_executable will be restricted and
+    // TODO(fxbug.dev/24770): In the near-ish future zx_vmo_replace_as_executable will be restricted and
     // will require either the process run in a job with some special policy or have access to a
     // special resource. We will either need to run the test binary with that capability or delete
     // this test at that point.

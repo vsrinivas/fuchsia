@@ -40,7 +40,7 @@ namespace {
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
-// TODO(ZX-1025): copy_user_string may truncate the incoming string,
+// TODO(fxbug.dev/30969): copy_user_string may truncate the incoming string,
 // and may copy extra data past the NUL.
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
 zx_status_t copy_user_string(const user_in_ptr<const char>& src, size_t src_len, char* buf,
@@ -148,7 +148,7 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t kind, user_out_pt
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  // TODO(ZX-968): debug rights
+  // TODO(fxbug.dev/30915): debug rights
   fbl::RefPtr<ThreadDispatcher> thread;
   zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &thread);
   if (status != ZX_OK)
@@ -164,7 +164,7 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  // TODO(ZX-968): debug rights
+  // TODO(fxbug.dev/30915): debug rights
   fbl::RefPtr<ThreadDispatcher> thread;
   zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &thread);
   if (status != ZX_OK)
@@ -179,7 +179,7 @@ zx_status_t sys_task_suspend(zx_handle_t handle, user_out_handle* token) {
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  // TODO(ZX-858): Add support for jobs
+  // TODO(fxbug.dev/30807): Add support for jobs
   fbl::RefPtr<Dispatcher> task;
   zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &task);
   if (status != ZX_OK)
@@ -234,7 +234,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
   auto status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_MANAGE_PROCESS, &job);
   if (status != ZX_OK) {
     // Try again, but with the WRITE right.
-    // TODO(ZX-2967) Remove this when all callers are using MANAGE_PROCESS.
+    // TODO(fxbug.dev/32803) Remove this when all callers are using MANAGE_PROCESS.
     status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_WRITE, &job);
     if (status != ZX_OK) {
       return status;
@@ -366,7 +366,7 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
     return ZX_ERR_NO_MEMORY;
 
   uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
-  // TODO(ZX-1631): While this limits reading to the mapped address space of
+  // TODO(fxbug.dev/31512): While this limits reading to the mapped address space of
   // this VMO, it should be reading from multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
   buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
@@ -425,7 +425,7 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   }
 
   uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
-  // TODO(ZX-1631): While this limits writing to the mapped address space of
+  // TODO(fxbug.dev/31512): While this limits writing to the mapped address space of
   // this VMO, it should be writing to multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
   buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));

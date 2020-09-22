@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-# TODO(FIDL-658): There should be a better long-term solution for build rules
+# TODO(fxbug.dev/7980): There should be a better long-term solution for build rules
 # for GIDL's .fidl files.
 fidl("conformance_fidl") {
   name = "conformance"

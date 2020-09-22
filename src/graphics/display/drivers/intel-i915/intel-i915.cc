@@ -2023,7 +2023,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
         if (display->pipe() == nullptr) {
           continue;
         }
-        // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
+        // TODO(fxbug.dev/31310): Reset/scale the display to ensure the buffer displays properly
         registers::PipeRegs pipe_regs(display->pipe()->pipe());
 
         auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space());

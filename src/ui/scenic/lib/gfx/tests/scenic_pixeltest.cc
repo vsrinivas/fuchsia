@@ -53,7 +53,7 @@ constexpr char kEnvironment[] = "ScenicPixelTest";
 // host_image_unittest.cc is also updated. Unlike that unit test,
 // scenic_pixel_test.cc has no way to confirm that it is going through the
 // direct-to-GPU path.
-// TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
+// TODO(fxbug.dev/24580): This number needs to be queried via sysmem or vulkan.
 constexpr uint32_t kYuvSize = 64;
 
 const float kPi = glm::pi<float>();
@@ -403,7 +403,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
-  // TODO(SCN-1369): Scenic may use a different set of bits when creating a
+  // TODO(fxbug.dev/24563): Scenic may use a different set of bits when creating a
   // buffer, resulting in a memory pool mismatch.
   const vk::BufferUsageFlags kUsageFlags =
       vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
@@ -925,7 +925,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   }
 }
 
-// TODO(SCN-1375): Blocked against hardware inability
+// TODO(fxbug.dev/24569): Blocked against hardware inability
 // to provide accurate screenshots from the physical
 // display. Our "TakeScreenshot()" method only grabs
 // pixel data from Escher before it gets sent off to

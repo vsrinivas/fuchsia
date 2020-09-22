@@ -249,7 +249,7 @@ zx_status_t SherlockAudioStreamIn::InitBuffer(size_t size) {
     return status;
   }
 
-  // TODO(ZX-3149): Per johngro's suggestion preallocate contiguous memory (say in
+  // TODO(fxbug.dev/32981): Per johngro's suggestion preallocate contiguous memory (say in
   // platform bus) since we are likely to fail after running for a while and we need to
   // init again (say the devhost is restarted).
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());

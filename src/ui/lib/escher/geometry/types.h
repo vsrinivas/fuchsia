@@ -52,7 +52,7 @@ struct Rectangle2D {
   const std::array<vec2, 4> clockwise_uvs = {vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
 
   bool operator==(const Rectangle2D& other) const {
-    // TODO(ES-137): this epislon needs to be less strict than the general one below.
+    // TODO(fxbug.dev/7228): this epislon needs to be less strict than the general one below.
     static const float kRectangleEpislon = 0.00001f;
     return glm::all(glm::epsilonEqual(origin, other.origin, kRectangleEpislon)) &&
            glm::all(glm::epsilonEqual(extent, other.extent, kRectangleEpislon)) &&

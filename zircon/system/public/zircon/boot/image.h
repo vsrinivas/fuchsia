@@ -206,7 +206,7 @@ typedef struct {
 //     The kernel assumes it was loaded at a fixed physical address of
 //     0x100000 (1MB).  zbi_kernel_t.entry is the absolute physical address
 //     of the PC location where the kernel will start.
-//     TODO(SEC-31): Perhaps this will change??
+//     TODO(fxbug.dev/24762): Perhaps this will change??
 //     The processor is in 64-bit mode with direct virtual to physical
 //     mapping covering the physical memory where the kernel and
 //     bootloader-constructed ZBI were loaded.

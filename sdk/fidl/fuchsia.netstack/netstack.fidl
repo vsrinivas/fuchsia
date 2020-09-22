@@ -77,7 +77,7 @@ struct NetInterface {
 };
 
 /// New version that includes a metric value.
-// TODO(NET-2078): Move this to NetInterface once Chromium stops using
+// TODO(fxbug.dev/21079): Move this to NetInterface once Chromium stops using
 // netstack.fidl.
 struct NetInterface2 {
     uint32 id;
@@ -115,7 +115,7 @@ struct RouteTableEntry {
 };
 
 /// New version that includes a metric value.
-// TODO(NET-2078): Move this to NetInterface once Chromium stops using
+// TODO(fxbug.dev/21079): Move this to NetInterface once Chromium stops using
 // netstack.fidl.
 struct RouteTableEntry2 {
     fuchsia.net.IpAddress destination;

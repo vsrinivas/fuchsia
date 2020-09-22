@@ -228,7 +228,7 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
       iter++;
     }
   }
-  // TODO(SCN-1107) - remove this workaround
+  // TODO(fxbug.dev/24315) - remove this workaround
   static constexpr bool kUseWorkaround = true;
   while (kUseWorkaround && present_pending_ && !channel_closed_) {
     lock.unlock();

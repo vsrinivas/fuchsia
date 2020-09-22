@@ -114,7 +114,7 @@ class Engine : public scheduling::FrameRenderer {
 
   EngineRenderer* renderer() { return engine_renderer_.get(); }
 
-  // TODO(SCN-1151)
+  // TODO(fxbug.dev/24357)
   // Instead of a set of Compositors, we should probably root at a set of
   // Displays. Or, we might not even need to store this set, and Displays (or
   // Compositors) would just be able to schedule a frame for themselves.
@@ -196,7 +196,7 @@ class Engine : public scheduling::FrameRenderer {
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
 
-  // TODO(SCN-1502): This is a temporary solution until we can remove frame_scheduler from
+  // TODO(fxbug.dev/24686): This is a temporary solution until we can remove frame_scheduler from
   // ResourceContext. Do not add any additional dependencies on this object/pointer.
   std::shared_ptr<scheduling::DelegatingFrameScheduler> delegating_frame_scheduler_;
 

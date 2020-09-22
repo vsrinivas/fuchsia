@@ -121,7 +121,7 @@ static __WARN_UNUSED_RESULT zx_status_t msg_get_handles(ProcessDispatcher* up, M
     if (handle_list[i]->dispatcher()->is_waitable())
       handle_list[i]->dispatcher()->Cancel(handle_list[i]);
     HandleOwner handle(handle_list[i]);
-    // TODO(ZX-969): This takes a lock per call. Consider doing these in a batch.
+    // TODO(fxbug.dev/30916): This takes a lock per call. Consider doing these in a batch.
     up->AddHandle(ktl::move(handle));
   }
 
@@ -413,7 +413,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
       return status;
   }
 
-  // TODO(ZX-970): ktrace channel calls; maybe two traces, maybe with txid.
+  // TODO(fxbug.dev/30917): ktrace channel calls; maybe two traces, maybe with txid.
 
   // Write message and wait for reply, deadline, or cancellation
   MessagePacketPtr reply;

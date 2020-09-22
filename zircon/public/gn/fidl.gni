@@ -305,7 +305,7 @@ template("fidl_library") {
             !defined(deps),
             "Public fidl_library(\"$fidl_target\") can only have public_deps")
         if (false) {
-          # TODO(BLD-353): Implement this GN feature: require that all the
+          # TODO(fxbug.dev/3156): Implement this GN feature: require that all the
           # immediate deps have assert_metadata={sdk=...} too.
           assert_metadata = {
             sdk = []
@@ -324,7 +324,7 @@ template("fidl_library") {
             [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
 
         if (defined(invoker.sdk) && invoker.sdk) {
-          # TODO(BLD-353): Assert that every dep also has sdk set.
+          # TODO(fxbug.dev/3156): Assert that every dep also has sdk set.
           sdk = [ true ]
         }
       }

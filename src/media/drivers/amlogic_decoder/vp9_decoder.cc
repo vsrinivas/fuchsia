@@ -916,7 +916,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
     // allocated ahead of time. The hardware will read them from
     // frame_map_mmu.buffer as needed.
     //
-    // TODO(MTWN-148): Return unused frames could be returned to a pool and use
+    // TODO(fxbug.dev/13434): Return unused frames could be returned to a pool and use
     // them for decoding a different frame.
     {
       uint32_t frame_count = frame_buffer_size / PAGE_SIZE;

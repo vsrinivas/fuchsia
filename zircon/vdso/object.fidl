@@ -70,7 +70,7 @@ protocol object {
     /// Rights: If topic is ZX_INFO_PROCESS_MAPS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
     /// Rights: If topic is ZX_INFO_PROCESS_VMOS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
     /// Rights: If topic is ZX_INFO_VMO, handle must be of type ZX_OBJ_TYPE_VMO.
-    /// TODO(ZX-2967), Should this require INSPECT?
+    /// TODO(fxbug.dev/32803), Should this require INSPECT?
     /// Rights: If topic is ZX_INFO_VMAR, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_INSPECT.
     /// Rights: If topic is ZX_INFO_CPU_STATS, handle must have resource kind ZX_RSRC_KIND_ROOT.
     /// Rights: If topic is ZX_INFO_KMEM_STATS, handle must have resource kind ZX_RSRC_KIND_ROOT.

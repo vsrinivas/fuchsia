@@ -15,7 +15,7 @@ pm_tool = rebase_path("$host_out_dir/pm")
 pkg_archive_contents = [
   "amber-files/repository=$amber_files/repository",
 
-  # TODO(IN-915): this should never contain the root key. In the future, this
+  # TODO(fxbug.dev/24959): this should never contain the root key. In the future, this
   # should contain no keys, once infra is managing key material itself.
   # These keys are consumed by the infra train promote scripts.
   "amber-files/keys=$amber_files/keys",

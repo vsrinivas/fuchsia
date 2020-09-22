@@ -15,7 +15,7 @@
 // bookkeeping. It's important that ZX_RSRC_KIND_COUNT is defined for each
 // architecture to properly allocate only the bookkeeping necessary.
 //
-// TODO(ZX-2419): Don't expose ZX_RSRC_KIND_COUNT to userspace
+// TODO(fxbug.dev/32272): Don't expose ZX_RSRC_KIND_COUNT to userspace
 
 typedef uint32_t zx_rsrc_kind_t;
 #define ZX_RSRC_KIND_MMIO ((zx_rsrc_kind_t)0u)

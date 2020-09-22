@@ -454,7 +454,7 @@ PtFlags X86PageTableEpt::split_flags(PageTableLevel level, PtFlags flags) {
 }
 
 void X86PageTableEpt::TlbInvalidate(PendingTlbInvalidation* pending) {
-  // TODO(ZX-981): Implement this.
+  // TODO(fxbug.dev/12479): Implement this.
   pending->clear();
 }
 
@@ -756,7 +756,7 @@ X86ArchVmAspace::~X86ArchVmAspace() {
   if (pt_) {
     pt_->~X86PageTableBase();
   }
-  // TODO(ZX-980): check that we've destroyed the aspace.
+  // TODO(fxbug.dev/30927): check that we've destroyed the aspace.
 }
 
 vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,

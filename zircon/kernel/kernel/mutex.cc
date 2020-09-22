@@ -149,7 +149,7 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
   // Spin on the mutex until it is either released, contested, or
   // the max spin time is reached.
   //
-  // TODO(ZX-4873): Optimize cache pressure of spinners and default spin max.
+  // TODO(fxbug.dev/34646): Optimize cache pressure of spinners and default spin max.
   const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
   const zx_ticks_t spin_until_ticks =
       affine::utils::ClampAdd(current_ticks(), time_to_ticks.Scale(spin_max_duration));

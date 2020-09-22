@@ -287,7 +287,7 @@ source_set("view_focuser_registry") {
 
 source_set("ids") {
   sources = [
-    # TODO(SCN-1398): IDs don't belong here, but this will work until we factor
+    # TODO(fxbug.dev/24590): IDs don't belong here, but this will work until we factor
     # out another system that needs ids outside of gfx.
     "id.cc",
     "id.h",
@@ -302,7 +302,7 @@ source_set("util") {
     "util/wrap.h",
   ]
   deps = [
-    # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
+    # TODO(fxbug.dev/24590): Needed by wrap/unwrap.  Move to separate source_set?
     "//src/lib/fxl",
     "//src/ui/lib/escher",
   ]

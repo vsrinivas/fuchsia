@@ -107,7 +107,7 @@ zx_ticks_t sys_ticks_get_via_kernel() {
 
 // zx_status_t zx_clock_adjust
 zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t offset) {
-  // TODO(ZX-971): finer grained validation
+  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
     return status;
@@ -171,9 +171,9 @@ zx_status_t sys_eventpair_create(uint32_t options, user_out_handle* out0, user_o
 zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options, user_out_handle* out) {
   LTRACEF("options 0x%x\n", options);
 
-  // TODO(ZX-2184) Require a non-INVALID handle.
+  // TODO(fxbug.dev/32044) Require a non-INVALID handle.
   if (rsrc != ZX_HANDLE_INVALID) {
-    // TODO(ZX-971): finer grained validation
+    // TODO(fxbug.dev/30918): finer grained validation
     zx_status_t status = validate_resource(rsrc, ZX_RSRC_KIND_ROOT);
     if (status != ZX_OK)
       return status;

@@ -40,7 +40,7 @@ void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   TRACE_DURATION("gfx", "scenic_impl::Session::Enqueue", "session_id", id(), "num_commands",
                  cmds.size());
   for (auto& cmd : cmds) {
-    // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
+    // TODO(fxbug.dev/23932): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
     const System::TypeId type_id = SystemTypeForCmd(cmd);
     const auto dispatcher_it = dispatchers_.find(type_id);
@@ -401,7 +401,7 @@ void Session::EventAndErrorReporter::FlushEvents() {
 
 void Session::EventAndErrorReporter::ReportError(syslog::LogSeverity severity,
                                                  std::string error_string) {
-  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // TODO(fxbug.dev/24465): Come up with a better solution to avoid children
   // calling into us during destruction.
   if (!session_) {
     FX_LOGS(ERROR) << "Reporting Scenic Session error after session destroyed: " << error_string;

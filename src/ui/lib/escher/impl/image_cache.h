@@ -23,7 +23,7 @@ namespace impl {
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
 //
-// TODO(ES-7): this does not prune entries!!  Once a new Image is created, it
+// TODO(fxbug.dev/23725): this does not prune entries!!  Once a new Image is created, it
 // will live until the cache is destroyed!!
 class ImageCache : public ImageFactory, private ResourceManager {
  public:

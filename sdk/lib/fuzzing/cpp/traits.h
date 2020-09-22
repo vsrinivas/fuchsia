@@ -93,7 +93,7 @@ struct Allocate {
     }                                                       \
   }
 
-// TODO(SEC-331): Use a more useful distribution for types such as bool.
+// TODO(fxbug.dev/25053): Use a more useful distribution for types such as bool.
 FUZZING_STATIC(bool);
 FUZZING_STATIC(uint8_t);
 FUZZING_STATIC(uint16_t);
@@ -111,7 +111,7 @@ FUZZING_STATIC(double);
 // Handle traits:
 // Like FUZZING_STATIC(zx_handle_t), but return ::zx::object<T> instance.
 //
-// TODO(SEC-331): Generate a distribution of legitimate and illegitimate handles.
+// TODO(fxbug.dev/25053): Generate a distribution of legitimate and illegitimate handles.
 template <typename T>
 struct MinSize<::zx::object<T>> {
   constexpr operator size_t() const { return sizeof(zx_handle_t); }
@@ -203,7 +203,7 @@ struct Allocate<std::string> {
 //
 // Caveat: When MinSize<T>() = 0, attempt to allocate S T-instances.
 //
-// TODO(SEC-331): Consume some input bytes to allocate pseudorandom number of items.
+// TODO(fxbug.dev/25053): Consume some input bytes to allocate pseudorandom number of items.
 template <typename T, size_t S>
 struct MinSize<std::array<T, S>> {
   constexpr operator size_t() const { return 0; }
@@ -257,7 +257,7 @@ struct Allocate<std::array<T, S>> {
 // Caveat: When MinSize<T>() = 0, treat T-instances as though they will
 // allocate 8 bytes, enough for a 64-bit pointer.
 //
-// TODO(SEC-331): Consume some input bytes to allocate pseudorandom number of items.
+// TODO(fxbug.dev/25053): Consume some input bytes to allocate pseudorandom number of items.
 template <typename T>
 struct MinSize<std::vector<T>> {
   constexpr operator size_t() const { return 0; }

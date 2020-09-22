@@ -112,7 +112,7 @@ TEST_F(ChromiumAppTest, CreateAndNavigate) {
 
   // If set, the URL and title events are used to determine if a page has
   // loaded. Otherwise, |is_main_document_loaded| is used instead.
-  // TODO(WEB-42): Remove this workaround once Chromium has rolled with the new
+  // TODO(fxbug.dev/29937): Remove this workaround once Chromium has rolled with the new
   // behavior.
   bool use_legacy_observer_behavior = true;
 

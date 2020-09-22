@@ -34,7 +34,7 @@ const zx::unowned_resource root() {
 // are 'ZX_ERR_NOT_FOUND', which indicates that it is missing from the
 // region allocator.
 //
-// TODO(ZX-2419): Figure out a way to test IRQs in the same manner, without
+// TODO(fxbug.dev/32272): Figure out a way to test IRQs in the same manner, without
 // hardcoding target-specific IRQ vectors in these tests. That information is
 // stored in the kernel and is not exposed to userspace, so we can't simply
 // guess/probe valid vectors like we can MMIO and still assume the tests are

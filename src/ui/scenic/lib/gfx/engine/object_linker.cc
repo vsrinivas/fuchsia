@@ -191,7 +191,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
   //
   // Once linking has occurred, this communication happens via UnregisterExport
   // or UnregisterImport and the peer_destroyed callback.
-  // TODO(SCN-982): Follow up on __ZX_OBJECT_PEER_CLOSED with Zircon.
+  // TODO(fxbug.dev/24197): Follow up on __ZX_OBJECT_PEER_CLOSED with Zircon.
   static_assert(ZX_CHANNEL_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   static_assert(ZX_EVENTPAIR_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   static_assert(ZX_FIFO_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");

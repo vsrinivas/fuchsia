@@ -10,7 +10,7 @@ void FindingsJson::Generate(const Finding& finding) {
   GenerateObject([&]() {
     GenerateObjectMember("category", "fidl-lint/" + finding.subcategory(), Position::kFirst);
     GenerateObjectMember("message", finding.message());
-    // TODO(FIDL-668) Add "url" to related FIDL documentation, per Tricium spec
+    // TODO(fxbug.dev/7990) Add "url" to related FIDL documentation, per Tricium spec
     Generate(finding.span());
     std::vector<SuggestionWithReplacementSpan> suggestions;
     if (finding.suggestion().has_value()) {

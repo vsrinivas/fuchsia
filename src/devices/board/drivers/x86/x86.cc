@@ -90,7 +90,7 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* ou
     return status;
   }
 
-  // TODO(ZX-4858): Remove this use of device_get_parent().  For now, suppress this
+  // TODO(fxbug.dev/34631): Remove this use of device_get_parent().  For now, suppress this
   // deprecation warning to not spam the build logs
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

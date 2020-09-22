@@ -34,7 +34,7 @@ table PixelFormat {
 ///
 /// This should be kept in sync with fuchsia.sysmem.PixelFormatType.
 //
-// TODO(ZX-2270): add more formats.
+// TODO(fxbug.dev/32128): add more formats.
 //
 // TODO(dustingreen): Add more comment text re. pixel data layout for each of
 // these.

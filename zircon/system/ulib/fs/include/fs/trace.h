@@ -10,7 +10,7 @@
 #ifdef __Fuchsia__
 #include <lib/trace/event.h>
 #else
-// TODO(ZX-1407): If ulib/trace defines a no-op
+// TODO(fxbug.dev/31305): If ulib/trace defines a no-op
 // version of these macros, we won't need to.
 //
 // Redefine tracing macros as no-ops for host-side tools

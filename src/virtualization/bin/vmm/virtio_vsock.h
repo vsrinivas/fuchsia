@@ -104,7 +104,7 @@ class VirtioVsock
   Stream<&VirtioVsock::Mux> rx_stream_;
   Stream<&VirtioVsock::Demux> tx_stream_;
 
-  // TODO(PD-117): Evaluate granularity of locking.
+  // TODO(fxbug.dev/12407): Evaluate granularity of locking.
   mutable std::mutex mutex_;
   ConnectionMap connections_ __TA_GUARDED(mutex_);
   ConnectionSet readable_ __TA_GUARDED(mutex_);

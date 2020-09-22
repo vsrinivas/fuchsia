@@ -99,7 +99,7 @@ impl StreamsBuilder {
         cobalt_sender: CobaltSender,
         domain: Option<String>,
     ) -> Result<Self, Error> {
-        // TODO(BT-533): detect codecs, add streams for each codec
+        // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
         // SBC is required
         let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
         let codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");

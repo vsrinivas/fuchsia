@@ -29,7 +29,7 @@ struct InterfaceConfig {
 struct TestAddEthernetDeviceRequest {
     string topological_path;
     InterfaceConfig config;
-    // TODO(FIDL-625): Use 'EthernetDevice device;' instead.
+    // TODO(fxbug.dev/7947): Use 'EthernetDevice device;' instead.
     uint32 this_should_be_a_handle;
 };
 

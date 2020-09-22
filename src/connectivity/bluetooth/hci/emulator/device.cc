@@ -324,7 +324,7 @@ void Device::WatchControllerParameters(WatchControllerParametersCallback callbac
 }
 
 void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
-  // TODO(BT-229): Implement
+  // TODO(fxbug.dev/822): Implement
 }
 
 void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) {

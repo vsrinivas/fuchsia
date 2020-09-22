@@ -18,7 +18,7 @@
 // The way how macros in wmi.h and wmi-tlv.h are working (read carefully how MSG() is defined before
 // ath10k_msg_type and how ATH10K_MSG_TYPE_WMI is *referred* in wmi.h) is that the .c code must
 // include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
-// properly. TODO(WLAN-606): Cleanup ath10k msg_buf
+// properly. TODO(fxbug.dev/29228): Cleanup ath10k msg_buf
 #include <ddk/driver.h>
 #include <lib/zircon-internal/align.h>
 #include <wlan/protocol/ieee80211.h>
@@ -1632,7 +1632,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
       arvif->beacon_state = ATH10K_BEACON_SENDING;
       mtx_unlock(&arvif->ar->data_lock);
 
-      // TODO(WLAN-413): populate this from the corresponding flags calculated
+      // TODO(fxbug.dev/29035): populate this from the corresponding flags calculated
       // by ath10k_wmi_update_tim()
       bool dtim_zero = false;
       bool deliver_cab = false;
@@ -1654,7 +1654,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
 }
 
 static void ath10k_wmi_tx_beacons_nowait(struct ath10k* ar) {
-  // TODO(WLAN-414): iterate over all interfaces
+  // TODO(fxbug.dev/29036): iterate over all interfaces
   if (ar->arvif_created) {
     ath10k_wmi_tx_beacon_nowait(&ar->arvif);
   }

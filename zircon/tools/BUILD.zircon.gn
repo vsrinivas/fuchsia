@@ -5,7 +5,7 @@
 import("$zx/public/gn/copied_files_dir.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 
-# TODO(BLD-353): This directory should probably merge with //tools after
+# TODO(fxbug.dev/3156): This directory should probably merge with //tools after
 # build unification.
 
 # Build the host tools intended for developer use.

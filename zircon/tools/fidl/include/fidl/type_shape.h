@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-// TODO(FIDL-710): We should revisit this namespace choice as part of improving code organization.
+// TODO(fxbug.dev/8032): We should revisit this namespace choice as part of improving code organization.
 namespace fidl {
 
 namespace flat {

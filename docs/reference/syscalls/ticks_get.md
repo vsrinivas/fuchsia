@@ -27,7 +27,7 @@ They are not guaranteed to continue advancing when the system is asleep.
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

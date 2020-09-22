@@ -203,7 +203,7 @@ bool Session::ReadFifoMessage() {
     case TRACE_PROVIDER_BUFFER_SAVED: {
       auto wrapped_count = packet.data32;
       auto durable_data_end = packet.data64;
-#if 0  // TODO(DX-367): Don't delete this, save for conversion to syslog.
+#if 0  // TODO(fxbug.dev/22887): Don't delete this, save for conversion to syslog.
         fprintf(stderr, "Session: Received buffer_saved message"
                 ", wrapped_count=%u, durable_data_end=0x%" PRIx64 "\n",
                 wrapped_count, durable_data_end);

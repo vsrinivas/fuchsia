@@ -8,4 +8,4 @@ implementations of core Bluetooth system services and hardware protocols.
 Defines a management interface to control the Bluetooth controller emulator
 driver (see [bt-hci-emulator](//src/connectivity/bluetooth/hci/emulator)).
 
-## TODO(BT-698): fake_profile.fidl
+## TODO(fxbug.dev/1291): fake_profile.fidl

@@ -71,7 +71,7 @@ class TestPort {
     sem->Reset();
     thread->join();
 
-    // TODO(ZX-594) - enable: Verify WaitAsync/Wait then kill the handle
+    // TODO(fxbug.dev/30552) - enable: Verify WaitAsync/Wait then kill the handle
 #if 0
         sem->WaitAsync(port.get());
         thread.reset(new std::thread([port] {
@@ -87,7 +87,7 @@ class TestPort {
 #endif
 
     // Verify close
-    // TODO(ZX-594): test Close after Wait also
+    // TODO(fxbug.dev/30552): test Close after Wait also
     port->Close();
     thread.reset(new std::thread([port, sem] {
       DLOG("Waiting for semaphore");

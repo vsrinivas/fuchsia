@@ -143,7 +143,7 @@ int socket(int domain, int type, int protocol) {
     *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
   }
 
-  // TODO(ZX-973): Implement CLOEXEC.
+  // TODO(fxbug.dev/30920): Implement CLOEXEC.
   // if (type & SOCK_CLOEXEC) {
   // }
 
@@ -378,7 +378,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   if (options & fnet::LookupIpOptions::V6_ADDRS) {
     for (uint64_t i = 0; i < response.ipv6_addrs.count() && count < MAXADDRS; i++) {
       buf[count].family = AF_INET6;
-      buf[count].scopeid = 0;  // TODO(NET-2438): Figure out a way to expose scope ID
+      buf[count].scopeid = 0;  // TODO(fxbug.dev/21415): Figure out a way to expose scope ID
       auto addr = response.ipv6_addrs.at(i).addr;
       memcpy(buf[count].addr, addr.data(), addr.size());
       buf[count].sortkey = 0;
@@ -386,7 +386,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     }
   }
 
-  // TODO(NET-2437) support CNAME
+  // TODO(fxbug.dev/21414) support CNAME
 
   return count;
 }

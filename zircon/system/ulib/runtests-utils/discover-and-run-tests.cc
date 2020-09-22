@@ -278,7 +278,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       }
     }
 
-    // TODO(ZX-2051): Include total duration in summary.json.
+    // TODO(fxbug.dev/31913): Include total duration in summary.json.
     uint64_t time_taken_ms = stopwatch->DurationInMsecs();
     printf("\nSUMMARY: Ran %lu tests: %d failed (%" PRIu64 ".%03u sec)\n", results.size(),
            failed_count, time_taken_ms / 1000, (unsigned)(time_taken_ms % 1000));

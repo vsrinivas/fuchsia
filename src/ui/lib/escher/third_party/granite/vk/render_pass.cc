@@ -73,7 +73,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
   const auto& color_info = rpi.color_attachment_infos[index];
   const bool is_swapchain_image = color_info.is_swapchain_image();
 
-  // TODO(ES-73): support for transient images.  What's missing?
+  // TODO(fxbug.dev/7166): support for transient images.  What's missing?
   FX_DCHECK(!color_info.is_transient || !is_swapchain_image)
       << "transient+swapchain images not yet handled.";
 
@@ -172,7 +172,7 @@ bool FillDepthStencilAttachmentDescription(const RenderPassInfo& rpi,
   desc->initialLayout =
       desc->loadOp == vk::AttachmentLoadOp::eLoad ? layout : vk::ImageLayout::eUndefined;
 
-  // TODO(ES-83): If the attachment is not being stored, then the most
+  // TODO(fxbug.dev/7174): If the attachment is not being stored, then the most
   // performant choice is to leave it in the same layout as the last subpass
   // that uses this attachment, in order to avoid an extra transition at the end
   // of the render pass (which would be indicated by setting |finalLayout| to
@@ -314,7 +314,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     subpass.pDepthStencilAttachment = depth_att_ref;
 
     if (info_subpasses[i].num_resolve_attachments) {
-      // TODO(ES-83): evaluate tradeoffs of relaxing this constraint.  How often
+      // TODO(fxbug.dev/7174): evaluate tradeoffs of relaxing this constraint.  How often
       // would it be beneficial to resolve some subset of the attachments?  How
       // much less convenient would the API become?  e.g. what changes would
       // need to be made to the RenderPassInfo struct?
@@ -528,7 +528,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   for (uint32_t attachment = 0; attachment < num_attachments; attachment++) {
     // As mentioned above, do not preserve attachments beyond the last subpass
     // where they are used.
-    // TODO(ES-83): add ClearBitsAtAndAboveIndex() to bit_ops.h
+    // TODO(fxbug.dev/7174): add ClearBitsAtAndAboveIndex() to bit_ops.h
     preserve_masks[attachment] &= (1u << last_subpass_for_attachment[attachment]) - 1;
   }
   for (uint32_t subpass_index = 0; subpass_index < num_info_subpasses; subpass_index++) {
@@ -554,7 +554,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
   // Add external subpass dependencies.
   //
-  // TODO(ES-83): Section 7.1 of the Vulkan spec ("Render Pass Creation") states
+  // TODO(fxbug.dev/7174): Section 7.1 of the Vulkan spec ("Render Pass Creation") states
   // that external subpass dependencies are implicitly specified when not given
   // explicitly by the user.  Such implicit dependencies use conservative stage
   // and access masks.  It is easy to do better for external "src" dependencies,

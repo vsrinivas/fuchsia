@@ -127,7 +127,7 @@ struct ProcessStatusReply {
 };
 
 struct LaunchRequest {
-  // TODO(DX-953): zxdb should be able to recognize when something is a binary
+  // TODO(fxbug.dev/5796): zxdb should be able to recognize when something is a binary
   //               or a component. Replying with the type is probably OK as it
   //               makes the client handling a bit easier.
   InferiorType inferior_type = InferiorType::kLast;

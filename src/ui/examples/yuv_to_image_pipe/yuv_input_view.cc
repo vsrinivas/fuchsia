@@ -13,7 +13,7 @@ namespace {
 
 constexpr int kNumImages = 3;
 
-// TODO(SCN-1278): Remove this.
+// TODO(fxbug.dev/24476): Remove this.
 // Turns two floats (high bits, low bits) into a 64-bit uint.
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;

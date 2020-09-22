@@ -22,7 +22,7 @@ protocol interrupt {
     [blocking]
     interrupt_wait(handle:INTERRUPT handle) -> (status status, optional_time out_timestamp);
 
-    // TODO(ZX-2967): No DESTROY rights here.
+    // TODO(fxbug.dev/32803): No DESTROY rights here.
     /// Destroys an interrupt object.
     interrupt_destroy(handle:INTERRUPT handle) -> (status status);
 

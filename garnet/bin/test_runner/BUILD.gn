@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-# TODO(MF-206): all of the following should be moved to components. In the
+# TODO(fxbug.dev/16147): all of the following should be moved to components. In the
 # future, only run-integration-tests should remain as a shell=true binary.
 
 group("test_runner") {

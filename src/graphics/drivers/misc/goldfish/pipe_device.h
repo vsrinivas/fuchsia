@@ -77,7 +77,7 @@ class PipeDevice : public DeviceType,
   std::optional<ddk::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
 
   fbl::Mutex pipes_lock_;
-  // TODO(TC-383): This should be std::unordered_map.
+  // TODO(fxbug.dev/3213): This should be std::unordered_map.
   using PipeMap = std::map<int32_t, std::unique_ptr<Pipe>>;
   PipeMap pipes_ TA_GUARDED(pipes_lock_);
 

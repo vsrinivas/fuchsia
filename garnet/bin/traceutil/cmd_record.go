@@ -243,7 +243,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		fmt.Println("done")
 	}
 
-	// TODO(TO-403): Remove remote file.  Add command line option to leave it.
+	// TODO(fxbug.dev/27613): Remove remote file.  Add command line option to leave it.
 
 	title := cmd.getReportTitle()
 

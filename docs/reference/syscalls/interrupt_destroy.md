@@ -37,7 +37,7 @@ that the packet has been read but the interrupt has not been re-armed by calling
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

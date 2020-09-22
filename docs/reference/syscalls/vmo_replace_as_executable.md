@@ -26,7 +26,7 @@ to the same underlying VM object, adding the right **ZX_RIGHT_EXECUTE**.
 *handle* is always invalidated.
 
 *vmex* may currently be **ZX_HANDLE_INVALID** to ease migration of new code,
-this is TODO(SEC-42) and will be removed.
+this is TODO(fxbug.dev/24770) and will be removed.
 
 ## RIGHTS
 

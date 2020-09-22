@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(ES-139): make GLM_FORCE_RADIANS the default.  We rely on this below for
+// TODO(fxbug.dev/7230): make GLM_FORCE_RADIANS the default.  We rely on this below for
 // creating quaternions.
 #define GLM_FORCE_RADIANS
 #include <gtest/gtest.h>
@@ -148,17 +148,17 @@ float TestPlaneIntersection(PlaneT plane, VecT pt1, VecT pt2) {
 
   float seg_vec_length_squared = glm::dot(seg_vec, seg_vec);
 
-  // TODO(ES-137): revisit kEpsilon fudge-factor.
+  // TODO(fxbug.dev/7228): revisit kEpsilon fudge-factor.
   EXPECT_NEAR(1.f, t1 + t2, kEpsilon * seg_vec_length_squared);
 
   const VecT intersection = pt1 + t1 * (pt2 - pt1);
   const VecT plane_def_vec = plane.dir() * plane.dist();
   const VecT vec_on_plane = intersection - plane_def_vec;
-  // TODO(ES-137): revisit kEpsilon fudge-factor.
+  // TODO(fxbug.dev/7228): revisit kEpsilon fudge-factor.
   if (glm::dot(vec_on_plane, vec_on_plane) > kEpsilon * 10) {
     // If the distance is great enough, verify that the intersection really is
     // on the plane.
-    // TODO(ES-137): revisit kEpsilon fudge-factor.
+    // TODO(fxbug.dev/7228): revisit kEpsilon fudge-factor.
     EXPECT_LT(glm::dot(vec_on_plane, plane.dir()), kEpsilon * 100);
   }
 

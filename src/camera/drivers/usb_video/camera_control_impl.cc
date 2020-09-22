@@ -52,7 +52,7 @@ void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   camera_device_info.product_name = usb_device_info.product_name;
   camera_device_info.product_id = usb_device_info.product_id;
 
-  // TODO(CAM-11): add more capabilities based on usb description
+  // TODO(fxbug.dev/3396): add more capabilities based on usb description
   camera_device_info.output_capabilities = fuchsia::camera::CAMERA_OUTPUT_STREAM;
   camera_device_info.max_stream_count = 1;
   callback(std::move(camera_device_info));

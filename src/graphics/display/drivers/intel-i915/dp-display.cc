@@ -225,7 +225,7 @@ zx_status_t DpAux::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply
   status.set_rcv_error(1);
   // The documentation says to not use setting 0 (400us), so use 3 (1600us).
   status.set_timeout_timer_value(3);
-  // TODO(ZX-1416): Support interrupts
+  // TODO(fxbug.dev/31313): Support interrupts
   status.set_interrupt_on_done(1);
   // Send busy starts the transaction
   status.set_send_busy(1);
@@ -328,7 +328,7 @@ zx_status_t DpAux::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessa
         LOG_TRACE("DP aux: Reply was not an ack (got I2C_NACK)\n");
         return ZX_ERR_IO_REFUSED;
       case DP_REPLY_I2C_DEFER:
-        // TODO(ZX-1416): Implement handling of I2C_DEFER.
+        // TODO(fxbug.dev/31313): Implement handling of I2C_DEFER.
         LOG_TRACE("DP aux: Received I2C_DEFER (not implemented)\n");
         return ZX_ERR_NEXT;
       default:
@@ -395,7 +395,7 @@ zx_status_t DpAux::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf
   if (status != ZX_OK) {
     return status;
   }
-  // TODO(ZX-1416): Handle the case where the hardware did a short write,
+  // TODO(fxbug.dev/31313): Handle the case where the hardware did a short write,
   // for which we could send the remaining bytes.
   if (reply.size != 1) {
     LOG_WARN("DP aux write: Unexpected reply size\n");
@@ -561,7 +561,7 @@ bool DpDisplay::LinkTrainingSetup() {
   dp_tp.WriteTo(mmio_space());
 
   // Configure ddi voltage swing
-  // TODO(ZX-1416): Read the VBT to handle unique motherboard configs for kaby lake
+  // TODO(fxbug.dev/31313): Read the VBT to handle unique motherboard configs for kaby lake
   unsigned count;
   uint8_t i_boost;
   const ddi_buf_trans_entry* entries;
@@ -765,7 +765,7 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 }
 
 bool DpDisplay::DoLinkTraining() {
-  // TODO(ZX-1416): If either of the two training steps fails, we're
+  // TODO(fxbug.dev/31313): If either of the two training steps fails, we're
   // supposed to try with a reduced bit rate.
   bool result = LinkTrainingSetup();
   if (result) {
@@ -841,7 +841,7 @@ bool DpDisplay::Query() {
       LOG_ERROR("Failed to read DP sink count\n");
       return false;
     }
-    // TODO(ZX-1416): Add support for MST
+    // TODO(fxbug.dev/31313): Add support for MST
     if (sink_count.count() != 1) {
       LOG_ERROR("MST not supported\n");
       return false;
@@ -947,7 +947,7 @@ bool DpDisplay::InitDdi() {
 
     // Per eDP 1.4, the panel must be on and ready to accept AUX messages
     // within T1 + T3, which is at most 90 ms.
-    // TODO(ZX-1416): Read the hardware's actual value for T1 + T3.
+    // TODO(fxbug.dev/31313): Read the hardware's actual value for T1 + T3.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(90)));
 
     if (!panel_status.ReadFrom(mmio_space()).on_status() ||
@@ -1285,7 +1285,7 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
     }
 
     // The pulse was from a downstream monitor being connected
-    // TODO(ZX-1416): Add support for MST
+    // TODO(fxbug.dev/31313): Add support for MST
     if (sink_count.count() > 1) {
       return true;
     }

@@ -315,7 +315,7 @@ TRBPromise Interrupter::Timeout(zx::time deadline) {
 }
 
 zx_status_t Interrupter::IrqThread() {
-  // TODO(ZX-940): See ZX-940.  Get rid of this.  For now we need thread
+  // TODO(fxbug.dev/30888): See ZX-940.  Get rid of this.  For now we need thread
   // priorities so that realtime transactions use the completer which ends
   // up getting realtime latency guarantees.
   async_loop_config_t config = kAsyncLoopConfigNeverAttachToThread;

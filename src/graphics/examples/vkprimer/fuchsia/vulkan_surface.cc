@@ -20,7 +20,7 @@ bool VulkanSurface::Init() {
     RTN_MSG(false, "VulkanSurface is already initialized.\n");
   }
 
-  // TODO(MA-647): Move to scenic (public) surface.
+  // TODO(fxbug.dev/13252): Move to scenic (public) surface.
   VkImagePipeSurfaceCreateInfoFUCHSIA info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,

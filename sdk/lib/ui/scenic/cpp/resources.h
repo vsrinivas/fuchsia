@@ -61,7 +61,7 @@ class Resource {
 };
 
 // Represents a memory resource in a session.
-// TODO(SCN-268): Make this class final, and add public move constructor.
+// TODO(fxbug.dev/23513): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
   Memory(Session* session, zx::vmo vmo, uint64_t allocation_size,
@@ -114,7 +114,7 @@ class RoundedRectangle final : public Shape {
 };
 
 // Represents an image resource in a session.
-// TODO(SCN-268): Make this class final, and add public move constructor.
+// TODO(fxbug.dev/23513): Make this class final, and add public move constructor.
 class Image : public Resource {
  public:
   // Creates an image resource bound to a session.
@@ -271,7 +271,7 @@ class ContainerNode : public Node {
 class ViewHolder;
 
 // Represents an entity node resource in a session.
-// TODO(SCN-268): Make this class final, and add public move constructor.
+// TODO(fxbug.dev/23513): Make this class final, and add public move constructor.
 class EntityNode : public ContainerNode {
  public:
   explicit EntityNode(Session* session);

@@ -169,7 +169,7 @@ class JsonWriter {
         case '\n':
           os_ << "\\n";
           break;
-        // TODO(FIDL-28): Escape more characters.
+        // TODO(fxbug.dev/7365): Escape more characters.
         default:
           os_ << c;
           break;

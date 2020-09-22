@@ -53,7 +53,7 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* c
   // Set up per-object state.
   mesh_data->Bind(cb);
 
-  // TODO(ES-158): this assumes that all meshes in this render-queue pass are
+  // TODO(fxbug.dev/7249): this assumes that all meshes in this render-queue pass are
   // drawn exactly the same way.  We will need something better soon.
   cb->SetShaderProgram(context->shader_program(), mesh_data->texture->sampler()->is_immutable()
                                                       ? mesh_data->texture->sampler()
@@ -86,7 +86,7 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   FX_DCHECK(texture);
   auto& mesh_spec = mesh->spec();
 
-  // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
+  // TODO(fxbug.dev/7194): avoid reaching in to impl::CommandBuffer for keep-alive.
   frame->cmds()->KeepAlive(mesh);
   frame->cmds()->KeepAlive(texture.get());
 
@@ -107,7 +107,7 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
     uint32_t binding_count = 0;
     for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
       if (auto& attribute_buffer = mesh->attribute_buffer(i)) {
-        // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
+        // TODO(fxbug.dev/7194): avoid reaching in to impl::CommandBuffer for keep-alive.
         frame->cmds()->KeepAlive(attribute_buffer.buffer);
 
         obj->vertex_bindings[binding_count++] =
@@ -140,7 +140,7 @@ PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(const FramePtr
   auto writable_binding = NewPaperShaderUniformBinding<PaperShaderMeshInstance>(frame);
   writable_binding.first->model_transform = transform;
   writable_binding.first->color = color;
-  // TODO(ES-152): populate field for vertex-shader clip-planes.
+  // TODO(fxbug.dev/7243): populate field for vertex-shader clip-planes.
 
   draw_data->object_properties = writable_binding.second;
   draw_data->flags = flags;

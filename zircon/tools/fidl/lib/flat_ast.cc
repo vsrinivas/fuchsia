@@ -382,7 +382,7 @@ class BytesTypeTemplate final : public TypeTemplate {
   }
 
  private:
-  // TODO(FIDL-389): Remove when canonicalizing types.
+  // TODO(fxbug.dev/7724): Remove when canonicalizing types.
   const Name kUint8TypeName = Name::CreateIntrinsic("uint8");
   const PrimitiveType kUint8Type = PrimitiveType(kUint8TypeName, types::PrimitiveSubtype::kUint8);
 
@@ -676,7 +676,7 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   add_primitive("float32", types::PrimitiveSubtype::kFloat32);
   add_primitive("float64", types::PrimitiveSubtype::kFloat64);
 
-  // TODO(FIDL-483): Remove when there is generalized support.
+  // TODO(fxbug.dev/7807): Remove when there is generalized support.
   const static auto kByteName = Name::CreateIntrinsic("byte");
   const static auto kBytesName = Name::CreateIntrinsic("bytes");
   root_typespace.templates_.emplace(
@@ -1212,7 +1212,7 @@ SourceSpan Library::GeneratedSimpleName(const std::string& name) {
 }
 
 std::string Library::NextAnonymousName() {
-  // TODO(FIDL-596): Improve anonymous name generation. We want to be
+  // TODO(fxbug.dev/7920): Improve anonymous name generation. We want to be
   // specific about how these names are generated once they appear in the
   // JSON IR, and are exposed to the backends.
   std::ostringstream data;
@@ -1828,7 +1828,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
         return;
       std::unique_ptr<Constant> maybe_default_value;
       if (member->maybe_used->maybe_default_value) {
-        // TODO(FIDL-609): Support defaults on tables.
+        // TODO(fxbug.dev/7932): Support defaults on tables.
         const auto default_value = member->maybe_used->maybe_default_value.get();
         reporter_->Report(ErrDefaultsOnTablesNotSupported, default_value->span());
       }
@@ -3253,7 +3253,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
                                                                   auto Visitor) -> bool {
     for (const auto& name : protocol->composed_protocols) {
       auto decl = LookupDeclByName(name);
-      // TODO(FIDL-603): Special handling here should not be required, we
+      // TODO(fxbug.dev/7926): Special handling here should not be required, we
       // should first rely on creating the types representing composed
       // protocols.
       if (!decl) {

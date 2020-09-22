@@ -341,7 +341,7 @@ class Sl4f {
     // Kill SL4F first, we'll use it to try to guess when the reboot is done.
     await stopServer();
     // Issue a reboot command and wait.
-    // TODO(DNO-621): trap errors
+    // TODO(fxbug.dev/7003): trap errors
     final Stopwatch rebootStopwatch = Stopwatch()..start();
     await ssh.run('dm reboot');
     await Future.delayed(Duration(seconds: 20));

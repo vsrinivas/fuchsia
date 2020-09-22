@@ -45,7 +45,7 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
 
   // Returns the first compositor from the current compositors,  or invalid
   // WeakPtr if there are no compositors.
-  // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
+  // TODO(fxbug.dev/24376): get rid of SceneGraph::first_compositor().
   CompositorWeakPtr first_compositor() const {
     for (auto& compositor : compositors_) {
       if (compositor) {

@@ -355,7 +355,7 @@ static void init_topology(zbi_topology_node_t* nodes, size_t node_count) {
 
   arch_set_num_cpus(static_cast<uint>(system_topology::GetSystemTopology().processor_count()));
 
-  // TODO(ZX-3068) Print the whole topology of the system.
+  // TODO(fxbug.dev/32903) Print the whole topology of the system.
   if (DPRINTF_ENABLED_FOR_LEVEL(INFO)) {
     for (auto* proc : system_topology::GetSystemTopology().processors()) {
       auto& info = proc->entity.processor.architecture_info.arm;

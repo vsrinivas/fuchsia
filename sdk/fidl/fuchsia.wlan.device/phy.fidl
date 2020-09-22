@@ -80,7 +80,7 @@ struct QueryResponse {
 
 resource struct CreateIfaceRequest {
     MacRole role;
-    // TODO(WLAN-927): Make `sme_channel` mandatory once all drivers support the channel.
+    // TODO(fxbug.dev/29547): Make `sme_channel` mandatory once all drivers support the channel.
     zx.handle:CHANNEL? sme_channel;
     bytes:6? init_mac_addr;
 };

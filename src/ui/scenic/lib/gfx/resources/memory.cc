@@ -13,7 +13,7 @@
 
 namespace {
 
-// TODO(SCN-1368): This is a hack until we solve the memory importation bug. On
+// TODO(fxbug.dev/24562): This is a hack until we solve the memory importation bug. On
 // x86 platforms, vk::Buffers come out of a separate memory pool. These helper
 // functions help make sure that there is a single valid memory pool, for
 // both images and buffers, by creating a dummy representative buffer/image.
@@ -27,7 +27,7 @@ uint32_t GetBufferMemoryBits(vk::Device device) {
   constexpr vk::DeviceSize kUnimportantBufferSize = 30000;
   vk::BufferCreateInfo buffer_create_info;
   buffer_create_info.size = kUnimportantBufferSize;
-  // TODO(SCN-1369): Buffer creation parameters currently need to be the same
+  // TODO(fxbug.dev/24563): Buffer creation parameters currently need to be the same
   // across all Scenic import flows, as well as in client export objects.
   buffer_create_info.usage =
       vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
@@ -59,7 +59,7 @@ uint32_t GetImageMemoryBits(vk::Device device) {
   // (src/ui/scenic/lib/gfx/resources/gpu_image.cc and
   // src/ui/lib/escher/util/image_utils.cc) or else the different vulkan
   // devices may interpret the bytes differently.
-  // TODO(SCN-1369): Use API to coordinate this with scenic.
+  // TODO(fxbug.dev/24563): Use API to coordinate this with scenic.
   info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
                vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
   vk::Image image = escher::image_utils::CreateVkImage(device, info, vk::ImageLayout::eUndefined);
@@ -112,7 +112,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
   }
 
   auto vk_device = resource_context.vk_device;
-  // TODO(SCN-151): If we're allowed to import the same vmo twice to two
+  // TODO(fxbug.dev/23406): If we're allowed to import the same vmo twice to two
   // different resources, we may need to change driver semantics so that you
   // can import a VMO twice. Referencing the test bug for now, since it should
   // uncover the bug.
@@ -141,7 +141,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
     return false;
   }
 
-  // TODO(SCN-1012): This function is only used on host memory when we are
+  // TODO(fxbug.dev/24225): This function is only used on host memory when we are
   // performing a zero-copy import. So it is currently hardcoded to look for a
   // valid UMA-style memory pool -- one that can be used as both host and device
   // memory.
@@ -153,7 +153,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
 
   uint32_t memory_type_bits = handle_properties.memoryTypeBits;
 
-// TODO(SCN-1368): This code should be unnecessary once we have a code flow that
+// TODO(fxbug.dev/24562): This code should be unnecessary once we have a code flow that
 // understands how the memory is expected to be used.
 #if __x86_64__
   memory_type_bits &= GetBufferMemoryBits(vk_device);
@@ -175,7 +175,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
       reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
                            "valid memory type for importation.";
     } else {
-      // TODO(SCN-1012): Error message is UMA specific.
+      // TODO(fxbug.dev/24225): Error message is UMA specific.
       FX_LOGS(INFO) << "Host memory VMO could not find a UMA-style memory type.";
     }
     return false;
@@ -293,7 +293,7 @@ escher::GpuMemPtr Memory::ImportGpuMemory(ErrorReporter* reporter,
                          "VkAllocateMemory failed.";
     return nullptr;
   }
-  // TODO(SCN-1115): If we can rely on all memory being importable into Vulkan
+  // TODO(fxbug.dev/24322): If we can rely on all memory being importable into Vulkan
   // (either as host or device memory), then we can always make a GpuMem
   // object, and rely on its mapped pointer accessor instead of storing our
   // own local uint8_t*.

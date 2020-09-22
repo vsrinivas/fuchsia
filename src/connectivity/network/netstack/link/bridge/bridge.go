@@ -244,7 +244,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// access itself so indirectly.
 	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: protocol}
 
-	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
+	// TODO(fxbug.dev/20778): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {
 		if flood {
 			l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())

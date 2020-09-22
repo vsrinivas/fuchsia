@@ -79,7 +79,7 @@ zx_status_t WaitForFile(const char* path, zx::time deadline) {
 zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   ConsoleLauncher launcher;
 
-  // TODO(ZX-4177): Remove all uses of the root job.
+  // TODO(fxbug.dev/33957): Remove all uses of the root job.
   zx_status_t status = GetRootJob(&launcher.root_job_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
@@ -186,7 +186,7 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // TODO(ZX-3385): Clean this up once devhost stops speaking fuchsia.io.File
+  // TODO(fxbug.dev/33183): Clean this up once devhost stops speaking fuchsia.io.File
   // on behalf of drivers.  Once that happens, the virtio-console driver
   // should just speak that instead of this shim interface.
   if (args.is_virtio) {

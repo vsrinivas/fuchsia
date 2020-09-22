@@ -617,7 +617,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(FIDL-329): Do this safely once FIDL-329 is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once FIDL-329 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -654,7 +654,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(FIDL-329): Do this safely once FIDL-329 is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once FIDL-329 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -691,7 +691,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(FIDL-329): Do this safely once FIDL-329 is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once FIDL-329 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -728,7 +728,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(FIDL-329): Do this safely once is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 

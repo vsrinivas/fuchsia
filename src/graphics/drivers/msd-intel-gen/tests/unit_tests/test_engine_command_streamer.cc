@@ -132,7 +132,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     EXPECT_EQ(state[0x22], 0x23A8ul);
     EXPECT_EQ(state[0x23], 0ul);
     EXPECT_EQ(state[0x24], 0x228Cul);
-    // TODO(MA-64) - check ppgtt pdp addresses
+    // TODO(fxbug.dev/12686) - check ppgtt pdp addresses
     // EXPECT_EQ(state[0x25], pdp3_upper);
     EXPECT_EQ(state[0x26], 0x2288ul);
     // EXPECT_EQ(state[0x27], pdp3_lower);

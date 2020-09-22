@@ -10,7 +10,7 @@ using fuchsia.wlan.mesh;
 // Stub types for communicating between the wlan service and the MLME drivers. Based on the 802.11
 // MLME SAP interface (IEEE Std 802.11-2016 section 6.3).
 
-// TODO(NET-631): restore the commented out enum aliases
+// TODO(fxbug.dev/21133): restore the commented out enum aliases
 
 // MLME-SCAN.request (IEEE Std 802.11-2016 6.3.3.2)
 
@@ -520,7 +520,7 @@ struct StartRequest {
     // following parameters determine what to be advertised to the peer
     // (in Beacons/ProbeResponse/AssociationResponse). Effectively this way replaces the following
     // fields originally defined in MLME-START.request.
-    // TODO(WLAN-909): Replace phy and cbw with full-fledged parameters below.
+    // TODO(fxbug.dev/29529): Replace phy and cbw with full-fledged parameters below.
     // - Capability Information
     // - HT Capabilities
     // - HT Operation

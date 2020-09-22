@@ -45,10 +45,10 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   scheduling::SessionId session_id() const { return global_id_.session_id; }
   GlobalId global_id() const { return global_id_; }
 
-  // TODO(SCN-1504): this blocks the removal of Session* from resource.
+  // TODO(fxbug.dev/24687): this blocks the removal of Session* from resource.
   EventReporter* event_reporter() const;
 
-  // TODO(SCN-1504): this blocks the removal of Session* from resource.  Should we stash one of
+  // TODO(fxbug.dev/24687): this blocks the removal of Session* from resource.  Should we stash one of
   // these in the resource?  Only for some resources?
   const ResourceContext& resource_context() const;
 

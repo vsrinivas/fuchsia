@@ -347,7 +347,7 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
 // zx_status_t zx_pc_firmware_tables
 zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> acpi_rsdp,
                                    user_out_ptr<zx_paddr_t> smbios) {
-  // TODO(ZX-971): finer grained validation
+  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
     return status;

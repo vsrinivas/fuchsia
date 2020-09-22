@@ -42,7 +42,7 @@ struct SetHardKeyboardDeliveryCmd {
 ///
 /// This command, typically set by the root presenter, allows disabling parallel
 /// dispatch; it is part of the input v2 transition work.
-// TODO(SCN-1047): Remove after gesture disambiguation is implemented.
+// TODO(fxbug.dev/24258): Remove after gesture disambiguation is implemented.
 struct SetParallelDispatchCmd {
     bool parallel_dispatch;
 };

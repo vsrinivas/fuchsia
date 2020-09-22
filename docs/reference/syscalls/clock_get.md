@@ -33,7 +33,7 @@ zx_status_t zx_clock_get(zx_clock_t clock_id, zx_time_t* out);
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(ZX-2399)
+TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 

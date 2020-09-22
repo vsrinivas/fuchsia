@@ -402,7 +402,7 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
 
   // NOTE: This currently does a write-read round-trip to the CPU in order to ensure that
   //       |thread->arch().debug_state| tracks the exact value as it is stored in the registers.
-  // TODO(ZX-3038): Ideally, we could do some querying at boot time about the format that the CPU
+  // TODO(fxbug.dev/32873): Ideally, we could do some querying at boot time about the format that the CPU
   //                is storing reserved bits and we can create a mask we can apply to the input
   //                values and avoid changing the state.
 

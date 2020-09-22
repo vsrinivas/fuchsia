@@ -167,7 +167,7 @@ static inline bool trace_is_inline_thread_ref(const trace_thread_ref_t* thread_r
 }
 
 // Makes a thread ref representing an unknown thread.
-// TODO(ZX-1030): Reserve thread ref index 0 for unknown threads,
+// TODO(fxbug.dev/30974): Reserve thread ref index 0 for unknown threads,
 // use thread ref index 255 for inline threads.
 static inline trace_thread_ref_t trace_make_unknown_thread_ref(void) {
   trace_thread_ref_t ref = {.encoded_value = TRACE_ENCODED_THREAD_REF_INLINE,

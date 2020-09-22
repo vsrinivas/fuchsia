@@ -212,7 +212,7 @@ main() {
       cp "${kernel_override}" "${cros_dir}/chroot/home/${USER}/${board}/output/vm_kernel"
     fi
 
-    # TODO(PD-206): remove termina kernel image
+    # TODO(fxbug.dev/23166): remove termina kernel image
     ${cipd} create \
         -in "${cros_dir}/chroot/home/${USER}/${board}/output" \
         -name "fuchsia_internal/linux/termina-${arch}" \

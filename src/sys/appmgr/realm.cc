@@ -210,7 +210,7 @@ bool IsValidEnvironmentLabel(const std::string& label) {
 // filesystem path component.
 std::string ComponentUrlToPathComponent(const FuchsiaPkgUrl& fp) {
   // If the parsed URL did not include a resource path, the default is used.
-  // TODO(CF-156): Remove this default once all component URLs include a
+  // TODO(fxbug.dev/4053): Remove this default once all component URLs include a
   // resource path.
   std::string resource = fp.resource_path();
   if (resource.empty()) {
@@ -447,7 +447,7 @@ zx::job Realm::DuplicateJobForHub() const {
   zx_status_t status = job_.duplicate(flags | ZX_RIGHT_WRITE, &duplicate_job);
   if (status == ZX_ERR_INVALID_ARGS) {
     // In the process of removing WRITE for processes; if duplicate with WRITE
-    // failed, try the new rights. TODO(ZX-2967): Once the transition is
+    // failed, try the new rights. TODO(fxbug.dev/32803): Once the transition is
     // complete, only duplicate with MANAGE_PROCESS.
     status = job_.duplicate(flags | ZX_RIGHT_MANAGE_PROCESS, &duplicate_job);
   }
@@ -826,7 +826,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       cmx_path = fp.resource_path();
 
       // The URL is fuchsia-pkg iff it has a resource.
-      // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+      // TODO(fxbug.dev/4053): Remove this logic once all URLs are fuchsia-pkg.
       is_fuchsia_pkg_url = true;
     } else {
       // It's possible the url does not have a resource, in which case either
