@@ -11,8 +11,7 @@ namespace camera {
 
 class ControllerMemoryAllocator {
  public:
-  explicit ControllerMemoryAllocator(fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : sysmem_allocator_(std::move(sysmem_allocator)){};
+  explicit ControllerMemoryAllocator(fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
   // Takes in two sets of constraints and allocated memory using sysmem based on those two sets of
   // constraints.

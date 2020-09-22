@@ -8,9 +8,19 @@
 #include <lib/trace/event.h>
 #include <zircon/errors.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace camera {
 
 constexpr auto kTag = "camera_controller";
+
+ControllerMemoryAllocator::ControllerMemoryAllocator(
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+    : sysmem_allocator_(std::move(sysmem_allocator)) {
+  if (sysmem_allocator_)
+    sysmem_allocator_->SetDebugClientInfo("camera controller " + fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
+}
 
 zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     const std::vector<fuchsia::sysmem::BufferCollectionConstraints>& constraints,
