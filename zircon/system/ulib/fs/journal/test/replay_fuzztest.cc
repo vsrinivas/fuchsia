@@ -21,8 +21,9 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   auto journal_start = fuzz_utils.data_provider()->ConsumeIntegral<uint64_t>();
   auto journal_length = fuzz_utils.data_provider()->ConsumeIntegral<uint64_t>();
   fuzz_utils.handler()->SetJournalStart(journal_start);
-  ReplayJournal(fuzz_utils.handler(), fuzz_utils.registry(), journal_start, journal_length,
-                fuzz_utils.block_size(), &info);
+  [[maybe_unused]] auto status =
+      ReplayJournal(fuzz_utils.handler(), fuzz_utils.registry(), journal_start, journal_length,
+                    fuzz_utils.block_size());
   return 0;
 }
 

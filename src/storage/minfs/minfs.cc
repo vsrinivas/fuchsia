@@ -1233,13 +1233,14 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out) {
   FS_TRACE_INFO("minfs: Replaying journal\n");
 
-  zx_status_t status = fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info),
-                                         info.BlockSize(), out);
-  if (status != ZX_OK) {
+  auto superblock_or =
+      fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info), info.BlockSize());
+  if (superblock_or.is_error()) {
     FS_TRACE_ERROR("minfs: Failed to replay journal\n");
-    return status;
+    return superblock_or.error_value();
   }
 
+  *out = std::move(superblock_or.value());
   FS_TRACE_DEBUG("minfs: Journal replayed\n");
   return ZX_OK;
 }

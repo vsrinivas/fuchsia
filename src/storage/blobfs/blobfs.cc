@@ -17,9 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <limits>
 #include <memory>
@@ -55,7 +57,6 @@
 namespace blobfs {
 namespace {
 
-using ::block_client::RemoteBlockDevice;
 using ::digest::Digest;
 using ::fs::Journal;
 using ::fs::JournalSuperblock;
@@ -63,11 +64,17 @@ using ::id_allocator::IdAllocator;
 using ::storage::BlockingRingBuffer;
 using ::storage::VmoidRegistry;
 
+struct DirectoryCookie {
+  size_t index;       // Index into node map
+  uint64_t reserved;  // Unused
+};
+
 // Writeback enabled, journaling enabled.
-zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, VmoidRegistry* registry,
-                              uint64_t journal_start, uint64_t journal_length,
-                              JournalSuperblock journal_superblock,
-                              std::unique_ptr<Journal>* out_journal) {
+zx::status<std::unique_ptr<Journal>> InitializeJournal(fs::TransactionHandler* transaction_handler,
+                                                       VmoidRegistry* registry,
+                                                       uint64_t journal_start,
+                                                       uint64_t journal_length,
+                                                       JournalSuperblock journal_superblock) {
   const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
 
   std::unique_ptr<BlockingRingBuffer> journal_buffer;
@@ -75,7 +82,7 @@ zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, Vmoid
                                                   "journal-writeback-buffer", &journal_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot create journal buffer: %s\n", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   std::unique_ptr<BlockingRingBuffer> writeback_buffer;
@@ -83,13 +90,12 @@ zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, Vmoid
                                       "data-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
-  *out_journal = std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
-                                           std::move(journal_buffer), std::move(writeback_buffer),
-                                           journal_start, Journal::Options());
-  return ZX_OK;
+  return zx::ok(std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
+                                          std::move(journal_buffer), std::move(writeback_buffer),
+                                          journal_start, Journal::Options()));
 }
 
 // Writeback enabled, journaling disabled.
@@ -167,7 +173,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
                                                options->writability, options->compression_settings,
                                                std::move(vmex_resource)));
-  fs->block_info_ = std::move(block_info);
+  fs->block_info_ = block_info;
 
   if (options->pager) {
     auto fs_ptr = fs.get();
@@ -197,27 +203,27 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
       return ZX_ERR_ACCESS_DENIED;
     }
     FS_TRACE_INFO("blobfs: Replaying journal\n");
-    JournalSuperblock journal_superblock;
-    status = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                               JournalBlocks(fs->info_), kBlobfsBlockSize, &journal_superblock);
-    if (status != ZX_OK) {
+    auto journal_superblock_or = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                                                   JournalBlocks(fs->info_), kBlobfsBlockSize);
+    if (journal_superblock_or.is_error()) {
       FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
-      return status;
+      return journal_superblock_or.error_value();
     }
+    JournalSuperblock journal_superblock = std::move(journal_superblock_or.value());
     FS_TRACE_DEBUG("blobfs: Journal replayed\n");
 
     switch (options->writability) {
-      case blobfs::Writability::Writable:
+      case blobfs::Writability::Writable: {
         FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
-        status = InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                                   JournalBlocks(fs->info_), std::move(journal_superblock),
-                                   &fs->journal_);
-        if (status != ZX_OK) {
+        auto journal_or =
+            InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                              JournalBlocks(fs->info_), std::move(journal_superblock));
+        if (journal_or.is_error()) {
           FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
-          return status;
+          return journal_or.error_value();
         }
-        status = fs->ReloadSuperblock();
-        if (status != ZX_OK) {
+        fs->journal_ = std::move(journal_or.value());
+        if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
           FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
           return status;
         }
@@ -231,6 +237,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
           }
         }
         break;
+      }
       case blobfs::Writability::ReadOnlyFilesystem:
         // Journal uninitialized.
         break;
@@ -264,7 +271,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
     FS_TRACE_ERROR("blobfs: Could not reset block bitmap\n");
     return status;
-  } else if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
+  }
+  if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
     FS_TRACE_ERROR("blobfs: Could not shrink block bitmap\n");
     return status;
   }
@@ -301,13 +309,16 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
     return status;
-  } else if ((status = fs->BlockAttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
+  }
+  if ((status = fs->BlockAttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to attach info vmo: %d\n", status);
     return status;
-  } else if ((status = fs->CreateFsId()) != ZX_OK) {
+  }
+  if ((status = fs->CreateFsId()) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create fs_id: %d\n", status);
     return status;
-  } else if ((status = fs->InitializeVnodes()) != ZX_OK) {
+  }
+  if ((status = fs->InitializeVnodes()) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
     return status;
   }
@@ -452,7 +463,7 @@ void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block,
           .dev_offset = BlockMapStartBlock(info_) + bbm_start_block,
           .length = bbm_end_block - bbm_start_block,
       }};
-  operations->Add(std::move(operation));
+  operations->Add(operation);
 }
 
 void Blobfs::WriteNode(uint32_t map_index, storage::UnbufferedOperationsBuilder* operations) {
@@ -466,7 +477,7 @@ void Blobfs::WriteNode(uint32_t map_index, storage::UnbufferedOperationsBuilder*
           .dev_offset = NodeMapStartBlock(info_) + block,
           .length = 1,
       }};
-  operations->Add(std::move(operation));
+  operations->Add(operation);
 }
 
 void Blobfs::UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags,
@@ -490,11 +501,11 @@ void Blobfs::WriteInfo(storage::UnbufferedOperationsBuilder* operations) {
           .length = 1,
       },
   };
-  operations->Add(std::move(operation));
+  operations->Add(operation);
 }
 
 void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
-                          std::vector<storage::BufferedOperation>* trim_data) {
+                          std::vector<storage::BufferedOperation>* trim_data) const {
   if (block_info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT) {
     TRACE_DURATION("blobfs", "Blobfs::DeleteExtent", "num_blocks", num_blocks, "start_block",
                    start_block);
@@ -530,19 +541,14 @@ zx_status_t Blobfs::GetFsId(zx::event* out_fs_id) const {
   return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
 }
 
-typedef struct dircookie {
-  size_t index;       // Index into node map
-  uint64_t reserved;  // Unused
-} dircookie_t;
-
-static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
+static_assert(sizeof(DirectoryCookie) <= sizeof(fs::vdircookie_t),
               "Blobfs dircookie too large to fit in IO state");
 
 zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                             size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blobfs::Readdir", "len", len);
   fs::DirentFiller df(dirents, len);
-  dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
+  DirectoryCookie* c = reinterpret_cast<DirectoryCookie*>(cookie);
 
   for (size_t i = c->index; i < info_.inode_count; ++i) {
     ZX_DEBUG_ASSERT(i < std::numeric_limits<uint32_t>::max());
@@ -629,7 +635,7 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
             .length = zeroed_nodes_blocks,
         },
     };
-    builder.Add(std::move(operation));
+    builder.Add(operation);
   }
   journal_->schedule_task(journal_->WriteMetadata(builder.TakeOperations()));
   return ZX_OK;
@@ -693,7 +699,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
             .length = zeroed_bitmap_blocks,
         },
     };
-    builder.Add(std::move(operation));
+    builder.Add(operation);
   }
   journal_->schedule_task(journal_->WriteMetadata(builder.TakeOperations()));
   return ZX_OK;
@@ -831,8 +837,8 @@ zx_status_t Blobfs::InitializeVnodes() {
       continue;
     }
 
-    zx_status_t validation_status = AllocatedExtentIterator::VerifyIteration(
-        GetNodeFinder(), inode.get());
+    zx_status_t validation_status =
+        AllocatedExtentIterator::VerifyIteration(GetNodeFinder(), inode.get());
     if (validation_status != ZX_OK) {
       // Whatever the more differentiated error is here, the real root issue is
       // the integrity of the data that was just mirrored from the disk.

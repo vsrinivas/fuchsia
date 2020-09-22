@@ -12,6 +12,8 @@
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
+#include "lib/zx/status.h"
+
 namespace fs {
 
 // Parses all entries within the journal, and returns the operations which must be
@@ -31,10 +33,10 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
 //
 // Returns the new |JournalSuperblock|, with an updated sequence number which should
 // be used on journal initialization.
-zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
-                          storage::VmoidRegistry* registry, uint64_t journal_start,
-                          uint64_t journal_length, uint32_t block_size,
-                          JournalSuperblock* out_journal_superblock);
+zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_handler,
+                                            storage::VmoidRegistry* registry,
+                                            uint64_t journal_start, uint64_t journal_length,
+                                            uint32_t block_size);
 
 }  // namespace fs
 

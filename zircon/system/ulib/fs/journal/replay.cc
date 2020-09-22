@@ -14,6 +14,7 @@
 #include <storage/operation/operation.h>
 
 #include "entry_view.h"
+#include "lib/zx/status.h"
 #include "replay_tree.h"
 
 namespace fs {
@@ -56,7 +57,7 @@ std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buf
 
   // Looks good enough. Create a JournalEntryView that now includes the footer.
   storage::BlockBufferView view(journal_buffer, start, entry_length);
-  JournalEntryView entry_view(std::move(view));
+  JournalEntryView entry_view(view);
   auto& const_entry_view = const_cast<const JournalEntryView&>(entry_view);
 
   // Validate the footer.
@@ -172,10 +173,10 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
       // 2) Iterate over |operations| and look for collision
       // 3) Omit the intersect
       return ZX_ERR_NOT_SUPPORTED;
-    } else {
-      // Replay all operations within this entry.
-      ParseBlocks(*journal_buffer, *entry, entry_start, &operation_tree);
     }
+
+    // Replay all operations within this entry.
+    ParseBlocks(*journal_buffer, *entry, entry_start, &operation_tree);
 
     // Move to the next entry.
     auto entry_blocks = entry->header().PayloadBlocks() + kEntryMetadataBlocks;
@@ -198,10 +199,10 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
   return ZX_OK;
 }
 
-zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
-                          storage::VmoidRegistry* registry, uint64_t journal_start,
-                          uint64_t journal_length, uint32_t block_size,
-                          JournalSuperblock* out_journal_superblock) {
+zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_handler,
+                                            storage::VmoidRegistry* registry,
+                                            uint64_t journal_start, uint64_t journal_length,
+                                            uint32_t block_size) {
   const uint64_t journal_entry_start = journal_start + kJournalMetadataBlocks;
   const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
   FS_TRACE_DEBUG("replay: Initializing journal superblock\n");
@@ -212,7 +213,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
                                                              block_size, "journal-superblock");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot initialize journal info block: %d\n", status);
-    return status;
+    return zx::error(status);
   }
   // Initialize and read the journal itself.
   FS_TRACE_INFO("replay: Initializing journal buffer (%zu blocks)\n", journal_entry_blocks);
@@ -220,7 +221,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   status = journal_buffer.Initialize(registry, journal_entry_blocks, block_size, "journal-buffer");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot initialize journal buffer: %d\n", status);
-    return status;
+    return zx::error(status);
   }
 
   FS_TRACE_DEBUG("replay: Reading from storage\n");
@@ -239,7 +240,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   status = transaction_handler->RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot load journal: %d\n", status);
-    return status;
+    return zx::error(status);
   }
 
   // Parse the journal, deciding which entries should be replayed.
@@ -259,7 +260,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
                                &next_entry_start);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot parse journal entries: %d\n", status);
-    return status;
+    return zx::error(status);
   }
 
   // Replay the requested journal entries, then the new header.
@@ -275,7 +276,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
     status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot replay entries: %d\n", status);
-      return status;
+      return zx::error(status);
     }
 
     operations.clear();
@@ -291,17 +292,14 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
     status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot update journal superblock: %d\n", status);
-      return status;
+      return zx::error(status);
     }
 
   } else {
     FS_TRACE_DEBUG("replay: Not replaying entries\n");
   }
 
-  if (out_journal_superblock) {
-    *out_journal_superblock = std::move(journal_superblock);
-  }
-  return ZX_OK;
+  return zx::ok(std::move(journal_superblock));
 }
 
 }  // namespace fs

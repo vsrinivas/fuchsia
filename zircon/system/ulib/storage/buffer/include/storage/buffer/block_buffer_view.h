@@ -25,11 +25,6 @@ class BlockBufferView {
       : buffer_(buffer), start_(start % buffer->capacity()), length_(length) {
     ZX_ASSERT(length <= buffer->capacity());
   }
-  BlockBufferView(const BlockBufferView&) = default;
-  BlockBufferView& operator=(const BlockBufferView&) = default;
-  BlockBufferView(BlockBufferView&&) = default;
-  BlockBufferView& operator=(BlockBufferView&&) = default;
-  ~BlockBufferView() = default;
 
   // Creates a new block buffer view within the current view.
   // |relative_start| is relative to |this.start()|.

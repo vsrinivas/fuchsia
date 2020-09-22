@@ -130,18 +130,18 @@ BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options options)
 
 zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
 #ifdef __Fuchsia__
-  zx_status_t status;
   if (apply_journal) {
-    status = fs::ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
-                               JournalBlocks(blobfs_->info_), kBlobfsBlockSize, nullptr);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status);
-      return status;
+    auto status = fs::ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
+                                    JournalBlocks(blobfs_->info_), kBlobfsBlockSize);
+    if (status.is_error()) {
+      FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status.error_value());
+      return status.error_value();
     }
   }
 
-  status = CheckFvmConsistency(&blobfs_->Info(), blobfs_->Device(), options_.repair);
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          CheckFvmConsistency(&blobfs_->Info(), blobfs_->Device(), options_.repair);
+      status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Inconsistent metadata does not match FVM: %d\n", status);
     return status;
   }

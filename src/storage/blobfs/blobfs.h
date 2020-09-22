@@ -61,9 +61,7 @@
 namespace blobfs {
 
 using block_client::BlockDevice;
-using digest::Digest;
 using llcpp::fuchsia::io::FilesystemInfo;
-using storage::OperationType;
 using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
@@ -189,7 +187,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
 
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-  void PersistBlocks(const ReservedExtent& extent, storage::UnbufferedOperationsBuilder* ops);
+  void PersistBlocks(const ReservedExtent& reserved_extent,
+                     storage::UnbufferedOperationsBuilder* operations);
 
   bool PagingEnabled() const { return pager_ != nullptr; }
 
@@ -260,7 +259,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Adds a trim operation to |trim_data|.
   void DeleteExtent(uint64_t start_block, uint64_t num_blocks,
-                    std::vector<storage::BufferedOperation>* trim_data);
+                    std::vector<storage::BufferedOperation>* trim_data) const;
 
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".

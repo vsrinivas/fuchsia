@@ -733,7 +733,8 @@ TEST_F(ReplayJournalTest, BadJournalSuperblockFails) {
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_EQ(ZX_ERR_IO, ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
-                                     kJournalAreaLength, kBlockSize, &superblock));
+                                     kJournalAreaLength, kBlockSize)
+                           .error_value());
 }
 
 TEST_F(ReplayJournalTest, CannotReadJournalFails) {
@@ -747,7 +748,8 @@ TEST_F(ReplayJournalTest, CannotReadJournalFails) {
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_EQ(ZX_ERR_IO, ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
-                                     kJournalAreaLength, kBlockSize, &superblock));
+                                     kJournalAreaLength, kBlockSize)
+                           .error_value());
 }
 
 TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
@@ -769,10 +771,10 @@ TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
       },
   };
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
-  JournalSuperblock superblock;
-  ASSERT_EQ(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
-                          kBlockSize, &superblock),
-            ZX_OK);
+  auto superblock_or = ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
+                                     kJournalAreaLength, kBlockSize);
+  ASSERT_TRUE(superblock_or.is_ok());
+  auto superblock = std::move(superblock_or.value());
   EXPECT_EQ(kStart, superblock.start());
   EXPECT_EQ(kSequenceNumber, superblock.sequence_number());
 }
@@ -829,10 +831,10 @@ TEST_F(ReplayJournalTest, OneEntry) {
       }};
 
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
-  JournalSuperblock superblock;
-  ASSERT_EQ(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
-                          kBlockSize, &superblock),
-            ZX_OK);
+  auto superblock_or = ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
+                                     kJournalAreaLength, kBlockSize);
+  ASSERT_TRUE(superblock_or.is_ok());
+  auto superblock = std::move(superblock_or.value());
   EXPECT_EQ(kStart + entry_size, superblock.start());
   // The sequence_number should have advanced to avoid replaying the old entry.
   EXPECT_EQ(kSequenceNumber + 1, superblock.sequence_number());
@@ -883,7 +885,8 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_EQ(ZX_ERR_IO, ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
-                                     kJournalAreaLength, kBlockSize, &superblock));
+                                     kJournalAreaLength, kBlockSize)
+                           .error_value());
 }
 
 }  // namespace
