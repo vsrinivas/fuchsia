@@ -16,9 +16,6 @@ rustc_test("shutdown_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  # TODO(46841): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [ "shutdown_integration.rs" ]
 }
 
@@ -33,9 +30,6 @@ rustc_binary("system_controller_client") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
   ]
-
-  # TODO(46841): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [ "system_controller_client.rs" ]
 }

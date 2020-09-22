@@ -187,10 +187,6 @@ template("component_manager") {
         "//src/lib/process_builder:test-util-fidl-rustc",
         "//src/sys/lib/directory_broker",
       ]
-
-      # TODO(46841): Fix the leaks and remove this.
-      non_rust_deps +=
-          [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     }
   } else {
     rustc_library(target_name) {
