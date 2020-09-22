@@ -81,6 +81,8 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_HEADER));
       } else if (node->role() == Role::IMAGE) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
+      } else if (node->role() == Role::LINK) {
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_LINK));
       } else if (node->role() == Role::SLIDER) {
         // Add the slider's range value to the label utterance, if specified.
         auto& label_utterance = description.back().utterance;
