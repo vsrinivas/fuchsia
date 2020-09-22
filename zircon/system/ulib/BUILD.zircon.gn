@@ -19,7 +19,6 @@ group("ulib") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/counters",
     "$zx/third_party/ulib",
-    "abr",
     "c",
     "c:crt1",
     "ddk-platform-defs",
