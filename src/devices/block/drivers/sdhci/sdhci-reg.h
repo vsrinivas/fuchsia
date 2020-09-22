@@ -200,7 +200,7 @@ class InterruptStatusEnable : public hwreg::RegisterBase<InterruptStatusEnable, 
   }
 
   auto& EnableNormalInterrupts() {
-    return set_card_interrupt(1)
+    return set_card_interrupt(0)  // The card interrupt will be enabled as necessary later.
         .set_buffer_read_ready(1)
         .set_buffer_write_ready(1)
         .set_transfer_complete(1)

@@ -862,6 +862,11 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
 
 zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
   interrupt_cb_ = ddk::InBandInterruptProtocolClient(interrupt_cb);
+  // Enable reporting of the card interrupt now that the client is going to use it.
+  InterruptStatusEnable::Get()
+      .ReadFrom(&regs_mmio_buffer_)
+      .set_card_interrupt(1)
+      .WriteTo(&regs_mmio_buffer_);
   return ZX_OK;
 }
 

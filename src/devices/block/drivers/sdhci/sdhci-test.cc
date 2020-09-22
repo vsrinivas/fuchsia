@@ -93,7 +93,8 @@ class TestSdhci : public Sdhci {
           break;
       }
 
-      if (card_interrupt_.exchange(false)) {
+      if (card_interrupt_.exchange(false) &&
+          InterruptStatusEnable::Get().ReadFrom(&regs_mmio_buffer_).card_interrupt() == 1) {
         status.set_card_interrupt(1).WriteTo(&regs_mmio_buffer_);
         return ZX_OK;
       }
