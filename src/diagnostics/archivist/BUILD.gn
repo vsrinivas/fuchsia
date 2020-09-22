@@ -120,8 +120,6 @@ rustc_binary("bin") {
   deps = [
     ":lib",
 
-    # TODO(54125): Fix the leaks and remove this.
-    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
