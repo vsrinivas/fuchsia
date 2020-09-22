@@ -6,14 +6,22 @@
 
 use {
     anyhow::{anyhow, Context as _, Error},
-    fidl_fuchsia_io_test::{Io1Config, Io1HarnessRequest, Io1HarnessRequestStream},
+    fidl_fuchsia_io_test::{
+        self as io_test, Io1Config, Io1HarnessRequest, Io1HarnessRequestStream,
+    },
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::prelude::*,
     log::error,
+    std::sync::Arc,
     vfs::{
-        directory::{entry::DirectoryEntry, helper::DirectlyMutable, mutable::simple},
+        directory::{
+            entry::DirectoryEntry,
+            helper::DirectlyMutable,
+            mutable::{connection::io1::MutableConnection, simple},
+            simple::Simple,
+        },
         execution_scope::ExecutionScope,
         file::pcb,
         file::vmo::asynchronous as vmo,
@@ -22,6 +30,41 @@ use {
 };
 
 struct Harness(Io1HarnessRequestStream);
+
+fn add_entry(
+    entry: &io_test::DirectoryEntry,
+    dest: &Arc<Simple<MutableConnection>>,
+) -> Result<(), Error> {
+    match entry {
+        io_test::DirectoryEntry::Directory(dir) => {
+            let name = dir.name.as_ref().expect("Directory must have name");
+            let new_dir = simple();
+            if let Some(entries) = dir.entries.as_ref() {
+                for entry in entries {
+                    let entry = entry.as_ref().expect("Directory entries must not be null");
+                    add_entry(entry, &new_dir)?;
+                }
+            }
+            // TODO(fxbug.dev/33880): Set the correct flags on this directory.
+            dest.add_entry(name, new_dir)?;
+        }
+        io_test::DirectoryEntry::File(file) => {
+            let name = file.name.as_ref().expect("File must have name");
+            let contents = file.contents.as_ref().expect("File must have contents").clone();
+            let new_file = pcb::read_write(
+                move || future::ok(contents.clone()),
+                100,
+                |_content| async move { Ok(()) },
+            );
+            dest.add_entry(name, new_file)?;
+        }
+        io_test::DirectoryEntry::VmoFile(_vmo_file) => {
+            // TODO(fxbug.dev/33880): Add support for VMO files.
+            return Err(anyhow!("VMO files are not supported"));
+        }
+    }
+    Ok(())
+}
 
 async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("error running harness server")? {
@@ -39,27 +82,15 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 responder.send(config)?;
                 continue;
             }
-            Io1HarnessRequest::GetEmptyDirectory {
-                flags,
-                directory_request,
-                control_handle: _,
-            } => {
+            Io1HarnessRequest::GetDirectory { root, directory_request, control_handle: _ } => {
                 let dir = simple();
-                (dir, flags, directory_request)
-            }
-            Io1HarnessRequest::GetDirectoryWithEmptyFile {
-                name,
-                flags,
-                directory_request,
-                control_handle: _,
-            } => {
-                let dir = simple();
-                let file = pcb::read_write(
-                    || future::ready(Ok(Vec::new())),
-                    100,
-                    |_content| async move { Ok(()) },
-                );
-                dir.clone().add_entry(name, file)?;
+                let flags = root.flags.expect("Root directory must have flags");
+                if let Some(entries) = root.entries {
+                    for entry in &entries {
+                        let entry = entry.as_ref().expect("Directory entries must not be null");
+                        add_entry(entry, &dir)?;
+                    }
+                }
                 (dir, flags, directory_request)
             }
             Io1HarnessRequest::GetDirectoryWithVmoFile {

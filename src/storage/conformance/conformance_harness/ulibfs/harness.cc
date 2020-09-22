@@ -29,6 +29,39 @@ zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
 zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
 
+void AddEntry(const fuchsia::io::test::DirectoryEntry& entry, fs::PseudoDir& dest) {
+  switch (entry.Which()) {
+    case fuchsia::io::test::DirectoryEntry::Tag::kDirectory: {
+      // TODO(fxbug.dev/33880): Set the correct flags on this directory.
+      fbl::RefPtr<fs::PseudoDir> child{fbl::MakeRefCounted<fs::PseudoDir>()};
+      if (entry.directory().has_entries()) {
+        for (const auto& grandchild : entry.directory().entries()) {
+          AddEntry(*grandchild, *child);
+        }
+      }
+      dest.AddEntry(entry.directory().name(), child);
+      break;
+    }
+    case fuchsia::io::test::DirectoryEntry::Tag::kFile: {
+      std::vector<uint8_t> contents = entry.file().contents();
+      auto reader = [contents](fbl::String* output) {
+        *output = fbl::String(reinterpret_cast<const char*>(contents.data()), contents.size());
+        return ZX_OK;
+      };
+      dest.AddEntry(entry.file().name(),
+                    fbl::MakeRefCounted<fs::BufferedPseudoFile>(reader, &DummyWriter));
+      break;
+    }
+    case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile:
+      // TODO(fxbug.dev/33880): Support VMO files.
+      FX_LOGS(ERROR) << "VMO files are not supported";
+      break;
+    case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
+      FX_LOGS(ERROR) << "Unknown DirectoryEntry type";
+      break;
+  }
+}
+
 class UlibfsHarness : public fuchsia::io::test::Io1Harness {
  public:
   explicit UlibfsHarness() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -59,35 +92,6 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     callback(std::move(config));
   }
 
-  void GetEmptyDirectory(uint32_t flags,
-                         fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
-
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
-    options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
-    zx_status_t status = vfs_->Serve(std::move(root), directory_request.TakeChannel(), options);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Serving empty directory failed: " << zx_status_get_string(status);
-      return;
-    }
-  }
-
-  void GetDirectoryWithEmptyFile(
-      std::string filename, uint32_t flags,
-      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
-    root->AddEntry(filename,
-                   fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader, &DummyWriter));
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
-    options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
-    zx_status_t status = vfs_->Serve(std::move(root), directory_request.TakeChannel(), options);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Serving directory with empty file failed: "
-                     << zx_status_get_string(status);
-      return;
-    }
-  }
-
   void GetDirectoryWithVmoFile(
       fuchsia::mem::Range file, std::string filename, uint32_t flags,
       fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
@@ -105,38 +109,6 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     test_vmos_.emplace_back(std::move(file.vmo));
   }
 
-  void GetDirectoryWithDirectory(
-      std::string dirname, uint32_t flags,
-      ::fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
-    root->AddEntry(dirname, fbl::MakeRefCounted<fs::PseudoDir>());
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
-    options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
-    zx_status_t status = vfs_->Serve(std::move(root), directory_request.TakeChannel(), options);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Serving directory with child directory failed: "
-                     << zx_status_get_string(status);
-      return;
-    }
-  }
-
-  void GetDirectoryWithNestedDirectory(
-      std::string dirname, std::string nested_dirname, uint32_t flags,
-      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
-    fbl::RefPtr<fs::PseudoDir> child{fbl::MakeRefCounted<fs::PseudoDir>()};
-    child->AddEntry(nested_dirname, fbl::MakeRefCounted<fs::PseudoDir>());
-    root->AddEntry(dirname, child);
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
-    options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
-    zx_status_t status = vfs_->Serve(std::move(root), directory_request.TakeChannel(), options);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Serving directory with nested directory failed: "
-                     << zx_status_get_string(status);
-      return;
-    }
-  }
-
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
       uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
@@ -149,6 +121,25 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
         vfs_->Serve(std::move(root), directory_request.TakeChannel(), filtered_options);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Serving directory with remote failed: " << zx_status_get_string(status);
+      return;
+    }
+  }
+
+  void GetDirectory(fuchsia::io::test::Directory root,
+                    fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
+    fbl::RefPtr<fs::PseudoDir> dir{fbl::MakeRefCounted<fs::PseudoDir>()};
+
+    if (root.has_entries()) {
+      for (const auto& entry : root.entries()) {
+        AddEntry(*entry, *dir);
+      }
+    }
+
+    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(root.flags());
+    options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
+    zx_status_t status = vfs_->Serve(std::move(dir), directory_request.TakeChannel(), options);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Serving directory failed: " << zx_status_get_string(status);
       return;
     }
   }

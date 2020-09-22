@@ -53,61 +53,66 @@ table Io1Config {
     5: bool no_remote_dir;
 };
 
+resource table Directory {
+    /// Name not required for root directory.
+    1: string name;
+
+    /// fuchsia.io OPEN_RIGHT_* flags for the directory.
+    2: uint32 flags;
+
+    /// Nullable to sidestep recursion rules. Don't actually supply nulls.
+    3: vector<DirectoryEntry?> entries;
+};
+
+table File {
+    1: string name;
+
+    /// fuchsia.io OPEN_RIGHT_* flags for the file.
+    2: uint32 flags;
+
+    3: bytes contents;
+};
+
+resource table VmoFile {
+    1: string name;
+
+    /// fuchsia.io OPEN_RIGHT_* flags for the VMO file.
+    2: uint32 flags;
+
+    3: fuchsia.mem.Range buffer;
+};
+
+resource union DirectoryEntry {
+    1: Directory directory;
+    2: File file;
+    3: VmoFile vmo_file;
+};
+
 [Discoverable]
 protocol Io1Harness {
     /// Returns the list of properties of the filesystem.
     GetConfig() -> (Io1Config config);
 
-    /// Serves an empty directory.
+    /// Serves a directory with the given contents.
     ///
-    /// + `flags` the flags the served directory connection has.
-    /// + `directory_request` the server end of the root directory connection.
-    GetEmptyDirectory(uint32 flags,
-                      request<fuchsia.io.Directory> directory_request);
-
-    /// Serves a directory with a single file inside.
-    ///
-    /// + `name` the name of the file in the root directory.
-    /// + `flags` the flags the served directory connection has.
-    /// + `directory_request` the server end of the root directory connection.
-    GetDirectoryWithEmptyFile(string name,
-                              uint32 flags,
-                              request<fuchsia.io.Directory> directory_request);
+    /// `root` describes the initial layout of the filesystem that will be
+    /// used for the test case. The root directory that is served (returned via
+    /// `directory_request`) will have the equivalent contents.
+    GetDirectory(Directory root,
+                 request<fuchsia.io.Directory> directory_request);
 
     /// Serves a directory with a single vmofile inside.
     ///
     /// + `name` the name of the vmofile in the root directory.
     /// + `flags` the flags the served directory connection has.
     /// + `directory_request` the server end of the root directory connection.
+    ///
+    /// TODO(fxbug.dev/33880): Add suppport for VMO files to GetDirectory and
+    /// then delete this method.
     GetDirectoryWithVmoFile(fuchsia.mem.Range file,
                             string name,
                             uint32 flags,
                             request<fuchsia.io.Directory> directory_request);
-
-    /// Serves a directory with a single directory inside.
-    ///
-    /// + `name` the name of the child directory in the root directory.
-    /// + `flags` the flags the served directory connection has.
-    /// + `directory_request` the server end of the root directory connection.
-    GetDirectoryWithDirectory(string name,
-                              uint32 flags,
-                              request<fuchsia.io.Directory> directory_request);
-
-    /// Serves a directory with the following structure:
-    ///
-    /// /                                           <--root directory
-    /// /`name`                                     <--child directory
-    /// /`name`/`nested_name`                       <--nested child directory
-    ///
-    /// + `dirname` the name of the child directory in the root directory.
-    /// + `nested_dirname` the name of the nested child directory in the child
-    ///    directory.
-    /// + `flags` the flags the served directory connection has.
-    /// + `directory_request` the server end of the root directory connection.
-    GetDirectoryWithNestedDirectory(string name,
-                                    string nested_name,
-                                    uint32 flags,
-                                    request<fuchsia.io.Directory> directory_request);
 
     /// Serves a directory that holds a child `remote_directory` with name
     /// `dir_name`. The `directory_request` connection to the root directory
@@ -120,6 +125,9 @@ protocol Io1Harness {
     /// + `name` the name of the child remote directory in the root directory.
     /// + `flags` the flags the served directory connection has.
     /// + `directory_request` the server end of the root directory connection.
+    ///
+    /// TODO(fxbug.dev/33880): Add suppport for remote directories to
+    /// GetDirectory and then delete this method.
     GetDirectoryWithRemoteDirectory(fuchsia.io.Directory remote_directory,
                                     string name,
                                     uint32 flags,

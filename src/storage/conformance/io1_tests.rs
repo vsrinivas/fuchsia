@@ -95,6 +95,31 @@ fn build_flag_combinations(constant_flags: &[u32], variable_flags: &[u32]) -> Ve
     vec
 }
 
+fn root_directory(flags: u32, entries: Vec<io_test::DirectoryEntry>) -> io_test::Directory {
+    // Convert the simple vector of entries into the convoluted FIDL field type.
+    let entries: Vec<Option<Box<io_test::DirectoryEntry>>> =
+        entries.into_iter().map(|e| Some(Box::new(e))).collect();
+    io_test::Directory { name: None, flags: Some(flags), entries: Some(entries) }
+}
+
+fn directory(
+    name: &str,
+    flags: u32,
+    entries: Vec<io_test::DirectoryEntry>,
+) -> io_test::DirectoryEntry {
+    let mut dir = root_directory(flags, entries);
+    dir.name = Some(name.to_string());
+    io_test::DirectoryEntry::Directory(dir)
+}
+
+fn file(name: &str, flags: u32, contents: Vec<u8>) -> io_test::DirectoryEntry {
+    io_test::DirectoryEntry::File(io_test::File {
+        name: Some(name.to_string()),
+        flags: Some(flags),
+        contents: Some(contents),
+    })
+}
+
 // Example test to start up a v2 component harness to test when opening a path that goes through a
 // remote mount point, the server forwards the request to the remote correctly.
 #[fasync::run_singlethreaded(test)]
@@ -116,9 +141,8 @@ async fn open_remote_directory_test() {
     let (logger, mut rx) = Io1RequestLoggerFactory::new();
     let remote_dir_server =
         logger.get_logged_directory(remote_name.to_string(), remote_dir_server).await;
-    harness
-        .get_empty_directory(io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, remote_dir_server)
-        .expect("Cannot get empty remote directory.");
+    let root = root_directory(io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, vec![]);
+    harness.get_directory(root, remote_dir_server).expect("Cannot get empty remote directory.");
 
     let (test_dir_proxy, test_dir_server) =
         create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
@@ -154,13 +178,13 @@ async fn file_read_with_sufficient_rights() {
     let constant_flags = [io::OPEN_RIGHT_READABLE];
     let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
-    let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
         let (test_dir_proxy, test_dir_server) =
             create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
         harness
-            .get_directory_with_empty_file(filename, directory_flags, test_dir_server)
+            .get_directory(root, test_dir_server)
             .expect("Cannot get remote directory with file.");
 
         let file =
@@ -180,13 +204,13 @@ async fn file_read_with_insufficient_rights() {
     let constant_flags = [];
     let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
-    let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
         let (test_dir_proxy, test_dir_server) =
             create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
         harness
-            .get_directory_with_empty_file(filename, directory_flags, test_dir_server)
+            .get_directory(root, test_dir_server)
             .expect("Cannot get remote directory with file.");
 
         let file =
@@ -206,13 +230,13 @@ async fn file_read_at_with_sufficient_rights() {
     let constant_flags = [io::OPEN_RIGHT_READABLE];
     let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
-    let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
         let (test_dir_proxy, test_dir_server) =
             create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
         harness
-            .get_directory_with_empty_file(filename, directory_flags, test_dir_server)
+            .get_directory(root, test_dir_server)
             .expect("Cannot get remote directory with file.");
 
         let file =
@@ -232,13 +256,13 @@ async fn file_read_at_with_insufficient_rights() {
     let constant_flags = [];
     let variable_flags = [io::OPEN_RIGHT_WRITABLE];
 
-    let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
         let (test_dir_proxy, test_dir_server) =
             create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
         harness
-            .get_directory_with_empty_file(filename, directory_flags, test_dir_server)
+            .get_directory(root, test_dir_server)
             .expect("Cannot get remote directory with file.");
 
         let file =
@@ -258,13 +282,13 @@ async fn file_write_with_sufficient_rights() {
     let constant_flags = [io::OPEN_RIGHT_WRITABLE];
     let variable_flags = [io::OPEN_RIGHT_READABLE];
 
-    let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
         let (test_dir_proxy, test_dir_server) =
             create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
         harness
-            .get_directory_with_empty_file(filename, directory_flags, test_dir_server)
+            .get_directory(root, test_dir_server)
             .expect("Cannot get remote directory with file.");
 
         let file =
@@ -284,13 +308,13 @@ async fn file_write_with_insufficient_rights() {
     let constant_flags = [];
     let variable_flags = [io::OPEN_RIGHT_READABLE];
 
-    let directory_flags = ALL_RIGHTS;
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
         let (test_dir_proxy, test_dir_server) =
             create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
         harness
-            .get_directory_with_empty_file(filename, directory_flags, test_dir_server)
+            .get_directory(root, test_dir_server)
             .expect("Cannot get remote directory with file.");
 
         let file =
@@ -298,6 +322,41 @@ async fn file_write_with_insufficient_rights() {
                 .await;
         let (status, _actual) = file.write("".as_bytes()).await.expect("Failed to write file");
         assert_ne!(Status::from_raw(status), Status::OK);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_read_in_subdirectory() {
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
+
+    let constant_flags = [io::OPEN_RIGHT_READABLE];
+    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
+
+    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
+    for file_flags in file_flags_set {
+        let root = root_directory(
+            ALL_RIGHTS,
+            vec![directory(
+                "subdir",
+                ALL_RIGHTS,
+                vec![file("testing.txt", file_flags, Vec::new())],
+            )],
+        );
+        let (test_dir_proxy, test_dir_server) =
+            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
+        harness
+            .get_directory(root, test_dir_server)
+            .expect("Cannot get remote directory with file.");
+
+        let file = open_node::<io::FileMarker>(
+            &test_dir_proxy,
+            file_flags,
+            io::MODE_TYPE_FILE,
+            "subdir/testing.txt",
+        )
+        .await;
+        let (status, _data) = file.read(0).await.expect("Read failed.");
+        assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
 
