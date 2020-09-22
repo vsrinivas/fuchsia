@@ -10,6 +10,21 @@ import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
+# Runtime is the set of package dependencies typically desired for the
+# construction of a product that includes scenic, and is included in
+# many such products.
+group("runtime") {
+  deps = [
+    "//garnet/bin/sysmem_connector",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/ui/bin/activity",
+    "//src/ui/bin/ime:ime_service",
+    "//src/ui/bin/root_presenter",
+    "//src/ui/bin/root_presenter:configs",
+    ":scenic",
+  ]
+}
+
 group("scenic") {
   public_deps = [ ":scenic_pkg" ]
 }

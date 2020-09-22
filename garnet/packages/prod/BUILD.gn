@@ -426,28 +426,10 @@ group("sbase") {
   ]
 }
 
-# WARNING: Known to topaz.
+# WARNING: Known to topaz & vendor.
 group("scenic") {
   public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//garnet/packages/prod:vulkan",
-    "//src/ui/bin/activity",
-    "//src/ui/bin/ime:ime_service",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/bin/root_presenter:configs",
-    "//src/ui/scenic",
-  ]
-}
-
-# WARNING: Known to topaz.
-group("scenic_no_ime") {
-  public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//garnet/packages/prod:vulkan",
-    "//src/ui/bin/activity",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/bin/root_presenter:configs",
-    "//src/ui/scenic",
+    "//src/ui/scenic:runtime",
   ]
 }
 
