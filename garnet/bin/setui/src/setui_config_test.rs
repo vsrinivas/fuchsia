@@ -7,7 +7,8 @@ use argh::FromArgs;
 use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
-    EnabledServicesConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
+    AgentConfiguration, EnabledServicesConfiguration, LightHardwareConfiguration,
+    LightSensorConfig, ServiceFlags,
 };
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -32,6 +33,10 @@ struct TestConfig {
     /// these configurations control specific settings for light hardware.
     #[argh(option, short = 'h')]
     light_hardware_config: Vec<OsString>,
+
+    /// these configurations control which agents are enabled.
+    #[argh(option, short = 'a')]
+    agent_config: Vec<OsString>,
 }
 
 fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
@@ -62,6 +67,10 @@ fn main() -> Result<(), Error> {
 
     for config in test_config.light_hardware_config.into_iter() {
         read_config::<LightHardwareConfiguration>(&config)?;
+    }
+
+    for config in test_config.agent_config.into_iter() {
+        read_config::<AgentConfiguration>(&config)?;
     }
 
     Ok(())

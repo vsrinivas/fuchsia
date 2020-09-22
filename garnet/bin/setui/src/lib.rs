@@ -101,6 +101,30 @@ enum Runtime {
     Nested(&'static str),
 }
 
+#[derive(Eq, PartialEq, Hash, Debug, Copy, Clone, Deserialize)]
+pub enum AgentType {
+    Earcons,
+    Restore,
+}
+
+pub fn get_default_agent_types() -> HashSet<AgentType> {
+    return vec![AgentType::Restore].into_iter().collect();
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct AgentConfiguration {
+    pub agent_types: HashSet<AgentType>,
+}
+
+impl From<AgentType> for AgentBlueprintHandle {
+    fn from(agent_type: AgentType) -> AgentBlueprintHandle {
+        match agent_type {
+            AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
+            AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Deserialize)]
 pub struct EnabledServicesConfiguration {
     pub services: HashSet<SettingType>,
@@ -117,15 +141,32 @@ pub struct ServiceFlags {
     pub controller_flags: HashSet<ControllerFlag>,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct ServiceConfiguration {
+    pub agent_types: HashSet<AgentType>,
     pub services: HashSet<SettingType>,
     pub controller_flags: HashSet<ControllerFlag>,
 }
 
 impl ServiceConfiguration {
-    pub fn from(services: EnabledServicesConfiguration, flags: ServiceFlags) -> Self {
-        Self { services: services.services, controller_flags: flags.controller_flags }
+    pub fn from(
+        agent_types: AgentConfiguration,
+        services: EnabledServicesConfiguration,
+        flags: ServiceFlags,
+    ) -> Self {
+        Self {
+            agent_types: agent_types.agent_types,
+            services: services.services,
+            controller_flags: flags.controller_flags,
+        }
+    }
+
+    fn set_services(&mut self, services: HashSet<SettingType>) {
+        self.services = services;
+    }
+
+    fn set_controller_flags(&mut self, controller_flags: HashSet<ControllerFlag>) {
+        self.controller_flags = controller_flags;
     }
 }
 
@@ -148,6 +189,7 @@ impl Environment {
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
+    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
@@ -183,6 +225,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             configuration: None,
             agent_blueprints: vec![],
+            agent_mapping_func: None,
             event_subscriber_blueprints: vec![],
             storage_factory,
             generate_service: None,
@@ -213,22 +256,34 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     /// Setting types to participate.
     pub fn settings(mut self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
-        let controller_flags =
-            self.configuration.take().map(|c| c.controller_flags).unwrap_or_else(|| HashSet::new());
-        self.configuration(ServiceConfiguration {
-            services: settings.to_vec().into_iter().collect(),
-            controller_flags,
-        })
+        if self.configuration.is_none() {
+            self.configuration = Some(ServiceConfiguration::default());
+        }
+
+        self.configuration
+            .as_mut()
+            .map(|c| c.set_services(settings.to_vec().into_iter().collect()));
+        self
     }
 
     /// Setting types to participate with customized controllers.
     pub fn flags(mut self, controller_flags: &[ControllerFlag]) -> EnvironmentBuilder<T> {
-        let services =
-            self.configuration.take().map(|c| c.services).unwrap_or_else(|| HashSet::new());
-        self.configuration(ServiceConfiguration {
-            services,
-            controller_flags: controller_flags.iter().map(|f| *f).collect(),
-        })
+        if self.configuration.is_none() {
+            self.configuration = Some(ServiceConfiguration::default());
+        }
+
+        self.configuration
+            .as_mut()
+            .map(|c| c.set_controller_flags(controller_flags.iter().map(|f| *f).collect()));
+        self
+    }
+
+    pub fn agent_mapping<F>(mut self, agent_mapping_func: F) -> EnvironmentBuilder<T>
+    where
+        F: Fn(AgentType) -> AgentBlueprintHandle + 'static,
+    {
+        self.agent_mapping_func = Some(Box::new(agent_mapping_func));
+        self
     }
 
     pub fn agents(mut self, blueprints: &[AgentBlueprintHandle]) -> EnvironmentBuilder<T> {
@@ -261,9 +316,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_dir = fs.root_dir();
         }
 
-        let (settings, flags) = match self.configuration {
-            Some(configuration) => (configuration.services, configuration.controller_flags),
-            _ => (HashSet::new(), HashSet::new()),
+        let (agent_types, settings, flags) = match self.configuration {
+            Some(configuration) => {
+                (configuration.agent_types, configuration.services, configuration.controller_flags)
+            }
+            _ => (HashSet::new(), HashSet::new(), HashSet::new()),
         };
 
         let event_messenger_factory = internal::event::message::create_hub();
@@ -284,10 +341,17 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             handler_factory.register(setting_type, handler);
         }
 
+        let agent_blueprints = self
+            .agent_mapping_func
+            .map(|agent_mapping_func| {
+                agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
+            })
+            .unwrap_or(self.agent_blueprints);
+
         if create_environment(
             service_dir,
             settings,
-            self.agent_blueprints,
+            agent_blueprints,
             self.event_subscriber_blueprints,
             service_context,
             event_messenger_factory,

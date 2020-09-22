@@ -245,6 +245,7 @@ test_package("setui_service_tests") {
 config_data("tests_config") {
   for_pkg = "setui_service_tests"
   sources = [
+    "src/tests/testdata/agent_configuration.json",
     "src/tests/testdata/audio_config_data.json",
     "src/tests/testdata/bluetooth-connected.wav",
     "src/tests/testdata/bluetooth-disconnected.wav",
@@ -347,6 +348,10 @@ unittest_package("sample-setui-config-test") {
       path = rebase_path("src/tests/testdata/light_hardware_configuration.json")
       dest = "light_hardware_configuration.json"
     },
+    {
+      path = rebase_path("src/tests/testdata/agent_configuration.json")
+      dest = "agent_configuration.json"
+    },
   ]
 
   tests = [
@@ -362,6 +367,8 @@ unittest_package("sample-setui-config-test") {
         "/pkg/data/light_sensor_configuration.json",
         "--light-hardware-config",
         "/pkg/data/light_hardware_configuration.json",
+        "--agent-config",
+        "/pkg/data/agent_configuration.json",
       ]
     },
     {
@@ -376,6 +383,8 @@ unittest_package("sample-setui-config-test") {
         "/pkg/data/light_sensor_configuration.json",
         "-h",
         "/pkg/data/light_hardware_configuration.json",
+        "-a",
+        "/pkg/data/agent_configuration.json",
       ]
     },
     {

@@ -11,8 +11,10 @@ use {
     settings::agent::earcons,
     settings::agent::restore_agent,
     settings::config::default_settings::DefaultSetting,
+    settings::get_default_agent_types,
     settings::handler::device_storage::StashDeviceStorageFactory,
     settings::switchboard::base::get_default_setting_types,
+    settings::AgentConfiguration,
     settings::EnabledServicesConfiguration,
     settings::EnvironmentBuilder,
     settings::ServiceConfiguration,
@@ -46,7 +48,14 @@ fn main() -> Result<(), Error> {
             .get_default_value()
             .expect("no default service flags");
 
-    let configuration = ServiceConfiguration::from(configuration, flags);
+    let agent_types = DefaultSetting::new(
+        Some(AgentConfiguration { agent_types: get_default_agent_types() }),
+        "/config/data/agent_configuration.json",
+    )
+    .get_default_value()
+    .expect("no default agent types");
+
+    let configuration = ServiceConfiguration::from(agent_types, configuration, flags);
 
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot
