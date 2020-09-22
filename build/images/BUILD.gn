@@ -24,8 +24,8 @@ import("//build/info/info.gni")
 import("//build/package_metadata.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
-import("//build/unification/zbi/zbi_input.gni")
+import("//build/zbi/zbi.gni")
+import("//build/zbi/zbi_input.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -593,7 +593,7 @@ group("fuchsia_contents") {
 
 # The main bootable image, which requires `blob.blk` to appear on some
 # attached storage device at runtime.
-migrated_zbi("fuchsia") {
+zbi("fuchsia") {
   testonly = true
 
   output_dir = root_out_dir
@@ -714,7 +714,7 @@ action("elf_sizes.json") {
 # Generate the prime fuchsia.zbi.
 # The prime images are used to have an alternate known-compatible OTA
 # target for integration testing.
-migrated_zbi("fuchsia_prime") {
+zbi("fuchsia_prime") {
   testonly = true
 
   output_dir = root_out_dir
@@ -1278,7 +1278,7 @@ zbi_input("fvm.blk_ramdisk") {
 # fvm.blk into a fat ZBI that boots the full system without using any real
 # storage.  The system decompresses the fvm.blk image into memory and then
 # sees that RAM disk just as if it were a real disk on the device.
-migrated_zbi("netboot") {
+zbi("netboot") {
   testonly = true
 
   output_dir = root_out_dir

@@ -9,7 +9,7 @@ import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
+import("//build/zbi/zbi.gni")
 
 assert(current_toolchain == target_toolchain)
 
@@ -55,7 +55,7 @@ devmgr_config("devmgr_config") {
   testonly = true
 }
 
-migrated_zbi("bringup") {
+zbi("bringup") {
   testonly = true
 
   output_dir = root_out_dir

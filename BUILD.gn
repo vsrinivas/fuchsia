@@ -12,7 +12,9 @@ import("//build/rust/config.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
+
+# TODO(60410): remove import when the ZN build is gone.
+import("//build/zbi/zbi.gni")
 import(
     "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 

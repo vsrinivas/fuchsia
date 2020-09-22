@@ -13,8 +13,8 @@ import("//build/info/info.gni")
 import("//build/package_metadata.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/zbi/generated_resource.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
-import("//build/unification/zbi/zbi_input.gni")
+import("//build/zbi/zbi.gni")
+import("//build/zbi/zbi_input.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.
@@ -372,7 +372,7 @@ template("assemble_system") {
     }
   }
 
-  migrated_zbi(image_name) {
+  zbi(image_name) {
     metadata = {
       # We insert a package barrier because the packages inside this ZBI
       # shouldn't leak to targets that depend on the ZBI. For example,

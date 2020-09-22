@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zbi/migrated_zbi.gni")
-import("//build/unification/zbi/zbi_input.gni")
+import("//build/zbi/zbi.gni")
+import("//build/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
 # Composes a test zbi out of Zircon artifacts.
@@ -20,8 +20,8 @@ import("//zircon/public/gn/test/zbi_test_success.gni")
 #     Defaults to [ "QEMU" ].
 #
 #   replace, complete, compress
-#     See migrated_zbi.gni.
-template("migrated_zbi_test") {
+#     See //build/zbi/zbi.gni.
+template("zbi_test") {
   main_target = target_name
   input_target = "${target_name}_input"
   zbi_target = "${target_name}_zbi"
@@ -44,7 +44,7 @@ template("migrated_zbi_test") {
     }
   }
 
-  migrated_zbi(zbi_target) {
+  zbi(zbi_target) {
     forward_variables_from(invoker,
                            "*",
                            [

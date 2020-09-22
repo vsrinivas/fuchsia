@@ -12,7 +12,7 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
+import("//build/zbi/zbi.gni")
 
 zedboot_deps = []
 
@@ -110,7 +110,7 @@ zbi_input("kernel_cmdline") {
 }
 
 # Note: This output is also used by a script in //scripts/verify_cmdline_params.
-migrated_zbi("zbi") {
+zbi("zbi") {
   output_name = "zedboot"
   output_dir = root_out_dir
   testonly = true

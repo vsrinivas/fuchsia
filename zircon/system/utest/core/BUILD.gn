@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
-import("//build/unification/zbi/migrated_zbi_test.gni")
+import("//build/testing/zbi_test.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
@@ -126,7 +126,7 @@ test("standalone") {
 }
 
 # Make that into a bootable ZBI with just the kernel.
-migrated_zbi_test("core-tests") {
+zbi_test("core-tests") {
   assert(current_cpu != "")
 
   args = [
@@ -158,7 +158,7 @@ migrated_zbi_test("core-tests") {
 # of choosing TSC if possible.
 if (current_cpu == "x64") {
   # Make that into a bootable ZBI with just the kernel.
-  migrated_zbi_test("core-tests-hpet") {
+  zbi_test("core-tests-hpet") {
     args = [
       "userboot=test/core-standalone-test",
       "kernel.wallclock=hpet",

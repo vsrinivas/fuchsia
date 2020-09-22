@@ -15,9 +15,8 @@ assert(!defined(zx) || zx != "/",
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
-import("//build/unification/zbi/migrated_zbi_test.gni")
 import("//build/unification/zbi/resource.gni")
+import("//build/zbi/zbi.gni")
 
 group("test") {
   testonly = true
@@ -63,7 +62,7 @@ resource("generated-zstd-zbi") {
 }
 
 # Generate zbi images for tests.
-migrated_zbi("generated-zstd") {
+zbi("generated-zstd") {
   compress = "zstd"
 
   testonly = true
@@ -71,7 +70,7 @@ migrated_zbi("generated-zstd") {
   deps = [ ":create-zbi-image" ]
 }
 
-migrated_zbi("generated-lz4f") {
+zbi("generated-lz4f") {
   compress = "lz4f"
 
   testonly = true

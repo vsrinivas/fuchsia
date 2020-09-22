@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/zbi/zbi_input.gni")
+import("//build/zbi/zbi_input.gni")
 import("//src/sys/build/components.gni")
 
 group("bootsvc") {

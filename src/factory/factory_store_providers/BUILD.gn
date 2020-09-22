@@ -8,8 +8,8 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//build/unification/zbi/migrated_zbi.gni")
 import("//build/unification/zbi/resource.gni")
+import("//build/zbi/zbi.gni")
 
 rustc_binary("bin") {
   name = "factory_store_providers"
@@ -119,7 +119,7 @@ foreach(file, test_files) {
   }
 }
 
-migrated_zbi("items") {
+zbi("items") {
   testonly = true
   cpu = ""  # Mark the zbi as incomplete.
   compress = false

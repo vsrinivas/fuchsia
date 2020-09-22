@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/zbi/migrated_zbi_test.gni")
+import("//build/testing/zbi_test.gni")
 import("//build/unification/zbi/resource.gni")
 
 # Pick out the tests.
@@ -36,7 +36,7 @@ test("zbi-child") {
 # The parent binary mexecs into this child image. The parent image is booted
 # with kernel.mexec-force-high-ramdisk=true meaning that it will place the child
 # image's ramdisk in high (>4GiB) memory.
-migrated_zbi_test("zbi-child-image") {
+zbi_test("zbi-child-image") {
   assert(current_cpu != "")
 
   args = [ "userboot=test/zbi-child-test" ]
@@ -82,7 +82,7 @@ test("zbi-parent") {
   ]
 }
 
-migrated_zbi_test("zbi-parent-image") {
+zbi_test("zbi-parent-image") {
   assert(current_cpu != "")
   args = [
     "bootsvc.next=test/zbi-parent-test",

@@ -1,0 +1,170 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+import("zbi_input.gni")
+
+declare_args() {
+  # Compression setting for ZBI "storage" items.
+  # This can be "zstd", optionally followed by ".LEVEL"
+  # where `LEVEL` can be an integer or "max".
+  zbi_compression = "zstd"
+}
+
+# Assembles a Zircon Boot Image file from various inputs.
+#
+# Parameters
+#
+# This template has two outputs: the first is the ZBI in question, whose path
+# is a function of the `output_dir`, `output_name`, and `output_extension`
+# parameters in the usual way, and the second is a JSON representation of its
+# contents whose path is formed by adding a further ".json" to the ZBI's path.
+#
+#   cpu
+#     Optional: CPU architecture for a complete ZBI.
+#     If this is "", then this target may produce an incomplete ZBI.
+#     Otherwise, it's a CPU name ("arm64" or "x64") and the target will
+#     fail if the ZBI is not complete so it can be booted on that CPU.
+#     Type: string
+#     Default: current_cpu
+#
+#   compress
+#     Optional: Whether to compress the BOOTFS and other `ZBI_TYPE_STORAGE`
+#     items in the output.  See the `--compressed` switch in `zbi --help`.
+#     If this is a string rather than a bool, it's the argument for the
+#     `--compressed` switch to `zbi`.  A value of `true` is replaced with
+#     $zbi_compression.
+#     Type: bool or string
+#     Default: true
+#
+#   output_dir
+#     Optional: Directory where the output file is written.
+#     Type: dir
+#     Default: target_out_dir
+#
+#   output_extension
+#     Optional: Extension added to $output_name.
+#     Type: string
+#     Default: "zbi"
+#
+#   output_name
+#     Optional: Name of the output file.
+#     Type: string
+#     Default: target_name
+#
+#   deps, data_deps, testonly, assert_no_deps, metadata, visibility
+#     See `gn help`.
+template("zbi") {
+  main_target = target_name
+  input_target = "${target_name}_input"
+  rsp_target = "${target_name}_rsp"
+
+  rsp_file = "$target_gen_dir/$target_name.zbi.rsp"
+
+  zbi_input(input_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+  }
+
+  generated_file(rsp_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":$input_target" ]
+    data_keys = [ "migrated_zbi_input_args" ]
+    walk_keys = [ "migrated_zbi_barrier" ]
+    output_conversion = "list lines"
+    outputs = [ rsp_file ]
+  }
+
+  output_file = target_name
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  }
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".zbi"
+  }
+  if (defined(invoker.output_dir)) {
+    output_file = "${invoker.output_dir}/$output_file"
+  } else {
+    output_file = "$target_out_dir/$output_file"
+  }
+  json_output_file = "$output_file.json"
+
+  zbi_tool = "$zircon_tools_dir/zbi"
+
+  action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "assert_no_deps",
+                             "compress",
+                             "data_deps",
+                             "metadata",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    script = "//build/zbi/run_zbi.py"
+
+    deps = [
+      ":$rsp_target",
+      "//zircon/public/tool/zbi($host_toolchain)",
+    ]
+
+    inputs = [
+      rsp_file,
+      zbi_tool,
+    ]
+    outputs = [
+      output_file,
+      json_output_file,
+    ]
+    depfile = "$output_file.d"
+
+    args = [
+      "--zbi",
+      rebase_path(zbi_tool, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--rspfile",
+      rebase_path(rsp_file, root_build_dir),
+
+      # The remaining arguments are passed to the zbi tool along with the
+      # contents of the response file.
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+
+      "--json-output",
+      rebase_path(outputs[1], root_build_dir),
+    ]
+
+    # Require a complete ZBI for the specified $cpu (or $current_cpu).
+    # A value of "" means it need not be a complete ZBI.
+    if (defined(invoker.cpu)) {
+      cpu = invoker.cpu
+    } else {
+      cpu = current_cpu
+    }
+    if (cpu != "") {
+      args += [ "--complete=$cpu" ]
+    }
+
+    # This comes last to affect the output despite any earlier
+    # "-c" or "-u" from metadata.zbi_input_args meant to affect
+    # a particular input (e.g. for "--type=ramdisk").
+    if (!defined(compress) || compress == true) {
+      compress = zbi_compression
+    }
+    if (compress == false) {
+      args += [ "--uncompressed" ]
+    } else {
+      args += [ "--compressed=$compress" ]
+    }
+  }
+}

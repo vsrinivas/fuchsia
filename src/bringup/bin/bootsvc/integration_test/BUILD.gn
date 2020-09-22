@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/zbi/migrated_zbi_test.gni")
+import("//build/testing/zbi_test.gni")
 import("//build/unification/zbi/resource.gni")
-import("//build/unification/zbi/zbi_input.gni")
+import("//build/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
 executable("bootsvc-integration-test") {
@@ -182,7 +182,7 @@ resource("fake-unpackaged-library") {
   outputs = [ "lib/dummy.so" ]
 }
 
-migrated_zbi_test("bootsvc-integration-tests") {
+zbi_test("bootsvc-integration-tests") {
   assert(current_cpu != "")
 
   args = [
@@ -211,7 +211,7 @@ migrated_zbi_test("bootsvc-integration-tests") {
   output_name = "$target_name-$current_cpu"
 }
 
-migrated_zbi_test("bootsvc-root-job-test") {
+zbi_test("bootsvc-root-job-test") {
   args = [
     "userboot=bin/bootsvc",
     "bootsvc.next=test/core/zbi-child-test",
