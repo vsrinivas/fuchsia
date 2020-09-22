@@ -29,7 +29,6 @@ class Home extends StatelessWidget {
         Expanded(
           child: Stack(
             fit: StackFit.expand,
-            overflow: Overflow.visible,
             children: <Widget>[
               // Story Clusters.
               Clusters(model: model),

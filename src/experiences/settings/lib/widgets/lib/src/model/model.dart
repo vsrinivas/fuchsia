@@ -156,7 +156,8 @@ class _InheritedModel<T extends Model> extends InheritedWidget {
   //ignore: unused_element
   const _InheritedModel.forRuntimeType()
       : model = null,
-        version = 0;
+        version = 0,
+        super(child: const Offstage());
 
   @override
   bool updateShouldNotify(_InheritedModel<T> oldWidget) =>
