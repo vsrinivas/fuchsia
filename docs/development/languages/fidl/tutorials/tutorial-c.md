@@ -728,4 +728,4 @@ arrive.
 [server]: /garnet/examples/fidl/echo_server_c/echo_server.c
 [c-family-comparison]: /docs/development/languages/fidl/guides/c-family-comparison.md
 [wire-format]: /docs/reference/fidl/language/wire-format
-[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
+[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp

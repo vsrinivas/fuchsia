@@ -25,6 +25,8 @@ The C bindings are deprecated in favor of [LLCPP](#llcpp).
 
 ## Low-Level C++ Bindings {#llcpp}
 
+*   Support encoding and decoding FIDL messages with C++17.
+*   Depend only on a small subset of the standard library.
 *   Optimized to meet the needs of low-level systems programming while providing
     slightly more safety and features than the C bindings.
 *   Represent data structures whose memory layout coincides with the wire
@@ -39,7 +41,7 @@ The C bindings are deprecated in favor of [LLCPP](#llcpp).
     FIDL struct owns all the handles stored inline, but a FIDL vector of structs
     containing handles will be represented as a vector view, which will not own
     the out-of-line handles.
-*   Defer all memory allocation decisions to the client.
+*   Provide fine-grained control over memory allocation.
 *   Code generator produces only type declarations, coding tables, simple
     inline functions, and pure virtual server interfaces.
 *   Client may manually dispatch incoming method calls on protocols
@@ -123,5 +125,5 @@ TODO
 
 <!-- xrefs -->
 [layout-attribute]: /docs/reference/fidl/language/attributes.md#layout
-[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
-[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/overview.md
+[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
+[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/hlcpp

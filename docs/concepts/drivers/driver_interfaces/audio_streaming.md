@@ -151,7 +151,7 @@ There are bindings for different languages to facilitate sending and receiving
 FIDL messages, and in particular for C++ drivers there is also a library
 [SimpleAudioStream](/src/media/audio/lib/simple-audio-stream) that facilitates the creation
 of drivers in C++, this library uses the
-[LLCPP](/docs/development/languages/fidl/tutorials/tutorial-llcpp.md) bindings to send and receive
+[LLCPP](/docs/reference/fidl/bindings/llcpp-bindings.md) bindings to send and receive
 FIDL messages.
 
 ## Format Negotiation

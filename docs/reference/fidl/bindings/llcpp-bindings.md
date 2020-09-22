@@ -70,7 +70,7 @@ In LLCPP, a user defined type (bits, enum, constant, struct, union, or table) is
 referred to using the generated class or variable (see [Type Definitions](#type-definitions)
 ). The nullable version of a user defined type
 `T` is referred to using a `fidl::tracking_ptr` of the generated type *except*
-for unions, which simply use the generated type itself. Refer to the [LLCPP Tutorial][llcpp-allocation]
+for unions, which simply use the generated type itself. Refer to the [LLCPP memory guide][llcpp-allocation]
 for information about `tracking_ptr`.
 
 ## Type definitions {#type-definitions}
@@ -372,8 +372,63 @@ client:
   to `SyncClient` when migrating code from the C bindings to the LLCPP bindings,
   or when implementing C APIs that take raw `zx_handle_t`s.
 
-#### fidl::Client
+#### fidl::Client {#async-client}
 
+<!-- TODO(fxbug.dev/58672) fidl::Client should be covered by generated docs -->
+
+`fidl::Client` is thread-safe and supports both synchronous and asynchronous
+calls as well as asynchronous event handling. It also supports use with a
+multi-threaded dispatcher.
+
+##### Creation
+
+A client is created with a client-end `zx::channel`, an `async_dispatcher_t*`,
+an optional hook (`OnClientUnboundFn`) to be invoked when the channel is
+unbound, and an optional [`AsyncEventHandlers`](#event-handlers) containing
+hooks to be invoked on FIDL events.
+
+```cpp
+Client<TicTacToe> client;
+zx_status_t status = client.Bind(
+    std::move(client_end), dispatcher,
+    // OnClientUnboundFn
+    [&](fidl::UnboundReason, zx_status_t, zx::channel) { /* ... */ },
+    // AsyncEventHandlers
+    { .on_opponent_move = [&]( /* ... */ ) { /* ... */ } });
+```
+The channel may be unbound automatically in case of the server-end being closed
+or due to an invalid message being received from the server. You may also
+actively unbind the channel through `client.Unbind()`.
+
+#### Unbinding
+
+Unbinding is thread-safe. In any of these cases, ongoing and future operations
+will not cause a fatal failure, only returning `ZX_ERR_CANCELED` where
+appropriate.
+
+If you provided an unbound hook, it is executed as task on the dispatcher,
+providing a reason and error status for the unbinding. You may also recover
+ownership of the client end of the channel through the hook. The unbound hook is
+guaranteed to be run.
+
+##### Interaction with dispatcher
+
+All asynchronous responses, event handling, and error handling are done through
+the `async_dispatcher_t*` provided on creation of a client. With the exception
+of the dispatcher being shutdown, you can expect that all hooks provided to the
+client APIs will be executed on a dispatcher thread (and not nested within other
+user code).
+
+NOTE: If you shutdown the dispatcher while there are any active bindings, the
+unbound hook may be executed on the thread executing shutdown. As such, you must
+not take any locks which could be taken by hooks provided to `fidl::Client` APIs
+while executing `async::Loop::Shutdown()/async_loop_shutdown()`. (You should
+probably ensure that no locks are held around shutdown anyway since it joins all
+dispatcher threads, which may take locks in user code).
+
+##### Outgoing FIDL methods
+
+You can invoke outgoing FIDL APIs through the `fidl::Client` instance.
 Dereferencing a `fidl::Client` provides access to the following methods:
 
 * `fidl::Result StartGame(bool start_first)`: Managed variant of a fire
@@ -383,7 +438,9 @@ Dereferencing a `fidl::Client` provides access to the following methods:
 * `fidl::Result MakeMove(uint8_t row, uint8_t col,
   fit::callback<void(bool success, fidl::tracking_ptr<GameState> new_state)>
   _cb)`: Managed variant of an asynchronous two way method. It takes a
-  callback to handle responses as the last argument.
+  callback to handle responses as the last argument. The callback is executed
+  on response in a dispatcher thread. The returned `fidl::StatusAndError` refers
+  just to the status of the outgoing call.
 * `fidl::Result MakeMove(fidl::BytePart _request_buffer, uint8_t row,
   uint8_t col, MakeMoveResponseContext* _context)`: Asynchronous,
   caller-allocated variant of a two way method. The final argument is a response
@@ -393,6 +450,11 @@ Dereferencing a `fidl::Client` provides access to the following methods:
 * `UnownedResultOf::MakeMove_sync(fidl::BytePart _request_bufffer, uint8_t row,
   uint8_t col, fidl::BytePart _response_buffer)`: Synchronous, caller-allocated
   variant of a two way method. The same method exists on `SyncClient`.
+
+Note: One-way and synchronous two-way FIDL methods have a similar API to the
+[`SyncClient`](#sync-client) versions. Aside from one-way methods directly
+returning `fidl::StatusAndError` and the added `_Sync` on the synchronous
+methods, the behavior is identical.
 
 Each two way method has a response context that is used in the caller-allocated,
 asynchronous case. `TicTacToe` has only one response context,
@@ -404,14 +466,17 @@ virtual void OnReply(fidl::DecodedMessage<MakeMoveResponse> msg)
 virtual void OnError()
 ```
 
-Only one of the two methods is called for a single response: `OnReply` is called
-with a successfully decoded response, whereas `OnError` is called on any error
-that would cause the response context to be discarded without `OnReply` being
+Only one of the two methods is called for a single response: `OnReply()` is called
+with a successfully decoded response, whereas `OnError()` is called on any error
+that would cause the response context to be discarded without `OnReply()` being
 called. You are responsible for ensuring that the response context object
 outlives the duration of the entire async call, since the `fidl::Client` borrows
 the context object by address to avoid implicit allocation.
 
-#### SyncClient
+Note: If the client is destroyed with outstanding asynchronous transactions,
+`OnError()` will be invoked for all of the associated `ResponseContext`s
+
+#### SyncClient {#sync-client}
 
 `TicTacToe::SyncClient` provides the following methods:
 
@@ -424,7 +489,14 @@ the context object by address to avoid implicit allocation.
 * `zx::channel* mutable_channel()`: Returns the underlying channel as mutable.
 * `TicTacToe::ResultOf::StartGame StartGame(bool start_first)`: Owned variant of
   a fire and forget method call, which takes the parameters as arguments and
-  returns the `ResultOf` class.
+  returns the `ResultOf` class. Buffer allocation for requests and responses are
+  entirely handled within this function, as is the case in simple C bindings.
+  The bindings calculate a safe buffer size specific to this call at compile
+  time based on FIDL wire-format and maximum length constraints. The buffers are
+  allocated on the stack if they fit under 512 bytes, or else on the heap.
+  In general, the managed flavor is easier to use, but may result in extra
+  allocation. See [ResultOf](#resultof) for details on buffer
+  management.
 * `TicTacToe::UnownedResultOf::StartGame StartGame(fidl::BytePart, bool
   start_first)`: Caller-allocated variant of a fire and forget call, which takes
   in backing storage for the request buffer, as well as request parameters, and
@@ -444,8 +516,7 @@ Note that each method has both an owned and caller-allocated variant. In brief,
 the owned variant of each method handles memory allocation for requests and
 responses, whereas the caller-allocated variant allows the user to pass in the
 buffers themselves. The owned variant is easier to use, but may result in extra
-allocation. Details as well as examples for each variant are provided in the
-[LLCPP Tutorial][llcpp-tutorial].
+allocation.
 
 #### Call {#client-call}
 
@@ -465,7 +536,7 @@ the only difference being that they are all `static` and take an
 * `static fidl::Result HandleEvents(zx::unowned_channel client_end, EventHandlers&
   handlers)`:
 
-#### Result, ResultOf and UnownedResultOf
+#### Result, ResultOf and UnownedResultOf [#resultof]
 
 The managed variants of each method of `SyncClient` and `Call` all return a
 `ResultOf::` type, whereas the caller-allocating variants all return an
@@ -500,6 +571,46 @@ To be simplified to:
 auto result = client->MakeMove_Sync(0, 0);
 bool success = result->success;
 ```
+
+> `ResultOf` manages ownership of all buffer and handles, while `::Unwrap()`
+> returns a view over it. Therefore, this object must outlive any references
+> to the unwrapped response.
+
+##### Allocation strategy And move semantics
+
+`ResultOf::` stores the response buffer inline if the message is guaranteed
+to fit under 512 bytes. Since the result object is usually instantiated on the
+caller's stack, this effectively means the response is stack-allocated when it
+is reasonably small. If the maximal response size exceeds 512 bytes,
+`ResultOf::` instead contains a `std::unique_ptr` to a heap-allocated buffer.
+
+Therefore, a `std::move()` on `ResultOf::Foo` may be costly if the response
+buffer is inline: the content has to be copied, and pointers to out-of-line
+objects have to be updated to locations within the destination object.
+Consider the following snippet:
+
+```cpp
+int CountPlanets(ResultOf::ScanForPlanets result) { /* ... */ }
+
+auto result = client->ScanForPlanets();
+SpaceShip::ScanForPlanetsResponse* response = result.Unwrap();
+Planet* planet = &response->planets[0];
+int count = CountPlanets(std::move(result));    // Costly
+// In addition, |response| and |planet| are invalidated due to the move
+```
+
+It may be written more efficiently as:
+
+```cpp
+int CountPlanets(fidl::VectorView<SpaceShip::Planet> planets) { /* ... */ }
+
+auto result = client.ScanForPlanets();
+int count = CountPlanets(result.Unwrap()->planets);
+```
+
+> If the result object need to be passed around multiple function calls,
+> consider pre-allocating a buffer in the outer-most function and use the
+> caller-allocating flavor.
 
 ### Server
 
@@ -571,9 +682,80 @@ for example usage), allowing the server to
 respond to requests asynchronously. The async completer has the same methods for
 responding to the client as the sync completer.
 
+Note: Each `Completer` object must only be accessed by one thread at a time.
+Simultaneous access from multiple threads will result in a crash.
+
+##### Parallel message handling
+
+NOTE: This use-case is currently possible only using the
+[lib/fidl](/zircon/system/ulib/fidl) bindings.
+
+By default, messages from a single binding are handled sequentially, i.e. a
+single thread attached to the dispatcher (run loop) is woken up if necessary,
+reads the message, executes the handler, and returns back to the dispatcher. The
+`::Sync` completer provides an additional API, `EnableNextDispatch()`, which may
+be used to selectively break this restriction. Specifically, a call to this API
+will enable another thread waiting on the dispatcher to handle the next message
+on the binding while the first thread is still in the handler. Note that
+repeated calls to `EnableNextDispatch()` on the same `Completer` are idempotent.
+
+```cpp
+void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) override {
+  // Suppose directed scans can be done in parallel. It would be suboptimal to block one scan until
+  // another has completed.
+  completer.EnableNextDispatch();
+  fidl::VectorView<Planet> discovered_planets = /* perform a directed planet scan */;
+  completer.Reply(std::move(discovered_planets));
+}
+```
+
+### Caller-allocated methods
+
+A number of the APIs above provide owned and caller-allocated variants of
+generated methods.
+
+The  caller-allocated variant defers all memory allocation responsibilities to
+the caller. The type `fidl::BytePart` references a buffer address and size. It
+will be used by the bindings library to construct the FIDL request, hence it
+must be sufficiently large. The method parameters (e.g. `heading`) are
+*linearized* to appropriate locations within the buffer. There are a number of
+ways to create the buffer:
+
+```cpp
+// 1. On the stack
+fidl::Buffer<StartGameRequest> request_buffer;
+auto result = client.StartGame(request_buffer.view(), true);
+
+// 2. On the heap
+auto request_buffer = std::make_unique<fidl::Buffer<StartGameRequest>>();
+auto result = client.StartGame(request_buffer->view(), true);
+
+// 3. Some other means, e.g. thread-local storage
+constexpr uint32_t request_size = fidl::MaxSizeInChannel<StartGameRequest>();
+uint8_t* buffer = allocate_buffer_of_size(request_size);
+fidl::BytePart request_buffer(/* data = */buffer, /* capacity = */request_size);
+auto result = client.StartGame(std::move(request_buffer), true);
+
+// Check the transport status (encoding error, channel writing error, etc.)
+if (result.status() != ZX_OK) {
+  // Handle error...
+}
+
+// Don't forget to free the buffer at the end if approach #3 was used...
+```
+
+> When the caller-allocating flavor is used, the `result` object borrows the
+> request and response buffers (hence its type is under `UnownedResultOf`).
+> Make sure the buffers outlive the `result` object.
+> See [UnownedResultOf](#resultof-and-unownedresultof).
+
+Note: Buffers passed to the bindings must be aligned to 8 bytes. The
+`fidl::Buffer` helper class does this automatically. Failure to align would
+result in a run-time error.
+
 ### Events {#events}
 
-#### Client
+#### Client {#event-handlers}
 
 In LLCPP, events can be handled asynchronously or synchronously, depending
 on the type of [client](#client) being used.
@@ -739,11 +921,10 @@ attribute causes the FIDL toolchain to generate an additional `static const char
 Name[]` field on the protocol class, containing the full protocol name.
 
 <!-- xrefs -->
-[llcpp-allocation]:
-/docs/development/languages/fidl/tutorials/tutorial-llcpp.md#memory-ownership
+[llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
 [llcpp-async-example]:
-/docs/development/languages/fidl/tutorials/tutorial-llcpp.md#async-server
-[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
+/docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
+[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
 [llcpp-server-example]: /garnet/examples/fidl/echo_server_llcpp
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits

@@ -79,6 +79,7 @@ static void connect(void* untyped_context, const char* service_name, zx_handle_t
   fidl::BindServer(context->dispatcher, zx::channel(service_request), context->server.get());
 }
 
+// [START main]
 int main(int argc, char** argv) {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   if (directory_request == ZX_HANDLE_INVALID) {
@@ -110,3 +111,4 @@ int main(int argc, char** argv) {
   loop.Run();
   return 0;
 }
+// [END main]

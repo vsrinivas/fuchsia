@@ -28,6 +28,8 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
     // rather than in sequence.
     async::PostDelayedTask(
         dispatcher_,
+        // The lambda capturing `completer` must be marked mutable, because making a
+        // reply using the completer mutates it such that duplicate repies will panic.
         [value = std::move(value), completer = completer.ToAsync()]() mutable {
           completer.Reply(std::move(value));
         },

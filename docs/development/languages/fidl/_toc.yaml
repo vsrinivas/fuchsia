@@ -31,7 +31,18 @@ toc:
     - title: "Testing protocols"
       path: /docs/development/languages/fidl/tutorials/hlcpp/topics/testing.md
   - title: "LLCPP"
-    path: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
+    section:
+    - title: "Overview"
+      path: /docs/development/languages/fidl/tutorials/llcpp/README.md
+    - title: "Getting Started"
+      section:
+      - include: /docs/development/languages/fidl/tutorials/llcpp/basics/_toc.yaml
+    - title: "Async server responses"
+      path: /docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
+    - title: "Request pipelining"
+      path: /docs/development/languages/fidl/tutorials/llcpp/topics/request-pipelining.md
+    - title: "Services"
+      path: /docs/development/languages/fidl/tutorials/llcpp/topics/services.md
   - title: "Rust"
     section:
     - title: "Overview"

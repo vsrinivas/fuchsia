@@ -1,0 +1,12 @@
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Compiling LLCPP"
+  path: /docs/development/languages/fidl/tutorials/llcpp/basics/using-fidl.md
+- title: "Server"
+  path: /docs/development/languages/fidl/tutorials/llcpp/basics/server.md
+- title: "Async client"
+  path: /docs/development/languages/fidl/tutorials/llcpp/basics/client.md
+- title: "Sync client"
+  path: /docs/development/languages/fidl/tutorials/llcpp/basics/sync-client.md

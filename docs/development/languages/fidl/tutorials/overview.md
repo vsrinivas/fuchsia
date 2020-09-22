@@ -27,7 +27,7 @@ If you're using C++ and wondering which tutorial to follow, take a look
 at the [HLCPP and LLCPP comparison doc][c-family].
 
   * [High Level C++ (HLCPP) Tutorial][hlcpp]
-  <!-- * [Low Level C++ (HLCPP) Tutorial][llcpp] -->
+  * [Low Level C++ (HLCPP) Tutorial][llcpp]
   * [Rust Tutorial][rust]
   * [Dart Tutorial][dart]
 
@@ -36,7 +36,7 @@ at the [HLCPP and LLCPP comparison doc][c-family].
 [fidl-concepts]: /docs/concepts/fidl/overview.md
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [hlcpp]: hlcpp/README.md
-<!-- [llcpp]: llcpp/README.md -->
+[llcpp]: llcpp/README.md
 [rust]: rust/README.md
 [dart]: dart/README.md
 [c]: /docs/development/languages/fidl/tutorials/tutorial-c.md

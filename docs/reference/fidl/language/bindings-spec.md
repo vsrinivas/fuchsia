@@ -300,7 +300,7 @@ components of a message are assembled into a contiguous chunk of memory (called
 "linearization"). The downside of such an approach is that it makes the bindings
 more rigid: changes to the FIDL wire format become more complex to implement.
 
-The [LLCPP bindings][llcpp-tutorial] are the only binding which take this
+The [LLCPP bindings][llcpp] are the only binding which take this
 approach.
 
 ### Equality comparison
@@ -423,4 +423,4 @@ interface Hasher {
 [RFC2119]: https://tools.ietf.org/html/rfc2119
 [go-generated-code-comment]: https://github.com/golang/go/issues/13560#issuecomment-288457920
 [attributes]: /docs/reference/fidl/language/attributes.md
-[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
+[llcpp]: /docs/reference/fidl/bindings/llcpp-bindings.md
