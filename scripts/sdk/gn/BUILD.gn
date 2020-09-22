@@ -5,8 +5,6 @@
 # Tests for the GN SDK contents.
 
 import("//build/go/go_test.gni")
-import("//build/sdk/sdk_atom.gni")
-import("//build/sdk/sdk_molecule.gni")
 
 # GN SDK inputs and outputs
 #
@@ -120,49 +118,4 @@ group("tests") {
 group("local_tests") {
   testonly = true
   public_deps = [ ":host_gn_sdk_test($host_toolchain)" ]
-}
-
-#
-# SDK files for the primary workflows.
-# These files are commonly used by multiple project
-# independent of the GN build system.
-BASE_BIN_FILES = [
-  "fserve.sh",
-  "fssh.sh",
-  "fpublish.sh",
-  "fpave.sh",
-  "fcp.sh",
-  "fconfig.sh",
-  "fuchsia-common.sh",
-]
-
-_bin_tool_atoms = []
-foreach(doc, BASE_BIN_FILES) {
-  _atom_label = "gn-sdk-base-bin-${doc}"
-  _tool_name = get_path_info(doc, "name")
-  sdk_atom(_atom_label) {
-    category = "partner"
-    id = "sdk://bin/${_tool_name}"
-    meta = {
-      dest = "bin/${_tool_name}-meta.json"
-      schema = "host_tool"
-      value = {
-        type = "host_tool"
-        name = _tool_name
-        root = "bin"
-        files = [ "bin/$doc" ]
-      }
-    }
-    files = [
-      {
-        source = "//scripts/sdk/gn/base/bin/${doc}"
-        dest = "bin/${doc}"
-      },
-    ]
-  }
-  _bin_tool_atoms += [ ":$_atom_label" ]
-}
-
-sdk_molecule("sdk_bin") {
-  deps = _bin_tool_atoms
 }
