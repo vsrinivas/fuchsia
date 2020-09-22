@@ -57,13 +57,13 @@ zx_library("fvm-host") {
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
     "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/lz4",
   ]
 }
 

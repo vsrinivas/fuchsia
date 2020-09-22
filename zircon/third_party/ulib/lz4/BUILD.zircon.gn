@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 lz4_lib = "$zx/third_party/lz4/lib"
 
@@ -12,6 +14,7 @@ zx_library("lz4") {
     "lz4/lz4.h",
     "lz4/lz4frame.h",
   ]
+  sdk_migrated = true
   sources = [
     "$lz4_lib/lz4.c",
     "$lz4_lib/lz4frame.c",
@@ -31,10 +34,13 @@ zx_library("lz4") {
     "__declspec(x)=",
   ]
 
-  # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
-
   # TODO(41766): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
+
+  # NOTE: The Zircon build, and zircon toolchains in the Fuchsia build add
+  # warn-implicit-fallthrough as a default config.
+  if (zx == "/" || zircon_toolchain != false) {
+    configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+  }
 }

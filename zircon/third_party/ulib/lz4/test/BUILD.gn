@@ -16,10 +16,10 @@ import("//build/fuzzing/fuzzer.gni")
 
 fuzzer("lz4-decompress-fuzzer") {
   sources = [ "lz4-decompress-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/lz4" ]
+  deps = [ "//zircon/third_party/ulib/lz4" ]
 }
 
 fuzzer("lz4-roundtrip-fuzzer") {
   sources = [ "lz4-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/lz4" ]
+  deps = [ "//zircon/third_party/ulib/lz4" ]
 }

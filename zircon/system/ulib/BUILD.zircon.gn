@@ -45,7 +45,6 @@ group("ulib-host") {
   testonly = true
   deps = [
     "$zx/third_party/ulib/boringssl",
-    "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",
     "$zx/third_party/ulib/zstd:zstdseek",
     "zircon:zircon-headers",

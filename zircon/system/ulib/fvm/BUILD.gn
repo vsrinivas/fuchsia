@@ -35,8 +35,8 @@ zx_library("fvm") {
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/lz4",
     "//zircon/system/ulib/digest",
+    "//zircon/third_party/ulib/lz4",
   ]
   public_deps = [
     # <fvm/fvm.h> has #include <digest/digest.h>.
@@ -46,7 +46,7 @@ zx_library("fvm") {
     "//zircon/system/ulib/gpt",
 
     # <fvm/sparse-reader.h> has #include <lz4/lz4frame.h>.
-    "//zircon/public/lib/lz4",
+    "//zircon/third_party/ulib/lz4",
   ]
   if (is_fuchsia) {
     sources += [ "client.cc" ]

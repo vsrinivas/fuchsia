@@ -773,7 +773,7 @@ config("temporarily_disable_ubsan_do_not_use") {
 
     # TODO(41766): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/third_party/ulib/lz4:*",
+    "$zx/third_party/ulib/lz4:*",
 
     # TODO(41901): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.

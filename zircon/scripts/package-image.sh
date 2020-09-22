@@ -112,7 +112,20 @@ if [[ "${RAMDISK_TYPE}" != "none" ]] &&
 fi
 
 # Some tools we use
-LZ4="${ZIRCON_BUILD_DIR}/tools/lz4"
+case "$(uname -m)" in
+  x86_64)
+    HOST_ARCH=x64
+    ;;
+  aarch64*|armv8*)
+    HOST_ARCH=arm64
+    ;;
+  *)
+    echo >&2 "ERROR: Unsupported host architecture!"
+    exit 1
+    ;;
+esac
+HOST_TOOLS_DIR="${ROOT_BUILD_DIR}/host_${HOST_ARCH}"
+LZ4="${HOST_TOOLS_DIR}/lz4"
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 ZBI="${ZIRCON_BUILD_DIR}/tools/zbi"
 
