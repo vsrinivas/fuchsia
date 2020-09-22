@@ -202,9 +202,15 @@ struct Metrics {
     float32 scale_z;
 };
 
-/// Represents an axis-aligned bounding box.  If any of the dimensions has a
-/// negative extent (e.g. max.x < min.x) then the bounding box is treated as
-/// empty.
+/// Represents an axis-aligned bounding box.
+///
+/// If any of the dimensions has a negative extent (e.g. max.x < min.x) then the
+/// bounding box is treated as empty. It is valid for a client to define an
+/// empty bounding box.
+///
+/// An "empty bounding box" is one that does not admit a point inhabitant.
+/// Note that a zero-volume, zero-area bounding box (e.g., a point like
+/// (0,0,0)-(0,0,0), or a line like (0,0,0)-(1,0,0)) is thus not empty.
 struct BoundingBox {
     vec3 min;
     vec3 max;

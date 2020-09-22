@@ -16,7 +16,10 @@ class BoundingBox {
   // Non-empty box.  No error-checking; it is up to the caller to ensure that
   // all components of max are >= the corresponding component of min.
   BoundingBox(vec3 min, vec3 max);
-  // Empty box.
+  // Canonical representation of an empty box.
+  //
+  // "Empty" means "no point can inhabit this box". It does not mean "zero volume" or "zero area",
+  // which still admits a singleton point inhabitant, or point inhabitants along a line.
   constexpr BoundingBox() : min_{1, 1, 1}, max_{0, 0, 0} {}
   // Return an empty box if max < min along any of the coordinate axes,
   // or if max == min along more than |max_degenerate_dimensions| of the
@@ -60,6 +63,7 @@ class BoundingBox {
     return true;
   }
 
+  // See definition of "empty box" in the default constructor.
   bool is_empty() const { return *this == BoundingBox(); }
 
   // Return the number of bounding box corners that are clipped by the

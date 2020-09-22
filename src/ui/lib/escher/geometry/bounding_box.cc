@@ -76,6 +76,10 @@ BoundingBox& BoundingBox::Intersect(const BoundingBox& box) {
       if (dimensions < 2) {
         // We consider the intersection between boxes that touch at only one
         // point or an edge to be empty.
+        //
+        // NOTE that this technically conflicts with the notion of "empty box" defined in the
+        // header, but it is semantically desirable - we typically don't expect interaction on just
+        // a point or line.
         *this = BoundingBox();
       }
     }
