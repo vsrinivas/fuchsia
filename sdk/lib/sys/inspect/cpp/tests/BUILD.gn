@@ -38,9 +38,6 @@ executable("test") {
     "//third_party/googletest:gmock",
   ]
   libs = [ "zircon" ]
-
-  # TODO(46843): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("sys_inspect_cpp_tests") {

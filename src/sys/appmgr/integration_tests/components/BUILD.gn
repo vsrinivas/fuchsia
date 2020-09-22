@@ -53,9 +53,6 @@ executable("components_binary_test") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(46557): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("components_binary_tests") {

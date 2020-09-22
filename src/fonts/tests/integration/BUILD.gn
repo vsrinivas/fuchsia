@@ -38,9 +38,6 @@ rustc_test("font_provider_integration_tests_bin") {
   ]
   visibility = [ ":*" ]
 
-  # TODO(46719): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/experimental_api/get_typeface_by_id.rs",
     "src/experimental_api/get_typefaces_by_family.rs",
