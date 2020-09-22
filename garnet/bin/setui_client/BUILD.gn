@@ -109,9 +109,6 @@ rustc_binary("setui_client_interface_test_bin") {
   ]
   source_root = "src/interface_test.rs"
 
-  # TODO(fxb/56138): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [ "src/interface_test.rs" ]
 }
 
