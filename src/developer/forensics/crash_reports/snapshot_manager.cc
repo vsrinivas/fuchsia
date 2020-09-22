@@ -70,12 +70,17 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
       current_annotations_size_(0u),
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
-      garbage_collected_uuid_(uuid::Generate()),
-      garbage_collected_annotations_(std::make_shared<Snapshot::Annotations>()),
-      timed_out_uuid_(uuid::Generate()),
-      timed_out_annotations_(std::make_shared<Snapshot::Annotations>()) {
-  garbage_collected_annotations_->emplace("debug.snapshot.error", "garbage collected");
-  timed_out_annotations_->emplace("debug.snapshot.error", "timeout");
+      garbage_collected_snapshot_("garbage collected"),
+      timed_out_snapshot_("timed out"),
+      no_uuid_snapshot_(UuidForNoSnapshotUuid()) {
+  garbage_collected_snapshot_.annotations->emplace("debug.snapshot.error", "garbage collected");
+  garbage_collected_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+
+  timed_out_snapshot_.annotations->emplace("debug.snapshot.error", "timeout");
+  timed_out_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+
+  no_uuid_snapshot_.annotations->emplace("debug.snapshot.error", "missing uuid");
+  no_uuid_snapshot_.annotations->emplace("debug.snapshot.present", "false");
 }
 
 void SnapshotManager::Connect() {
@@ -106,18 +111,22 @@ void SnapshotManager::Connect() {
 }
 
 Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
-  if (uuid == garbage_collected_uuid_) {
-    return Snapshot(garbage_collected_annotations_);
+  if (uuid == garbage_collected_snapshot_.uuid) {
+    return Snapshot(garbage_collected_snapshot_.annotations);
   }
 
-  if (uuid == timed_out_uuid_) {
-    return Snapshot(timed_out_annotations_);
+  if (uuid == timed_out_snapshot_.uuid) {
+    return Snapshot(timed_out_snapshot_.annotations);
+  }
+
+  if (uuid == no_uuid_snapshot_.uuid) {
+    return Snapshot(no_uuid_snapshot_.annotations);
   }
 
   auto* data = FindSnapshotData(uuid);
 
   if (!data) {
-    return Snapshot(garbage_collected_annotations_);
+    return Snapshot(garbage_collected_snapshot_.annotations);
   }
 
   return Snapshot(data->annotations, data->archive);
@@ -153,7 +162,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
         // if a snapshot is dropped immediately after it is received because its annotations and
         // archive are too large and it is one of the oldest in the FIFO.
         if (!request) {
-          return ::fit::ok(garbage_collected_uuid_);
+          return ::fit::ok(garbage_collected_snapshot_.uuid);
         }
 
         if (!request->is_pending) {
@@ -161,7 +170,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
         }
 
         if (clock_->Now() >= deadline) {
-          return ::fit::ok(timed_out_uuid_);
+          return ::fit::ok(timed_out_snapshot_.uuid);
         }
 
         WaitForSnapshot(uuid, deadline, context.suspend_task());
@@ -170,7 +179,8 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
 }
 
 void SnapshotManager::Release(const SnapshotUuid& uuid) {
-  if (uuid == garbage_collected_uuid_ || uuid == timed_out_uuid_) {
+  if (uuid == garbage_collected_snapshot_.uuid || uuid == timed_out_snapshot_.uuid ||
+      uuid == no_uuid_snapshot_.uuid) {
     return;
   }
 

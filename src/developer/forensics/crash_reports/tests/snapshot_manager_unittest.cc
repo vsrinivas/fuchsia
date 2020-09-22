@@ -240,7 +240,10 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
   ASSERT_TRUE(snapshot_manager_->GetSnapshot(uuid2.value()).LockAnnotations());
 
   EXPECT_THAT(*(snapshot_manager_->GetSnapshot(uuid1.value()).LockAnnotations()),
-              UnorderedElementsAreArray({Pair("debug.snapshot.error", "garbage collected")}));
+              UnorderedElementsAreArray({
+                  Pair("debug.snapshot.error", "garbage collected"),
+                  Pair("debug.snapshot.present", "false"),
+              }));
 }
 
 TEST_F(SnapshotManagerTest, Check_Release) {
@@ -261,8 +264,11 @@ TEST_F(SnapshotManagerTest, Check_Release) {
   snapshot_manager_->Release(uuid.value());
   {
     auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
-    EXPECT_THAT(*(snapshot_manager_->GetSnapshot(uuid.value()).LockAnnotations()),
-                UnorderedElementsAreArray({Pair("debug.snapshot.error", "garbage collected")}));
+    EXPECT_THAT(*(snapshot.LockAnnotations()),
+                UnorderedElementsAreArray({
+                    Pair("debug.snapshot.error", "garbage collected"),
+                    Pair("debug.snapshot.present", "false"),
+                }));
     EXPECT_FALSE(snapshot.LockArchive());
   }
 }
@@ -304,8 +310,19 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
-  EXPECT_THAT(*(snapshot_manager_->GetSnapshot(uuid.value()).LockAnnotations()),
-              UnorderedElementsAreArray({Pair("debug.snapshot.error", "timeout")}));
+  EXPECT_THAT(*(snapshot.LockAnnotations()), UnorderedElementsAreArray({
+                                                 Pair("debug.snapshot.error", "timeout"),
+                                                 Pair("debug.snapshot.present", "false"),
+                                             }));
+  EXPECT_FALSE(snapshot.LockArchive());
+}
+
+TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
+  auto snapshot = snapshot_manager_->GetSnapshot(SnapshotManager::UuidForNoSnapshotUuid());
+  EXPECT_THAT(*(snapshot.LockAnnotations()), UnorderedElementsAreArray({
+                                                 Pair("debug.snapshot.error", "missing uuid"),
+                                                 Pair("debug.snapshot.present", "false"),
+                                             }));
   EXPECT_FALSE(snapshot.LockArchive());
 }
 

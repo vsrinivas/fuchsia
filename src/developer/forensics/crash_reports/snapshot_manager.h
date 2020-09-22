@@ -57,6 +57,10 @@ class SnapshotManager {
   // dropped by SnapshotManager.
   void Release(const SnapshotUuid& uuid);
 
+  // Returns a Uuid a client can use if it doesn't have one, e.g., it was previously stored in a
+  // file and the file is gone.
+  static SnapshotUuid UuidForNoSnapshotUuid() { return "no uuid"; }
+
  private:
   // State associated with an async call to fuchsia.feedback.DataProvider/GetSnapshot.
   //  * The uuid of the request's snapshot.
@@ -135,15 +139,18 @@ class SnapshotManager {
   std::vector<SnapshotRequest> requests_;
   std::map<SnapshotUuid, SnapshotData> data_;
 
-  // Uuid and annotations for when a client requests a Uuid or a snapshot of a request that has been
-  // dropped due to size constraints.
-  SnapshotUuid garbage_collected_uuid_;
-  std::shared_ptr<Snapshot::Annotations> garbage_collected_annotations_;
+  // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,
+  // time outs.
+  struct SpecialCaseSnapshot {
+    explicit SpecialCaseSnapshot(SnapshotUuid uuid)
+        : uuid(std::move(uuid)), annotations(std::make_unique<Snapshot::Annotations>()) {}
+    SnapshotUuid uuid;
+    std::shared_ptr<Snapshot::Annotations> annotations;
+  };
 
-  // Uuid and annotations for when a client requests a Uuid or a snapshot of a request that timed
-  // out.
-  SnapshotUuid timed_out_uuid_;
-  std::shared_ptr<Snapshot::Annotations> timed_out_annotations_;
+  SpecialCaseSnapshot garbage_collected_snapshot_;
+  SpecialCaseSnapshot timed_out_snapshot_;
+  SpecialCaseSnapshot no_uuid_snapshot_;
 };
 
 }  // namespace crash_reports
