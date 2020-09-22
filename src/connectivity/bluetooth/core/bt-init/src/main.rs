@@ -15,18 +15,18 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::{client, fuchsia_single_component_package_url, server},
-    fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     futures::{
         future::{self, try_join},
         FutureExt, StreamExt,
     },
+    log::{info, warn},
 };
 
 mod config;
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["bt-init"]).expect("Can't init logger");
-    fx_log_info!("Starting bt-init...");
+    fuchsia_syslog::init_with_tags(&["bt-init"]).expect("Can't init logger");
+    info!("Starting bt-init...");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let cfg = config::Config::load()?;
@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
     if cfg.autostart_snoop() {
         snoop_connection = client::connect_to_service::<SnoopMarker>();
         if let Err(e) = snoop_connection {
-            fx_log_warn!("Failed to start snoop service: {}", e);
+            warn!("Failed to start snoop service: {}", e);
         }
     }
 
@@ -61,7 +61,7 @@ fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let server = fs
         .for_each(move |(name, chan)| {
-            fx_log_info!("Passing {} Handle to bt-gap", name);
+            info!("Passing {} Handle to bt-gap", name);
             let _ = bt_gap.pass_to_named_service(name, chan);
             future::ready(())
         })
