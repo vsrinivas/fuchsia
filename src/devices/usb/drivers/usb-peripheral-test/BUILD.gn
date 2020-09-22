@@ -44,8 +44,8 @@ if (is_fuchsia) {
     sources = [ "test.cc" ]
     deps = [
       "//zircon/public/lib/fbl",
-      "//zircon/public/lib/usbhost-static",
       "//zircon/public/lib/zxtest",
+      "//zircon/third_party/ulib/usbhost",
     ]
   }
 }

@@ -49,7 +49,4 @@ group("ulib-host") {
     "$zx/third_party/ulib/zstd:zstdseek",
     "zircon:zircon-headers",
   ]
-  if (current_os == "linux") {
-    deps += [ "$zx/third_party/ulib/usbhost:usbhost-static" ]
-  }
 }
