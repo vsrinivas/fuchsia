@@ -11,7 +11,8 @@ zx_library("mmio") {
   public_deps = [
     # <lib/mmio/mmio.h> has #include <fbl/macros.h>.
     "//zircon/public/lib/fbl",
+
     # <lib/mmio/mmio.h> has #include <mmio-ptr/mmio-ptr.h>.
-    "//zircon/public/lib/mmio-ptr",
+    "//zircon/system/ulib/mmio-ptr",
   ]
 }

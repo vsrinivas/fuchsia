@@ -29,8 +29,6 @@ group("ulib") {
     "lazy_init",
     "ldmsg",
     "lockdep",
-    "mmio-ptr",
-    "mmio-ptr:mmio-ptr-fake",
     "ram-crashlog",
     "region-alloc",
     "runtime",

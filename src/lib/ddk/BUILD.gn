@@ -64,7 +64,7 @@ zx_library("ddk") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_c",
     "//zircon/public/lib/ddk-platform-defs",
-    "//zircon/public/lib/mmio-ptr",
+    "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/syslog:syslog-headers",
 
     # TODO(BLD-353): Exporting this dependency causes problems in the legacy
