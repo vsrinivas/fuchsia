@@ -15,6 +15,8 @@ use {
     std::sync::Arc,
 };
 
+pub type FocuserPtr = Arc<ui_views::FocuserProxy>;
+
 /// The [`FlatSceneManager`] constructs an empty scene with a single white ambient light.
 ///
 /// Each added view is positioned at (x, y, z) = 0, and sized to match the size of the display.
@@ -22,6 +24,9 @@ use {
 pub struct FlatSceneManager {
     /// The Scenic session associated with this [`FlatSceneManager`].
     pub session: scenic::SessionPtr,
+
+    /// The view focuser associated with the [`session`].
+    pub focuser: FocuserPtr,
 
     /// The id of the compositor used for the scene's layer stack.
     pub compositor_id: u32,
@@ -69,7 +74,7 @@ impl SceneManager for FlatSceneManager {
         display_pixel_density: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error> {
-        let session: scenic::SessionPtr = FlatSceneManager::create_session(&scenic)?;
+        let (session, focuser) = FlatSceneManager::create_session(&scenic)?;
 
         let ambient_light = FlatSceneManager::create_ambient_light(&session);
         let scene = FlatSceneManager::create_ambiently_lit_scene(&session, &ambient_light);
@@ -114,6 +119,7 @@ impl SceneManager for FlatSceneManager {
 
         Ok(FlatSceneManager {
             session,
+            focuser,
             root_node,
             display_size: ScreenSize::from_size(&size_in_pixels, display_metrics),
             compositor_id,
@@ -129,12 +135,19 @@ impl SceneManager for FlatSceneManager {
         &mut self,
         view_provider: ui_app::ViewProviderProxy,
         name: Option<String>,
-    ) -> Result<scenic::EntityNode, Error> {
+    ) -> Result<ui_views::ViewRef, Error> {
         let token_pair = scenic::ViewTokenPair::new()?;
-        view_provider.create_view(token_pair.view_token.value, None, None)?;
+        let mut viewref_pair = scenic::ViewRefPair::new()?;
+        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        view_provider.create_view_with_view_ref(
+            token_pair.view_token.value,
+            &mut viewref_pair.control_ref,
+            &mut viewref_pair.view_ref,
+        )?;
         let view_holder_node = self.create_view_holder_node(token_pair.view_holder_token, name);
         self.root_node.add_child(&view_holder_node);
-        Ok(view_holder_node)
+
+        Ok(viewref_dup)
     }
 
     fn session(&self) -> scenic::SessionPtr {
@@ -181,11 +194,14 @@ impl FlatSceneManager {
     ///
     /// # Errors
     /// If the [`scenic::SessionPtr`] could not be created.
-    fn create_session(scenic: &ui_scenic::ScenicProxy) -> Result<scenic::SessionPtr, Error> {
+    fn create_session(
+        scenic: &ui_scenic::ScenicProxy,
+    ) -> Result<(scenic::SessionPtr, FocuserPtr), Error> {
         let (session_proxy, session_request_stream) = fidl::endpoints::create_proxy()?;
-        scenic.create_session(session_request_stream, None)?;
+        let (focuser_proxy, focuser_request_stream) = fidl::endpoints::create_proxy()?;
+        scenic.create_session2(session_request_stream, None, Some(focuser_request_stream))?;
 
-        Ok(scenic::Session::new(session_proxy))
+        Ok((scenic::Session::new(session_proxy), Arc::new(focuser_proxy)))
     }
 
     /// Creates a scene with the given ambient light.

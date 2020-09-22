@@ -8,8 +8,8 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
-    fidl_fuchsia_ui_scenic as ui_scenic, fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_scenic, fuchsia_syslog as syslog,
+    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic, fuchsia_syslog as syslog,
     futures::future::TryFutureExt,
     futures::prelude::*,
     parking_lot::Mutex,
@@ -61,7 +61,7 @@ pub trait SceneManager: Sized {
         &mut self,
         view_provider: ui_app::ViewProviderProxy,
         name: Option<String>,
-    ) -> Result<scenic::EntityNode, Error>;
+    ) -> Result<ui_views::ViewRef, Error>;
 
     /// Requests the scenic session from the scene_manager.
     ///

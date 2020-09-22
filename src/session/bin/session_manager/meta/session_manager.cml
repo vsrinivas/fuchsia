@@ -82,6 +82,7 @@
                 "/svc/fuchsia.ui.lifecycle.LifecycleController", // to kill scenic if restarting
                 "/svc/fuchsia.ui.scenic.Scenic", // sessions use Scenic to display images
                 "/svc/fuchsia.ui.shortcut.Manager",
+                "/svc/fuchsia.ui.views.ViewRefInstalled",
                 "/svc/fuchsia.update.channel.Provider",
                 "/svc/fuchsia.update.channelcontrol.ChannelControl",
                 "/svc/fuchsia.wlan.service.Wlan",

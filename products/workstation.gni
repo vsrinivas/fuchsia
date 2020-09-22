@@ -7,7 +7,6 @@ import("//products/terminal.gni")
 base_package_labels -= [
   "//garnet/bin/terminal:tiles_config",
   "//src/ui/bin/root_presenter",
-  "//src/ui/bin/root_presenter:configs",
 ]
 
 base_package_labels += [
