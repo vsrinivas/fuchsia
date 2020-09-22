@@ -25,9 +25,6 @@ rustc_library("mundane") {
     "kdf",
   ]
 
-  # TODO(46762): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/boringssl/abort.rs",
     "src/boringssl/mod.rs",
