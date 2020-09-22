@@ -7,6 +7,7 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use async_trait::async_trait;
 use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 /// Convenience macro for specifying a MessageMatcher while creating a MockNode.
@@ -33,7 +34,8 @@ struct MockNode {
 
     /// A vector of (Message, Result) pairs. This specifies the list of Messages the MockNode
     /// expects to receive, along with the Result that the MockNode will respond with.
-    msg_response_pairs: RefCell<Vec<(MessageMatcher, Result<MessageReturn, PowerManagerError>)>>,
+    msg_response_pairs:
+        RefCell<VecDeque<(MessageMatcher, Result<MessageReturn, PowerManagerError>)>>,
 
     /// A count that increases each time the MockNode receives a message, used mainly for logging.
     msg_rcv_count: Cell<u32>,
@@ -83,7 +85,7 @@ impl Node for MockNode {
         );
 
         // Get the next MessageMatcher and Result in the vector
-        let (msg_matcher, response) = self.msg_response_pairs.borrow_mut().pop().unwrap();
+        let (msg_matcher, response) = self.msg_response_pairs.borrow_mut().pop_front().unwrap();
 
         // Verify the incoming Message is a match
         assert!(
@@ -113,19 +115,51 @@ impl Drop for MockNode {
     }
 }
 
-/// Creates a new MockNode with the specified name and (MessageMatcher, Result) pairs.
-pub fn create_mock_node(
-    name: &'static str,
-    mut msg_response_pairs: Vec<(MessageMatcher, Result<MessageReturn, PowerManagerError>)>,
-) -> Rc<dyn Node> {
-    // Reverse the vector so that `pop` gives us the elements in the same order they were specified
-    msg_response_pairs.reverse();
+/// Provides a leak-checking interface for building `MockNode`s.
+///
+/// Because `Node`s are typically handled behind `Rc`s, they may be subject to reference cycles that
+/// prevent them from dropping when a test function that creates them exits. This behavior is
+/// problematic for `MockNode`s, as their expectations are checked upon drop.
+///
+/// `MockNodeMaker` guards against this possibility by checking, upon its own drop, that it holds
+/// the last strong reference to all of the `MockNode`s that it created. This guarantees that they
+/// will be dropped as well.
+pub struct MockNodeMaker {
+    nodes: Vec<Rc<dyn Node>>,
+}
 
-    Rc::new(MockNode {
-        name: name.to_string(),
-        msg_response_pairs: RefCell::new(msg_response_pairs),
-        msg_rcv_count: Cell::new(0),
-    })
+impl MockNodeMaker {
+    pub fn new() -> MockNodeMaker {
+        MockNodeMaker { nodes: Vec::new() }
+    }
+
+    pub fn make(
+        &mut self,
+        name: &'static str,
+        msg_response_pairs: Vec<(MessageMatcher, Result<MessageReturn, PowerManagerError>)>,
+    ) -> Rc<dyn Node> {
+        let node = Rc::new(MockNode {
+            name: name.to_string(),
+            msg_response_pairs: RefCell::new(VecDeque::from(msg_response_pairs)),
+            msg_rcv_count: Cell::new(0),
+        });
+        self.nodes.push(node.clone());
+        node
+    }
+}
+
+impl Drop for MockNodeMaker {
+    fn drop(&mut self) {
+        let leaked_nodes = self
+            .nodes
+            .iter()
+            .filter_map(|n| if Rc::strong_count(n) > 1 { Some(n.name()) } else { None })
+            .collect::<Vec<_>>();
+
+        if !leaked_nodes.is_empty() {
+            panic!("Mock node(s) were leaked: {}", leaked_nodes.join(", "));
+        }
+    }
 }
 
 /// A mock node which responds to all messages with an error. Intended to be used as a "don't care"
@@ -159,7 +193,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     #[should_panic]
     async fn test_incorrect_rcv_message_panic() {
-        let mock_node = create_mock_node(
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_node = mock_maker.make(
             "MockNode",
             vec![(
                 MessageMatcher::Eq(Message::GetTotalCpuLoad),
@@ -172,7 +207,8 @@ mod tests {
     /// Tests that sending an expected Message results in the specified response.
     #[fasync::run_singlethreaded(test)]
     async fn test_message_response() {
-        let mock_node = create_mock_node(
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_node = mock_maker.make(
             "MockNode",
             vec![(
                 MessageMatcher::Eq(Message::GetPerformanceState),
@@ -191,7 +227,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     #[should_panic]
     async fn test_message_arg_eq_mismatch_panic() {
-        let mock_node = create_mock_node(
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_node = mock_maker.make(
             "MockNode",
             vec![(
                 MessageMatcher::Eq(Message::SetPerformanceState(2)),
@@ -206,13 +243,32 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_leftover_messages_panic() {
-        let _mock_node = create_mock_node(
+        let mut mock_maker = MockNodeMaker::new();
+        let _mock_node = mock_maker.make(
             "MockNode",
             vec![(
                 MessageMatcher::Eq(Message::GetTotalCpuLoad),
                 Ok(MessageReturn::GetTotalCpuLoad(4.0)),
             )],
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "Mock node(s) were leaked: MockNode")]
+    fn test_leaked_node_panic() {
+        use std::cell::Cell;
+        let mut mock_maker = MockNodeMaker::new();
+
+        struct CycleMaker {
+            reference: Cell<Option<Rc<CycleMaker>>>,
+            _node: Option<Rc<dyn Node>>,
+        }
+
+        let cycle = Rc::new(CycleMaker {
+            reference: Cell::new(None),
+            _node: Some(mock_maker.make("MockNode", vec![])),
+        });
+        cycle.reference.set(Some(cycle.clone()));
     }
 
     /// Tests that the `msg_<comparison>` family of macros expands to the expected values.

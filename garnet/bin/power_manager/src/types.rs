@@ -111,6 +111,12 @@ impl From<Seconds> for fuchsia_async::Time {
     }
 }
 
+impl From<fuchsia_async::Time> for Nanoseconds {
+    fn from(time: fuchsia_async::Time) -> Nanoseconds {
+        Nanoseconds(time.into_nanos())
+    }
+}
+
 // Define multiplication and division involving Seconds and Hertz.
 impl ops::Mul<Hertz> for Seconds {
     type Output = f64;

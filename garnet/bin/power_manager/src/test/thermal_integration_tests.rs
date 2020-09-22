@@ -12,6 +12,10 @@ use crate::{
 };
 use cpu_control_handler::PState;
 use fuchsia_async as fasync;
+use futures::{
+    future::LocalBoxFuture,
+    stream::{FuturesUnordered, StreamExt},
+};
 use rkf45;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -272,14 +276,15 @@ impl Simulator {
 }
 
 /// Coordinates execution of tests of ThermalPolicy.
-struct ThermalPolicyTest {
+struct ThermalPolicyTest<'a> {
     executor: fasync::Executor,
     time: Seconds,
     thermal_policy: Rc<ThermalPolicy>,
+    policy_futures: FuturesUnordered<LocalBoxFuture<'a, ()>>,
     sim: Rc<RefCell<Simulator>>,
 }
 
-impl ThermalPolicyTest {
+impl<'a> ThermalPolicyTest<'a> {
     /// Iniitalizes a new ThermalPolicyTest.
     fn new(sim_params: SimulatorParams, policy_params: ThermalPolicyParams) -> Self {
         {
@@ -301,14 +306,15 @@ impl ThermalPolicyTest {
 
         let cpu_params = sim_params.cpu_params.clone();
         let sim = Simulator::new(sim_params);
+        let policy_futures = FuturesUnordered::new();
         let thermal_policy = match executor.run_until_stalled(&mut Box::pin(
-            Self::init_thermal_policy(&sim, &cpu_params, policy_params),
+            Self::init_thermal_policy(&sim, &cpu_params, policy_params, &policy_futures),
         )) {
             futures::task::Poll::Ready(policy) => policy,
             _ => panic!("Failed to create ThermalPolicy"),
         };
 
-        Self { executor, time, sim, thermal_policy }
+        Self { executor, time, sim, thermal_policy, policy_futures }
     }
 
     /// Initializes the ThermalPolicy. Helper function for new().
@@ -316,6 +322,7 @@ impl ThermalPolicyTest {
         sim: &Rc<RefCell<Simulator>>,
         cpu_params: &SimulatedCpuParams,
         policy_params: ThermalPolicyParams,
+        futures: &FuturesUnordered<LocalBoxFuture<'a, ()>>,
     ) -> Rc<ThermalPolicy> {
         let temperature_node =
             temperature_handler::tests::setup_test_node(Simulator::make_temperature_fetcher(&sim));
@@ -357,7 +364,7 @@ impl ThermalPolicyTest {
             crash_report_handler: create_dummy_node(),
             policy_params,
         };
-        ThermalPolicyBuilder::new(thermal_config).build().unwrap()
+        ThermalPolicyBuilder::new(thermal_config).build(futures).unwrap()
     }
 
     /// Iterates the policy n times.
@@ -368,17 +375,13 @@ impl ThermalPolicyTest {
             self.time += dt;
             self.executor.set_fake_time(self.time.into());
             self.sim.borrow_mut().step(dt);
-            // In the future below, the compiler would see `self.thermal_policy` as triggering
-            // an immutable borrow of `self.executor`, which cannot occur within
-            // `self.executor.run_until_stalled`. Pulling out the reference here avoids that
-            // problem.
-            let thermal_policy = &mut self.thermal_policy;
-            assert!(self
-                .executor
-                .run_until_stalled(&mut Box::pin(async {
-                    thermal_policy.iterate_thermal_control().await.unwrap();
-                }))
-                .is_ready());
+
+            let wakeup_time = self.executor.wake_next_timer().unwrap();
+            assert_eq!(fasync::Time::from(self.time), wakeup_time);
+            assert_eq!(
+                futures::task::Poll::Pending,
+                self.executor.run_until_stalled(&mut self.policy_futures.next())
+            );
         }
     }
 }

@@ -448,7 +448,7 @@ impl InspectData {
 pub mod tests {
     use super::*;
     use crate::shutdown_request::RebootReason;
-    use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
+    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
     use inspect::assert_inspect_tree;
     use matches::assert_matches;
@@ -543,6 +543,8 @@ pub mod tests {
     /// Driver Manager and calls the Component Manager shutdown API.
     #[fasync::run_singlethreaded(test)]
     async fn test_shutdown() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // The test will call `shutdown` with each of these shutdown requests
         let shutdown_requests = vec![
             ShutdownRequest::Reboot(RebootReason::UserRequest),
@@ -558,7 +560,7 @@ pub mod tests {
 
         // Create the mock Driver Manager node that expects to receive the SetTerminationSystemState
         // message for each state in `system_power_states`
-        let driver_mgr_node = create_mock_node(
+        let driver_mgr_node = mock_maker.make(
             "DriverMgrNode",
             shutdown_requests
                 .iter()
@@ -593,6 +595,8 @@ pub mod tests {
     /// expected timeout period.
     #[test]
     fn test_shutdown_timeout() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Need to use an Executor with fake time to test the timeout value
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
         exec.set_fake_time(Seconds(0.0).into());
@@ -609,7 +613,7 @@ pub mod tests {
             fidl::endpoints::create_proxy_and_stream::<fsys::SystemControllerMarker>().unwrap();
 
         // Create the SystemShutdownHandler node
-        let node = SystemShutdownHandlerBuilder::new(create_mock_node(
+        let node = SystemShutdownHandlerBuilder::new(mock_maker.make(
             "DriverMgrNode",
             vec![(
                 msg_eq!(SetTerminationSystemState(shutdown_request.into())),
@@ -641,6 +645,7 @@ pub mod tests {
     /// in progress.
     #[test]
     fn test_ignore_second_shutdown() {
+        let mut mock_maker = MockNodeMaker::new();
         let mut exec = fasync::Executor::new().unwrap();
 
         // Arbitrary shutdown request to be used in the test
@@ -650,7 +655,7 @@ pub mod tests {
         // doesn't respond to the request. This way we can properly exercise the timeout path.
         let (proxy, _stream) =
             fidl::endpoints::create_proxy_and_stream::<fsys::SystemControllerMarker>().unwrap();
-        let node = SystemShutdownHandlerBuilder::new(create_mock_node(
+        let node = SystemShutdownHandlerBuilder::new(mock_maker.make(
             "DriverMgrNode",
             vec![(
                 msg_eq!(SetTerminationSystemState(shutdown_request.into())),
@@ -700,12 +705,14 @@ pub mod tests {
     /// present, then the watcher node is notified of the shutdown request.
     #[fasync::run_singlethreaded(test)]
     async fn test_watcher_notify() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Choose an arbitrary shutdown request for the test
         let shutdown_request = ShutdownRequest::Reboot(RebootReason::HighTemperature);
 
         // A mock DriverManagerHandler node that expects the SetTerminationSystemState message
         // corresponding to the above shutdown_request
-        let driver_mgr_node = create_mock_node(
+        let driver_mgr_node = mock_maker.make(
             "DriverManagerHandler",
             vec![(
                 msg_eq!(SetTerminationSystemState(shutdown_request.into())),
@@ -715,7 +722,7 @@ pub mod tests {
 
         // A mock ShutdownWatcher node that expects the SystemShutdown message containing the above
         // shutdown_request
-        let shutdown_watcher = create_mock_node(
+        let shutdown_watcher = mock_maker.make(
             "ShutdownWatcher",
             vec![(msg_eq!(SystemShutdown(shutdown_request)), msg_ok_return!(SystemShutdown))],
         );

@@ -435,7 +435,7 @@ impl TemperatureFilter {
 #[cfg(test)]
 mod temperature_filter_tests {
     use super::*;
-    use crate::test::mock_node::{create_mock_node, MessageMatcher};
+    use crate::test::mock_node::{MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
     use fuchsia_async as fasync;
 
@@ -456,7 +456,8 @@ mod temperature_filter_tests {
     /// node and returns the expected raw and filtered temperature values.
     #[fasync::run_singlethreaded(test)]
     async fn test_get_temperature() {
-        let temperature_node = create_mock_node(
+        let mut mock_maker = MockNodeMaker::new();
+        let temperature_node = mock_maker.make(
             "Temperature",
             vec![
                 (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(50.0)))),

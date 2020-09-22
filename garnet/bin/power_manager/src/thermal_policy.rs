@@ -16,7 +16,11 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
-use futures::prelude::*;
+use futures::{
+    future::{FutureExt, LocalBoxFuture},
+    stream::FuturesUnordered,
+    StreamExt,
+};
 use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
@@ -129,7 +133,10 @@ impl<'a> ThermalPolicyBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Result<Rc<ThermalPolicy>, Error> {
+    pub fn build<'b>(
+        self,
+        futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
+    ) -> Result<Rc<ThermalPolicy>, Error> {
         // Create default values
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
         let thermal_metrics =
@@ -154,7 +161,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
         });
 
         node.inspect.set_thermal_config(&node.config);
-        node.clone().start_periodic_thermal_loop();
+        futures_out.push(node.clone().periodic_thermal_loop());
         Ok(node)
     }
 }
@@ -278,15 +285,15 @@ enum ThrottlingState {
 }
 
 impl ThermalPolicy {
-    /// Starts a periodic timer that fires at the interval specified by
-    /// ThermalControllerParams.sample_interval. At each timer, `iterate_thermal_control` is called
+    /// Creates a Future driven by a timer firing at the interval specified by
+    /// ThermalControllerParams.sample_interval. At each fire, `iterate_thermal_control` is called
     /// and any resulting errors are logged.
-    fn start_periodic_thermal_loop(self: Rc<Self>) {
+    fn periodic_thermal_loop<'a>(self: Rc<Self>) -> LocalBoxFuture<'a, ()> {
         let mut periodic_timer = fasync::Interval::new(
             self.config.policy_params.controller_params.sample_interval.into(),
         );
 
-        fasync::Task::local(async move {
+        async move {
             while let Some(()) = periodic_timer.next().await {
                 fuchsia_trace::instant!(
                     "power_manager",
@@ -302,8 +309,8 @@ impl ThermalPolicy {
                     "result" => format!("{:?}", result).as_str()
                 );
             }
-        })
-        .detach();
+        }
+        .boxed_local()
     }
 
     /// This is the main body of the closed loop thermal control logic. The function is called
@@ -316,7 +323,7 @@ impl ThermalPolicy {
     ///     4. Use the proportional error and integral error to derive thermal load and available
     ///        power values
     ///     5. Update the relevant nodes with the new thermal load and available power information
-    pub async fn iterate_thermal_control(&self) -> Result<(), Error> {
+    async fn iterate_thermal_control(&self) -> Result<(), Error> {
         fuchsia_trace::duration!("power_manager", "ThermalPolicy::iterate_thermal_control");
 
         let timestamp = get_current_timestamp();
@@ -1010,7 +1017,7 @@ impl InspectThrottleHistoryEntry {
 pub mod tests {
     use super::*;
     use crate::cobalt_metrics::mock_cobalt_metrics::MockCobaltMetrics;
-    use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
+    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
     use inspect::testing::{assert_inspect_tree, HistogramAssertion};
 
@@ -1083,7 +1090,9 @@ pub mod tests {
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
         };
-        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+
+        let node_futures = FuturesUnordered::new();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
 
         assert_eq!(node.get_time_delta(Seconds(1.5).into()), Seconds(1.5));
         assert_eq!(node.get_time_delta(Seconds(2.0).into()), Seconds(0.5));
@@ -1107,7 +1116,8 @@ pub mod tests {
             crash_report_handler: create_dummy_node(),
             policy_params,
         };
-        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+        let node_futures = FuturesUnordered::new();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
 
         assert_eq!(node.get_temperature_error(Celsius(40.0), Seconds(1.0)), (40.0, 0.0));
         assert_eq!(node.get_temperature_error(Celsius(90.0), Seconds(1.0)), (-10.0, -10.0));
@@ -1118,10 +1128,12 @@ pub mod tests {
     /// CPU control nodes.
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_cpu_actors() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Set up the two CpuControlHandler mock nodes. The message reply to SetMaxPowerConsumption
         // indicates how much power the mock node was able to utilize, and ultimately drives the
         // test logic.
-        let cpu_node_1 = create_mock_node(
+        let cpu_node_1 = mock_maker.make(
             "CpuCtrlNode1",
             vec![
                 // On the first iteration, this node will consume all available power (1W)
@@ -1143,7 +1155,7 @@ pub mod tests {
                 ),
             ],
         );
-        let cpu_node_2 = create_mock_node(
+        let cpu_node_2 = mock_maker.make(
             "CpuCtrlNode2",
             vec![
                 // On the first iteration, the first node consumes all available power (1W), so
@@ -1168,14 +1180,15 @@ pub mod tests {
         );
 
         let thermal_config = ThermalConfig {
-            temperature_node: create_mock_node("TemperatureNode", vec![]),
+            temperature_node: mock_maker.make("TemperatureNode", vec![]),
             cpu_control_nodes: vec![cpu_node_1, cpu_node_2],
-            sys_pwr_handler: create_mock_node("SysPwrNode", vec![]),
-            thermal_limiter_node: create_mock_node("ThermalLimiterNode", vec![]),
+            sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
+            thermal_limiter_node: mock_maker.make("ThermalLimiterNode", vec![]),
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
         };
-        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+        let node_futures = FuturesUnordered::new();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
 
         // Distribute 1W of total power across the two CPU nodes. The real test logic happens inside
         // the mock node, where we verify that the expected power amounts are granted to both CPU
@@ -1189,19 +1202,22 @@ pub mod tests {
     /// Tests for the presence and correctness of dynamically-added inspect data
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_data() {
+        let mut mock_maker = MockNodeMaker::new();
+
         let policy_params = default_policy_params();
         let thermal_config = ThermalConfig {
-            temperature_node: create_mock_node("TemperatureNode", vec![]),
-            cpu_control_nodes: vec![create_mock_node("CpuCtrlNode", vec![])],
-            sys_pwr_handler: create_mock_node("SysPwrNode", vec![]),
-            thermal_limiter_node: create_mock_node("ThermalLimiterNode", vec![]),
+            temperature_node: mock_maker.make("TemperatureNode", vec![]),
+            cpu_control_nodes: vec![mock_maker.make("CpuCtrlNode", vec![])],
+            sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
+            thermal_limiter_node: mock_maker.make("ThermalLimiterNode", vec![]),
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
         };
         let inspector = inspect::Inspector::new();
+        let node_futures = FuturesUnordered::new();
         let _node = ThermalPolicyBuilder::new(thermal_config)
             .with_inspect_root(inspector.root())
-            .build()
+            .build(&node_futures)
             .unwrap();
 
         assert_inspect_tree!(
@@ -1235,6 +1251,8 @@ pub mod tests {
     /// Tests that throttle data is collected and stored properly in Inspect.
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_throttle_history() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Set relevant policy parameters so we have deterministic power and thermal load
         // calculations
         let mut policy_params = default_policy_params();
@@ -1258,14 +1276,14 @@ pub mod tests {
         let thermal_config = ThermalConfig {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![
-                create_mock_node(
+                mock_maker.make(
                     "Cpu1Node",
                     vec![(
                         msg_eq!(SetMaxPowerConsumption(throttle_available_power_cpu1)),
                         msg_ok_return!(SetMaxPowerConsumption(throttle_cpu1_power_used)),
                     )],
                 ),
-                create_mock_node(
+                mock_maker.make(
                     "Cpu2Node",
                     vec![(
                         msg_eq!(SetMaxPowerConsumption(throttle_available_power_cpu2)),
@@ -1279,9 +1297,10 @@ pub mod tests {
             policy_params,
         };
         let inspector = inspect::Inspector::new();
+        let node_futures = FuturesUnordered::new();
         let node = ThermalPolicyBuilder::new(thermal_config)
             .with_inspect_root(inspector.root())
-            .build()
+            .build(&node_futures)
             .unwrap();
 
         // Causes Inspect to receive throttle_start_time and one reading into thermal_load_hist
@@ -1420,34 +1439,56 @@ pub mod tests {
     /// state cycles between the various states.
     #[test]
     fn test_cobalt_metrics() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Set custom thermal policy parameters to have easier control over throttling state changes
         let mut policy_params = default_policy_params();
         policy_params.throttle_end_delay = Seconds(10.0);
         policy_params.controller_params.target_temperature = Celsius(50.0);
         policy_params.thermal_shutdown_temperature = Celsius(80.0);
 
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
-        let current_time = Cell::new(Seconds(0.0));
+        // The executor's fake time must be set before node creation to ensure the periodic timer's
+        // deadline is properly initialized.
+        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(Seconds(0.0).into());
+
         let mock_metrics = MockCobaltMetrics::new();
+        let node_futures = FuturesUnordered::new();
         let node = ThermalPolicyBuilder::new(ThermalConfig {
-            temperature_node: create_mock_node(
+            temperature_node: mock_maker.make(
                 "Temperature",
                 vec![
                     // These temperature readings combined with the TemperatureFilter reset in
                     // between policy iterations below causes us to cycle easily and
                     // deterministically between throttling states
+
+                    // Begin thermal throttling
                     (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(55.0)))),
+                    // Activate cooldown timer
                     (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    // Back into thermal throttling
                     (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(55.0)))),
+                    // Activate and run down cooldown timer
                     (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
                     (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    // End thermal throttling
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(45.0)))),
+                    // Thermal shutdown
                     (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(90.0)))),
                 ],
             ),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
-            crash_report_handler: create_mock_node(
+            crash_report_handler: mock_maker.make(
                 "CrashReport",
                 vec![(
                     // The test ends with a thermal shutdown so ensure the mock node expects it
@@ -1458,60 +1499,81 @@ pub mod tests {
             policy_params,
         })
         .with_thermal_metrics(Box::new(mock_metrics.clone()))
-        .build()
+        .build(&node_futures)
         .unwrap();
 
-        let increment_time = |t| {
-            current_time.set(current_time.get() + t);
-        };
+        // Wrap the executor, node, and futures in a simple struct that drives time steps. This
+        // enables the control flow:
+        // 1. Call TimeStepper::schedule_wakeup to wake the periodic timer, exposing the time of the
+        //    wakeup, which may be needed for metric expectations.
+        // 2. Set metric expectations.
+        // 3. Iterate the ThermalPolicy.
+        // 4. Verify metric expectations.
+        struct TimeStepper<'a> {
+            executor: fasync::Executor,
+            node: Rc<ThermalPolicy>,
+            node_futures: FuturesUnordered<LocalBoxFuture<'a, ()>>,
+        }
 
-        let mut iterate_policy = || {
-            node.state.temperature_filter.reset();
-            executor.set_fake_time(current_time.get().into());
-            match executor.run_until_stalled(&mut Box::pin(node.iterate_thermal_control())) {
-                futures::task::Poll::Ready(result) => assert!(result.is_ok()),
-                e => panic!(e),
-            };
-        };
+        impl<'a> TimeStepper<'a> {
+            fn schedule_wakeup(&mut self) -> Nanoseconds {
+                let wakeup_time = self.executor.wake_next_timer().unwrap();
+                self.executor.set_fake_time(wakeup_time);
+                Nanoseconds::from(wakeup_time)
+            }
+
+            fn iterate_policy(&mut self) {
+                self.node.state.temperature_filter.reset();
+
+                assert_eq!(
+                    futures::task::Poll::Pending,
+                    self.executor.run_until_stalled(&mut self.node_futures.next())
+                );
+            }
+        }
+
+        let mut stepper = TimeStepper { executor, node, node_futures };
 
         // Begin thermal throttling
-        increment_time(Seconds(1.0));
-        mock_metrics.expect_log_throttle_start(current_time.get().into());
+        let next_time = stepper.schedule_wakeup();
+        mock_metrics.expect_log_throttle_start(next_time);
         mock_metrics.expect_log_raw_temperature(Celsius(55.0));
-        iterate_policy();
+        stepper.iterate_policy();
         mock_metrics.verify("Didn't receive expected calls for 'Begin thermal throttling 1'");
 
         // Active cooldown timer
-        increment_time(Seconds(1.0));
+        stepper.schedule_wakeup();
         mock_metrics.expect_log_raw_temperature(Celsius(45.0));
-        iterate_policy();
+        stepper.iterate_policy();
         mock_metrics.verify("Didn't receive expected calls for 'Active cooldown timer 1'");
 
         // Back into thermal throttling
-        increment_time(Seconds(1.0));
+        stepper.schedule_wakeup();
         mock_metrics.expect_log_raw_temperature(Celsius(55.0));
-        iterate_policy();
+        stepper.iterate_policy();
         mock_metrics.verify("Didn't receive expected calls for 'Begin thermal throttling 2'");
 
-        // Back into active cooldown timer
-        increment_time(Seconds(1.0));
-        mock_metrics.expect_log_raw_temperature(Celsius(45.0));
-        iterate_policy();
-        mock_metrics.verify("Didn't receive expected calls for 'Active cooldown timer 2'");
+        // Begin the active cooldown timer on iteration 0, and run for 9 more seconds
+        for _ in 0..10 {
+            stepper.schedule_wakeup();
+            mock_metrics.expect_log_raw_temperature(Celsius(45.0));
+            stepper.iterate_policy();
+            mock_metrics.verify("Didn't receive expected calls for 'Active cooldown timer 2'");
+        }
 
-        // End thermal throttling (timer expired)
-        increment_time(Seconds(15.0));
-        mock_metrics.expect_log_throttle_end_mitigated(current_time.get().into());
+        // Ten seconds after cooldown starts, thermal throttling ends
+        let next_time = stepper.schedule_wakeup();
+        mock_metrics.expect_log_throttle_end_mitigated(next_time);
         mock_metrics.expect_log_raw_temperature(Celsius(45.0));
-        iterate_policy();
+        stepper.iterate_policy();
         mock_metrics.verify("Didn't receive expected calls for 'End thermal throttling'");
 
         // Cause the thermal policy to enter thermal shutdown
-        increment_time(Seconds(1.0));
-        mock_metrics.expect_log_throttle_start(current_time.get().into());
+        let next_time = stepper.schedule_wakeup();
+        mock_metrics.expect_log_throttle_start(next_time);
         mock_metrics.expect_log_raw_temperature(Celsius(90.0));
-        mock_metrics.expect_log_throttle_end_shutdown(current_time.get().into());
-        iterate_policy();
+        mock_metrics.expect_log_throttle_end_shutdown(next_time);
+        stepper.iterate_policy();
         mock_metrics.verify("Didn't receive expected calls for 'Thermal shutdown'");
     }
 
@@ -1519,6 +1581,8 @@ pub mod tests {
     /// CrashReportHandler node.
     #[fasync::run_singlethreaded(test)]
     async fn test_throttle_crash_report() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Define the test parameters
         let mut policy_params = default_policy_params();
         policy_params.throttle_end_delay = Seconds(0.0);
@@ -1529,7 +1593,7 @@ pub mod tests {
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
-            crash_report_handler: create_mock_node(
+            crash_report_handler: mock_maker.make(
                 "CrashReportMock",
                 vec![(
                     msg_eq!(FileCrashReport("fuchsia-thermal-throttle".to_string())),
@@ -1538,7 +1602,8 @@ pub mod tests {
             ),
             policy_params,
         };
-        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+        let node_futures = FuturesUnordered::new();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
 
         // Enter and then exit thermal throttling. The mock crash_report_handler node will assert if
         // it does not receive a FileCrashReport message.

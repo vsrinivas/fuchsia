@@ -520,7 +520,7 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::test::mock_node::{create_mock_node, MessageMatcher};
+    use crate::test::mock_node::{MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
@@ -585,14 +585,15 @@ pub mod tests {
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
+        let mut mock_maker = MockNodeMaker::new();
         let cpu_ctrl_node = setup_test_node(
             CpuControlParams {
                 num_cores: 1,
                 p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
                 capacitance: Farads(0.0),
             },
-            create_mock_node("StatsNode", vec![]),
-            create_mock_node(
+            mock_maker.make("StatsNode", vec![]),
+            mock_maker.make(
                 "DevHostNode",
                 vec![
                     // The CpuControlHandler node queries the current performance state from the
@@ -662,6 +663,8 @@ pub mod tests {
     /// and parameters to choose the appropriate P-states.
     #[fasync::run_singlethreaded(test)]
     async fn test_set_max_power_consumption() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Arbitrary CpuControlParams chosen to allow the node to demonstrate P-state selection
         let cpu_params = CpuControlParams {
             num_cores: 4,
@@ -686,7 +689,7 @@ pub mod tests {
             })
             .collect();
 
-        let stats_node = create_mock_node(
+        let stats_node = mock_maker.make(
             "StatsNode",
             // The CpuControlHandler node queries the current CPU load each time it receives a
             // SetMaxPowerConsumption message
@@ -696,7 +699,7 @@ pub mod tests {
                 (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
             ],
         );
-        let devhost_node = create_mock_node(
+        let devhost_node = mock_maker.make(
             "DevHostNode",
             vec![
                 // CpuControlHandler queries performance state during its initialiation
@@ -748,6 +751,8 @@ pub mod tests {
     /// is never selected.
     #[fasync::run_singlethreaded(test)]
     async fn test_min_cpu_clock_speed() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Arbitrary CpuControlParams chosen to allow the node to demonstrate P-state selection
         let capacitance = Farads(100.0e-12);
         let cpu_params = CpuControlParams {
@@ -773,7 +778,7 @@ pub mod tests {
             })
             .collect();
 
-        let stats_node = create_mock_node(
+        let stats_node = mock_maker.make(
             "StatsNode",
             // The CpuControlHandler node queries the current CPU load each time it receives a
             // SetMaxPowerConsumption message
@@ -782,7 +787,7 @@ pub mod tests {
                 (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
             ],
         );
-        let devhost_node = create_mock_node(
+        let devhost_node = mock_maker.make(
             "DevHostNode",
             vec![
                 // CpuControlHandler lazy queries performance state during its initialiation
@@ -830,6 +835,8 @@ pub mod tests {
     /// Tests for the presence and correctness of dynamically-added inspect data
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_data() {
+        let mut mock_maker = MockNodeMaker::new();
+
         // Some dummy CpuControlParams to verify the params get published in Inspect
         let num_cores = 4;
         let p_state = PState { frequency: Hertz(2.0e9), voltage: Volts(4.5) };
@@ -841,8 +848,8 @@ pub mod tests {
             "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
-            create_mock_node("StatsNode", vec![]),
-            create_mock_node(
+            mock_maker.make("StatsNode", vec![]),
+            mock_maker.make(
                 "DevHostNode",
                 vec![
                     // The CpuControlHandler node queries the current performance state from the
@@ -890,9 +897,10 @@ pub mod tests {
             }
         });
 
+        let mut mock_maker = MockNodeMaker::new();
         let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
-        nodes.insert("cpu_stats".to_string(), create_mock_node("MockNode", vec![]));
-        nodes.insert("cpu_dev".to_string(), create_mock_node("MockNode", vec![]));
+        nodes.insert("cpu_stats".to_string(), mock_maker.make("MockNode", vec![]));
+        nodes.insert("cpu_dev".to_string(), mock_maker.make("MockNode", vec![]));
         let _ = CpuControlHandlerBuilder::new_from_json(json_data, &nodes);
     }
 }

@@ -14,7 +14,11 @@ use crate::utils::get_current_timestamp;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
-use futures::StreamExt;
+use futures::{
+    future::{FutureExt, LocalBoxFuture},
+    stream::FuturesUnordered,
+    StreamExt,
+};
 use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
@@ -100,7 +104,10 @@ impl ThermalShutdownBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Rc<ThermalShutdown>, Error> {
+    pub fn build<'a>(
+        self,
+        futures_out: &FuturesUnordered<LocalBoxFuture<'a, ()>>,
+    ) -> Result<Rc<ThermalShutdown>, Error> {
         let thermal_metrics =
             self.thermal_metrics.unwrap_or(Box::new(get_cobalt_metrics_instance()));
 
@@ -116,7 +123,7 @@ impl ThermalShutdownBuilder {
             thermal_metrics,
         });
 
-        node.clone().start_polling_loop();
+        futures_out.push(node.clone().polling_loop());
         Ok(node)
     }
 }
@@ -142,18 +149,18 @@ pub struct ThermalShutdown {
 }
 
 impl ThermalShutdown {
-    /// Spawns a task that periodically polls the temperature and checks it against the configured
-    /// threshold.
-    fn start_polling_loop(self: Rc<Self>) {
+    /// Creates a Future that periodically polls the temperature and checks it against the
+    /// configured threshold.
+    fn polling_loop<'a>(self: Rc<Self>) -> LocalBoxFuture<'a, ()> {
         let mut periodic_timer = fasync::Interval::new(self.poll_interval.into());
 
-        fasync::Task::local(async move {
+        async move {
             while let Some(()) = periodic_timer.next().await {
                 let result = self.poll_temperature().await;
                 log_if_err!(result, "Error while polling temperature");
             }
-        })
-        .detach();
+        }
+        .boxed_local()
     }
 
     /// Polls the temperature sensor once and checks the reading against the configured threshold.
@@ -195,7 +202,7 @@ impl Node for ThermalShutdown {
 mod tests {
     use super::*;
     use crate::cobalt_metrics::mock_cobalt_metrics::MockCobaltMetrics;
-    use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
+    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
@@ -225,11 +232,12 @@ mod tests {
     /// triggers a system shutdown.
     #[fasync::run_singlethreaded(test)]
     async fn test_triggered_shutdown() {
-        let temperature_node = create_mock_node(
+        let mut mock_maker = MockNodeMaker::new();
+        let temperature_node = mock_maker.make(
             "Temperature",
             vec![(msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(100.0))))],
         );
-        let shutdown_node = create_mock_node(
+        let shutdown_node = mock_maker.make(
             "Shutdown",
             vec![(
                 msg_eq!(SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature))),
@@ -237,9 +245,10 @@ mod tests {
             )],
         );
 
+        let node_futures = FuturesUnordered::new();
         let node = ThermalShutdownBuilder::new(temperature_node, shutdown_node)
             .with_thermal_shutdown_temperature(Celsius(99.0))
-            .build()
+            .build(&node_futures)
             .unwrap();
         assert!(node.poll_temperature().await.is_ok());
     }
@@ -248,15 +257,17 @@ mod tests {
     /// into the Cobalt metrics instance to log the thermal shutdown.
     #[test]
     fn test_cobalt_metrics() {
+        let mut mock_maker = MockNodeMaker::new();
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
         executor.set_fake_time(Seconds(10.0).into()); // arbitrary nonzero time
         let mock_metrics = MockCobaltMetrics::new();
+        let node_futures = FuturesUnordered::new();
         let node = ThermalShutdownBuilder::new(
-            create_mock_node(
+            mock_maker.make(
                 "Temperature",
                 vec![(msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(110.0))))],
             ),
-            create_mock_node(
+            mock_maker.make(
                 "Shutdown",
                 vec![(
                     msg_eq!(SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature))),
@@ -266,7 +277,7 @@ mod tests {
         )
         .with_thermal_shutdown_temperature(Celsius(100.0))
         .with_thermal_metrics(Box::new(mock_metrics.clone()))
-        .build()
+        .build(&node_futures)
         .unwrap();
 
         // Cause the node to enter thermal shutdown

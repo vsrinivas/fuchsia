@@ -6,7 +6,10 @@ use crate::node::Node;
 use anyhow::{Context, Error};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::component;
-use futures::stream::StreamExt;
+use futures::{
+    future::LocalBoxFuture,
+    stream::{FuturesUnordered, StreamExt},
+};
 use serde_json as json;
 use std::collections::HashMap;
 use std::fs::File;
@@ -46,35 +49,39 @@ impl PowerManager {
         inspector.serve(&mut fs)?;
 
         // Create the nodes according to the config file
-        self.create_nodes_from_config(&mut fs).await?;
+        let node_futures = FuturesUnordered::new();
+        self.create_nodes_from_config(&mut fs, &node_futures).await?;
 
-        // Run the ServiceFs (handles incoming request streams). This future never completes.
-        fs.collect::<()>().await;
+        // Run the ServiceFs (handles incoming request streams) and node futures. This future never
+        // completes.
+        futures::stream::select(fs, node_futures).collect::<()>().await;
 
         Ok(())
     }
 
     /// Create the nodes by reading and parsing the node config JSON file.
-    async fn create_nodes_from_config<'a, 'b>(
+    async fn create_nodes_from_config<'a, 'b, 'c>(
         &mut self,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
+        node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<(), Error> {
         let json_data: json::Value =
             json::from_reader(BufReader::new(File::open(NODE_CONFIG_PATH)?))?;
-        self.create_nodes(json_data, service_fs).await
+        self.create_nodes(json_data, service_fs, node_futures).await
     }
 
     /// Creates the nodes using the specified JSON object, adding them to the `nodes` HashMap.
-    async fn create_nodes<'a, 'b>(
+    async fn create_nodes<'a, 'b, 'c>(
         &mut self,
         json_data: json::Value,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
+        node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<(), Error> {
         // Iterate through each object in the top-level array, which represents configuration for a
         // single node
         for node_config in json_data.as_array().unwrap().iter() {
             let node = self
-                .create_node(node_config.clone(), service_fs)
+                .create_node(node_config.clone(), service_fs, node_futures)
                 .await
                 .with_context(|| format!("Failed creating node {}", node_config["name"]))?;
             self.nodes.insert(node_config["name"].as_str().unwrap().to_string(), node);
@@ -84,10 +91,11 @@ impl PowerManager {
 
     /// Uses the supplied `json_data` to construct a single node, where `json_data` is the JSON
     /// object corresponding to a single node configuration.
-    async fn create_node<'a, 'b>(
+    async fn create_node<'a, 'b, 'c>(
         &mut self,
         json_data: json::Value,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
+        node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<Rc<dyn Node>, Error> {
         Ok(match json_data["type"].as_str().unwrap() {
             "CrashReportHandler" => {
@@ -146,11 +154,11 @@ impl PowerManager {
             .build()?,
             "ThermalPolicy" => {
                 thermal_policy::ThermalPolicyBuilder::new_from_json(json_data, &self.nodes)
-                    .build()?
+                    .build(node_futures)?
             }
             "ThermalShutdown" => {
                 thermal_shutdown::ThermalShutdownBuilder::new_from_json(json_data, &self.nodes)
-                    .build()?
+                    .build(node_futures)?
             }
             unknown => panic!("Unknown node type: {}", unknown),
         })
@@ -177,7 +185,11 @@ mod tests {
             },
         ]);
         let mut power_manager = PowerManager::new();
-        power_manager.create_nodes(json_data, &mut ServiceFs::new_local()).await.unwrap();
+        let node_futures = FuturesUnordered::new();
+        power_manager
+            .create_nodes(json_data, &mut ServiceFs::new_local(), &node_futures)
+            .await
+            .unwrap();
     }
 
     /// Finds all of the node config files under the test package's "/config/data" directory. The
