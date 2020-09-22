@@ -17,9 +17,6 @@ rustc_library("net-types") {
     "//src/lib/zerocopy",
   ]
 
-  # TODO(46764): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   features = [ "std" ]
 
   sources = [
