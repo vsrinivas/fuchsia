@@ -14,10 +14,16 @@
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 
+// This is present and needs to be called in the most recent version of quickjs.
+// It's only here so that we can run against both the old and new version until
+// we integrate the new version.
+__attribute__((weak)) void js_std_init_handlers(JSRuntime* rt) {}
+
 namespace shell {
 
 Runtime::Runtime() {
   rt_ = JS_NewRuntime();
+  js_std_init_handlers(rt_);
   is_valid_ = (rt_ == nullptr);
 
   // The correct loader for ES6 modules.  Not sure why this has to be done by hand.
