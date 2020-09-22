@@ -37,7 +37,7 @@ if (current_toolchain == default_toolchain) {
       # This doesn't get a separate shlib sub-toolchain, but the main one
       # can do loadable_module().
       with_shared = false
-      shlib = true
+      is_pic_default = true
 
       toolchain_args = {
         if (zircon_optimize == "none" || zircon_optimize == "debug") {

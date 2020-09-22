@@ -351,16 +351,9 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:werror",
   ]
 
-  default_shared_library_configs =
-      default_common_binary_configs + [
-        "//build/config/zircon:shared_library_config",
-        "//build/config/zircon:no_undefined_symbols",
-      ]
-
-  if (toolchain_variant.is_pic_default) {
-    # NOTE: The Zircon build differs from the Fuchsia build for toolchains
-    # that generate PIC-friendly code.
-    default_common_binary_configs += [
+  default_shared_library_configs = default_common_binary_configs
+  if (!toolchain_variant.is_pic_default) {
+    default_shared_library_configs += [
       "//build/config/zircon:shared_library_config",
       "//build/config/zircon:no_undefined_symbols",
     ]
@@ -1720,7 +1713,10 @@ template("executable") {
 
 template("loadable_module") {
   _module_name = target_name
-  _variant_shared = true
+
+  # NOTE: Allow PIC-friendly toolchains to use loadable_module().
+  _variant_shared = toolchain_variant.with_shared
+
   variant_target("loadable_module") {
     target_name = _module_name
     if (defined(invoker._target_type)) {

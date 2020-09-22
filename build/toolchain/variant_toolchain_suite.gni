@@ -96,6 +96,11 @@ template("_variant_toolchain") {
 #     Optional: If these toolchains will have a "-shared" companion.
 #     (Each variant toolchain has its own "-shared" companion.)
 #
+#   is_pic_default:
+#     Optional: If these toolchains will generate PIC-friendly code by
+#     default on ELF platforms. If true, this is incompatible with
+#     `with_shared == true`.
+#
 #   toolchain_tags:
 #     Optional: A list of tags applied to each toolchain instantiated in this
 #     suite. See //build/toolchain/toolchain_tags.gni for the list of valid
@@ -119,6 +124,11 @@ template("variant_toolchain_suite") {
   # or the other., and have .base.
   is_host = defined(invoker.toolchain_os) && invoker.toolchain_os == host_os
   not_needed([ "is_host" ])
+
+  is_pic_default = defined(invoker.is_pic_default) && invoker.is_pic_default
+  with_shared = defined(invoker.with_shared) && invoker.with_shared
+  assert(!is_pic_default || !with_shared,
+         "is_pic_default and with_shared cannot be true at the same!")
 
   exclude_tags = []
   if (defined(invoker.exclude_variant_tags)) {
@@ -187,6 +197,7 @@ template("variant_toolchain_suite") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "is_pic_default",
                              "toolchain_args",
                              "toolchain_template",
                              "with_shared",
@@ -244,9 +255,9 @@ template("variant_toolchain_suite") {
         toolchain_template_args = invoker_toolchain_template_args
         this_variant = variant
         this_invoker = invoker
-        this_pic_default = false
+        this_pic_default = is_pic_default
       }
-      if (defined(invoker.with_shared) && invoker.with_shared) {
+      if (with_shared) {
         _variant_toolchain("${target_name}${variant.suffix}-shared") {
           toolchain_template = invoker.toolchain_template
           toolchain_template_args = {

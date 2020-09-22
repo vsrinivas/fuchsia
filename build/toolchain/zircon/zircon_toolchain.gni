@@ -86,13 +86,6 @@ _buildidtool =
 #     otherwise it defaults to "".
 #     Type: string
 #
-#   shlib
-#     Optional: If true, the toolchain will support the "solink" and
-#     "solink_module" (for shared_library() and loadable_module() targets,
-#     respectively).
-#     Type: bool
-#     Default: false
-#
 #   use_goma
 #     Optional: If defined, overrides the $use_goma build argument.
 #     If true, compilation commands are prefixed with "$goma_dir/gomacc".
@@ -136,6 +129,14 @@ _buildidtool =
 #     if $os == $host_os and $cpu == $host_cpu, i.e. native compilation for
 #     the build host.  In that case, when using GCC, this says to use plain
 #     "gcc" et al rather than "<triple>-gcc" et al.
+#     Type: bool
+#     Default: false
+#
+#   shlib
+#     Optional: If true, the toolchain will support the "solink" and
+#     "solink_module" (for shared_library() and loadable_module() targets,
+#     respectively). This is now determined by the values of with_shared
+#     and is_pic_default in toolchain_variant.
 #     Type: bool
 #     Default: false
 #
@@ -208,7 +209,7 @@ template("zircon_toolchain") {
         remove_shared_configs = []
         deps = []
         is_pic_default = false
-        with_shared = defined(invoker.shlib) && invoker.shlib
+        with_shared = false
         instrumented = false
         tags = []
       }
@@ -550,7 +551,7 @@ template("zircon_toolchain") {
       command = "$ld $switches $link_inputs$strip_command"
     }
 
-    if (defined(invoker.shlib) && invoker.shlib) {
+    if (_toolchain_variant.with_shared || _toolchain_variant.is_pic_default) {
       # We don't support building shared libraries for host tools.
       assert(invoker.os == "fuchsia",
              "shared library creation not supported for ${invoker.os}")

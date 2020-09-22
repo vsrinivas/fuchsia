@@ -21,7 +21,8 @@ if (current_toolchain == default_toolchain) {
     zircon_toolchain_suite("user.vdso_$cpu") {
       cpu = cpu
       os = current_os
-      shlib = true
+      with_shared = false
+      is_pic_default = true
       strip = "--strip-sections"
       environment = "user.vdso"
 
