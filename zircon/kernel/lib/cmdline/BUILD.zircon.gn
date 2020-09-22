@@ -4,16 +4,18 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("cmdline") {
   sdk = "source"
-  sdk_name = "kcmdline"
   sdk_headers = [ "lib/cmdline.h" ]
+  sdk_migrated = true
 
   # For use only in the kernel and its own unit tests.
   visibility = [
     "$zx/kernel/*",
     "$zx/system/ulib",
-    "$zx/system/utest/kernel-cmdline/*",
+    "//src/zircon/tests/kernel-cmdline/*",
   ]
   kernel = true
   static = true

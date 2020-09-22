@@ -16,7 +16,6 @@ assert(current_cpu != "")
 group("ulib") {
   testonly = true
   deps = [
-    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/counters",
     "$zx/third_party/ulib",
     "c",
