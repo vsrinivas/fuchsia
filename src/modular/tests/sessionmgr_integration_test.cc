@@ -26,6 +26,8 @@ constexpr char kBasemgrGlobPath[] = "/hub/r/mth_*_test/*/c/basemgr.cmx/*/out/deb
 
 class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {};
 
+class SessionmgrIntegrationTestWithoutDefaultHarness : public sys::testing::TestWithEnvironment {};
+
 class IntlPropertyProviderImpl : public fuchsia::intl::PropertyProvider {
  public:
   int call_count() { return call_count_; }
@@ -60,6 +62,28 @@ class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_
   }
 
   bool reboot_called_ = false;
+};
+
+// A |FakeComponent| that invokes a callback when terminating
+class FakeComponentWithOnTerminate : public modular_testing::FakeComponent {
+ public:
+  explicit FakeComponentWithOnTerminate(FakeComponent::Args args)
+      : FakeComponent(std::move(args)) {}
+  ~FakeComponentWithOnTerminate() override = default;
+
+  void set_on_terminate(fit::function<void()> on_terminate) {
+    on_terminate_ = std::move(on_terminate);
+  }
+
+ protected:
+  // |fuchsia::modular::Lifecycle|
+  void Terminate() override {
+    on_terminate_();
+    modular_testing::FakeComponent::Terminate();
+  }
+
+ private:
+  fit::function<void()> on_terminate_ = []() {};
 };
 
 // Create a service in the test harness that is also provided by the session environment. Verify
@@ -299,6 +323,65 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionOnSessionAgentCrash) {
   // The session and agent should have restarted.
   RunLoopUntil([&] { return !session_shell->is_running(); });
   RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+}
+
+// Tests that agents have access to PuppetMaster during teardown.
+// This test creates its own TestHarnessLauncher so it can tear it down before the test ends.
+TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTerminate) {
+  static const auto kFakeAgentUrl =
+      modular_testing::TestHarnessBuilder::GenerateFakeUrl("test_agent");
+
+  auto fake_agent =
+      std::make_unique<FakeComponentWithOnTerminate>(modular_testing::FakeComponent::Args{
+          .url = kFakeAgentUrl,
+          .sandbox_services = {fuchsia::modular::ComponentContext::Name_,
+                               fuchsia::modular::PuppetMaster::Name_}});
+  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
+
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+
+  bool is_agent_terminate_called{false};
+  bool is_puppet_master_closed{false};
+
+  {
+    modular_testing::TestHarnessLauncher test_harness_launcher(
+        real_services()->Connect<fuchsia::sys::Launcher>());
+
+    fuchsia::modular::testing::TestHarnessSpec spec;
+    spec.mutable_sessionmgr_config()->set_session_agents({kFakeAgentUrl});
+
+    modular_testing::TestHarnessBuilder builder(std::move(spec));
+    builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
+    builder.InterceptComponent(fake_agent->BuildInterceptOptions());
+    builder.BuildAndRun(test_harness_launcher.test_harness());
+
+    // Wait for the session to start.
+    RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+
+    puppet_master.set_error_handler([&](zx_status_t /*unused*/) {
+      // The agent should have terminated before PuppetMaster is closed.
+      EXPECT_TRUE(is_agent_terminate_called);
+      is_puppet_master_closed = true;
+    });
+
+    // Connect to the PuppetMaster provided to the agent.
+    fake_agent->component_context()->svc()->Connect(puppet_master.NewRequest());
+
+    fake_agent->set_on_terminate([&]() {
+      // PuppetMaster should not have closed before the agent is torn down.
+      EXPECT_FALSE(is_puppet_master_closed);
+      is_agent_terminate_called = true;
+    });
+
+    test_harness_launcher.StopTestHarness();
+
+    // Wait until the agent terminates
+    RunLoopUntil([&] { return !fake_agent->is_running(); });
+
+    RunLoopUntil([&] { return is_agent_terminate_called && is_puppet_master_closed; });
+
+    // The test harness component is torn down once |test_harness_launcher| goes out of scope.
+  }
 }
 
 }  // namespace

@@ -44,7 +44,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
-  void Terminate(fit::function<void()> callback);
+  void Terminate(fit::function<void()> done);
 
  private:
   // |Sessionmgr|
@@ -56,12 +56,15 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id);
+  void InitializeStartupAgentLauncher();
+  void InitializeStartupAgents();
   void InitializeAgentRunner(std::string session_shell_url);
-  void InitializeIntlPropertyProvider();
-  void InitializeModular(fuchsia::modular::session::AppConfig story_shell_config,
-                         bool use_session_shell_for_story_shell_factory);
+  void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
+                               bool use_session_shell_for_story_shell_factory);
   void InitializeSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);
+  void InitializePuppetMaster();
+  void InitializeSessionCtl();
 
   void RunSessionShell(fuchsia::modular::session::AppConfig session_shell_config);
 

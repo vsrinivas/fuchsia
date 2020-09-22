@@ -82,7 +82,29 @@ TEST_F(TestHarnessLauncherTest, CleanupInDestructor) {
   {
     modular_testing::TestHarnessLauncher launcher(GetTestHarnessLauncher());
     RunLoopUntil([this] { return is_running(); });
+    EXPECT_TRUE(launcher.is_test_harness_running());
   }
+  // Test that the modular_test_harness.cmx is no longer running after
+  // TestHarnessLauncher is destroyed.
+  EXPECT_FALSE(is_running());
+}
+
+// Test that TestHarnessLauncher will terminates the modular_test_harness.cmx
+// component when calling StopTestHarness.
+TEST_F(TestHarnessLauncherTest, StopTestHarness) {
+  // Test that modular_test_harness.cmx is not running.
+  {
+    modular_testing::TestHarnessLauncher launcher(GetTestHarnessLauncher());
+
+    RunLoopUntil([this] { return is_running(); });
+    EXPECT_TRUE(launcher.is_test_harness_running());
+
+    launcher.StopTestHarness();
+
+    RunLoopUntil([&] { return !launcher.is_test_harness_running(); });
+    RunLoopUntil([this] { return !is_running(); });
+  }
+
   // Test that the modular_test_harness.cmx is no longer running after
   // TestHarnessLauncher is destroyed.
   EXPECT_FALSE(is_running());

@@ -6,11 +6,15 @@
 #include <lib/modular/testing/cpp/test_harness_launcher.h>
 
 namespace modular_testing {
+
 namespace {
+
 constexpr char kTestHarnessUrl[] =
     "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/"
     "modular_test_harness.cmx";
+
 constexpr zx::duration kTerminateTimeout = zx::sec(10);
+
 }  // namespace
 
 TestHarnessLauncher::TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher)
@@ -29,10 +33,15 @@ TestHarnessLauncher::TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher)
   test_harness_svc_->Connect(test_harness_.NewRequest());
   test_harness_svc_->Connect(lifecycle_.NewRequest());
 
-  test_harness_ctrl_.set_error_handler([this](zx_status_t) { test_harness_loop_.Quit(); });
+  test_harness_ctrl_.set_error_handler(
+      [this](zx_status_t /*unused*/) { test_harness_loop_.Quit(); });
 }
 
-TestHarnessLauncher::~TestHarnessLauncher() {
+void TestHarnessLauncher::StopTestHarness() {
+  if (!is_test_harness_running()) {
+    return;
+  }
+
   if (lifecycle_) {
     lifecycle_->Terminate();
     // Upon Lifecycle/Terminate(), the modular test harness will ask basemgr to terminate, and
@@ -45,6 +54,10 @@ TestHarnessLauncher::~TestHarnessLauncher() {
   } else {
     async::PostTask(test_harness_loop_.dispatcher(), [this] { test_harness_ctrl_->Kill(); });
   }
+}
+
+TestHarnessLauncher::~TestHarnessLauncher() {
+  StopTestHarness();
 
   test_harness_loop_.JoinThreads();
 }
