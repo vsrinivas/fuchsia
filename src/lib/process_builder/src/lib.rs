@@ -104,19 +104,23 @@ pub struct NamespaceEntry {
 ///
 /// See top-level crate documentation for a usage example.
 pub struct ProcessBuilder {
+    /// The ELF binary for the new process.
     executable: zx::Vmo,
+    /// The fuchsia.ldsvc.Loader service to use for the new process, if dynamically linked.
     ldsvc: Option<fldsvc::LoaderProxy>,
-    vdso: Option<zx::Vmo>,
-    inner: BuilderInner,
+    /// A non-default vDSO to use for the new process, if any.
+    non_default_vdso: Option<zx::Vmo>,
+    /// The contents of the main processargs message to be sent to the new process.
+    msg_contents: processargs::MessageContents,
+    /// Handles that are common to both the linker and main processargs messages, wrapped in an
+    /// inner struct for code organization and clarity around borrows.
+    common: CommonMessageHandles,
 }
 
-// This is split into a separate struct so that we can borrow this to continue building the linker
-// message after already partially moving fields out of ProcessBuilder.
-struct BuilderInner {
+struct CommonMessageHandles {
     process: zx::Process,
     thread: zx::Thread,
     root_vmar: zx::Vmar,
-    msg_contents: processargs::MessageContents,
 }
 
 /// A container for a fully built but not yet started (as in, its initial thread is not yet
@@ -199,10 +203,11 @@ impl ProcessBuilder {
         let mut pb = ProcessBuilder {
             executable,
             ldsvc: None,
-            vdso: None,
-            inner: BuilderInner { process, thread, root_vmar, msg_contents },
+            non_default_vdso: None,
+            msg_contents,
+            common: CommonMessageHandles { process, thread, root_vmar },
         };
-        pb.inner.msg_contents.handles.append(&mut pb.inner.common_message_handles()?);
+        pb.common.add_to_message(&mut pb.msg_contents)?;
         Ok(pb)
     }
 
@@ -241,19 +246,19 @@ impl ProcessBuilder {
 
     /// Sets the vDSO VMO for the process.
     pub fn set_vdso_vmo(&mut self, vdso: zx::Vmo) {
-        self.vdso = Some(vdso);
+        self.non_default_vdso = Some(vdso);
     }
 
     /// Add arguments to the process's bootstrap message. Successive calls append (not replace)
     /// arguments.
     pub fn add_arguments(&mut self, mut args: Vec<CString>) {
-        self.inner.msg_contents.args.append(&mut args);
+        self.msg_contents.args.append(&mut args);
     }
 
     /// Add environment variables to the process's bootstrap message. Successive calls append (not
     /// replace) environment variables.
     pub fn add_environment_variables(&mut self, mut vars: Vec<CString>) {
-        self.inner.msg_contents.environment_vars.append(&mut vars);
+        self.msg_contents.environment_vars.append(&mut vars);
     }
 
     /// Add handles to the process's bootstrap message. Successive calls append (not replace)
@@ -323,7 +328,7 @@ impl ProcessBuilder {
                     self.set_vdso_vmo(h.handle.into());
                 }
                 _ => {
-                    self.inner.msg_contents.handles.push(h);
+                    self.msg_contents.handles.push(h);
                 }
             }
         }
@@ -355,7 +360,7 @@ impl ProcessBuilder {
         // only 16-bits. Realistically this will never matter - if you're anywhere near this
         // many entries, you're going to exceed the bootstrap message length limit - but Rust
         // encourages us (and makes it easy) to be safe about the edge case here.
-        let mut idx = u16::try_from(self.inner.msg_contents.namespace_paths.len())
+        let mut idx = u16::try_from(self.msg_contents.namespace_paths.len())
             .expect("namespace_paths.len should never be larger than a u16");
         let num_entries = u16::try_from(entries.len())
             .map_err(|_| ProcessBuilderError::InvalidArg("Too many namespace entries".into()))?;
@@ -373,8 +378,8 @@ impl ProcessBuilder {
 
         // Intentionally separate from validation so that we don't partially add namespace entries=
         for entry in entries.drain(..) {
-            self.inner.msg_contents.namespace_paths.push(entry.path);
-            self.inner.msg_contents.handles.push(StartupHandle {
+            self.msg_contents.namespace_paths.push(entry.path);
+            self.msg_contents.handles.push(StartupHandle {
                 handle: zx::Handle::from(entry.directory),
                 info: HandleInfo::new(HandleType::NamespaceDirectory, idx),
             });
@@ -421,7 +426,7 @@ impl ProcessBuilder {
             dynamic = true;
 
             // Check that a ldsvc.Loader service was provided.
-            let ldsvc = self.ldsvc.ok_or(ProcessBuilderError::LoaderMissing())?;
+            let ldsvc = self.ldsvc.take().ok_or(ProcessBuilderError::LoaderMissing())?;
 
             // A process using PT_INTERP might be loading a libc.so that supports sanitizers;
             // reserve the low address region for sanitizers to allocate shadow memory.
@@ -432,24 +437,27 @@ impl ProcessBuilder {
             //
             // !! WARNING: This makes a specific address VMAR allocation, so it must come before
             // any elf_load::load_elf calls. !!
-            reserve_vmar = Some(ReservationVmar::reserve_low_address_space(&self.inner.root_vmar)?);
+            reserve_vmar =
+                Some(ReservationVmar::reserve_low_address_space(&self.common.root_vmar)?);
 
             // Get the dynamic linker and map it into the process's address space.
             let ld_vmo = get_dynamic_linker(&ldsvc, &self.executable, interp_hdr).await?;
             let ld_headers = elf_parse::Elf64Headers::from_vmo(&ld_vmo)?;
-            loaded_elf = elf_load::load_elf(&ld_vmo, &self.inner.root_vmar, &ld_headers)?;
+            loaded_elf = elf_load::load_elf(&ld_vmo, &self.common.root_vmar, &ld_headers)?;
 
             // Build the dynamic linker bootstrap message and write it to the bootstrap channel.
             // This message is written before the primary bootstrap message since it is consumed
             // first in the dynamic linker.
-            let msg = self.inner.build_linker_message(ldsvc, self.executable, loaded_elf.vmar)?;
+            let executable = mem::replace(&mut self.executable, zx::Handle::invalid().into());
+            let msg = self.build_linker_message(ldsvc, executable, loaded_elf.vmar)?;
             msg.write(&bootstrap_wr).map_err(ProcessBuilderError::WriteBootstrapMessage)?;
         } else {
             // Statically linked but still position-independent (ET_DYN) ELF, load directly.
             dynamic = false;
 
-            loaded_elf = elf_load::load_elf(&self.executable, &self.inner.root_vmar, &elf_headers)?;
-            self.inner.msg_contents.handles.push(StartupHandle {
+            loaded_elf =
+                elf_load::load_elf(&self.executable, &self.common.root_vmar, &elf_headers)?;
+            self.msg_contents.handles.push(StartupHandle {
                 handle: loaded_elf.vmar.into_handle(),
                 info: HandleInfo::new(HandleType::LoadedVmar, 0),
             });
@@ -457,7 +465,7 @@ impl ProcessBuilder {
 
         // Load the vDSO - either the default system vDSO, or the user-provided one - into the
         // process's address space and a handle to it to the bootstrap message.
-        let vdso_base = self.inner.load_vdso(self.vdso)?;
+        let vdso_base = self.load_vdso()?;
 
         // Calculate initial stack size.
         let stack_size;
@@ -466,7 +474,7 @@ impl ProcessBuilder {
             // Calculate the initial stack size for the dynamic linker. This factors in the size of
             // an extra handle for the stac) that hasn't yet been added to the message contents,
             // since creating the stack requires this size.
-            stack_size = calculate_initial_linker_stack_size(&mut self.inner.msg_contents, 1)?;
+            stack_size = calculate_initial_linker_stack_size(&mut self.msg_contents, 1)?;
             stack_vmo_name = format!("stack: msg of {:#x?}", stack_size);
         } else {
             // Set stack size from PT_GNU_STACK header, if present, or use the default. The dynamic
@@ -489,10 +497,10 @@ impl ProcessBuilder {
         // Allocate the initial thread's stack, map it, and add a handle to the bootstrap message.
         let stack_vmo_name =
             CString::new(stack_vmo_name).expect("Stack VMO name must not contain interior nul's");
-        let stack_ptr = self.inner.create_stack(stack_size, &stack_vmo_name)?;
+        let stack_ptr = self.create_stack(stack_size, &stack_vmo_name)?;
 
         // Build and send the primary bootstrap message.
-        let msg = processargs::Message::build(self.inner.msg_contents)?;
+        let msg = processargs::Message::build(self.msg_contents)?;
         msg.write(&bootstrap_wr).map_err(ProcessBuilderError::WriteBootstrapMessage)?;
 
         // Explicitly destroy the reservation VMAR before returning so that we can be sure it is
@@ -502,15 +510,123 @@ impl ProcessBuilder {
         }
 
         Ok(BuiltProcess {
-            process: self.inner.process,
-            root_vmar: self.inner.root_vmar,
-            thread: self.inner.thread,
+            process: self.common.process,
+            root_vmar: self.common.root_vmar,
+            thread: self.common.thread,
             entry: loaded_elf.entry,
             stack: stack_ptr,
             bootstrap: bootstrap_rd,
             vdso_base: vdso_base,
             elf_base: loaded_elf.vmar_base,
         })
+    }
+
+    /// Build the bootstrap message for the dynamic linker, which uses the same processargs
+    /// protocol as the message for the main process but somewhat different contents.
+    ///
+    /// The LoaderProxy provided must be ready to be converted to a Handle with into_channel(). In
+    /// other words, there must be no other active clones of the proxy, no open requests, etc. The
+    /// intention is that the user provides a handle only (perhaps wrapped in a ClientEnd) through
+    /// [ProcessBuilder::set_loader_service()], not a Proxy, so the library can be sure this
+    /// invariant is maintained and a failure is a library bug.
+    fn build_linker_message(
+        &self,
+        ldsvc: fldsvc::LoaderProxy,
+        executable: zx::Vmo,
+        loaded_vmar: zx::Vmar,
+    ) -> Result<processargs::Message, ProcessBuilderError> {
+        // Don't need to use the ldsvc.Loader anymore; turn it back into into a raw handle so
+        // we can pass it along in the dynamic linker bootstrap message.
+        let ldsvc_hnd =
+            ldsvc.into_channel().expect("Failed to get channel from LoaderProxy").into_zx_channel();
+
+        // The linker message only needs a subset of argv and envvars.
+        let args = extract_ld_arguments(&self.msg_contents.args);
+        let environment_vars =
+            extract_ld_environment_variables(&self.msg_contents.environment_vars);
+
+        let mut linker_msg_contents = processargs::MessageContents {
+            // Argument strings are sent to the linker so that it can use argv[0] in messages it
+            // prints.
+            args,
+            // Environment variables are sent to the linker so that it can see vars like LD_DEBUG.
+            environment_vars,
+            // Process namespace is not set up or used in the linker.
+            namespace_paths: vec![],
+            // Loader message includes a few special handles needed to do its job, plus a set of
+            // handles common to both messages which are generated by this library.
+            handles: vec![
+                StartupHandle {
+                    handle: ldsvc_hnd.into_handle(),
+                    info: HandleInfo::new(HandleType::LdsvcLoader, 0),
+                },
+                StartupHandle {
+                    handle: executable.into_handle(),
+                    info: HandleInfo::new(HandleType::ExecutableVmo, 0),
+                },
+                StartupHandle {
+                    handle: loaded_vmar.into_handle(),
+                    info: HandleInfo::new(HandleType::LoadedVmar, 0),
+                },
+            ],
+        };
+        self.common.add_to_message(&mut linker_msg_contents)?;
+        Ok(processargs::Message::build(linker_msg_contents)?)
+    }
+
+    /// Load the vDSO VMO into the process's address space and a handle to it to the bootstrap
+    /// message. If a vDSO VMO is provided, loads that one, otherwise loads the default system
+    /// vDSO. Returns the base address that the vDSO was mapped into.
+    fn load_vdso(&mut self) -> Result<usize, ProcessBuilderError> {
+        let vdso = match self.non_default_vdso.take() {
+            Some(vmo) => Ok(vmo),
+            None => get_system_vdso_vmo(),
+        }?;
+        let vdso_headers = elf_parse::Elf64Headers::from_vmo(&vdso)?;
+        let loaded_vdso = elf_load::load_elf(&vdso, &self.common.root_vmar, &vdso_headers)?;
+
+        self.msg_contents.handles.push(StartupHandle {
+            handle: vdso.into_handle(),
+            info: HandleInfo::new(HandleType::VdsoVmo, 0),
+        });
+
+        Ok(loaded_vdso.vmar_base)
+    }
+
+    /// Allocate the initial thread's stack, map it, and add a handle to the bootstrap message.
+    /// Returns the initial stack pointer for the process.
+    ///
+    /// Note that launchpad supported not allocating a stack at all, but that only happened if an
+    /// explicit stack size of 0 is set. ProcessBuilder does not support overriding the stack size
+    /// so a stack is always created.
+    fn create_stack(
+        &mut self,
+        stack_size: usize,
+        vmo_name: &CStr,
+    ) -> Result<usize, ProcessBuilderError> {
+        let stack_vmo = zx::Vmo::create(stack_size as u64).map_err(|s| {
+            ProcessBuilderError::GenericStatus("Failed to create VMO for initial thread stack", s)
+        })?;
+        stack_vmo
+            .set_name(&vmo_name)
+            .map_err(|s| ProcessBuilderError::GenericStatus("Failed to set stack VMO name", s))?;
+        let stack_flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
+        let stack_base =
+            self.common.root_vmar.map(0, &stack_vmo, 0, stack_size, stack_flags).map_err(|s| {
+                ProcessBuilderError::GenericStatus("Failed to map initial stack", s)
+            })?;
+        let stack_ptr = compute_initial_stack_pointer(stack_base, stack_size);
+
+        // Pass the stack VMO to the process. Our protocol with the new process is that we warrant
+        // that this is the VMO from which the initial stack is mapped and that we've exactly
+        // mapped the entire thing, so vm_object_get_size on this in concert with the initial SP
+        // value tells it the exact bounds of its stack.
+        self.msg_contents.handles.push(StartupHandle {
+            handle: stack_vmo.into_handle(),
+            info: HandleInfo::new(HandleType::StackVmo, 0),
+        });
+
+        Ok(stack_ptr)
     }
 }
 
@@ -585,134 +701,26 @@ fn extract_ld_environment_variables(envvars: &[CString]) -> Vec<CString> {
     extracted
 }
 
-impl BuilderInner {
-    /// Build the bootstrap message for the dynamic linker, which uses the same processargs
-    /// protocol as the message for the main process but somewhat different contents.
-    ///
-    /// The LoaderProxy provided must be ready to be converted to a Handle with into_channel(). In
-    /// other words, there must be no other active clones of the proxy, no open requests, etc. The
-    /// intention is that the user provides a handle only (perhaps wrapped in a ClientEnd) through
-    /// [ProcessBuilder::set_loader_service()], not a Proxy, so the library can be sure this
-    /// invariant is maintained and a failure is a library bug.
-    fn build_linker_message(
-        &self,
-        ldsvc: fldsvc::LoaderProxy,
-        executable: zx::Vmo,
-        loaded_vmar: zx::Vmar,
-    ) -> Result<processargs::Message, ProcessBuilderError> {
-        // Don't need to use the ldsvc.Loader anymore; turn it back into into a raw handle so
-        // we can pass it along in the dynamic linker bootstrap message.
-        let ldsvc_hnd =
-            ldsvc.into_channel().expect("Failed to get channel from LoaderProxy").into_zx_channel();
-
-        // The linker message only needs a subset of argv and envvars.
-        let args = extract_ld_arguments(&self.msg_contents.args);
-        let environment_vars =
-            extract_ld_environment_variables(&self.msg_contents.environment_vars);
-
-        let mut linker_msg_contents = processargs::MessageContents {
-            // Argument strings are sent to the linker so that it can use argv[0] in messages it
-            // prints.
-            args,
-            // Environment variables are sent to the linker so that it can see vars like LD_DEBUG.
-            environment_vars,
-            // Process namespace is not set up or used in the linker.
-            namespace_paths: vec![],
-            // Loader message includes a few special handles needed to do its job, plus a set of
-            // handles common to both messages which are generated by this library.
-            handles: vec![
-                StartupHandle {
-                    handle: ldsvc_hnd.into_handle(),
-                    info: HandleInfo::new(HandleType::LdsvcLoader, 0),
-                },
-                StartupHandle {
-                    handle: executable.into_handle(),
-                    info: HandleInfo::new(HandleType::ExecutableVmo, 0),
-                },
-                StartupHandle {
-                    handle: loaded_vmar.into_handle(),
-                    info: HandleInfo::new(HandleType::LoadedVmar, 0),
-                },
-            ],
-        };
-        linker_msg_contents.handles.append(&mut self.common_message_handles()?);
-
-        Ok(processargs::Message::build(linker_msg_contents)?)
-    }
-
+impl CommonMessageHandles {
     /// Returns a vector of processargs message handles created by this library which are common to
     /// both the linker and main messages, duplicating handles as needed.
-    fn common_message_handles(&self) -> Result<Vec<StartupHandle>, ProcessBuilderError> {
+    fn add_to_message(
+        &self,
+        msg: &mut processargs::MessageContents,
+    ) -> Result<(), ProcessBuilderError> {
         let handles: &[(zx::HandleRef<'_>, &str, HandleType)] = &[
             (self.process.as_handle_ref(), "Failed to dup process handle", HandleType::ProcessSelf),
             (self.root_vmar.as_handle_ref(), "Failed to dup VMAR handle", HandleType::RootVmar),
             (self.thread.as_handle_ref(), "Failed to dup thread handle", HandleType::ThreadSelf),
         ];
 
-        handles
-            .iter()
-            .map(|(h, err_str, handle_type)| {
-                let handle = h
-                    .duplicate(zx::Rights::SAME_RIGHTS)
-                    .map_err(|s| ProcessBuilderError::GenericStatus(err_str, s))?;
-                Ok(StartupHandle { handle, info: HandleInfo::new(*handle_type, 0) })
-            })
-            .collect()
-    }
-
-    /// Load the vDSO VMO into the process's address space and a handle to it to the bootstrap
-    /// message. If a vDSO VMO is provided, loads that one, otherwise loads the default system
-    /// vDSO. Returns the base address that the vDSO was mapped into.
-    fn load_vdso(&mut self, vdso: Option<zx::Vmo>) -> Result<usize, ProcessBuilderError> {
-        let vdso_vmo = match vdso {
-            Some(vmo) => Ok(vmo),
-            None => get_system_vdso_vmo(),
-        }?;
-        let vdso_headers = elf_parse::Elf64Headers::from_vmo(&vdso_vmo)?;
-        let loaded_vdso = elf_load::load_elf(&vdso_vmo, &self.root_vmar, &vdso_headers)?;
-
-        self.msg_contents.handles.push(StartupHandle {
-            handle: vdso_vmo.into_handle(),
-            info: HandleInfo::new(HandleType::VdsoVmo, 0),
-        });
-
-        Ok(loaded_vdso.vmar_base)
-    }
-
-    /// Allocate the initial thread's stack, map it, and add a handle to the bootstrap message.
-    /// Returns the initial stack pointer for the process.
-    ///
-    /// Note that launchpad supported not allocating a stack at all, but that only happened if an
-    /// explicit stack size of 0 is set. ProcessBuilder does not support overriding the stack size
-    /// so a stack is always created.
-    fn create_stack(
-        &mut self,
-        stack_size: usize,
-        vmo_name: &CStr,
-    ) -> Result<usize, ProcessBuilderError> {
-        let stack_vmo = zx::Vmo::create(stack_size as u64).map_err(|s| {
-            ProcessBuilderError::GenericStatus("Failed to create VMO for initial thread stack", s)
-        })?;
-        stack_vmo
-            .set_name(&vmo_name)
-            .map_err(|s| ProcessBuilderError::GenericStatus("Failed to set stack VMO name", s))?;
-        let stack_flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
-        let stack_base = self
-            .root_vmar
-            .map(0, &stack_vmo, 0, stack_size, stack_flags)
-            .map_err(|s| ProcessBuilderError::GenericStatus("Failed to map initial stack", s))?;
-        let stack_ptr = compute_initial_stack_pointer(stack_base, stack_size);
-
-        // Pass the stack VMO to the process. Our protocol with the new process is that we warrant
-        // that this is the VMO from which the initial stack is mapped and that we've exactly
-        // mapped the entire thing, so vm_object_get_size on this in concert with the initial SP
-        // value tells it the exact bounds of its stack.
-        self.msg_contents.handles.push(StartupHandle {
-            handle: stack_vmo.into_handle(),
-            info: HandleInfo::new(HandleType::StackVmo, 0),
-        });
-
-        Ok(stack_ptr)
+        for (handle, err_str, handle_type) in handles {
+            let dup = handle
+                .duplicate(zx::Rights::SAME_RIGHTS)
+                .map_err(|s| ProcessBuilderError::GenericStatus(err_str, s))?;
+            msg.handles.push(StartupHandle { handle: dup, info: HandleInfo::new(*handle_type, 0) });
+        }
+        Ok(())
     }
 }
 
