@@ -600,8 +600,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -610,7 +608,7 @@ class Protocol final {
    private:
     RequestStrictResponseFlexibleResponse& Message() {
       return *reinterpret_cast<RequestStrictResponseFlexibleResponse*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -626,8 +624,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -657,8 +653,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -667,7 +661,7 @@ class Protocol final {
    private:
     RequestStrictResponseFlexibleRequest& Message() {
       return *reinterpret_cast<RequestStrictResponseFlexibleRequest*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -683,8 +677,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -714,8 +706,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -724,7 +714,7 @@ class Protocol final {
    private:
     RequestFlexibleResponseStrictResponse& Message() {
       return *reinterpret_cast<RequestFlexibleResponseStrictResponse*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -740,8 +730,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -771,8 +759,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -781,7 +767,7 @@ class Protocol final {
    private:
     RequestFlexibleResponseStrictRequest& Message() {
       return *reinterpret_cast<RequestFlexibleResponseStrictRequest*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -797,8 +783,6 @@ class Protocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();

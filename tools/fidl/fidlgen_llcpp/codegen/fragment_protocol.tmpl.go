@@ -419,15 +419,13 @@ class {{ .Name }} final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
    private:
-    {{ .Name }}Response& Message() { return *reinterpret_cast<{{ .Name }}Response*>(message_.bytes().data()); }
+    {{ .Name }}Response& Message() { return *reinterpret_cast<{{ .Name }}Response*>(message_.bytes()); }
 
     {{- if gt .ResponseMaxHandles 0 }}
       zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Response::MaxNumHandles)];
@@ -450,8 +448,6 @@ class {{ .Name }} final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
 
@@ -500,15 +496,13 @@ class {{ .Name }} final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
    private:
-    {{ .Name }}Request& Message() { return *reinterpret_cast<{{ .Name }}Request*>(message_.bytes().data()); }
+    {{ .Name }}Request& Message() { return *reinterpret_cast<{{ .Name }}Request*>(message_.bytes()); }
 
     {{- if gt .RequestMaxHandles 0 }}
       zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Request::MaxNumHandles)];
@@ -531,8 +525,6 @@ class {{ .Name }} final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
 

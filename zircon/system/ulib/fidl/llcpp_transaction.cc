@@ -72,10 +72,9 @@ fidl::Result CompleterBase::SendReply(const ::fidl::internal::FidlMessage& messa
     transaction_->InternalError({::fidl::UnbindInfo::kEncodeError, message.status()});
     return fidl::Result(message.status(), message.error());
   }
-  auto status = transaction_->Reply(Message(
-      BytePart(message.bytes().data(), message.bytes().capacity(), message.bytes().actual()),
-      HandlePart(message.handles().data(), message.handles().capacity(),
-                 message.handles().actual())));
+  auto status = transaction_->Reply(
+      Message(BytePart(message.bytes(), message.byte_capacity(), message.byte_actual()),
+              HandlePart(message.handles(), message.handle_capacity(), message.handle_actual())));
   if (status != ZX_OK) {
     transaction_->InternalError({UnbindInfo::kChannelError, status});
     return fidl::Result(status, ::fidl::kErrorWriteFailed);

@@ -70,20 +70,18 @@ class LinearSnap {
     ZX_ASSERT(message.ok());
     ZX_ASSERT(message.error() == nullptr);
 
-    ZX_ASSERT(message.bytes().actual() <= sizeof(snap_data_));
-    memcpy(snap_data_, message.bytes().data(), message.bytes().actual());
-    snap_data_size_ = message.bytes().actual();
+    ZX_ASSERT(message.byte_actual() <= sizeof(snap_data_));
+    memcpy(snap_data_, message.bytes(), message.byte_actual());
+    snap_data_size_ = message.byte_actual();
 
-    ZX_ASSERT(message.handles().actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
-    memcpy(snap_handles_, message.handles().data(),
-           message.handles().actual() * sizeof(zx_handle_t));
-    snap_handles_count_ = message.handles().actual();
+    ZX_ASSERT(message.handle_actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
+    memcpy(snap_handles_, message.handles(), message.handle_actual() * sizeof(zx_handle_t));
+    snap_handles_count_ = message.handle_actual();
 
     // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
     const char* error = nullptr;
-    zx_status_t status =
-        fidl_decode(FidlType::Type, message.bytes().data(), message.bytes().actual(),
-                    message.handles().data(), message.handles().actual(), &error);
+    zx_status_t status = fidl_decode(FidlType::Type, message.bytes(), message.byte_actual(),
+                                     message.handles(), message.handle_actual(), &error);
     ZX_ASSERT(status == ZX_OK);
     ZX_ASSERT(error == nullptr);
 

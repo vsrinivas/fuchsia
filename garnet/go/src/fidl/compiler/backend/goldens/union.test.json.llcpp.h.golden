@@ -2804,8 +2804,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -2815,7 +2813,7 @@ class TestProtocol final {
     StrictXUnionHenceResponseMayBeStackAllocatedResponse& Message() {
       return *reinterpret_cast<
           StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -2829,8 +2827,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -2867,8 +2863,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -2878,7 +2872,7 @@ class TestProtocol final {
     StrictXUnionHenceResponseMayBeStackAllocatedRequest& Message() {
       return *reinterpret_cast<
           StrictXUnionHenceResponseMayBeStackAllocatedRequest*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -2892,8 +2886,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -2928,8 +2920,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -2939,7 +2929,7 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& Message() {
       return *reinterpret_cast<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -2953,8 +2943,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -2993,8 +2981,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -3004,7 +2990,7 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest& Message() {
       return *reinterpret_cast<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest*>(
-          message_.bytes().data());
+          message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -3018,8 +3004,6 @@ class TestProtocol final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();

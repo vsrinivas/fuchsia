@@ -23,13 +23,12 @@ class FidlMessage final : public ::fidl::Result {
   FidlMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual, zx_handle_t* handles,
               uint32_t handle_capacity, uint32_t handle_actual);
 
-  const BytePart& bytes() const { return bytes_; }
-
-  const HandlePart& handles() const { return handles_; }
-
-  bool linearized() const { return linearized_; }
-
-  bool encoded() const { return encoded_; }
+  uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
+  zx_handle_t* handles() const { return message_.handles; }
+  uint32_t byte_actual() const { return message_.num_bytes; }
+  uint32_t handle_actual() const { return message_.num_handles; }
+  uint32_t byte_capacity() const { return byte_capacity_; }
+  uint32_t handle_capacity() const { return handle_capacity_; }
 
   // Linearizes and encodes a message. |data| is a pointer to a buffer which holds the source
   // message body which type is defined by |message_type|.
@@ -59,12 +58,11 @@ class FidlMessage final : public ::fidl::Result {
                        ::fidl::internal::ResponseContext* context);
 
  private:
-  void ReleaseHandles() { handles_.set_actual(0); }
+  void ReleaseHandles() { message_.num_handles = 0; }
 
-  BytePart bytes_;
-  HandlePart handles_;
-  bool linearized_ = false;
-  bool encoded_ = false;
+  fidl_msg_t message_;
+  uint32_t byte_capacity_;
+  uint32_t handle_capacity_;
 };
 
 // Defines an incomming method entry. Used by a server to dispatch an incoming message.

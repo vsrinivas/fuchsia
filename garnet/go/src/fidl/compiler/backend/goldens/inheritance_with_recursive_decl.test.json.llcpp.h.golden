@@ -131,8 +131,6 @@ class Parent final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -140,7 +138,7 @@ class Parent final {
 
    private:
     FirstRequest& Message() {
-      return *reinterpret_cast<FirstRequest*>(message_.bytes().data());
+      return *reinterpret_cast<FirstRequest*>(message_.bytes());
     }
     zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
                                   FirstRequest::MaxNumHandles)];
@@ -155,8 +153,6 @@ class Parent final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -409,8 +405,6 @@ class Child final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -418,7 +412,7 @@ class Child final {
 
    private:
     FirstRequest& Message() {
-      return *reinterpret_cast<FirstRequest*>(message_.bytes().data());
+      return *reinterpret_cast<FirstRequest*>(message_.bytes());
     }
     zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
                                   FirstRequest::MaxNumHandles)];
@@ -433,8 +427,6 @@ class Child final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -466,8 +458,6 @@ class Child final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -475,7 +465,7 @@ class Child final {
 
    private:
     SecondRequest& Message() {
-      return *reinterpret_cast<SecondRequest*>(message_.bytes().data());
+      return *reinterpret_cast<SecondRequest*>(message_.bytes());
     }
     zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
                                   SecondRequest::MaxNumHandles)];
@@ -490,8 +480,6 @@ class Child final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();

@@ -188,8 +188,6 @@ class Top final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -197,7 +195,7 @@ class Top final {
 
    private:
     GetFooResponse& Message() {
-      return *reinterpret_cast<GetFooResponse*>(message_.bytes().data());
+      return *reinterpret_cast<GetFooResponse*>(message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -210,8 +208,6 @@ class Top final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
@@ -239,8 +235,6 @@ class Top final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
 
@@ -248,7 +242,7 @@ class Top final {
 
    private:
     GetFooRequest& Message() {
-      return *reinterpret_cast<GetFooRequest*>(message_.bytes().data());
+      return *reinterpret_cast<GetFooRequest*>(message_.bytes());
     }
     ::fidl::internal::FidlMessage message_;
   };
@@ -261,8 +255,6 @@ class Top final {
     zx_status_t status() const { return message_.status(); }
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
-    bool linearized() const { return message_.linearized(); }
-    bool encoded() const { return message_.encoded(); }
 
     ::fidl::internal::FidlMessage& GetFidlMessage() {
       return message_.GetFidlMessage();
