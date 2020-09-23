@@ -110,19 +110,22 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
 // Matches a data partition, which is a Minfs partition backed by zxcrypt.
 class MinfsMatcher : public BlockDeviceManager::Matcher {
  public:
+  using PartitionNames = std::set<std::string, std::less<>>;
+
   static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
-  MinfsMatcher(const PartitionMapMatcher& map, std::string_view partition_name,
+  MinfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
                const fuchsia_hardware_block_partition_GUID& type_guid,
                const BlockDeviceManager::Options& options)
       : map_(map),
-        partition_name_(partition_name),
+        partition_names_(std::move(partition_names)),
         type_guid_(type_guid),
         variant_(GetVariantFromOptions(options)) {}
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
     if (expected_inner_path_.empty()) {
-      if (map_.IsChild(device) && device.partition_name() == partition_name_ &&
+      if (map_.IsChild(device) &&
+          partition_names_.find(device.partition_name()) != partition_names_.end() &&
           !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
         switch (variant_) {
           case Variant::kNormal:
@@ -196,7 +199,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   }
 
   const PartitionMapMatcher& map_;
-  const std::string partition_name_;
+  const PartitionNames partition_names_;
   const fuchsia_hardware_block_partition_GUID type_guid_;
   const Variant variant_;
   std::string expected_inner_path_;
@@ -301,8 +304,8 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
     if (options.is_set(Options::kDurable)) {
       static constexpr fuchsia_hardware_block_partition_GUID durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
-      matchers_.push_back(
-          std::make_unique<MinfsMatcher>(*gpt, Options::kDurable, durable_type_guid, options));
+      matchers_.push_back(std::make_unique<MinfsMatcher>(
+          *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, durable_type_guid, options));
       gpt_required = true;
     }
     if (options.is_set(Options::kFactory)) {
@@ -319,7 +322,8 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
     }
     if (options.is_set(Options::kMinfs)) {
       static constexpr fuchsia_hardware_block_partition_GUID minfs_type_guid = GUID_DATA_VALUE;
-      matchers_.push_back(std::make_unique<MinfsMatcher>(*fvm, "minfs", minfs_type_guid, options));
+      matchers_.push_back(std::make_unique<MinfsMatcher>(
+          *fvm, MinfsMatcher::PartitionNames{"minfs", GUID_DATA_NAME}, minfs_type_guid, options));
       fvm_required = true;
     }
   }
