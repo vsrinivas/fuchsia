@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use std::error::Error;
 
-use crate::core::fmt;
+use crate::{core::fmt, io};
 
 #[derive(fmt::Debug)]
 pub enum FatfsNumericError {
@@ -33,6 +33,7 @@ pub enum FatfsError {
     FsInfoInvalid,
     InvalidBootSectorSig,
     InvalidBytesPerSector(FatfsNumericError),
+    InvalidClusterNumber,
     InvalidFatType,
     InvalidFats,
     InvalidLeadSig,
@@ -69,6 +70,12 @@ impl fmt::Display for FatfsError {
     }
 }
 
+impl From<FatfsError> for io::Error {
+    fn from(error: FatfsError) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, error)
+    }
+}
+
 impl From<&FatfsError> for String {
     fn from(error: &FatfsError) -> String {
         match error {
@@ -82,6 +89,7 @@ impl From<&FatfsError> for String {
             FatfsError::FsInfoInvalid => "Invalid BPB (FSInfo sector not in a reserved region)".to_owned(),
             FatfsError::InvalidBootSectorSig => "Invalid boot sector signature".to_owned(),
             FatfsError::InvalidBytesPerSector(what) => format!("Invalid bytes_per_sector value in BPB ({})", what),
+            FatfsError::InvalidClusterNumber => "Cluster number is invalid".to_owned(),
             FatfsError::InvalidFatType => "Invalid FAT type".to_owned(),
             FatfsError::InvalidFats => "Invalid fats value in BPB".to_owned(),
             FatfsError::InvalidLeadSig => "Invalid lead_sig in FsInfo sector".to_owned(),

@@ -26,10 +26,16 @@ pub(crate) enum DirRawStream<'fs, IO: ReadWriteSeek, TP, OCC> {
 }
 
 impl<IO: ReadWriteSeek, TP, OCC> DirRawStream<'_, IO, TP, OCC> {
-    fn abs_pos(&self) -> Option<u64> {
+    fn abs_pos(&self) -> Result<Option<u64>, FatfsError> {
         match self {
-            DirRawStream::File(file) => file.as_ref().and_then(|f| f.abs_pos()),
-            DirRawStream::Root(slice) => Some(slice.abs_pos()),
+            DirRawStream::File(file) => {
+                if let Some(ref file) = file {
+                    Ok(file.abs_pos()?)
+                } else {
+                    Ok(None)
+                }
+            }
+            DirRawStream::Root(slice) => Ok(Some(slice.abs_pos())),
         }
     }
 
@@ -749,7 +755,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
             self.fs.commit(transaction)?;
         }
         let end_pos = stream.seek(io::SeekFrom::Current(0))?;
-        let abs_pos = stream.abs_pos().map(|p| p - DIR_ENTRY_SIZE);
+        let abs_pos = stream.abs_pos()?.map(|p| p - DIR_ENTRY_SIZE);
         // return new logical entry descriptor
         let short_name = ShortName::new(raw_entry.name());
         Ok(DirEntry {
@@ -840,7 +846,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'_, 'fs, IO, TP, OCC
             match raw_entry {
                 DirEntryData::File(data) => {
                     // Get entry position on volume
-                    let abs_pos = stream.abs_pos().map(|p| p - DIR_ENTRY_SIZE);
+                    let abs_pos = stream.abs_pos()?.map(|p| p - DIR_ENTRY_SIZE);
                     // Check if LFN checksum is valid
                     lfn_builder.validate_chksum(data.name());
                     // Return directory entry

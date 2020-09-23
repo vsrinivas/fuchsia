@@ -412,16 +412,20 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         self.bpb.bytes_from_sectors(sector)
     }
 
-    fn sector_from_cluster(&self, cluster: u32) -> u32 {
-        self.first_data_sector + self.bpb.sectors_from_clusters(cluster - RESERVED_FAT_ENTRIES)
+    fn sector_from_cluster(&self, cluster: u32) -> Result<u32, FatfsError> {
+        if cluster < RESERVED_FAT_ENTRIES {
+            return Err(FatfsError::InvalidClusterNumber);
+        }
+
+        Ok(self.first_data_sector + self.bpb.sectors_from_clusters(cluster - RESERVED_FAT_ENTRIES))
     }
 
     pub fn cluster_size(&self) -> u32 {
         self.bpb.cluster_size()
     }
 
-    pub(crate) fn offset_from_cluster(&self, cluser: u32) -> u64 {
-        self.offset_from_sector(self.sector_from_cluster(cluser))
+    pub(crate) fn offset_from_cluster(&self, cluster: u32) -> Result<u64, FatfsError> {
+        Ok(self.offset_from_sector(self.sector_from_cluster(cluster)?))
     }
 
     pub(crate) fn bytes_from_clusters(&self, clusters: u32) -> u64 {
@@ -470,7 +474,7 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         };
         if zero {
             let mut disk = self.disk.borrow_mut();
-            disk.seek(SeekFrom::Start(self.offset_from_cluster(cluster)))?;
+            disk.seek(SeekFrom::Start(self.offset_from_cluster(cluster)?))?;
             write_zeros(&mut *disk, self.cluster_size() as u64)?;
         }
         let mut fs_info = self.fs_info.borrow_mut();

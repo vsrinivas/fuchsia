@@ -5,6 +5,7 @@ use crate::io::prelude::*;
 use crate::io::{ErrorKind, SeekFrom};
 
 use crate::dir_entry::DirEntryEditor;
+use crate::error::FatfsError;
 use crate::fs::{FileSystem, ReadWriteSeek};
 use crate::time::{Date, DateTime, TimeProvider};
 
@@ -63,21 +64,21 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
         }
     }
 
-    pub(crate) fn abs_pos(&self) -> Option<u64> {
+    pub(crate) fn abs_pos(&self) -> Result<Option<u64>, FatfsError> {
         // Returns current position relative to filesystem start
         // Note: when between clusters it returns position after previous cluster
-        match self.current_cluster {
+        Ok(match self.current_cluster {
             Some(n) => {
                 assert!(self.offset > 0); // offset == 0 should mean current_clusters is None.
                 let cluster_size = self.fs.cluster_size();
                 // We want offset_in_cluster to be in the range [1..cluster_size], and not
                 // [0..cluster_size - 1].
                 let offset_in_cluster = (self.offset - 1) % cluster_size + 1;
-                let offset_in_fs = self.fs.offset_from_cluster(n) + (offset_in_cluster as u64);
+                let offset_in_fs = self.fs.offset_from_cluster(n)? + (offset_in_cluster as u64);
                 Some(offset_in_fs)
             }
             None => None,
-        }
+        })
     }
 
     pub fn flush_dir_entry(&mut self) -> io::Result<()> {
@@ -311,7 +312,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Read for File<'_, IO, TP, OCC> {
         }
         trace!("read {} bytes in cluster {}", read_size, current_cluster);
         let offset_in_fs =
-            self.fs.offset_from_cluster(current_cluster) + (offset_in_cluster as u64);
+            self.fs.offset_from_cluster(current_cluster)? + (offset_in_cluster as u64);
         let read_bytes = {
             let mut disk = self.fs.disk.borrow_mut();
             disk.seek(SeekFrom::Start(offset_in_fs))?;
@@ -382,7 +383,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for File<'_, IO, TP, OCC> {
         };
         trace!("write {} bytes in cluster {}", write_size, current_cluster);
         let offset_in_fs =
-            self.fs.offset_from_cluster(current_cluster) + (offset_in_cluster as u64);
+            self.fs.offset_from_cluster(current_cluster)? + (offset_in_cluster as u64);
         let written_bytes = {
             let mut disk = self.fs.disk.borrow_mut();
             disk.seek(SeekFrom::Start(offset_in_fs))?;

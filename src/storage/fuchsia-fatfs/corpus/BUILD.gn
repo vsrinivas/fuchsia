@@ -6,6 +6,7 @@ import("//build/unification/zbi/resource.gni")
 resource("fat-fuzzer_corpus") {
   sources = [
     "fat.img",
+    "invalid_cluster_number.img",
     "large_sectors_per_fat_and_bytes_per_sector.img",
     "many_sectors_per_fat.img",
     "utf16_unpaired_surrogates.img",
