@@ -198,10 +198,6 @@ template("component_manager") {
       name = "component_manager_lib"
       edition = "2018"
 
-      features = [
-        "propagate_utc_clock",  # Enable UTC clock propagation in ELF runner
-      ]
-
       # Only for internal use.
       visibility = [
         "//src/session/*",
