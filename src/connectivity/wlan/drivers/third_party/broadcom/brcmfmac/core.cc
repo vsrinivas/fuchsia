@@ -541,8 +541,8 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   if (mac_addr != nullptr) {
     memcpy(ifp->mac_addr, mac_addr, ETH_ALEN);
   }
-  BRCMF_DBG(WLANIF, " ==== netdev:%s : bsscfgidx: %d, ifidx: %d, mac: " MAC_FMT_STR " created ===",
-            ndev->name, bsscfgidx, ifidx, MAC_FMT_ARGS(ifp->mac_addr));
+  BRCMF_INFO("Created a new iface. netdev:%s, bsscfgidx: %d, ifidx: %d, mac: " MAC_FMT_STR,
+             ndev->name, bsscfgidx, ifidx, MAC_FMT_ARGS(ifp->mac_addr));
   if (if_out) {
     *if_out = ifp;
   }
