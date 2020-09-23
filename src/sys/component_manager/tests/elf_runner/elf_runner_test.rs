@@ -4,7 +4,10 @@
 
 use {
     fuchsia_async as fasync,
-    test_utils_lib::{echo_capability::EchoCapability, opaque_test::*},
+    test_utils_lib::{
+        echo_capability::EchoCapability, events::EventMatcher, injectors::CapabilityInjector,
+        opaque_test::*,
+    },
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -30,10 +33,9 @@ async fn run_single_test(url: &str, expected_output: &str) {
 
     let event_source = test.connect_to_event_source().await.unwrap();
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
     event_source.start_component_tree().await;
 
     let event = echo_rx.next().await.unwrap();
     assert_eq!(expected_output, event.message);
-    injector.abort();
 }

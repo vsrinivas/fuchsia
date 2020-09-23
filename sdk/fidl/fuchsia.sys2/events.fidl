@@ -397,7 +397,8 @@ protocol RoutingProtocol {
 
 /// A FIDL-based version of a CapabilityProvider
 protocol CapabilityProvider {
-    /// Called to bind a server end of a channel to the provided framework capability.
-    /// TODO(xbhatnag): provide all arguments (flags, mode, path) to this method.
-    Open(zx.handle:CHANNEL server_end) -> ();
+    /// Called to bind a server end of a channel to the provided capability.
+    /// The flags, mode and path specified here are passed on from the fuchsia.io.Directory.Open
+    /// FIDL call that caused this capability routing to occur.
+    Open(zx.handle:CHANNEL server_end, uint32 flags, uint32 mode, string:fuchsia.io.MAX_PATH path) -> ();
 };

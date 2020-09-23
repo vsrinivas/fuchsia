@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_test_hub as fhub,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{collections::HashMap, sync::Arc},
-    test_utils_lib::events::Injector,
+    test_utils_lib::injectors::ProtocolInjector,
 };
 
 #[derive(Debug)]
@@ -77,7 +77,7 @@ impl HubReportCapability {
 }
 
 #[async_trait]
-impl Injector for HubReportCapability {
+impl ProtocolInjector for HubReportCapability {
     type Marker = fhub::HubReportMarker;
 
     async fn serve(

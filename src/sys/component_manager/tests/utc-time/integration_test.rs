@@ -12,7 +12,7 @@ use fuchsia_zircon as zx;
 use futures::{channel::oneshot, lock::Mutex, prelude::*};
 use log::*;
 use std::sync::Arc;
-use test_utils_lib::{events::*, opaque_test::OpaqueTestBuilder};
+use test_utils_lib::{events::*, injectors::*, opaque_test::OpaqueTestBuilder};
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
     pseudo_directory,
@@ -69,10 +69,7 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
     // requesting this will panic.
     debug!("injecting TestOutcomeCapability");
     let (capability, test_case) = test_outcome_report();
-    event_source
-        .install_injector(capability, None)
-        .await
-        .expect("failed to install TestOutcomeCapability");
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     // Unblock the component_manager.
     debug!("starting component tree");
@@ -99,7 +96,7 @@ fn test_outcome_report() -> (Arc<TestOutcomeCapability>, oneshot::Receiver<Resul
 }
 
 #[async_trait]
-impl Injector for TestOutcomeCapability {
+impl ProtocolInjector for TestOutcomeCapability {
     type Marker = ftest::TestOutcomeReportMarker;
 
     async fn serve(

@@ -6,7 +6,6 @@ use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
-    fidl::Channel,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::{connect_channel_to_service, connect_to_service},
     fuchsia_zircon as zx,
@@ -85,10 +84,10 @@ impl EventSource {
             ));
         }
         let (client_end, stream) = create_request_stream::<fsys::EventStreamMarker>()?;
-        self.proxy
-            .subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end)
-            .await?
-            .map_err(|error| format_err!("Error: {:?}", error))?;
+        let subscription =
+            self.proxy.subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end);
+
+        subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
         Ok(EventStream::new(stream))
     }
 
@@ -98,101 +97,6 @@ impl EventSource {
     ) -> Result<EventLog, Error> {
         let event_stream = self.subscribe(event_names).await?;
         Ok(EventLog::new(event_stream))
-    }
-
-    /// This is a convenience method that subscribes to the `CapabilityRouted`
-    /// event, spawns a new task, and injects the service provided by the
-    /// injector if requested by the event. A `matcher` can be optionally
-    /// supplied allowing the caller to choose the target that gets the injected
-    /// capability. Otherwise, the injector will be used for all targets using a
-    /// matching capability.
-    pub async fn install_injector<I: 'static>(
-        &self,
-        injector: Arc<I>,
-        matcher: Option<EventMatcher>,
-    ) -> Result<AbortHandle, Error>
-    where
-        I: Injector,
-    {
-        let matcher = matcher.unwrap_or(EventMatcher::new());
-        if let Err(e) = matcher.capability_id.matches(&Some(I::Marker::NAME.to_string())) {
-            return Err(e);
-        }
-        let matcher = matcher.expect_capability_id(I::Marker::NAME);
-        let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-
-        fasync::Task::spawn(
-            Abortable::new(
-                async move {
-                    loop {
-                        let event = match event_stream
-                            .wait_until_exact::<CapabilityRouted>(matcher.clone())
-                            .await
-                        {
-                            Ok(e) => e,
-                            Err(e) => match e.downcast::<EventStreamError>() {
-                                Ok(EventStreamError::StreamClosed) => return,
-                                Err(e) => panic!("Unknown error! {:?}", e),
-                            },
-                        };
-
-                        if event.result.is_ok() {
-                            event.inject(injector.clone()).await.expect("injection failed");
-                        }
-                    }
-                },
-                abort_registration,
-            )
-            .unwrap_or_else(|_| ()),
-        )
-        .detach();
-        Ok(abort_handle)
-    }
-
-    // This is a convenience method that subscribes to the `CapabilityRouted` event,
-    // spawns a new task, and interposes the service provided by the interposer if requested
-    // by the event.
-    pub async fn install_interposer<I: 'static>(
-        &self,
-        interposer: Arc<I>,
-    ) -> Result<AbortHandle, Error>
-    where
-        I: Interposer,
-    {
-        let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        fasync::Task::spawn(
-            Abortable::new(
-                async move {
-                    loop {
-                        let event = match event_stream.wait_until_type::<CapabilityRouted>().await {
-                            Ok(e) => e,
-                            Err(e) => match e.downcast::<EventStreamError>() {
-                                Ok(EventStreamError::StreamClosed) => return,
-                                Err(e) => panic!("Unknown error! {:?}", e),
-                            },
-                        };
-
-                        if let Ok(payload) = &event.result {
-                            if payload.capability_id == I::Marker::NAME
-                            // TODO(56604): Remove support for path-based.
-                            || payload.capability_id == format!("/svc/{}", I::Marker::NAME)
-                            {
-                                event
-                                    .interpose(interposer.clone())
-                                    .await
-                                    .expect("injection failed");
-                            }
-                        }
-                    }
-                },
-                abort_registration,
-            )
-            .unwrap_or_else(|_| (())),
-        )
-        .detach();
-        Ok(abort_handle)
     }
 
     pub async fn start_component_tree(&self) {
@@ -392,41 +296,6 @@ impl Handler for fsys::Event {
     }
 }
 
-/// An Injector allows a test to implement a protocol to be used by a component.
-///
-/// Client <---> Injector
-#[async_trait]
-pub trait Injector: Send + Sync {
-    type Marker: ServiceMarker;
-
-    /// This function will be run in a spawned task when a client attempts
-    /// to connect to the service being injected. `request_stream` is a stream of
-    /// requests coming in from the client.
-    async fn serve(
-        self: Arc<Self>,
-        mut request_stream: <<Self as Injector>::Marker as ServiceMarker>::RequestStream,
-    ) -> Result<(), Error>;
-}
-
-/// An Interposer allows a test to sit between a service and a client
-/// and mutate or silently observe messages being passed between them.
-///
-/// Client <---> Interposer <---> Service
-#[async_trait]
-pub trait Interposer: Send + Sync {
-    type Marker: ServiceMarker;
-
-    /// This function will be run asynchronously when a client attempts
-    /// to connect to the service being interposed. `request_stream` is a stream of
-    /// requests coming in from the client and `to_service` is a proxy to the
-    /// real service.
-    async fn interpose(
-        self: Arc<Self>,
-        mut request_stream: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
-        to_service: <<Self as Interposer>::Marker as ServiceMarker>::Proxy,
-    ) -> Result<(), Error>;
-}
-
 /// A protocol that allows routing capabilities over FIDL.
 #[async_trait]
 pub trait RoutingProtocol {
@@ -439,94 +308,6 @@ pub trait RoutingProtocol {
     ) -> Result<(), fidl::Error> {
         if let Some(proxy) = self.protocol_proxy() {
             return proxy.set_provider(client_end).await;
-        }
-        Ok(())
-    }
-
-    /// Set an Injector for the given capability.
-    #[must_use = "futures do nothing unless you await on them!"]
-    async fn inject<I: 'static>(&self, injector: Arc<I>) -> Result<(), fidl::Error>
-    where
-        I: Injector,
-    {
-        // Create the CapabilityProvider channel
-        let (provider_client_end, mut provider_capability_stream) =
-            create_request_stream::<fsys::CapabilityProviderMarker>()
-                .expect("Could not create request stream for CapabilityProvider");
-
-        // Wait for an Open request on the CapabilityProvider channel
-        fasync::Task::spawn(async move {
-            if let Some(Ok(fsys::CapabilityProviderRequest::Open { server_end, responder })) =
-                provider_capability_stream.next().await
-            {
-                // Unblock component manager from the open request
-                responder.send().expect("Could not respond to CapabilityProvider::Open");
-
-                // Create the stream for the Client <---> Interposer connection
-                let stream = ServerEnd::<I::Marker>::new(server_end)
-                    .into_stream()
-                    .expect("could not convert channel into stream");
-
-                injector.serve(stream).await.expect("Injection failed");
-            } else {
-                panic!(
-                    "Failed to inject capability! CapabilityProvider was not able to invoke Open"
-                );
-            }
-        })
-        .detach();
-
-        // Send the client end of the CapabilityProvider protocol
-        if let Some(protocol_proxy) = self.protocol_proxy() {
-            return protocol_proxy.set_provider(provider_client_end).await;
-        }
-        Ok(())
-    }
-
-    /// Set an Interposer for the given capability.
-    #[must_use = "futures do nothing unless you await on them!"]
-    async fn interpose<I: 'static>(&self, interposer: Arc<I>) -> Result<(), fidl::Error>
-    where
-        I: Interposer,
-    {
-        // Create the Interposer <---> Server channel
-        let (client_end, server_end) = Channel::create().expect("could not create channel");
-
-        // Create the CapabilityProvider channel
-        let (provider_client_end, mut provider_capability_stream) =
-            create_request_stream::<fsys::CapabilityProviderMarker>()
-                .expect("Could not create request stream for CapabilityProvider");
-
-        // Wait for an Open request on the CapabilityProvider channel
-        fasync::Task::spawn(async move {
-            if let Some(Ok(fsys::CapabilityProviderRequest::Open { server_end, responder })) =
-                provider_capability_stream.next().await
-            {
-                // Unblock component manager from the open request
-                responder.send().expect("Could not respond to CapabilityProvider::Open");
-
-                // Create the proxy for the Interposer <---> Server connection
-                let proxy = ClientEnd::<I::Marker>::new(client_end)
-                    .into_proxy()
-                    .expect("could not convert into proxy");
-
-                // Create the stream for the Client <---> Interposer connection
-                let stream = ServerEnd::<I::Marker>::new(server_end)
-                    .into_stream()
-                    .expect("could not convert channel into stream");
-
-                // Start interposing!
-                interposer.interpose(stream, proxy).await.expect("Interposition failed");
-            } else {
-                panic!("Failed to interpose! CapabilityProvider was not able to invoke Open");
-            }
-        })
-        .detach();
-
-        // Replace the existing provider and open it with the
-        // server end of the Interposer <---> Server channel.
-        if let Some(protocol_proxy) = self.protocol_proxy() {
-            return protocol_proxy.replace_and_open(provider_client_end, server_end).await;
         }
         Ok(())
     }

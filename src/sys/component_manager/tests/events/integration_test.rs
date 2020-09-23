@@ -8,7 +8,11 @@ use {
     echo_interposer::EchoInterposer,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::StreamExt,
-    test_utils_lib::{echo_capability::EchoCapability, events::*, opaque_test::*},
+    test_utils_lib::{
+        echo_capability::EchoCapability, events::*, injectors::*, interposers::ProtocolInterposer,
+        opaque_test::*,
+    },
+    vfs::{file::pcb::asynchronous::read_only_static, pseudo_directory},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -22,7 +26,7 @@ async fn async_event_source_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -36,7 +40,6 @@ async fn async_event_source_test() {
         vec!["Started", "Started", "Started", "Destroyed", "Destroyed", "Destroyed"],
         events
     );
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -51,7 +54,7 @@ async fn echo_interposer_test() {
 
     // Setup the interposer
     let (echo_interposer, mut rx) = EchoInterposer::new();
-    let interposer = event_source.install_interposer(echo_interposer).await.unwrap();
+    let interposer = echo_interposer.interpose(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -75,10 +78,7 @@ async fn scoped_events_test() {
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source
-        .install_injector(capability, Some(EventMatcher::new().expect_moniker("./echo_reporter:0")))
-        .await
-        .unwrap();
+    capability.inject(&event_source, EventMatcher::new().expect_moniker("./echo_reporter:0")).await;
 
     event_source.start_component_tree().await;
 
@@ -110,8 +110,6 @@ async fn scoped_events_test() {
         )
     );
     events_echo.resume();
-
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -127,13 +125,9 @@ async fn realm_offered_event_source_test() {
     // Inject echo capability for `root/nested_realm/reporter` so that we can observe its messages
     // here.
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source
-        .install_injector(
-            capability,
-            Some(EventMatcher::new().expect_moniker("./nested_realm:0/reporter:0")),
-        )
-        .await
-        .unwrap();
+    capability
+        .inject(&event_source, EventMatcher::new().expect_moniker("./nested_realm:0/reporter:0"))
+        .await;
     event_source.start_component_tree().await;
 
     // Verify that the `reporter` sees `Started` for the three components started under the
@@ -143,8 +137,6 @@ async fn realm_offered_event_source_test() {
         assert_eq!(events_echo.message, format!("./child_{}:0", child));
         events_echo.resume();
     }
-
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -158,7 +150,7 @@ async fn nested_event_source_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -171,7 +163,6 @@ async fn nested_event_source_test() {
     }
     children.sort_unstable();
     assert_eq!(vec!["./child_a:0", "./child_b:0", "./child_c:0"], children);
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -185,7 +176,7 @@ async fn chained_interposer_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoFactoryInterposer::new();
-    let injector = event_source.install_interposer(capability).await.unwrap();
+    capability.interpose(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -196,7 +187,6 @@ async fn chained_interposer_test() {
     }
     messages.sort_unstable();
     assert_eq!(vec!["Interposed: a", "Interposed: b", "Interposed: c"], messages);
-    injector.abort();
 }
 
 async fn expect_and_get_timestamp<T: Event>(
@@ -250,7 +240,7 @@ async fn event_capability_ready() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -269,7 +259,6 @@ async fn event_capability_ready() {
         ],
         messages
     );
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -283,13 +272,12 @@ async fn resolved_error_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
     let message = echo_rx.next().await.map(|m| m.message).unwrap();
     assert_eq!("ERROR", message);
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -303,7 +291,7 @@ async fn synthesis_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
     let mut events = vec![];
@@ -325,7 +313,6 @@ async fn synthesis_test() {
         ],
         events
     );
-    injector.abort();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -339,7 +326,7 @@ async fn static_event_stream_capability_requested_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability, None).await.unwrap();
+    capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -349,6 +336,47 @@ async fn static_event_stream_capability_requested_test() {
     let start_trigger_echo = echo_rx.next().await.unwrap();
     assert_eq!(start_trigger_echo.message, "Start trigger");
     start_trigger_echo.resume();
+}
 
-    injector.abort();
+#[fasync::run_singlethreaded(test)]
+async fn dir_capability_routed_test() {
+    let test = OpaqueTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/file_contents_reporter.cm",
+    )
+    .await
+    .unwrap();
+
+    let event_source = test.connect_to_event_source().await.unwrap();
+
+    // Setup the Echo service
+    let (capability, mut echo_rx) = EchoCapability::new();
+    capability.inject(&event_source, EventMatcher::new()).await;
+
+    // Setup the pseudo filesystem
+    let pseudo_dir = pseudo_directory! {
+        "bar" => pseudo_directory! {
+            "baz" => read_only_static(b"Hello World!")
+        }
+    };
+    DirectoryInjector::new(pseudo_dir)
+        .inject(&event_source, EventMatcher::new().expect_capability_id("/foo"))
+        .await;
+
+    // Connect the v2 component to a directory in the test namespace
+    TestNamespaceInjector::new("/pkg")
+        .inject(&event_source, EventMatcher::new().expect_capability_id("/test_pkg"))
+        .await;
+
+    // Start the component tree
+    event_source.start_component_tree().await;
+
+    // Wait for the reporter to return the contents of /foo/bar/baz
+    let echo = echo_rx.next().await.unwrap();
+    assert_eq!(echo.message, "Hello World!");
+    echo.resume();
+
+    // Wait for the reporter to return the contents of /test_pkg/meta/package
+    let echo = echo_rx.next().await.unwrap();
+    assert!(echo.message.contains("events_integration_test"));
+    echo.resume();
 }

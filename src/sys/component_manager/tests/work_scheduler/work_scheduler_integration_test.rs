@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    test_utils_lib::{events::*, opaque_test::*},
+    test_utils_lib::{events::*, injectors::*, opaque_test::*},
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 
@@ -17,7 +17,7 @@ async fn basic_work_scheduler_test() {
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await.unwrap();
+    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -39,7 +39,7 @@ async fn unbound_work_scheduler_test() {
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await.unwrap();
+    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 

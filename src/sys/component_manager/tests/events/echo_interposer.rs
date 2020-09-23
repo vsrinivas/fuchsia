@@ -8,7 +8,7 @@ use {
     fidl_fidl_examples_routing_echo as fecho,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::events::Interposer,
+    test_utils_lib::interposers::ProtocolInterposer,
 };
 
 /// Client <---> EchoInterposer <---> Echo service
@@ -28,13 +28,13 @@ impl EchoInterposer {
 }
 
 #[async_trait]
-impl Interposer for EchoInterposer {
+impl ProtocolInterposer for EchoInterposer {
     type Marker = fecho::EchoMarker;
 
-    async fn interpose(
+    async fn serve(
         self: Arc<Self>,
         mut from_client: fecho::EchoRequestStream,
-        to_service: fecho::EchoProxy,
+        to_server: fecho::EchoProxy,
     ) -> Result<(), Error> {
         // Start listening to requests from client
         while let Some(Ok(fecho::EchoRequest::EchoString { value: Some(input), responder })) =
@@ -44,7 +44,7 @@ impl Interposer for EchoInterposer {
             let modified_input = format!("Interposed: {}", input);
 
             // Forward the request to the service and get a response
-            let out = to_service
+            let out = to_server
                 .echo_string(Some(&modified_input))
                 .await?
                 .expect("echo_string got empty result");

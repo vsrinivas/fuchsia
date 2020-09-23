@@ -322,14 +322,15 @@ impl ExternalCapabilityProvider {
 impl CapabilityProvider for ExternalCapabilityProvider {
     async fn open(
         self: Box<Self>,
-        _flags: u32,
-        _open_mode: u32,
-        _relative_path: PathBuf,
+        flags: u32,
+        open_mode: u32,
+        relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
+        let path_str = relative_path.to_str().expect("Relative path must be valid unicode");
         self.proxy
-            .open(server_end)
+            .open(server_end, flags, open_mode, path_str)
             .await
             .expect("failed to invoke CapabilityProvider::Open over FIDL");
         Ok(())

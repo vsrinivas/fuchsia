@@ -11,7 +11,7 @@ use {
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::{path::PathBuf, sync::Arc, sync::Mutex},
-    test_utils_lib::{events::*, opaque_test::*},
+    test_utils_lib::{events::*, injectors::*, opaque_test::*},
 };
 
 lazy_static! {
@@ -87,7 +87,7 @@ async fn storage_from_collection() {
     // rendezvous so the test can inspect storage before the child is
     // destroyed.
     let trigger_capability = TriggerCapability::new(trigger_lock.clone());
-    event_source.install_injector(trigger_capability, None).await.unwrap();
+    trigger_capability.inject(&event_source, EventMatcher::new()).await;
 
     event_source.start_component_tree().await;
 
@@ -146,7 +146,7 @@ impl TriggerCapability {
 }
 
 #[async_trait]
-impl Injector for TriggerCapability {
+impl ProtocolInjector for TriggerCapability {
     type Marker = ftest::TriggerMarker;
 
     async fn serve(

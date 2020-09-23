@@ -1,0 +1,20 @@
+{
+    program: {
+        binary: "bin/file_contents_reporter",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            directory: "/foo",
+            rights: [ "r*" ],
+        },
+        {
+            directory: "/test_pkg",
+            rights: [ "r*" ],
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "framework",
+        },
+    ],
+}

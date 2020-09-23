@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::events::Interposer,
+    test_utils_lib::interposers::ProtocolInterposer,
 };
 
 /// Client <---> EchoFactoryInterposer <---> EchoFactory service
@@ -30,10 +30,10 @@ impl EchoFactoryInterposer {
 }
 
 #[async_trait]
-impl Interposer for EchoFactoryInterposer {
+impl ProtocolInterposer for EchoFactoryInterposer {
     type Marker = fechofactory::EchoFactoryMarker;
 
-    async fn interpose(
+    async fn serve(
         self: Arc<Self>,
         mut from_client: fechofactory::EchoFactoryRequestStream,
         to_service: fechofactory::EchoFactoryProxy,
@@ -48,7 +48,7 @@ impl Interposer for EchoFactoryInterposer {
 
             // Create the Interposer <---> Server channel
             let (proxy_to_service, service_server_end) =
-                fidl::endpoints::create_proxy::<<EchoInterposer as Interposer>::Marker>()?;
+                fidl::endpoints::create_proxy::<<EchoInterposer as ProtocolInterposer>::Marker>()?;
 
             // Forward the request to the service and get a response
             to_service.request_echo_protocol(service_server_end).await?;
@@ -56,7 +56,7 @@ impl Interposer for EchoFactoryInterposer {
             fasync::Task::spawn(async move {
                 let stream = server_end.into_stream().expect("could not convert into stream");
                 interposer
-                    .interpose(stream, proxy_to_service)
+                    .serve(stream, proxy_to_service)
                     .await
                     .expect("failed to interpose echo protocol");
             })

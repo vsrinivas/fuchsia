@@ -54,6 +54,8 @@ rustc_test("events_integration_test_bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
@@ -76,6 +78,7 @@ test_package("events_integration_test") {
     "components:echo_client_for_events_bin",
     "components:echo_reporter_bin",
     "components:echo_server_for_events_bin",
+    "components:file_contents_reporter_bin",
     "components:interpose_echo_looper_bin",
     "components:nested_reporter_bin",
     "components:realm_offered_bin",
@@ -183,6 +186,10 @@ test_package("events_integration_test") {
           rebase_path("components/static_event_stream/meta/trigger_server.cml")
       dest = "static_event_stream_trigger_server.cm"
     },
+    {
+      path = rebase_path("components/dir_capability_routed/meta/reporter.cml")
+      dest = "file_contents_reporter.cm"
+    },
   ]
 
   binaries = [
@@ -200,6 +207,9 @@ test_package("events_integration_test") {
     },
     {
       name = "chained_interpose_echo_factory"
+    },
+    {
+      name = "file_contents_reporter"
     },
     {
       name = "scoped_echo_server"

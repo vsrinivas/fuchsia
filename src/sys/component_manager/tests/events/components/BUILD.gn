@@ -321,3 +321,17 @@ rustc_binary("synthesis_reporter_bin") {
 
   sources = [ "synthesis/reporter.rs" ]
 }
+
+rustc_binary("file_contents_reporter_bin") {
+  name = "file_contents_reporter"
+  edition = "2018"
+  source_root = "dir_capability_routed/reporter.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "dir_capability_routed/reporter.rs" ]
+}

@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_test_workscheduler as fws,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::events::Injector,
+    test_utils_lib::injectors::ProtocolInjector,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -39,7 +39,7 @@ impl WorkSchedulerDispatchReporter {
 }
 
 #[async_trait]
-impl Injector for WorkSchedulerDispatchReporter {
+impl ProtocolInjector for WorkSchedulerDispatchReporter {
     type Marker = fws::WorkSchedulerDispatchReporterMarker;
 
     async fn serve(

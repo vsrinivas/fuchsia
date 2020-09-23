@@ -10,8 +10,9 @@ use {
     fuchsia_syslog::{self as fxlog, fx_log_info},
     futures_util::stream::TryStreamExt,
     std::sync::{Arc, Mutex},
-    test_utils_lib::events::{
-        self as events, Event, EventMatcher, EventSource, Injector, Ordering,
+    test_utils_lib::{
+        events::{self as events, Event, EventMatcher, EventSource, Ordering},
+        injectors::*,
     },
 };
 
@@ -50,7 +51,7 @@ async fn test_exit_after_rendezvous() {
     // component tree.
     let event_source = EventSource::new_sync().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
-    event_source.install_injector(rendezvous_service.clone(), None).await.unwrap();
+    rendezvous_service.inject(&event_source, EventMatcher::new()).await;
     let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
     event_source.start_component_tree().await;
 
@@ -81,7 +82,7 @@ struct RendezvousService {
 }
 
 #[async_trait]
-impl Injector for RendezvousService {
+impl ProtocolInjector for RendezvousService {
     type Marker = test_protocol::TriggerMarker;
 
     async fn serve(

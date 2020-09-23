@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::Injector,
+    crate::injectors::ProtocolInjector,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fidl_examples_routing_echo as fecho,
@@ -77,7 +77,7 @@ impl EchoCapability {
 }
 
 #[async_trait]
-impl Injector for EchoCapability {
+impl ProtocolInjector for EchoCapability {
     type Marker = fecho::EchoMarker;
 
     async fn serve(

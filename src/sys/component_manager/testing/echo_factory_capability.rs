@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{echo_capability::EchoCapability, events::Injector},
+    crate::{echo_capability::EchoCapability, injectors::ProtocolInjector},
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
@@ -29,7 +29,7 @@ impl EchoFactoryCapability {
 }
 
 #[async_trait]
-impl Injector for EchoFactoryCapability {
+impl ProtocolInjector for EchoFactoryCapability {
     type Marker = fechofactory::EchoFactoryMarker;
 
     async fn serve(

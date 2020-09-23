@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::Injector,
+    crate::injectors::ProtocolInjector,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
@@ -83,7 +83,7 @@ impl TriggerCapability {
 }
 
 #[async_trait]
-impl Injector for TriggerCapability {
+impl ProtocolInjector for TriggerCapability {
     type Marker = ftest::TriggerMarker;
 
     async fn serve(

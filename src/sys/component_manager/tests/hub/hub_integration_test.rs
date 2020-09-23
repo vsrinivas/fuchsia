@@ -11,7 +11,7 @@ use {
     hub_report_capability::*,
     io_util::*,
     std::{path::PathBuf, sync::Arc},
-    test_utils_lib::{events::*, opaque_test::*},
+    test_utils_lib::{events::*, injectors::*, opaque_test::*},
 };
 
 pub struct TestRunner {
@@ -51,7 +51,7 @@ impl TestRunner {
             let event_stream = event_source.subscribe(event_names).await.unwrap();
 
             // Inject HubReportCapability wherever it's requested.
-            event_source.install_injector(hub_report_capability.clone(), None).await.unwrap();
+            hub_report_capability.inject(&event_source, EventMatcher::new()).await;
 
             // Unblock component manager
             event_source.start_component_tree().await;
