@@ -263,6 +263,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 TEST_F(DriverRunnerTest, StartRootDriver) {
   auto driver_index = CreateDriverIndex();
   DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
@@ -281,6 +282,7 @@ TEST_F(DriverRunnerTest, StartRootDriver) {
 TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild) {
   auto driver_index = CreateDriverIndex();
   DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
@@ -304,6 +306,39 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild) {
   Unbind();
 }
 
+// Start the root driver, add a child node, then remove it.
+TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
+  auto driver_index = CreateDriverIndex();
+  DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
+  fdf::NodeControllerPtr node_controller;
+  fdf::NodePtr second_node;
+  driver_host().SetStartHandler([this, &node_controller, &second_node](
+                                    fdf::DriverStartArgs start_args, auto driver) {
+    auto& entries = start_args.program().entries();
+    EXPECT_EQ(2u, entries.size());
+    EXPECT_EQ("binary", entries[0].key);
+    EXPECT_EQ("driver/root-driver.so", entries[0].value->str());
+    EXPECT_EQ("colocate", entries[1].key);
+    EXPECT_EQ("false", entries[1].value->str());
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("second");
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()),
+                        second_node.NewRequest(loop().dispatcher()));
+  });
+  zx::channel root_driver_controller;
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+
+  node_controller->Remove();
+  loop().RunUntilIdle();
+  ASSERT_FALSE(second_node.is_bound());
+
+  Unbind();
+}
+
 // Start an unknown driver.
 TEST_F(DriverRunnerTest, StartRootDriver_UnknownDriver) {
   auto driver_index = CreateDriverIndex();
@@ -315,6 +350,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_UnknownDriver) {
 TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
   auto driver_index = CreateDriverIndex();
   DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
@@ -367,6 +403,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
 TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
   auto driver_index = CreateDriverIndex();
   DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
@@ -419,6 +456,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
 TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
   auto driver_index = CreateDriverIndex();
   DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());

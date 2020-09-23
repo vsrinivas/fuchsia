@@ -61,6 +61,8 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
 
   DriverHostComponent* parent_driver_host() const;
   void set_driver_host(DriverHostComponent* driver_host);
+  void set_controller_binding(
+      fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::NodeController> controller_binding);
   void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node> binding);
 
   void Remove();
@@ -78,6 +80,8 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
 
   DriverHostComponent* driver_host_ = nullptr;
   fbl::DoublyLinkedList<std::unique_ptr<Node>> children_;
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::NodeController>>
+      controller_binding_;
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node>> binding_;
 };
 

@@ -82,6 +82,9 @@ Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispat
     : parent_(parent), driver_binder_(driver_binder), dispatcher_(dispatcher) {}
 
 Node::~Node() {
+  if (controller_binding_.has_value()) {
+    controller_binding_->Unbind();
+  }
   if (binding_.has_value()) {
     binding_->Unbind();
   }
@@ -90,6 +93,10 @@ Node::~Node() {
 DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_host_; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
+
+void Node::set_controller_binding(fidl::ServerBindingRef<fdf::NodeController> controller_binding) {
+  controller_binding_ = std::make_optional(std::move(controller_binding));
+}
 
 void Node::set_binding(fidl::ServerBindingRef<fdf::Node> binding) {
   binding_ = std::make_optional(std::move(binding));
@@ -101,7 +108,18 @@ void Node::Remove() {
   }
 }
 
-void Node::Remove(RemoveCompleter::Sync completer) { Remove(); }
+void Node::Remove(RemoveCompleter::Sync completer) {
+  // When NodeController::Remove() is called, we unbind the Node. This causes
+  // the Node binding to then call Node::Remove().
+  //
+  // We take this approach to avoid a use-after-free, where calling
+  // Node::Remove() directly would then cause the the Node binding to do the
+  // same, after the Node has already been freed.
+  if (binding_.has_value()) {
+    binding_->Unbind();
+    binding_.reset();
+  }
+}
 
 void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel node,
                     AddChildCompleter::Sync completer) {
@@ -115,6 +133,7 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
     completer.Close(bind_controller.error());
     return;
   }
+  child->set_controller_binding(bind_controller.take_value());
 
   if (node.is_valid()) {
     auto bind_node = fidl::BindServer<fdf::Node::Interface>(
