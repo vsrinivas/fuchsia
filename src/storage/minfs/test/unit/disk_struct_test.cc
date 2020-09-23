@@ -42,7 +42,6 @@ TEST(InspectorDiskStruct, GetSuperblockString) {
 	integrity_start_block: 0
 	dat_block: 0
 	slice_size: 0
-	vslice_count: 0
 	ibm_slices: 0
 	abm_slices: 0
 	ino_slices: 0

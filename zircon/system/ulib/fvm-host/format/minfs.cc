@@ -117,8 +117,6 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   fvm_info_.dat_slices =
       safemath::checked_cast<uint32_t>((dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
 
-  fvm_info_.vslice_count = CalculateVsliceCount(fvm_info_);
-
   xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
           kBlocksPerSlice);
   xprintf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
@@ -140,7 +138,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
 
   reserve->set_data_reserved(fvm_info_.dat_slices * fvm_info_.slice_size);
   reserve->set_inodes_reserved(fvm_info_.inode_count);
-  reserve->set_total_bytes_reserved(fvm_info_.vslice_count * kBlocksPerSlice *
+  reserve->set_total_bytes_reserved(CalculateVsliceCount(fvm_info_) * kBlocksPerSlice *
                                     minfs::kMinfsBlockSize);
   if (!reserve->Approved()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -225,7 +223,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
 
 zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {
   CheckFvmReady();
-  *slices_out = safemath::checked_cast<uint32_t>(fvm_info_.vslice_count);
+  *slices_out = safemath::checked_cast<uint32_t>(CalculateVsliceCount(fvm_info_));
   return ZX_OK;
 }
 

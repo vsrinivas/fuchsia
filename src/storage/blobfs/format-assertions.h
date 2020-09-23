@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
-#define ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
+#ifndef SRC_STORAGE_BLOBFS_FORMAT_ASSERTIONS_H_
+#define SRC_STORAGE_BLOBFS_FORMAT_ASSERTIONS_H_
 
 #include <cstddef>
 
@@ -31,7 +31,7 @@ static_assert(offsetof(Superblock, alloc_block_count) ==                0x38);
 static_assert(offsetof(Superblock, alloc_inode_count) ==                0x40);
 static_assert(offsetof(Superblock, reserved2) ==                        0x48);
 static_assert(offsetof(Superblock, slice_size) ==                       0x50);
-static_assert(offsetof(Superblock, vslice_count) ==                     0x58);
+static_assert(offsetof(Superblock, deprecated1) ==                      0x58);
 static_assert(offsetof(Superblock, abm_slices) ==                       0x60);
 static_assert(offsetof(Superblock, ino_slices) ==                       0x64);
 static_assert(offsetof(Superblock, dat_slices) ==                       0x68);
@@ -49,8 +49,8 @@ static_assert(PADDING_LENGTH(Superblock, inode_count,            alloc_block_cou
 static_assert(PADDING_LENGTH(Superblock, alloc_block_count,      alloc_inode_count) ==      0);
 static_assert(PADDING_LENGTH(Superblock, alloc_inode_count,      reserved2) ==              0);
 static_assert(PADDING_LENGTH(Superblock, reserved2,              slice_size) ==             0);
-static_assert(PADDING_LENGTH(Superblock, slice_size,             vslice_count) ==           0);
-static_assert(PADDING_LENGTH(Superblock, vslice_count,           abm_slices) ==             0);
+static_assert(PADDING_LENGTH(Superblock, slice_size,             deprecated1) ==            0);
+static_assert(PADDING_LENGTH(Superblock, deprecated1,            abm_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, abm_slices,             ino_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, ino_slices,             dat_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, dat_slices,             journal_slices) ==         0);
@@ -115,4 +115,4 @@ static_assert(sizeof(ExtentContainer) ==
 
 }  // namespace blobfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
+#endif  // SRC_STORAGE_BLOBFS_FORMAT_ASSERTIONS_H_

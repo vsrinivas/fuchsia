@@ -612,7 +612,6 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
     return ZX_ERR_NO_SPACE;
   }
 
-  info_.vslice_count += length;
   info_.ino_slices += static_cast<uint32_t>(length);
   info_.inode_count = inodes;
 
@@ -680,7 +679,6 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   // of kBlobfsBlockSize.
   block_map->Shrink(blocks);
 
-  info_.vslice_count += length;
   info_.dat_slices += static_cast<uint32_t>(length);
   info_.data_block_count = blocks;
 

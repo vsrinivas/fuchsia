@@ -58,8 +58,6 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "\n"
           "info.slice_size: %" PRIu64
           "\n"
-          "info.vslice_count: %" PRIu64
-          "\n"
           "info.abm_slices: %" PRIu32
           "\n"
           "info.ino_slices: %" PRIu32
@@ -69,8 +67,8 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "info.journal_slices: %" PRIu32 "\n",
           info.magic0, info.magic1, info.version, info.flags, info.block_size,
           info.data_block_count, info.journal_block_count, info.inode_count, info.alloc_block_count,
-          info.alloc_inode_count, info.slice_size, info.vslice_count, info.abm_slices,
-          info.ino_slices, info.dat_slices, info.journal_slices);
+          info.alloc_inode_count, info.slice_size, info.abm_slices, info.ino_slices,
+          info.dat_slices, info.journal_slices);
 }
 
 }  // namespace
@@ -193,6 +191,14 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     }
   }
   return ZX_OK;
+}
+
+uint32_t CalculateVsliceCount(const Superblock& superblock) {
+  // Account for an additional slice for the superblock itself.
+  return safemath::checked_cast<uint32_t>(1 + static_cast<uint64_t>(superblock.abm_slices) +
+                                          static_cast<uint64_t>(superblock.ino_slices) +
+                                          static_cast<uint64_t>(superblock.dat_slices) +
+                                          static_cast<uint64_t>(superblock.journal_slices));
 }
 
 uint32_t BlocksRequiredForInode(uint64_t inode_count) {

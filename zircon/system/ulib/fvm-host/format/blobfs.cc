@@ -5,8 +5,9 @@
 #include <inttypes.h>
 
 #include <limits>
-#include <safemath/checked_math.h>
 #include <utility>
+
+#include <safemath/checked_math.h>
 
 #include "fvm-host/format.h"
 
@@ -59,8 +60,6 @@ zx_status_t BlobfsFormat::ComputeSlices(uint64_t inode_count, uint64_t data_bloc
   fvm_info_.ino_slices = BlocksToSlices(ino_blocks);
   fvm_info_.journal_slices = BlocksToSlices(ToU32(journal_block_count));
   fvm_info_.dat_slices = BlocksToSlices(safemath::checked_cast<uint32_t>(data_blocks));
-  fvm_info_.vslice_count = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices + fvm_info_.dat_slices +
-                           fvm_info_.journal_slices;
 
   fvm_info_.inode_count = safemath::checked_cast<uint32_t>(
       fvm_info_.ino_slices * fvm_info_.slice_size / blobfs::kBlobfsInodeSize);
@@ -117,11 +116,12 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
 
   // Lets see if we can increase journal size now
   uint64_t slice_limit = reserve->total_bytes().request.value_or(0) / slice_size;
-  if (slice_limit > fvm_info_.vslice_count) {
+  uint32_t vslice_count = blobfs::CalculateVsliceCount(fvm_info_);
+  if (slice_limit > vslice_count) {
     // TODO(auradkar): This should use TransactionLimits
     uint64_t journal_block_count = blobfs::SuggestJournalBlocks(
         ToU32(JournalBlocks(fvm_info_)),
-        ToU32((slice_limit - fvm_info_.vslice_count) * slice_size / BlockSize()));
+        ToU32((slice_limit - vslice_count) * slice_size / BlockSize()));
     // Above, we might have changed number of blocks allocated to the journal. This
     // might affect the number of allocated/reserved slices. Call ComputeSlices
     // again to adjust the count.
@@ -133,7 +133,7 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
 
   reserve->set_data_reserved(fvm_info_.data_block_count * BlockSize());
   reserve->set_inodes_reserved(fvm_info_.inode_count);
-  reserve->set_total_bytes_reserved(SlicesToBlocks(ToU32(fvm_info_.vslice_count)) * BlockSize());
+  reserve->set_total_bytes_reserved(SlicesToBlocks(vslice_count) * BlockSize());
   if (!reserve->Approved()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }

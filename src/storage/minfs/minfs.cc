@@ -231,9 +231,6 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
   }
   info->dat_slices = options.fvm_data_slices;
 
-  // update vslice_count after allocating all the slices, accounting for an additional
-  // slice needed for superblock.
-  info->vslice_count = CalculateVsliceCount(*info);
   return ZX_OK;
 }
 #endif
@@ -372,7 +369,6 @@ void DumpInfo(const Superblock& info) {
   FS_TRACE_DEBUG("minfs: generation count:  %10u\n", info.generation_count);
   FS_TRACE_DEBUG("minfs: oldest_revision:  %10u\n", info.oldest_revision);
   FS_TRACE_DEBUG("minfs: slice_size: %u\n", info.slice_size);
-  FS_TRACE_DEBUG("minfs: vslice_count: %u\n", info.vslice_count);
   FS_TRACE_DEBUG("minfs: ibm_slices: %u\n", info.ibm_slices);
   FS_TRACE_DEBUG("minfs: abm_slices: %u\n", info.abm_slices);
   FS_TRACE_DEBUG("minfs: ino_slices: %u\n", info.ino_slices);
@@ -394,10 +390,13 @@ void UpdateChecksum(Superblock* info) {
   info->checksum = crc32(0, reinterpret_cast<uint8_t*>(info), sizeof(*info));
 }
 
-uint32_t CalculateVsliceCount(const Superblock& info) {
+uint32_t CalculateVsliceCount(const Superblock& superblock) {
   // Account for an additional slice for the superblock itself.
-  return (1 + info.ibm_slices + info.abm_slices + info.ino_slices + info.integrity_slices +
-          info.dat_slices);
+  return safemath::checked_cast<uint32_t>(1ull + static_cast<uint64_t>(superblock.ibm_slices) +
+                                          static_cast<uint64_t>(superblock.abm_slices) +
+                                          static_cast<uint64_t>(superblock.ino_slices) +
+                                          static_cast<uint64_t>(superblock.integrity_slices) +
+                                          static_cast<uint64_t>(superblock.dat_slices));
 }
 
 #ifdef __Fuchsia__

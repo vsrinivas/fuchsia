@@ -109,7 +109,7 @@ struct __PACKED Superblock {
 
   // The following fields are only valid with (flags & kBlobFlagFVM):
   uint64_t slice_size;      // Underlying slice size.
-  uint64_t vslice_count;    // Number of underlying slices.
+  uint64_t deprecated1;     // Unused but not necessarily 0 (saved total vslices in old vers.).
   uint32_t abm_slices;      // Slices allocated to block bitmap.
   uint32_t ino_slices;      // Slices allocated to node map.
   uint32_t dat_slices;      // Slices allocated to file data section.

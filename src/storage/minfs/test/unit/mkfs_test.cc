@@ -61,27 +61,5 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   }
 }
 
-const uint64_t kSliceSize = kMinfsBlockSize * 8;
-const uint64_t kSliceCount = 1028;
-
-TEST(FormatFVMFilesystemTest, FVMIncorrectVsliceCount) {
-  auto device =
-      std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  std::unique_ptr<Bcache> bcache;
-
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
-
-  Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
-
-  // Expect FVM flag to be set correctly.
-  EXPECT_EQ(sb.flags & kMinfsFlagFVM, kMinfsFlagFVM);
-
-  // Expect vslice_count to be aggregate of the slice counts + superblock slice.
-  uint32_t expected_vslice_count = CalculateVsliceCount(sb);
-  EXPECT_EQ(expected_vslice_count, sb.vslice_count);
-}
-
 }  // namespace
 }  // namespace minfs

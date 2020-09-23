@@ -114,7 +114,7 @@ struct Superblock {
 
   // The following fields are only valid with (flags & kMinfsFlagFVM):
   uint32_t slice_size;        // Underlying slice size.
-  uint32_t vslice_count;      // Number of allocated underlying slices.
+  uint32_t deprecated1;       // Unused but not necessarily 0 (saved total vslices in old vers.).
   uint32_t ibm_slices;        // Slices allocated to inode bitmap.
   uint32_t abm_slices;        // Slices allocated to block bitmap.
   uint32_t ino_slices;        // Slices allocated to inode table.

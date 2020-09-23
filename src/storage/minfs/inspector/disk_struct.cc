@@ -35,7 +35,6 @@ std::unique_ptr<disk_inspector::DiskStruct> GetSuperblockStruct() {
   ADD_FIELD(object, Superblock, integrity_start_block);
   ADD_FIELD(object, Superblock, dat_block);
   ADD_FIELD(object, Superblock, slice_size);
-  ADD_FIELD(object, Superblock, vslice_count);
   ADD_FIELD(object, Superblock, ibm_slices);
   ADD_FIELD(object, Superblock, abm_slices);
   ADD_FIELD(object, Superblock, ino_slices);

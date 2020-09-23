@@ -91,9 +91,6 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
     return status;
   }
 
-  superblock->vslice_count = superblock->abm_slices + superblock->ino_slices +
-                             superblock->dat_slices + superblock->journal_slices + 1;
-
   superblock->inode_count =
       static_cast<uint32_t>(superblock->ino_slices * superblock->slice_size / kBlobfsInodeSize);
 

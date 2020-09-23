@@ -38,6 +38,9 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 // Validates the metadata of a blobfs superblock, given a disk with |max| blocks.
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max);
 
+// Returns the total number of vslices needed for the given partition.
+uint32_t CalculateVsliceCount(const Superblock& info);
+
 // Returns number of blocks required for inode_count inodes
 uint32_t BlocksRequiredForInode(uint64_t inode_count);
 

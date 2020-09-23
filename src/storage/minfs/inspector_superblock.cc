@@ -85,46 +85,42 @@ std::unique_ptr<disk_inspector::DiskObject> SuperBlockObject::GetElementAt(uint3
       return CreateUint32DiskObj("slice_size", &(sb_.slice_size));
     }
     case 17: {
-      // uint32_t vslice_count.
-      return CreateUint32DiskObj("vslice_count", &(sb_.vslice_count));
-    }
-    case 18: {
       // uint32_t ibm_slices.
       return CreateUint32DiskObj("ibm_slices", &(sb_.ibm_slices));
     }
-    case 19: {
+    case 18: {
       // uint32_t abm_slices.
       return CreateUint32DiskObj("abm_slices", &(sb_.abm_slices));
     }
-    case 20: {
+    case 19: {
       // uint32_t ino_slices.
       return CreateUint32DiskObj("ino_slices", &(sb_.ino_slices));
     }
-    case 21: {
+    case 20: {
       // uint32_t integrity_slices.
       return CreateUint32DiskObj("integrity_slices", &(sb_.integrity_slices));
     }
-    case 22: {
+    case 21: {
       // uint32_t dat_slices.
       return CreateUint32DiskObj("dat_slices", &(sb_.dat_slices));
     }
-    case 23: {
+    case 22: {
       // uint32_t/ino_t unlinked_head.
       return CreateUint32DiskObj("unlinked_head", &(sb_.unlinked_head));
     }
-    case 24: {
+    case 23: {
       // uint32_t/ino_t unlinked_tail.
       return CreateUint32DiskObj("unlinked_tail", &(sb_.unlinked_tail));
     }
-    case 25: {
+    case 24: {
       //  uint32_t checksum.
       return CreateUint32DiskObj("checksum", &(sb_.checksum));
     }
-    case 26: {
+    case 25: {
       //  uint32_t generation_count.
       return CreateUint32DiskObj("generation_count", &(sb_.generation_count));
     }
-    case 27: {
+    case 26: {
       // uint32_t reserved[].
       return CreateUint32ArrayDiskObj("reserved", sb_.reserved, 1);
     }
