@@ -273,6 +273,10 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
     if (unlikely(envelope->num_handles > 0)) {
+      if (unknown_handle_idx_ + envelope->num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
+        SetError("number of unknown handles exceeds unknown handle array size");
+        return Status::kConstraintViolationError;
+      }
       if (has_handles()) {
         memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
                envelope->num_handles * sizeof(zx_handle_t));

@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include <fidl/test/coding/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "fidl_coded_types.h"
@@ -1500,6 +1501,26 @@ TEST(Structs, decode_nested_nullable_structs) {
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_absent);
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_inline.l3_absent);
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_present->l3_absent);
+}
+
+TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
+  uint8_t bytes[] = {
+      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+
+      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
+      0,   0,   0,   0,   0,   0,   0,   0,  // alloc present
+
+      0,   0,   0,   0,   65,  0,   0,   0,    // envelope 1: num bytes / num handles
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+  };
+
+  const char* error = nullptr;
+  auto status = fidl_decode(&llcpp::fidl::test::coding::fidl_test_coding_SimpleTableTable, bytes,
+                            ArrayCount(bytes), nullptr, 0, &error);
+
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_STR_EQ(error, "number of unknown handles exceeds unknown handle array size");
 }
 
 // Most fidl_encode_etc code paths are covered by the fidl_encode tests.
