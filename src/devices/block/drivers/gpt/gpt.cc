@@ -20,12 +20,14 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <utf_conversion/utf_conversion.h>
 
 #include "ddk/driver.h"
 #include "zircon/errors.h"
@@ -36,6 +38,7 @@ namespace gpt {
 namespace {
 
 constexpr size_t kDeviceNameLength = 40;
+constexpr size_t kMaxUtf16NameLen = GPT_NAME_LEN / sizeof(char16_t);
 
 using gpt_t = gpt_header_t;
 
@@ -46,6 +49,12 @@ struct Guid {
   uint8_t data4[8];
 };
 
+template <class Facet>
+struct DeletableFacet : Facet {
+  template <class... Args>
+  DeletableFacet(Args&&... args) : Facet(std::forward<Args>(args)...) {}
+};
+
 void uint8_to_guid_string(char* dst, uint8_t* src) {
   Guid* guid = (Guid*)src;
   sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
@@ -53,13 +62,23 @@ void uint8_to_guid_string(char* dst, uint8_t* src) {
           guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
 }
 
-// TODO(http://fxb/33048): Ensure the output string of this function is always null-terminated.
-void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
-  while (charcount > 0) {
-    *dst++ = *src;
-    src += 2;  // FIXME cheesy
-    charcount -= 2;
+// Returns a null terminated UTF-8 representation of the partition name.
+[[nodiscard]] zx_status_t GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity) {
+  size_t len = capacity;
+  const uint16_t* utf16_name = reinterpret_cast<const uint16_t*>(entry.name);
+  const size_t utf16_name_len =
+      std::distance(utf16_name, std::find(utf16_name, utf16_name + kMaxUtf16NameLen, 0));
+  if (zx_status_t status =
+          utf16_to_utf8(utf16_name, utf16_name_len, reinterpret_cast<uint8_t*>(name), &len,
+                        UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);
+      status != ZX_OK) {
+    return status;
   }
+  if (len >= capacity) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  name[len] = 0;
+  return ZX_OK;
 }
 
 void apply_guid_map(const guid_map_t* guid_map, size_t entries, const char* name, uint8_t* type) {
@@ -153,12 +172,7 @@ zx_status_t PartitionDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t*
 static_assert(GPT_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Partition name length mismatch");
 
 zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
-  if (capacity < GPT_NAME_LEN) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  memset(out_name, 0, GPT_NAME_LEN);
-  utf16_to_cstring(out_name, gpt_entry_.name, GPT_NAME_LEN);
-  return ZX_OK;
+  return GetPartitionName(gpt_entry_, out_name, capacity);
 }
 
 zx_status_t PartitionDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
@@ -353,16 +367,21 @@ zx_status_t PartitionTable::Bind() {
 
     char partition_guid[GPT_GUID_STRLEN];
     uint8_to_guid_string(partition_guid, entry->guid);
-    char pname[GPT_NAME_LEN];
-    utf16_to_cstring(pname, entry->name, GPT_NAME_LEN);
 
-    apply_guid_map(guid_map_, guid_map_entries_, pname, entry->type);
+    // It's at most 3 UTF-8 code units for every UTF-16 code unit.  Code points > 0x10000 (which
+    // require 4 UTF-8 code units) get encoded as surrogate pairs in UTF-16.
+    char partition_name[kMaxUtf16NameLen * 3];
+    if ((status = GetPartitionName(*entry, partition_name, sizeof(partition_name))) != ZX_OK) {
+      zxlogf(ERROR, "gpt: bad partition name, ignoring entry");
+      continue;
+    }
+    apply_guid_map(guid_map_, guid_map_entries_, partition_name, entry->type);
 
     char type_guid[GPT_GUID_STRLEN];
     uint8_to_guid_string(type_guid, entry->type);
     zxlogf(TRACE,
            "gpt: partition=%u type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64 "\n",
-           partitions, type_guid, partition_guid, pname, entry->first, entry->last);
+           partitions, type_guid, partition_guid, partition_name, entry->first, entry->last);
 
     block_info.block_count = entry->last - entry->first + 1;
     device->SetInfo(entry, &block_info, block_op_size);

@@ -5,7 +5,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#pragma once
+#ifndef UTF_CONVERSION_UTF_CONVERSION_H_
+#define UTF_CONVERSION_UTF_CONVERSION_H_
 
 __BEGIN_CDECLS
 
@@ -54,17 +55,17 @@ __BEGIN_CDECLS
 //
 // src     : a pointer to the source string, encoded using UTF16
 // src_len : The number of code units (uint16_t) in the source to process.
-// dst     : a pointer to the buffer which will hold the null terminated result
-//           of the conversion.
+// dst     : a pointer to the buffer (not null terminated).
 // dst_len : A pointer to the length of of the destination buffer (in bytes).
 //           Afterwards, this parameter will be updated to indicate the total
-//           number of bytes it would take to hold a null terminated
-//           representation of the UTF8 string, even if there was not enough
-//           room in the destination buffer to perform a full conversion.
+//           number of bytes it would take to hold a representation of the UTF8
+//           string (excluding null terminator), even if there was not enough
+//           room in the destination buffer to perform a full conversion.  No
+//           error is returned if the buffer is not big enough.
 // flags   : Flags which control the conversion process.  See above.
 //
 // Note:  Embedded nulls within the source will be processed and encoded.  *No*
-// null termination of the destination buffer will be performed by default.
+// null termination of the destination buffer will be performed.
 #if __cplusplus
 zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, size_t* dst_len,
                           uint32_t flags = 0);
@@ -74,3 +75,5 @@ zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, siz
 #endif
 
 __END_CDECLS
+
+#endif  // UTF_CONVERSION_UTF_CONVERSION_H_

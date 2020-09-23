@@ -32,6 +32,7 @@ driver_module("gpt") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/utf_conversion",
   ]
 }
 
@@ -55,6 +56,7 @@ test("gpt-device-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/utf_conversion",
   ]
 }
 

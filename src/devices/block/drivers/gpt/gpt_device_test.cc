@@ -27,7 +27,12 @@
 #include "gpt.h"
 #include "gpt_test_data.h"
 
+namespace gpt {
 namespace {
+
+// To make sure that we correctly convert UTF-16, to UTF-8, the second partition has a suffix with
+// codepoint 0x10000, which in UTF-16 requires a surrogate pair.
+constexpr std::string_view kPartition1Name = "Linux filesystem\xf0\x90\x80\x80";
 
 class FakeBlockDevice : public ddk::BlockProtocol<FakeBlockDevice> {
  public:
@@ -119,10 +124,6 @@ zx_status_t FakeBlockDevice::BlockQueueOp(block_op_t* op) {
   return ZX_OK;
 }
 
-}  // namespace
-
-namespace gpt {
-
 class GptDeviceTest : public zxtest::Test {
  public:
   GptDeviceTest() = default;
@@ -203,7 +204,7 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
   PartitionDevice* dev1 = devices[1].get();
   ASSERT_NOT_NULL(dev1);
   ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
-  ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
+  ASSERT_EQ(kPartition1Name, name);
 
   ASSERT_OK(dev1->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
   {
@@ -259,11 +260,11 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
   PartitionDevice* dev1 = devices[1].get();
   ASSERT_NOT_NULL(dev1);
   ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
-  ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
+  ASSERT_EQ(kPartition1Name, name);
 
   ASSERT_OK(dev1->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
   {
-    uint8_t expected_guid[GPT_GUID_LEN] = GUID_METADATA;
+    uint8_t expected_guid[GPT_GUID_LEN] = GUID_LINUX_FILESYSTEM;
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
   ASSERT_OK(dev1->BlockPartitionGetGuid(GUIDTYPE_INSTANCE, &guid));
@@ -428,4 +429,5 @@ TEST_F(GptDeviceTest, BlockOpsOutOfBounds) {
   EXPECT_TRUE(ddk_.Ok());
 }
 
+}  // namespace
 }  // namespace gpt
