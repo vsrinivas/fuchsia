@@ -95,7 +95,15 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
                    sizeof(psci_driver));
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
                    sizeof(timer_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_AS370_POWER, NULL, 0);
+
+  // append_boot_item doesn't support zero-length payloads, so we have to call zbi_create_entry
+  // directly.
+  uint8_t* new_section = NULL;
+  zbi_result_t result = zbi_create_entry(bootdata, SIZE_MAX, ZBI_TYPE_KERNEL_DRIVER,
+                                         KDRV_AS370_POWER, 0, 0, (void**)&new_section);
+  if (result != ZBI_RESULT_OK) {
+    fail("zbi_create_entry failed\n");
+  }
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
