@@ -14,13 +14,15 @@ namespace scenic_impl {
 using DisplayBufferCollectionId = uint64_t;
 using DisplayEventId = uint64_t;
 
+// Atomically produces a new id that can be used to reference a buffer collection.
+DisplayBufferCollectionId GenerateUniqueCollectionId();
+
 // Imports a sysmem buffer collection token to a display controller, and sets the constraints.
-// A successful import will return a unique ID to reference the collection by. Failure will
-// result in a return value of 0 for the ID, signifying an invalid collection.
-DisplayBufferCollectionId ImportBufferCollection(
-    const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
-    const fuchsia::hardware::display::ImageConfig& image_config);
+// A successful import will return true, otherwise it will return false.
+bool ImportBufferCollection(DisplayBufferCollectionId identifier,
+                            const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+                            fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
+                            const fuchsia::hardware::display::ImageConfig& image_config);
 
 // Imports a zx::event to the provided display controller. The return value is an ID to
 // reference that event on other display controller functions that take an event as an

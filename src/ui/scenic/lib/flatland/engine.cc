@@ -245,12 +245,12 @@ void Engine::AddDisplay(uint64_t display_id, TransformHandle transform, glm::uve
                               .pixel_scale = std::move(pixel_scale)};
 }
 
-Engine::BufferCollectionIdPair Engine::RegisterTargetCollection(
+GlobalBufferCollectionId Engine::RegisterTargetCollection(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator, uint64_t display_id, uint32_t num_vmos) {
   FX_DCHECK(sysmem_allocator);
   auto iter = display_map_.find(display_id);
   if (iter == display_map_.end() || num_vmos == 0) {
-    return {.global_id = Renderer::kInvalidId, .display_id = 0};
+    return Renderer::kInvalidId;
   }
 
   auto display_info = iter->second;
@@ -258,25 +258,10 @@ Engine::BufferCollectionIdPair Engine::RegisterTargetCollection(
   const uint32_t width = display_info.pixel_scale.x;
   const uint32_t height = display_info.pixel_scale.y;
 
-  // Create an image config from the display resolution info.
-  fuchsia::hardware::display::ImageConfig image_config = {
-      .width = width,
-      .height = height,
-      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-  };
-
   // Create the buffer collection token to be used for frame buffers.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr engine_token;
   auto status = sysmem_allocator->AllocateSharedCollection(engine_token.NewRequest());
   FX_DCHECK(status == ZX_OK) << status;
-
-  // Create a dup token for the display.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  status =
-      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
-  status = engine_token->Sync();
-  FX_DCHECK(status == ZX_OK);
 
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
   status =
@@ -284,23 +269,15 @@ Engine::BufferCollectionIdPair Engine::RegisterTargetCollection(
   status = engine_token->Sync();
   FX_DCHECK(status == ZX_OK);
 
-  // Register the buffer collection with the renderer.
+  // Register the buffer collection with the renderer and display simultaneously.
   auto renderer_collection_id =
       renderer_->RegisterRenderTargetCollection(sysmem_allocator, std::move(renderer_token));
   FX_DCHECK(renderer_collection_id != Renderer::kInvalidId);
 
-  // Register the buffer collection with the display controller.
-  auto display_collection_id = scenic_impl::ImportBufferCollection(
-      *display_controller_.get(), std::move(display_token), image_config);
-  FX_DCHECK(display_collection_id != 0);
-
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(engine_token), num_vmos,
                                           width, height, kNoneUsage, std::nullopt);
 
-  BufferCollectionIdPair id_pair = {.global_id = renderer_collection_id,
-                                    .display_id = display_collection_id};
-  framebuffer_id_map_[display_id] = id_pair;
-  return id_pair;
+  return renderer_collection_id;
 }
 
 }  // namespace flatland

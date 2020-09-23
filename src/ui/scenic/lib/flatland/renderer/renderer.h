@@ -77,7 +77,8 @@ class Renderer {
   // thread safe, and so multiple Flatland instances can call it simultaneously. The
   // buffer collection associated with an image must be registered with the renderer before
   // that image can be used during rendering. Concrete implementations of this class may
-  // potentially set their own additional constraints on the buffer collection.
+  // potentially set their own additional constraints on the buffer collection, including
+  // negotiating with the display controller.
   //
   // Upon registration, this function returns a GlobalBufferCollectionId to be used as a unique ID
   // to reference the collection. It is the client's responsibility to specify which buffer

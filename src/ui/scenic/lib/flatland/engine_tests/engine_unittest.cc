@@ -61,7 +61,6 @@ class EngineTest : public gtest::RealLoopFixture {
   EngineTest()
       : uber_struct_system_(std::make_shared<UberStructSystem>()),
         link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())),
-        renderer_(std::make_shared<flatland::NullRenderer>()),
         display_controller_objs_(scenic_impl::display::test::CreateMockDisplayController()) {}
 
   void SetUp() override {
@@ -85,6 +84,11 @@ class EngineTest : public gtest::RealLoopFixture {
         hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
           display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
                                                          std::move(handles.value().dc_device));
+
+          // This global renderer will only be used with tests that have access to the
+          // real display controller.
+          renderer_ = std::make_shared<flatland::NullRenderer>(
+              display_manager_->default_display_controller());
         }));
 
     zx::duration timeout = zx::sec(5);
@@ -96,6 +100,7 @@ class EngineTest : public gtest::RealLoopFixture {
     executor_.reset();
     display_manager_.reset();
     sysmem_allocator_ = nullptr;
+    renderer_.reset();
     gtest::RealLoopFixture::TearDown();
   }
 
@@ -230,8 +235,8 @@ class EngineTest : public gtest::RealLoopFixture {
   // Systems that are populated with data from Flatland instances.
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
-  std::shared_ptr<flatland::NullRenderer> renderer_;
   const scenic_impl::display::test::DisplayControllerObjects display_controller_objs_;
+  std::shared_ptr<flatland::NullRenderer> renderer_;
   std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<scenic_impl::display::DisplayManager> display_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
@@ -254,6 +259,7 @@ TEST_F(EngineTest, BadBufferRegistration) {
     return;
   }
 
+  ASSERT_TRUE(renderer_);
   Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
 
   const uint32_t kDisplayId = display->display_id();
@@ -262,25 +268,21 @@ TEST_F(EngineTest, BadBufferRegistration) {
   const uint32_t kNumVmos = 2;
 
   // Try to register a buffer collection without first adding a display.
-  auto [renderer_id, display_id] =
-      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
+  auto renderer_id = engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
   EXPECT_EQ(renderer_id, Renderer::kInvalidId);
-  EXPECT_EQ(display_id, 0u);
 
   // Now add the display.
   engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
 
   // Try again with 0 vmos. This should also fail.
-  auto [renderer_id_2, display_id_2] =
+  auto renderer_id_2 =
       engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, /*num_vmos*/ 0);
   EXPECT_EQ(renderer_id_2, Renderer::kInvalidId);
-  EXPECT_EQ(display_id_2, 0u);
 
   // Now use a positive vmo number, this should work.
-  auto [renderer_id_3, display_id_3] =
+  auto renderer_id_3 =
       engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
   EXPECT_NE(renderer_id_3, Renderer::kInvalidId);
-  EXPECT_NE(display_id_3, 0u);
 }
 
 // Test to make sure we can register framebuffers to the renderer and display
@@ -302,12 +304,11 @@ TEST_F(EngineTest, BufferRegistrationTest) {
   const uint32_t kHeight = display->height_in_px();
   const uint32_t kNumVmos = 2;
 
+  ASSERT_TRUE(renderer_);
   Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
   engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
-  auto [renderer_id, display_id] =
-      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
+  auto renderer_id = engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
   EXPECT_NE(renderer_id, Renderer::kInvalidId);
-  EXPECT_NE(display_id, 0u);
 
   // We can check the result of buffer registration by the engine through the renderer.
   // We should see the same number of vmos we told the engine to create, as well as each
@@ -427,8 +428,11 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
     }
   });
 
-  // Create an engine.
-  Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
+  // Create an engine. Since this test doesn't make use of the real display controller. Create
+  // a local version of the renderer that uses the fake display controller and pass that into
+  // the engine.
+  auto renderer = std::make_shared<NullRenderer>(display_controller);
+  Engine engine(display_controller, renderer, link_system_, uber_struct_system_);
 
   engine.AddDisplay(display_id, parent_root_handle, resolution);
   engine.RenderFrame();

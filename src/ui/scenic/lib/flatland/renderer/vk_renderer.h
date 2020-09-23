@@ -9,6 +9,7 @@
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -18,7 +19,9 @@ namespace flatland {
 // by extension the Vulkan API.
 class VkRenderer final : public Renderer {
  public:
-  VkRenderer(std::unique_ptr<escher::Escher> escher);
+  explicit VkRenderer(std::unique_ptr<escher::Escher> escher,
+                      const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>&
+                          display_controller = nullptr);
   ~VkRenderer() override;
 
   // |Renderer|.
@@ -64,6 +67,7 @@ class VkRenderer final : public Renderer {
 
   // Vulkan rendering components.
   std::unique_ptr<escher::Escher> escher_;
+  const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
   escher::RectangleCompositor compositor_;
 
   // This mutex is used to protect access to |collection_map_|, |collection_metadata_map_|,
@@ -72,9 +76,6 @@ class VkRenderer final : public Renderer {
   std::unordered_map<GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
   std::unordered_map<GlobalBufferCollectionId, BufferCollectionMetadata> collection_metadata_map_;
   std::unordered_map<GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA> vk_collection_map_;
-
-  // Thread-safe identifier generator. Starts at 1 as 0 is an invalid ID.
-  std::atomic<GlobalBufferCollectionId> id_generator_ = 1;
 
   uint32_t frame_number_ = 0;
 };

@@ -179,9 +179,12 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 // RegisterRenderTargetCollection() and Validate() simultaneously from
 // multiple threads and have it work.
 void MultithreadingTest(Renderer* renderer) {
-  const uint32_t kNumThreads = 100;
+  const uint32_t kNumThreads = 50;
 
-  auto register_and_validate_function = [&renderer](bool register_texture) {
+  std::set<GlobalBufferCollectionId> bcid_set;
+  std::mutex lock;
+
+  auto register_and_validate_function = [&renderer, &bcid_set, &lock](bool register_texture) {
     // Make a test loop.
     async::TestLoop loop;
 
@@ -203,6 +206,12 @@ void MultithreadingTest(Renderer* renderer) {
     EXPECT_NE(bcid, Renderer::kInvalidId);
 
     SetClientConstraintsAndWaitForAllocated(sysmem_allocator.get(), std::move(tokens.dup_token));
+
+    // Add the bcid to the global vector in a thread-safe manner.
+    {
+      std::unique_lock<std::mutex> unique_lock(lock);
+      bcid_set.insert(bcid);
+    }
 
     // The buffer collection *should* be valid here.
     auto result = renderer->Validate(bcid);
@@ -226,27 +235,23 @@ void MultithreadingTest(Renderer* renderer) {
   }
 
   // Validate the ids here one more time to make sure the renderer's internal
-  // state hasn't been corrupted. The ids are generated incrementally so we
-  // know that we should have id values in the range [1, kNumThreads].
-  for (GlobalBufferCollectionId i = 1; i <= kNumThreads; i++) {
+  // state hasn't been corrupted. We use the values gathered in the bcid_vec
+  // to test with.
+  EXPECT_EQ(bcid_set.size(), kNumThreads);
+  for (const auto& bcid : bcid_set) {
     // The buffer collection *should* be valid here.
-    auto result = renderer->Validate(i);
+    auto result = renderer->Validate(bcid);
     EXPECT_TRUE(result.has_value());
 
     // There should be 1 vmo.
     EXPECT_EQ(result->vmo_count, 1U);
   }
-
-  // Check that if we give a non-valid bcid, that the result is null.
-  auto result = renderer->Validate(kNumThreads + 1);
-  EXPECT_FALSE(result.has_value());
 }
 
 // This test checks to make sure that the Render() function properly signals
 // a zx::event which can be used by an async::Wait object to asynchronously
 // call a custom function.
-void AsyncEventSignalTest(Renderer* renderer,
-                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           bool use_vulkan) {
   // First create a pairs of sysmem tokens for the render target.
   auto target_tokens = CreateSysmemTokens(sysmem_allocator);
@@ -292,11 +297,8 @@ void AsyncEventSignalTest(Renderer* renderer,
   bool signaled = false;
   auto dispatcher = loop.dispatcher();
   auto wait = std::make_unique<async::Wait>(release_fence.get(), ZX_EVENT_SIGNALED);
-  wait->set_handler([&signaled](async_dispatcher_t*, async::Wait*,
-                                zx_status_t /*status*/,
-                                const zx_packet_signal_t* /*signal*/) mutable {
-    signaled = true;
-  });
+  wait->set_handler([&signaled](async_dispatcher_t*, async::Wait*, zx_status_t /*status*/,
+                                const zx_packet_signal_t* /*signal*/) mutable { signaled = true; });
   wait->Begin(dispatcher);
 
   // The call to Render() will signal the release fence, triggering the wait object to
@@ -304,7 +306,6 @@ void AsyncEventSignalTest(Renderer* renderer,
   std::vector<zx::event> fences;
   fences.push_back(std::move(release_fence));
   renderer->Render(render_target, {}, {}, fences);
-
 
   if (use_vulkan) {
     auto vk_renderer = static_cast<VkRenderer*>(renderer);
@@ -348,7 +349,7 @@ TEST_F(NullRendererTest, MultithreadingTest) {
 
 TEST_F(NullRendererTest, AsyncEventSignalTest) {
   NullRenderer renderer;
-  AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/false);
+  AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/ false);
 }
 
 VK_TEST_F(VulkanRendererTest, RegisterCollectionTest) {
@@ -405,7 +406,7 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
   VkRenderer renderer(std::move(unique_escher));
-  AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/true);
+  AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/ true);
 }
 
 // This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
@@ -565,8 +566,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // ----------------
 // ----------------
 // ----------------
-// TODO(fxbug.dev/52632): Transparency is currently hardcoded in the renderer to be on. This test will
-// break if that is changed to be hardcoded to false before we expose it in the API.
+// TODO(fxbug.dev/52632): Transparency is currently hardcoded in the renderer to be on. This test
+// will break if that is changed to be hardcoded to false before we expose it in the API.
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();

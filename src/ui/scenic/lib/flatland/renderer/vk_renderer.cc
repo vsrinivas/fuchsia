@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
+#include <zircon/pixelformat.h>
+
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
@@ -25,8 +27,12 @@ TexturePtr CreateDepthTexture(Escher* escher, const ImagePtr& output_image) {
 
 namespace flatland {
 
-VkRenderer::VkRenderer(std::unique_ptr<escher::Escher> escher)
-    : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_.get())) {}
+VkRenderer::VkRenderer(
+    std::unique_ptr<escher::Escher> escher,
+    const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& display_controller)
+    : escher_(std::move(escher)),
+      display_controller_(std::move(display_controller)),
+      compositor_(escher::RectangleCompositor(escher_.get())) {}
 
 VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();
@@ -81,12 +87,39 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
     token = sync_token.Unbind();
   }
 
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
+  if (display_controller_) {
+    // TODO(fxbug.dev/51213): See if this can become asynchronous.
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = token.BindSync();
+    zx_status_t status =
+        sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+
+    // Reassign the channel to the non-sync interface handle.
+    token = sync_token.Unbind();
+  }
+
   // Create the sysmem buffer collection. We do this before creating the vulkan collection below,
   // since New() checks if the incoming token is of the wrong type/malicious.
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Unable to register collection.";
     return kInvalidId;
+  }
+
+  // This id will be used for both the renderer and display controller handles.
+  auto identifier = scenic_impl::GenerateUniqueCollectionId();
+  FX_DCHECK(identifier != Renderer::kInvalidId);
+
+  // Create a duped display token.
+  if (display_controller_) {
+    const fuchsia::hardware::display::ImageConfig& image_config = {
+        .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+    };
+
+    auto result = scenic_impl::ImportBufferCollection(identifier, *display_controller_.get(),
+                                                      std::move(display_token), image_config);
+    FX_DCHECK(result);
   }
 
   // Create the vk_collection and set its constraints.
@@ -100,10 +133,6 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
         vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, vk_constraints, vk_loader);
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
-
-  // Atomically increment the id generator and create a new identifier for the
-  // current buffer collection.
-  GlobalBufferCollectionId identifier = id_generator_++;
 
   // Multiple threads may be attempting to read/write from |collection_map_| so we
   // lock this function here.
@@ -125,6 +154,11 @@ void VkRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
   // If the collection is not in the map, then there's nothing to do.
   if (collection_itr == collection_map_.end()) {
     return;
+  }
+
+  // Release from the display as well.
+  if (display_controller_) {
+    (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   }
 
   // Erase the sysmem collection from the map.
@@ -160,7 +194,7 @@ std::optional<BufferCollectionMetadata> VkRenderer::Validate(
   }
 
   // If there is already metadata, we can just return it instead of checking the allocation
-  // status again. Once a buffer is allocated it won't be stop being allocated.
+  // status again. Once a buffer is allocated it won't stop being allocated.
   auto metadata_itr = collection_metadata_map_.find(collection_id);
   if (metadata_itr != collection_metadata_map_.end()) {
     return metadata_itr->second;

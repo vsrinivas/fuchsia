@@ -89,50 +89,29 @@ class DisplayTest : public gtest::RealLoopFixture {
 // Create a buffer collection and set constraints on the display, the vulkan renderer
 // and the client, and make sure that the collection is still properly allocated.
 VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
-  const uint64_t kWidth = 60;
-  const uint64_t kHeight = 40;
-
-  // Create the VK renderer.
-  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
-  flatland::VkRenderer renderer(std::move(unique_escher));
+  const uint64_t kWidth = 32;
+  const uint64_t kHeight = 64;
 
   // Grab the display controller.
   auto display_controller = display_manager_->default_display_controller();
   EXPECT_TRUE(display_controller);
 
+  // Create the VK renderer.
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  flatland::VkRenderer renderer(std::move(unique_escher), display_controller);
+
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
-  // Create display token.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  auto status = tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
-                                              display_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-
   // Register the collection with the renderer, which sets the vk constraints.
   auto renderer_collection_id =
-      renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
+      renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_NE(renderer_collection_id, flatland::Renderer::kInvalidId);
 
   // Validating should fail, because we've only set the renderer constraints.
   auto buffer_metadata = renderer.Validate(renderer_collection_id);
-  EXPECT_FALSE(buffer_metadata.has_value());
-
-  // Set the display constraints on the display controller.
-  fuchsia::hardware::display::ImageConfig image_config = {
-      .width = kWidth,
-      .height = kHeight,
-      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-  };
-  auto display_collection_id = scenic_impl::ImportBufferCollection(
-      *display_controller.get(), std::move(display_token), image_config);
-  EXPECT_NE(display_collection_id, 0U);
-
-  // Validating should still fail, since even though we have the renderer and display, we don't have
-  // the client constraints set.
-  buffer_metadata = renderer.Validate(renderer_collection_id);
   EXPECT_FALSE(buffer_metadata.has_value());
 
   // Create a client-side handle to the buffer collection and set the client constraints.
@@ -157,6 +136,26 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   // time and this time it should return real data.
   buffer_metadata = renderer.Validate(renderer_collection_id);
   EXPECT_TRUE(buffer_metadata.has_value());
+  EXPECT_EQ(buffer_metadata->vmo_count, 1u);
+  EXPECT_EQ(buffer_metadata->image_constraints.required_min_coded_width, kWidth);
+  EXPECT_EQ(buffer_metadata->image_constraints.required_min_coded_height, kHeight);
+
+  // We should now be able to also import an image to the display controller, using the
+  // display-specific buffer collection id. If it returns OK, then we know that the renderer
+  // did fully set the DC constraints.
+  uint64_t image_id;
+  fuchsia::hardware::display::ImageConfig image_config = {
+      .width = kWidth,
+      .height = kHeight,
+      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+  };
+
+  zx_status_t import_image_status = ZX_OK;
+  (*display_controller.get())
+      ->ImportImage(image_config, renderer_collection_id, /*vmo_idx*/ 0, &import_image_status,
+                    &image_id);
+  EXPECT_EQ(import_image_status, ZX_OK);
+  EXPECT_NE(image_id, 0u);
 }
 
 // Test out event signaling on the Display Controller by importing a buffer collection and its 2
@@ -164,9 +163,9 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 // then setting the second image on the layer which has a wait event. When the wait event is
 // signaled, this will cause the second layer image to go up, which in turn will cause the first
 // layer image's event to be signaled.
-// TODO(fxbug.dev/55167): Check to see if there is a more appropriate place to test display controller
-// events and/or if there already exist adequate tests that cover all of the use cases being
-// covered by this test.
+// TODO(fxbug.dev/55167): Check to see if there is a more appropriate place to test display
+// controller events and/or if there already exist adequate tests that cover all of the use cases
+// being covered by this test.
 VK_TEST_F(DisplayTest, SetDisplayImageTest) {
   // Grab the display controller.
   auto display_controller = display_manager_->default_display_controller();
@@ -191,9 +190,12 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
       .height = kHeight,
       .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
   };
-  auto display_collection_id = scenic_impl::ImportBufferCollection(
-      *display_controller.get(), std::move(tokens.dup_token), image_config);
+  auto display_collection_id = scenic_impl::GenerateUniqueCollectionId();
   ASSERT_NE(display_collection_id, 0U);
+
+  bool res = scenic_impl::ImportBufferCollection(display_collection_id, *display_controller.get(),
+                                                 std::move(tokens.dup_token), image_config);
+  ASSERT_TRUE(res);
 
   flatland::SetClientConstraintsAndWaitForAllocated(
       sysmem_allocator_.get(), std::move(tokens.local_token), kNumVmos, kWidth, kHeight);

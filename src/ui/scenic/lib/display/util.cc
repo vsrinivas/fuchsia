@@ -9,21 +9,25 @@
 #include <lib/zx/event.h>
 
 namespace scenic_impl {
-DisplayBufferCollectionId ImportBufferCollection(
-    const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
-    const fuchsia::hardware::display::ImageConfig& image_config) {
+
+DisplayBufferCollectionId GenerateUniqueCollectionId() {
   // This function will be called from multiple threads, and thus needs an atomic
   // incrementor for the id.
-  static std::atomic<uint64_t> buffer_collection_id = 0;
-  buffer_collection_id++;
+  static std::atomic<DisplayBufferCollectionId> buffer_collection_id = 0;
+  return ++buffer_collection_id;
+}
+
+bool ImportBufferCollection(DisplayBufferCollectionId buffer_collection_id,
+                            const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+                            fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
+                            const fuchsia::hardware::display::ImageConfig& image_config) {
   zx_status_t status;
 
   if (display_controller->ImportBufferCollection(buffer_collection_id, std::move(token), &status) !=
           ZX_OK ||
       status != ZX_OK) {
     FX_LOGS(ERROR) << "ImportBufferCollection failed - status: " << status;
-    return 0;
+    return false;
   }
 
   if (display_controller->SetBufferCollectionConstraints(buffer_collection_id, image_config,
@@ -34,10 +38,10 @@ DisplayBufferCollectionId ImportBufferCollection(
     if (display_controller->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
       FX_LOGS(ERROR) << "ReleaseBufferCollection failed.";
     }
-    return 0;
+    return false;
   }
 
-  return buffer_collection_id;
+  return true;
 }
 
 DisplayEventId ImportEvent(const fuchsia::hardware::display::ControllerSyncPtr& display_controller,

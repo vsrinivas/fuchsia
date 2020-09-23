@@ -8,6 +8,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -17,6 +18,9 @@ namespace flatland {
 // renderer implementation does except for actually rendering.
 class NullRenderer : public Renderer {
  public:
+  explicit NullRenderer(const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>&
+                            display_controller = nullptr);
+
   ~NullRenderer() override = default;
 
   // |Renderer|.
@@ -45,13 +49,12 @@ class NullRenderer : public Renderer {
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
 
+  const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
+
   // This mutex is used to protect access to |collection_map_| and |collection_metadata_map_|.
   std::mutex lock_;
   std::unordered_map<GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
   std::unordered_map<GlobalBufferCollectionId, BufferCollectionMetadata> collection_metadata_map_;
-
-  // Thread-safe identifier generator. Starts at 1 as 0 is an invalid ID.
-  std::atomic<GlobalBufferCollectionId> id_generator_ = 1;
 };
 
 }  // namespace flatland
