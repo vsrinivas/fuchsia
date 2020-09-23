@@ -14,6 +14,7 @@
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/test_utils.h>
+#include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
 namespace llcpp_test = ::llcpp::fidl::llcpp::types::test;
 
@@ -131,30 +132,64 @@ TEST(XUnion, InitialTag) {
   EXPECT_TRUE(strict_xunion.has_invalid_tag());
 }
 
-// Flexible unions with unknown data should decode successfully but fail to encode.
-TEST(XUnion, UnknownTagFlexible) {
-  // Unknown data decodes successfully and results in an unknown tag. The latter cannot be checked
-  // with GIDL.
+TEST(XUnion, UnknownBytes) {
   auto bytes = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal
       0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8 bytes, 0 handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // present
       0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // unknown bytes
   };
-  fidl::EncodedMessage<llcpp_test::TestXUnionInStruct> message(
-      fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
-  auto decode_result = fidl::Decode(std::move(message));
-  ASSERT_EQ(decode_result.status, ZX_OK) << zx_status_get_string(decode_result.status);
-  EXPECT_EQ(decode_result.Unwrap()->xu.which(), llcpp_test::TestXUnion::Tag::kUnknown);
+  auto check_tag = [](const llcpp_test::TestXUnion& xu) {
+    EXPECT_EQ(xu.which(), llcpp_test::TestXUnion::Tag::kUnknown);
+  };
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<llcpp_test::MsgWrapper::TestXUnionResponse>(
+      bytes, {}, std::move(check_tag));
+}
 
-  // Unknown data fails to encode. This cannot be in expressed in GIDL because unknown unions cannot
-  // be constructed natively in LLCPP. Decoding raw bytes would also not work because encode_failure
-  // tests do not specify the raw bytes.
-  fidl::internal::LinearizeBuffer<llcpp_test::TestXUnionInStruct> buffer;
-  auto xu_bytes = decode_result.message.Release();
-  auto encode_result = fidl::LinearizeAndEncode(
-      reinterpret_cast<llcpp_test::TestXUnionInStruct*>(xu_bytes.data()), buffer.buffer());
-  ASSERT_EQ(encode_result.status, ZX_ERR_INVALID_ARGS)
-      << zx_status_get_string(encode_result.status);
-  EXPECT_STREQ(encode_result.error, "Cannot encode unknown union or table") << encode_result.error;
+TEST(XUnion, UnknownHandlesResource) {
+  auto bytes = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal
+      0x08, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,  // 8 bytes, 3 handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // unknown bytes
+  };
+
+  zx_handle_t h1, h2, h3;
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h1));
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h2));
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h3));
+  std::vector<zx_handle_t> handles = {h1, h2, h3};
+
+  auto check_tag = [](const llcpp_test::TestXUnion& xu) {
+    EXPECT_EQ(xu.which(), llcpp_test::TestXUnion::Tag::kUnknown);
+  };
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<llcpp_test::MsgWrapper::TestXUnionResponse>(
+      bytes, handles, std::move(check_tag));
+}
+
+TEST(XUnion, UnknownHandlesNonResource) {
+  auto bytes = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal
+      0x08, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,  // 8 bytes, 3 handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // unknown bytes
+  };
+
+  zx_handle_t h1, h2, h3;
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h1));
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h2));
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h3));
+  std::vector<zx_handle_t> handles = {h1, h2, h3};
+
+  auto check_tag = [](const llcpp_test::TestNonResourceXUnion& xu) {
+    EXPECT_EQ(xu.which(), llcpp_test::TestNonResourceXUnion::Tag::kUnknown);
+  };
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<
+      llcpp_test::MsgWrapper::TestNonResourceXUnionResponse>(bytes, handles, std::move(check_tag));
 }

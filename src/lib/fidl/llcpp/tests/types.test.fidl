@@ -25,10 +25,6 @@ flexible resource union TestXUnion {
     3: handle h;
 };
 
-resource struct TestXUnionInStruct {
-    TestXUnion xu;
-};
-
 union TestStrictXUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
@@ -36,6 +32,10 @@ union TestStrictXUnion {
 
 struct TestStrictXUnionInStruct {
     TestStrictXUnion xu;
+};
+
+flexible union TestNonResourceXUnion {
+    1: int32 primitive;
 };
 
 /// Verifies that user code can manipulate these bits.
@@ -87,4 +87,31 @@ enum Enum : uint32 {
 };
 
 struct EmptyStruct {
+};
+
+table TestTable {
+    1: uint8 x;
+};
+
+resource table TestResourceTable {
+    1: uint8 x;
+};
+
+/// Certain traits are only implemented for top level (i.e. request/response struct)
+/// types, since LLCPP only calls encode/decode on those top level types.
+/// Types used in tests that exercise these codepaths (e.g. involving HasFlexibleEnvelope)
+/// should be put in a request/response struct instead of a regular struct in order
+/// to reflect the actual paths exercised within a protocol.
+///
+/// For example, to test a union MyUnion, instead of:
+///   - declaring wrapper struct `struct MyUnionStruct { MyUnion xu };`
+///   - writing encode/decode tests in C++ using MyUnionStruct
+/// do:
+///   - add method `MyUnion() -> (MyUnion result);`
+///   - write tests in C++ using MsgWrapper::MyUnionResponse
+protocol MsgWrapper {
+    TestXUnion() -> (TestXUnion result);
+    TestNonResourceXUnion() -> (TestNonResourceXUnion result);
+    TestTable() -> (TestTable result);
+    TestResourceTable() -> (TestResourceTable result);
 };

@@ -211,7 +211,7 @@ template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
   if constexpr (IsResponseType<FidlType>()) {
-    if (FidlType::HasFlexibleEnvelope && Direction == MessageDirection::kReceiving) {
+    if (FidlType::HasFlexibleEnvelope) {
       return ZX_CHANNEL_MAX_MSG_BYTES;
     }
   }
