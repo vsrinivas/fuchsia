@@ -552,8 +552,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
       ndev = drvr->iflist[bsscfgidx]->ndev;
       if (strncmp(ndev->name, name, sizeof(ndev->name))) {
-        BRCMF_DBG(WLANIF,
-                  "Reusing netdev:%s for new client iface, but changing its name to netdev:%s.",
+        BRCMF_INFO("Reusing netdev:%s for new client iface, but changing its name to netdev:%s.",
                   ndev->name, name);
         brcmf_write_net_device_name(ndev, name);
       }
@@ -610,9 +609,10 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
           }
           BRCMF_ERR("Falling back to random mac address: " MAC_FMT_STR,
                     MAC_FMT_ARGS(bootloader_macaddr));
+        } else {
+          BRCMF_DBG(INFO, "Retrieved bootloader wifi MAC addresss: " MAC_FMT_STR,
+                    MAC_FMT_ARGS(bootloader_macaddr));
         }
-        BRCMF_DBG(WLANIF, "Retrieved bootloader wifi MAC addresss: " MAC_FMT_STR,
-                  MAC_FMT_ARGS(bootloader_macaddr));
         mac_addr = bootloader_macaddr;
       }
 
@@ -627,12 +627,6 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-
-  // Log the new iface's role, name, and MAC address
-  const uint8_t* mac_addr = ndev_to_if(ndev)->mac_addr;
-  BRCMF_DBG(WLANIF, "Created %s iface netdev:%s with MAC address " MAC_FMT_STR, iface_role_name,
-            ndev->name, MAC_FMT_ARGS(mac_addr));
-
   *wdev_out = wdev;
   return ZX_OK;
 }

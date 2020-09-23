@@ -189,9 +189,13 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
-
   *out_iface_id = iface_id;
-  BRCMF_DBG(WLANPHY, "Interface %d created successfully", iface_id);
+
+  // Log the new iface's role, name, and MAC address
+  net_device* ndev = wdev->netdev;
+  const uint8_t* mac_addr = ndev_to_if(ndev)->mac_addr;
+  BRCMF_DBG(WLANPHY, "Created %s iface with netdev:%s id:%d MAC address " MAC_FMT_STR, role,
+            ndev->name, iface_id, MAC_FMT_ARGS(mac_addr));
   return ZX_OK;
 }
 
