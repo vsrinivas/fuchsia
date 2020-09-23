@@ -22,7 +22,7 @@ async fn main() {
     let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 
     for _ in 1..=3 {
-        let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+        let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
         let target_moniker = event.target_moniker();
         let _ = echo.echo_string(Some(target_moniker)).await;
         event.resume().await.unwrap();

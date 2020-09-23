@@ -44,14 +44,14 @@ async fn storage() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // Expect the 2 children to be bound to
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
     event.resume().await.unwrap();
 
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
     event.resume().await.unwrap();
 
     let component_manager_path = test.get_component_manager_path();

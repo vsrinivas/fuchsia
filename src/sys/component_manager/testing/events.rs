@@ -265,33 +265,13 @@ impl EventStream {
         }
     }
 
-    /// Expects the next event to be of a particular type.
+    /// Expects the next event to match the provided EventMatcher.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_type<T: Event>(&mut self) -> Result<T, Error> {
-        let event = self.next().await?;
-        T::from_fidl(event)
-    }
-
-    /// Expects the next event to be of a particular type and moniker and
-    /// have a payload.  Returns the casted type if an error event is received.
-    /// Otherwise, it crashes.
-    pub async fn expect_error<T: Event>(&mut self, expected_event_matcher: EventMatcher) -> T {
+    pub async fn expect_match<T: Event>(&mut self, expected_event_matcher: EventMatcher) -> T {
         let event = self.next().await.unwrap();
         let descriptor = EventDescriptor::try_from(&event).unwrap();
-        let event = T::from_fidl(event).unwrap();
+        let event = T::try_from(event).unwrap();
         expected_event_matcher.matches(&descriptor).unwrap();
-        assert!(event.is_err());
-        event
-    }
-
-    /// Expects the next event to be of a particular type and moniker.
-    /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_exact<T: Event>(&mut self, expected_event_matcher: EventMatcher) -> T {
-        let event = self.next().await.unwrap();
-        let descriptor = EventDescriptor::try_from(&event).unwrap();
-        let event = T::from_fidl(event).unwrap();
-        expected_event_matcher.matches(&descriptor).unwrap();
-        assert!(event.is_ok());
         event
     }
 
@@ -301,7 +281,7 @@ impl EventStream {
     pub async fn wait_until_type<T: Event>(&mut self) -> Result<T, Error> {
         loop {
             let event = self.next().await?;
-            if let Ok(event) = T::from_fidl(event) {
+            if let Ok(event) = T::try_from(event) {
                 return Ok(event);
             }
         }
@@ -319,7 +299,7 @@ impl EventStream {
             let event = self.next().await?;
             let descriptor = EventDescriptor::try_from(&event)?;
             eprintln!("Received descriptor {:?}", descriptor);
-            if let Ok(event) = T::from_fidl(event) {
+            if let Ok(event) = T::try_from(event) {
                 if expected_event_matcher.matches(&descriptor).is_ok() {
                     return Ok(event);
                 }
@@ -373,7 +353,7 @@ impl EventStream {
 }
 
 /// Common features of any event - event type, target moniker, conversion function
-pub trait Event: Handler {
+pub trait Event: Handler + TryFrom<fsys::Event, Error = anyhow::Error> {
     const TYPE: fsys::EventType;
     const NAME: &'static str;
 
@@ -382,7 +362,6 @@ pub trait Event: Handler {
     fn timestamp(&self) -> zx::Time;
     fn is_ok(&self) -> bool;
     fn is_err(&self) -> bool;
-    fn from_fidl(event: fsys::Event) -> Result<Self, Error>;
 }
 
 /// Basic handler that resumes/unblocks from an Event
@@ -667,6 +646,25 @@ impl RawFieldMatcher<ExitStatus> for ExitStatusMatcher {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+struct EventIsOkMatcher {
+    event_is_ok: bool,
+}
+
+impl EventIsOkMatcher {
+    fn new(event_is_ok: bool) -> Self {
+        Self { event_is_ok }
+    }
+}
+
+impl RawFieldMatcher<bool> for EventIsOkMatcher {
+    const NAME: &'static str = "event_is_ok";
+
+    fn matches(&self, other: &bool) -> bool {
+        self.event_is_ok == *other
+    }
+}
+
 /// A field matcher is an optional matcher that compares against an optional field.
 /// If there is a mismatch, an error string is generated. If there is no matcher specified,
 /// then there is no error. If there is matcher without a corresponding field then that's a missing
@@ -704,11 +702,30 @@ pub struct EventMatcher {
     target_monikers: Option<MonikerMatcher>,
     capability_id: Option<CapabilityIdMatcher>,
     exit_status: Option<ExitStatusMatcher>,
+    event_is_ok: Option<EventIsOkMatcher>,
 }
 
 impl EventMatcher {
     pub fn new() -> Self {
-        Self { event_type: None, target_monikers: None, capability_id: None, exit_status: None }
+        Self {
+            event_type: None,
+            target_monikers: None,
+            capability_id: None,
+            exit_status: None,
+            event_is_ok: None,
+        }
+    }
+
+    pub fn ok() -> Self {
+        let mut matcher = EventMatcher::new();
+        matcher.event_is_ok = Some(EventIsOkMatcher::new(true));
+        matcher
+    }
+
+    pub fn err() -> Self {
+        let mut matcher = EventMatcher::new();
+        matcher.event_is_ok = Some(EventIsOkMatcher::new(false));
+        matcher
     }
 
     pub fn expect_type(mut self, event_type: fsys::EventType) -> Self {
@@ -749,59 +766,18 @@ impl EventMatcher {
         self.target_monikers.matches(&other.target_moniker)?;
         self.capability_id.matches(&other.capability_id)?;
         self.exit_status.matches(&other.exit_status)?;
+        self.event_is_ok.matches(&other.event_is_ok)?;
         Ok(())
     }
 }
 
-#[derive(Clone, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub struct EventDescriptor {
     event_type: Option<fsys::EventType>,
     capability_id: Option<String>,
-    pub target_moniker: Option<String>,
+    target_moniker: Option<String>,
     exit_status: Option<ExitStatus>,
-}
-
-/// This implementation of PartialEq allows comparison between `EventDescriptor`s when the order in
-/// which components are launched can't be guaranteed. `target_moniker` can end in a wild card in
-/// `target_moniker` to match by prefix instead of requiring a full match. For example, a test can
-/// use the the following `EventDescriptor`
-///
-/// ```
-/// EventDescriptor::new<CapabilityRouted>()
-///     .expect_moniker("./session:session:*")
-///     .expect_capability_id("elf")
-/// ```
-///
-/// to match another `EventDescriptor` with the target_moniker of "./session:session:1" or
-/// "./session:session:2". If both target_monikers have instance ids they are still compared as
-/// expected.
-///
-/// This also works (wild card for name and id):
-///
-/// ```
-/// EventDescriptor::new<CapabilityRouted>()
-///     .expect_moniker("./session:*")
-///     .expect_capability_id("elf")
-/// ```
-impl PartialEq<EventDescriptor> for EventDescriptor {
-    fn eq(&self, other: &EventDescriptor) -> bool {
-        let targets_match = match (&self.target_moniker, &other.target_moniker) {
-            (Some(self_moniker), Some(other_moniker)) => {
-                if self_moniker.ends_with("*") {
-                    let index = self_moniker.rfind('*').unwrap();
-                    let prefix = &self_moniker[..index];
-                    other_moniker.starts_with(prefix)
-                } else {
-                    self_moniker == other_moniker
-                }
-            }
-            (self_moniker, other_moniker) => self_moniker == other_moniker,
-        };
-
-        self.event_type == other.event_type
-            && self.capability_id == other.capability_id
-            && targets_match
-    }
+    event_is_ok: Option<bool>,
 }
 
 #[derive(Debug)]
@@ -870,8 +846,13 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             ))) => status.map(|val| val.into()),
             _ => None,
         };
+        let event_is_ok = match &event.event_result {
+            Some(fsys::EventResult::Payload(_)) => Some(true),
+            Some(fsys::EventResult::Error(_)) => Some(false),
+            _ => None,
+        };
 
-        Ok(EventDescriptor { event_type, target_moniker, capability_id, exit_status })
+        Ok(EventDescriptor { event_type, target_moniker, capability_id, exit_status, event_is_ok })
     }
 }
 
@@ -1053,8 +1034,12 @@ macro_rules! create_event {
                 fn is_err(&self) -> bool {
                     self.result.is_err()
                 }
+            }
 
-                fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
+            impl TryFrom<fsys::Event> for $event_type {
+                type Error = anyhow::Error;
+
+                fn try_from(event: fsys::Event) -> Result<Self, Self::Error> {
                     // Extract the payload from the Event object.
                     let result = match event.event_result {
                         Some(fsys::EventResult::Payload(payload)) => {

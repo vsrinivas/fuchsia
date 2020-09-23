@@ -39,7 +39,7 @@ pub async fn init_blobfs() -> (OpaqueTest, Directory) {
     ];
 
     for _ in 1..=4 {
-        let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+        let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
         let component_url = event.component_url();
         info!("{} has started", component_url);
 

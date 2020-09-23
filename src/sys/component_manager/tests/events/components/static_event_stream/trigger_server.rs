@@ -47,7 +47,7 @@ fn run_main_event_stream(
     fasync::Task::spawn(async move {
         let mut event_stream = EventStream::new(stream);
         let mut capability_request =
-            event_stream.expect_exact::<CapabilityRequested>(EventMatcher::new()).await;
+            event_stream.expect_match::<CapabilityRequested>(EventMatcher::ok()).await;
         assert_eq!(".\\trigger_server:0/trigger_client:0", capability_request.target_moniker());
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
@@ -70,7 +70,7 @@ fn run_second_event_stream(
     fasync::Task::spawn(async move {
         let mut event_stream = EventStream::new(stream);
         let capability_request =
-            event_stream.expect_error::<CapabilityRequested>(EventMatcher::new()).await;
+            event_stream.expect_match::<CapabilityRequested>(EventMatcher::err()).await;
         let trigger_path = format!("/svc/{}", ftest::TriggerMarker::NAME);
         // Verify that the second stream gets an error.
         match capability_request.result {

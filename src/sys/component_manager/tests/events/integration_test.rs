@@ -105,7 +105,7 @@ async fn scoped_events_test() {
         events_echo.message,
         concat!(
             "Events: [",
-            "EventDescriptor { event_type: Some(Started), capability_id: None, target_moniker: Some(\"./echo_server:0\"), exit_status: None }",
+            "EventDescriptor { event_type: Some(Started), capability_id: None, target_moniker: Some(\"./echo_server:0\"), exit_status: None, event_is_ok: Some(true) }",
             "]"
         )
     );
@@ -203,7 +203,7 @@ async fn expect_and_get_timestamp<T: Event>(
     event_stream: &mut EventStream,
     moniker: &str,
 ) -> Result<zx::Time, Error> {
-    let event = event_stream.expect_exact::<T>(EventMatcher::new().expect_moniker(moniker)).await;
+    let event = event_stream.expect_match::<T>(EventMatcher::ok().expect_moniker(moniker)).await;
     let timestamp = event.timestamp();
     event.resume().await.unwrap();
     Ok(timestamp)

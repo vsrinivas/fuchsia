@@ -96,8 +96,8 @@ async fn main() {
 
     // Wait for the dynamic child to begin deletion
     let event = event_stream
-        .expect_exact::<MarkedForDestruction>(
-            EventMatcher::new().expect_moniker("./coll:simple_instance:1"),
+        .expect_match::<MarkedForDestruction>(
+            EventMatcher::ok().expect_moniker("./coll:simple_instance:1"),
         )
         .await;
     hub_report.report_directory_contents("/hub/children").await.unwrap();
@@ -110,15 +110,15 @@ async fn main() {
 
     // Wait for the dynamic child to stop
     let event = event_stream
-        .expect_exact::<Stopped>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
+        .expect_match::<Stopped>(EventMatcher::ok().expect_moniker("./coll:simple_instance:1"))
         .await;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await.unwrap();
     event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to begin deletion
     let event = event_stream
-        .expect_exact::<MarkedForDestruction>(
-            EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
+        .expect_match::<MarkedForDestruction>(
+            EventMatcher::ok().expect_moniker("./coll:simple_instance:1/child:0"),
         )
         .await;
     hub_report
@@ -137,8 +137,8 @@ async fn main() {
 
     // Wait for the dynamic child's static child to be destroyed
     let event = event_stream
-        .expect_exact::<Destroyed>(
-            EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
+        .expect_match::<Destroyed>(
+            EventMatcher::ok().expect_moniker("./coll:simple_instance:1/child:0"),
         )
         .await;
     hub_report
@@ -149,7 +149,7 @@ async fn main() {
 
     // Wait for the dynamic child to be destroyed
     let event = event_stream
-        .expect_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
+        .expect_match::<Destroyed>(EventMatcher::ok().expect_moniker("./coll:simple_instance:1"))
         .await;
     hub_report.report_directory_contents("/hub/deleting").await.unwrap();
     event.resume().await.unwrap();

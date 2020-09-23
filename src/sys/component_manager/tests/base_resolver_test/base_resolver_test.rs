@@ -35,12 +35,12 @@ async fn base_resolver_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // Expect the echo_server component to be bound to
     let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("./echo_server:0"))
+        .expect_match::<Started>(EventMatcher::ok().expect_moniker("./echo_server:0"))
         .await;
     event.resume().await.unwrap();
 

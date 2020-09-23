@@ -7,7 +7,7 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{self as component, ScopedInstance},
     regex::Regex,
-    std::{collections::BTreeSet, iter::FromIterator},
+    std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
     test_utils_lib::events::{
         CapabilityReady, Event, EventSource, MarkedForDestruction, Running, Started,
     },
@@ -56,11 +56,11 @@ async fn main() -> Result<(), Error> {
         let event = event_stream.next().await?;
         match event.event_type {
             Some(Running::TYPE) => {
-                let event = Running::from_fidl(event).expect("convert to running");
+                let event = Running::try_from(event).expect("convert to running");
                 running.push(event.target_moniker().to_string());
             }
             Some(CapabilityReady::TYPE) => {
-                let event = CapabilityReady::from_fidl(event).expect("convert to capability ready");
+                let event = CapabilityReady::try_from(event).expect("convert to capability ready");
                 capability_ready.insert(event.target_moniker().to_string());
             }
             other => panic!("unexpected event type: {:?}", other),

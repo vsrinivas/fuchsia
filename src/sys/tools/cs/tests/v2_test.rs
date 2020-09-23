@@ -36,7 +36,7 @@ async fn empty_component() {
     event_source.start_component_tree().await;
 
     // Root must be created first
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     let hub_v2_path = test.get_hub_v2_path().into_os_string().into_string().unwrap();
@@ -67,12 +67,12 @@ async fn tree() {
     event_source.start_component_tree().await;
 
     // Root must be created first
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // 6 descendants are created eagerly. Order is irrelevant.
     for _ in 1..=6 {
-        let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+        let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
         event.resume().await.unwrap();
     }
 
@@ -156,7 +156,7 @@ async fn echo_realm() {
         // root and echo_client are started eagerly.
         // echo_server is started after echo_client connects to the Echo service.
         for _ in 1..=3 {
-            let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+            let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
             event.resume().await.unwrap();
         }
     }

@@ -32,13 +32,13 @@ async fn main() {
     let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 
     for _ in 1..=3 {
-        let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
+        let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
         assert_eq!(event.component_url(), url);
         let _ = echo.echo_string(Some(&format!("{:?}", Started::TYPE))).await;
     }
 
     for _ in 1..=3 {
-        let _ = event_stream.expect_exact::<Destroyed>(EventMatcher::new()).await;
+        let _ = event_stream.expect_match::<Destroyed>(EventMatcher::ok()).await;
         let _ = echo.echo_string(Some(&format!("{:?}", Destroyed::TYPE))).await;
     }
 }

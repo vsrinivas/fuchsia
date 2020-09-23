@@ -22,7 +22,7 @@ async fn basic_work_scheduler_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
@@ -44,12 +44,12 @@ async fn unbound_work_scheduler_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
+    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // `/worker_sibling:0` has started.
     let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("./worker_sibling:0"))
+        .expect_match::<Started>(EventMatcher::ok().expect_moniker("./worker_sibling:0"))
         .await;
     event.resume().await.unwrap();
 
