@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 .macro zircon_syscall num, name, caller
+    li t0, \num
+    ecall
 // This symbol at the return address identifies this as an approved call site.
     .hidden CODE_SYSRET_\name\()_VIA_\caller
 CODE_SYSRET_\name\()_VIA_\caller\():
