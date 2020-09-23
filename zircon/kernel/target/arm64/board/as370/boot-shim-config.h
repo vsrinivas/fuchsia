@@ -28,7 +28,7 @@ static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .mmio_phys = 0xf7900000,
     .gicd_offset = 0x1000,
     .gicc_offset = 0x2000,
-    .ipi_base = 9,
+    .ipi_base = 0,
 };
 
 static const dcfg_arm_psci_driver_t psci_driver = {
