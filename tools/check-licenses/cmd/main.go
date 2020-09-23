@@ -6,22 +6,41 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
+	"os"
 
 	checklicenses "go.fuchsia.dev/fuchsia/tools/check-licenses"
 )
 
-const configFile = "tools/check-licenses/config/config.json"
+var (
+	config checklicenses.Config
+
+	configFile = flag.String("config_file", "tools/check-licenses/config/config.json", "Location of config.json.")
+	target     = flag.String("target", "Options: {all, <target>}", "Analyze the dependency tree of a specific GN build target.")
+)
+
+func validateArgs() {
+	_, err := os.Stat(*configFile)
+	if os.IsNotExist(err) {
+		log.Fatalf("Config file \"%v\" does not exist!", *configFile)
+	}
+
+	if *target != "Options: {all, <target>}" {
+		log.Printf("WARNING: Flag \"target\" was set to \"%v\", but that flag is currently unsupported. check-licenses will parse the full directory tree.\n", *target)
+		*target = "Options: {all, <target>}"
+	}
+	config.Target = *target
+
+	if err := config.Init(configFile); err != nil {
+		log.Fatalf("Failed to initialize config: %v", err)
+	}
+}
 
 func main() {
-	var config checklicenses.Config
-	configJson := flag.String("config", configFile, "Location of config.json")
-	if err := config.Init(configJson); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	flag.StringVar(&config.Target, "target", config.Target, "Options: {all, <target>}")
+	flag.Parse()
+	validateArgs()
+
 	if err := checklicenses.Walk(&config); err != nil {
-		fmt.Println(err.Error())
+		log.Fatalf("Failed to analyze the given directory: %v", err)
 	}
 }
