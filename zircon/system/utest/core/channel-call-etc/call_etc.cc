@@ -35,8 +35,10 @@ class EchoServer {
     uint32_t actual_handles;
     uint8_t bytes[NBufBytes];
     zx_handle_t handles[NBufHandles];
+    ASSERT_EQ(ZX_OK, server_end.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
     ASSERT_EQ(ZX_OK, server_end.read(0, bytes, handles, NBufBytes, NBufHandles, &actual_bytes,
                                      &actual_handles));
+    ASSERT_EQ(ZX_OK, server_end.wait_one(ZX_CHANNEL_WRITABLE, zx::time::infinite(), nullptr));
     ASSERT_EQ(ZX_OK, server_end.write(0, bytes, actual_bytes, handles, actual_handles));
   }
 
