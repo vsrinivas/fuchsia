@@ -267,6 +267,8 @@ std::string GetGoName(const Type& type) {
     return "VMFlag";
   if (name == "zx_channel_call_args_t")
     return "ChannelCallArgs";
+  if (name == "zx_channel_call_etc_args_t")
+    return "ChannelCallEtcArgs";
   if (name == "zx_clock_t")
     return "uint32";
   if (name == "zx_handle_disposition_t")

@@ -236,15 +236,15 @@ TEXT ·Sys_channel_call_finish(SB),NOSPLIT,$0
 TEXT ·Sys_channel_call(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call(SB)
 
-// func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc_noretry(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc_noretry(SB)
 
-// func Sys_channel_call_etc_finish(deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_call_etc_finish(deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc_finish(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc_finish(SB)
 
-// func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc(SB)
 
@@ -988,15 +988,15 @@ func Sys_channel_call(handle Handle, options uint32, deadline Time, args *Channe
 
 //go:noescape
 //go:nosplit
-func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 
 //go:noescape
 //go:nosplit
-func Sys_channel_call_etc_finish(deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+func Sys_channel_call_etc_finish(deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 
 //go:noescape
 //go:nosplit
-func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 
 //go:noescape
 //go:nosplit
@@ -1734,15 +1734,15 @@ TEXT ·Sys_channel_call_finish(SB),NOSPLIT,$0
 TEXT ·Sys_channel_call(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call(SB)
 
-// func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc_noretry(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc_noretry(SB)
 
-// func Sys_channel_call_etc_finish(deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_call_etc_finish(deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc_finish(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc_finish(SB)
 
-// func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc(SB)
 
