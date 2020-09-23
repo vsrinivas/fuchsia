@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-#include "src/bringup/bin/netsvc/test/paver-test-common.h"
+#include "paver-test-common.h"
 
 namespace {
 
@@ -18,7 +18,7 @@ std::string FirmwareFilename(const std::string& type = "") {
   return NB_FIRMWARE_FILENAME_PREFIX + type;
 }
 
-TEST(PaverTest, Constructor) { netsvc::Paver paver(zx::channel); }
+TEST(PaverTest, Constructor) { netsvc::Paver paver({}, {}); }
 
 TEST(PaverTest, GetSingleton) {
   int fd = open("/svc", O_DIRECTORY | O_RDWR);
