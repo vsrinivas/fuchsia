@@ -10,7 +10,7 @@ use {
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     lazy_static::lazy_static,
     std::sync::{Arc, Mutex},
@@ -36,6 +36,18 @@ async fn get_daemon_proxy() -> Result<DaemonProxy> {
         }
     }
     find_and_connect().await
+}
+
+async fn get_fastboot_proxy() -> Result<FastbootProxy> {
+    let daemon_proxy = get_daemon_proxy().await?;
+    let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
+    let app: Ffx = argh::from_env();
+
+    daemon_proxy
+        .get_fastboot(&app.target.unwrap_or("".to_string()), fastboot_server_end)
+        .await
+        .context("connecting to Fastboot")
+        .map(|_| fastboot_proxy)
 }
 
 async fn get_remote_proxy() -> Result<RemoteControlProxy> {
@@ -77,6 +89,7 @@ async fn run() -> Result<()> {
     ffx_lib_suite::ffx_plugin_impl(
         get_daemon_proxy,
         get_remote_proxy,
+        get_fastboot_proxy,
         is_experiment_subcommand_on,
         app,
     )

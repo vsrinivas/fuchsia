@@ -12,7 +12,9 @@ use {
     async_std::task,
     async_trait::async_trait,
     fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
+    fidl_fuchsia_developer_bridge::{
+        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError,
+    },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -284,6 +286,12 @@ impl Daemon {
                     .copy_to_channel(remote.into_channel())
                     .map_err(|_| DaemonError::RcsConnectionError);
                 responder.send(&mut response).context("error sending response")?;
+            }
+            DaemonRequest::GetFastboot { target: _, fastboot: _, responder } => {
+                // TODO: Fastboot/Daemon Implementation
+                responder
+                    .send(&mut Err(FastbootError::Generic))
+                    .context("sending error response")?
             }
             DaemonRequest::Quit { responder } => {
                 log::info!("Received quit request.");

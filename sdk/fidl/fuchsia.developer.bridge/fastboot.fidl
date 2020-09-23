@@ -1,0 +1,14 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.bridge;
+
+enum FastbootError {
+    GENERIC = 1;
+};
+
+[Discoverable]
+protocol Fastboot {
+    Flash(string:256 partition_name, string:256 path) -> () error FastbootError;
+};

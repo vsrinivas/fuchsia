@@ -1,12 +1,14 @@
-pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut>(
+pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut, F, FFut>(
 {% if includes_execution == "false" and includes_subcommands == "false" %}
   _daemon_factory: D,
   _remote_factory: R,
+  _fastboot_factory: F,
   _is_experiment: E,
   _cmd: {{suite_args_lib}}::FfxPluginCommand,
 {% else %}
   daemon_factory: D,
   remote_factory: R,
+  fastboot_factory: F,
   is_experiment: E,
   cmd: {{suite_args_lib}}::FfxPluginCommand,
 {% endif %}
@@ -22,6 +24,10 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut>(
             fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
         >,
     >,
+    F: FnOnce() -> FFut,
+    FFut: std::future::Future<
+        Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+    >,
     E: FnOnce(&'static str) -> EFut,
     EFut: std::future::Future<Output = bool>,
 {
@@ -30,20 +36,20 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut>(
   match cmd.subcommand {
       Some(sub) => match sub {
 {% for plugin in plugins %}
-        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, is_experiment, c).await,
+        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, fastboot_factory, is_experiment, c).await,
 {% endfor %}
       },
-      None => {{execution_lib}}::ffx_plugin_impl(daemon_factory, remote_factory, is_experiment, cmd).await
+      None => {{execution_lib}}::ffx_plugin_impl(daemon_factory, remote_factory, fastboot_factory, is_experiment, cmd).await
     }
 {% else %}
-  {{execution_lib}}::ffx_plugin_impl(daemon_factory, remote_factory, is_experiment, cmd).await
+  {{execution_lib}}::ffx_plugin_impl(daemon_factory, remote_factory, fastboot_factory, is_experiment, cmd).await
 {% endif %}
 
 {% else %}
 {% if includes_subcommands == "true" %}
     match cmd.subcommand {
 {% for plugin in plugins %}
-      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, is_experiment, c).await,
+      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, fastboot_factory, is_experiment, c).await,
 {% endfor %}
     }
 {% else %}

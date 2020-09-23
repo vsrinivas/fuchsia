@@ -8,6 +8,7 @@ fidl("fuchsia.developer.bridge") {
   sdk_category = "internal"
   sources = [
     "daemon.fidl",
+    "fastboot.fidl",
     "target.fidl",
   ]
   public_deps = [

@@ -11,4 +11,8 @@ pub struct FlashCommand {
     //path to flashing manifest
     #[argh(positional)]
     pub manifest: String,
+
+    //product to flash
+    #[argh(positional)]
+    pub product: Option<String>,
 }

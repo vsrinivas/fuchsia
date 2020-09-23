@@ -92,6 +92,7 @@ fn generate_fake_test_proxy_method(
 pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error> {
     let mut uses_daemon = false;
     let mut uses_remote = false;
+    let mut uses_fastboot = false;
     let mut uses_map = false;
     let mut args: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut futures: Punctuated<Ident, Token!(,)> = Punctuated::new();
@@ -130,6 +131,17 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                             } else if t.ident == Ident::new("DaemonProxy", Span::call_site()) {
                                 args.push(Ident::new("daemon_proxy", Span::call_site()));
                                 uses_daemon = true;
+                                if let Pat::Ident(pat_ident) = pat.as_ref() {
+                                    test_fake_methods_to_generate.push(
+                                        generate_fake_test_proxy_method(
+                                            pat_ident.ident.clone(),
+                                            path,
+                                        ),
+                                    );
+                                }
+                            } else if t.ident == Ident::new("FastbootProxy", Span::call_site()) {
+                                args.push(Ident::new("fastboot_proxy", Span::call_site()));
+                                uses_fastboot = true;
                                 if let Pat::Ident(pat_ident) = pat.as_ref() {
                                     test_fake_methods_to_generate.push(
                                         generate_fake_test_proxy_method(
@@ -229,6 +241,16 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         outer_args.push(quote! {_remote_factory: R});
     }
 
+    if uses_fastboot {
+        outer_args.push(quote! {fastboot_factory: F});
+        preamble = quote! {
+            #preamble
+            let fastboot_proxy = fastboot_factory().await?;
+        };
+    } else {
+        outer_args.push(quote! {_fastboot_factory: F});
+    }
+
     if let Some(_) = proxies.experiment_key {
         outer_args.push(quote! {is_experiment: E});
     } else {
@@ -276,7 +298,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
 
     Ok(quote! {
         #input
-        pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+        pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
             #outer_args
         ) -> anyhow::Result<()>
             where
@@ -292,6 +314,10 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
             >,
             E: FnOnce(&'static str) -> EFut,
             EFut: std::future::Future<Output = bool>,
+            F: FnOnce() -> FFut,
+            FFut: std::future::Future<
+                Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+            >,
         {
             #gated_impl
         }
@@ -421,9 +447,10 @@ mod test {
             pub async fn echo(_cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 _daemon_factory: D,
                 _remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
@@ -440,6 +467,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 echo(_cmd).await
             }
@@ -458,9 +489,10 @@ mod test {
             pub fn echo(_cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 _daemon_factory: D,
                 _remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
@@ -477,6 +509,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 echo(_cmd)
             }
@@ -497,9 +533,10 @@ mod test {
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 daemon_factory: D,
                 _remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
@@ -516,6 +553,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 let daemon_proxy = daemon_factory().await?;
                 echo(daemon_proxy, _cmd).await
@@ -565,17 +606,18 @@ mod test {
     }
 
     #[test]
-    fn test_ffx_plugin_with_a_remote_proxy_and_command() -> Result<(), Error> {
+    fn test_ffx_plugin_with_a_fastboot_proxy_and_command() -> Result<(), Error> {
         let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(
-                remote: RemoteControlProxy,
+                fastboot: FastbootProxy,
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 _daemon_factory: D,
-                remote_factory: R,
+                _remote_factory: R,
+                fastboot_factory: F,
                 _is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
@@ -592,6 +634,91 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
+            {
+                let fastboot_proxy = fastboot_factory().await?;
+                echo(fastboot_proxy, _cmd).await
+            }
+        };
+        let fake_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_fastboot<R:'static>(handle_request: R) -> FastbootProxy
+                where R: FnOnce(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<<FastbootProxy as fidl::endpoints::Proxy>::Service>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
+        let oneshot_fake_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_oneshot_fake_fastboot<R:'static>(handle_request: R) -> FastbootProxy
+                where R: FnOnce(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<<FastbootProxy as fidl::endpoints::Proxy>::Service>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    if let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
+        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
+        assert_eq!(original, result.original);
+        assert_eq!(plugin, result.plugin);
+        assert_eq!(2, result.fake_tests.len());
+        assert_eq!(fake_test, result.fake_tests[0]);
+        assert_eq!(oneshot_fake_test, result.fake_tests[1]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_ffx_plugin_with_a_remote_proxy_and_command() -> Result<(), Error> {
+        let proxies = Default::default();
+        let original: ItemFn = parse_quote! {
+            pub async fn echo(
+                remote: RemoteControlProxy,
+                _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
+        };
+        let plugin: ItemFn = parse_quote! {
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
+                _daemon_factory: D,
+                remote_factory: R,
+                _fastboot_factory: F,
+                _is_experiment: E,
+                _cmd: EchoCommand
+            ) -> anyhow::Result<()>
+                where
+                D: FnOnce() -> DFut,
+                DFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
+                >,
+                R: FnOnce() -> RFut,
+                RFut: std::future::Future<
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
+                    >,
+                >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 let remote_proxy = remote_factory().await?;
                 echo(remote_proxy, _cmd).await
@@ -632,9 +759,10 @@ mod test {
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 daemon_factory: D,
                 remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
@@ -651,6 +779,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 let daemon_proxy = daemon_factory().await?;
                 let remote_proxy = remote_factory().await?;
@@ -711,9 +843,10 @@ mod test {
                 daemon: DaemonProxy) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 daemon_factory: D,
                 remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
@@ -730,6 +863,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 let daemon_proxy = daemon_factory().await?;
                 let remote_proxy = remote_factory().await?;
@@ -791,9 +928,10 @@ mod test {
                 ) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 _daemon_factory: D,
                 remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 cmd: WhateverCommand
             ) -> anyhow::Result<()>
@@ -810,6 +948,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 let remote_proxy = remote_factory().await?;
                 let (test, test_server_end) =
@@ -867,9 +1009,10 @@ mod test {
                 ) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 _daemon_factory: D,
                 remote_factory: R,
+                _fastboot_factory: F,
                 _is_experiment: E,
                 cmd: WhateverCommand
             ) -> anyhow::Result<()>
@@ -886,6 +1029,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 let remote_proxy = remote_factory().await?;
                 let (foo, foo_server_end) =
@@ -968,9 +1115,10 @@ mod test {
                 ) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 _daemon_factory: D,
                 remote_factory: R,
+                _fastboot_factory: F,
                 is_experiment: E,
                 cmd: WhateverCommand
             ) -> anyhow::Result<()>
@@ -987,6 +1135,10 @@ mod test {
                 >,
                 E: FnOnce(&'static str) -> EFut,
                 EFut: std::future::Future<Output = bool>,
+                F: FnOnce() -> FFut,
+                FFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
+                >,
             {
                 if is_experiment("foo_key").await {
                     let remote_proxy = remote_factory().await?;

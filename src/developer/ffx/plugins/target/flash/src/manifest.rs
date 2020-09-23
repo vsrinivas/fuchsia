@@ -3,11 +3,32 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Context, Result},
+    anyhow::{anyhow, Context, Result},
+    async_trait::async_trait,
+    ffx_core::ffx_bail,
+    ffx_flash_args::FlashCommand,
+    fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
     serde_json::{from_value, Value},
-    std::io::Read,
+    std::io::{Read, Write},
 };
+
+pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
+pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
+pub(crate) const MULTIPLE_PRODUCT: &str =
+    "Multiple products found in manifest. Please specify a product";
+
+#[async_trait]
+pub(crate) trait Flash {
+    async fn flash<W>(
+        &self,
+        writer: W,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write + Send;
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct ManifestFile {
@@ -20,18 +41,17 @@ pub(crate) enum FlashManifest {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct FlashManifestV1(Vec<Product>);
+pub(crate) struct FlashManifestV1(pub(crate) Vec<Product>);
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Product {
-    name: String,
-    partitions: Vec<Partition>,
+    pub(crate) name: String,
+    pub(crate) partitions: Vec<Partition>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Partition(String, String);
 
-#[cfg(test)]
 impl Partition {
     pub(crate) fn name(&self) -> &str {
         self.0.as_str()
@@ -48,8 +68,63 @@ impl FlashManifest {
             .context("reading flash manifest from disk")?;
         match manifest.version {
             1 => Ok(Self::V1(from_value(manifest.manifest.clone())?)),
-            _ => bail!("Unknown flash manifest version"),
+            _ => ffx_bail!("{}", UNKNOWN_VERSION),
         }
+    }
+}
+
+#[async_trait]
+impl Flash for FlashManifest {
+    async fn flash<W>(
+        &self,
+        writer: W,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write + Send,
+    {
+        match self {
+            Self::V1(v) => v.flash(writer, fastboot_proxy, cmd).await,
+        }
+    }
+}
+
+#[async_trait]
+impl Flash for FlashManifestV1 {
+    async fn flash<W>(
+        &self,
+        mut writer: W,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write + Send,
+    {
+        let product = match cmd.product {
+            Some(p) => {
+                if let Some(res) = self.0.iter().find(|product| product.name == p) {
+                    res
+                } else {
+                    ffx_bail!("{} {}", MISSING_PRODUCT, p);
+                }
+            }
+            None => {
+                if self.0.len() == 1 {
+                    &self.0[0]
+                } else {
+                    ffx_bail!("{}", MULTIPLE_PRODUCT);
+                }
+            }
+        };
+        for partition in &product.partitions {
+            writeln!(writer, "Writing \"{}\" from {}", partition.name(), partition.file())?;
+            //TODO: better error handling when errors are well defined.
+            fastboot_proxy.flash(partition.name(), partition.file()).await?.map_err(|_| {
+                anyhow!("There was an error uploading {} - {}", partition.name(), partition.file())
+            })?;
+        }
+        Ok(())
     }
 }
 
@@ -59,6 +134,7 @@ impl FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::bail;
     use serde_json::from_str;
     use std::io::BufReader;
 

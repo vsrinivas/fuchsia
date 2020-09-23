@@ -33,4 +33,11 @@ protocol Daemon {
     GetRemoteControl(
         string:fuchsia.device.DEVICE_NAME_MAX target,
         request<rc.RemoteControl> remote) -> () error DaemonError;
+
+    /// Gets a fastboot proxy for the given target.
+    /// The target param expects an exact match with a target's
+    /// nodename.
+    GetFastboot(
+        string:fuchsia.device.DEVICE_NAME_MAX target,
+        request<Fastboot> fastboot) -> () error FastbootError;
 };
