@@ -11,6 +11,7 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "third_party/cobalt/src/lib/statusor/status_macros.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
@@ -73,7 +74,7 @@ StatusOr<T> MakeBadTypeError(const std::string& key, const std::string& expected
 }
 
 StatusOr<std::string> JSONHelper::GetString(const std::string& key) const {
-  RETURN_IF_ERROR(EnsureKey(key));
+  CB_RETURN_IF_ERROR(EnsureKey(key));
 
   if (!config_file_contents_[key].IsString()) {
     return MakeBadTypeError<std::string>(key, "string", config_file_contents_[key].GetType());
@@ -83,7 +84,7 @@ StatusOr<std::string> JSONHelper::GetString(const std::string& key) const {
 }
 
 StatusOr<bool> JSONHelper::GetBool(const std::string& key) const {
-  RETURN_IF_ERROR(EnsureKey(key));
+  CB_RETURN_IF_ERROR(EnsureKey(key));
 
   if (!config_file_contents_[key].IsBool()) {
     return MakeBadTypeError<bool>(key, "bool", config_file_contents_[key].GetType());
