@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wlan/protocol/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 
@@ -13,6 +17,8 @@
 #define ABSOLUTE_TIME(delay) (zx::time() + (delay))
 
 namespace wlan::testing {
+
+using ::testing::NotNull;
 
 class BeaconTest : public ::testing::Test, public simulation::StationIfc {
  public:
@@ -83,15 +89,19 @@ void BeaconTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
   ASSERT_EQ(mgmt_frame->MgmtFrameType(), simulation::SimManagementFrame::FRAME_TYPE_BEACON);
 
   auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
-  beacons_received_.emplace_back(env_.GetTime(), info->channel, beacon_frame->ssid_,
+  std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
+      beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+  ASSERT_THAT(ssid_generic_ie, NotNull());
+  auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+  beacons_received_.emplace_back(env_.GetTime(), info->channel, ssid_ie->ssid_,
                                  beacon_frame->bssid_);
   beacons_received_.back().privacy = beacon_frame->capability_info_.privacy() ? true : false;
-  auto ie = beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
-  if (ie) {
+  auto csa_generic_ie = beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
+  if (csa_generic_ie != nullptr) {
     CSA_beacon_count++;
-    auto ie_ptr = static_cast<simulation::CSAInformationElement*>(ie.get());
-    beacons_received_.back().channel_to_switch_ = ie_ptr->new_channel_number_;
-    beacons_received_.back().channel_switch_count_ = ie_ptr->channel_switch_count_;
+    auto csa_ie = static_cast<simulation::CSAInformationElement*>(csa_generic_ie.get());
+    beacons_received_.back().channel_to_switch_ = csa_ie->new_channel_number_;
+    beacons_received_.back().channel_switch_count_ = csa_ie->channel_switch_count_;
   }
 }
 

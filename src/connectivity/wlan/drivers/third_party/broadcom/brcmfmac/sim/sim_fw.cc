@@ -18,13 +18,17 @@
 
 #include <arpa/inet.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 #include <third_party/bcmdhd/crossdriver/dhd.h>
 
+#include "ddk/protocol/wlan/info.h"
 #include "ddk/protocol/wlanif.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
@@ -758,13 +762,21 @@ void SimFirmware::AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_
 }
 
 void SimFirmware::AssocScanResultSeen(const ScanResult& scan_result) {
+  std::optional<wlan_ssid_t> scan_result_ssid;
+  for (const auto& ie : scan_result.ies) {
+    if (ie != nullptr && ie->IEType() == simulation::InformationElement::IE_TYPE_SSID) {
+      auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ie);
+      scan_result_ssid.emplace(ssid_ie->ssid_);
+    }
+  }
   // Check ssid filter
-  if (scan_state_.opts->ssid) {
+  if (scan_state_.opts->ssid && scan_result_ssid.has_value()) {
     ZX_ASSERT(scan_state_.opts->ssid->len <= sizeof(scan_state_.opts->ssid->ssid));
-    if (scan_result.ssid.len != scan_state_.opts->ssid->len) {
+    if (scan_result_ssid->len != scan_state_.opts->ssid->len) {
       return;
     }
-    if (std::memcmp(scan_result.ssid.ssid, scan_state_.opts->ssid->ssid, scan_result.ssid.len)) {
+    if (std::memcmp(scan_result_ssid->ssid, scan_state_.opts->ssid->ssid, scan_result_ssid->len) !=
+        0) {
       return;
     }
   }
@@ -2311,7 +2323,7 @@ void SimFirmware::ConductChannelSwitch(const wlan_channel_t& dst_channel, uint8_
 void SimFirmware::RxBeacon(const wlan_channel_t& channel,
                            std::shared_ptr<const simulation::SimBeaconFrame> frame) {
   if (scan_state_.state == ScanState::SCANNING && !scan_state_.opts->is_active) {
-    ScanResult scan_result = {.channel = channel, .ssid = frame->ssid_, .bssid = frame->bssid_};
+    ScanResult scan_result = {.channel = channel, .bssid = frame->bssid_, .ies = frame->IEs_};
 
     scan_result.bss_capability.set_val(frame->capability_info_.val());
     scan_state_.opts->on_result_fn(scan_result);
@@ -2322,50 +2334,51 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel,
     RestartBeaconWatchdog();
 
     auto ie = frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
-    if (ie) {
-      // If CSA IE exist.
-      auto csa_ie = static_cast<simulation::CSAInformationElement*>(ie.get());
+    if (ie == nullptr) {
+      return;
+    }
+    // If CSA IE exists.
+    auto csa_ie = static_cast<simulation::CSAInformationElement*>(ie.get());
 
-      // Get current chanspec of client ifidx and convert to channel.
-      wlan_channel_t channel = GetIfChannel(false);
+    // Get current chanspec of client ifidx and convert to channel.
+    wlan_channel_t channel = GetIfChannel(false);
 
-      zx::duration SwitchDelay = frame->interval_ * (int64_t)csa_ie->channel_switch_count_;
+    zx::duration SwitchDelay = frame->interval_ * (int64_t)csa_ie->channel_switch_count_;
 
-      if (channel_switch_state_.state == ChannelSwitchState::HOME) {
-        // If the destination channel is the same as current channel, just ignore it.
-        if (csa_ie->new_channel_number_ == channel.primary) {
-          return;
-        }
-
-        channel.primary = csa_ie->new_channel_number_;
-        channel_switch_state_.new_channel = csa_ie->new_channel_number_;
-
-        channel_switch_state_.state = ChannelSwitchState::SWITCHING;
-      } else {
-        ZX_ASSERT(channel_switch_state_.state == ChannelSwitchState::SWITCHING);
-        if (csa_ie->new_channel_number_ == channel_switch_state_.new_channel) {
-          return;
-        }
-
-        // If the new channel is different from the previous dst channel, cancel callback.
-        hw_.CancelCallback(channel_switch_state_.switch_timer_id);
-
-        // If it's the same as current channel for this client before switching, just simply cancel
-        // the switch event and clear state.
-        if (csa_ie->new_channel_number_ == channel.primary) {
-          channel_switch_state_.state = ChannelSwitchState::HOME;
-          return;
-        }
-
-        // Schedule a new event when dst channel change.
-        channel.primary = csa_ie->new_channel_number_;
+    if (channel_switch_state_.state == ChannelSwitchState::HOME) {
+      // If the destination channel is the same as current channel, just ignore it.
+      if (csa_ie->new_channel_number_ == channel.primary) {
+        return;
       }
 
-      auto callback = std::make_unique<std::function<void()>>();
-      *callback = std::bind(&SimFirmware::ConductChannelSwitch, this, channel,
-                            csa_ie->channel_switch_mode_);
-      hw_.RequestCallback(std::move(callback), SwitchDelay, &channel_switch_state_.switch_timer_id);
+      channel.primary = csa_ie->new_channel_number_;
+      channel_switch_state_.new_channel = csa_ie->new_channel_number_;
+
+      channel_switch_state_.state = ChannelSwitchState::SWITCHING;
+    } else {
+      ZX_ASSERT(channel_switch_state_.state == ChannelSwitchState::SWITCHING);
+      if (csa_ie->new_channel_number_ == channel_switch_state_.new_channel) {
+        return;
+      }
+
+      // If the new channel is different from the previous dst channel, cancel callback.
+      hw_.CancelCallback(channel_switch_state_.switch_timer_id);
+
+      // If it's the same as current channel for this client before switching, just simply cancel
+      // the switch event and clear state.
+      if (csa_ie->new_channel_number_ == channel.primary) {
+        channel_switch_state_.state = ChannelSwitchState::HOME;
+        return;
+      }
+
+      // Schedule a new event when dst channel change.
+      channel.primary = csa_ie->new_channel_number_;
     }
+
+    auto callback = std::make_unique<std::function<void()>>();
+    *callback =
+        std::bind(&SimFirmware::ConductChannelSwitch, this, channel, csa_ie->channel_switch_mode_);
+    hw_.RequestCallback(std::move(callback), SwitchDelay, &channel_switch_state_.switch_timer_id);
   }
 }
 
@@ -2387,7 +2400,7 @@ void SimFirmware::RxProbeResp(const wlan_channel_t& channel,
   }
 
   ScanResult scan_result = {
-      .channel = channel, .ssid = frame->ssid_, .bssid = frame->src_addr_, .rssi_dbm = rssi_dbm};
+      .channel = channel, .bssid = frame->src_addr_, .rssi_dbm = rssi_dbm, .ies = frame->IEs_};
 
   scan_result.bss_capability.set_val(frame->capability_info_.val());
   scan_state_.opts->on_result_fn(scan_result);
@@ -2396,12 +2409,36 @@ void SimFirmware::RxProbeResp(const wlan_channel_t& channel,
 // Handle an Rx Beacon sent to us from the hardware, using it to fill in all of the fields in a
 // brcmf_escan_result.
 void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
-  // For now, the only IE we will include will be for the SSID
-  size_t ssid_ie_size = 2 + result_in.ssid.len;
+  std::vector<uint8_t> ie_buf;
+  for (const auto& ie : result_in.ies) {
+    if (ie == nullptr) {
+      continue;
+    }
+    switch (ie->IEType()) {
+      case simulation::InformationElement::IE_TYPE_SSID: {
+        const auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ie);
+        std::vector<uint8_t> current_ie_buf = ssid_ie->ToRawIe();
+        ie_buf.insert(ie_buf.end(), current_ie_buf.begin(), current_ie_buf.end());
+        break;
+      }
+      case simulation::InformationElement::IE_TYPE_CSA: {
+        const auto csa_ie = std::static_pointer_cast<simulation::CSAInformationElement>(ie);
+        std::vector<uint8_t> current_ie_buf = csa_ie->ToRawIe();
+        ie_buf.insert(ie_buf.end(), current_ie_buf.begin(), current_ie_buf.end());
+        break;
+      }
+      case simulation::InformationElement::IE_TYPE_WPA1:
+        __FALLTHROUGH;
+      case simulation::InformationElement::IE_TYPE_WPA2:
+        __FALLTHROUGH;
+      default:
+        break;
+    }
+  }
 
-  // scan_result_size includes all BSS info structures (each including IEs). We (like the firmware)
+  // scan_result_size includes all BSS info structures (each including IEs). Like the firmware, we
   // only send one result back at a time.
-  size_t scan_result_size = roundup(sizeof(brcmf_escan_result_le) + ssid_ie_size, 4);
+  size_t scan_result_size = roundup(sizeof(brcmf_escan_result_le) + ie_buf.size(), 4);
 
   auto buf = std::make_unique<std::vector<uint8_t>>(scan_result_size);
 
@@ -2416,15 +2453,13 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
   bss_info->version = BRCMF_BSS_INFO_VERSION;
 
   // length of this record (includes IEs)
-  bss_info->length = roundup(sizeof(brcmf_bss_info_le) + ssid_ie_size, 4);
+  bss_info->length = roundup(sizeof(brcmf_bss_info_le) + ie_buf.size(), 4);
   // channel
   bss_info->chanspec = channel_to_chanspec(&d11_inf_, &result_in.channel);
   // capability
   bss_info->capability = result_in.bss_capability.val();
 
   // ssid
-  ZX_ASSERT(sizeof(bss_info->SSID) == sizeof(result_in.ssid.ssid));
-  ZX_ASSERT(result_in.ssid.len <= sizeof(result_in.ssid.ssid));
   bss_info->SSID_len = 0;  // SSID will go into an IE
 
   // bssid
@@ -2436,17 +2471,11 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
 
   // IEs
   bss_info->ie_offset = sizeof(brcmf_bss_info_le);
-
-  // IE: SSID
   size_t ie_offset = sizeof(brcmf_escan_result_le);
-  size_t ie_len = 0;
   uint8_t* ie_data = &buffer_data[ie_offset];
-  ie_data[ie_len++] = IEEE80211_ASSOC_TAG_SSID;
-  ie_data[ie_len++] = result_in.ssid.len;
-  memcpy(&ie_data[ie_len], result_in.ssid.ssid, result_in.ssid.len);
-  ie_len += result_in.ssid.len;
+  std::memcpy(ie_data, ie_buf.data(), ie_buf.size());
 
-  bss_info->ie_length = ie_len;
+  bss_info->ie_length = ie_buf.size();
 
   // Wrap this in an event and send it back to the driver
   SendEventToDriver(scan_result_size, std::move(buf), BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_PARTIAL,

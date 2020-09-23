@@ -73,21 +73,21 @@ void PassiveScanTestInterface::OnScanResult(const wlanif_scan_result_t* result) 
 
   int matches_seen = 0;
 
-  for (auto ap_info = test_->aps_.begin(); ap_info != test_->aps_.end(); ap_info++) {
-    common::MacAddr mac_addr = (*ap_info)->ap_.GetBssid();
+  for (const auto& ap_info : test_->aps_) {
+    common::MacAddr mac_addr = ap_info->ap_.GetBssid();
     ASSERT_EQ(sizeof(result->bss.bssid), sizeof(mac_addr.byte));
     if (!std::memcmp(result->bss.bssid, mac_addr.byte, sizeof(mac_addr.byte))) {
-      (*ap_info)->beacons_seen_count_++;
+      ap_info->beacons_seen_count_++;
       matches_seen++;
 
       // Verify SSID
-      wlan_ssid_t ssid_info = (*ap_info)->ap_.GetSsid();
+      const wlan_ssid_t ssid_info = ap_info->ap_.GetSsid();
       EXPECT_EQ(result->bss.ssid.len, ssid_info.len);
       ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
       EXPECT_EQ(memcmp(result->bss.ssid.data, ssid_info.ssid, ssid_info.len), 0);
 
       // Verify channel
-      wlan_channel_t channel = (*ap_info)->ap_.GetChannel();
+      const wlan_channel_t channel = ap_info->ap_.GetChannel();
       EXPECT_EQ(result->bss.chan.primary, channel.primary);
       EXPECT_EQ(result->bss.chan.cbw, channel.cbw);
       EXPECT_EQ(result->bss.chan.secondary80, channel.secondary80);

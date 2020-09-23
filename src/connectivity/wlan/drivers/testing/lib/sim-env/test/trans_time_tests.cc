@@ -2,15 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 
 // zx::time() gives us an absolute time of zero
 #define ABSOLUTE_TIME(delay) (zx::time() + (delay))
 
 namespace wlan::testing {
+
+using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
@@ -84,8 +90,12 @@ void SimStation::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFram
   switch (mgmt_frame->MgmtFrameType()) {
     case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
       auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
-      EXPECT_EQ(beacon_frame->ssid_.len, kDefaultSsid.len);
-      EXPECT_EQ(memcmp(beacon_frame->ssid_.ssid, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN), 0);
+      std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
+          beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+      ASSERT_THAT(ssid_generic_ie, NotNull());
+      auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+      EXPECT_EQ(ssid_ie->ssid_.len, kDefaultSsid.len);
+      EXPECT_EQ(std::memcmp(ssid_ie->ssid_.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
       EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);
       recv_times_.push_back(env_->GetTime());
       break;

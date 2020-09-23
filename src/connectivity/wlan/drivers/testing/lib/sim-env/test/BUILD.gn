@@ -29,6 +29,8 @@ executable("rx_tests") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/lib/fxl/test/:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -42,6 +44,8 @@ executable("frame_ie_tests") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/lib/fxl/test/:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -55,6 +59,8 @@ executable("location_tests") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/lib/fxl/test/:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -68,6 +74,8 @@ executable("trans_time_tests") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/lib/fxl/test/:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

@@ -44,6 +44,8 @@ executable("beacon_unittests") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -71,6 +73,8 @@ executable("probe_unittests") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

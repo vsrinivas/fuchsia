@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
@@ -10,6 +11,8 @@
 // Verify that signal strengths are being properly calculated and delivered by the environment
 
 namespace wlan::testing {
+
+using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
@@ -24,7 +27,7 @@ void checkChannel(const wlan_channel_t& channel) {
 
 void checkSsid(const wlan_ssid_t& ssid) {
   EXPECT_EQ(ssid.len, kDefaultSsid.len);
-  EXPECT_EQ(memcmp(ssid.ssid, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN), 0);
+  EXPECT_EQ(std::memcmp(ssid.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
 }
 
 class SimStation : public wlan::simulation::StationIfc {
@@ -55,7 +58,12 @@ class SimStation : public wlan::simulation::StationIfc {
     switch (mgmt_frame->MgmtFrameType()) {
       case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
         auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
-        checkSsid(beacon_frame->ssid_);
+        std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
+            beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+        ASSERT_THAT(ssid_generic_ie, NotNull());
+        auto ssid_ie =
+            std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+        checkSsid(ssid_ie->ssid_);
         EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);
         signal_received = true;
         signal_strength = info->signal_strength;

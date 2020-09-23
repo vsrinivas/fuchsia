@@ -2,14 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::testing {
+
+using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kAp1TxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
@@ -62,7 +68,11 @@ void ProbeTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
   sig_strength_resp_list.push_back(info->signal_strength);
   auto probe_resp_frame = std::static_pointer_cast<const simulation::SimProbeRespFrame>(mgmt_frame);
   bssid_resp_list_.push_back(probe_resp_frame->src_addr_);
-  ssid_resp_list_.push_back(probe_resp_frame->ssid_);
+  std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
+      probe_resp_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+  ASSERT_THAT(ssid_generic_ie, NotNull());
+  auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+  ssid_resp_list_.push_back(ssid_ie->ssid_);
 }
 
 void compareChannel(const wlan_channel_t& channel1, const wlan_channel_t& channel2) {
@@ -72,8 +82,8 @@ void compareChannel(const wlan_channel_t& channel1, const wlan_channel_t& channe
 }
 
 void compareSsid(const wlan_ssid_t& ssid1, const wlan_ssid_t& ssid2) {
-  EXPECT_EQ(ssid1.len, ssid2.len);
-  EXPECT_EQ(memcmp(ssid1.ssid, ssid2.ssid, WLAN_MAX_SSID_LEN), 0);
+  ASSERT_EQ(ssid1.len, ssid2.len);
+  EXPECT_EQ(memcmp(ssid1.ssid, ssid2.ssid, ssid1.len), 0);
 }
 
 /* Verify that probe request which is sent to a channel with no ap active on, will not get

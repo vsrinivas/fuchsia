@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include <list>
+#include <memory>
 #include <optional>
 
 #include "sim-sta-ifc.h"
@@ -39,12 +40,31 @@ enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
 
 class InformationElement {
  public:
-  enum SimIEType { IE_TYPE_CSA = 37, IE_TYPE_WPA1 = 221, IE_TYPE_WPA2 = 48 };
+  enum SimIEType { IE_TYPE_SSID = 0, IE_TYPE_CSA = 37, IE_TYPE_WPA1 = 221, IE_TYPE_WPA2 = 48 };
 
   explicit InformationElement() = default;
   virtual ~InformationElement();
 
   virtual SimIEType IEType() const = 0;
+
+  // Return the IE as a buffer of bytes, in the 802.11-specified format for this IE type.
+  virtual std::vector<uint8_t> ToRawIe() const = 0;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.2
+class SSIDInformationElement : public InformationElement {
+ public:
+  explicit SSIDInformationElement(const wlan_ssid_t& ssid) : ssid_(ssid){};
+
+  SSIDInformationElement(const SSIDInformationElement& ssid_ie);
+
+  ~SSIDInformationElement() override;
+
+  SimIEType IEType() const override;
+
+  std::vector<uint8_t> ToRawIe() const override;
+
+  wlan_ssid_t ssid_;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.19
@@ -61,6 +81,8 @@ class CSAInformationElement : public InformationElement {
   ~CSAInformationElement() override;
 
   SimIEType IEType() const override;
+
+  std::vector<uint8_t> ToRawIe() const override;
 
   bool channel_switch_mode_;
   uint8_t new_channel_number_;
@@ -104,6 +126,7 @@ class SimManagementFrame : public SimFrame {
   SimFrameType FrameType() const override;
   // Frame subtype identifier for management frames
   virtual SimMgmtFrameType MgmtFrameType() const = 0;
+  void AddSSIDIE(const wlan_ssid_t& ssid);
   void AddCSAIE(const wlan_channel_t& channel, uint8_t channel_switch_count);
   void AddRawIes(fbl::Span<const uint8_t> raw_ies);
   std::shared_ptr<InformationElement> FindIE(InformationElement::SimIEType ie_type) const;
@@ -124,8 +147,7 @@ class SimManagementFrame : public SimFrame {
 class SimBeaconFrame : public SimManagementFrame {
  public:
   SimBeaconFrame() = default;
-  explicit SimBeaconFrame(const wlan_ssid_t& ssid, const common::MacAddr& bssid)
-      : ssid_(ssid), bssid_(bssid){};
+  explicit SimBeaconFrame(const wlan_ssid_t& ssid, const common::MacAddr& bssid);
 
   SimBeaconFrame(const SimBeaconFrame& beacon);
 
@@ -135,7 +157,6 @@ class SimBeaconFrame : public SimManagementFrame {
 
   SimFrame* CopyFrame() const override;
 
-  wlan_ssid_t ssid_;
   common::MacAddr bssid_;
   zx::duration interval_;
   wlan::CapabilityInfo capability_info_;
@@ -159,8 +180,7 @@ class SimProbeRespFrame : public SimManagementFrame {
  public:
   SimProbeRespFrame() = default;
   explicit SimProbeRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
-                             const wlan_ssid_t& ssid)
-      : SimManagementFrame(src, dst), ssid_(ssid){};
+                             const wlan_ssid_t& ssid);
 
   SimProbeRespFrame(const SimProbeRespFrame& probe_resp);
 
@@ -170,7 +190,6 @@ class SimProbeRespFrame : public SimManagementFrame {
 
   SimFrame* CopyFrame() const override;
 
-  wlan_ssid_t ssid_;
   wlan::CapabilityInfo capability_info_;
 };
 

@@ -58,7 +58,7 @@ class FakeAp : public StationIfc {
     environ->AddStation(this);
     tx_info_.channel = chan;
     beacon_state_.beacon_frame_.bssid_ = bssid;
-    beacon_state_.beacon_frame_.ssid_ = ssid;
+    beacon_state_.beacon_frame_.AddSSIDIE(ssid);
     // By default, assume AP is part of an infrastructure network
     beacon_state_.beacon_frame_.capability_info_.set_ibss(0);
     beacon_state_.beacon_frame_.capability_info_.set_ess(1);

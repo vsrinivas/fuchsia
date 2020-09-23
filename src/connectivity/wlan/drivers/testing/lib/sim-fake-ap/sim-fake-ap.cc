@@ -56,7 +56,7 @@ void FakeAp::SetBssid(const common::MacAddr& bssid) {
 
 void FakeAp::SetSsid(const wlan_ssid_t& ssid) {
   ssid_ = ssid;
-  beacon_state_.beacon_frame_.ssid_ = ssid;
+  beacon_state_.beacon_frame_.AddSSIDIE(ssid);
 }
 
 void FakeAp::SetCSABeaconInterval(zx::duration interval) {

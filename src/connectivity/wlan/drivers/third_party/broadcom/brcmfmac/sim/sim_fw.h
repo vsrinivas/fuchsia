@@ -21,11 +21,14 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
+#include <list>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
@@ -81,10 +84,11 @@ class SimFirmware {
 
   struct ScanResult {
     wlan_channel_t channel;
-    wlan_ssid_t ssid;
     common::MacAddr bssid;
     wlan::CapabilityInfo bss_capability;
     int8_t rssi_dbm;
+    // Note: SSID appears in an IE.
+    std::list<std::shared_ptr<wlan::simulation::InformationElement>> ies;
   };
 
   using ScanResultHandler = std::function<void(const ScanResult& scan_result)>;
