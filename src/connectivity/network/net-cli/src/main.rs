@@ -680,20 +680,20 @@ fn write_neigh_entry<W: std::io::Write>(
     match item {
         neighbor::EntryIteratorItem::Existing(entry) => {
             if watch_for_changes {
-                write!(f, "EXISTING | {}", neighbor_ext::Entry::from(entry))
+                writeln!(f, "EXISTING | {}", neighbor_ext::Entry::from(entry))
             } else {
-                write!(f, "{}", neighbor_ext::Entry::from(entry))
+                writeln!(f, "{}", neighbor_ext::Entry::from(entry))
             }
         }
-        neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}) => write!(f, "IDLE"),
+        neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}) => writeln!(f, "IDLE"),
         neighbor::EntryIteratorItem::Added(entry) => {
-            write!(f, "ADDED    | {}", neighbor_ext::Entry::from(entry))
+            writeln!(f, "ADDED    | {}", neighbor_ext::Entry::from(entry))
         }
         neighbor::EntryIteratorItem::Changed(entry) => {
-            write!(f, "CHANGED  | {}", neighbor_ext::Entry::from(entry))
+            writeln!(f, "CHANGED  | {}", neighbor_ext::Entry::from(entry))
         }
         neighbor::EntryIteratorItem::Removed(entry) => {
-            write!(f, "REMOVED  | {}", neighbor_ext::Entry::from(entry))
+            writeln!(f, "REMOVED  | {}", neighbor_ext::Entry::from(entry))
         }
     }
 }
@@ -1084,7 +1084,7 @@ mod tests {
                     .next()
                     .await
                     .map(|item| item_to_string(item.expect("neigh_entry_stream should succeed")));
-                assert_eq!(got, Some(want_line.into()));
+                assert_eq!(got, Some(format!("{}\n", want_line)));
             }
 
             // When listing entries, the sender should close after sending all existing entries.
