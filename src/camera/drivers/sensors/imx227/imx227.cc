@@ -22,6 +22,7 @@
 #include <hw/reg.h>
 
 #include "src/camera/drivers/sensors/imx227/constants.h"
+#include "src/camera/drivers/sensors/imx227/imx227-bind.h"
 #include "src/camera/drivers/sensors/imx227/imx227_modes.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 #include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"
@@ -502,9 +503,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace camera
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(imx227, camera::driver_ops, "imx227", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SONY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SONY_IMX227),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CAMERA_SENSOR),
-ZIRCON_DRIVER_END(imx227)
+ZIRCON_DRIVER(imx227, camera::driver_ops, "imx227", "0.1");

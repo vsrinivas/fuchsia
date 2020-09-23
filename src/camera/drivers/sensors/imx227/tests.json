@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+
+  {
+    "name": "Vendor",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC"
+    }
+  },
+
+  {
+    "name": "Device",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SONY",
+      "fuchsia.BIND_PLATFORM_DEV_PID": "1",
+      "fuchsia.BIND_PLATFORM_DEV_DID": "42"
+    }
+  },
+
+  {
+    "name": "Sony IMX227",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SONY",
+      "fuchsia.BIND_PLATFORM_DEV_PID": "1",
+      "fuchsia.BIND_PLATFORM_DEV_DID": "18"
+    }
+  }
+]

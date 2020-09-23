@@ -1,0 +1,11 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.platform;
+using fuchsia.composite;
+
+fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.SONY;
+fuchsia.BIND_PLATFORM_DEV_PID == 1; // PDEV_PID_SONY_IMX227
+fuchsia.BIND_PLATFORM_DEV_DID == 18; // PDEV_DID_CAMERA_SENSOR
