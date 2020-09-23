@@ -57,3 +57,11 @@ resource struct MultipleHandleSubtypes {
     handle:EVENT event;
     handle:CHANNEL channel;
 };
+
+resource table ReservedFieldTable {
+    1: reserved;
+};
+
+resource struct ReservedFieldTableStruct {
+    ReservedFieldTable table;
+};
