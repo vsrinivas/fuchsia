@@ -139,6 +139,12 @@ async fn get_inspect_data<'a>(
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn inspect_nic() -> Result {
+    // The number of IPv6 addresses that the stack will assign to an interface.
+    //
+    // When an interface comes up, the stack will assign two link-local IPv6
+    // addresses to it.
+    const EXPECTED_NUM_IPV6_ADDRESSES: usize = 2;
+
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
     let env = sandbox
@@ -195,11 +201,11 @@ async fn inspect_nic() -> Result {
                     interfaces_by_id
                         .get(id)
                         .map(|iface| {
-                            // endpoint is up, has assigned IPv4 and IPv6
-                            // addresses.
+                            // Endpoint is up, has assigned IPv4 and at least the expected number of
+                            // IPv6 addresses.
                             iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
                                 && iface.addr != fidl_ip!(0.0.0.0)
-                                && iface.ipv6addrs.len() != 0
+                                && iface.ipv6addrs.len() >= EXPECTED_NUM_IPV6_ADDRESSES
                         })
                         .unwrap_or(false)
                 });
