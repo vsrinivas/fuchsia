@@ -243,8 +243,8 @@ func Main() {
 			MaxTempAddrPreferredLifetime:  maxTempAddrPreferredLifetime,
 			RegenAdvanceDuration:          regenAdvanceDuration,
 		},
-		NDPDisp: ndpDisp,
-
+		NDPDisp:              ndpDisp,
+		AutoGenIPv6LinkLocal: true,
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
