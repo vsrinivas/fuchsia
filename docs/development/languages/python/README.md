@@ -9,11 +9,12 @@ drop support for Python 2. Until that time, scripts should support both
 versions. See [Fuchsia Python style guide](python_style.md) for details.
 
 ## Style
+
 [Fuchsia Python style guide](python_style.md)
 
 ## Testing
 
-TODO(dschuyler) establish testing guidelines.
+See [Python testing](testing.md).
 
 ## Documentation
 

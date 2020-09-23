@@ -6,3 +6,5 @@ toc:
   path: /docs/development/languages/python
 - title: "Python style guide"
   path: /docs/development/languages/python/python_style.md
+- title: "Testing"
+  path: /docs/development/languages/python/testing.md
