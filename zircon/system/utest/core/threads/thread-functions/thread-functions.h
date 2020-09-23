@@ -50,6 +50,7 @@ int atomic_exchange(volatile int* addr, int value);
 
 constexpr int kTestAtomicSetValue = 1;
 constexpr int kTestAtomicExitValue = 2;
+constexpr int kTestAtomicClobberValue = 3;
 
 // The arg is a |volatile int*|. The function loops storing |kTestAtomicSetValue| there
 // until it sees |kTestAtomicExitValue| then exits.

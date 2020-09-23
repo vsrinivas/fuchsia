@@ -648,24 +648,29 @@ TEST(Threads, SuspendPortCall) {
 TEST(Threads, SuspendStopsThread) {
   zxr_thread_t thread;
 
-  volatile int value = 0;
+  volatile int value = kTestAtomicClobberValue;
   zx_handle_t thread_h;
   ASSERT_TRUE(
       start_thread(threads_test_atomic_store, const_cast<int*>(&value), &thread, &thread_h));
 
-  while (atomic_load(&value) != 1) {
+  while (atomic_load(&value) != kTestAtomicSetValue) {
     zx_nanosleep(0);
   }
 
+  // Suspend the thread and wait for the suspend to happen.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
-  while (atomic_load(&value) != 2) {
-    atomic_store(&value, 2);
-    // Give the thread a chance to clobber the value
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-  }
+  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, nullptr), ZX_OK);
+
+  // Clobber the value, wait, and "check" that the thread didn't reset the value.
+  // This isn't fool proof, but it's hard to check that something "doesn't" happen.
+  atomic_store(&value, kTestAtomicClobberValue);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+  ASSERT_EQ(atomic_load(&value), kTestAtomicClobberValue);
+
+  // Let the thread resume and then wait for it to reset the value.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
-  while (atomic_load(&value) != 1) {
+  while (atomic_load(&value) != kTestAtomicSetValue) {
     zx_nanosleep(0);
   }
 
