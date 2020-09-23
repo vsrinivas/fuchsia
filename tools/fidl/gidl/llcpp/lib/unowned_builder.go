@@ -66,6 +66,8 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 		return fmt.Sprintf("%g", value)
 	case string:
 		return fmt.Sprintf("fidl::StringView(%s, %d)", strconv.Quote(value), len(value))
+	case gidlir.Handle:
+		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
@@ -102,8 +104,17 @@ func (b *unownedBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.Struct
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
-		b.write(
-			"%s.%s = %s;\n", containerVar, field.Key.Name, b.visit(field.Value, fieldDecl))
+
+		stringBeforeVisitField := b.String()
+		fieldValue := b.visit(field.Value, fieldDecl)
+		// if visiting the field does not write any data to the string builder
+		// then its return value is a temporary object and so cannot be moved
+		// (which will prevent copy elision)
+		if stringBeforeVisitField == b.String() {
+			b.write("%s.%s = %s;\n", containerVar, field.Key.Name, fieldValue)
+		} else {
+			b.write("%s.%s = std::move(%s);\n", containerVar, field.Key.Name, fieldValue)
+		}
 	}
 	var result string
 	if decl.IsNullable() {

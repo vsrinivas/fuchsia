@@ -12,6 +12,7 @@ import (
 
 	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	libcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	libllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp/lib"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
@@ -20,12 +21,16 @@ import (
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <benchmarkfidl/llcpp/fidl.h>
 #include <perftest/perftest.h>
+#include <lib/fidl/cpp/test/handle_util.h>
 
 #include "src/tests/benchmarks/fidl/walker/walker_benchmark_util.h"
 
 namespace {
 
 void Build{{ .Name }}(std::function<void({{.Type}})> f) {
+{{- if .HandleDefs }}
+	auto handle_defs = {{ .HandleDefs }};
+{{- end }}
 	{{ .ValueBuild }}
 	f(std::move({{ .ValueVar }}));
 }
@@ -45,6 +50,7 @@ PERFTEST_CTOR(RegisterTests)
 type benchmarkTmplInput struct {
 	Path, Name, Type     string
 	ValueBuild, ValueVar string
+	HandleDefs           string
 }
 
 func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
@@ -66,6 +72,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 			Type:       llcppBenchmarkType(gidlBenchmark.Value),
 			ValueBuild: valBuild,
 			ValueVar:   valVar,
+			HandleDefs: libcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
 		}); err != nil {
 			return nil, nil, err
 		}

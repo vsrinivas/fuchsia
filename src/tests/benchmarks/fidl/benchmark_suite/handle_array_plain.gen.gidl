@@ -6,7 +6,7 @@
 
 // 64 plain handle array in a struct
 benchmark("HandleArray/Plain/64") {
-    bindings_allowlist = [dart, rust],
+    bindings_denylist = [go],
     handle_defs = {
 	    #0 = event(),
 	    #1 = event(),
