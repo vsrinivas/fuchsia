@@ -42,7 +42,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":zircon_host_tests",
     "bringup:tests",
     "camera:tests",
     "chromium:tests",
@@ -74,18 +73,12 @@ group("tests") {
     "ui:tests",
     "virtualization:tests",
     "zircon:tests",
+  ]
 
-    # These targets should be removed when the tests are moved to //src.
-    "//zircon/kernel/lib/devicetree/tests",
+  # These targets should be removed when the tests are moved to //src.
+  deps += [
+    "//zircon/kernel:tests",
     "//zircon/system/ulib:tests",
     "//zircon/system/utest:tests",
-  ]
-}
-
-group("zircon_host_tests") {
-  testonly = true
-  deps = [
-    "//zircon/kernel/dev/coresight/tests($host_toolchain)",
-    "//zircon/kernel/lib/heap/cmpctmalloc/tests($host_toolchain)",
   ]
 }

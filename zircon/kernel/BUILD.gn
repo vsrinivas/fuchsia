@@ -113,4 +113,13 @@ if (is_kernel) {
 
     cflags_c = [ "-Wmissing-prototypes" ]
   }
-}  # is_kernel
+} else {  # is_kernel
+  group("tests") {
+    testonly = true
+    deps = [
+      "dev/coresight/tests($host_toolchain)",
+      "lib/devicetree/tests",
+      "lib/heap/cmpctmalloc/tests($host_toolchain)",
+    ]
+  }
+}
