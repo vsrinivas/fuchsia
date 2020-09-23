@@ -16,6 +16,24 @@ func init() {
 		Gen:      gidlGenHandleArrayEvent,
 		Benchmarks: []config.Benchmark{
 			{
+				Name:    "HandleArray/Event/1",
+				Comment: `1 event handle array in a struct`,
+				Config: config.Config{
+					"size": 1,
+				},
+				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 1),
+				Denylist:   []config.Binding{config.Go},
+			},
+			{
+				Name:    "HandleArray/Event/16",
+				Comment: `16 event handle array in a struct`,
+				Config: config.Config{
+					"size": 16,
+				},
+				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 16),
+				Denylist:   []config.Binding{config.Go},
+			},
+			{
 				Name:    "HandleArray/Event/64",
 				Comment: `64 event handle array in a struct`,
 				Config: config.Config{

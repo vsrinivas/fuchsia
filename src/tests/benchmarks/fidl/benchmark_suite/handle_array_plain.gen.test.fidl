@@ -6,6 +6,14 @@
 
 library benchmarkfidl;
 
+resource struct HandleArrayPlain1 {
+    array<handle>:1 handles;
+};
+
+resource struct HandleArrayPlain16 {
+    array<handle>:16 handles;
+};
+
 resource struct HandleArrayPlain64 {
     array<handle>:64 handles;
 };

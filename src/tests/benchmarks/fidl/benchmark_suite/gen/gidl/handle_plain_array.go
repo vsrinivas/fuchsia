@@ -16,6 +16,30 @@ func init() {
 		Gen:      gidlGenHandleArrayPlain,
 		Benchmarks: []config.Benchmark{
 			{
+				Name:    "HandleArray/Plain/1",
+				Comment: `1 plain handle array in a struct`,
+				Config: config.Config{
+					"size": 1,
+				},
+				// The FIDL type of the handle is a plain handle, but the handle value still needs
+				// a type, chosen here to be 'event' for better comparison with the
+				// event_handle_array benchmark.
+				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 1),
+				Denylist:   []config.Binding{config.Go},
+			},
+			{
+				Name:    "HandleArray/Plain/16",
+				Comment: `16 plain handle array in a struct`,
+				Config: config.Config{
+					"size": 16,
+				},
+				// The FIDL type of the handle is a plain handle, but the handle value still needs
+				// a type, chosen here to be 'event' for better comparison with the
+				// event_handle_array benchmark.
+				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 16),
+				Denylist:   []config.Binding{config.Go},
+			},
+			{
 				Name:    "HandleArray/Plain/64",
 				Comment: `64 plain handle array in a struct`,
 				Config: config.Config{

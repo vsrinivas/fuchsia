@@ -18,6 +18,16 @@ func init() {
 		Definitions: []config.Definition{
 			{
 				Config: config.Config{
+					"size": 1,
+				},
+			},
+			{
+				Config: config.Config{
+					"size": 16,
+				},
+			},
+			{
+				Config: config.Config{
 					"size": 64,
 				},
 			},

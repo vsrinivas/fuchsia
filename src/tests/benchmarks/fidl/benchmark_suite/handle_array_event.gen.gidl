@@ -4,6 +4,64 @@
 
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
+// 1 event handle array in a struct
+benchmark("HandleArray/Event/1") {
+    bindings_denylist = [go],
+    handle_defs = {
+	    #0 = event(),
+    },
+    value = HandleArrayEvent1{
+        handles: [
+            #0,
+
+        ]
+    },
+}
+
+// 16 event handle array in a struct
+benchmark("HandleArray/Event/16") {
+    bindings_denylist = [go],
+    handle_defs = {
+	    #0 = event(),
+	    #1 = event(),
+	    #2 = event(),
+	    #3 = event(),
+	    #4 = event(),
+	    #5 = event(),
+	    #6 = event(),
+	    #7 = event(),
+	    #8 = event(),
+	    #9 = event(),
+	    #10 = event(),
+	    #11 = event(),
+	    #12 = event(),
+	    #13 = event(),
+	    #14 = event(),
+	    #15 = event(),
+    },
+    value = HandleArrayEvent16{
+        handles: [
+            #0,
+            #1,
+            #2,
+            #3,
+            #4,
+            #5,
+            #6,
+            #7,
+            #8,
+            #9,
+            #10,
+            #11,
+            #12,
+            #13,
+            #14,
+            #15,
+
+        ]
+    },
+}
+
 // 64 event handle array in a struct
 benchmark("HandleArray/Event/64") {
     bindings_denylist = [go],
