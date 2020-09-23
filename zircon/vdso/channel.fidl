@@ -32,7 +32,7 @@ resource struct HandleDisposition {
     status result;
 };
 
-struct ChannelCallEtcArgs {
+resource struct ChannelCallEtcArgs {
     vector<byte> wr_bytes;
     mutable_vector_HandleDisposition_u32size wr_handles;
     vector<byte> rd_bytes;
