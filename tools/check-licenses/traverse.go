@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Walk gathers all Licenses then checks for a match within each filtered file
@@ -42,7 +43,7 @@ func Walk(config *Config) error {
 
 func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
 	// TODO(solomonkinard) larger limit for single license files?
-	path := file_tree.getPath() + "/" + base
+	path := strings.TrimSpace(file_tree.getPath() + base)
 	data, err := readFromFile(path, config.MaxReadSize)
 	if err != nil {
 		return err
@@ -66,13 +67,16 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, config *Conf
 		} else {
 			metrics.increment("num_with_project_license")
 			for _, arr_license := range project.singleLicenseFiles {
+
 				for i, license := range arr_license {
+					for author := range license.matches {
+						license.matches[author].files = append(license.matches[author].files, path)
+					}
 					if i == 0 {
 						metrics.increment("num_one_file_matched_to_one_single_license")
 					}
 					fmt.Printf("project license: %s\n", license.category)
 					metrics.increment("num_one_file_matched_to_multiple_single_licenses")
-					licenses.MatchAuthors([]byte(license.pattern.String()), path, license)
 				}
 			}
 			fmt.Printf("File license: missing. Project license: exists. path: %s\n", path)

@@ -65,35 +65,35 @@
   "customProjectLicenses" : [
     {
       "projectRoot": "prebuilt/third_party/rust/linux-x64",
-      "licenseLocation": "share/doc/rust/COPYRIGHT"
+      "licenseLocation": "linux-x64/share/doc/rust/COPYRIGHT"
     },
     {
       "projectRoot": "prebuilt/third_party/rust_tools/linux-x64",
-      "licenseLocation": "share/doc/rust/COPYRIGHT"
+      "licenseLocation": "linux-x64/share/doc/rust/COPYRIGHT"
     },
     {
       "projectRoot": "prebuilt/third_party/cmake/linux-x64",
-      "licenseLocation": "doc/cmake-3.10/Copyright.txt"
+      "licenseLocation": "linux-x64/doc/cmake-3.10/Copyright.txt"
     },
     {
       "projectRoot": "prebuilt/third_party/ffmpeg/pkg",
-      "licenseLocation": "ffmpeg/docs/LICENSE.md"
+      "licenseLocation": "pkg/ffmpeg/docs/LICENSE.md"
     },
     {
       "projectRoot": "prebuilt/third_party/gcc/linux-x64",
-      "licenseLocation": "share/info/gcc.info"
+      "licenseLocation": "linux-x64/share/info/gcc.info"
     },
     {
       "projectRoot": "prebuilt/third_party/python3/linux-x64",
-      "licenseLocation": "lib/python3.8/LICENSE.txt"
+      "licenseLocation": "linux-x64/lib/python3.8/LICENSE.txt"
     },
     {
       "projectRoot": "prebuilt/third_party/llvm/include",
-      "licenseLocation": "llvm/Support/LICENSE.TXT"
+      "licenseLocation": "include/llvm/Support/LICENSE.TXT"
     },
     {
       "projectRoot": "prebuilt/third_party/jq/linux-x64",
-      "licenseLocation": "share/doc/jq/COPYING "
+      "licenseLocation": "linux-x64/share/doc/jq/COPYING "
     }
 
   ],

@@ -35,6 +35,8 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 				for _, customProjectLicense := range config.CustomProjectLicenses {
 					if path == customProjectLicense.ProjectRoot {
 						metrics.increment("num_single_license_files")
+						// TODO(omerlevran): Fix the directory and file_root having to repeat a
+						// directory.
 						file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
 						return nil
 					}
