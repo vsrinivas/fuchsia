@@ -91,12 +91,16 @@ test_package("semantics-integration-tests") {
 
   resources = [
     {
-      path = rebase_path("testdata/static.html")
-      dest = "static.html"
+      path = rebase_path("testdata/big_list.html")
+      dest = "big_list.html"
     },
     {
       path = rebase_path("testdata/dynamic_button.html")
       dest = "dynamic_button.html"
+    },
+    {
+      path = rebase_path("testdata/static.html")
+      dest = "static.html"
     },
   ]
 }

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Big list test</title>
+  </head>
+  <body onLoad="generateList()">
+    <script>
+      function generateList() {
+        const list = document.querySelector("#list");
+        const template = document.querySelector('#entry');
+        for (let i = 0; i < 1000; i++) {
+          const clone = template.content.cloneNode(true);
+          const li = clone.querySelector("li");
+          li.textContent = "Entry " + i;
+          list.appendChild(clone);
+        }
+      }
+    </script>
+    <ul id="list"/>
+    <template id="entry">
+      <li/>
+    </template>
+  </body>
+</html>
