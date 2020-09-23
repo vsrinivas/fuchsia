@@ -12,16 +12,22 @@
 namespace a11y {
 
 // A SemanticTransform represents a chain of local transformations from all of the
-// nodes in a specific path from the root of the SemanticTree.
+// nodes in a specific path from the root of the SemanticTree.  If ChainLocalTransform
+// is invoked on each node's transform starting from a target node and moving up to the
+// root, the resulting transform will represent a transform from the target node's coordinate
+// space to the root node's.
 class SemanticTransform {
  public:
   // Takes a matrix from fuchsia.accessibility.semantics.Node's |transform| field
-  // and logically prepends it to the list of transforms to apply (left-multiplying it with
+  // and logically appends it to the list of transforms to apply (left-multiplying it with
   // the already applied transforms).
   void ChainLocalTransform(const fuchsia::ui::gfx::mat4& local_transform);
 
   // Transform the given point using the accumulated transforms.
   fuchsia::ui::gfx::vec3 Apply(const fuchsia::ui::gfx::vec3& point) const;
+
+  // Return a new SemanticTransform that represents the inverse transformation of this one.
+  SemanticTransform Invert() const;
 
   // Return a vector with the resulting scale factors for each component
   const std::array<float, 3>& scale_vector() const { return scale_vector_; }

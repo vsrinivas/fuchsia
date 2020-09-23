@@ -37,4 +37,14 @@ fuchsia::ui::gfx::vec3 SemanticTransform::Apply(const fuchsia::ui::gfx::vec3& po
   return new_point;
 }
 
+SemanticTransform SemanticTransform::Invert() const {
+  SemanticTransform new_transform;
+  new_transform.scale_vector_ = {1.f / scale_vector_[0], 1.f / scale_vector_[1],
+                                 1.f / scale_vector_[2]};
+  new_transform.translation_vector_ = {-translation_vector_[0] / scale_vector_[0],
+                                       -translation_vector_[1] / scale_vector_[1],
+                                       -translation_vector_[2] / scale_vector_[2]};
+  return new_transform;
+}
+
 }  // namespace a11y

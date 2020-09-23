@@ -67,5 +67,37 @@ TEST(SemanticTransformTest, AccumulatedTransforms) {
   EXPECT_FLOAT_EQ(new_point.z, init_point.z * 39.76 + 9.38);
 }
 
+TEST(SemanticTransformTest, Invert) {
+  fuchsia::ui::gfx::mat4 raw_transform;
+
+  // Scale factors
+  raw_transform.matrix[0] = 1.2;
+  raw_transform.matrix[5] = 3.4;
+  raw_transform.matrix[10] = 5.6;
+  // Translation values
+  raw_transform.matrix[12] = -1.0;
+  raw_transform.matrix[13] = 2.5;
+  raw_transform.matrix[14] = 1.5;
+  raw_transform.matrix[15] = 1.0;
+
+  a11y::SemanticTransform transform;
+  transform.ChainLocalTransform(raw_transform);
+
+  auto inverse = transform.Invert();
+  EXPECT_FLOAT_EQ(inverse.scale_vector()[0], 5. / 6);
+  EXPECT_FLOAT_EQ(inverse.scale_vector()[1], 5. / 17);
+  EXPECT_FLOAT_EQ(inverse.scale_vector()[2], 5. / 28);
+  EXPECT_FLOAT_EQ(inverse.translation_vector()[0], 5. / 6);
+  EXPECT_FLOAT_EQ(inverse.translation_vector()[1], -25. / 34);
+  EXPECT_FLOAT_EQ(inverse.translation_vector()[2], -15. / 56);
+
+  fuchsia::ui::gfx::vec3 test_point = {1.3, 2.4, 3.5};
+  auto round_trip_point = inverse.Apply(transform.Apply(test_point));
+
+  EXPECT_FLOAT_EQ(test_point.x, round_trip_point.x);
+  EXPECT_FLOAT_EQ(test_point.y, round_trip_point.y);
+  EXPECT_FLOAT_EQ(test_point.z, round_trip_point.z);
+}
+
 }  // namespace
 }  // namespace accessibility_test

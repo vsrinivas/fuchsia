@@ -124,7 +124,13 @@ void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding
                     kHighlightEdgeThickness, bounding_box_center_x, bounding_box.min.y,
                     annotation_elevation);
 
-  PushCommand(&cmds, scenic::NewSetTranslationCmd(kContentNodeId, translation_vector));
+  // BUG(fxb.dev/55485): Workaround this bug by downscaling the translation vector's x and y
+  // coordinates.
+  std::array<float, 3> true_translation_vector = translation_vector;
+  true_translation_vector[0] /= scale_vector[0];
+  true_translation_vector[1] /= scale_vector[1];
+
+  PushCommand(&cmds, scenic::NewSetTranslationCmd(kContentNodeId, true_translation_vector));
   PushCommand(&cmds, scenic::NewSetScaleCmd(kContentNodeId, scale_vector));
 
   // If state_.has_annotations is false, then either the top-level content node has not yet been

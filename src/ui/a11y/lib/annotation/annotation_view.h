@@ -28,7 +28,8 @@ class AnnotationViewInterface {
   virtual void InitializeView(fuchsia::ui::views::ViewRef client_view_ref) = 0;
 
   // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
-  // bounding box.
+  // bounding box. scale_vector and translation_vector describe the transform from the view's
+  // coordinate space to the space the bounding box is in.
   virtual void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
                              const std::array<float, 3>& scale_vector,
                              const std::array<float, 3>& translation_vector) = 0;

@@ -99,11 +99,11 @@ const Node* SemanticsIntegrationTest::FindNodeWithLabel(const Node* node, zx_koi
 
 a11y::SemanticTransform SemanticsIntegrationTest::GetTransformForNode(zx_koid_t view_ref_koid,
                                                                       uint32_t node_id) {
-  std::stack<const Node*> path;
+  std::vector<const Node*> path;
   // Perform a DFS to find the path to the target node
   std::function<bool(const Node*)> traverse = [&](const Node* node) {
     if (node->node_id() == node_id) {
-      path.push(node);
+      path.push_back(node);
       return true;
     }
     if (!node->has_child_ids()) {
@@ -113,7 +113,7 @@ a11y::SemanticTransform SemanticsIntegrationTest::GetTransformForNode(zx_koid_t 
       const auto* child = view_manager()->GetSemanticNode(view_ref_koid, child_id);
       FX_DCHECK(child);
       if (traverse(child)) {
-        path.push(node);
+        path.push_back(node);
         return true;
       }
     }
@@ -124,12 +124,10 @@ a11y::SemanticTransform SemanticsIntegrationTest::GetTransformForNode(zx_koid_t 
   traverse(root);
 
   a11y::SemanticTransform transform;
-  while (!path.empty()) {
-    auto node = path.top();
+  for (auto& node : path) {
     if (node->has_transform()) {
       transform.ChainLocalTransform(node->transform());
     }
-    path.pop();
   }
 
   return transform;

@@ -54,44 +54,31 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
   // respectively. Tx, Ty, and Tz are the x, y, and z components of translation,
   // respectively.
   //
-  // In order to compute the transform matrix from the root node's coordinate
-  // space to the focused node's coordinate space, we can simply compute the
+  // In order to compute the transform matrix from the focused node's coordinate
+  // space to the root node's coordinate space, we can simply compute the
   // cross product of the focused node's ancestors' transform matrices,
   // beginning at the focused node and up to the minimum-depth non-root ancestor
-  // (the root does not have a parent, so it does not need a transform):
+  // (the root does not have a parent, so it does not need a transform).
   //
-  // [Focused node transform] = [focused node transform] x [parent transform] x ...
-  //   x [depth 2 ancestor transform] x [depth 1 ancestor transform]
-  //
-  // Assuming that the transform matrices are of the form described above, we
-  // don't actually need to do the full matrix multiplications. The matrix
-  // arithmetic will work out such that Sx = Sx1 * Sx2 * ..., Sy = ..., Sz = ...
-  // and Tx = (Sx2 * Sx3 * ...)(Tx1) + (Sx3 * Sx4 * ...)(Tx2) + ....
+  // [Focused node to root transform] = [depth 1 ancestor transform] x
+  //   [depth 2 ancestor transform] x ...  x [parent transform] x [focused node transform]
   //
   // The resulting transform will be of the same form as described above. Using
   // this matrix, we can simply extract the scaling and translation vectors
   // required by scenic: (Sx, Sy, Sz) and (Tx, Ty, Tz), respectively.
   uint32_t current_node_id = annotated_node->node_id();
-  std::stack<const fuchsia::accessibility::semantics::Node*> nodes_to_visit;
+  SemanticTransform transform;
   while (current_node_id != 0) {
     auto current_node = tree_weak_ptr->GetNode(current_node_id);
     FX_DCHECK(current_node);
 
     if (current_node->has_transform()) {
-      nodes_to_visit.push(current_node);
+      transform.ChainLocalTransform(current_node->transform());
     }
 
     auto parent_node = tree_weak_ptr->GetParentNode(current_node_id);
     FX_DCHECK(parent_node);
     current_node_id = parent_node->node_id();
-  }
-
-  SemanticTransform transform;
-  while (!nodes_to_visit.empty()) {
-    auto current_node = nodes_to_visit.top();
-    nodes_to_visit.pop();
-
-    transform.ChainLocalTransform(current_node->transform());
   }
 
   auto bounding_box = annotated_node->location();
