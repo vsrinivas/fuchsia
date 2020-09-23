@@ -190,7 +190,8 @@ pub async fn cache_package<'a>(
             },
         )
         .await
-        .expect("processor exists")?;
+        .expect("processor exists")
+        .map_err(CacheError::FetchMetaFar)?;
 
     cache
         .list_needs(merkle)
@@ -212,7 +213,7 @@ pub async fn cache_package<'a>(
                 .collect::<FuturesUnordered<_>>()
                 .map(|res| res.expect("processor exists"))
                 .try_collect::<()>()
-                .err_into()
+                .map_err(|e| CacheError::FetchContentBlob(e, merkle))
         })
         .await?;
 
@@ -230,8 +231,11 @@ pub enum CacheError {
     #[error("while listing needed blobs for package")]
     ListNeeds(#[from] pkgfs::needs::ListNeedsError),
 
-    #[error("while fetching blobs for package")]
-    Fetch(#[from] Arc<FetchError>),
+    #[error("while fetching the meta.far")]
+    FetchMetaFar(#[source] Arc<FetchError>),
+
+    #[error("while fetching content blob: {1}")]
+    FetchContentBlob(#[source] Arc<FetchError>, BlobId),
 }
 
 pub(crate) trait ToResolveStatus {
@@ -250,7 +254,8 @@ impl ToResolveStatus for CacheError {
             CacheError::Fidl(_) => Status::IO,
             CacheError::MerkleFor(err) => err.to_resolve_status(),
             CacheError::ListNeeds(err) => err.to_resolve_status(),
-            CacheError::Fetch(err) => err.to_resolve_status(),
+            CacheError::FetchMetaFar(err) => err.to_resolve_status(),
+            CacheError::FetchContentBlob(err, _) => err.to_resolve_status(),
         }
     }
 }
