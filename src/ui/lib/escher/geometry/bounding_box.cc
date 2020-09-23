@@ -40,13 +40,16 @@ BoundingBox::BoundingBox(vec3 min, vec3 max) : min_(min), max_(max) {
 }
 
 BoundingBox BoundingBox::NewChecked(vec3 min, vec3 max, uint32_t max_degenerate_dimensions) {
-  vec3 diff = max - min;
+  const vec3 diff = max - min;
   if (diff.x < 0.f || diff.y < 0.f || diff.z < 0.f)
     return BoundingBox();
 
-  uint32_t degenerate_dimensions =
+  const uint32_t degenerate_dimensions =
       (diff.x == 0.f ? 1 : 0) + (diff.y == 0.f ? 1 : 0) + (diff.z == 0.f ? 1 : 0);
-  return degenerate_dimensions > max_degenerate_dimensions ? BoundingBox() : BoundingBox(min, max);
+  if (degenerate_dimensions > max_degenerate_dimensions)
+   return BoundingBox();
+
+  return BoundingBox(min, max);
 }
 
 BoundingBox& BoundingBox::Join(const BoundingBox& box) {

@@ -712,8 +712,8 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene, event2.gfx().Which());
 }
 
-// When a ViewHolder receives a SetViewPropertiesCmd with invalid bounding box,
-// it should still set the properties, but ignore the bounding box arguments.
+// When a ViewHolder receives a SetViewPropertiesCmd with an empty or point bounding box, it should
+// accept the properties, and not crash.
 TEST_F(ViewTest, ViewPropertiesWithInvalidBoundingBox) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -736,23 +736,33 @@ TEST_F(ViewTest, ViewPropertiesWithInvalidBoundingBox) {
                                                         }));
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
-  // Set ViewProperties with an invalid bounding box.
+  // Set ViewProperties with an empty bounding box.
   Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, fuchsia::ui::gfx::ViewProperties{
                                                             .bounding_box =
                                                                 {
                                                                     .min = {1, 1, 1},
-                                                                    .max = {1, 1, 1},
+                                                                    .max = {0, 0, 0},
                                                                 },
                                                             .inset_from_min = {0, 0, 0},
                                                             .inset_from_max = {0, 0, 0},
                                                             .focus_change = true,
                                                             .downward_input = true,
                                                         }));
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
-  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);
-  ExpectErrorAt(0,
-                "ViewProperties has invalid or uninitialized bounding box: min = 1,1,1 "
-                "max = 1,1,1 inset_from_min = 0,0,0 inset_from_max = 0,0,0.");
+  // Set ViewProperties with a point bounding box.
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, fuchsia::ui::gfx::ViewProperties{
+                                                            .bounding_box =
+                                                                {
+                                                                    .min = {0, 0, 0},
+                                                                    .max = {0, 0, 0},
+                                                                },
+                                                            .inset_from_min = {0, 0, 0},
+                                                            .inset_from_max = {0, 0, 0},
+                                                            .focus_change = true,
+                                                            .downward_input = true,
+                                                        }));
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Create a Scene and connect the ViewHolder to the Scene.
   const ResourceId scene_id = 3u;
@@ -767,7 +777,7 @@ TEST_F(ViewTest, ViewPropertiesWithInvalidBoundingBox) {
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   auto view = FindResource<View>(view_id);
   // No new errors.
-  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Verify the ViewPropertiesChanged event was emitted.
   bool view_properties_changed_event = false;

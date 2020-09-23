@@ -16,16 +16,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-namespace {
-
-bool ViewPropertiesHasValidBoundingBox(const fuchsia::ui::gfx::ViewProperties& props) {
-  escher::vec3 min = Unwrap(props.bounding_box.min) + Unwrap(props.inset_from_min);
-  escher::vec3 max = Unwrap(props.bounding_box.max) - Unwrap(props.inset_from_max);
-  return glm::all(glm::lessThan(min, max));
-}
-
-}  // namespace
-
 const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceType::kViewHolder,
                                                 "ViewHolder"};
 
@@ -122,8 +112,9 @@ escher::BoundingBox ViewHolder::GetLocalBoundingBox() const {
       Unwrap(view_properties_.bounding_box.min) + Unwrap(view_properties_.inset_from_min);
   escher::vec3 max =
       Unwrap(view_properties_.bounding_box.max) - Unwrap(view_properties_.inset_from_max);
-  FX_DCHECK(glm::all(glm::lessThan(min, max)));
-  return escher::BoundingBox(min, max);
+  // Empty, point, or line view-bounds are permissible, but we collapse these to "empty".
+  // In contrast, 2d surfaces (like rectangles) and 3d volumes (like cubes) are okay.
+  return escher::BoundingBox::NewChecked(min, max, /* max degenerate dimension */ 1);
 }
 
 // Returns the world-space bounding box.
@@ -134,35 +125,13 @@ escher::BoundingBox ViewHolder::GetWorldBoundingBox() const {
 void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props,
                                    ErrorReporter* error_reporter) {
   if (!fidl::Equals(props, view_properties_)) {
+    view_properties_ = std::move(props);
     // This code transforms the bounding box given to the view holder
     // into a set of clipping planes on the transform node that will
     // then be applied to all children of this view holder. This is
     // to ensure that all geometry gets clipped to the view bounds and
     // does not extend past its allowed extent.
-    //
-    // The ViewProperties passed in may have an invalid (of zero volume)
-    // bounding box, which occurs when annotation ViewHolder need to set up
-    // focus properties but its parent View doesn't have a valid bounding box
-    // yet. In that case we should just ignore the bounding box argument.
-    if (ViewPropertiesHasValidBoundingBox(props)) {
-      view_properties_ = std::move(props);
-      SetClipPlanesFromBBox(GetLocalBoundingBox(), error_reporter);
-    } else {
-      error_reporter->INFO() << "ViewProperties has invalid or uninitialized bounding box: min = "
-                             << props.bounding_box.min.x << "," << props.bounding_box.min.y << ","
-                             << props.bounding_box.min.z << " max = " << props.bounding_box.max.x
-                             << "," << props.bounding_box.max.y << "," << props.bounding_box.max.z
-                             << " inset_from_min = " << props.inset_from_min.x << ","
-                             << props.inset_from_min.y << "," << props.inset_from_max.z
-                             << " inset_from_max = " << props.inset_from_max.x << ","
-                             << props.inset_from_max.y << "," << props.inset_from_max.z << ".";
-
-      // Ignore bounding box changes.
-      props.bounding_box = view_properties_.bounding_box;
-      props.inset_from_max = view_properties_.inset_from_max;
-      props.inset_from_min = view_properties_.inset_from_min;
-      view_properties_ = std::move(props);
-    }
+    SetClipPlanesFromBBox(GetLocalBoundingBox(), error_reporter);
     SendViewPropertiesChangedEvent();
   }
 }
