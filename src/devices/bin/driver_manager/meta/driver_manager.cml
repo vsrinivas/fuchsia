@@ -180,6 +180,7 @@
                 "/svc/fuchsia.kernel.DebugBroker",
                 "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.scheduler.ProfileProvider",
+                "/svc/fuchsia.sysmem.Allocator",
                 "/svc/fuchsia.tracing.kernel.Controller",
                 "/svc/fuchsia.tracing.kernel.Reader",
                 "/svc/fuchsia.virtualconsole.SessionManager",
