@@ -2648,7 +2648,6 @@ static zx_status_t brcmf_sdio_bus_rxctl(brcmf_bus* bus_if, unsigned char* msg, u
   }
 }
 
-#if !defined(NDEBUG)
 static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
                                     const void* ram_data, size_t ram_sz) {
   char* ram_cmp;
@@ -2694,12 +2693,6 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 
   return ret;
 }
-#else /* !defined(NDEBUG) */
-static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
-                                    const void* ram_data, size_t ram_sz) {
-  return true;
-}
-#endif /* !defined(NDEBUG) */
 
 static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus, const void* firmware,
                                                  size_t firmware_size) {
@@ -2739,26 +2732,43 @@ static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, const void*
 static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus, const void* firmware,
                                                 size_t firmware_size, const void* nvram,
                                                 size_t nvram_size) {
-  zx_status_t bcmerror;
+  zx_status_t bcmerror = ZX_OK;
   uint32_t rstvec;
+  uint8_t attempt_times = 0;
 
   sdio_claim_host(bus->sdiodev->func1);
   brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
 
   rstvec = *(const uint32_t*)firmware;
   BRCMF_DBG(SDIO, "firmware rstvec: %x", rstvec);
+  // Download firmware with retries.
+  do {
+    attempt_times++;
+    bcmerror = brcmf_sdio_download_code_file(bus, firmware, firmware_size);
+    if (bcmerror == ZX_OK)
+      break;
+    BRCMF_ERR("firmware file download failed, %u retry attempts remaining.",
+              FILE_LOAD_MAX_ATTEMPTS - attempt_times);
+  } while (attempt_times < FILE_LOAD_MAX_ATTEMPTS);
 
-  bcmerror = brcmf_sdio_download_code_file(bus, firmware, firmware_size);
-  if (bcmerror != ZX_OK) {
-    BRCMF_ERR("dongle image file download failed");
+  BRCMF_DBG(SDIO, "attempted %u times.", attempt_times);
+  if (bcmerror != ZX_OK)
     goto err;
-  }
 
-  bcmerror = brcmf_sdio_download_nvram(bus, nvram, nvram_size);
-  if (bcmerror != ZX_OK) {
-    BRCMF_ERR("dongle nvram file download failed");
+  attempt_times = 0;
+  // Download nvram with retries.
+  do {
+    attempt_times++;
+    bcmerror = brcmf_sdio_download_nvram(bus, nvram, nvram_size);
+    if (bcmerror == ZX_OK)
+      break;
+    BRCMF_ERR("nvram file download failed, %u retry attempts remaining.",
+              FILE_LOAD_MAX_ATTEMPTS - attempt_times);
+  } while (attempt_times < FILE_LOAD_MAX_ATTEMPTS);
+
+  BRCMF_DBG(SDIO, "attempted %u times.", attempt_times);
+  if (bcmerror != ZX_OK)
     goto err;
-  }
 
   /* Take arm out of reset */
   if (!brcmf_chip_set_active(bus->ci, rstvec)) {
