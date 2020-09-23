@@ -12,14 +12,12 @@ use {
     },
     anyhow::format_err,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig, RepositoryKey},
+    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryKey},
     fuchsia_cobalt::CobaltSender,
-    fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::lock::Mutex as AsyncMutex,
-    hyper_rustls::HttpsConnector,
     serde::{Deserialize, Serialize},
     std::sync::Arc,
     tuf::{
@@ -28,7 +26,7 @@ use {
         error::Error as TufError,
         interchange::Json,
         metadata::{MetadataVersion, TargetPath},
-        repository::{EphemeralRepository, HttpRepository, HttpRepositoryBuilder},
+        repository::{EphemeralRepository, HttpRepositoryBuilder},
     },
 };
 
@@ -70,7 +68,7 @@ struct RepositoryInspectState {
 impl Repository {
     pub async fn new(
         config: &RepositoryConfig,
-        cobalt_sender: CobaltSender,
+        mut cobalt_sender: CobaltSender,
         node: inspect::Node,
     ) -> Result<Self, anyhow::Error> {
         let local = EphemeralRepository::<Json>::new();
@@ -83,18 +81,6 @@ impl Repository {
             HttpRepositoryBuilder::new_with_uri(remote_url, fuchsia_hyper::new_https_client())
                 .build();
 
-        Self::new_from_local_and_remote(local, remote, config, mirror_config, cobalt_sender, node)
-            .await
-    }
-
-    async fn new_from_local_and_remote(
-        local: EphemeralRepository<Json>,
-        remote: HttpRepository<HttpsConnector<HyperConnector>, Json>,
-        config: &RepositoryConfig,
-        mirror_config: &MirrorConfig,
-        mut cobalt_sender: CobaltSender,
-        node: inspect::Node,
-    ) -> Result<Self, anyhow::Error> {
         let mut root_keys = vec![];
 
         // FIXME(42863) we used keyid_hash_algorithms in order to verify compatibility with the
