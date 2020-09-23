@@ -232,6 +232,8 @@ mod tests {
         assert!(pending_runs.try_lock().unwrap().is_empty());
     }
 
+    // TODO(fxbug.dev/60525): should_panic tests trigger LSAN
+    #[ignore]
     #[test]
     #[should_panic]
     fn run_singlethreaded_with_timeout() {
@@ -287,6 +289,8 @@ mod tests {
         assert!(pending_runs.try_lock().unwrap().is_empty());
     }
 
+    // TODO(fxbug.dev/60525): should_panic tests trigger LSAN
+    #[ignore]
     #[test]
     #[should_panic]
     fn run_with_timeout() {
