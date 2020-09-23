@@ -118,6 +118,7 @@ __END_CDECLS
 #define HAVE_SYSCALL_CATEGORY_blocking 1
 SYSCALL_CATEGORY_BEGIN(blocking)
     SYSCALL_IN_CATEGORY(channel_call)
+    SYSCALL_IN_CATEGORY(channel_call_etc)
     SYSCALL_IN_CATEGORY(futex_wait)
     SYSCALL_IN_CATEGORY(interrupt_wait)
     SYSCALL_IN_CATEGORY(nanosleep)
@@ -160,6 +161,7 @@ SYSCALL_CATEGORY_END(test_category2)
 SYSCALL_CATEGORY_BEGIN(vdsocall)
     SYSCALL_IN_CATEGORY(cache_flush)
     SYSCALL_IN_CATEGORY(channel_call)
+    SYSCALL_IN_CATEGORY(channel_call_etc)
     SYSCALL_IN_CATEGORY(clock_get_monotonic)
     SYSCALL_IN_CATEGORY(cprng_draw)
     SYSCALL_IN_CATEGORY(ticks_get)
@@ -233,6 +235,18 @@ TEXT ·Sys_channel_call_finish(SB),NOSPLIT,$0
 // func Sys_channel_call(handle Handle, options uint32, deadline Time, args *ChannelCallArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call(SB)
+
+// func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+TEXT ·Sys_channel_call_etc_noretry(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_channel_call_etc_noretry(SB)
+
+// func Sys_channel_call_etc_finish(deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+TEXT ·Sys_channel_call_etc_finish(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_channel_call_etc_finish(SB)
+
+// func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+TEXT ·Sys_channel_call_etc(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_channel_call_etc(SB)
 
 // func Sys_clock_get(clock_id uint32, out *Time) Status
 TEXT ·Sys_clock_get(SB),NOSPLIT,$0
@@ -974,6 +988,18 @@ func Sys_channel_call(handle Handle, options uint32, deadline Time, args *Channe
 
 //go:noescape
 //go:nosplit
+func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+
+//go:noescape
+//go:nosplit
+func Sys_channel_call_etc_finish(deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+
+//go:noescape
+//go:nosplit
+func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+
+//go:noescape
+//go:nosplit
 func Sys_clock_get(clock_id uint32, out *Time) Status
 
 //go:noescape
@@ -1707,6 +1733,18 @@ TEXT ·Sys_channel_call_finish(SB),NOSPLIT,$0
 // func Sys_channel_call(handle Handle, options uint32, deadline Time, args *ChannelCallArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call(SB)
+
+// func Sys_channel_call_etc_noretry(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+TEXT ·Sys_channel_call_etc_noretry(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_channel_call_etc_noretry(SB)
+
+// func Sys_channel_call_etc_finish(deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+TEXT ·Sys_channel_call_etc_finish(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_channel_call_etc_finish(SB)
+
+// func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *zx_channel_call_etc_args_t, actual_bytes *uint32, actual_handles *uint32) Status
+TEXT ·Sys_channel_call_etc(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_channel_call_etc(SB)
 
 // func Sys_clock_get(clock_id uint32, out *Time) Status
 TEXT ·Sys_clock_get(SB),NOSPLIT,$0
@@ -2626,6 +2664,66 @@ TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$0-44
 	MOVD actual_bytes+24(FP), R4
 	MOVD actual_handles+32(FP), R5
 	BL vdso_zx_channel_call(SB)
+	MOVW R0, ret+40(FP)
+	BL runtime·exitsyscall(SB)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_channel_call_etc_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$0-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW handle+0(FP), R0
+	MOVW options+4(FP), R1
+	MOVD deadline+8(FP), R2
+	MOVD args+16(FP), R3
+	MOVD actual_bytes+24(FP), R4
+	MOVD actual_handles+32(FP), R5
+	BL vdso_zx_channel_call_etc_noretry(SB)
+	MOVW R0, ret+40(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_channel_call_etc_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$0-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVD deadline+0(FP), R0
+	MOVD args+8(FP), R1
+	MOVD actual_bytes+16(FP), R2
+	MOVD actual_handles+24(FP), R3
+	BL vdso_zx_channel_call_etc_finish(SB)
+	MOVW R0, ret+32(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_channel_call_etc(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$0-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	CALL runtime·entersyscall(SB)
+	MOVW handle+0(FP), R0
+	MOVW options+4(FP), R1
+	MOVD deadline+8(FP), R2
+	MOVD args+16(FP), R3
+	MOVD actual_bytes+24(FP), R4
+	MOVD actual_handles+32(FP), R5
+	BL vdso_zx_channel_call_etc(SB)
 	MOVW R0, ret+40(FP)
 	BL runtime·exitsyscall(SB)
 	MOVD g_m(g), R21
@@ -5609,6 +5707,9 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_channel_call_noretry", 0xb5ad0b5b, &vdso_zx_channel_call_noretry},
 	{"_zx_channel_call_finish", 0x85ce3de9, &vdso_zx_channel_call_finish},
 	{"_zx_channel_call", 0xe70e51c9, &vdso_zx_channel_call},
+	{"_zx_channel_call_etc_noretry", 0xc3a3e7d6, &vdso_zx_channel_call_etc_noretry},
+	{"_zx_channel_call_etc_finish", 0xd3cdf704, &vdso_zx_channel_call_etc_finish},
+	{"_zx_channel_call_etc", 0x8639e344, &vdso_zx_channel_call_etc},
 	{"_zx_clock_get", 0x3fb5d7c0, &vdso_zx_clock_get},
 	{"_zx_clock_get_monotonic", 0xb00e6115, &vdso_zx_clock_get_monotonic},
 	{"_zx_clock_adjust", 0x87cf38ab, &vdso_zx_clock_adjust},
@@ -5792,6 +5893,9 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_channel_call_noretry zx_channel_call_noretry
 //go:cgo_import_dynamic vdso_zx_channel_call_finish zx_channel_call_finish
 //go:cgo_import_dynamic vdso_zx_channel_call zx_channel_call
+//go:cgo_import_dynamic vdso_zx_channel_call_etc_noretry zx_channel_call_etc_noretry
+//go:cgo_import_dynamic vdso_zx_channel_call_etc_finish zx_channel_call_etc_finish
+//go:cgo_import_dynamic vdso_zx_channel_call_etc zx_channel_call_etc
 //go:cgo_import_dynamic vdso_zx_clock_get zx_clock_get
 //go:cgo_import_dynamic vdso_zx_clock_get_monotonic zx_clock_get_monotonic
 //go:cgo_import_dynamic vdso_zx_clock_adjust zx_clock_adjust
@@ -5974,6 +6078,9 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_channel_call_noretry vdso_zx_channel_call_noretry
 //go:linkname vdso_zx_channel_call_finish vdso_zx_channel_call_finish
 //go:linkname vdso_zx_channel_call vdso_zx_channel_call
+//go:linkname vdso_zx_channel_call_etc_noretry vdso_zx_channel_call_etc_noretry
+//go:linkname vdso_zx_channel_call_etc_finish vdso_zx_channel_call_etc_finish
+//go:linkname vdso_zx_channel_call_etc vdso_zx_channel_call_etc
 //go:linkname vdso_zx_clock_get vdso_zx_clock_get
 //go:linkname vdso_zx_clock_get_monotonic vdso_zx_clock_get_monotonic
 //go:linkname vdso_zx_clock_adjust vdso_zx_clock_adjust
@@ -6191,6 +6298,18 @@ func vdsoCall_zx_channel_call_finish(deadline int64, args unsafe.Pointer, actual
 //go:noescape
 //go:nosplit
 func vdsoCall_zx_channel_call(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_channel_call_etc_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_channel_call_etc_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_channel_call_etc(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
 
 //go:noescape
 //go:nosplit
@@ -6881,6 +7000,9 @@ var (
 	vdso_zx_channel_call_noretry uintptr
 	vdso_zx_channel_call_finish uintptr
 	vdso_zx_channel_call uintptr
+	vdso_zx_channel_call_etc_noretry uintptr
+	vdso_zx_channel_call_etc_finish uintptr
+	vdso_zx_channel_call_etc uintptr
 	vdso_zx_clock_get uintptr
 	vdso_zx_clock_get_monotonic uintptr
 	vdso_zx_clock_adjust uintptr
@@ -7373,6 +7495,81 @@ TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$8-44
 	MOVQ actual_bytes+24(FP), R8
 	MOVQ actual_handles+32(FP), R9
 	MOVQ vdso_zx_channel_call(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_etc_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ args+16(FP), CX
+	MOVQ actual_bytes+24(FP), R8
+	MOVQ actual_handles+32(FP), R9
+	MOVQ vdso_zx_channel_call_etc_noretry(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_etc_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ deadline+0(FP), DI
+	MOVQ args+8(FP), SI
+	MOVQ actual_bytes+16(FP), DX
+	MOVQ actual_handles+24(FP), CX
+	MOVQ vdso_zx_channel_call_etc_finish(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_etc(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ args+16(FP), CX
+	MOVQ actual_bytes+24(FP), R8
+	MOVQ actual_handles+32(FP), R9
+	MOVQ vdso_zx_channel_call_etc(SB), AX
 	CALL AX
 	MOVL AX, ret+40(FP)
 	CALL runtime·exitsyscall(SB)
@@ -11827,6 +12024,166 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
           "is_array": true,
           "attributes": [
             "IN"
+          ]
+        },
+        {
+          "name": "actual_bytes",
+          "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "actual_handles",
+          "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "channel_call_etc_noretry",
+      "attributes": [
+        "*",
+        "internal"
+      ],
+      "top_description": [
+      ],
+      "requirements": [
+        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", ".",
+        "All", "wr_handles", "of", "args", "must", "have", "ZX_RIGHT_TRANSFER", "."
+      ],
+      "arguments": [
+        {
+          "name": "handle",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "options",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "deadline",
+          "type": "zx_time_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "args",
+          "type": "zx_channel_call_etc_args_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "actual_bytes",
+          "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "actual_handles",
+          "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "channel_call_etc_finish",
+      "attributes": [
+        "*",
+        "internal"
+      ],
+      "top_description": [
+      ],
+      "requirements": [
+      ],
+      "arguments": [
+        {
+          "name": "deadline",
+          "type": "zx_time_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "args",
+          "type": "zx_channel_call_etc_args_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "actual_bytes",
+          "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "actual_handles",
+          "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "channel_call_etc",
+      "attributes": [
+        "*",
+        "blocking",
+        "vdsocall"
+      ],
+      "top_description": [
+        "Send", "a", "message", "to", "a", "channel", "and", "await", "a", "reply", "."
+      ],
+      "requirements": [
+        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", ".",
+        "All", "wr_handles", "of", "args", "must", "have", "ZX_RIGHT_TRANSFER", "."
+      ],
+      "arguments": [
+        {
+          "name": "handle",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "options",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "deadline",
+          "type": "zx_time_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "args",
+          "type": "zx_channel_call_etc_args_t",
+          "is_array": true,
+          "attributes": [
           ]
         },
         {
@@ -18509,6 +18866,31 @@ VDSO_SYSCALL(channel_call, zx_status_t, /* no attributes */, 6,
     user_out_ptr<uint32_t> actual_bytes,
     user_out_ptr<uint32_t> actual_handles))
 
+INTERNAL_SYSCALL(channel_call_etc_noretry, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    user_inout_ptr<zx_channel_call_etc_args_t> args,
+    user_out_ptr<uint32_t> actual_bytes,
+    user_out_ptr<uint32_t> actual_handles))
+
+INTERNAL_SYSCALL(channel_call_etc_finish, zx_status_t, /* no attributes */, 4,
+    (deadline, args, actual_bytes, actual_handles), (
+    zx_time_t deadline,
+    user_inout_ptr<zx_channel_call_etc_args_t> args,
+    user_out_ptr<uint32_t> actual_bytes,
+    user_out_ptr<uint32_t> actual_handles))
+
+VDSO_SYSCALL(channel_call_etc, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    user_inout_ptr<zx_channel_call_etc_args_t> args,
+    user_out_ptr<uint32_t> actual_bytes,
+    user_out_ptr<uint32_t> actual_handles))
+
 KERNEL_SYSCALL(clock_get, zx_status_t, /* no attributes */, 2,
     (clock_id, out), (
     zx_clock_t clock_id,
@@ -19672,6 +20054,18 @@ syscall_result wrapper_channel_call_noretry(zx_handle_t handle, uint32_t options
 syscall_result wrapper_channel_call_finish(zx_time_t deadline, const zx_channel_call_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, uint64_t pc) {
     return do_syscall(ZX_SYS_channel_call_finish, pc, &VDso::ValidSyscallPC::channel_call_finish, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_channel_call_finish(deadline, make_user_in_ptr(args), make_user_out_ptr(actual_bytes), make_user_out_ptr(actual_handles));
+        return result;
+    });
+}
+syscall_result wrapper_channel_call_etc_noretry(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_etc_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, uint64_t pc) {
+    return do_syscall(ZX_SYS_channel_call_etc_noretry, pc, &VDso::ValidSyscallPC::channel_call_etc_noretry, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_channel_call_etc_noretry(handle, options, deadline, make_user_inout_ptr(args), make_user_out_ptr(actual_bytes), make_user_out_ptr(actual_handles));
+        return result;
+    });
+}
+syscall_result wrapper_channel_call_etc_finish(zx_time_t deadline, zx_channel_call_etc_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, uint64_t pc) {
+    return do_syscall(ZX_SYS_channel_call_etc_finish, pc, &VDso::ValidSyscallPC::channel_call_etc_finish, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_channel_call_etc_finish(deadline, make_user_inout_ptr(args), make_user_out_ptr(actual_bytes), make_user_out_ptr(actual_handles));
         return result;
     });
 }
@@ -20995,6 +21389,31 @@ VDSO_SYSCALL(channel_call, zx_status_t, /* no attributes */, 6,
     uint32_t* actual_bytes,
     uint32_t* actual_handles))
 
+INTERNAL_SYSCALL(channel_call_etc_noretry, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    zx_channel_call_etc_args_t* args,
+    uint32_t* actual_bytes,
+    uint32_t* actual_handles))
+
+INTERNAL_SYSCALL(channel_call_etc_finish, zx_status_t, /* no attributes */, 4,
+    (deadline, args, actual_bytes, actual_handles), (
+    zx_time_t deadline,
+    zx_channel_call_etc_args_t* args,
+    uint32_t* actual_bytes,
+    uint32_t* actual_handles))
+
+VDSO_SYSCALL(channel_call_etc, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    zx_channel_call_etc_args_t* args,
+    uint32_t* actual_bytes,
+    uint32_t* actual_handles))
+
 KERNEL_SYSCALL(clock_get, zx_status_t, /* no attributes */, 2,
     (clock_id, out), (
     zx_clock_t clock_id,
@@ -22165,6 +22584,15 @@ _ZX_SYSCALL_DECL(channel_call, zx_status_t, /* no attributes */, 6,
     uint32_t* actual_bytes,
     uint32_t* actual_handles))
 
+_ZX_SYSCALL_DECL(channel_call_etc, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    zx_channel_call_etc_args_t* args,
+    uint32_t* actual_bytes,
+    uint32_t* actual_handles))
+
 _ZX_SYSCALL_DECL(clock_get, zx_status_t, /* no attributes */, 2,
     (clock_id, out), (
     zx_clock_t clock_id,
@@ -23252,6 +23680,15 @@ extern {
         actual_handles: *mut u32
         ) -> zx_status_t;
 
+    pub fn zx_channel_call_etc(
+        handle: zx_handle_t,
+        options: u32,
+        deadline: zx_time_t,
+        args: *mut zx_channel_call_etc_args_t,
+        actual_bytes: *mut u32,
+        actual_handles: *mut u32
+        ) -> zx_status_t;
+
     pub fn zx_clock_get(
         clock_id: zx_clock_t,
         out: *mut zx_time_t
@@ -24335,164 +24772,166 @@ extern {
 #define ZX_SYS_channel_write_etc 7
 #define ZX_SYS_channel_call_noretry 8
 #define ZX_SYS_channel_call_finish 9
-#define ZX_SYS_clock_get 10
-#define ZX_SYS_clock_adjust 11
-#define ZX_SYS_clock_get_monotonic_via_kernel 12
-#define ZX_SYS_clock_create 13
-#define ZX_SYS_clock_read 14
-#define ZX_SYS_clock_get_details 15
-#define ZX_SYS_clock_update 16
-#define ZX_SYS_cprng_draw_once 17
-#define ZX_SYS_cprng_add_entropy 18
-#define ZX_SYS_debug_read 19
-#define ZX_SYS_debug_write 20
-#define ZX_SYS_debug_send_command 21
-#define ZX_SYS_debuglog_create 22
-#define ZX_SYS_debuglog_write 23
-#define ZX_SYS_debuglog_read 24
-#define ZX_SYS_event_create 25
-#define ZX_SYS_eventpair_create 26
-#define ZX_SYS_exception_get_thread 27
-#define ZX_SYS_exception_get_process 28
-#define ZX_SYS_fifo_create 29
-#define ZX_SYS_fifo_read 30
-#define ZX_SYS_fifo_write 31
-#define ZX_SYS_framebuffer_get_info 32
-#define ZX_SYS_framebuffer_set_range 33
-#define ZX_SYS_futex_wait 34
-#define ZX_SYS_futex_wake 35
-#define ZX_SYS_futex_requeue 36
-#define ZX_SYS_futex_wake_single_owner 37
-#define ZX_SYS_futex_requeue_single_owner 38
-#define ZX_SYS_futex_get_owner 39
-#define ZX_SYS_guest_create 40
-#define ZX_SYS_guest_set_trap 41
-#define ZX_SYS_handle_close 42
-#define ZX_SYS_handle_close_many 43
-#define ZX_SYS_handle_duplicate 44
-#define ZX_SYS_handle_replace 45
-#define ZX_SYS_interrupt_create 46
-#define ZX_SYS_interrupt_bind 47
-#define ZX_SYS_interrupt_wait 48
-#define ZX_SYS_interrupt_destroy 49
-#define ZX_SYS_interrupt_ack 50
-#define ZX_SYS_interrupt_trigger 51
-#define ZX_SYS_interrupt_bind_vcpu 52
-#define ZX_SYS_iommu_create 53
-#define ZX_SYS_ioports_request 54
-#define ZX_SYS_ioports_release 55
-#define ZX_SYS_job_create 56
-#define ZX_SYS_job_set_policy 57
-#define ZX_SYS_job_set_critical 58
-#define ZX_SYS_ktrace_read 59
-#define ZX_SYS_ktrace_control 60
-#define ZX_SYS_ktrace_write 61
-#define ZX_SYS_nanosleep 62
-#define ZX_SYS_ticks_get_via_kernel 63
-#define ZX_SYS_msi_allocate 64
-#define ZX_SYS_msi_create 65
-#define ZX_SYS_mtrace_control 66
-#define ZX_SYS_object_wait_one 67
-#define ZX_SYS_object_wait_many 68
-#define ZX_SYS_object_wait_async 69
-#define ZX_SYS_object_signal 70
-#define ZX_SYS_object_signal_peer 71
-#define ZX_SYS_object_get_property 72
-#define ZX_SYS_object_set_property 73
-#define ZX_SYS_object_get_info 74
-#define ZX_SYS_object_get_child 75
-#define ZX_SYS_object_set_profile 76
-#define ZX_SYS_pager_create 77
-#define ZX_SYS_pager_create_vmo 78
-#define ZX_SYS_pager_detach_vmo 79
-#define ZX_SYS_pager_supply_pages 80
-#define ZX_SYS_pager_op_range 81
-#define ZX_SYS_pc_firmware_tables 82
-#define ZX_SYS_pci_get_nth_device 83
-#define ZX_SYS_pci_enable_bus_master 84
-#define ZX_SYS_pci_reset_device 85
-#define ZX_SYS_pci_config_read 86
-#define ZX_SYS_pci_config_write 87
-#define ZX_SYS_pci_cfg_pio_rw 88
-#define ZX_SYS_pci_get_bar 89
-#define ZX_SYS_pci_map_interrupt 90
-#define ZX_SYS_pci_query_irq_mode 91
-#define ZX_SYS_pci_set_irq_mode 92
-#define ZX_SYS_pci_init 93
-#define ZX_SYS_pci_add_subtract_io_range 94
-#define ZX_SYS_pmt_unpin 95
-#define ZX_SYS_port_create 96
-#define ZX_SYS_port_queue 97
-#define ZX_SYS_port_wait 98
-#define ZX_SYS_port_cancel 99
-#define ZX_SYS_process_exit 100
-#define ZX_SYS_process_create 101
-#define ZX_SYS_process_start 102
-#define ZX_SYS_process_read_memory 103
-#define ZX_SYS_process_write_memory 104
-#define ZX_SYS_profile_create 105
-#define ZX_SYS_resource_create 106
-#define ZX_SYS_smc_call 107
-#define ZX_SYS_socket_create 108
-#define ZX_SYS_socket_write 109
-#define ZX_SYS_socket_read 110
-#define ZX_SYS_socket_shutdown 111
-#define ZX_SYS_stream_create 112
-#define ZX_SYS_stream_writev 113
-#define ZX_SYS_stream_writev_at 114
-#define ZX_SYS_stream_readv 115
-#define ZX_SYS_stream_readv_at 116
-#define ZX_SYS_stream_seek 117
-#define ZX_SYS_syscall_test_0 118
-#define ZX_SYS_syscall_test_1 119
-#define ZX_SYS_syscall_test_2 120
-#define ZX_SYS_syscall_test_3 121
-#define ZX_SYS_syscall_test_4 122
-#define ZX_SYS_syscall_test_5 123
-#define ZX_SYS_syscall_test_6 124
-#define ZX_SYS_syscall_test_7 125
-#define ZX_SYS_syscall_test_8 126
-#define ZX_SYS_syscall_test_wrapper 127
-#define ZX_SYS_syscall_test_handle_create 128
-#define ZX_SYS_system_get_event 129
-#define ZX_SYS_system_mexec 130
-#define ZX_SYS_system_mexec_payload_get 131
-#define ZX_SYS_system_powerctl 132
-#define ZX_SYS_task_suspend 133
-#define ZX_SYS_task_suspend_token 134
-#define ZX_SYS_task_create_exception_channel 135
-#define ZX_SYS_task_kill 136
-#define ZX_SYS_thread_exit 137
-#define ZX_SYS_thread_create 138
-#define ZX_SYS_thread_start 139
-#define ZX_SYS_thread_read_state 140
-#define ZX_SYS_thread_write_state 141
-#define ZX_SYS_timer_create 142
-#define ZX_SYS_timer_set 143
-#define ZX_SYS_timer_cancel 144
-#define ZX_SYS_vcpu_create 145
-#define ZX_SYS_vcpu_resume 146
-#define ZX_SYS_vcpu_interrupt 147
-#define ZX_SYS_vcpu_read_state 148
-#define ZX_SYS_vcpu_write_state 149
-#define ZX_SYS_vmar_allocate 150
-#define ZX_SYS_vmar_destroy 151
-#define ZX_SYS_vmar_map 152
-#define ZX_SYS_vmar_unmap 153
-#define ZX_SYS_vmar_protect 154
-#define ZX_SYS_vmar_op_range 155
-#define ZX_SYS_vmo_create 156
-#define ZX_SYS_vmo_read 157
-#define ZX_SYS_vmo_write 158
-#define ZX_SYS_vmo_get_size 159
-#define ZX_SYS_vmo_set_size 160
-#define ZX_SYS_vmo_op_range 161
-#define ZX_SYS_vmo_create_child 162
-#define ZX_SYS_vmo_set_cache_policy 163
-#define ZX_SYS_vmo_replace_as_executable 164
-#define ZX_SYS_vmo_create_contiguous 165
-#define ZX_SYS_vmo_create_physical 166
-#define ZX_SYS_COUNT 167
+#define ZX_SYS_channel_call_etc_noretry 10
+#define ZX_SYS_channel_call_etc_finish 11
+#define ZX_SYS_clock_get 12
+#define ZX_SYS_clock_adjust 13
+#define ZX_SYS_clock_get_monotonic_via_kernel 14
+#define ZX_SYS_clock_create 15
+#define ZX_SYS_clock_read 16
+#define ZX_SYS_clock_get_details 17
+#define ZX_SYS_clock_update 18
+#define ZX_SYS_cprng_draw_once 19
+#define ZX_SYS_cprng_add_entropy 20
+#define ZX_SYS_debug_read 21
+#define ZX_SYS_debug_write 22
+#define ZX_SYS_debug_send_command 23
+#define ZX_SYS_debuglog_create 24
+#define ZX_SYS_debuglog_write 25
+#define ZX_SYS_debuglog_read 26
+#define ZX_SYS_event_create 27
+#define ZX_SYS_eventpair_create 28
+#define ZX_SYS_exception_get_thread 29
+#define ZX_SYS_exception_get_process 30
+#define ZX_SYS_fifo_create 31
+#define ZX_SYS_fifo_read 32
+#define ZX_SYS_fifo_write 33
+#define ZX_SYS_framebuffer_get_info 34
+#define ZX_SYS_framebuffer_set_range 35
+#define ZX_SYS_futex_wait 36
+#define ZX_SYS_futex_wake 37
+#define ZX_SYS_futex_requeue 38
+#define ZX_SYS_futex_wake_single_owner 39
+#define ZX_SYS_futex_requeue_single_owner 40
+#define ZX_SYS_futex_get_owner 41
+#define ZX_SYS_guest_create 42
+#define ZX_SYS_guest_set_trap 43
+#define ZX_SYS_handle_close 44
+#define ZX_SYS_handle_close_many 45
+#define ZX_SYS_handle_duplicate 46
+#define ZX_SYS_handle_replace 47
+#define ZX_SYS_interrupt_create 48
+#define ZX_SYS_interrupt_bind 49
+#define ZX_SYS_interrupt_wait 50
+#define ZX_SYS_interrupt_destroy 51
+#define ZX_SYS_interrupt_ack 52
+#define ZX_SYS_interrupt_trigger 53
+#define ZX_SYS_interrupt_bind_vcpu 54
+#define ZX_SYS_iommu_create 55
+#define ZX_SYS_ioports_request 56
+#define ZX_SYS_ioports_release 57
+#define ZX_SYS_job_create 58
+#define ZX_SYS_job_set_policy 59
+#define ZX_SYS_job_set_critical 60
+#define ZX_SYS_ktrace_read 61
+#define ZX_SYS_ktrace_control 62
+#define ZX_SYS_ktrace_write 63
+#define ZX_SYS_nanosleep 64
+#define ZX_SYS_ticks_get_via_kernel 65
+#define ZX_SYS_msi_allocate 66
+#define ZX_SYS_msi_create 67
+#define ZX_SYS_mtrace_control 68
+#define ZX_SYS_object_wait_one 69
+#define ZX_SYS_object_wait_many 70
+#define ZX_SYS_object_wait_async 71
+#define ZX_SYS_object_signal 72
+#define ZX_SYS_object_signal_peer 73
+#define ZX_SYS_object_get_property 74
+#define ZX_SYS_object_set_property 75
+#define ZX_SYS_object_get_info 76
+#define ZX_SYS_object_get_child 77
+#define ZX_SYS_object_set_profile 78
+#define ZX_SYS_pager_create 79
+#define ZX_SYS_pager_create_vmo 80
+#define ZX_SYS_pager_detach_vmo 81
+#define ZX_SYS_pager_supply_pages 82
+#define ZX_SYS_pager_op_range 83
+#define ZX_SYS_pc_firmware_tables 84
+#define ZX_SYS_pci_get_nth_device 85
+#define ZX_SYS_pci_enable_bus_master 86
+#define ZX_SYS_pci_reset_device 87
+#define ZX_SYS_pci_config_read 88
+#define ZX_SYS_pci_config_write 89
+#define ZX_SYS_pci_cfg_pio_rw 90
+#define ZX_SYS_pci_get_bar 91
+#define ZX_SYS_pci_map_interrupt 92
+#define ZX_SYS_pci_query_irq_mode 93
+#define ZX_SYS_pci_set_irq_mode 94
+#define ZX_SYS_pci_init 95
+#define ZX_SYS_pci_add_subtract_io_range 96
+#define ZX_SYS_pmt_unpin 97
+#define ZX_SYS_port_create 98
+#define ZX_SYS_port_queue 99
+#define ZX_SYS_port_wait 100
+#define ZX_SYS_port_cancel 101
+#define ZX_SYS_process_exit 102
+#define ZX_SYS_process_create 103
+#define ZX_SYS_process_start 104
+#define ZX_SYS_process_read_memory 105
+#define ZX_SYS_process_write_memory 106
+#define ZX_SYS_profile_create 107
+#define ZX_SYS_resource_create 108
+#define ZX_SYS_smc_call 109
+#define ZX_SYS_socket_create 110
+#define ZX_SYS_socket_write 111
+#define ZX_SYS_socket_read 112
+#define ZX_SYS_socket_shutdown 113
+#define ZX_SYS_stream_create 114
+#define ZX_SYS_stream_writev 115
+#define ZX_SYS_stream_writev_at 116
+#define ZX_SYS_stream_readv 117
+#define ZX_SYS_stream_readv_at 118
+#define ZX_SYS_stream_seek 119
+#define ZX_SYS_syscall_test_0 120
+#define ZX_SYS_syscall_test_1 121
+#define ZX_SYS_syscall_test_2 122
+#define ZX_SYS_syscall_test_3 123
+#define ZX_SYS_syscall_test_4 124
+#define ZX_SYS_syscall_test_5 125
+#define ZX_SYS_syscall_test_6 126
+#define ZX_SYS_syscall_test_7 127
+#define ZX_SYS_syscall_test_8 128
+#define ZX_SYS_syscall_test_wrapper 129
+#define ZX_SYS_syscall_test_handle_create 130
+#define ZX_SYS_system_get_event 131
+#define ZX_SYS_system_mexec 132
+#define ZX_SYS_system_mexec_payload_get 133
+#define ZX_SYS_system_powerctl 134
+#define ZX_SYS_task_suspend 135
+#define ZX_SYS_task_suspend_token 136
+#define ZX_SYS_task_create_exception_channel 137
+#define ZX_SYS_task_kill 138
+#define ZX_SYS_thread_exit 139
+#define ZX_SYS_thread_create 140
+#define ZX_SYS_thread_start 141
+#define ZX_SYS_thread_read_state 142
+#define ZX_SYS_thread_write_state 143
+#define ZX_SYS_timer_create 144
+#define ZX_SYS_timer_set 145
+#define ZX_SYS_timer_cancel 146
+#define ZX_SYS_vcpu_create 147
+#define ZX_SYS_vcpu_resume 148
+#define ZX_SYS_vcpu_interrupt 149
+#define ZX_SYS_vcpu_read_state 150
+#define ZX_SYS_vcpu_write_state 151
+#define ZX_SYS_vmar_allocate 152
+#define ZX_SYS_vmar_destroy 153
+#define ZX_SYS_vmar_map 154
+#define ZX_SYS_vmar_unmap 155
+#define ZX_SYS_vmar_protect 156
+#define ZX_SYS_vmar_op_range 157
+#define ZX_SYS_vmo_create 158
+#define ZX_SYS_vmo_read 159
+#define ZX_SYS_vmo_write 160
+#define ZX_SYS_vmo_get_size 161
+#define ZX_SYS_vmo_set_size 162
+#define ZX_SYS_vmo_op_range 163
+#define ZX_SYS_vmo_create_child 164
+#define ZX_SYS_vmo_set_cache_policy 165
+#define ZX_SYS_vmo_replace_as_executable 166
+#define ZX_SYS_vmo_create_contiguous 167
+#define ZX_SYS_vmo_create_physical 168
+#define ZX_SYS_COUNT 169
 ----- syscall-numbers.h END -----
 
 

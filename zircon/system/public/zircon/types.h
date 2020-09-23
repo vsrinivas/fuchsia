@@ -452,6 +452,17 @@ typedef struct zx_channel_call_args {
     uint32_t rd_num_handles;
 } zx_channel_call_args_t;
 
+typedef struct zx_channel_call_etc_args {
+    const void* wr_bytes;
+    zx_handle_disposition_t* wr_handles;
+    void *rd_bytes;
+    zx_handle_info_t* rd_handles;
+    uint32_t wr_num_bytes;
+    uint32_t wr_num_handles;
+    uint32_t rd_num_bytes;
+    uint32_t rd_num_handles;
+} zx_channel_call_etc_args_t;
+
 // The ZX_VM_FLAG_* constants are to be deprecated in favor of the ZX_VM_*
 // versions.
 #define ZX_VM_FLAG_PERM_READ              ((uint32_t)1u << 0)

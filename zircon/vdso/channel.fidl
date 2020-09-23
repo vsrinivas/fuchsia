@@ -32,6 +32,13 @@ resource struct HandleDisposition {
     status result;
 };
 
+struct ChannelCallEtcArgs {
+    vector<byte> wr_bytes;
+    mutable_vector_HandleDisposition_u32size wr_handles;
+    vector<byte> rd_bytes;
+    mutable_vector_HandleInfo_u32size rd_handles;
+};
+
 [Transport = "Syscall"]
 protocol channel {
     /// Create a channel.
@@ -97,6 +104,28 @@ protocol channel {
     [blocking,
     vdsocall]
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
-    channel_call(handle handle, uint32 options, time deadline, ChannelCallArgs args)
+    channel_call(handle:CHANNEL handle, uint32 options, time deadline, ChannelCallArgs args)
+        -> (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
+    [internal]
+    channel_call_etc_noretry(handle:CHANNEL handle,
+                             uint32 options,
+                             time deadline,
+                             mutable_ChannelCallEtcArgs args)
+        -> (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    [internal]
+    channel_call_etc_finish(time deadline, mutable_ChannelCallEtcArgs args)
+        -> (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Send a message to a channel and await a reply.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
+    [blocking,
+    vdsocall]
+    // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
+    channel_call_etc(handle:CHANNEL handle, uint32 options, time deadline, mutable_ChannelCallEtcArgs args)
         -> (status status, uint32 actual_bytes, uint32 actual_handles);
 };

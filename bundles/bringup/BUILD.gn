@@ -158,6 +158,7 @@ group("tests") {
     "//zircon/system/utest/core:core-c11-mutex-bootfs-test",
     "//zircon/system/utest/core:core-c11-thread-bootfs-test",
     "//zircon/system/utest/core:core-channel-bootfs-test",
+    "//zircon/system/utest/core:core-channel-call-etc-bootfs-test",
     "//zircon/system/utest/core:core-channel-write-etc-bootfs-test",
     "//zircon/system/utest/core:core-clock-bootfs-test",
     "//zircon/system/utest/core:core-elf-tls-bootfs-test",

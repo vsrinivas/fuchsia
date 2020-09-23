@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/type_traits.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <object/message_packet.h>
@@ -208,9 +209,9 @@ zx_status_t sys_channel_read_etc(zx_handle_t handle_value, uint32_t options,
                       actual_bytes, actual_handles);
 }
 
+template <typename ChannelCallArgs>
 static zx_status_t channel_read_out(ProcessDispatcher* up, MessagePacketPtr reply,
-                                    zx_channel_call_args_t* args,
-                                    user_out_ptr<uint32_t> actual_bytes,
+                                    ChannelCallArgs* args, user_out_ptr<uint32_t> actual_bytes,
                                     user_out_ptr<uint32_t> actual_handles) {
   uint32_t num_bytes = reply->data_size();
   uint32_t num_handles = reply->num_handles();
@@ -241,9 +242,9 @@ static zx_status_t channel_read_out(ProcessDispatcher* up, MessagePacketPtr repl
   return ZX_OK;
 }
 
+template <typename ChannelCallArgs>
 static zx_status_t channel_call_epilogue(ProcessDispatcher* up, MessagePacketPtr reply,
-                                         zx_channel_call_args_t* args,
-                                         user_out_ptr<uint32_t> actual_bytes,
+                                         ChannelCallArgs* args, user_out_ptr<uint32_t> actual_bytes,
                                          user_out_ptr<uint32_t> actual_handles) {
   auto bytes = reply ? reply->data_size() : 0u;
   zx_status_t status = channel_read_out(up, ktl::move(reply), args, actual_bytes, actual_handles);
@@ -343,40 +344,20 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
   return ZX_OK;
 }
 
-// zx_status_t zx_channel_write
-zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
-                              user_in_ptr<const void> user_bytes, uint32_t num_bytes,
-                              user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
-  LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n", handle_value,
-          user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
-
-  return channel_write(handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
-}
-
-// zx_status_t zx_channel_write_etc
-zx_status_t sys_channel_write_etc(zx_handle_t handle_value, uint32_t options,
-                                  user_in_ptr<const void> user_bytes, uint32_t num_bytes,
-                                  user_inout_ptr<zx_handle_disposition_t> user_handles,
-                                  uint32_t num_handles) {
-  LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n", handle_value,
-          user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
-
-  return channel_write(handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
-}
-
-// zx_status_t zx_channel_call_noretry
-zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_time_t deadline,
-                                     user_in_ptr<const zx_channel_call_args_t> user_args,
-                                     user_out_ptr<uint32_t> actual_bytes,
-                                     user_out_ptr<uint32_t> actual_handles) {
-  zx_channel_call_args_t args;
+template <template <typename> typename UserPtr, typename ChannelCallArgs>
+zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_time_t deadline,
+                                 UserPtr<ChannelCallArgs> user_args,
+                                 user_out_ptr<uint32_t> actual_bytes,
+                                 user_out_ptr<uint32_t> actual_handles) {
+  ktl::remove_const_t<ChannelCallArgs> args;
 
   zx_status_t status = user_args.copy_from_user(&args);
   if (status != ZX_OK)
     return status;
 
   user_in_ptr<const char> user_bytes = make_user_in_ptr(static_cast<const char*>(args.wr_bytes));
-  user_in_ptr<const zx_handle_t> user_handles = make_user_in_ptr(args.wr_handles);
+  using WriteHandleType = ktl::remove_pointer_t<decltype(args.wr_handles)>;
+  UserPtr<WriteHandleType> user_handles(args.wr_handles);
 
   uint32_t num_bytes = args.wr_num_bytes;
   uint32_t num_handles = args.wr_num_handles;
@@ -423,12 +404,11 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
   return channel_call_epilogue(up, ktl::move(reply), &args, actual_bytes, actual_handles);
 }
 
-// zx_status_t zx_channel_call_finish
-zx_status_t sys_channel_call_finish(zx_time_t deadline,
-                                    user_in_ptr<const zx_channel_call_args_t> user_args,
-                                    user_out_ptr<uint32_t> actual_bytes,
-                                    user_out_ptr<uint32_t> actual_handles) {
-  zx_channel_call_args_t args;
+template <template <typename> typename UserPtr, typename ChannelCallArgs>
+zx_status_t channel_call_finish(zx_time_t deadline, UserPtr<ChannelCallArgs> user_args,
+                                user_out_ptr<uint32_t> actual_bytes,
+                                user_out_ptr<uint32_t> actual_handles) {
+  ktl::remove_const_t<ChannelCallArgs> args;
   zx_status_t status = user_args.copy_from_user(&args);
   if (status != ZX_OK)
     return status;
@@ -447,4 +427,62 @@ zx_status_t sys_channel_call_finish(zx_time_t deadline,
   if (status != ZX_OK)
     return status;
   return channel_call_epilogue(up, ktl::move(reply), &args, actual_bytes, actual_handles);
+}
+
+// zx_status_t zx_channel_write
+zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
+                              user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                              user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
+  LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n", handle_value,
+          user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
+
+  return channel_write(handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
+}
+
+// zx_status_t zx_channel_write_etc
+zx_status_t sys_channel_write_etc(zx_handle_t handle_value, uint32_t options,
+                                  user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                                  user_inout_ptr<zx_handle_disposition_t> user_handles,
+                                  uint32_t num_handles) {
+  LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n", handle_value,
+          user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
+
+  return channel_write(handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
+}
+
+// zx_status_t zx_channel_call_noretry
+zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_time_t deadline,
+                                     user_in_ptr<const zx_channel_call_args_t> user_args,
+                                     user_out_ptr<uint32_t> actual_bytes,
+                                     user_out_ptr<uint32_t> actual_handles) {
+  return channel_call_noretry<user_in_ptr, const zx_channel_call_args_t>(
+      handle_value, options, deadline, user_args, actual_bytes, actual_handles);
+}
+
+// zx_status_t zx_channel_call_finish
+zx_status_t sys_channel_call_finish(zx_time_t deadline,
+                                    user_in_ptr<const zx_channel_call_args_t> user_args,
+                                    user_out_ptr<uint32_t> actual_bytes,
+                                    user_out_ptr<uint32_t> actual_handles) {
+  return channel_call_finish<user_in_ptr, const zx_channel_call_args_t>(
+      deadline, user_args, actual_bytes, actual_handles);
+}
+
+// zx_status_t zx_channel_call_etc_noretry
+zx_status_t sys_channel_call_etc_noretry(zx_handle_t handle_value, uint32_t options,
+                                         zx_time_t deadline,
+                                         user_inout_ptr<zx_channel_call_etc_args_t> user_args,
+                                         user_out_ptr<uint32_t> actual_bytes,
+                                         user_out_ptr<uint32_t> actual_handles) {
+  return channel_call_noretry<user_inout_ptr, zx_channel_call_etc_args_t>(
+      handle_value, options, deadline, user_args, actual_bytes, actual_handles);
+}
+
+// zx_status_t zx_channel_call_etc_finish
+zx_status_t sys_channel_call_etc_finish(zx_time_t deadline,
+                                        user_inout_ptr<zx_channel_call_etc_args_t> user_args,
+                                        user_out_ptr<uint32_t> actual_bytes,
+                                        user_out_ptr<uint32_t> actual_handles) {
+  return channel_call_finish<user_inout_ptr, zx_channel_call_etc_args_t>(
+      deadline, user_args, actual_bytes, actual_handles);
 }

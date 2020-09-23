@@ -1,6 +1,6 @@
 {
   "pkg/zx/include/lib/zx/bti.h": "36d67577c4f3ac4eddce4c10fc8bd581",
-  "pkg/zx/include/lib/zx/channel.h": "06f953833c5f8a55982504d9943dcc7f",
+  "pkg/zx/include/lib/zx/channel.h": "15f71a0716276523f627ad2d07be4965",
   "pkg/zx/include/lib/zx/clock.h": "08d13376dca206531711cfc41cd13b89",
   "pkg/zx/include/lib/zx/debuglog.h": "a3a2f15f51712d8c1b9590260bce915d",
   "pkg/zx/include/lib/zx/event.h": "6ec782bf5ff54dbc4ec81900c1bf26b1",

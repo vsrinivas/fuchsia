@@ -34,6 +34,13 @@ using mutable_usize = usize;
 // TODO(fidlc): mutable<vector<HandleDisposition>
 using mutable_vector_HandleDisposition_u32size = vector<HandleDisposition>;
 
+// TODO(fidlc): uint32 size
+// TODO(fidlc): vector<HandleInfo>
+using mutable_vector_HandleInfo_u32size = vector<HandleInfo>;
+
+// TODO(fidlc): mutable<ChannelCallEtcArgs>
+using mutable_ChannelCallEtcArgs = ChannelCallEtcArgs;
+
 // TODO(fidlc): mutable<vector<WaitItem>>
 using mutable_vector_WaitItem = vector<WaitItem>;
 

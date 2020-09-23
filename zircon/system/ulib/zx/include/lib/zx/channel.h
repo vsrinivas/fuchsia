@@ -57,6 +57,11 @@ class channel final : public object<channel> {
                    uint32_t* actual_bytes, uint32_t* actual_handles) const {
     return zx_channel_call(get(), flags, deadline.get(), args, actual_bytes, actual_handles);
   }
+
+  zx_status_t call_etc(uint32_t flags, zx::time deadline, zx_channel_call_etc_args_t* args,
+                       uint32_t* actual_bytes, uint32_t* actual_handles) const {
+    return zx_channel_call_etc(get(), flags, deadline.get(), args, actual_bytes, actual_handles);
+  }
 };
 
 using unowned_channel = unowned<channel>;

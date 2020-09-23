@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_KTL_TYPE_TRAITS_H_
-#define ZIRCON_KERNEL_INCLUDE_KTL_TYPE_TRAITS_H_
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_
 
 #include <type_traits>
 
@@ -92,6 +92,9 @@ using std::remove_const_t;
 using std::remove_extent;
 using std::remove_extent_t;
 
+using std::remove_pointer;
+using std::remove_pointer_t;
+
 using std::remove_reference;
 using std::remove_reference_t;
 
@@ -110,4 +113,4 @@ inline constexpr bool is_one_of_v = ktl::is_one_of<T, Ts...>::value;
 
 }  // namespace ktl
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KTL_TYPE_TRAITS_H_
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_

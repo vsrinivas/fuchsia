@@ -37,6 +37,17 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
                  Constness::kMutable);
     return true;
   }
+  if (name == "mutable_vector_HandleInfo_u32size") {
+    *type = Type(
+        TypeVector(Type(library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
+        Constness::kMutable);
+    return true;
+  }
+  if (name == "mutable_ChannelCallEtcArgs") {
+    *type = Type(TypePointer(Type(library.TypeFromIdentifier("zx/ChannelCallEtcArgs"))),
+                 Constness::kMutable);
+    return true;
+  }
   if (name == "mutable_vector_WaitItem") {
     *type = Type(TypeVector(Type(library.TypeFromIdentifier("zx/WaitItem"))), Constness::kMutable);
     return true;

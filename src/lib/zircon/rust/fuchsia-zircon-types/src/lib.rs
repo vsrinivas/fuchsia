@@ -524,6 +524,19 @@ pub struct zx_channel_call_args_t {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_channel_call_etc_args_t {
+    pub wr_bytes: *const u8,
+    pub wr_handles: *mut zx_handle_disposition_t,
+    pub rd_bytes: *mut u8,
+    pub rd_handles: *mut zx_handle_info_t,
+    pub wr_num_bytes: u32,
+    pub wr_num_handles: u32,
+    pub rd_num_bytes: u32,
+    pub rd_num_handles: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_handle_disposition_t {
     pub operation: zx_handle_op_t,
     pub handle: zx_handle_t,

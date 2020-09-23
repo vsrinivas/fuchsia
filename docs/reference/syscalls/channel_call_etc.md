@@ -16,7 +16,7 @@ Send a message to a channel and await a reply.
 zx_status_t zx_channel_call_etc(zx_handle_t handle,
                                 uint32_t options,
                                 zx_time_t deadline,
-                                const zx_channel_call_etc_args_t* args,
+                                zx_channel_call_etc_args_t* args,
                                 uint32_t* actual_bytes,
                                 uint32_t* actual_handles);
 ```
@@ -41,7 +41,7 @@ message's transaction id. The arguments that would be supplied to
 ```
 typedef struct {
     const void* wr_bytes;
-    const zx_handle_disposition_t* wr_handles;
+    zx_handle_disposition_t* wr_handles;
     void *rd_bytes;
     zx_handle_info_t* rd_handles;
     uint32_t wr_num_bytes;
