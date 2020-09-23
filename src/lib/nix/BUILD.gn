@@ -2,24 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
-import("//build/unification/zx_library.gni")
-
 group("tests") {
   testonly = true
   deps = [ "tests" ]
 }
 
-zx_library("nix") {
-  sdk = "static"
-  sdk_headers = [
-    "sys/epoll.h",
-    "sys/inotify.h",
+config("nix_headers") {
+  include_dirs = [ "include" ]
+}
+
+static_library("nix") {
+  public = [
+    "include/sys/epoll.h",
+    "include/sys/inotify.h",
   ]
   sources = [
     "epoll.cc",
     "inotify.cc",
   ]
+  public_configs = [ ":nix_headers" ]
 }
