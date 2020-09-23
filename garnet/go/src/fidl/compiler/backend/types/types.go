@@ -784,10 +784,11 @@ func (member *EnumMember) IsUnknown() bool {
 // Bits represents a FIDL declaration of an bits.
 type Bits struct {
 	Attributes
-	Type    Type                      `json:"type"`
-	Name    EncodedCompoundIdentifier `json:"name"`
-	Mask    string                    `json:"mask"`
-	Members []BitsMember              `json:"members"`
+	Type       Type                      `json:"type"`
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Mask       string                    `json:"mask"`
+	Members    []BitsMember              `json:"members"`
+	Strictness `json:"strict"`
 }
 
 // BitsMember represents a single variant in a FIDL bits.

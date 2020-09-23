@@ -104,6 +104,41 @@ func TestCanUnmarshalUnsignedEnumUnknownValue(t *testing.T) {
 	}
 }
 
+func TestCanUnmarshalBitsStrictness(t *testing.T) {
+	inputTmpl := `{
+		"bits_declarations": [
+			{
+				"type": {
+					"kind": "primitive",
+					"subtype": "uint32"
+				},
+				"mask": "1",
+				"members": [],
+				"strict": %s
+			}
+		]
+	}`
+
+	cases := []struct {
+		jsonValue     string
+		expectedValue Strictness
+	}{
+		{"false", IsFlexible},
+		{"true", IsStrict},
+	}
+	for _, ex := range cases {
+		root, err := ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
+		if err != nil {
+			t.Fatalf("failed to read JSON IR: %s", err)
+		}
+		bits := root.Bits[0]
+		if bits.Strictness != ex.expectedValue {
+			t.Fatalf("jsonValue '%s': expected %v, actual %v",
+				ex.jsonValue, ex.expectedValue, bits.Strictness)
+		}
+	}
+}
+
 func TestParseCompoundIdentifier(t *testing.T) {
 	type testCase struct {
 		input          EncodedCompoundIdentifier
