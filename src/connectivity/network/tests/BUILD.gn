@@ -82,9 +82,6 @@ rustc_test("netstack_integration_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # TODO(46769): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/constants.rs",
     "src/dhcp.rs",
