@@ -567,7 +567,7 @@ TEST_P(SocketOptsTest, SmallTOSOptionSize) {
     EXPECT_EQ(get_sz, expect_sz);
     // Account for partial copies by getsockopt, retrieve the lower
     // bits specified by get_sz, while comparing against expect_tos.
-    EXPECT_EQ(get & ~(~0 << (get_sz * 8)), static_cast<uint>(expect_tos));
+    EXPECT_EQ(get & ~(~0u << (get_sz * 8)), static_cast<uint>(expect_tos));
   }
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
