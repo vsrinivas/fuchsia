@@ -48,9 +48,6 @@ rustc_binary("bin") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
   ]
 
-  # TODO(48460): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/bindings/context.rs",
     "src/bindings/devices.rs",
