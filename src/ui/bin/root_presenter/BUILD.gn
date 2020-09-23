@@ -59,6 +59,8 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
+    "injector.cc",
+    "injector.h",
     "presentation.cc",
     "presentation.h",
   ]

@@ -10,8 +10,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
-namespace root_presenter {
-namespace testing {
+namespace root_presenter::testing {
 
 class FakeSession : public fuchsia::ui::scenic::Session {
  public:
@@ -61,7 +60,6 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   fuchsia::ui::scenic::SessionListenerPtr listener_;
 };
 
-}  // namespace testing
-}  // namespace root_presenter
+}  // namespace root_presenter::testing
 
 #endif  // SRC_UI_BIN_ROOT_PRESENTER_TESTS_FAKES_FAKE_SESSION_H_
