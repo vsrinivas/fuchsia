@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
+                "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator"
             ]
         }
