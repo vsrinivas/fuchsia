@@ -25,9 +25,6 @@ rustc_test("http_client_integration_test") {
   ]
 
   sources = [ "src/lib.rs" ]
-
-  # TODO(58494): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_component("component") {
