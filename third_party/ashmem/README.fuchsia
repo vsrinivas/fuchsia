@@ -1,0 +1,7 @@
+Name: ashmem
+License: Apache 2.0
+License File: LICENSE
+Upstream Git: https://android.googlesource.com/platform/system/core/+/dd7bc3319deb2b77c5d07a51b7d6cd7e11b5beb0/include/cutils/ashmem.h
+Description:
+
+Android ashmem headers.
