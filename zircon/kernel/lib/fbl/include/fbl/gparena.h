@@ -40,7 +40,7 @@ class __OWNER(void) GPArena {
     // Carve out some memory from the kernel root VMAR
     const size_t mem_sz = ROUNDUP(max_count * ObjectSize, PAGE_SIZE);
 
-    fbl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObjectPaged> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, mem_sz, &vmo);
     if (status != ZX_OK) {
       return status;

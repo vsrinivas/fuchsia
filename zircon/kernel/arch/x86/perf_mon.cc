@@ -1274,7 +1274,7 @@ static void x86_perfmon_unmap_buffers_locked(PerfmonState* state) {
 
 static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
   DEBUG_ASSERT(perfmon_mchbar_bar != 0);
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   vaddr_t begin_page = (perfmon_mchbar_bar + UNC_IMC_STATS_BEGIN) & ~(PAGE_SIZE - 1);
   vaddr_t end_page = (perfmon_mchbar_bar + UNC_IMC_STATS_END) & ~(PAGE_SIZE - 1);
   size_t num_bytes_to_map = end_page + PAGE_SIZE - begin_page;

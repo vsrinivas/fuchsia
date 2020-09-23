@@ -85,7 +85,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
   auto align_log2_arg = static_cast<uint8_t>(alignment_log2);
 
   // create a vm object
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, size, align_log2_arg, &vmo);
   if (status != ZX_OK) {
     return status;
@@ -124,7 +124,7 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t 
   size = ROUNDUP_PAGE_SIZE(size);
 
   // create a vm object
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   zx_status_t result = VmObjectPhysical::Create(paddr, size, &vmo);
   if (result != ZX_OK) {
     return result;

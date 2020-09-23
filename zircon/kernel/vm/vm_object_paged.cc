@@ -406,7 +406,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
 }
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
-                                        fbl::RefPtr<VmObject>* obj) {
+                                        fbl::RefPtr<VmObjectPaged>* obj) {
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
   if (status != ZX_OK) {
@@ -419,7 +419,7 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto vmo = fbl::AdoptRef<VmObject>(
+  auto vmo = fbl::AdoptRef<VmObjectPaged>(
       new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, ktl::move(lock), nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -431,7 +431,7 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
 }
 
 zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
-                                  fbl::RefPtr<VmObject>* obj) {
+                                  fbl::RefPtr<VmObjectPaged>* obj) {
   if (options & kContiguous) {
     // Force callers to use CreateContiguous() instead.
     return ZX_ERR_INVALID_ARGS;
@@ -441,7 +441,8 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint32_t options, ui
 }
 
 zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t size,
-                                            uint8_t alignment_log2, fbl::RefPtr<VmObject>* obj) {
+                                            uint8_t alignment_log2,
+                                            fbl::RefPtr<VmObjectPaged>* obj) {
   DEBUG_ASSERT(alignment_log2 < sizeof(uint64_t) * 8);
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
@@ -449,7 +450,7 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     return status;
   }
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   status = CreateCommon(pmm_alloc_flags, kContiguous, size, &vmo);
   if (status != ZX_OK) {
     return status;
@@ -508,10 +509,10 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
 }
 
 zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, bool exclusive,
-                                                fbl::RefPtr<VmObject>* obj) {
+                                                fbl::RefPtr<VmObjectPaged>* obj) {
   LTRACEF("data %p, size %zu\n", data, size);
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = CreateCommon(PMM_ALLOC_FLAG_ANY, 0, size, &vmo);
   if (status != ZX_OK) {
     return status;
@@ -567,7 +568,7 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
 }
 
 zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
-                                          uint64_t size, fbl::RefPtr<VmObject>* obj) {
+                                          uint64_t size, fbl::RefPtr<VmObjectPaged>* obj) {
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
   if (status != ZX_OK) {
@@ -580,7 +581,7 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto vmo = fbl::AdoptRef<VmObject>(
+  auto vmo = fbl::AdoptRef<VmObjectPaged>(
       new (&ac) VmObjectPaged(options, PMM_ALLOC_FLAG_ANY, size, ktl::move(lock), ktl::move(src)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;

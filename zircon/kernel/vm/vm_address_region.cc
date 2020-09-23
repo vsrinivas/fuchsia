@@ -130,7 +130,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
   }
 
   if (!is_upper_bound && (offset >= size_ || size > size_ - offset)) {
-      return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
   if (is_upper_bound && (offset > size_ || size > size_ || size > offset)) {
     return ZX_ERR_INVALID_ARGS;
@@ -1005,7 +1005,7 @@ zx_status_t VmAddressRegion::ReserveSpace(const char* name, vaddr_t base, size_t
   // We would never call MapRange on the VmMapping, thus the VMO would never actually allocate any
   // physical pages and we would never modify the PTE except for the permission change bellow
   // caused by Protect.
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 0, &vmo);
   if (status != ZX_OK) {
     return status;

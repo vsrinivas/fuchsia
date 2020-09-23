@@ -47,7 +47,8 @@ VmObjectPhysical::~VmObjectPhysical() {
   RemoveFromGlobalList();
 }
 
-zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {
+zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size,
+                                     fbl::RefPtr<VmObjectPhysical>* obj) {
   if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -64,7 +65,7 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto vmo = fbl::AdoptRef<VmObject>(
+  auto vmo = fbl::AdoptRef<VmObjectPhysical>(
       new (&ac) VmObjectPhysical(ktl::move(lock), base, size, /*is_slice=*/false));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;

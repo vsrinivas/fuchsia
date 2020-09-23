@@ -76,7 +76,7 @@ zx_status_t MapStructs2_1(const smbios::EntryPoint2_1* ep, fbl::RefPtr<VmMapping
   size_t len = ROUNDUP(end - base, PAGE_SIZE);
 
   auto vmar = VmAspace::kernel_aspace()->RootVmar();
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   zx_status_t status = VmObjectPhysical::Create(base, len, &vmo);
   if (status != ZX_OK) {
     return status;

@@ -60,7 +60,7 @@ ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
 ktl::unique_ptr<UserMemory> UserMemory::Create(size_t size) {
   size = ROUNDUP_PAGE_SIZE(size);
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &vmo);
   if (status != ZX_OK) {
     unittest_printf("VmObjectPaged::Create failed: %d\n", status);

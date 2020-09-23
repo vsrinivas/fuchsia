@@ -52,7 +52,7 @@ static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* 
   DEBUG_ASSERT(!!vmar);
 
   // Create a VMO for our stack
-  fbl::RefPtr<VmObject> stack_vmo;
+  fbl::RefPtr<VmObjectPaged> stack_vmo;
   zx_status_t status =
       VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, DEFAULT_STACK_SIZE, &stack_vmo);
   if (status != ZX_OK) {

@@ -49,7 +49,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_handle* out
     return res;
 
   // create a vm object
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   res = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_options, size, &vmo);
   if (res != ZX_OK)
     return res;

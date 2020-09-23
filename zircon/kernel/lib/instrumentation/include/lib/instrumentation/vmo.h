@@ -15,6 +15,7 @@
 #ifdef _KERNEL
 #include <fbl/ref_ptr.h>
 #include <ktl/array.h>
+#include <vm/vm_object_paged.h>
 #endif
 
 class Handle;
@@ -39,7 +40,7 @@ class InstrumentationData {
   // These live forever to keep a permanent reference to the VMO so that the
   // memory always remains valid, even if userspace closes the last handle.
   static ktl::array<InstrumentationData, kVmoCount> instances_;
-  fbl::RefPtr<VmObject> vmo_;
+  fbl::RefPtr<VmObjectPaged> vmo_;
 
   // The only instances possible are the static ones.
   InstrumentationData() = default;

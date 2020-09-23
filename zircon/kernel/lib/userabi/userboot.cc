@@ -152,7 +152,7 @@ void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) {
 // Converts platform crashlog into a VMO
 zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
   size_t size = platform_recover_crashlog(0, NULL, NULL);
-  fbl::RefPtr<VmObject> crashlog_vmo;
+  fbl::RefPtr<VmObjectPaged> crashlog_vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &crashlog_vmo);
 
   if (status != ZX_OK) {
@@ -191,7 +191,7 @@ void bootstrap_vmos(Handle** handles) {
   }
 
   // The ZBI.
-  fbl::RefPtr<VmObject> rootfs_vmo;
+  fbl::RefPtr<VmObjectPaged> rootfs_vmo;
   zx_status_t status = VmObjectPaged::CreateFromWiredPages(rbase, rsize, true, &rootfs_vmo);
   ASSERT(status == ZX_OK);
   rootfs_vmo->set_name(kZbiVmoName, sizeof(kZbiVmoName) - 1);
@@ -215,7 +215,7 @@ void bootstrap_vmos(Handle** handles) {
 #endif
 
   // kcounters names table.
-  fbl::RefPtr<VmObject> kcountdesc_vmo;
+  fbl::RefPtr<VmObjectPaged> kcountdesc_vmo;
   status = VmObjectPaged::CreateFromWiredPages(CounterDesc().VmoData(), CounterDesc().VmoDataSize(),
                                                true, &kcountdesc_vmo);
   ASSERT(status == ZX_OK);
@@ -226,7 +226,7 @@ void bootstrap_vmos(Handle** handles) {
   ASSERT(status == ZX_OK);
 
   // kcounters live data.
-  fbl::RefPtr<VmObject> kcounters_vmo;
+  fbl::RefPtr<VmObjectPaged> kcounters_vmo;
   status = VmObjectPaged::CreateFromWiredPages(CounterArena().VmoData(),
                                                CounterArena().VmoDataSize(), false, &kcounters_vmo);
   ASSERT(status == ZX_OK);
@@ -313,7 +313,7 @@ void userboot_init(uint) {
   // Map the stack anywhere.
   uintptr_t stack_base;
   {
-    fbl::RefPtr<VmObject> stack_vmo;
+    fbl::RefPtr<VmObjectPaged> stack_vmo;
     status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, stack_size, &stack_vmo);
     ASSERT(status == ZX_OK);
     stack_vmo->set_name(kStackVmoName, sizeof(kStackVmoName) - 1);

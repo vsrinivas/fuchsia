@@ -640,7 +640,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
   // MMIO based bars are passed back using a VMO. If we end up creating one here
   // without errors then later a handle will be passed back to the caller.
   KernelHandle<VmObjectDispatcher> kernel_handle;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   zx_rights_t rights;
   if (info->is_mmio) {
     // Create a VMO mapping to the address / size of the mmio region this bar

@@ -150,7 +150,7 @@ void gdt_setup() {
   size_t gdt_real_size = _temp_gdt_end - _temp_gdt;
   size_t gdt_size = 0x10000;
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status =
       VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, /*options*/ 0u, gdt_real_size, &vmo);
   ASSERT(status == ZX_OK);

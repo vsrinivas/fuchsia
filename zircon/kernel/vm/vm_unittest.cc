@@ -203,7 +203,7 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &vmo);
   if (status != ZX_OK) {
     return status;
@@ -223,7 +223,8 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
 
 }  // namespace
 
-static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObject>* out_vmo) {
+static zx_status_t make_committed_pager_vmo(vm_page_t** out_page,
+                                            fbl::RefPtr<VmObjectPaged>* out_vmo) {
   // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
   // actually take any page faults.
   fbl::AllocChecker ac;
@@ -232,7 +233,7 @@ static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<Vm
     return ZX_ERR_NO_MEMORY;
   }
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, PAGE_SIZE, &vmo);
   if (status != ZX_OK) {
     return status;
@@ -1099,7 +1100,7 @@ static bool vmaspace_accessed_test() {
   // Create some memory we can map touch to test accessed tracking on. Needs to be created from
   // user pager backed memory as harvesting is allowed to be limited to just that.
   vm_page_t* page;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = make_committed_pager_vmo(&page, &vmo);
   ASSERT_EQ(ZX_OK, status);
   auto mem = testing::UserMemory::Create(vmo);
@@ -1166,7 +1167,7 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   // Create some memory we can map touch to test accessed tracking on. Needs to be created from
   // user pager backed memory as harvesting is allowed to be limited to just that.
   vm_page_t* page;
-  fbl::RefPtr<VmObject> mapping_vmo;
+  fbl::RefPtr<VmObjectPaged> mapping_vmo;
   zx_status_t status = make_committed_pager_vmo(&page, &mapping_vmo);
   ASSERT_EQ(ZX_OK, status);
   auto mem = testing::UserMemory::Create(mapping_vmo);
@@ -1174,7 +1175,7 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   ASSERT_EQ(ZX_OK, mem->CommitAndMap(PAGE_SIZE));
 
   // Need a separate VMO to read/write from.
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
   ASSERT_EQ(status, ZX_OK);
 
@@ -1204,7 +1205,7 @@ static bool dump_all_aspaces() {
 // Creates a vm object.
 static bool vmo_create_test() {
   BEGIN_TEST;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_TRUE(vmo);
@@ -1215,7 +1216,7 @@ static bool vmo_create_test() {
 
 static bool vmo_create_maximum_size() {
   BEGIN_TEST;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 0xfffffffffffe0000, &vmo);
   EXPECT_EQ(status, ZX_OK, "should be ok\n");
 
@@ -1270,7 +1271,7 @@ static bool vmo_commit_test() {
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1290,7 +1291,7 @@ static bool vmo_pin_test() {
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status =
       VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
@@ -1340,7 +1341,7 @@ static bool vmo_multiple_pin_test() {
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1391,7 +1392,7 @@ static bool vmo_odd_size_commit_test() {
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = 15;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1414,7 +1415,7 @@ static bool vmo_create_physical_test() {
   ASSERT_EQ(ZX_OK, status, "vm page allocation\n");
   ASSERT_TRUE(vm_page);
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1436,7 +1437,7 @@ static bool vmo_physical_pin_test() {
   zx_status_t status = pmm_alloc_page(0, &vm_page, &pa);
   ASSERT_EQ(ZX_OK, status);
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
 
   // Validate we can pin the range.
@@ -1458,7 +1459,7 @@ static bool vmo_physical_pin_test() {
 static bool vmo_create_contiguous_test() {
   BEGIN_TEST;
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size, 0, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1496,7 +1497,7 @@ static bool vmo_contiguous_decommit_test() {
   BEGIN_TEST;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size, 0, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1528,7 +1529,7 @@ static bool vmo_contiguous_decommit_test() {
 static bool vmo_precommitted_map_test() {
   BEGIN_TEST;
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1553,7 +1554,7 @@ static bool vmo_precommitted_map_test() {
 static bool vmo_demand_paged_map_test() {
   BEGIN_TEST;
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1577,7 +1578,7 @@ static bool vmo_demand_paged_map_test() {
 static bool vmo_dropped_ref_test() {
   BEGIN_TEST;
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1605,7 +1606,7 @@ static bool vmo_dropped_ref_test() {
 static bool vmo_remap_test() {
   BEGIN_TEST;
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1643,7 +1644,7 @@ static bool vmo_remap_test() {
 static bool vmo_double_remap_test() {
   BEGIN_TEST;
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1697,7 +1698,7 @@ static bool vmo_read_write_smoke_test() {
   static const size_t alloc_size = PAGE_SIZE * 16;
 
   // create object
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1788,7 +1789,7 @@ static bool vmo_cache_test() {
   ASSERT_TRUE(vm_page);
   // Test that the flags set/get properly
   {
-    fbl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObjectPhysical> vmo;
     status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1801,7 +1802,7 @@ static bool vmo_cache_test() {
 
   // Test valid flags
   for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
-    fbl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObjectPhysical> vmo;
     status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1810,7 +1811,7 @@ static bool vmo_cache_test() {
 
   // Test invalid flags
   for (uint32_t i = ARCH_MMU_FLAG_CACHE_MASK + 1; i < 32; i++) {
-    fbl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObjectPhysical> vmo;
     status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1819,7 +1820,7 @@ static bool vmo_cache_test() {
 
   // Test valid flags with invalid flags
   {
-    fbl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObjectPhysical> vmo;
     status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1831,7 +1832,7 @@ static bool vmo_cache_test() {
 
   // Test that changing policy while mapped is blocked
   {
-    fbl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObjectPhysical> vmo;
     status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1857,7 +1858,7 @@ static bool vmo_lookup_test() {
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1922,7 +1923,7 @@ static bool vmo_lookup_clone_test() {
 
   static const size_t page_count = 4;
   static const size_t alloc_size = PAGE_SIZE * page_count;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, alloc_size, &vmo);
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
@@ -1977,7 +1978,7 @@ static bool vmo_clone_removes_write_test() {
   BEGIN_TEST;
 
   // Create and map a VMO.
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "vmo create");
   auto ka = VmAspace::kernel_aspace();
@@ -2090,7 +2091,7 @@ static bool vmo_move_pages_on_access_test() {
 
   AutoVmScannerDisable scanner_disable;
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
   zx_status_t status = make_committed_pager_vmo(&page, &vmo);
   ASSERT_EQ(ZX_OK, status);
@@ -2145,8 +2146,8 @@ static bool vmo_eviction_test() {
   auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
 
   // Make two pager backed vmos
-  fbl::RefPtr<VmObject> vmo;
-  fbl::RefPtr<VmObject> vmo2;
+  fbl::RefPtr<VmObjectPaged> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo2;
   vm_page_t* page;
   vm_page_t* page2;
   zx_status_t status = make_committed_pager_vmo(&page, &vmo);
@@ -2224,7 +2225,7 @@ static bool vmo_attribution_clones_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 4 * PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
   // Dummy user id to keep the cloning code happy.
@@ -2314,7 +2315,7 @@ static bool vmo_attribution_ops_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status =
       VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 4 * PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
@@ -2383,7 +2384,7 @@ static bool vmo_attribution_pager_test() {
   ASSERT_TRUE(ac.check());
 
   static const size_t alloc_size = 2 * PAGE_SIZE;
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, alloc_size, &vmo);
   ASSERT_EQ(ZX_OK, status);
   // Dummy user id to keep the cloning code happy.
@@ -2393,7 +2394,7 @@ static bool vmo_attribution_pager_test() {
   EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
 
   // Create an aux VMO to transfer pages into the pager-backed vmo.
-  fbl::RefPtr<VmObject> aux_vmo;
+  fbl::RefPtr<VmObjectPaged> aux_vmo;
   status =
       VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &aux_vmo);
   ASSERT_EQ(ZX_OK, status);
@@ -2457,7 +2458,7 @@ static bool vmo_attribution_evict_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
   zx_status_t status = make_committed_pager_vmo(&page, &vmo);
   ASSERT_EQ(ZX_OK, status);
@@ -2479,7 +2480,7 @@ static bool vmo_attribution_dedup_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, 2 * PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
@@ -3493,7 +3494,7 @@ static bool pq_add_remove() {
   test_page.set_state(VM_PAGE_STATE_OBJECT);
 
   // Need a VMO to claim our pager backed page is in
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(0, 0, PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
   VmObjectPaged* vmop = VmObjectPaged::AsVmObjectPaged(vmo);
@@ -3538,7 +3539,7 @@ static bool pq_move_queues() {
   test_page.set_state(VM_PAGE_STATE_OBJECT);
 
   // Need a VMO to claim our pager backed page is in
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(0, 0, PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
   VmObjectPaged* vmop = VmObjectPaged::AsVmObjectPaged(vmo);
@@ -3606,7 +3607,7 @@ static bool pq_rotate_queue() {
   pager_page.set_state(VM_PAGE_STATE_OBJECT);
 
   // Need a VMO to claim our pager backed page is in.
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(0, 0, PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
   VmObjectPaged* vmop = VmObjectPaged::AsVmObjectPaged(vmo);

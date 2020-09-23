@@ -115,7 +115,7 @@ std::optional<uintptr_t> RootResourceFilter::ProcessCmdLineReservation(size_t si
   // Do not store the result in the node just yet, we want to make sure that the
   // pin succeeds first (since the node destructor will unconditionally unpin
   // the VMO).
-  fbl::RefPtr<VmObject> tmp;
+  fbl::RefPtr<VmObjectPaged> tmp;
   zx_status_t status;
   status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, size, PAGE_SIZE_SHIFT, &tmp);
   if (status == ZX_OK) {

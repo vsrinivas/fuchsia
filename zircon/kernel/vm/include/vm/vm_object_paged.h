@@ -41,7 +41,7 @@ class VmObjectPaged final : public VmObject {
   static constexpr uint32_t kSlice = (1u << 3);
 
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
-                            fbl::RefPtr<VmObject>* vmo);
+                            fbl::RefPtr<VmObjectPaged>* vmo);
 
   // Gets the raw VmObjectPaged pointer, or null if the VmObject is not paged.
   static VmObjectPaged* AsVmObjectPaged(const fbl::RefPtr<VmObject>& vmo) {
@@ -56,7 +56,7 @@ class VmObjectPaged final : public VmObject {
   // returned vmo has all of its pages committed, and does not allow
   // decommitting them.
   static zx_status_t CreateContiguous(uint32_t pmm_alloc_flags, uint64_t size,
-                                      uint8_t alignment_log2, fbl::RefPtr<VmObject>* vmo);
+                                      uint8_t alignment_log2, fbl::RefPtr<VmObjectPaged>* vmo);
 
   // Creates a VMO from wired pages.
   //
@@ -68,10 +68,10 @@ class VmObjectPaged final : public VmObject {
   // the pages. If exclusive is true, then [data, data + size) will be unmapped from the
   // kernel address space (unless they lie in the physmap).
   static zx_status_t CreateFromWiredPages(const void* data, size_t size, bool exclusive,
-                                          fbl::RefPtr<VmObject>* vmo);
+                                          fbl::RefPtr<VmObjectPaged>* vmo);
 
   static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options, uint64_t size,
-                                    fbl::RefPtr<VmObject>* vmo);
+                                    fbl::RefPtr<VmObjectPaged>* vmo);
 
   zx_status_t Resize(uint64_t size) override;
   uint32_t create_options() const override { return options_; }
@@ -233,7 +233,7 @@ class VmObjectPaged final : public VmObject {
   void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset) TA_REQ(lock_);
 
   static zx_status_t CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
-                                  fbl::RefPtr<VmObject>* vmo);
+                                  fbl::RefPtr<VmObjectPaged>* vmo);
 
   // private destructor, only called from refptr
   ~VmObjectPaged() override;

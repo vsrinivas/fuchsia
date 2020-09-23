@@ -77,7 +77,7 @@ zx_status_t create_valid_msi_vmo(fbl::RefPtr<VmObject>* out_vmo,
                                  volatile MsiCapability** out_cap) {
   zx_status_t status;
   size_t vmo_size = sizeof(MsiCapability);
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   if ((status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, 0 /* options */,
                                                 &vmo)) != ZX_OK) {
     return status;
@@ -235,7 +235,7 @@ static bool interrupt_vmo_test() {
   KernelHandle<InterruptDispatcher> interrupt;
   zx_rights_t rights;
   {
-    fbl::RefPtr<VmObject> vmo, vmo_noncontig;
+    fbl::RefPtr<VmObjectPaged> vmo, vmo_noncontig;
     size_t vmo_size = sizeof(MsiCapability);
     ASSERT_EQ(ZX_OK,
               VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, /*options=*/0, &vmo));

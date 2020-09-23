@@ -22,7 +22,7 @@ EmbeddedVmo::EmbeddedVmo(const char* name, const void* image, size_t size,
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
 
   // create vmo out of ro data mapped in kernel space
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::CreateFromWiredPages(image, size, true, &vmo);
   ASSERT(status == ZX_OK);
 

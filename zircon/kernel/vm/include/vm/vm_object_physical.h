@@ -26,7 +26,7 @@
 // VMO representing a physical range of memory
 class VmObjectPhysical final : public VmObject {
  public:
-  static zx_status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
+  static zx_status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObjectPhysical>* vmo);
 
   zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
                                fbl::RefPtr<VmObject>* child_vmo) override

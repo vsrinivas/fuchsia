@@ -54,7 +54,7 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
 
 zx_status_t GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_paddr,
                                                               zx_paddr_t host_paddr, size_t len) {
-  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObjectPhysical> vmo;
   zx_status_t status = VmObjectPhysical::Create(host_paddr, len, &vmo);
   if (status != ZX_OK) {
     return status;

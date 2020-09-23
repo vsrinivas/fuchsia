@@ -117,7 +117,7 @@ zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
   // the symbolizer markup data file.  This gets the symbolizer context for the
   // kernel and then a dumpfile element for each VMO published.
   struct SymbolizerFile {
-    fbl::RefPtr<VmObject>& vmo_ = instances_[kSymbolizer].vmo_;
+    fbl::RefPtr<VmObjectPaged>& vmo_ = instances_[kSymbolizer].vmo_;
     size_t pos_ = 0;
     FILE stream_{this};
 
