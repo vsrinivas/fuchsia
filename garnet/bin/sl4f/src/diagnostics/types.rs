@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq)]
 pub enum DiagnosticsMethod {
     /// Wraps `fuchsia.diagnostics.Archive.StreamDiagnostics` with default parameters
-    /// stream_mode=SNAPSHOT, format=JSON, data_type=INSPECT
+    /// stream_mode=SNAPSHOT, format=JSON, data_type=INSPECT,
+    /// batch_retrieval_timeout_seconds=60
     SnapshotInspect,
 }
 

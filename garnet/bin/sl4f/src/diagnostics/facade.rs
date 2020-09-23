@@ -26,6 +26,7 @@ impl DiagnosticsFacade {
             .retry_if_empty(false)
             .with_archive(proxy)
             .add_selectors(args.selectors.into_iter())
+            .with_batch_retrieval_timeout_seconds(60)
             .snapshot_raw(DataType::Inspect)
             .await
     }

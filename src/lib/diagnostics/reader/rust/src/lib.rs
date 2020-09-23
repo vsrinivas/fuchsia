@@ -89,6 +89,7 @@ pub struct ArchiveReader {
     should_retry: bool,
     minimum_schema_count: usize,
     timeout: Option<Duration>,
+    batch_retrieval_timeout_seconds: Option<i64>,
 }
 
 impl ArchiveReader {
@@ -102,6 +103,7 @@ impl ArchiveReader {
             should_retry: true,
             archive: None,
             minimum_schema_count: 1,
+            batch_retrieval_timeout_seconds: None,
         }
     }
 
@@ -138,6 +140,13 @@ impl ArchiveReader {
     /// Do not use in tests unless timeout is the expected behavior.
     pub fn with_timeout(mut self, duration: Duration) -> Self {
         self.timeout = Some(duration);
+        self
+    }
+
+    /// Set the maximum time to wait for a wait for a single component
+    /// to have its diagnostics data "pumped".
+    pub fn with_batch_retrieval_timeout_seconds(mut self, timeout: i64) -> Self {
+        self.batch_retrieval_timeout_seconds = Some(timeout);
         self
     }
 
@@ -208,6 +217,7 @@ impl ArchiveReader {
         stream_parameters.stream_mode = Some(mode);
         stream_parameters.data_type = Some(data_type);
         stream_parameters.format = Some(Format::Json);
+        stream_parameters.batch_retrieval_timeout_seconds = self.batch_retrieval_timeout_seconds;
         stream_parameters.client_selector_configuration = if self.selectors.is_empty() {
             Some(ClientSelectorConfiguration::SelectAll(true))
         } else {
