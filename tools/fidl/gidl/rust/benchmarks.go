@@ -25,7 +25,7 @@ use {
 		handle::Handle,
 	},
 	fidl_benchmarkfidl{{ .CrateSuffix }} as benchmarkfidl{{ .CrateSuffix }},
-	fuchsia_criterion::criterion::{BatchSize, Bencher},
+	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,
 	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles},
@@ -51,14 +51,26 @@ const _V1_CONTEXT: &Context = &Context {};
 
 {{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
-	b.iter(|| {
-		{{- if .HandleDefs }}
-		let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-		let handle_defs = unsafe { disown_handles(handle_defs) };
-		let handle_defs = handle_defs.as_ref();
-		{{- end }}
-		{{ .Value }}
-	});
+	b.iter_batched_ref(
+		|| {
+			{{- if .HandleDefs }}
+			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+			unsafe { disown_handles(handle_defs) }
+			{{- else }}
+			{{- /* Use empty vector with b.iter_batched_ref, rather than b.iter,
+				for consistency between handle and non-handle benchmarks. */}}
+			Vec::<Handle>::new()
+			{{- end }}
+		},
+		|_handle_defs| {
+			{{- if .HandleDefs }}
+			let handle_defs = _handle_defs.as_ref();
+			{{- end }}
+			black_box({{ .Value }}); {{- /* semicolon: include drop time. */}}
+		},
+		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
+		BatchSize::SmallInput,
+	);
 }
 
 fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
@@ -75,7 +87,15 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
 			with_tls_coding_bufs(|bytes, handles| {
 				Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
-			});
+				{{- /* Return the underlying heap storage of handles, since with_tls_coding_bufs
+					clears it after calling this closure, which otherwise would close all the
+					handles. By returning the actual handles, we avoid including handle close
+					time in the benchmark. Note that this means the handle vector must reallocate
+					on every iteration if handles are used. */}}
+				{{- if .HandleDefs }}
+				std::mem::take(handles)
+				{{- end }}
+			}) {{- /* no semicolon: exclude drop time. */}}
 		},
 		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
 		BatchSize::SmallInput,
@@ -97,6 +117,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		},
 		|(bytes, handles, value)| {
 			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
+			{{- /* semicolon above: include drop time. */}}
 		},
 		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
 		BatchSize::SmallInput,
@@ -113,6 +134,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		{{ .ValueType }}::new_empty,
 		|value| {
 			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
+			{{- /* semicolon above: include drop time */}}
 		},
 		BatchSize::SmallInput,
 	);
