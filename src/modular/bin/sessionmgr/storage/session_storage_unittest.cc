@@ -471,5 +471,79 @@ TEST_F(SessionStorageTest, OnAnnotationsUpdatedCallbackBeforeCreate) {
   EXPECT_EQ(2, annotations_count);
 }
 
+// Tests that multiple watchers passed to SubscribeStoryUpdated are notified with the same
+// data when the story is updated.
+TEST_F(SessionStorageTest, SubscribeStoryUpdatedMultipleWatchers) {
+  static constexpr auto kTestStoryName = "story_name";
+  static constexpr auto kTestAnnotationKey = "test_annotation_key";
+  static constexpr auto kTestAnnotationValue = "test_annotation_value";
+
+  auto storage = CreateStorage();
+
+  auto story_id = storage->CreateStory(kTestStoryName, /*annotations=*/{});
+
+  bool is_first_watcher_called{false};
+  storage->SubscribeStoryUpdated(
+      [&, expected_story_id = story_id](std::string story_id,
+                                        const fuchsia::modular::internal::StoryData& story_data) {
+        EXPECT_EQ(expected_story_id, story_id);
+        EXPECT_EQ(expected_story_id, story_data.story_info().id());
+        EXPECT_TRUE(story_data.story_info().has_annotations());
+        is_first_watcher_called = true;
+        return WatchInterest::kStop;
+      });
+
+  bool is_second_watcher_called{false};
+  storage->SubscribeStoryUpdated(
+      [&, expected_story_id = story_id](std::string story_id,
+                                        const fuchsia::modular::internal::StoryData& story_data) {
+        EXPECT_EQ(expected_story_id, story_id);
+        EXPECT_EQ(expected_story_id, story_data.story_info().id());
+        EXPECT_TRUE(story_data.story_info().has_annotations());
+        is_second_watcher_called = true;
+        return WatchInterest::kStop;
+      });
+
+  // Update the story to trigger the watchers.
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text(kTestAnnotationValue);
+  auto annotation = fuchsia::modular::Annotation{
+      .key = kTestAnnotationKey, .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  storage->MergeStoryAnnotations(story_id, std::move(annotations));
+
+  RunLoopUntil([&] { return is_first_watcher_called && is_second_watcher_called; });
+}
+
+// Tests that multiple watchers passed to SubscribeStoryDeleted are notified with the same
+// data when the story is deleted.
+TEST_F(SessionStorageTest, SubscribeStoryDeletedMultipleWatchers) {
+  static constexpr auto kTestStoryName = "story_name";
+
+  auto storage = CreateStorage();
+
+  auto story_id = storage->CreateStory(kTestStoryName, /*annotations=*/{});
+
+  bool is_first_watcher_called{false};
+  storage->SubscribeStoryDeleted([&, expected_story_id = story_id](std::string story_id) {
+    EXPECT_EQ(expected_story_id, story_id);
+    is_first_watcher_called = true;
+    return WatchInterest::kStop;
+  });
+
+  bool is_second_watcher_called{false};
+  storage->SubscribeStoryDeleted([&, expected_story_id = story_id](std::string story_id) {
+    EXPECT_EQ(expected_story_id, story_id);
+    is_second_watcher_called = true;
+    return WatchInterest::kStop;
+  });
+
+  storage->DeleteStory(story_id);
+
+  RunLoopUntil([&] { return is_first_watcher_called && is_second_watcher_called; });
+}
+
 }  // namespace
 }  // namespace modular

@@ -72,6 +72,30 @@ TEST(WatcherList, NotifyWithArguments) {
   EXPECT_TRUE(called);
 }
 
+// Tests that calling Notify on a WatcherList with multiple watchers calls all watchers,
+// copying the arguments.
+TEST(WatcherList, NotifyCallsMultipleWatchersWithMovedArg) {
+  static constexpr auto kExpectedCount = 5;
+  static constexpr auto kExpectedArgValue = "arg value";
+  using WatcherFunc = fit::function<WatchInterest(std::string)>;
+
+  WatcherList<WatcherFunc> watcher_list;
+
+  int called_count = 0;
+  for (int i = 0; i < kExpectedCount; i++) {
+    watcher_list.Add([&called_count](std::string arg) {
+      ++called_count;
+      EXPECT_EQ(kExpectedArgValue, arg);
+      return WatchInterest::kStop;
+    });
+  }
+
+  std::string arg{kExpectedArgValue};
+  watcher_list.Notify(std::move(arg));
+
+  EXPECT_EQ(kExpectedCount, called_count);
+}
+
 // Tests that a watcher that returns WatchInterest::kStop is removed from the list.
 TEST(WatcherList, WatchInterestStop) {
   WatcherList<WatcherClosure> watcher_list;

@@ -40,12 +40,14 @@ class WatcherList {
   void Add(Callable watcher) { watchers_.push_back(std::move(watcher)); }
 
   // Notify all watchers in the list.
+  //
+  // All |args| must be copyable.
   template <typename... Args>
   void Notify(Args&&... args) {
     // Call all of the watchers with the given arguments.
     for (auto it = watchers_.begin(); it != watchers_.end();) {
       auto& watcher = *it;
-      auto result = watcher(std::forward<Args>(args)...);
+      auto result = watcher(args...);
 
       // Remove the watcher if indicated that it wishes to be removed.
       if (result == WatchInterest::kStop) {
