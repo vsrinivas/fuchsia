@@ -11,6 +11,7 @@ group("tests") {
     "mt-musb-host:tests",
     "usb-hub-rewrite:tests",
     "usb-peripheral:tests",
+    "usb-peripheral-test:tests",
     "usb-virtual-bus:tests",
     "xhci-rewrite:tests",
   ]

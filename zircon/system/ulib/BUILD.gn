@@ -18,8 +18,14 @@ group("tests") {
   deps = [
     ":fuzzers",
     "edid:tests",
+    "fbl/test:fbl($host_toolchain)",
+    "ffl/test:ffl($host_toolchain)",
+    "fit/test($host_toolchain)",
     "fs/journal/test",
+    "fs/transaction/test($host_toolchain)",
     "ftl/test:tests",
+    "fvm-host:fvm-host-test($host_toolchain)",
+    "fvm/test:fvm-unit($host_toolchain)",
     "fvm/test:tests",
     "fzl:tests",
     "hid-parser/test:tests",
@@ -27,9 +33,22 @@ group("tests") {
     "storage/buffer/test",
     "storage/operation/test",
     "sysconfig-client:tests",
+    "trace-reader/test:trace-reader-test($host_toolchain)",
+    "uart/test($host_toolchain)",
+    "zbi/test:zbi($host_toolchain)",
     "zbitl/test",
     "zxio:tests",
+    "zxtest/test:zxtest($host_toolchain)",
+    "zxtest/test/integration:zxtest-integration($host_toolchain)",
   ]
+
+  if (current_os == "linux") {
+    deps += [
+      "ftl-mtd/test:ftl-volume-wrapper($host_toolchain)",
+      "ftl-mtd/test:nand-volume-driver($host_toolchain)",
+      "nand-redundant-storage/test:nand-redundant-storage($host_toolchain)",
+    ]
+  }
 }
 
 fuzzers_package("fuzzers") {

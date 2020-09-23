@@ -27,6 +27,11 @@ if (is_fuchsia) {
       "//zircon/public/lib/sync",
     ]
   }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":tests($host_toolchain)" ]
+  }
 } else if (current_os == "linux") {
   import("//build/test.gni")
 
@@ -47,5 +52,13 @@ if (is_fuchsia) {
       "//zircon/public/lib/zxtest",
       "//zircon/third_party/ulib/usbhost",
     ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":usb-peripheral-test" ]
+  }
+} else {
+  group("tests") {
   }
 }

@@ -11,14 +11,10 @@ group("test") {
   testonly = true
   deps = [
     ":blobfs-fuzzers",
+    ":blobfs-host($host_toolchain)",
     ":blobfs-integration-package",
     ":blobfs-unittest",
   ]
-}
-
-group("host_tests") {
-  testonly = true
-  deps = [ ":blobfs-host" ]
 }
 
 executable("test_binary") {

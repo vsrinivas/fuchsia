@@ -10,10 +10,17 @@
 group("tests") {
   testonly = true
   deps = [
+    "cmdline($host_toolchain)",
     "dash",
     "fs-recovery:tests",
     "fvm:tests",
     "service:tests",
     "stdio:stdio-test-package",
   ]
+  if (current_os == "linux") {
+    deps += [
+      "ftl-mtd:ftl-volume-wrapper-integration($host_toolchain)",
+      "mtd($host_toolchain)",
+    ]
+  }
 }

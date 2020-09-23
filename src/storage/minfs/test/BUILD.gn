@@ -19,6 +19,7 @@ import("//build/testing/bootfs_test.gni")
 group("test") {
   testonly = true
   deps = [
+    ":minfs-host($host_toolchain)",
     ":minfs-integration",
     ":minfs-power",
     ":minfs-unit",

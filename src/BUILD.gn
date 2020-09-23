@@ -75,8 +75,7 @@ group("tests") {
     "virtualization:tests",
     "zircon:tests",
 
-    # These targets should be removed when the tests are moved to
-    # //src.
+    # These targets should be removed when the tests are moved to //src.
     "//zircon/kernel/lib/devicetree/tests",
     "//zircon/system/ulib:tests",
     "//zircon/system/utest:tests",
@@ -86,7 +85,6 @@ group("tests") {
 group("zircon_host_tests") {
   testonly = true
   deps = [
-    "//build/unification/tests:host",
     "//zircon/kernel/dev/coresight/tests($host_toolchain)",
     "//zircon/kernel/lib/heap/cmpctmalloc/tests($host_toolchain)",
   ]
