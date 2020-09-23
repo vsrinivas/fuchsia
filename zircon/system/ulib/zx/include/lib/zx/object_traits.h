@@ -39,6 +39,7 @@ struct object_traits {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -49,6 +50,7 @@ struct object_traits<channel> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = true;
 };
 
@@ -59,6 +61,7 @@ struct object_traits<eventpair> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = true;
 };
 
@@ -69,6 +72,7 @@ struct object_traits<fifo> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = true;
 };
 
@@ -79,6 +83,7 @@ struct object_traits<log> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -89,6 +94,7 @@ struct object_traits<pmt> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = false;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -99,6 +105,7 @@ struct object_traits<socket> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = true;
 };
 
@@ -109,6 +116,7 @@ struct object_traits<port> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = false;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -119,6 +127,7 @@ struct object_traits<vmar> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = false;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -129,6 +138,7 @@ struct object_traits<interrupt> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -139,6 +149,7 @@ struct object_traits<guest> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = false;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -149,6 +160,7 @@ struct object_traits<exception> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = false;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -159,6 +171,7 @@ struct object_traits<job> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = true;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -169,6 +182,7 @@ struct object_traits<process> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = true;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -179,6 +193,7 @@ struct object_traits<thread> {
   static constexpr bool supports_set_profile = true;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -189,6 +204,7 @@ struct object_traits<resource> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = true;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 
@@ -199,6 +215,7 @@ struct object_traits<msi> {
   static constexpr bool supports_set_profile = false;
   static constexpr bool supports_user_signal = false;
   static constexpr bool supports_wait = true;
+  static constexpr bool supports_kill = false;
   static constexpr bool has_peer_handle = false;
 };
 

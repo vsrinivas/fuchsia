@@ -26,7 +26,9 @@ class task : public object<T> {
 
   task(task&& other) : object<T>(other.release()) {}
 
-  zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
+  zx_status_t kill() const {
+    static_assert(object_traits<T>::supports_kill, "Object must support being killed.");
+    return zx_task_kill(object<T>::get()); }
 
   zx_status_t suspend(suspend_token* result) const {
     // Assume |result| must refer to a different container than |this|, due
