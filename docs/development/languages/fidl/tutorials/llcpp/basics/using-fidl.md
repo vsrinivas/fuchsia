@@ -53,7 +53,7 @@ rm -r examples/fidl/llcpp/unittests/*
      deps = [ "//third_party/googletest:gtest_main" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="package" %}
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/BUILD.gn" region_tag="package" %}
    ```
 
    Note: The `executable_path` in the package needs to match the `output_name` of the `test`
