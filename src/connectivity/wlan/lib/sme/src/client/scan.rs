@@ -20,7 +20,7 @@ use {
 
 const PASSIVE_SCAN_CHANNEL_MS: u32 = 200;
 const ACTIVE_SCAN_PROBE_DELAY_MS: u32 = 5;
-const ACTIVE_SCAN_CHANNEL_MS: u32 = 50;
+const ACTIVE_SCAN_CHANNEL_MS: u32 = 75;
 
 type BssId = [u8; 6];
 
