@@ -8,24 +8,33 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [ ":adaptation_tests" ]
+  public_deps = [ ":weavestack-adaptation-unittests" ]
 }
 
-test_package("adaptation_tests") {
+test_package("weavestack-adaptation-unittests") {
   tests = [
     {
       name = "weave_ble_manager_unittests"
     },
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "configuration_manager_unittests"
     },
     {
       name = "group_key_store_unittests"
     },
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "platform_case_auth_delegate_unittests"
     },
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "weave_config_manager_unittests"
     },
     {
@@ -81,39 +90,21 @@ executable("weave_ble_manager_unittests") {
   testonly = true
   output_name = "weave_ble_manager_unittests"
   sources = [ "ble_manager_unittests.cpp" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":common_test_deps" ]
 }
 
 executable("configuration_manager_unittests") {
   testonly = true
   output_name = "configuration_manager_unittests"
   sources = [ "configuration_manager_unittests.cpp" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":common_test_deps" ]
 }
 
 executable("group_key_store_unittests") {
   testonly = true
   output_name = "group_key_store_unittests"
   sources = [ "group_key_store_unittests.cpp" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":common_test_deps" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -123,13 +114,7 @@ executable("platform_case_auth_delegate_unittests") {
   testonly = true
   output_name = "platform_case_auth_delegate_unittests"
   sources = [ "platform_case_auth_delegate_unittests.cpp" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":common_test_deps" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -139,13 +124,7 @@ executable("weave_platform_manager_unittests") {
   testonly = true
   output_name = "weave_platform_manager_unittests"
   sources = [ "platform_manager_unittests.cpp" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":common_test_deps" ]
 }
 
 executable("weave_config_manager_unittests") {
@@ -153,12 +132,8 @@ executable("weave_config_manager_unittests") {
   output_name = "weave_config_manager_unittests"
   sources = [ "weave_config_manager_unittests.cpp" ]
   deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
+    ":common_test_deps",
     "//src/lib/files:files",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -166,20 +141,19 @@ executable("weave_thread_stack_manager_unittests") {
   testonly = true
   output_name = "weave_thread_stack_manager_unittests"
   sources = [ "thread_stack_manager_unittests.cpp" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":common_test_deps" ]
 }
 
 executable("weave_connectivity_manager_unittests") {
   testonly = true
   output_name = "weave_connectivity_manager_unittests"
   sources = [ "connectivity_manager_unittests.cpp" ]
-  deps = [
+  deps = [ ":common_test_deps" ]
+}
+
+group("common_test_deps") {
+  testonly = true
+  public_deps = [
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
@@ -190,7 +164,7 @@ executable("weave_connectivity_manager_unittests") {
 }
 
 config_data("config") {
-  for_pkg = "adaptation_tests"
+  for_pkg = "weavestack-adaptation-unittests"
   sources = [
     "testdata/default_environment.json",
     "testdata/device_info.json",
