@@ -13,79 +13,25 @@
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 
-#include <string_view>
-
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
 #include "block-device-interface.h"
-#include "block-device-manager.h"
 #include "block-watcher-test-data.h"
 #include "encrypted-volume-interface.h"
 
-namespace devmgr {
 namespace {
-
-using ::devmgr_integration_test::RecursiveWaitForFile;
-using ::driver_integration_test::IsolatedDevmgr;
+using devmgr_integration_test::RecursiveWaitForFile;
+using driver_integration_test::IsolatedDevmgr;
 
 class MockBlockDevice : public devmgr::BlockDeviceInterface {
  public:
-  static const std::string& BaseTopologicalPath() {
-    static std::string* path = new std::string("/dev/mock_device/block");
-    return *path;
+  disk_format_t GetFormat() override = 0;
+  void SetFormat(disk_format_t format) override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
-
-  struct Options {
-    static Options Default() { return {}; }
-
-    disk_format_t content_format = DISK_FORMAT_UNKNOWN;
-    std::string_view driver_path;
-    std::string topological_path = BaseTopologicalPath();
-    std::string partition_name;
-  };
-
-  static Options GptOptions() {
-    return {.content_format = DISK_FORMAT_GPT, .driver_path = kGPTDriverPath};
-  }
-
-  static Options FvmOptions() {
-    return {.content_format = DISK_FORMAT_FVM, .driver_path = kFVMDriverPath};
-  }
-
-  static Options MinfsZxcryptOptions() {
-    return {
-        .content_format = DISK_FORMAT_ZXCRYPT,
-        .driver_path = kZxcryptDriverPath,
-        .topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block",
-        .partition_name = "minfs",
-    };
-  }
-
-  static Options DurableZxcryptOptions() {
-    return {
-        .content_format = DISK_FORMAT_ZXCRYPT,
-        .driver_path = kZxcryptDriverPath,
-        .topological_path = MockBlockDevice::BaseTopologicalPath() + "/durable-004/block",
-        .partition_name = "durable",
-    };
-  }
-
-  static Options DurableOptions() {
-    return {
-        .topological_path =
-            MockBlockDevice::BaseTopologicalPath() + "/durable-004/block/zxcrypt/unsealed/block",
-    };
-  }
-
-  MockBlockDevice(const Options& options = Options::Default()) : options_(options) {}
-
-  disk_format_t content_format() const override { return options_.content_format; }
-  const std::string& topological_path() const override { return options_.topological_path; }
-  const std::string& partition_name() const override { return options_.partition_name; }
-  disk_format_t GetFormat() final { return format_; }
-  void SetFormat(disk_format_t format) final { format_ = format; }
-  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
+  bool Netbooting() override { return false; }
+  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) override {
     fuchsia_hardware_block_BlockInfo info = {};
     info.flags = 0;
     info.block_size = 512;
@@ -93,225 +39,85 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
     *out_info = info;
     return ZX_OK;
   }
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    static fuchsia_hardware_block_partition_GUID null_guid;
-    return null_guid;
+  zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t AttachDriver(const std::string_view& driver) override {
-    EXPECT_EQ(driver, options_.driver_path);
-    EXPECT_FALSE(attached_);
-    attached_ = true;
-    return ZX_OK;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t UnsealZxcrypt() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return ZX_ERR_INTERNAL;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+  }
+  zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                      bool* is_path) override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+  }
+  zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t FormatZxcrypt() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return ZX_ERR_INTERNAL;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   bool ShouldCheckFilesystems() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return false;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t CheckFilesystem() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return ZX_ERR_INTERNAL;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t FormatFilesystem() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return ZX_ERR_INTERNAL;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t MountFilesystem() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return ZX_ERR_INTERNAL;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx::status<std::string> VeritySeal() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return zx::error(ZX_ERR_INTERNAL);
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return ZX_ERR_INTERNAL;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   bool ShouldAllowAuthoringFactory() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
-    return false;
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
-
-  bool attached() const { return attached_; }
-
- private:
-  const Options options_;
-  disk_format_t format_ = DISK_FORMAT_UNKNOWN;
-  bool attached_ = false;
 };
 
-class BlockVerityDevice : public MockBlockDevice {
- public:
-  static Options VerityOptions() {
-    return Options{.driver_path = kBlockVerityDriverPath,
-                   .topological_path = BaseTopologicalPath() + "/factory-001/block",
-                   .partition_name = "factory"};
-  }
-
-  BlockVerityDevice(bool allow_authoring, const Options& options = VerityOptions())
-      : MockBlockDevice(options), allow_authoring_(allow_authoring) {}
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-    static fuchsia_hardware_block_partition_GUID guid = GPT_FACTORY_TYPE_GUID;
-    return guid;
-  }
-  bool ShouldAllowAuthoringFactory() override { return allow_authoring_; }
-
- private:
-  const bool allow_authoring_;
-};
-
-static constexpr char kFakeSeal[] =
-    "0000000000000000000000000000000000000000000000000000000000000000";
-
-class SealedBlockVerityDevice : public BlockVerityDevice {
- public:
-  SealedBlockVerityDevice() : BlockVerityDevice(/*allow_authoring=*/false) {}
-
-  zx::status<std::string> VeritySeal() final { return zx::ok(std::string(kFakeSeal)); }
-  zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
-    EXPECT_STR_EQ(kFakeSeal, seal_hex);
-    opened_ = true;
-    return ZX_OK;
-  }
-  bool opened() const { return opened_; }
-
- private:
-  bool opened_ = false;
-};
-
-class FactoryfsDevice : public MockBlockDevice {
- public:
-  static Options FactoryfsOptions() {
-    return Options{
-        .topological_path = BaseTopologicalPath() + "/factory-001/block/verity/verified/block",
-    };
-  }
-
-  FactoryfsDevice() : MockBlockDevice(FactoryfsOptions()) {}
-
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-    static fuchsia_hardware_block_partition_GUID guid = GPT_FACTORY_TYPE_GUID;
-    return guid;
-  }
-  zx_status_t CheckFilesystem() override {
-    checked_ = true;
-    return ZX_OK;
-  }
-  zx_status_t FormatFilesystem() override {
-    formatted_ = true;
-    return ZX_OK;
-  }
-  zx_status_t MountFilesystem() override {
-    mounted_ = true;
-    return ZX_OK;
-  }
-  bool checked() const { return checked_; }
-  bool formatted() const { return formatted_; }
-  bool mounted() const { return mounted_; }
-
- private:
-  bool checked_ = false;
-  bool formatted_ = false;
-  bool mounted_ = false;
-};
-
-class BlobDevice : public MockBlockDevice {
- public:
-  static Options BlobfsOptions() {
-    return {
-        .topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/blobfs-p-1/block",
-        .partition_name = "blobfs",
-    };
-  }
-
-  BlobDevice() : MockBlockDevice(BlobfsOptions()) {}
-
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override {
-    static fuchsia_hardware_block_partition_GUID guid = GUID_BLOB_VALUE;
-    return guid;
-  }
-  zx_status_t CheckFilesystem() override {
-    checked_ = true;
-    return ZX_OK;
-  }
-  zx_status_t FormatFilesystem() override {
-    formatted_ = true;
-    return ZX_OK;
-  }
-  zx_status_t MountFilesystem() override {
-    mounted_ = true;
-    return ZX_OK;
-  }
-  bool checked() const { return checked_; }
-  bool formatted() const { return formatted_; }
-  bool mounted() const { return mounted_; }
-
- private:
-  bool checked_ = false;
-  bool formatted_ = false;
-  bool mounted_ = false;
-};
-
-class MinfsDevice : public MockBlockDevice {
- public:
-  static Options MinfsOptions() {
-    return {
-        .topological_path =
-            MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block/zxcrypt/unsealed/block",
-    };
-  }
-
-  MinfsDevice(Options options = MinfsOptions()) : MockBlockDevice(options) {}
-
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-    static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
-    return guid;
-  }
-  zx_status_t CheckFilesystem() override {
-    checked_ = true;
-    return ZX_OK;
-  }
-  zx_status_t FormatFilesystem() override {
-    formatted_ = true;
-    return ZX_OK;
-  }
-  zx_status_t MountFilesystem() override {
-    mounted_ = true;
-    return ZX_OK;
-  }
-  bool checked() const { return checked_; }
-  bool formatted() const { return formatted_; }
-  bool mounted() const { return mounted_; }
-
- private:
-  bool checked_ = false;
-  bool formatted_ = false;
-  bool mounted_ = false;
-};
-
-BlockDeviceManager::Options TestOptions() { return BlockDeviceManager::DefaultOptions(); }
-
-// Tests adding a device which has an unknown format.
+// Tests adding a device which has no GUID and an unknown format.
 TEST(AddDeviceTestCase, AddUnknownDevice) {
-  MockBlockDevice device;
-  BlockDeviceManager manager(TestOptions());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
+  class UnknownDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  };
+  UnknownDevice device;
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.Add());
+}
+
+// Tests adding a device with an unknown GUID and unknown format.
+TEST(AddDeviceTestCase, AddUnknownPartition) {
+  class UnknownDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+  };
+  UnknownDevice device;
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.Add());
 }
 
 // Tests adding a device which is smaller than the expected header size
 TEST(AddDeviceTestCase, AddSmallDevice) {
   class SmallDevice : public MockBlockDevice {
    public:
-    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) override {
       fuchsia_hardware_block_BlockInfo info = {};
       info.flags = 0;
       info.block_size = 512;
@@ -321,105 +127,217 @@ TEST(AddDeviceTestCase, AddSmallDevice) {
     }
   };
   SmallDevice device;
-  BlockDeviceManager manager(TestOptions());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.Add());
 }
 
 // Tests adding a device with a GPT format.
 TEST(AddDeviceTestCase, AddGPTDevice) {
-  MockBlockDevice device(MockBlockDevice::GptOptions());
-  BlockDeviceManager manager(TestOptions());
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
+  class GptDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_GPT; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kGPTDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool attached = false;
+  };
+  GptDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
 }
 
 // Tests adding a device with an FVM format.
 TEST(AddDeviceTestCase, AddFVMDevice) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
+  class FvmDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FVM; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kFVMDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool attached = false;
+  };
+  FvmDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
 }
 
 // Tests adding a device with an MBR format.
 TEST(AddDeviceTestCase, AddMBRDevice) {
-  auto options = TestOptions();
-  options.options.emplace(BlockDeviceManager::Options::kMbr);
-  BlockDeviceManager manager(options);
-  MockBlockDevice device(MockBlockDevice::Options{
-      .content_format = DISK_FORMAT_MBR,
-      .driver_path = kMBRDriverPath,
-  });
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
+  class MbrDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_MBR; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kMBRDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool attached = false;
+  };
+  MbrDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
 }
 
-TEST(AddDeviceTestCase, AddBlockVerityDevice) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  BlockVerityDevice device(/*allow_authoring=*/true);
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
+// Tests adding a device with a factory GUID but an unknown disk format.
+TEST(AddDeviceTestCase, AddUnformattedBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    // in FCT mode we need to be able to bind the block-verity driver to devices that don't yet
+    // have detectable magic, so Add relies on the gpt guid.
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      *is_path = false;
+      return ZX_OK;
+    }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GPT_FACTORY_TYPE_GUID;
+      return ZX_OK;
+    }
+    bool attached = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
 }
 
-TEST(AddDeviceTestCase, NonFactoryBlockVerityDeviceNotAttached) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  MockBlockDevice::Options options = BlockVerityDevice::VerityOptions();
-  options.partition_name = "not-factory";
-  BlockVerityDevice device(/*allow_authoring=*/true, options);
-  EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
-  EXPECT_FALSE(device.attached());
+// Tests adding a device with a factory GUID but an unknown disk format with the topological path
+// suffix /mutable/block
+TEST(AddDeviceTestCase, AddUnformattedMutableBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      ADD_FATAL_FAILURE("Should not attach a driver");
+      return ZX_OK;
+    }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      if (strcmp("/mutable/block", expected_path.data()) == 0) {
+        *is_path = true;
+        mutable_path_checked = true;
+      } else {
+        *is_path = false;
+      }
+      return ZX_OK;
+    }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GPT_FACTORY_TYPE_GUID;
+      return ZX_OK;
+    }
+    bool mutable_path_checked = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.mutable_path_checked);
+}
+
+// Tests adding a device with a factory GUID but an unknown disk format with the
+// topological path suffice /verified/block
+TEST(AddDeviceTestCase, AddUnformattedVerifiedBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      ADD_FATAL_FAILURE("Should not attach a driver");
+      return ZX_OK;
+    }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      if (strcmp("/verified/block", expected_path.data()) == 0) {
+        *is_path = true;
+        verified_path_checked = true;
+      } else {
+        *is_path = false;
+      }
+      return ZX_OK;
+    }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GPT_FACTORY_TYPE_GUID;
+      return ZX_OK;
+    }
+    bool verified_path_checked = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.verified_path_checked);
 }
 
 // Tests adding a device with the block-verity disk format
+const char kFakeSeal[] = "0000000000000000000000000000000000000000000000000000000000000000";
 TEST(AddDeviceTestCase, AddFormattedBlockVerityDevice) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  SealedBlockVerityDevice device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
-  EXPECT_TRUE(device.opened());
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOCK_VERITY; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool ShouldAllowAuthoringFactory() final { return false; }
+    zx::status<std::string> VeritySeal() final { return zx::ok(std::string(kFakeSeal)); }
+    zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
+      EXPECT_STR_EQ(kFakeSeal, seal_hex);
+      opened = true;
+      return ZX_OK;
+    }
+    bool attached = false;
+    bool opened = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
+  EXPECT_TRUE(device.opened);
 }
 
 // Tests adding a device with block-verity format but no seal provided by
 // bootloader
 TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceWithoutSeal) {
-  class BlockVerityDeviceWithNoSeal : public BlockVerityDevice {
+  class BlockVerityDevice : public MockBlockDevice {
    public:
-    BlockVerityDeviceWithNoSeal() : BlockVerityDevice(/*allow_authoring=*/false) {}
-
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOCK_VERITY; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool ShouldAllowAuthoringFactory() final { return false; }
     zx::status<std::string> VeritySeal() final {
-      seal_read_ = true;
+      seal_read = true;
       return zx::error_status(ZX_ERR_NOT_FOUND);
     }
     zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
       ADD_FATAL_FAILURE("Should not call OpenBlockVerityForVerifiedRead");
       return ZX_OK;
     }
-    bool seal_read() const { return seal_read_; }
-
-   private:
-    bool seal_read_ = false;
+    bool attached = false;
+    bool seal_read = false;
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  BlockVerityDeviceWithNoSeal device;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
-  EXPECT_TRUE(device.seal_read());
+  BlockVerityDevice device;
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, device.Add());
+  EXPECT_TRUE(device.attached);
+  EXPECT_TRUE(device.seal_read);
 }
 
 // Tests adding a device with block-verity format while in factory authoring mode
 TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
-  class BlockVerityDeviceInAuthoringMode : public BlockVerityDevice {
+  class BlockVerityDevice : public MockBlockDevice {
    public:
-    BlockVerityDeviceInAuthoringMode() : BlockVerityDevice(/*allow_authoring=*/true) {}
-
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOCK_VERITY; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool ShouldAllowAuthoringFactory() final { return true; }
     zx::status<std::string> VeritySeal() final {
       ADD_FATAL_FAILURE("Should not call VeritySeal");
       return zx::error_status(ZX_ERR_NOT_FOUND);
@@ -428,298 +346,308 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
       ADD_FATAL_FAILURE("Should not call OpenBlockVerityForVerifiedRead");
       return ZX_OK;
     }
+    bool attached = false;
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  BlockVerityDeviceInAuthoringMode device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
 }
 
 // Tests adding blobfs which does not not have a valid type GUID.
 TEST(AddDeviceTestCase, AddNoGUIDBlobDevice) {
-  class BlobDeviceWithInvalidTypeGuid : public BlobDevice {
+  class BlobDevice : public MockBlockDevice {
    public:
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_TEST_VALUE;
-      return guid;
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOBFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GUID_TEST_VALUE;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      ADD_FATAL_FAILURE("Should not check filesystem");
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      ADD_FATAL_FAILURE("Should not mount filesystem");
+      return ZX_OK;
     }
   };
-
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  BlobDeviceWithInvalidTypeGuid device;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
-  EXPECT_FALSE(device.mounted());
+  BlobDevice device;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.Add());
 }
 
 // Tests adding blobfs with a valid type GUID, but invalid metadata.
 TEST(AddDeviceTestCase, AddInvalidBlobDevice) {
-  class BlobDeviceWithInvalidMetadata : public BlobDevice {
+  class BlobDevice : public MockBlockDevice {
    public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOBFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GUID_BLOB_VALUE;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
     zx_status_t CheckFilesystem() final {
-      BlobDevice::CheckFilesystem();
+      checked = true;
       return ZX_ERR_BAD_STATE;
     }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  BlobDeviceWithInvalidMetadata device;
-  EXPECT_EQ(ZX_ERR_BAD_STATE, manager.AddDevice(device));
-  EXPECT_TRUE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_FALSE(device.mounted());
+  BlobDevice device;
+  EXPECT_EQ(ZX_ERR_BAD_STATE, device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_FALSE(device.mounted);
 }
 
 // Tests adding blobfs with a valid type GUID and valid metadata.
 TEST(AddDeviceTestCase, AddValidBlobDevice) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  BlobDevice device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_TRUE(device.mounted());
-}
+  class BlobDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOBFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GUID_BLOB_VALUE;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
 
-TEST(AddDeviceTestCase, NetbootingDoesNotMountBlobfs) {
-  auto options = TestOptions();
-  options.options.emplace(BlockDeviceManager::Options::kNetboot);
-  BlockDeviceManager manager(options);
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
   BlobDevice device;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
-  EXPECT_FALSE(device.mounted());
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_TRUE(device.mounted);
 }
 
 // Tests adding minfs which does not not have a valid type GUID.
 TEST(AddDeviceTestCase, AddNoGUIDMinfsDevice) {
-  class MinfsDeviceWithInvalidGuid : public MockBlockDevice {
+  class MinfsDevice : public MockBlockDevice {
    public:
-    using MockBlockDevice::MockBlockDevice;
-
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_TEST_VALUE;
-      return guid;
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GUID_TEST_VALUE;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      ADD_FATAL_FAILURE("Should not check filesystem");
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      ADD_FATAL_FAILURE("Should not mount filesystem");
+      return ZX_OK;
     }
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  MinfsDeviceWithInvalidGuid device(MockBlockDevice::MinfsZxcryptOptions());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
-  EXPECT_FALSE(device.attached());
+  MinfsDevice device;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.Add());
 }
 
 // Tests adding minfs with a valid type GUID and invalid metadata. Observe that
 // the filesystem reformats itself.
 TEST(AddDeviceTestCase, AddInvalidMinfsDevice) {
-  class ZxcryptDevice : public MockBlockDevice {
+  class MinfsDevice : public MockBlockDevice {
    public:
-    using MockBlockDevice::MockBlockDevice;
-
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
-      return guid;
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
     }
-    zx_status_t UnsealZxcrypt() final { return ZX_OK; }
-  };
-  class MinfsDeviceWithInvalidMetadata : public MinfsDevice {
-   public:
     zx_status_t CheckFilesystem() final {
-      MinfsDevice::CheckFilesystem();
+      checked = true;
       return ZX_ERR_BAD_STATE;
     }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  ZxcryptDevice zxcrypt_device(MockBlockDevice::MinfsZxcryptOptions());
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
-  MinfsDeviceWithInvalidMetadata device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.checked());
-  EXPECT_TRUE(device.formatted());
-  EXPECT_TRUE(device.mounted());
+  MinfsDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_TRUE(device.formatted);
+  EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding minfs with a valid type GUID and invalid format. Observe that
+// the filesystem reformats itself.
+TEST(AddDeviceTestCase, AddUnknownFormatMinfsDevice) {
+  class MinfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return format; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final { return ZX_OK; }
+    zx_status_t MountFilesystem() final {
+      EXPECT_TRUE(formatted);
+      mounted = true;
+      return ZX_OK;
+    }
+    zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final {
+      *is_unsealed_zxcrypt = true;
+      return ZX_OK;
+    }
+    void SetFormat(disk_format_t f) final { format = f; }
+
+    disk_format_t format = DISK_FORMAT_UNKNOWN;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  MinfsDevice device;
+  EXPECT_FALSE(device.formatted);
+  EXPECT_FALSE(device.mounted);
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.formatted);
+  EXPECT_TRUE(device.mounted);
 }
 
 // Tests adding zxcrypt with a valid type GUID and invalid format. Observe that
 // the partition reformats itself.
-TEST(AddDeviceTestCase, FormatZxcryptDevice) {
+TEST(AddDeviceTestCase, AddUnknownFormatZxcryptDevice) {
   class ZxcryptDevice : public MockBlockDevice {
    public:
-    using MockBlockDevice::MockBlockDevice;
-
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
-      return guid;
-    }
-    zx_status_t FormatZxcrypt() final {
-      formatted_zxcrypt_ = true;
+    disk_format_t GetFormat() final { return format; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      memcpy(out_guid->value, expected, sizeof(expected));
       return ZX_OK;
     }
-    zx_status_t UnsealZxcrypt() final { return ZX_OK; }
-    bool formatted_zxcrypt() const { return formatted_zxcrypt_; }
-
-   private:
-    bool formatted_zxcrypt_ = false;
-  };
-
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  MockBlockDevice::Options options = MockBlockDevice::MinfsZxcryptOptions();
-  options.content_format = DISK_FORMAT_UNKNOWN;
-  ZxcryptDevice zxcrypt_device(options);
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
-  MinfsDevice device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(zxcrypt_device.formatted_zxcrypt());
-  EXPECT_TRUE(device.formatted());
-  EXPECT_TRUE(device.mounted());
-}
-
-// Tests adding zxcrypt with a valid type GUID and minfs format i.e. it's a minfs partition without
-// zxcrypt. Observe that the partition reformats itself.
-TEST(AddDeviceTestCase, FormatMinfsDeviceWithZxcrypt) {
-  class ZxcryptDevice : public MockBlockDevice {
-   public:
-    using MockBlockDevice::MockBlockDevice;
-
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
-      return guid;
-    }
     zx_status_t FormatZxcrypt() final {
-      formatted_zxcrypt_ = true;
+      formatted_zxcrypt = true;
       return ZX_OK;
     }
+    zx_status_t FormatFilesystem() final {
+      formatted_filesystem = true;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final { return ZX_OK; }
     zx_status_t UnsealZxcrypt() final { return ZX_OK; }
-    bool formatted_zxcrypt() const { return formatted_zxcrypt_; }
+    zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final {
+      *is_unsealed_zxcrypt = false;
+      return ZX_OK;
+    }
+    void SetFormat(disk_format_t f) final { format = f; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kZxcryptDriverPath, driver.data());
+      return ZX_OK;
+    }
 
-   private:
-    bool formatted_zxcrypt_ = false;
+    disk_format_t format = DISK_FORMAT_UNKNOWN;
+    bool formatted_zxcrypt = false;
+    bool formatted_filesystem = false;
   };
-
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  MockBlockDevice::Options options = MockBlockDevice::MinfsZxcryptOptions();
-  options.content_format = DISK_FORMAT_MINFS;
-  ZxcryptDevice zxcrypt_device(options);
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
-  MinfsDevice device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(zxcrypt_device.formatted_zxcrypt());
-  EXPECT_TRUE(device.formatted());
-  EXPECT_TRUE(device.mounted());
-}
-
-TEST(AddDeviceTestCase, MinfsWithNoZxcryptOptionMountsWithoutZxcrypt) {
-  auto options = TestOptions();
-  options.options.emplace("no-zxcrypt");
-  BlockDeviceManager manager(options);
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  auto minfs_options = MinfsDevice::MinfsOptions();
-  minfs_options.topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block";
-  minfs_options.partition_name = "minfs";
-  MinfsDevice device(minfs_options);
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.mounted());
-}
-
-TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
-  // The minfs-ramdisk option will check that the topological path actually has an expected ramdisk
-  // prefix.
-  auto manager_options = TestOptions();
-  manager_options.options.emplace("minfs-ramdisk");
-  BlockDeviceManager manager(manager_options);
-  auto options = MockBlockDevice::FvmOptions();
-  constexpr std::string_view kBasePath = "/dev/misc/ramctl/mock_device/block";
-  options.topological_path = kBasePath;
-  MockBlockDevice fvm_device(options);
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  options = MinfsDevice::MinfsOptions();
-  options.topological_path = std::string(kBasePath) + "/fvm/minfs-p-2/block";
-  options.partition_name = "minfs";
-  MinfsDevice device(options);
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.mounted());
-}
-
-TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
-  auto options = TestOptions();
-  options.options.emplace("minfs-ramdisk");
-  BlockDeviceManager manager(options);
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
-  auto minfs_options = MinfsDevice::MinfsOptions();
-  minfs_options.topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block";
-  minfs_options.partition_name = "minfs";
-  MinfsDevice device(minfs_options);
-  EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
-  EXPECT_FALSE(device.mounted());
+  ZxcryptDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.formatted_zxcrypt);
+  EXPECT_FALSE(device.formatted_filesystem);
 }
 
 // Durable partition tests
 // Tests adding minfs on durable partition with a valid type GUID and valid metadata.
 TEST(AddDeviceTestCase, AddValidDurableDevice) {
-  class ZxcryptDevice : public MockBlockDevice {
-   public:
-    using MockBlockDevice::MockBlockDevice;
-
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GPT_DURABLE_TYPE_GUID;
-      return guid;
-    }
-    zx_status_t UnsealZxcrypt() final { return ZX_OK; }
-  };
   class DurableDevice : public MockBlockDevice {
    public:
-    using MockBlockDevice::MockBlockDevice;
-
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GPT_DURABLE_TYPE_GUID;
-      return guid;
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
     }
     zx_status_t CheckFilesystem() final {
-      checked_ = true;
+      checked = true;
       return ZX_OK;
     }
     zx_status_t FormatFilesystem() final {
-      formatted_ = true;
+      formatted = true;
       return ZX_OK;
     }
     zx_status_t MountFilesystem() final {
-      mounted_ = true;
+      mounted = true;
       return ZX_OK;
     }
 
-    bool checked() const { return checked_; }
-    bool formatted() const { return formatted_; }
-    bool mounted() const { return mounted_; }
-
-   private:
-    bool checked_ = false;
-    bool formatted_ = false;
-    bool mounted_ = false;
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  ZxcryptDevice zxcrypt_device(MockBlockDevice::DurableZxcryptOptions());
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
-  DurableDevice device(MockBlockDevice::DurableOptions());
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_TRUE(device.mounted());
+  DurableDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding minfs backed durable partition with a valid type GUID and invalid metadata.
+// Observe that the filesystem reformats itself.
+TEST(AddDeviceTestCase, AddInvalidDurableDevice) {
+  class DurableDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_ERR_BAD_STATE;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  DurableDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_TRUE(device.formatted);
+  EXPECT_TRUE(device.mounted);
 }
 
 // Tests adding a boot partition device with unknown format can be added with
@@ -727,11 +655,8 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
 TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
   class BootPartDevice : public MockBlockDevice {
    public:
-    BootPartDevice()
-        : MockBlockDevice(Options{
-              .driver_path = kBootpartDriverPath,
-          }) {}
-    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) override {
       fuchsia_hardware_block_BlockInfo info = {};
       info.flags = BLOCK_FLAG_BOOTPART;
       info.block_size = 512;
@@ -739,11 +664,20 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
       *out_info = info;
       return ZX_OK;
     }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBootpartDriverPath, driver.data());
+      return ZX_OK;
+    }
+    zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final {
+      *is_unsealed_zxcrypt = false;
+      checked_unsealed_zxcrypt = true;
+      return ZX_OK;
+    }
+    bool checked_unsealed_zxcrypt = false;
   };
   BootPartDevice device;
-  BlockDeviceManager manager(TestOptions());
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.attached());
+  EXPECT_OK(device.Add());
+  EXPECT_FALSE(device.checked_unsealed_zxcrypt);
 }
 
 TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
@@ -829,50 +763,109 @@ TEST(AddDeviceTestCase, AddFailingZxcryptVolumeShouldNotFormat) {
 // Tests adding factoryfs with valid factoryfs magic, as a verified child of a
 // block-verity device, but with invalid metadata.
 TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
-  class FactoryfsWithInvalidMetadata : public FactoryfsDevice {
-    zx_status_t CheckFilesystem() override {
-      FactoryfsDevice::CheckFilesystem();
+  class FactoryfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ(expected_path.data(), "/verity/verified/block");
+      *is_path = true;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
       return ZX_ERR_BAD_STATE;
     }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
   };
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  SealedBlockVerityDevice verity_device;
-  EXPECT_OK(manager.AddDevice(verity_device));
-  FactoryfsWithInvalidMetadata device;
-  EXPECT_EQ(ZX_ERR_BAD_STATE, manager.AddDevice(device));
-  EXPECT_TRUE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_FALSE(device.mounted());
+  FactoryfsDevice device;
+  EXPECT_EQ(ZX_ERR_BAD_STATE, device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_FALSE(device.mounted);
 }
 
 // Tests adding factoryfs with valid fasctoryfs magic, as a verified child of a
 // block-verity device, and valid metadata.
 TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
-  SealedBlockVerityDevice verity_device;
-  EXPECT_OK(manager.AddDevice(verity_device));
+  class FactoryfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ(expected_path.data(), "/verity/verified/block");
+      *is_path = true;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
   FactoryfsDevice device;
-  EXPECT_OK(manager.AddDevice(device));
-  EXPECT_TRUE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_TRUE(device.mounted());
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_TRUE(device.mounted);
 }
 
 // Tests adding factoryfs with a valid superblock, as a device which is not a
 // verified child of a block-verity device.
 TEST(AddDeviceTestCase, AddUnverifiedFactoryFsDevice) {
-  BlockDeviceManager manager(TestOptions());
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  class FactoryfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ(expected_path.data(), "/verity/verified/block");
+      *is_path = false; // Not a verified child path
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
   FactoryfsDevice device;
-  EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
-  EXPECT_FALSE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_FALSE(device.mounted());
+  EXPECT_OK(device.Add());
+  EXPECT_FALSE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_FALSE(device.mounted);
 }
 
 class BlockWatcherTest : public zxtest::Test {
@@ -1061,4 +1054,3 @@ TEST_F(BlockWatcherTest, TestMultiplePause) {
 }
 
 }  // namespace
-}  // namespace devmgr

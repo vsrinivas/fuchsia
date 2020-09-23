@@ -9,7 +9,6 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -18,7 +17,6 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/time.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -126,65 +124,18 @@ int OpenVerityDeviceThread(void* arg) {
   return 0;
 }
 
-std::string GetTopologicalPath(int fd) {
-  fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  auto resp = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(disk_connection.borrow_channel()));
-  if (resp.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get topological path (fidl error): "
-                   << zx_status_get_string(resp.status());
-    return {};
-  }
-  if (resp->result.is_err()) {
-    FX_LOGS(ERROR) << "Unable to get topological path: "
-                   << zx_status_get_string(resp->result.err());
-    return {};
-  }
-  const auto& path = resp->result.response().path;
-  return {path.data(), path.size()};
-}
-
 }  // namespace
 
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd)
-    : mounter_(mounter), fd_(std::move(fd)), topological_path_(GetTopologicalPath(fd_.get())) {}
-
-disk_format_t BlockDevice::content_format() const {
-  if (content_format_) {
-    return *content_format_;
-  }
-  content_format_ = detect_disk_format(fd_.get());
-  return *content_format_;
-}
+    : mounter_(mounter), fd_(std::move(fd)), format_(detect_disk_format(fd_.get())) {}
 
 disk_format_t BlockDevice::GetFormat() { return format_; }
 
 void BlockDevice::SetFormat(disk_format_t format) { format_ = format; }
 
-const std::string& BlockDevice::partition_name() const {
-  if (!partition_name_.empty()) {
-    return partition_name_;
-  }
-  // The block device might not support the partition protocol in which case the connection will be
-  // closed, so clone the channel in case that happens.
-  fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  zx::channel channel(fdio_service_clone(connection.borrow_channel()));
-  auto resp =
-      llcpp::fuchsia::hardware::block::partition::Partition::Call::GetName(channel.borrow());
-  if (resp.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partiton name (fidl error): "
-                   << zx_status_get_string(resp.status());
-    return partition_name_;
-  }
-  if (resp->status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partiton name: " << zx_status_get_string(resp->status);
-    return partition_name_;
-  }
-  partition_name_ = std::string(resp->name.data(), resp->name.size());
-  return partition_name_;
-}
+bool BlockDevice::Netbooting() { return mounter_->Netbooting(); }
 
-zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
+zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) {
   if (info_.has_value()) {
     memcpy(out_info, &*info_, sizeof(*out_info));
     return ZX_OK;
@@ -200,24 +151,15 @@ zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) con
   return call_status;
 }
 
-const fuchsia_hardware_block_partition_GUID& BlockDevice::GetTypeGuid() const {
-  if (type_guid_) {
-    return *type_guid_;
-  }
-  type_guid_.emplace();
+zx_status_t BlockDevice::GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) {
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  // The block device might not support the partition protocol in which case the connection will be
-  // closed, so clone the channel in case that happens.
-  zx::channel channel(fdio_service_clone(connection.borrow_channel()));
   zx_status_t io_status, call_status;
-  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel.get(), &call_status,
-                                                                    &type_guid_.value());
+  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(connection.borrow_channel(),
+                                                                    &call_status, out_guid);
   if (io_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error)";
-  } else if (call_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID";
+    return io_status;
   }
-  return *type_guid_;
+  return call_status;
 }
 
 zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
@@ -287,6 +229,52 @@ zx_status_t BlockDevice::OpenBlockVerityForVerifiedRead(std::string seal_hex) {
   }
 
   return ZX_OK;
+}
+
+zx_status_t BlockDevice::IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                                 bool* is_path) {
+  zx_status_t call_status;
+  fbl::StringBuffer<PATH_MAX> path;
+  path.Resize(path.capacity());
+  size_t path_len;
+  fdio_cpp::UnownedFdioCaller disk_connection(fd_.get());
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+      zx::unowned_channel(disk_connection.borrow_channel()));
+  zx_status_t status = resp.status();
+
+  if (status != ZX_OK) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  } else {
+    call_status = ZX_OK;
+    auto& r = resp->result.response();
+    path_len = r.path.size();
+    if (path_len > PATH_MAX) {
+      return ZX_ERR_INTERNAL;
+    }
+    memcpy(path.data(), r.path.data(), r.path.size());
+  }
+
+  if (call_status != ZX_OK) {
+    return call_status;
+  }
+  if (path_len < expected_path.length()) {
+    *is_path = false;
+  } else {
+    *is_path =
+        std::string_view(path.begin() + path_len - expected_path.length()).compare(expected_path) ==
+        0;
+  }
+  return ZX_OK;
+}
+
+zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
+  // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
+  // determine which it actually is. We do this by looking up the topological
+  // path.
+  return IsTopologicalPathSuffix(std::string_view("/zxcrypt/unsealed/block"), is_unsealed_zxcrypt);
 }
 
 zx_status_t BlockDevice::FormatZxcrypt() {
@@ -436,6 +424,7 @@ zx_status_t BlockDevice::MountFilesystem() {
     zx::unowned_channel channel(disk_connection.borrow_channel());
     block_device.reset(fdio_service_clone(channel->get()));
   }
+
   switch (format_) {
     case DISK_FORMAT_FACTORYFS: {
       fprintf(stderr, "fshost: BlockDevice::MountFilesystem(factoryfs)\n");
@@ -490,10 +479,18 @@ zx_status_t BlockDevice::MountFilesystem() {
 }
 
 zx_status_t BlockDeviceInterface::Add() {
-  switch (GetFormat()) {
-    case DISK_FORMAT_BOOTPART: {
-      return AttachDriver(kBootpartDriverPath);
-    }
+  disk_format_t df = GetFormat();
+  fuchsia_hardware_block_BlockInfo info;
+  zx_status_t status;
+  if ((status = GetInfo(&info)) != ZX_OK) {
+    return status;
+  }
+
+  if (info.flags & BLOCK_FLAG_BOOTPART) {
+    return AttachDriver(kBootpartDriverPath);
+  }
+
+  switch (df) {
     case DISK_FORMAT_GPT: {
       return AttachDriver(kGPTDriverPath);
     }
@@ -504,8 +501,9 @@ zx_status_t BlockDeviceInterface::Add() {
       return AttachDriver(kMBRDriverPath);
     }
     case DISK_FORMAT_BLOCK_VERITY: {
-      if (zx_status_t status = AttachDriver(kBlockVerityDriverPath); status != ZX_OK) {
-        return status;
+      zx_status_t rc = AttachDriver(kBlockVerityDriverPath);
+      if (rc != ZX_OK) {
+        return rc;
       }
 
       if (!ShouldAllowAuthoringFactory()) {
@@ -521,44 +519,140 @@ zx_status_t BlockDeviceInterface::Add() {
       return ZX_OK;
     }
     case DISK_FORMAT_FACTORYFS: {
-      if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
+      // Check if the block device canonical path ends in "/verity/verified/block".  If so,
+      // this is a child of a block-verity verified device; mount factoryfs.
+      bool is_verified_child;
+      if ((status = IsTopologicalPathSuffix(std::string_view("/verity/verified/block"),
+                                            &is_verified_child)) != ZX_OK) {
+        return status;
+      }
+
+      if (!is_verified_child) {
+        printf("Ignoring factoryfs-formatted device that is not under a verified block device\n");
+        return ZX_OK;
+      }
+
+      if ((status = CheckFilesystem()) != ZX_OK) {
         return status;
       }
 
       return MountFilesystem();
     }
     case DISK_FORMAT_ZXCRYPT: {
-      return UnsealZxcrypt();
+      if (!Netbooting()) {
+        return UnsealZxcrypt();
+      }
+      return ZX_OK;
     }
+    default:
+      break;
+  }
+
+  fuchsia_hardware_block_partition_GUID guid;
+  if ((status = GetTypeGUID(&guid)) != ZX_OK) {
+    return status;
+  }
+
+  // If we're in netbooting mode, then only bind drivers for partition
+  // containers and the install partition, not regular filesystems.
+  if (Netbooting()) {
+    if (gpt_is_install_guid(guid.value, GPT_GUID_LEN)) {
+      printf("fshost: mounting install partition\n");
+      return MountFilesystem();
+    }
+    return ZX_OK;
+  }
+
+  switch (df) {
     case DISK_FORMAT_BLOBFS: {
-      if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
+      const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
+      if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      if ((status = CheckFilesystem()) != ZX_OK) {
         return status;
       }
+
       return MountFilesystem();
     }
     case DISK_FORMAT_MINFS: {
       printf("fshost: mounting minfs\n");
-      if (CheckFilesystem() != ZX_OK) {
-        if (zx_status_t status = FormatFilesystem(); status != ZX_OK) {
-          return status;
-        }
+
+      const uint8_t expected_data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      const uint8_t expected_durable_guid[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
+      if (((memcmp(guid.value, expected_data_guid, GPT_GUID_LEN)) &&
+           (memcmp(guid.value, expected_durable_guid, GPT_GUID_LEN)))) {
+        return ZX_ERR_INVALID_ARGS;
       }
-      if (zx_status_t status = MountFilesystem(); status != ZX_OK) {
-        printf("fshost: failed to mount filesystem: %s\n", zx_status_get_string(status));
+
+      if (CheckFilesystem() != ZX_OK) {
         if ((status = FormatFilesystem()) != ZX_OK) {
           return status;
         }
-        return MountFilesystem();
+      }
+      status = MountFilesystem();
+      if (status != ZX_OK) {
+        printf("fshost: failed to mount filesystem: %s\n", zx_status_get_string(status));
+        return status;
       }
       return ZX_OK;
     }
-    case DISK_FORMAT_FAT:
-    case DISK_FORMAT_VBMETA:
-    case DISK_FORMAT_UNKNOWN:
-    case DISK_FORMAT_COUNT_:
+    default:
+      // If the disk format is unknown but we know it should be the data
+      // partition, format the disk properly.
+      if (gpt_is_data_guid(guid.value, GPT_GUID_LEN)) {
+        printf("fshost: Data partition has unknown format\n");
+        bool is_unsealed_zxcrypt;
+        if (IsUnsealedZxcrypt(&is_unsealed_zxcrypt) != ZX_OK) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (is_unsealed_zxcrypt) {
+          printf("fshost: Formatting as minfs partition\n");
+          SetFormat(DISK_FORMAT_MINFS);
+          status = FormatFilesystem();
+          if (status != ZX_OK) {
+            return status;
+          }
+        } else {
+          printf("fshost: Formatting as zxcrypt partition\n");
+          SetFormat(DISK_FORMAT_ZXCRYPT);
+          status = FormatZxcrypt();
+          if (status != ZX_OK) {
+            return status;
+          }
+        }
+        return Add();
+      }
+
+      // if we know it's supposed to be a factoryfs partition, bind the block-verity driver.
+      if (gpt_is_factory_guid(guid.value, GPT_GUID_LEN)) {
+        bool is_already_bound;
+        if (IsTopologicalPathSuffix(std::string_view("/mutable/block"), &is_already_bound) !=
+            ZX_OK) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (is_already_bound) {
+          // This is the child device of a block device that already has the
+          // verity driver bound.  Don't bind, lest we cause a second layer of indirection!
+          return ZX_OK;
+        }
+
+        if (IsTopologicalPathSuffix(std::string_view("/verified/block"), &is_already_bound) !=
+            ZX_OK) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (is_already_bound) {
+          // This is the child device of a block device that already has the
+          // verity driver bound.  Don't bind, lest we cause a second layer of indirection!
+          return ZX_OK;
+        }
+
+        printf("fshost: binding block-verity driver\n");
+        return AttachDriver(kBlockVerityDriverPath);
+      }
+
       return ZX_ERR_NOT_SUPPORTED;
   }
-  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace devmgr

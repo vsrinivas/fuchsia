@@ -101,7 +101,6 @@ source_set("block-watcher") {
     "//build/config:all_source",
   ]
   sources = [
-    "block-device-manager.cc",
     "block-device.cc",
     "block-watcher.cc",
     "encrypted-volume.cc",
@@ -115,7 +114,6 @@ source_set("block-watcher") {
     ":launcher",
     ":metrics",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//src/storage/blobfs",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
@@ -319,11 +317,6 @@ isolated_devmgr_unittest_component("block-watcher-test") {
 }
 
 fuchsia_test_package("fshost-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [
     ":block-watcher-test",
     ":fshost-test",
@@ -342,17 +335,4 @@ group("bootfs") {
     ":fshost",
     ":meta",
   ]
-}
-
-resource("no_minfs_zxcrypt") {
-  sources = [ "no_minfs_zxcrypt_fshost_config" ]
-  outputs = [ "config/fshost" ]
-  deps = [ "//build/validate:non_production_tag" ]
-}
-
-# To be used when minfs is embedded within FVM within a ramdisk (e.g. recovery) and therefore
-# doesn't require zxcrypt.
-resource("minfs_ramdisk") {
-  sources = [ "minfs_ramdisk_fshost_config" ]
-  outputs = [ "config/fshost" ]
 }

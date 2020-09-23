@@ -25,7 +25,7 @@ constexpr uint32_t kBlockCount = 1024 * 256;
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kSliceSize = (1 << 20);
 constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
-const char* kDataName = "minfs";
+const char* kDataName = "fs-recovery-data";
 const char* kRamdiskPath = "misc/ramctl";
 
 // Test fixture that builds a ramdisk and destroys it when destructed.

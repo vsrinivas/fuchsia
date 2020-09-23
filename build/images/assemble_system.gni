@@ -409,10 +409,7 @@ template("assemble_system") {
            ] + invoker.bootfs_labels
 
     if (ramdisk_fvm_in_zbi) {
-      deps += [
-        ":${image_name}_fvm.blk_ramdisk",
-        "//src/storage/fshost:minfs_ramdisk",
-      ]
+      deps += [ ":${image_name}_fvm.blk_ramdisk" ]
     }
   }
 }
