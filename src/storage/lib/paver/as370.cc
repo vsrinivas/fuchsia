@@ -14,7 +14,7 @@ namespace paver {
 zx::status<std::unique_ptr<DevicePartitioner>> As370Partitioner::Initialize(
     fbl::unique_fd devfs_root) {
   zx::status<> status = IsBoard(devfs_root, "visalia");
-  if (status.is_error()) {
+  if (status.is_error() && (status = IsBoard(devfs_root, "as370")).is_error()) {
     return status.take_error();
   }
   LOG("Successfully initialized As370Partitioner Device Partitioner\n");
