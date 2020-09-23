@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/dist/fini_manifest.gni")
+import("//build/dist/generated_resource.gni")
 import("//build/images/args.gni")
-import("//build/unification/zbi/generated_resource.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//tools/cmc/build/validate_component_manifest_references.gni")
 

@@ -12,10 +12,10 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/dist/generated_resource.gni")
+import("//build/dist/resource.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
-import("//build/unification/zbi/generated_resource.gni")
-import("//build/unification/zbi/resource.gni")
 
 test("runtests-utils") {
   if (is_fuchsia) {

@@ -14,7 +14,7 @@
 # Parameters
 #
 #   outputs
-#     Required: See resource().
+#     Required: See resource.gni.
 #
 # See generated_file() for other parameters.
 #

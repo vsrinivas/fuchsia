@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/images/args.gni")
 import("//build/images/manifest.gni")
 import("//build/testing/test_spec.gni")
-import("//build/unification/zbi/resource.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//tools/cmc/build/cml.gni")

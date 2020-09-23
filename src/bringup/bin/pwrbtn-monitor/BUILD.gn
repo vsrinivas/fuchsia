@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zbi/component_manifest_resources.gni")
+import("//build/dist/component_manifest_resources.gni")
 
 executable("pwrbtn-monitor") {
   if (is_fuchsia) {

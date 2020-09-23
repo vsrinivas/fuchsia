@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zbi/resource.gni")
+import("//build/dist/resource.gni")
 
 # Entry point for all general purpose GN templates for building and testing
 # Fuchsia components.

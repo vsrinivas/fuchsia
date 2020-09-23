@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/fuzzing/fuzzer.gni")
-import("//build/unification/zbi/resource.gni")
 import("//build/unification/zx_library.gni")
 
 group("tests") {

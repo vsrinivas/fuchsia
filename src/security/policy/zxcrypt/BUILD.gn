@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zbi/generated_resource.gni")
+import("//build/dist/generated_resource.gni")
 
 # The various targets in this file represent zxcrypt configuration files added
 # to the boot partition of ZBI files as `config/zxcrypt`, for consumption by

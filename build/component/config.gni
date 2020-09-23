@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/unification/zbi/resource.gni")
+import("//build/dist/resource.gni")
 
 # Generates binary config using FIDL format and .json data values.
 #

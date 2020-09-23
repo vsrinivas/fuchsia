@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/test.gni")
 import("//build/testing/zbi_test.gni")
-import("//build/unification/zbi/resource.gni")
 import("//build/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
