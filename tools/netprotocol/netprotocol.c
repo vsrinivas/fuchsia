@@ -280,7 +280,7 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
 #if defined(__APPLE__)
   // macOS development hosts often have a firewall that prompts the user with a dialog box asking if
   // a conection should be allowed. On macOS, use a long timeout for the first wait to ensure the
-  // user has a chance to read the dialog and respond. See also bug fxb/42296.
+  // user has a chance to read the dialog and respond. See also bug fxbug.dev/42296.
   //
   // TODO(maniscalco): Once macOS hosts are no longer supported for bringup development we can
   // remove this special case and the first_wait concept.

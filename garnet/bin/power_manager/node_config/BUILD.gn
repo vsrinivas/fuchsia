@@ -40,7 +40,7 @@ node_config("luis") {
 # Make the node config files available for the power_manager_tests test package
 # to allow for some more advanced validation beyond what we can accomplish with
 # JSON schema validation alone.
-# TODO(fxb/52818): Explore build-time JSON validation
+# TODO(fxbug.dev/52818): Explore build-time JSON validation
 config_data("test_config_data") {
   for_pkg = "power_manager_tests"
   sources = [

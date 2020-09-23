@@ -98,7 +98,7 @@ func TestRun(t *testing.T) {
 	if !strings.Contains(out, "wow.c:1") {
 		t.Fatalf("fuzzer output not properly symbolized: %q", out)
 	}
-	// TODO(fxb/47370): check artifact behavior
+	// TODO(fxbug.dev/47370): check artifact behavior
 }
 
 func TestMissingPID(t *testing.T) {

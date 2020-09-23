@@ -25,7 +25,7 @@ table PairingOptions {
     /// If not present or false, the pairing will default to bondable mode. Otherwise, setting this
     /// parameter to true will initiate a non-bondable pairing.
     ///
-    /// TODO(fxb/42403): Only implemented for LE transport. Support this for BR/EDR.
+    /// TODO(fxbug.dev/42403): Only implemented for LE transport. Support this for BR/EDR.
     2: bool non_bondable;
 
     /// If transport is LOW_ENERGY or CLASSIC, pairing will be performed over the transport

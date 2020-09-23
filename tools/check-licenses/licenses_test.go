@@ -12,11 +12,11 @@ import (
 )
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
-	// TODO(http://fxb/56847): Implement.
+	// TODO(http://fxbug.dev/56847): Implement.
 }
 
 func TestLicensesMatchFile(t *testing.T) {
-	// TODO(http://fxb/56847): Implement.
+	// TODO(http://fxbug.dev/56847): Implement.
 }
 
 func TestLicensesInit(t *testing.T) {
@@ -43,7 +43,7 @@ func TestLicensesNew(t *testing.T) {
 }
 
 func TestLicensesWorker(t *testing.T) {
-	// TODO(http://fxb/56847): Implement.
+	// TODO(http://fxbug.dev/56847): Implement.
 }
 
 func mkDir(t *testing.T) string {

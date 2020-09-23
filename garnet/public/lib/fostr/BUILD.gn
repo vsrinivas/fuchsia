@@ -32,7 +32,7 @@ source_set("fostr") {
 
   public_configs = [ "//garnet/public:config" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -42,7 +42,7 @@ shared_library("fostr_shared") {
     "indent.h",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 

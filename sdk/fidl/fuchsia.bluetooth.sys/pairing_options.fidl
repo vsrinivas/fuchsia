@@ -36,7 +36,7 @@ table PairingOptions {
     ///
     /// If transport is CLASSIC, this option must be absent or otherwise the value BONDABLE.
     /// NON_BONDABLE mode is not currently supported for the CLASSIC transport
-    // TODO(fxb/42403): Support NON_BONDABLE for the CLASSIC transport.
+    // TODO(fxbug.dev/42403): Support NON_BONDABLE for the CLASSIC transport.
     2: BondableMode bondable_mode;
 
     /// If transport is LOW_ENERGY, indicate a desire to pair over the LE transport.

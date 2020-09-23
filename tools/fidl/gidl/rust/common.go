@@ -139,7 +139,7 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 	return identifierName(decl.Name())
 }
 
-// TODO(fxb/39407): Move into a common library outside GIDL.
+// TODO(fxbug.dev/39407): Move into a common library outside GIDL.
 func identifierName(qualifiedName string) string {
 	parts := strings.Split(qualifiedName, "/")
 	lastPartsIndex := len(parts) - 1

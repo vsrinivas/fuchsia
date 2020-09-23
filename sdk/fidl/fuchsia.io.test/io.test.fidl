@@ -8,7 +8,7 @@ using fuchsia.mem;
 using fuchsia.io;
 using zx;
 
-// TODO(fxb/33880): Implement full testing framework. For now, we are
+// TODO(fxbug.dev/33880): Implement full testing framework. For now, we are
 // hard-coding the desired directory layout manually in separate "Get"
 // functions. In the next step, we would want to have a protocol to describe
 // the intended directory layout setup, and integrate io2 connections.
@@ -135,7 +135,7 @@ protocol Io1Harness {
 };
 
 /// Stub harness api for the io2.fidl protocol.
-/// TODO(fxb/46082): Add separate io2 test harness api once we come up with a
+/// TODO(fxbug.dev/46082): Add separate io2 test harness api once we come up with a
 /// good enough set of functions that we have enough flexibility to create
 /// variable directory structures to with explicit permission settings for tests.
 [Discoverable]

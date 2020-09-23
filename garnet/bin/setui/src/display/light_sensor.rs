@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // Copied from src/ui/bin/brightness_manager
-// TODO(fxb/36843) consolidate usages
+// TODO(fxbug.dev/36843) consolidate usages
 
 use crate::call;
 use crate::display::light_sensor_config::LightSensorConfig;

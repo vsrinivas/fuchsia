@@ -1536,7 +1536,7 @@ template("variant_target") {
     # executable's location.  Usually that does not matter, because we
     # avoid dynamic linking (for host tools) for reasons like that.  An
     # exception is ASan on Mac, but that is currently disabled due to
-    # problems caused by its use of dynamic linking (TODO(fxb/3166)).
+    # problems caused by its use of dynamic linking (TODO(fxbug.dev/3166)).
     copy(target_name) {
       forward_variables_from(target_invoker,
                              [

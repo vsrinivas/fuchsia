@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// TODO(fxb/45425): somehow validate build layouts?
+// TODO(fxbug.dev/45425): somehow validate build layouts?
 
 func newBaseBuild() *BaseBuild {
 	return &BaseBuild{
@@ -128,7 +128,7 @@ func TestSymbolize(t *testing.T) {
 	build.Paths["symbolize"] = "symbolize"
 	build.Paths["llvm-symbolizer"] = "llvm-symbolizer"
 
-	// TODO(fxb/45425): more realistic test data
+	// TODO(fxbug.dev/45425): more realistic test data
 	inputData := "[1234.5][klog] INFO: {{{0x41}}}"
 	expectedOutput := "wow.c:1\n"
 	src := bytes.NewBufferString(inputData)

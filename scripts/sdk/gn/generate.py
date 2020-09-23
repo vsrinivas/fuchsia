@@ -376,7 +376,7 @@ class GNBuilder(Frontend):
 
             # Special case: VkLayer_standard_validation does not have a binary
             # and also depends on VkLayer_khronos_validation. Currently atom
-            # metadata does not contain this information (fxb/46250).
+            # metadata does not contain this information (fxbug.dev/46250).
             if layer_name == 'VkLayer_standard_validation':
                 layer = model.VulkanLayer(
                     name=layer_name,
@@ -406,7 +406,7 @@ class GNBuilder(Frontend):
                     binary=os.path.relpath(binary, start=local_pkg))
                 # Special case: VkLayer_image_pipe_swapchain has an undocumented
                 # data_dep on trace-engine. Currently atom metadata does not
-                # contain this information (fxb/46250).
+                # contain this information (fxbug.dev/46250).
                 if layer_name == 'VkLayer_image_pipe_swapchain':
                     layer.data_deps.append('../trace-engine')
 

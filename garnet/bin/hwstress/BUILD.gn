@@ -50,7 +50,7 @@ source_set("lib") {
   # amount of stress placed on the system (e.g., more heat for CPU tests).
   configs += [ "//build/config:optimize_speed" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -144,7 +144,7 @@ executable("hwstress_test") {
     "//zircon/public/lib/zxc",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

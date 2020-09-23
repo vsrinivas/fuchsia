@@ -67,7 +67,7 @@ namespace {{ . }} {
 
 {{- /* Declare tables and unions first, since they store their members
     out-of-line and so they only need forward declarations.
-    See fxb/7919 formore context. */}}
+    See fxbug.dev/7919 formore context. */}}
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}

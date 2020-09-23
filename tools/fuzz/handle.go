@@ -11,7 +11,7 @@ import (
 	"reflect"
 )
 
-// TODO(fxb/47320): Implement shorter, mutable tokens by using a path to a tmpdir
+// TODO(fxbug.dev/47320): Implement shorter, mutable tokens by using a path to a tmpdir
 
 // A Handle provides a way to serialize information about an Instance.
 // A Handle must be immutable for the lifetime of the Instance.

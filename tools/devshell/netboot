@@ -77,7 +77,7 @@ mkdir "${tmpdir}/host_x64"
 cp "${HOST_OUT_DIR}/bootserver" "${tmpdir}/host_x64/bootserver"
 
 # Make a temporary image that adds in the ~/.ssh/fuchsia_authorized_keys file.
-# Netboot doesn't require special compression. fxb/43305 for more info.
+# Netboot doesn't require special compression. fxbug.dev/43305 for more info.
 fx-zbi-default-compression \
   -o "${tmpdir}/${IMAGE_NETBOOT_ZBI}" \
   "${FUCHSIA_BUILD_DIR}/${IMAGE_NETBOOT_ZBI}" \

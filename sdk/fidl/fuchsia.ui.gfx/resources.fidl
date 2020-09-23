@@ -183,7 +183,7 @@ resource struct ViewHolderArgs {
 
 /// A Compositor draws its `LayerStack` into a framebuffer provided by its
 /// attached `Display`, if any.  If no display is attached, nothing is rendered.
-// TODO(fxb/23686): there is currently no way to create/attach a display.
+// TODO(fxbug.dev/23686): there is currently no way to create/attach a display.
 struct CompositorArgs {
     // TODO(fxbug.dev/23916): Clean up dummy args.
     uint32 dummy = 0;

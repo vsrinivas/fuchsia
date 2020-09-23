@@ -171,7 +171,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// arm64 devices should already be enabling kernel.serial at compile time.
 	// We need to pass this in to all devices (even those without a serial line)
 	// to prevent race conditions that only occur when the option isn't present.
-	// TODO (fxb/10480): Move this back to being invoked in the if clause.
+	// TODO (fxbug.dev/10480): Move this back to being invoked in the if clause.
 	r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
 
 	// Disable usb mass storage to determine if it affects NUC stability.
@@ -284,7 +284,7 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
 	for _, t := range targets {
 		t := t
 		eg.Go(func() error {
-			// TODO(fxb/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
+			// TODO(fxbug.dev/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
 			imgs, closeFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootMode)
 			if err != nil {
 				return err
@@ -380,7 +380,7 @@ func (r *RunCommand) setupSSHConnection(ctx context.Context, t Target) (*sshutil
 	}
 
 	var client *sshutil.Client
-	// TODO(fxb/52397): Determine whether this is necessary or there is a better
+	// TODO(fxbug.dev/52397): Determine whether this is necessary or there is a better
 	// way to address this bug.
 	err = retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 2), func() error {
 		client, err = sshutil.ConnectToNode(ctx, t.Nodename(), config)

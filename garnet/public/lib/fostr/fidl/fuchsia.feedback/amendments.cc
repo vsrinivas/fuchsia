@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream& os, const ComponentData& value) {
   os << ::fostr::Indent;
   if (value.has_namespace()) {
     // The field named "namespace", which is a reserved C++ keyword, is the reason why we need
-    // amendments as fostr generates namespace() instead of namespace_(), cf. fxb/47480.
+    // amendments as fostr generates namespace() instead of namespace_(), cf. fxbug.dev/47480.
     os << ::fostr::NewLine << "namespace: " << value.namespace_();
   }
   if (value.has_annotations()) {

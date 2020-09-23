@@ -12,7 +12,7 @@ fi
 # invocations of device-finder to modulate whether ipv4 is enabled or
 # not, and is present to allow negatively affected users to turn the
 # feature off. This flag will be removed once the migration is
-# complete. Tracking Bug: fxb/49230
+# complete. Tracking Bug: fxbug.dev/49230
 export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-false}"
 
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
@@ -98,7 +98,7 @@ function fx-build-config-load {
   export ZIRCON_BUILDROOT="${FUCHSIA_BUILD_DIR%/}.zircon"
   export ZIRCON_TOOLS_DIR="${ZIRCON_BUILDROOT}/tools"
 
-  # TODO(mangini): revisit once fxb/38436 is fixed.
+  # TODO(mangini): revisit once fxbug.dev/38436 is fixed.
   if [[ "${HOST_OUT_DIR:0:1}" != "/" ]]; then
     HOST_OUT_DIR="${FUCHSIA_BUILD_DIR}/${HOST_OUT_DIR}"
   fi

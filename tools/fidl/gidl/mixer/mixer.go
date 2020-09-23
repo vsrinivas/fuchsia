@@ -158,7 +158,7 @@ type NamedDeclaration interface {
 
 	// Name returns the fully qualified name of this declaration, e.g.
 	// "the.library.name/TheTypeName".
-	// TODO(fxb/39407): Return common.DeclName.
+	// TODO(fxbug.dev/39407): Return common.DeclName.
 	Name() string
 }
 
@@ -274,7 +274,7 @@ func (decl *FloatDecl) conforms(value interface{}, _ context) error {
 	default:
 		return fmt.Errorf("expecting float64, found %T (%s)", value, value)
 	case float64:
-		// TODO(fxb/43020): Allow these once each backend supports them.
+		// TODO(fxbug.dev/43020): Allow these once each backend supports them.
 		if math.IsNaN(value) {
 			return fmt.Errorf("NaN not supported: %v", value)
 		}
@@ -318,7 +318,7 @@ func (decl *StringDecl) conforms(value interface{}, _ context) error {
 
 type HandleDecl struct {
 	subtype fidlir.HandleSubtype
-	// TODO(fxb/41920): Add a field for handle rights.
+	// TODO(fxbug.dev/41920): Add a field for handle rights.
 	nullable bool
 }
 
@@ -365,7 +365,7 @@ func (decl *BitsDecl) Name() string {
 }
 
 func (decl *BitsDecl) conforms(value interface{}, ctx context) error {
-	// TODO(fxb/7847): Require a valid bits member when strict
+	// TODO(fxbug.dev/7847): Require a valid bits member when strict
 	return decl.Underlying.conforms(value, ctx)
 }
 
@@ -380,7 +380,7 @@ func (decl *EnumDecl) Name() string {
 }
 
 func (decl *EnumDecl) conforms(value interface{}, ctx context) error {
-	// TODO(fxb/7847): Require a valid enum member when strict
+	// TODO(fxbug.dev/7847): Require a valid enum member when strict
 	return decl.Underlying.conforms(value, ctx)
 }
 
@@ -458,7 +458,7 @@ func (decl *StructDecl) conforms(value interface{}, ctx context) error {
 		provided[field.Key.Name] = struct{}{}
 	}
 	for _, member := range decl.structDecl.Members {
-		// TODO(fxb/49939) Allow omitted non-nullable fields that have defaults.
+		// TODO(fxbug.dev/49939) Allow omitted non-nullable fields that have defaults.
 		if _, ok := provided[string(member.Name)]; !ok && !member.Type.Nullable {
 			panic(fmt.Sprintf("missing non-nullable field %s in struct %s",
 				member.Name, decl.Name()))
@@ -695,11 +695,11 @@ func (decl *VectorDecl) conforms(value interface{}, ctx context) error {
 // Schema is the GIDL-level concept of a FIDL library. It provides functions to
 // lookup types and return the corresponding Declaration.
 type Schema struct {
-	// TODO(fxb/39407): Use common.LibraryName.
+	// TODO(fxbug.dev/39407): Use common.LibraryName.
 	libraryName string
 	// Maps fully qualified type names to fidlir data structures:
 	// *fidlir.Struct, *fidlir.Table, or *fidlir.Union.
-	// TODO(fxb/39407): Use common.DeclName.
+	// TODO(fxbug.dev/39407): Use common.DeclName.
 	types map[string]interface{}
 }
 
@@ -781,12 +781,12 @@ func (s Schema) lookupDeclByName(unqualifiedName string, nullable bool) (Declara
 	return s.lookupDeclByQualifiedName(s.qualifyName(unqualifiedName), nullable)
 }
 
-// TODO(fxb/39407): Take common.MemberName, return common.DeclName.
+// TODO(fxbug.dev/39407): Take common.MemberName, return common.DeclName.
 func (s Schema) qualifyName(unqualifiedName string) string {
 	return fmt.Sprintf("%s/%s", s.libraryName, unqualifiedName)
 }
 
-// TODO(fxb/39407): Take common.DeclName.
+// TODO(fxbug.dev/39407): Take common.DeclName.
 func (s Schema) lookupDeclByQualifiedName(name string, nullable bool) (Declaration, bool) {
 	typ, ok := s.types[name]
 	if !ok {
@@ -878,7 +878,7 @@ func (s Schema) lookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 	case fidlir.VectorType:
 		return &VectorDecl{schema: s, typ: typ}, true
 	default:
-		// TODO(fxb/36441): HandleType, RequestType
+		// TODO(fxbug.dev/36441): HandleType, RequestType
 		panic("not implemented")
 	}
 }

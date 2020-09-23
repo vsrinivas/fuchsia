@@ -21,7 +21,7 @@ const (
 )
 
 // Available subcommand names
-// TODO(fxb/47231): add resolve_fuzzer command
+// TODO(fxbug.dev/47231): add resolve_fuzzer command
 const (
 	StartInstance = "start_instance"
 	StopInstance  = "stop_instance"
@@ -103,7 +103,7 @@ func (c *APICommand) Execute(out io.Writer) error {
 	case PutData:
 		return instance.Put(c.srcPath, c.dstPath)
 	case RunFuzzer:
-		// TODO(fxb/45431): buffer output so we don't get prematurely terminated by CF
+		// TODO(fxbug.dev/45431): buffer output so we don't get prematurely terminated by CF
 		return instance.RunFuzzer(out, c.fuzzer, c.extraArgs...)
 	case Version:
 		fmt.Fprintf(out, "v%d.%d.%d\n", VersionMajor, VersionMinor, VersionPatch)

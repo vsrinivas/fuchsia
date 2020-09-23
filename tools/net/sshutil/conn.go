@@ -362,7 +362,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 
 		// SendRequest can actually hang if the server stops responding
 		// in between receiving a keepalive and sending a response (see
-		// fxb/47698). To protect against this, we'll emit events in a
+		// fxbug.dev/47698). To protect against this, we'll emit events in a
 		// separate goroutine so if we don't get one in the expected
 		// time we'll disconnect.
 		ch := make(chan error, 1)

@@ -27,7 +27,7 @@ protocol MacAddressing {
     /// stability or uniqueness of the returned value to identify or disambiguate device instances.
     GetUnicastAddress() -> (fuchsia.net.MacAddress address);
 
-    // TODO(fxb/44065) enable an API like the one below to be notified of changes to the Unicast
+    // TODO(fxbug.dev/44065) enable an API like the one below to be notified of changes to the Unicast
     // MAC once plumbed through the banjo protocol as well.
     // WatchUnicastAddress() -> (Mac address);
 

@@ -77,7 +77,7 @@ func main() {
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
 	flag.StringVar(&snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
-	// TODO(fxb/36480): Support different timeouts for different tests.
+	// TODO(fxbug.dev/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Usage = usage
 	flag.Parse()

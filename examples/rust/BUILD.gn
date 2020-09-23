@@ -10,7 +10,7 @@ group("rust") {
   deps = [
     ":tests",
 
-    # TODO(fxb/50421): This target seems broken.
+    # TODO(fxbug.dev/50421): This target seems broken.
     # "cdylib",
     "eth-rs",
     "inspect-rs",
@@ -29,7 +29,7 @@ group("tests") {
     # Until such time that these directories have tests, at least check that
     # they compile properly.
 
-    # TODO(fxb/50421): This target seems broken.
+    # TODO(fxbug.dev/50421): This target seems broken.
     # "cdylib",
     "eth-rs",
     "inspect-rs",

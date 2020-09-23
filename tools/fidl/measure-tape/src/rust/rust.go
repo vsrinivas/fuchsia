@@ -42,13 +42,13 @@ func (cb *codeBuffer) writeMethod(m *measurer.Method) {
 	traitName, methodName := toTraitAndMethodName(m.ID.Kind)
 	cb.writef("impl %s for %s {\n", traitName, toTypeName(m.ID.TargetType))
 	cb.indent(func() {
-		// TODO(fxb/51366): With improved locals handling, we could
+		// TODO(fxbug.dev/51366): With improved locals handling, we could
 		// conditionally define the alias below. Of course, this would be
-		// superseded by fxb/51368 but both should happen.
+		// superseded by fxbug.dev/51368 but both should happen.
 		cb.writef("#[allow(unused_variables)]\n")
 		cb.writef("fn %s(&self, size_agg: &mut SizeAgg) {\n", methodName)
 		cb.indent(func() {
-			// TODO(fxb/51368): Variable naming should be defered to printing.
+			// TODO(fxbug.dev/51368): Variable naming should be defered to printing.
 			// Here, we should bind m.Arg to the name 'self' therefore avoiding
 			// this local.
 			cb.writef("let %s = self;\n", formatExpr{m.Arg})
@@ -99,7 +99,7 @@ func (cb *codeBuffer) CaseInvoke(id measurer.MethodID, val measurer.Expression) 
 }
 
 func (cb *codeBuffer) CaseGuard(cond measurer.Expression, body *measurer.Block) {
-	// TODO(fxb/51613): Improve guard statement.
+	// TODO(fxbug.dev/51613): Improve guard statement.
 	cb.writef("match %s {\n", formatExpr{cond})
 	cb.indent(func() {
 		cb.writef("Some(_) => {\n")

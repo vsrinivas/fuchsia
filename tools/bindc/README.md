@@ -40,7 +40,7 @@ For more details, see [the driver development documentation]
 
 A bind program defines the conditions to call a driver's `bind()` hook.
 
-TODO(fxb/35932): Flesh out this documentation.
+TODO(fxbug.dev/35932): Flesh out this documentation.
 
 ### Grammar
 
@@ -84,8 +84,8 @@ A string literal matches the regex `”[^”]*”`, and a numeric literal matche
 A bind library defines a set of properties that drivers may assign to their children. Also,
 bind programs may refer to bind libraries.
 
-TODO(fxb/35932): Flesh out this documentation.
-TODO(fxb/36103): Implement and document comments.
+TODO(fxbug.dev/35932): Flesh out this documentation.
+TODO(fxbug.dev/36103): Implement and document comments.
 
 ```
 library = library-header , using-list , declaration-list ;

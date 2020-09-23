@@ -40,7 +40,7 @@ template("sdk_prebuilt_executable") {
   _legacy_tool_diff -= [ tool_name ]
   is_legacy_tool = _legacy_tool_diff != sdk_legacy_tool_allowlist
 
-  # TODO(fxb/42999): remove extra atom
+  # TODO(fxbug.dev/42999): remove extra atom
   if (is_legacy_tool && current_cpu == host_cpu) {
     sdk_atom("${target_name}_sdk_legacy") {
       id = "sdk://$file_base"

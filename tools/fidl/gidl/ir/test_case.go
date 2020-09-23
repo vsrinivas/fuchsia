@@ -79,7 +79,7 @@ func (list LanguageList) Includes(targetLanguage string) bool {
 
 type HandleDef struct {
 	Subtype fidlir.HandleSubtype
-	// TODO(fxb/41920): Add a field for handle rights.
+	// TODO(fxbug.dev/41920): Add a field for handle rights.
 }
 
 var supportedHandleSubtypes = map[fidlir.HandleSubtype]struct{}{

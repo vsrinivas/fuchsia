@@ -210,7 +210,7 @@ class Sl4f {
   ///
   /// Throws a [Sl4fException] if the host IP address cannot be determined.
   Future<String> hostIpAddress() async {
-    // TODO(fxb/52924): Replace the body of this function with just the host ip
+    // TODO(fxbug.dev/52924): Replace the body of this function with just the host ip
     // env variable (which could be set in Sl4f.fromEnvironment(), above). Or,
     // try that env var and use the following as a fallback.
 

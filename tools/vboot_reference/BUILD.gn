@@ -137,7 +137,7 @@ executable("cgpt") {
   deps = [ "//third_party/boringssl:crypto" ]
   configs += [ ":internal_config" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(47057): Fix the leaks and remove this.
@@ -191,7 +191,7 @@ executable("futility") {
   deps += [ "//third_party/boringssl:crypto" ]
   configs += [ ":internal_config" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(47057): Fix the leaks and remove this.

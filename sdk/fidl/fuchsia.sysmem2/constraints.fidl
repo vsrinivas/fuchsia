@@ -215,7 +215,7 @@ enum CoherencyDomain {
 };
 
 /// Describes constraints on layout of image data in buffers.
-// TODO(fxb/32119): change struct to table
+// TODO(fxbug.dev/32119): change struct to table
 table ImageFormatConstraints {
     /// The PixelFormat for which the following constraints apply.  A
     /// participant may have more than one PixelFormat that's supported, in
@@ -322,7 +322,7 @@ table ImageFormatConstraints {
     /// cause the allocated buffers to be large enough to hold an image that is
     /// required_max_coded_width * required_max_coded_height.
     ///
-    /// TODO(fxb/34192): Make it easier to allocate buffers of minimal size
+    /// TODO(fxbug.dev/34192): Make it easier to allocate buffers of minimal size
     /// that can (optionally) also handle 90 degree rotated version of the max
     /// dimensions / alternate required bounds for another main aspect ratio.
     /// un-set is treated as 0xFFFFFFFF.
@@ -337,7 +337,7 @@ table ImageFormatConstraints {
 };
 
 /// Describes how an image is represented.
-// TODO(fxb/32119): Currently this table is not considered ready for use between
+// TODO(fxbug.dev/32119): Currently this table is not considered ready for use between
 // processes, but should be fairly soon.
 table ImageFormat {
     /// Pixel format.

@@ -22,7 +22,7 @@ source_set("testutil") {
   sources = [ rebase_path("testutil.cc", ".", gperftools_src_root) ]
   deps = [ "//garnet/lib/profiler:profiler_static" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -51,7 +51,7 @@ executable("profiledata_unittest") {
     "//src/lib/fxl",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

@@ -212,7 +212,7 @@ else
 fi
 
 # The prebuilt images do not have a bootserver for mac, so overwrite the bootserver with the
-# mac bootserver. See fxb/48346.
+# mac bootserver. See fxbug.dev/48346.
 if is-mac; then
   cp -f "$(get-fuchsia-sdk-tools-dir)/bootserver" "${FUCHSIA_IMAGE_WORK_DIR}/image/bootserver.exe.linux-x64"
 fi

@@ -40,7 +40,7 @@ type Build interface {
 	// Reads input from `in`, symbolizes it, and writes it back to `out`.
 	// Returns on error, or when `in` has no more data to read.  Processing
 	// will be streamed, line-by-line.
-	// TODO(fxb/47482): does this belong elsewhere?
+	// TODO(fxbug.dev/47482): does this belong elsewhere?
 	Symbolize(in io.Reader, out io.Writer) error
 
 	// Returns a list of the names of the fuzzers that are available to run
@@ -55,7 +55,7 @@ type BaseBuild struct {
 }
 
 // This is stubbed out to allow for test code to replace it
-// TODO(fxb/45383): auto-detect build type?
+// TODO(fxbug.dev/45383): auto-detect build type?
 var NewBuild = NewLocalFuchsiaBuild
 
 // NewClusterFuzzBuild will create a BaseBuild with path layouts corresponding
@@ -231,7 +231,7 @@ func (b *BaseBuild) LoadFuzzers() error {
 }
 
 // ListFuzzers lists the names of fuzzers present in the build
-// TODO(fxb/45108): handle variant stripping
+// TODO(fxbug.dev/45108): handle variant stripping
 func (b *BaseBuild) ListFuzzers() []string {
 	var names []string
 	for k := range b.Fuzzers {

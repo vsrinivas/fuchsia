@@ -28,7 +28,7 @@ install_host_tools("host") {
   outputs = [ "fidlgen_hlcpp" ]
 }
 
-# TODO(fxb/45483): Remove once all SDK customers are using HLCPP backend
+# TODO(fxbug.dev/45483): Remove once all SDK customers are using HLCPP backend
 # directly.
 go_binary("fidlgen") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"

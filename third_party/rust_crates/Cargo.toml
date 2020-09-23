@@ -215,7 +215,7 @@ zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 # Keep this sorted alphabetically, please.
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
-# TODO(fxb/56201): Vendor fatfs when upstream makes a new release.
+# TODO(fxbug.dev/56201): Vendor fatfs when upstream makes a new release.
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
 crossterm_winapi = { path = "tiny_mirrors/crossterm_winapi" }
 fatfs = { path = "tiny_mirrors/fatfs" }

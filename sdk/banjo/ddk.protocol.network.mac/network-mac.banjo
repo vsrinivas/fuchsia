@@ -40,7 +40,7 @@ struct Features {
 [Layout = "ddk-protocol"]
 protocol MacAddrImpl {
   /// Gets this device's MAC address.
-  // TODO(fxb/44065) we need an address changed event (in lockstep with FIDL definition).
+  // TODO(fxbug.dev/44065) we need an address changed event (in lockstep with FIDL definition).
   // TODO(brunodalbo) use fuchsia.net.MacAddress here and in SetMode when we can use FIDL types in
   // Banjo.
   GetAddress() -> (array<uint8>:MAC_SIZE mac);

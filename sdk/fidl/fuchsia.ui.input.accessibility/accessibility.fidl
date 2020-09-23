@@ -58,7 +58,7 @@ protocol PointerEventRegistry {
 
 /// A PointerEventListener receives pointer events and decides to consume them
 /// or not.
-/// TODO(fxb/36429): Investigate flow control mechanisms for a11y input events.
+/// TODO(fxbug.dev/36429): Investigate flow control mechanisms for a11y input events.
 protocol PointerEventListener {
     /// Sends a PointerEvent to an accessibility service. An event is returned
     /// at any time to indicate whether the pointer event stream was consumed /

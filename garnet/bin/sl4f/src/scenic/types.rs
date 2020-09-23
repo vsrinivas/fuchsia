@@ -187,7 +187,7 @@ remote_vec!(TimeZoneId with=TimeZoneIdDef);
 remote_optional!(TemperatureUnit with=TemperatureUnitDef);
 remote_optional!(ViewConfig with=ViewConfigDef);
 
-// TODO(fxb/59274): Do not use Serde remote for FIDL tables.
+// TODO(fxbug.dev/59274): Do not use Serde remote for FIDL tables.
 #[derive(Deserialize, Debug)]
 #[serde(remote = "Profile")]
 pub struct ProfileDef {

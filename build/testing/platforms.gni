@@ -98,7 +98,7 @@ test_platforms = [
     device_type = "Intel NUC Kit NUC7i5DNHE"
   },
 
-  # Experimental/FYI. fxb/43946
+  # Experimental/FYI. fxbug.dev/43946
   {
     device_type = "Nelson"
     cpu = "arm64"

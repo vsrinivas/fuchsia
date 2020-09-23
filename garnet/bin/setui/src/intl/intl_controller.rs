@@ -111,7 +111,7 @@ impl IntlController {
     /// Writes the time zone setting to the timezone service.
     ///
     /// Errors are only logged as this is an intermediate step in a migration.
-    /// TODO(fxb/41639): remove this
+    /// TODO(fxbug.dev/41639): remove this
     async fn write_intl_info_to_service(&self, info: IntlInfo) {
         let service_context = self.client.get_service_context().await.clone();
         fasync::Task::spawn(async move {

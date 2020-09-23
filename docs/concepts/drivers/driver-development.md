@@ -360,7 +360,7 @@ more complicated ones,
 [driver-integration-test](/zircon/system/ulib/driver-integration-test) is
 recommended.
 
-TODO(fxb/51320): Fill out more detail here.
+TODO(fxbug.dev/51320): Fill out more detail here.
 
 ## Driver rights
 

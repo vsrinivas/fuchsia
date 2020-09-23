@@ -28,7 +28,7 @@ pub type ExitAction = Arc<dyn Fn() + Send + Sync + 'static>;
 // service for |stored_stream|'s stream type. |proxy| is set to None if it
 // fails to bind to the AudioCore service. |early_exit_action| specifies a
 // closure to be run if the StreamVolumeControl exits prematurely.
-// TODO(fxb/57705): Replace UnboundedSender with a oneshot channel.
+// TODO(fxbug.dev/57705): Replace UnboundedSender with a oneshot channel.
 pub struct StreamVolumeControl {
     pub stored_stream: AudioStream,
     proxy: Option<VolumeControlProxy>,
@@ -46,7 +46,7 @@ impl Drop for StreamVolumeControl {
     }
 }
 
-// TODO(fxb/37777): Listen for volume changes from Volume Control.
+// TODO(fxbug.dev/37777): Listen for volume changes from Volume Control.
 impl StreamVolumeControl {
     pub async fn create(
         audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
@@ -145,7 +145,7 @@ impl StreamVolumeControl {
             exit_tx.unbounded_send(()).ok();
         }
 
-        // TODO(fxb/37777): Update |stored_stream| in StreamVolumeControl and send a notification
+        // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a notification
         // when we receive an update.
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
         let publisher_clone = self.publisher.as_ref().map_or(None, |p| Some(p.clone()));

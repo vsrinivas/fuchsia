@@ -29,7 +29,7 @@ protocol PeerManager {
 /// * `error PeerError` indicates a procedure failure.
 /// The current Get(), Set() methods can be interpreted as only initiating an AVDTP procedure.
 /// The implementation of Get() and Set() methods use generic capabilities and stream information.
-/// TODO(fxb/36563): Add arguments and responses for Get() and Set() methods to allow the
+/// TODO(fxbug.dev/36563): Add arguments and responses for Get() and Set() methods to allow the
 /// client to specify and receive the results of the procedures.
 protocol PeerController {
     /// Initiate a stream configuration procedure.

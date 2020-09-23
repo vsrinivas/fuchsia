@@ -3,7 +3,7 @@
 Note: The C language bindings are deprecated in favor of the
 [LLCPP bindings][llcpp-tutorial]. You should use LLCPP, possibly with C shims,
 instead of the C bindings.
-<!-- TODO(fxb/52464) link to LLCPP in C guide when written -->
+<!-- TODO(fxbug.dev/52464) link to LLCPP in C guide when written -->
 
 ## About this tutorial
 

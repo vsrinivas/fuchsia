@@ -21,7 +21,7 @@ protocol Daemon {
     EchoString(string:256 value) -> (string:256 response);
 
     /// Lists targets by nodename.
-    /// TODO(fxb/52798): Use an iterator instead of a limited vector.
+    /// TODO(fxbug.dev/52798): Use an iterator instead of a limited vector.
     ListTargets(string:fuchsia.device.DEVICE_NAME_MAX value) -> (vector<Target>:512 response);
 
     /// Make the daemon exit.

@@ -4,7 +4,7 @@
 
 // This package implements the Zircon netboot protocol.
 //
-// TODO(fxb/35957): Add testing for this package.
+// TODO(fxbug.dev/35957): Add testing for this package.
 package netboot
 
 import (

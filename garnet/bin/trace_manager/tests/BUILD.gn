@@ -41,7 +41,7 @@ executable("trace_manager_tests_bin") {
     "//zircon/system/ulib/trace-provider",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

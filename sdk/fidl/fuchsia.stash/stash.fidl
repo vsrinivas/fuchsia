@@ -111,7 +111,7 @@ protocol Store {
 };
 
 /// A copy of |Store| in all but name. Behaves identically to |Store|.
-/// See: fxb/48802
+/// See: fxbug.dev/48802
 [Discoverable]
 protocol Store2 {
     compose Store;

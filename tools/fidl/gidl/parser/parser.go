@@ -285,7 +285,7 @@ var sections = map[string]sectionMetadata{
 				Name:       name,
 				Value:      body.Value,
 				HandleDefs: body.HandleDefs,
-				// TODO(fxb/52495): Temporarily hardcoded to v1. We should
+				// TODO(fxbug.dev/52495): Temporarily hardcoded to v1. We should
 				// either make encode_failure tests specify a wireformat -> err
 				// mapping, or remove the WireFormats field.
 				WireFormats:       []ir.WireFormat{ir.V1WireFormat},

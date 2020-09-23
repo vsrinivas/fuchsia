@@ -9,7 +9,7 @@ import (
 )
 
 // NewClangFormatter a formatter that invokes clang-format.
-// TODO(fxb/49757) Use --style=file and copy the .clang-format file to the correct location.
+// TODO(fxbug.dev/49757) Use --style=file and copy the .clang-format file to the correct location.
 // An alternate way to do this is to load the config directly from .clang_format and put the
 // style as JSON in quotes.
 func NewClangFormatter(clangFormatPath string) common.Formatter {

@@ -20,7 +20,7 @@ func TestCodegenImplDotSyzkaller(t *testing.T) {
 	for _, filename := range typestest.AllExamples(*testDataFlag) {
 		t.Run(filename, func(t *testing.T) {
 			if filename == "struct_default_value_enum_library_reference.test.json" {
-				t.Skip("TODO(fxb/45007): Syzkaller does not support enum member references in struct defaults")
+				t.Skip("TODO(fxbug.dev/45007): Syzkaller does not support enum member references in struct defaults")
 			}
 			root := typestest.GetExample(*testDataFlag, filename)
 			golden := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.syz.txt.golden", filename))

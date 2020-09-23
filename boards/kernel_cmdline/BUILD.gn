@@ -45,7 +45,7 @@ kernel_cmdline("x64-reduced-perf-variation") {
     # performance characteristics, meaning that benchmark results vary
     # significantly based on the device running it.
     #
-    # TODO(fxb/33161): Ideally, we should load microcode during Zircon boot,
+    # TODO(fxbug.dev/33161): Ideally, we should load microcode during Zircon boot,
     # which should bring all devices to the same patch level, removing the
     # performance differences when spectre mitigations are in place.
     "kernel.x86.disable_spec_mitigations=true",

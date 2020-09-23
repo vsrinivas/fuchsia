@@ -42,7 +42,7 @@ func (cg *CodeGenerator) genAllMethods() map[MethodID]*Method {
 		if mt == nil {
 			return allMethods
 		}
-		// TODO(fxb/51368): Variable naming should be defered to printing.
+		// TODO(fxbug.dev/51368): Variable naming should be defered to printing.
 		local := exprLocal("value", mt.kind, false)
 		for _, m := range []*Method{
 			cg.newMeasureMethod(mt, local),
@@ -131,7 +131,7 @@ func (cg *CodeGenerator) newMeasureHandlesMethod(mt *MeasuringTape, expr Express
 		case Struct:
 			for _, member := range mt.members {
 				if member.mt.kind == Handle {
-					// TODO(fxb/49488): Conditionally increase for nullable handles.
+					// TODO(fxbug.dev/49488): Conditionally increase for nullable handles.
 					body.emitAddNumHandles(exprNum(1))
 				} else if member.mt.hasHandles {
 					body.emitInvoke(
@@ -179,7 +179,7 @@ func (cg *CodeGenerator) writeInvoke(member measuringTapeMember, expr Expression
 			if mode == inlineAndOutOfLine {
 				if member.mt.elementMt.kind == Handle ||
 					(!member.mt.elementMt.hasOutOfLine && member.mt.elementMt.hasHandles) {
-					// TODO(fxb/49488): Conditionally increase for nullable handles.
+					// TODO(fxbug.dev/49488): Conditionally increase for nullable handles.
 					guardBody.emitAddNumHandles(
 						exprMult(
 							exprLength(expr),
@@ -210,7 +210,7 @@ func (cg *CodeGenerator) writeInvoke(member measuringTapeMember, expr Expression
 		if mode == inlineAndOutOfLine {
 			body.emitAddNumBytes(exprFidlAlign(exprNum(member.mt.inlineNumBytes)))
 			if member.mt.elementMt.kind == Handle || (!member.mt.hasOutOfLine && member.mt.hasHandles) {
-				// TODO(fxb/49488): Conditionally increase for nullable handles.
+				// TODO(fxbug.dev/49488): Conditionally increase for nullable handles.
 				body.emitAddNumHandles(exprNum(member.mt.inlineNumHandles))
 			}
 		}
@@ -234,7 +234,7 @@ func (cg *CodeGenerator) writeInvoke(member measuringTapeMember, expr Expression
 	case Handle:
 		if mode == inlineAndOutOfLine {
 			body.emitAddNumBytes(exprNum(8))
-			// TODO(fxb/49488): Conditionally increase for nullable handles.
+			// TODO(fxbug.dev/49488): Conditionally increase for nullable handles.
 			body.emitAddNumHandles(exprNum(1))
 		}
 	default:

@@ -8,7 +8,7 @@ use {
 };
 
 /// A placeholder for real cloning support in FIDL generated Rust code.
-/// TODO(fxb/37456): Remove
+/// TODO(fxbug.dev/37456): Remove
 pub trait FIDLClone {
     fn clone(&self) -> Self;
 }

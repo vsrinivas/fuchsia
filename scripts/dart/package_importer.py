@@ -63,7 +63,7 @@ def parse_packages_file(dot_packages_path):
 def get_deps(package_name, parsed_yaml, dep_type):
     if dep_type in parsed_yaml and parsed_yaml[dep_type]:
         deps = parsed_yaml[dep_type]
-        # This is to avoid circular dependencies. See fxb/40784.
+        # This is to avoid circular dependencies. See fxbug.dev/40784.
         if package_name == 'built_value' and 'built_value_generator' in deps:
             del deps['built_value_generator']
         return deps

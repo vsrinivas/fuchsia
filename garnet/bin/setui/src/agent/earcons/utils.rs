@@ -87,7 +87,7 @@ pub async fn play_sound<'a>(
         match call_async!(sound_player_proxy => play_sound(id, AudioRenderUsage::Background)).await
         {
             Ok(_) => {
-                // TODO(fxb/50246): Add inspect logging.
+                // TODO(fxbug.dev/50246): Add inspect logging.
             }
             Err(e) => fx_log_err!("[earcons] Unable to Play sound from Player: {}", e),
         };

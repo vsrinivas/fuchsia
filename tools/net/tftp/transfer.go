@@ -240,7 +240,7 @@ func (t *transfer) handleError(p []byte) error {
 func handleUnexpected(expected string, p []byte) error {
 	// This should never happen.  This represents the client and
 	// server having mismatched state and a very real bug somewhere.
-	// But this happens. fxb/42283. We'll log and try to recover the best we
+	// But this happens. fxbug.dev/42283. We'll log and try to recover the best we
 	// can.
 	return fmt.Errorf("unexpected opcode! (expected %s)\n%v", expected, p)
 }

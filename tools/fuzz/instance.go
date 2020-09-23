@@ -39,7 +39,7 @@ func NewInstance() (Instance, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error configuring build: %s", err)
 	}
-	// TODO(fxb/47479): should the user be able to choose connector/launcher types?
+	// TODO(fxbug.dev/47479): should the user be able to choose connector/launcher types?
 	launcher := NewQemuLauncher(build)
 
 	// Note: We can't get a Connector until the Launcher has started
@@ -47,7 +47,7 @@ func NewInstance() (Instance, error) {
 }
 
 func loadInstanceFromHandle(handle Handle) (Instance, error) {
-	// TODO(fxb/47320): Store build info in the handle too
+	// TODO(fxbug.dev/47320): Store build info in the handle too
 	build, err := NewBuild()
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (i *BaseInstance) RunFuzzer(out io.Writer, name string, args ...string) err
 		return err
 	}
 	fuzzer.Parse(args)
-	// TODO(fxb/47370): implement artifact fetching
+	// TODO(fxbug.dev/47370): implement artifact fetching
 	return fuzzer.Run(i.Connector, out, "implementMe")
 }
 

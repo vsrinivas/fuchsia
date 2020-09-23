@@ -159,7 +159,7 @@ resource struct VmoBuffer {
 };
 
 /// Information about a buffer collection and its buffers.
-// TODO(fxb/32119): change struct to table
+// TODO(fxbug.dev/32119): change struct to table
 [ForDeprecatedCBindings]
 resource struct BufferCollectionInfo_2 {
     /// The total number of buffers.
@@ -284,7 +284,7 @@ struct BufferMemorySettings {
 };
 
 /// Describes constraints on layout of image data in buffers.
-// TODO(fxb/32119): change struct to table
+// TODO(fxbug.dev/32119): change struct to table
 [ForDeprecatedCBindings]
 struct ImageFormatConstraints {
     /// The PixelFormat for which the following constraints apply.  A
@@ -412,7 +412,7 @@ struct ImageFormatConstraints {
 };
 
 /// Describes how an image is represented.
-// TODO(fxb/32119): change struct to table
+// TODO(fxbug.dev/32119): change struct to table
 [ForDeprecatedCBindings]
 struct ImageFormat_2 {
     /// Pixel format.

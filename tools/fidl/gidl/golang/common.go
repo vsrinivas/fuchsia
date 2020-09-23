@@ -241,7 +241,7 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 	return identifierName(decl.Name())
 }
 
-// TODO(fxb/39407): Such utilities (and their accompanying tests) would be
+// TODO(fxbug.dev/39407): Such utilities (and their accompanying tests) would be
 // useful as part of fidlcommon or fidlir to do FIDL-to-<target_lang>
 // conversion.
 func identifierName(qualifiedName string) string {

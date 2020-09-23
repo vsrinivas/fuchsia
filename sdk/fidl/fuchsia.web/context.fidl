@@ -12,7 +12,7 @@ enum ContextError : int32 {
 };
 
 /// The top-level service interface which allows for the creation of Context resources.
-// TODO(fxb/29926): Remove ContextProvider in favor of launching Context instances directly.
+// TODO(fxbug.dev/29926): Remove ContextProvider in favor of launching Context instances directly.
 [Discoverable]
 protocol ContextProvider {
     /// Creates a new browser [`fuchsia.web.Context`] whose state is wholly independent and
@@ -116,7 +116,7 @@ resource table CreateContextParams {
     /// its data discarded upon [`fuchsia.web.Context`] destruction.
     ///
     /// If set, `data_directory` must not be shared with any other [`fuchsia.web.Context`].
-    // TODO(fxb/29925): Provide an API to inform the caller when the `data_directory` can be safely
+    // TODO(fxbug.dev/29925): Provide an API to inform the caller when the `data_directory` can be safely
     // removed.
     2: fuchsia.io.Directory data_directory;
 

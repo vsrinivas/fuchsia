@@ -128,7 +128,7 @@ func fileExists(path string) bool {
 // Prepare files that are needed by QEMU, if they haven't already been prepared
 func (q *QemuLauncher) Prepare() error {
 	// Create a tmpdir to store files we need
-	// TODO(fxb/45431): If we fail to boot and give the user a handle, tempdirs will
+	// TODO(fxbug.dev/45431): If we fail to boot and give the user a handle, tempdirs will
 	// get orphaned; be better about removing them on error
 	if q.TmpDir == "" {
 		tmpDir, err := ioutil.TempDir("", "clusterfuchsia-qemu-")
@@ -147,7 +147,7 @@ func (q *QemuLauncher) Prepare() error {
 	// Stick our SSH key into the authorized_keys files
 	initrd := path.Join(q.TmpDir, "ssh-"+path.Base(zbi))
 	if !fileExists(initrd) {
-		// TODO(fxb/45424): generate ssh key per-instance
+		// TODO(fxbug.dev/45424): generate ssh key per-instance
 		entry := "data/ssh/authorized_keys=" + authkeys
 		if err := CreateProcessForeground(zbitool, "-o", initrd, zbi, "-e", entry); err != nil {
 			return fmt.Errorf("adding ssh key failed: %s", err)
@@ -205,7 +205,7 @@ func (q *QemuLauncher) Start() (Connector, error) {
 
 	cmd := NewCommand(invocation[0], invocation[1:]...)
 
-	// TODO(fxb/45431): log qemu output to some global tempfile to match current CF behavior
+	// TODO(fxbug.dev/45431): log qemu output to some global tempfile to match current CF behavior
 
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -256,7 +256,7 @@ func (q *QemuLauncher) Start() (Connector, error) {
 			return nil, fmt.Errorf("error during boot: %s", err)
 		}
 	case <-time.After(q.timeout):
-		// TODO(fxb/45431): kill/cleanup?
+		// TODO(fxbug.dev/45431): kill/cleanup?
 		return nil, fmt.Errorf("timeout waiting for boot")
 	}
 
@@ -289,7 +289,7 @@ func (q *QemuLauncher) Kill() error {
 	if q.Pid != 0 {
 		glog.Infof("Killing PID %d", q.Pid)
 
-		// TODO(fxb/45431): More gracefully, with timeout
+		// TODO(fxbug.dev/45431): More gracefully, with timeout
 		if err := syscall.Kill(q.Pid, syscall.SIGKILL); err != nil {
 			glog.Warningf("failed to kill instance: %s", err)
 		}
@@ -305,7 +305,7 @@ func (q *QemuLauncher) Kill() error {
 }
 
 func loadLauncherFromHandle(build Build, handle Handle) (Launcher, error) {
-	// TODO(fxb/47479): detect launcher type
+	// TODO(fxbug.dev/47479): detect launcher type
 	launcher := NewQemuLauncher(build)
 
 	if err := handle.PopulateObject(&launcher); err != nil {

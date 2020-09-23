@@ -6,7 +6,7 @@ library fuchsia.url;
 
 /// There is no maximum URL length defined by RFC 3986, but this length should
 /// be long enough to accommodate most non-data: URLs.
-// See fxb/53565 for additional context on this value.
+// See fxbug.dev/53565 for additional context on this value.
 const uint32 MAX_URL_LENGTH = 4096;
 
 /// A URL is used to reference a resource from a specified network location.

@@ -32,7 +32,7 @@ pub trait Node {
         node: &Rc<dyn Node>,
         msg: &Message,
     ) -> Result<MessageReturn, PowerManagerError> {
-        // TODO(fxb/44484): Ideally we'd use a duration event here. But due to a limitation in the
+        // TODO(fxbug.dev/44484): Ideally we'd use a duration event here. But due to a limitation in the
         // Rust tracing library, that would require creating any formatted strings (such as the
         // "message" value) unconditionally, even when the tracing category is disabled. To
         // avoid that unnecessary computation, just use an instant event.

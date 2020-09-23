@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.devicesettings") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "invalid-case-for-constant",
     "string-bounds-not-specified",
@@ -16,7 +16,7 @@ fidl("fuchsia.devicesettings") {
   sdk_category = "internal"
 
   visibility = [
-    # fxb/47602 audit the below
+    # fxbug.dev/47602 audit the below
     "//garnet/bin/setui/*",
     "//garnet/bin/setui_client/*",
     "//garnet/go/src/device_settings/*",

@@ -119,7 +119,7 @@ macro_rules! fidl_process {
 
 // Only differentiated from fidl_process in that the expected responder
 // type is Watch2Responder.
-// TODO(fxb/55719): remove when watch2 is migrated back to watch
+// TODO(fxbug.dev/55719): remove when watch2 is migrated back to watch
 #[macro_export]
 macro_rules! fidl_process_2 {
     // Generates a fidl_io mod with a spawn for the given fidl interface,

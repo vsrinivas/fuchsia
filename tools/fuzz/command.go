@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// TODO(fxb/45424): use timeout for all methods
+// TODO(fxbug.dev/45424): use timeout for all methods
 
 // An InstanceCmd represents a remote command to be run on an Instance
 // This interface is similar to that of os.exec.Cmd
@@ -124,7 +124,7 @@ func (c *SSHInstanceCmd) Start() error {
 	session.Stdin = c.input
 	session.Stdout = c.output
 	if c.output != nil {
-		// TODO(fxb/45424): limit size of errlog, we only really want the tail for debugging
+		// TODO(fxbug.dev/45424): limit size of errlog, we only really want the tail for debugging
 		session.Stderr = io.MultiWriter(c.output, &c.errlog)
 	} else {
 		session.Stderr = &c.errlog
@@ -134,7 +134,7 @@ func (c *SSHInstanceCmd) Start() error {
 		return err
 	}
 
-	c.session = session // TODO(fxb/45424): clean up
+	c.session = session // TODO(fxbug.dev/45424): clean up
 
 	return nil
 }
@@ -147,8 +147,8 @@ func (c *SSHInstanceCmd) StdinPipe() (io.WriteCloser, error) {
 }
 
 // StdoutPipe returns a pipe connected to the command's output
-// TODO(fxb/45424): this currently includes stderr in addition to stdout
-// TODO(fxb/45424): use ssh.Session's implementation of pipe stuff, etc
+// TODO(fxbug.dev/45424): this currently includes stderr in addition to stdout
+// TODO(fxbug.dev/45424): use ssh.Session's implementation of pipe stuff, etc
 func (c *SSHInstanceCmd) StdoutPipe() (io.ReadCloser, error) {
 	r, w := io.Pipe()
 	c.output = w
@@ -198,7 +198,7 @@ func (c *SSHInstanceCmd) Wait() error {
 
 		return err
 	case <-timeoutCh:
-		// TODO(fxb/45424): clean up the ssh command
+		// TODO(fxbug.dev/45424): clean up the ssh command
 		return fmt.Errorf("timeout waiting for command to complete")
 	}
 }

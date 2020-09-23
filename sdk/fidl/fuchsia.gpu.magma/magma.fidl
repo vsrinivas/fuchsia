@@ -28,7 +28,7 @@ enum Status {
 };
 
 protocol Device {
-    /// Deprecated(fxb/54105)
+    /// Deprecated(fxbug.dev/54105)
     Query(uint64 query_id) -> (uint64 result);
 
     /// Returns a parameter, or an error.

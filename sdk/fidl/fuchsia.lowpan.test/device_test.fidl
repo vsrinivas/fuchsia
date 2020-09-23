@@ -43,6 +43,6 @@ protocol DeviceTest {
 
     GetThreadRouterId() -> (uint8 router_id);
 
-    // TODO(fxb/44678): Get Neighbor Table
-    // TODO(fxb/44680): Get/Insert/Remove Filterlist
+    // TODO(fxbug.dev/44678): Get Neighbor Table
+    // TODO(fxbug.dev/44680): Get/Insert/Remove Filterlist
 };

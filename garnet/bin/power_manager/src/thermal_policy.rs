@@ -735,7 +735,7 @@ impl ThermalPolicy {
         // utilized amount is subtracted from the total available power, then the remaining power is
         // allocated to the remaining CPU control nodes in the same way.
 
-        // TODO(fxb/48205): We may want to revisit this distribution algorithm to avoid potentially
+        // TODO(fxbug.dev/48205): We may want to revisit this distribution algorithm to avoid potentially
         // starving some CPU control nodes. We'll want to have some discussions and learn more about
         // intended big.LITTLE scheduling and operation to better inform our decisions here. We may
         // find that we'll need to first query the nodes to learn how much power they intend to use

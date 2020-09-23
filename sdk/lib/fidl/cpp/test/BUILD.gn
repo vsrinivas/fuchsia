@@ -28,7 +28,7 @@ source_set("test") {
 }
 
 fidl("frobinator") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "event-names-must-start-with-on",
     "string-bounds-not-specified",

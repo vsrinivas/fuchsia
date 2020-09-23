@@ -253,7 +253,7 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 }
 
 func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
-	// TODO(fxb/45007): Syzkaller does not support enum member references.
+	// TODO(fxbug.dev/45007): Syzkaller does not support enum member references.
 	// When this changes, we need to remove all special handling such as
 	// ignoring specific files in the codegen test, or in the regen script.
 	t, ok := primitiveTypes[val]

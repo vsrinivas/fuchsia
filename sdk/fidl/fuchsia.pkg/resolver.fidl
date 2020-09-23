@@ -33,7 +33,7 @@ protocol PackageResolver {
     ///     * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
     ///     * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
     ///     * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
-    // TODO(fxb/45811) change `package_url` from string to PackageUrl
+    // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl
     Resolve(
         string package_url,
         vector<string> selectors,

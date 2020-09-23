@@ -90,7 +90,7 @@ class _ZedmonProcess {
   /// Stops the zedmon client process and returns a summarized power
   /// measurement.
   //
-  // TODO(fxb/44358): Implement downsampling to Zedmon client, and then provide
+  // TODO(fxbug.dev/44358): Implement downsampling to Zedmon client, and then provide
   // access to the downsampled timeseries instead of just an average.
   Future<PowerSummary> stop() async {
     _stopped = true;

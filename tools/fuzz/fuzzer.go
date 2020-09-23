@@ -203,7 +203,7 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, artifactDir string) error {
 		return fmt.Errorf("failed during scanning: %s", err)
 	}
 
-	// TODO(fxb/47370): implement this, possibly elsewhere
+	// TODO(fxbug.dev/47370): implement this, possibly elsewhere
 	for _, artifact := range <-artifactsCh {
 		glog.Infof("should fetch artifact %s", f.AbsPath(artifact))
 	}

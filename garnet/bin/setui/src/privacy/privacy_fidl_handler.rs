@@ -82,7 +82,7 @@ async fn process_request(
     return Ok(None);
 }
 
-// TODO(fxb/55719): Remove when clients are ported to watch.
+// TODO(fxbug.dev/55719): Remove when clients are ported to watch.
 async fn process_request_2(
     context: RequestContext<PrivacySettings, PrivacyWatch2Responder>,
     req: PrivacyRequest,

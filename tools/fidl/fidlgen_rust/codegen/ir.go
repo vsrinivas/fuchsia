@@ -509,7 +509,7 @@ func (c *compiler) compileConstant(val types.Constant, typ types.Type) string {
 		} else {
 			// Bits or enum member.
 			parts.Name = types.Identifier(compileCamelIdentifier(parts.Name))
-			// TODO(fxb/47034) For bits the member should be SCREAMING_SNAKE_CASE.
+			// TODO(fxbug.dev/47034) For bits the member should be SCREAMING_SNAKE_CASE.
 			parts.Member = types.Identifier(compileCamelIdentifier(parts.Member))
 		}
 		return c.compileCompoundIdentifier(parts)
@@ -648,7 +648,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", t)
 			} else {
-				// TODO(fxb/42304): Replace with "&mut %s".
+				// TODO(fxbug.dev/42304): Replace with "&mut %s".
 				r = t
 			}
 		case types.ProtocolDeclType:
@@ -679,7 +679,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	for _, v := range val.Members {
 		e.Members = append(e.Members, BitsMember{
 			Attributes: v.Attributes,
-			// TODO(fxb/47034) Should be SCREAMING_SNAKE_CASE.
+			// TODO(fxbug.dev/47034) Should be SCREAMING_SNAKE_CASE.
 			Name:  compileCamelIdentifier(v.Name),
 			Value: c.compileConstant(v.Value, val.Type),
 		})
@@ -1194,7 +1194,7 @@ func (c *compiler) fillDerives(ir *Root) {
 }
 
 func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) derives {
-	// TODO(fxb/52257): Remove this temporary hack.
+	// TODO(fxbug.dev/52257): Remove this temporary hack.
 	if eci == "fuchsia.sysmem/BufferCollectionInfo_2" {
 		return newDerives()
 	}

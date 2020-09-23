@@ -550,7 +550,7 @@ config("default_warnings") {
   ]
 }
 
-# TODO(fxb/58160): clean up instances of this outside of third party code.
+# TODO(fxbug.dev/58160): clean up instances of this outside of third party code.
 config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
   visibility = [
@@ -567,7 +567,7 @@ config("Wno-reorder-init-list") {
   ]
 }
 
-# TODO(fxb/58161): clean up instances of this outside of third party code.
+# TODO(fxbug.dev/58161): clean up instances of this outside of third party code.
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
   visibility = [
@@ -581,7 +581,7 @@ config("Wno-unused-function") {
   ]
 }
 
-# TODO(fxb/58162): clean up instances of this outside of third party code.
+# TODO(fxbug.dev/58162): clean up instances of this outside of third party code.
 config("Wno-conversion") {
   cflags = [ "-Wno-conversion" ]
   visibility = [

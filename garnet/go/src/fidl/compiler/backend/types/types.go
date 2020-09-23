@@ -44,7 +44,7 @@ func ReadJSONIrContent(bytes []byte) (Root, error) {
 		return root, fmt.Errorf("Error parsing JSON IR: %v", err)
 	}
 
-	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
 	// Topaz, and should be removed after fidlgen_dart code has been updated.
 	root.Interfaces = root.Protocols
 
@@ -230,7 +230,7 @@ const (
 	ObjectTypePager
 )
 
-// TODO(fxb/45998): emit the numeric value of the subtype in fidlc
+// TODO(fxbug.dev/45998): emit the numeric value of the subtype in fidlc
 func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 	switch val {
 	case Bti:
@@ -640,7 +640,7 @@ type Protocol struct {
 	Methods []Method                  `json:"methods"`
 }
 
-// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
 // Topaz, and should be removed after fidlgen_dart code has been updated.
 type Interface = Protocol
 
@@ -838,7 +838,7 @@ const (
 	TableDeclType    DeclType = "table"
 	UnionDeclType    DeclType = "union"
 
-	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
 	// Topaz, and should be removed after fidlgen_dart code has been updated.
 	InterfaceDeclType DeclType = "interface"
 )
@@ -876,7 +876,7 @@ type Root struct {
 	Decls     DeclMap                     `json:"declarations,omitempty"`
 	Libraries []Library                   `json:"library_dependencies,omitempty"`
 
-	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
 	// Topaz, and should be removed after fidlgen_dart code has been updated.
 	Interfaces []Protocol
 }

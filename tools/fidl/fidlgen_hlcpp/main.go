@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/codegen"
 )
 
-// TODO(fxb/45483): Until all SDK consumers are moved off to using dedicated
+// TODO(fxbug.dev/45483): Until all SDK consumers are moved off to using dedicated
 // flags to invoke HLCPP fidlgen, we must preserve this legacy flags.
 var jsonPath = flag.String("json", "",
 	"relative path to the FIDL intermediate representation.")

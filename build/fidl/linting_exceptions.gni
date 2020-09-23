@@ -5,7 +5,7 @@
 # Allowlist of libraries that are not linted by the build.
 # This allows the libraries to be progressively made lint-free while preventing
 # new libraries from going unchecked.
-# See fxb/36769.
+# See fxbug.dev/36769.
 
 unlinted_libraries = [
   "fuchsia.cobalt",

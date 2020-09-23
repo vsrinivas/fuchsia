@@ -64,7 +64,7 @@ const uint8 VHT_CAP_LEN = 12;
 const uint8 VHT_OP_LEN = 5;
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable and
 // 2 values for BSS Membership Selector in Table 9-78. Only these 14 values are valid.
-// But in fxb/41022, some of these values may be duplicated in both SupportedRates(SR) and
+// But in fxbug.dev/41022, some of these values may be duplicated in both SupportedRates(SR) and
 // ExtendedSupportedRates(ESR). Since the SR element allows 8 bytes, and assuming the ESR element
 // duplicates all the values in the SR element plus contains all the remaining valid values, the
 // maximum is set to 8 + 14 = 22.

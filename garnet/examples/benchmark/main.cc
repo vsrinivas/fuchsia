@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   // Wait for tracing to get set up.  Without this, the tracing system can miss
   // some of the initial tracing events we generate later.
   //
-  // TODO(fxb/22911): Replace this sleep with single function that will start
+  // TODO(fxbug.dev/22911): Replace this sleep with single function that will start
   // a TraceProvider in a non-racy way.
   puts("Sleeping to allow tracing to start...");
   loop.Run(zx::deadline_after(zx::sec(1)));

@@ -82,7 +82,7 @@ func TestEndToEnd(t *testing.T) {
 
 	glog.Info(out)
 
-	// TODO(fxb/45425): validate output more
+	// TODO(fxbug.dev/45425): validate output more
 	if m, err := regexp.MatchString(`deadly signal`, out); err != nil || !m {
 		t.Fatalf("unxpected output: %s", out)
 	}

@@ -74,7 +74,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
     FX_LOGS(WARNING) << "Using /pkgfs/packages/" << fuchsia_url.package_name() << " as "
                      << fuchsia_url.ToString()
                      << " but since this is not a fuchsia.com URL this probably isn't what you "
-                        "wanted. Consider serving the package in your package repo. See fxb/48818.";
+                        "wanted. Consider serving the package in your package repo. See fxbug.dev/48818.";
   }
 
   callback(fidl::MakeOptional(std::move(package)));

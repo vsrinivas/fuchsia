@@ -193,7 +193,7 @@ template("fidl_library") {
     in_vendor = string_replace(full_label, "//vendor", "") != full_label
     if (in_vendor && !vendor_linting) {
       # Disable lints for libraries under //vendor.
-      # TODO(fxb/36800): remove this exception.
+      # TODO(fxbug.dev/36800): remove this exception.
       should_lint = false
     }
 

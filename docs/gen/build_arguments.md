@@ -697,7 +697,7 @@ From //build/images/args.gni:18
 
 ### enable_api_diff
 Detect dart API changes
-TODO(fxb/36723, fxb/6623) Remove this flag once issues are resolved
+TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 

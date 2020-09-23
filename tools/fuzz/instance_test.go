@@ -110,7 +110,7 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("expected error when running invalid fuzzer")
 	}
 
-	// TODO(fxb/45425): Flesh out the mocks to catch more errors
+	// TODO(fxbug.dev/45425): Flesh out the mocks to catch more errors
 	if err := i.Get("/path/to/remoteFile", "/path/to/localFile"); err != nil {
 		t.Fatalf("Error getting from instance: %s", err)
 	}

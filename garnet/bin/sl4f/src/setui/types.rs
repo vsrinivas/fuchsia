@@ -45,7 +45,7 @@ pub enum NetworkType {
 
 /// Types used for fuchsia.intl FIDL calls.
 /// Implementation is copied from /garnet/bin/setui/src/switchboard/intl_types.rs
-/// TODO(fxb/53501) Remove this once intl_types is defined in a rust_library.
+/// TODO(fxbug.dev/53501) Remove this once intl_types is defined in a rust_library.
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct IntlInfo {
     pub locales: Option<Vec<LocaleId>>,

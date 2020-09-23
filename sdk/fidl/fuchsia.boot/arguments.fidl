@@ -37,6 +37,6 @@ protocol Arguments {
 
     /// Get all boot arguments with keys starting with
     /// `prefix`. Returns a vector with strings of the form 'key=value'.
-    /// TODO(fxb/33460) - remove Collect once boot arguments have been componentised.
+    /// TODO(fxbug.dev/33460) - remove Collect once boot arguments have been componentised.
     Collect(string:MAX_ARGS_NAME_LENGTH prefix) -> (vector<string:MAX_ARGS_COLLECT_LENGTH>:MAX_ARGS_VECTOR_LENGTH results);
 };

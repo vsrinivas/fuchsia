@@ -79,7 +79,7 @@ int dnsResolve(char *hostname, DNSServiceRef *ref, bool ipv4, bool ipv6, void *c
   // domain name and the hostname are identical (plus or minus a trailing
   // ".local"), so this skips straight to resolving the IP address.
   //
-  // TODO(fxb/43928)
+  // TODO(fxbug.dev/43928)
   return DNSServiceGetAddrInfo(ref, flags, 0, protocol, hostname, dnsResolveCallback, ctx);
 }
 

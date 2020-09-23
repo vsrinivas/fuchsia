@@ -46,7 +46,7 @@ def main():
         old_ids = [l.strip() for l in reference_file.readlines()]
 
     # tools/arm64 should not exist on mac hosts
-    # TODO(fxb/42999): remove when SDK transition is complete.
+    # TODO(fxbug.dev/42999): remove when SDK transition is complete.
     if platform.mac_ver()[0]:
         old_ids = [i for i in old_ids if not i.startswith('sdk://tools/arm64')]
 

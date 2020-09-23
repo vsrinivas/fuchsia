@@ -112,7 +112,7 @@ pub fn watch_bluetooth_connections(
                 Ok((updated, removed)) => {
                     let mut bluetooth_handler = handler.lock().await;
                     if updated.len() > 0 {
-                        // TODO(fxb/50246): Add logging for updating bluetooth connections.
+                        // TODO(fxbug.dev/50246): Add logging for updating bluetooth connections.
                         // Figure out which peers are connected.
                         let new_connected_peers: Vec<Peer> = updated
                             .into_iter()
@@ -152,7 +152,7 @@ pub fn watch_bluetooth_connections(
 
                         // Play the earcon sound.
                         if added_peer_ids.len() > 0 {
-                            // TODO(fxb/50246): Add logging for connecting bluetooth peer.
+                            // TODO(fxbug.dev/50246): Add logging for connecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_handler.common_earcons_params.clone();
                             let publisher = publisher.clone();
@@ -166,7 +166,7 @@ pub fn watch_bluetooth_connections(
                             }).detach();
                         }
                         if removed_peer_ids.len() > 0 || removed.len() > 0 {
-                            // TODO(fxb/50246): Add logging for disconnecting bluetooth peer.
+                            // TODO(fxbug.dev/50246): Add logging for disconnecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_handler.common_earcons_params.clone();
                             let publisher = publisher.clone();

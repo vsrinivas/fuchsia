@@ -16,7 +16,7 @@ template("zircon_host_tool") {
   file_base = "tools/$tool_name"
   tool_src = "$zircon_root_build_dir/tools-$current_os-$current_cpu/$tool_name"
 
-  # TODO(fxb/42999): remove extra atom
+  # TODO(fxbug.dev/42999): remove extra atom
   if (current_cpu == host_cpu) {
     sdk_atom("${target_name}_sdk_legacy") {
       id = "sdk://$file_base"

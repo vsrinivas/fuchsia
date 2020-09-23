@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Emulation of rm -rf out && cp -af in out. This is necessary on Mac in order
 to preserve nanoseconds of mtime. See https://fxbug.dev/56376#c5."""
 

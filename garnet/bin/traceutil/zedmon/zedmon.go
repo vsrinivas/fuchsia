@@ -201,7 +201,7 @@ func (z *Zedmon) doRun(fOffset, fDelta time.Duration, path string, data chan []b
 		// handler, and that `z.csvout` has processed some data.
 		//
 		// It would be better if `Zedmon` emitted records as it processed them. However, it would
-		// likely be better to invest the effort in converting traceutil to Dart (see fxb/48045),
+		// likely be better to invest the effort in converting traceutil to Dart (see fxbug.dev/48045),
 		// in which there is already a Zedmon interface that behaves accordingly.
 		if !startSignalled {
 			started <- true

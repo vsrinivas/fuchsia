@@ -1051,7 +1051,7 @@ templates. These unsupported features include:
     cannot be launched using `run` followed by a fuzzy match with their launch
     URL. Components can still be launched using their full launch URL. Tests
     can still be launched with `fx test` followed by the short name of the
-    test. See [fxb/55739][fxb-55739] for more details.
+    test. See [fxbug.dev/55739][fxb-55739] for more details.
 
 [cml-format]: /docs/concepts/components/v2/component_manifests.md
 [cmx-format]: /docs/concepts/components/v1/component_manifests.md

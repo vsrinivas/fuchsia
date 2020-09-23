@@ -38,7 +38,7 @@ typedef struct fdio_namespace fdio_ns_t;
 //
 // The "null" transport absorbs writes and is never readable.
 //
-// TODO(fxb/43267): Eventually, with the exception of the "local" and "null"
+// TODO(fxbug.dev/43267): Eventually, with the exception of the "local" and "null"
 // transport, the different transports should become an implementation detail
 // in zxio.
 

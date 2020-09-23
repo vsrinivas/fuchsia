@@ -9,7 +9,7 @@ using fuchsia.mem;
 using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
-// TODO(fxb/29927): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
+// TODO(fxbug.dev/29927): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
 enum ConsoleLogLevel : int32 {
     /// No logging.
     NONE = 100;

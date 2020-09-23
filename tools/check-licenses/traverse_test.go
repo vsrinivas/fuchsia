@@ -9,5 +9,5 @@ import (
 )
 
 func TestTraverse(t *testing.T) {
-	// TODO(http://fxb/56847): Implement.
+	// TODO(http://fxbug.dev/56847): Implement.
 }

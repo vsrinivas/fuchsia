@@ -123,7 +123,7 @@ template("fuzzer") {
   }
 
   # Generate seed corpus. See https://llvm.org/docs/LibFuzzer.html#corpus
-  # TODO(fxb/58940): Move away from invoking add_corpus.py and towards using
+  # TODO(fxbug.dev/58940): Move away from invoking add_corpus.py and towards using
   # in-tree corpus manifests.
   corpus_target = "${target_name}_corpus"
   corpus_output = "${target_gen_dir}/${base_output_name}/corpus.manifest"

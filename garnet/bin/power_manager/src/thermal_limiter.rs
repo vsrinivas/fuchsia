@@ -296,7 +296,7 @@ impl ThermalLimiter {
         actor_type: fthermal::ActorType,
         trip_points: Vec<fthermal::TripPoint>,
     ) -> Result<(), fthermal::Error> {
-        // TODO(fxb/44484): These strings must live for the duration of the function because the
+        // TODO(fxbug.dev/44484): These strings must live for the duration of the function because the
         // trace macro uses them when the function goes out of scope. Therefore, they must be bound
         // here and not used anonymously at the macro callsite.
         let actor_type_str = format!("{:?}", actor_type);

@@ -47,7 +47,7 @@ if (is_host) {
       "//zircon/system/ulib/cmdline",
     ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 
@@ -71,7 +71,7 @@ if (is_host) {
       "//zircon/system/ulib/cmdline",
     ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 }

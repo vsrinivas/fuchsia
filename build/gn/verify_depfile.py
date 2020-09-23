@@ -11,7 +11,7 @@ import sys
 
 # Exempt targets with these prefixes.
 EXEMPTION_PREFIXES = [
-    # TODO(fxb/56885): cargo-gnaw should generate sources files for third party crates.
+    # TODO(fxbug.dev/56885): cargo-gnaw should generate sources files for third party crates.
     '//third_party/rust_crates:',
 ]
 

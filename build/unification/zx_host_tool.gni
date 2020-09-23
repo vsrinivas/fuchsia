@@ -42,7 +42,7 @@ template("zx_host_tool") {
     file_base = "tools/$tool_name"
     tool_src = output_file
 
-    # TODO(fxb/42999): remove extra atom
+    # TODO(fxbug.dev/42999): remove extra atom
     if (current_cpu == host_cpu) {
       sdk_atom("${target_name}_sdk_legacy") {
         id = "sdk://$file_base"

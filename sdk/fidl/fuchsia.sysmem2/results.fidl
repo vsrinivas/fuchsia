@@ -46,7 +46,7 @@ resource table VmoBuffer {
 const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 128;
 
 /// Information about a buffer collection and its buffers.
-// TODO(fxb/32119): provide a way for clients to receive this table instead of the
+// TODO(fxbug.dev/32119): provide a way for clients to receive this table instead of the
 // struct fuchsia.sysmem.BufferCollectionInfo_2.
 resource table BufferCollectionInfo {
     /// These settings apply to all the buffers in the inital buffer allocation.

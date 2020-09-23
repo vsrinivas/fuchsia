@@ -90,7 +90,7 @@ template("gidl") {
              "-json",
              rebase_path(json_file),
 
-             # TODO(fxb/52371) It should not be necessary to specify number of generated files.
+             # TODO(fxbug.dev/52371) It should not be necessary to specify number of generated files.
              "-num-extra-output-files",
              num_extra_output_files,
            ] + extra_args + rebase_path(invoker.inputs)
@@ -142,7 +142,7 @@ template("gidl_single_file_source_set") {
                              "deps",
                            ])
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     public_configs = [ "//build/config:Wno-conversion" ]
   }
 }
@@ -154,7 +154,7 @@ template("gidl_multiple_file_source_set") {
   assert(defined(invoker.language))
   assert(!defined(invoker.sources))
 
-  # TODO(fxb/52371) Generate output filename list on the fly.
+  # TODO(fxbug.dev/52371) Generate output filename list on the fly.
   source_files = [
     "${target_gen_dir}/gidl_generated_${target_name}1.cc",
     "${target_gen_dir}/gidl_generated_${target_name}2.cc",
@@ -322,7 +322,7 @@ template("gidl_multiple_file_source_set") {
                              "deps",
                            ])
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     public_configs = [ "//build/config:Wno-conversion" ]
   }
 }

@@ -140,7 +140,7 @@ $GET_FILES
 
 # Do not format these files
 NO_FORMAT=(
-  # fxb/46090
+  # fxbug.dev/46090
   "${FUCHSIA_DIR}/build/unification/images/BUILD.gn"
   "${FUCHSIA_DIR}/build/unification/tests/host/BUILD.gn"
   "${FUCHSIA_DIR}/zircon/system/banjo/BUILD.gn"

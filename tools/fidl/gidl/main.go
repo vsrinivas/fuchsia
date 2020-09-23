@@ -91,7 +91,7 @@ type GIDLFlags struct {
 	JSONPath *string
 	Language *string
 	Type     *string
-	// TODO(fxb/52371) It should not be necessary to specify the number of generated files.
+	// TODO(fxbug.dev/52371) It should not be necessary to specify the number of generated files.
 	NumOutputFiles            *int
 	MultipleFilePattern       *string
 	Out                       *string
@@ -234,7 +234,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO(fxb/52371) Until these files are named based on their `type`, they need to be
+	// TODO(fxbug.dev/52371) Until these files are named based on their `type`, they need to be
 	// generated in a deterministic order.
 	fileNum := 1
 	keys := make([]string, 0, len(otherFiles))
@@ -250,7 +250,7 @@ func main() {
 	}
 	// Fill unused output files with empty files to have a consistent set of source dependencies
 	// in GN.
-	// TODO(fxb/52371) The empty file doesn't work for some languages, like go that require a
+	// TODO(fxbug.dev/52371) The empty file doesn't work for some languages, like go that require a
 	// package to be declared.
 	for ; fileNum <= *flags.NumOutputFiles; fileNum++ {
 		if err := ioutil.WriteFile(outputFilepath(*flags.MultipleFilePattern, fileNum), []byte{}, 0666); err != nil {

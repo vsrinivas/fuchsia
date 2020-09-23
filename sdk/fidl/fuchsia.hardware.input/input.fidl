@@ -56,7 +56,7 @@ protocol DeviceReportsReader {
     ReadReports() -> (vector<Report>:MAX_REPORTS_COUNT reports) error zx.status;
 };
 
-// TODO(fxb/49329): This API doesn't follow best practices and needs to be
+// TODO(fxbug.dev/49329): This API doesn't follow best practices and needs to be
 // cleaned up.
 protocol Device {
     /// Get the HID boot interface protocol this device supports

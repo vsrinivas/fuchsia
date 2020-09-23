@@ -183,7 +183,7 @@ impl ShutdownWatcher {
 
     /// Notifies the registered reboot watchers of the incoming reboot request reason.
     async fn notify_reboot_watchers(&self, reason: RebootReason, timeout: Seconds) {
-        // TODO(fxb/44484): This string must live for the duration of the function because the trace
+        // TODO(fxbug.dev/44484): This string must live for the duration of the function because the trace
         // macro uses it when the function goes out of scope. Therefore, it must be bound here and
         // not used anonymously at the macro callsite.
         let reason_str = format!("{:?}", reason);

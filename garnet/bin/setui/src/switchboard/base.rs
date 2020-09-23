@@ -215,7 +215,7 @@ pub enum SettingRequest {
 
 impl SettingRequest {
     /// Returns the name of the enum, for writing to inspect.
-    /// TODO(fxb/56718): write a macro to simplify this
+    /// TODO(fxbug.dev/56718): write a macro to simplify this
     pub fn for_inspect(self) -> &'static str {
         match self {
             SettingRequest::Get => "Get",
@@ -412,7 +412,7 @@ pub enum SettingResponse {
 
 impl SettingResponse {
     /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
-    /// TODO(fxb/56718): simplify this with a macro.
+    /// TODO(fxbug.dev/56718): simplify this with a macro.
     pub fn for_inspect(self) -> (&'static str, String) {
         match self {
             SettingResponse::Unknown => ("Unknown", "".to_string()),

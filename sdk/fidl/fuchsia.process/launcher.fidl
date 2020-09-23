@@ -98,7 +98,7 @@ resource struct ProcessStartData {
     zx.vaddr base;
 };
 
-// TODO(fxb/37281): replace with built-in constant
+// TODO(fxbug.dev/37281): replace with built-in constant
 const uint32 MAX = 0xFFFFFFFF;
 
 /// A low-level interface for launching processes.

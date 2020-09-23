@@ -44,7 +44,7 @@ enum EventType {
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
-    /// TODO(fxb/39417): Ensure the instance is stopped before this event.
+    /// TODO(fxbug.dev/39417): Ensure the instance is stopped before this event.
     MARKED_FOR_DESTRUCTION = 6;
 
     /// An instance's declaration was resolved successfully for the first time.
@@ -107,7 +107,7 @@ flexible resource union EventResult {
 /// Corresponds to an error that occurred during a state transition.
 table EventError {
     /// A string describing the error that occurred.
-    /// TODO(fxb/49792): We should be sending structured errors, and not simply strings.
+    /// TODO(fxbug.dev/49792): We should be sending structured errors, and not simply strings.
     /// This is a placeholder pending further internal component manager refactors.
     1: string:MAX_ERROR_DESCRIPTION_LENGTH description;
 

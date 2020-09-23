@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This API is deprecated. Use https://cs.corp.google.com/fuchsia/fuchsia-mirror/sdk/fidl/fuchsia.hardware.power.statecontrol/admin.fidl
-// instead.Bug:fxb/42257
+// instead.Bug:fxbug.dev/42257
 library fuchsia.device.manager;
 
 using zx;

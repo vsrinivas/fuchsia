@@ -38,7 +38,7 @@ source_set("lib") {
     "//zircon/third_party/rapidjson",
   ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -85,7 +85,7 @@ if (is_host) {
 
     data_deps = [ ":test_data" ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 }

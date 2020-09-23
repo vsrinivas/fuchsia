@@ -4,7 +4,7 @@
 
 library fuchsia.sysmem2;
 
-// TODO(fxb/32119): The definitions in this file aren't final and shouldn't yet
+// TODO(fxbug.dev/32119): The definitions in this file aren't final and shouldn't yet
 // be used in any FIDL protocol.
 
 // Describes how a client will access the contents of a buffer.

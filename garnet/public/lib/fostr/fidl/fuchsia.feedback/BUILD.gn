@@ -7,7 +7,7 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 fostr_fidl("fuchsia.feedback") {
   fidl_target = "//sdk/fidl/fuchsia.feedback"
 
-  # TODO(fxb/47480): remove these amendments once fostr supports reserved C++ keywords.
+  # TODO(fxbug.dev/47480): remove these amendments once fostr supports reserved C++ keywords.
   additional_include = "lib/fostr/fidl/fuchsia.feedback/amendments.h"
 
   amendments_path =

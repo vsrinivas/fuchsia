@@ -414,7 +414,7 @@ config("werror") {
   }
 }
 
-# TODO(fxb/58162): clean up usages of this config
+# TODO(fxbug.dev/58162): clean up usages of this config
 config("Wno-conversion") {
   cflags = [ "-Wno-conversion" ]
 }

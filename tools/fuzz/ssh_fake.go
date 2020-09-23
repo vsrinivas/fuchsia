@@ -90,7 +90,7 @@ func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp)
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions,
 			error) {
-			// TODO(fxb/45424): actually verify the key
+			// TODO(fxbug.dev/45424): actually verify the key
 			return &ssh.Permissions{}, nil
 		},
 	}
@@ -140,7 +140,7 @@ func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp)
 func handleSSHSession(server *ssh.ServerConn, requests <-chan *ssh.Request,
 	channel ssh.Channel, errCh chan<- error, fakeFs *fakeSftp) {
 
-	defer server.Close() // TODO(fxb/47316): is this necessary / the right scope for this?
+	defer server.Close() // TODO(fxbug.dev/47316): is this necessary / the right scope for this?
 
 	for req := range requests {
 		switch req.Type {

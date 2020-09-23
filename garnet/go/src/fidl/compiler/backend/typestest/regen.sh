@@ -58,7 +58,7 @@ find "${GOLDENS_DIR}" -type f -not -name 'BUILD.gn' -exec rm {} \;
 for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
     src_name="$( basename "${src_path}" | sed -e 's/\.json\.golden$//g' )"
 
-    # TODO(fxb/45006): Skipping due to issue with representation of binary
+    # TODO(fxbug.dev/45006): Skipping due to issue with representation of binary
     # operators.
     if [ "constants.test" = "${src_name}" ]; then
         continue
@@ -149,7 +149,7 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
         -output-filename "${GOLDENS_DIR}/${rust_name}.golden" \
         -rustfmt "${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt"
 
-    # TODO(fxb/45007): Syzkaller does not support enum member references in struct
+    # TODO(fxbug.dev/45007): Syzkaller does not support enum member references in struct
     # defaults.
     if [ "struct_default_value_enum_library_reference.test" = "${src_name}" ]; then
         continue

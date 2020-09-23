@@ -7,7 +7,7 @@ import("//build/host.gni")
 executable("loglistener") {
   sources = [ "loglistener.c" ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

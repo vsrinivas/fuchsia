@@ -115,7 +115,7 @@ _args=(
   "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart"
 )
 
-# TODO(fxb/53267): Using tput colors is more reliable than letting Dart do its
+# TODO(fxbug.dev/53267): Using tput colors is more reliable than letting Dart do its
 # own terminal detection. Remove once Dart can do its own detection more
 # robustly.
 if [[ ! -t 1 ]] || ! tput colors >/dev/null 2>&1; then

@@ -13,7 +13,7 @@ fidl("fuchsia.stash") {
   sdk_category = "internal"
 
   visibility = [
-    # fxb/47602 audit the below
+    # fxbug.dev/47602 audit the below
     "//garnet/bin/setui/*",
     "//src/connectivity/bluetooth/core/bt-gap/*",
     "//src/connectivity/network/*",

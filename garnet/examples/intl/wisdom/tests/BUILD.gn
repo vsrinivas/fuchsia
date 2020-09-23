@@ -20,7 +20,7 @@ executable("intl_wisdom_test_bin") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 

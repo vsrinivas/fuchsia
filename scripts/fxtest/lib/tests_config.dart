@@ -234,7 +234,7 @@ class TestsConfig {
   /// Wrapper around io.ansi.wrapWith which first honors config flags.
   String wrapWith(String value, Iterable<ansi.AnsiCode> codes,
       {bool forScript = false}) {
-    // TODO(fxb/53267): Remove the override once terminal detection works inside
+    // TODO(fxbug.dev/53267): Remove the override once terminal detection works inside
     // tmux.
     if (flags.simpleOutput) {
       return value;

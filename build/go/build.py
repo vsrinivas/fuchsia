@@ -360,7 +360,7 @@ def main():
                         ] + sources
                         subprocess.check_call(verify_args, env=env)
                 except FileNotFoundError:
-                    # TODO(fxb/58776): This will be an error when source listings are enforced.
+                    # TODO(fxbug.dev/58776): This will be an error when source listings are enforced.
                     print(
                         'Could not find source list file: ' +
                         args.source_list_path)

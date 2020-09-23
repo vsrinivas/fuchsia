@@ -65,7 +65,7 @@ class BazelBuilder(Frontend):
                 copy_tree(self.local('base', 'cc'), self.output)
             # Copy Dart files if needed.
             if 'dart_library' in types:
-                # fxb/41514 : disable dart/flutter bits
+                # fxbug.dev/41514 : disable dart/flutter bits
                 # self.has_dart = True
                 # copy_tree(self.local('base', 'dart'), self.output)
                 pass

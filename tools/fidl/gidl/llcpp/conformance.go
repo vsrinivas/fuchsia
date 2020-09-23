@@ -241,6 +241,6 @@ func conformanceType(gidlTypeString string) string {
 }
 
 func llcppErrorCode(code gidlir.ErrorCode) string {
-	// TODO(fxb/35381) Implement different codes for different FIDL error cases.
+	// TODO(fxbug.dev/35381) Implement different codes for different FIDL error cases.
 	return "ZX_ERR_INVALID_ARGS"
 }

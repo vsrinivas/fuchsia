@@ -4,7 +4,7 @@
 
 import("//build/go/go_library.gni")
 
-# TODO(fxb/58759): Remove once fidlgen_dart is updated to depend on individual
+# TODO(fxbug.dev/58759): Remove once fidlgen_dart is updated to depend on individual
 # targets.
 go_library("compiler") {
   name = "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/..."

@@ -6,7 +6,7 @@ package ir
 
 type ErrorCode string
 
-// TODO(fxb/34770) Organize error codes by encoding / decoding.
+// TODO(fxbug.dev/34770) Organize error codes by encoding / decoding.
 // Potentially do a check in the parser that the code is the right type.
 const (
 	_                           ErrorCode = ""

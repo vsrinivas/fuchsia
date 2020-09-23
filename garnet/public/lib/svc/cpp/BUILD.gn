@@ -27,20 +27,20 @@ source_set("cpp") {
     "//zircon/system/ulib/fs",
   ]
 
-  # fxb/36788 this target is deprecated
+  # fxbug.dev/36788 this target is deprecated
   # Please use //sdk/lib/sys or //sdk/lib/svc as appropriate.
   visibility = [
     "//src/cobalt/bin/testapp:cobalt_testapp",
     "//src/lib/component/cpp:cpp",
-    "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittest",
     "//src/modular/bin/sessionmgr:startup_agent_launcher",
+    "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittest",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/lifecycle/cpp:lifecycle_impl",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//src/modular/tests:queue_persistence_test",
+    "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_manager:lib",
     "//src/virtualization/bin/guest_runner:lib",
-    "//src/virtualization/bin/guest:bin",
     "//src/virtualization/lib/guest_interaction:guest_interaction_service_test",
     "//src/virtualization/packages/biscotti_guest/linux_runner:lib",
     "//src/virtualization/tests:guest_console",

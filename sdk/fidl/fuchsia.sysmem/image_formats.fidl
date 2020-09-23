@@ -7,7 +7,7 @@ library fuchsia.sysmem;
 /// Describes how the pixels within an image are represented.
 /// Simple formats need only a type.
 /// Parametric pixel formats may require additional properties.
-// TODO(fxb/32119): change struct to table
+// TODO(fxbug.dev/32119): change struct to table
 [ForDeprecatedCBindings]
 struct PixelFormat {
     PixelFormatType type;
@@ -96,7 +96,7 @@ enum PixelFormatType {
 /// Describes how the pixels within an image are meant to be presented.
 /// Simple color spaces need only a type.
 /// Parametric color spaces may require additional properties.
-// TODO(fxb/32119): change struct to table
+// TODO(fxbug.dev/32119): change struct to table
 [ForDeprecatedCBindings]
 struct ColorSpace {
     ColorSpaceType type;

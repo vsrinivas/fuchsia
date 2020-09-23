@@ -14,18 +14,14 @@
 # WARNING: Known to topaz.
 group("scenic") {
   testonly = true
-  public_deps = [
-    "//src/ui/tools:scenic"
-  ]
+  public_deps = [ "//src/ui/tools:scenic" ]
 }
 
-# TODO(fxb/36227): sl4f is explicitly excluded here, we can consider adding it back once it
+# TODO(fxbug.dev/36227): sl4f is explicitly excluded here, we can consider adding it back once it
 # migrates off 'deprecated-shell'
 group("all") {
   testonly = true
-  public_deps = [
-    ":scenic",
-  ]
+  public_deps = [ ":scenic" ]
 }
 
 # WARNING: Known to infrastructure.

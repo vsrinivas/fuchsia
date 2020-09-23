@@ -1,4 +1,4 @@
-# fxb/47602 - visibility auditors
+# fxbug.dev/47602 - visibility auditors
 per-file BUILD.gn=jln@google.com
 per-file BUILD.gn=benwright@google.com
 per-file BUILD.gn=bryanhenry@google.com

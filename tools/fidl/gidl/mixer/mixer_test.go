@@ -264,7 +264,7 @@ func TestFloatDeclConforms(t *testing.T) {
 		conformFail{float32(0.0), "expecting float64"},
 		conformFail{0, "expecting float64"},
 		conformFail{"foo", "expecting float64"},
-		// TODO(fxb/43020): Allow these once each backend supports them.
+		// TODO(fxbug.dev/43020): Allow these once each backend supports them.
 		conformFail{math.Inf(1), "infinity not supported"},
 		conformFail{math.Inf(-1), "infinity not supported"},
 		conformFail{math.NaN(), "NaN not supported"},

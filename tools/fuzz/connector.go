@@ -38,7 +38,7 @@ type Connector interface {
 
 	// Returns an InstanceCmd representing the command to be run on the instance. Only one
 	// command should be active at a time.
-	// TODO(fxb/47479): In some cases, we should be able to relax the above restriction
+	// TODO(fxbug.dev/47479): In some cases, we should be able to relax the above restriction
 	Command(name string, args ...string) InstanceCmd
 
 	// Copies targetSrc (may include globs) to hostDst
@@ -90,7 +90,7 @@ func (c *SSHConnector) Connect() error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	// TODO(fxb/45424): dial timeout
+	// TODO(fxbug.dev/45424): dial timeout
 	address := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
 	client, err := ssh.Dial("tcp", address, config)
 	if err != nil {
@@ -115,7 +115,7 @@ func (c *SSHConnector) Connect() error {
 func (c *SSHConnector) Close() {
 	glog.Info("Closing SSH/SFTP")
 
-	// TODO(fxb/47316): Look into errors thrown by these Closes when
+	// TODO(fxbug.dev/47316): Look into errors thrown by these Closes when
 	// disconnecting from in-memory SSH server
 	if c.client != nil {
 		if err := c.client.Close(); err != nil {
@@ -134,7 +134,7 @@ func (c *SSHConnector) Close() {
 
 // Command returns an InstanceCmd that can be used to given command over SSH
 func (c *SSHConnector) Command(name string, args ...string) InstanceCmd {
-	// TODO(fxb/45424): Would be best to shell escape
+	// TODO(fxbug.dev/45424): Would be best to shell escape
 	cmdline := strings.Join(append([]string{name}, args...), " ")
 	return &SSHInstanceCmd{connector: c, cmdline: cmdline}
 }
@@ -176,7 +176,7 @@ func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
 			return fmt.Errorf("error opening remote file: %s", err)
 		}
 		defer fin.Close()
-		// TODO(fxb/45429): handle non-dir dst, ensure exists, etc
+		// TODO(fxbug.dev/45429): handle non-dir dst, ensure exists, etc
 		fout, err := os.Create(path.Join(hostDst, path.Base(src)))
 		if err != nil {
 			return fmt.Errorf("error creating local file: %s", err)
@@ -215,7 +215,7 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 		if err != nil {
 			return fmt.Errorf("error opening local file: %s", err)
 		}
-		// TODO(fxb/45429): handle non-dir dst, ensure exists, etc
+		// TODO(fxbug.dev/45429): handle non-dir dst, ensure exists, etc
 		fout, err := c.sftpClient.Create(path.Join(targetDst, path.Base(src)))
 		defer fout.Close()
 		if err != nil {
@@ -230,7 +230,7 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 }
 
 func loadConnectorFromHandle(handle Handle) (Connector, error) {
-	// TODO(fxb/47479): detect connector type
+	// TODO(fxbug.dev/47479): detect connector type
 	var conn SSHConnector
 
 	if err := handle.PopulateObject(&conn); err != nil {
@@ -251,7 +251,7 @@ func loadConnectorFromHandle(handle Handle) (Connector, error) {
 }
 
 // Generate a key to use for SSH
-// TODO(fxb/45424): Also return public key
+// TODO(fxbug.dev/45424): Also return public key
 func createSSHKey() (*rsa.PrivateKey, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

@@ -50,7 +50,7 @@ func (c *mockConnector) GetSysLog(pid int) (string, error) {
 		return "syslog failure", fmt.Errorf("Intentionally broken Connector")
 	}
 
-	// TODO(fxb/45425): more realistic test data
+	// TODO(fxbug.dev/45425): more realistic test data
 	lines := []string{
 		fmt.Sprintf("syslog for %d", pid),
 		"[1234.5][klog] INFO: {{{0x41}}}",

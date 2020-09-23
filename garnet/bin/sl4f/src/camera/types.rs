@@ -69,7 +69,7 @@ enum DeviceTypeDef {
     Virtual = 2,
 }
 
-// TODO(fxb/59274): Do not use Serde remote for FIDL tables.
+// TODO(fxbug.dev/59274): Do not use Serde remote for FIDL tables.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "DeviceInfo")]
 struct DeviceInfoDef {

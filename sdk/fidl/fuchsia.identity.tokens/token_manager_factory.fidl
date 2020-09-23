@@ -20,7 +20,7 @@ protocol TokenManagerFactory {
     ///                         channels used to display interactive
     ///                         authentication and authorization flows.
     /// + `token_manager` The server end of a `TokenManager` channel.
-    // TODO(fxb/43298): Remove the dependency on AuthenticationContextProvider
+    // TODO(fxbug.dev/43298): Remove the dependency on AuthenticationContextProvider
     // once auth providers can acquire their UI resources through the session
     // framework. At this point we may be able to remove the TokenManagerFactory
     // protocol entirely and make the TokenManager protocol discoverable.

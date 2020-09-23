@@ -561,10 +561,10 @@ func (c *compiler) computeHandleRights(t types.Type) (types.HandleRights, bool) 
 // Handle subtype annotations are added to fields that contain handles
 // or arrays and vectors of handles (recursively).
 func (c *compiler) computeHandleSubtype(t types.Type) (types.ObjectType, bool) {
-	// TODO(fxb/45998): clean up once numeric subtype is emitted in IR
+	// TODO(fxbug.dev/45998): clean up once numeric subtype is emitted in IR
 	switch t.Kind {
 	case types.HandleType:
-		// TODO(fxb/48012): subtypes of aliased handle types are not currently
+		// TODO(fxbug.dev/48012): subtypes of aliased handle types are not currently
 		// set in the JSON, so they are unchecked.
 		return types.ObjectTypeFromHandleSubtype(t.HandleSubtype), true
 	case types.RequestType:
@@ -1062,7 +1062,7 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}
-	// TODO(fxb/59077): Uncomment to support type assertion once I1102f244aa5ab4545fab21218c1da90be08604ec has landed.
+	// TODO(fxbug.dev/59077): Uncomment to support type assertion once I1102f244aa5ab4545fab21218c1da90be08604ec has landed.
 	if len(fidlData.Structs) != 0 /*|| len(fidlData.Enums) != 0*/ || len(fidlData.Protocols) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}

@@ -77,7 +77,7 @@ struct NetSpec {
 table GuestConfig {
     /// Which kernel to use. Cannot be changed from the command-line.
     1: Kernel kernel;
-    // TODO(fxb/42889): Make kernel_path, ramdisk_path, and block_devices into a fuchsia.io.File
+    // TODO(fxbug.dev/42889): Make kernel_path, ramdisk_path, and block_devices into a fuchsia.io.File
     /// The path to load the kernel from. Cannot be changed from the command-line.
     2: string kernel_path;
     /// Load the ramdisk_path as an initial RAM disk. Cannot be changed from the command-line.
@@ -155,7 +155,7 @@ resource struct LaunchInfo {
     /// The URL of the package to launch.
     string url;
 
-    // TODO(fxb/42888): pass the configuration to the guest launcher instead.
+    // TODO(fxbug.dev/42888): pass the configuration to the guest launcher instead.
     /// Configuration that will be passed to the VMM binary when launching this guest.
     ///
     /// See //src/virtualization/bin/vmm/guest_config.cc for valid options.

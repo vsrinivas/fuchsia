@@ -111,7 +111,7 @@ pub struct CpuControlHandlerBuilder<'a> {
 impl<'a> CpuControlHandlerBuilder<'a> {
     pub fn new_with_driver_path(
         cpu_driver_path: String,
-        // TODO(fxb/45507): Determine a proper owner for this value.
+        // TODO(fxbug.dev/45507): Determine a proper owner for this value.
         capacitance: Farads,
         cpu_stats_handler: Rc<dyn Node>,
         cpu_dev_handler_node: Rc<dyn Node>,
