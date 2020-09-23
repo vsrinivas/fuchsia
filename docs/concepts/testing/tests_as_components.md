@@ -1,50 +1,70 @@
 # Tests as components
 
-Tests on Fuchsia can either be run as standalone executables or as components.
-Standalone executables are invoked in whatever environment the test runner
-happens to be in, whereas components executed in a test runner are run in a
-hermetic environment.
+Caution: This document describes manifests for [components v1][components-v1].
+The old architecture (components v1) implemented by `appmgr` is still in use,
+but will be removed once the transition to the new architecture is complete.
 
-These hermetic environments are fully separated from the host services, and the
-test manifests can stipulate that new instances of services should be started in
-this environment, or services from the host should be plumbed in to the test
+This document outlines the way for developers to configure their tests to run as
+Fuchsia components. This document is for developers working inside the Fuchsia
+source tree (`fuchsia.git`). The workflow described in this document is not
+suitable for the Fuchsia SDK-based developers.
+
+The exact GN invocations used to produce a test may vary between different
+classes of tests and different languages. This document assumes that test logic
+is being built somewhere and the test binary is to be built to run as a Fuchsia
+component. For C++ and Rust, this would be the executable file that the build
+produces. (For information on writing tests in Rust, see
+[Testing Rust code][rust-testing].)
+
+For an example setup of a test component, see
+<code>[//examples/hello_world/rust][hello-world-rust]</code>.
+
+## Fuchsia test environments
+
+Tests on Fuchsia can run either as standalone executables (for example,
+[host tests][run-fuchsia-test]) or as components. Standalone executables are
+invoked within the environment the test runner is in, whereas components
+executed in a test runner run in a hermetic environment. These hermetic
+environments are fully separated from the host services. Test manifests
+determine whether new instances of services should be started in this
+environment, or services from the host should be plumbed in to the test
 environment.
 
-This document aims to outline the idiomatic way for a developer to configure
-their test artifacts to be run as components. This document is targeted towards
-developers working inside of `fuchsia.git`, and the workflow described is
-unlikely to work for SDK-based developers.
+## Packaging a test as a component
 
-An example setup of a test component is available at
-`//examples/hello_world/rust`.
+To package a test as a component, you need to create the following:
 
-## Building the test
+*   [Component manifest](#component-manifest-for-a-test).
+*   [Package build rules](#package-build-rules-for-a-test-component) for the
+    test executable and manifest.
 
-The exact GN invocations that should be used to produce a test vary between
-different classes of tests and different languages. The rest of this document
-assumes that test logic is being built somewhere, and that the test output is
-something that can be run as a component. For C++ and Rust, this would be the
-executable file the build produces.
+Note: When writing simple unit tests that do not depend on any facets, features,
+or services in Fuchsia, you can create a test package using the
+<code>[fuchsia_unittest_package][fuchsia-unittest-package-gni]</code> template.
+This template lets the build system automatically generate a component manifest
+for these tests.
 
-Further documentation for building tests is [available for Rust][rust_testing].
+### Component manifest for a test {#component-manifest-for-a-test}
 
-## Packaging and component-ifying the tests
+A component manifest informs the component framework how to run a component. In
+this case, it explains how to run the test binary. A component manifest file
+(`.cmx`) is typically located in a `meta` directory next to the `BUILD.gn` file:
 
-Once the build rule for building a test executable exists, a component manifest
-referencing the executable and a package build rule containing the executable
-and manifest must be created.
+```none
+<your_test_directory>
+  ├── BUILD.gn
+  ├── meta
+  │   └── <component_manifest_file>
+  ...
+```
 
-### Component manifests
+When a package is built, it includes the component manifest file under a top
+level directory, which is also called `meta`.
 
-The component manifest exists to inform the component framework how to run
-something. In this case, it's explaining how to run the test binary. This file
-typically lives in a `meta` directory next to the `BUILD.gn` file, and will be
-included in the package under a top level directory also called `meta`.
+The simplest possible component manifest for running a test may look like the
+following:
 
-The simplest possible component manifest for running a test would look like
-this:
-
-```cmx
+```none
 {
     "program": {
         "binary": "test/hello_world_rust_bin_test"
@@ -52,17 +72,22 @@ this:
 }
 ```
 
-This component, when run, would invoke the `test/hello_world_rust_bin_test`
-binary in the package.
+When you run the component above, it invokes the
+`test/hello_world_rust_bin_test` binary in the package.
 
-This example manifest may be insufficient for many use cases as the program will
-have a rather limited set of capabilities, for example there will be no mutable
-storage available and no services it can access. The `sandbox` portion of the
-manifest can be used to expand on this. As an alternative to the prior example,
-this example will give the component access to storage at `/cache` and will
-allow it to talk to the service located at `/svc/fuchsia.logger.LogSink`.
+However, the example manifest above may be inadequate for many use cases because
+the program running under this manifest has a very limited set of capabilities.
+For instance, there is no mutable storage available for this program and it
+cannot access any services in Fuchsia.
 
-```cmx
+#### Sandbox
+
+The `sandbox` portion of the manifest can be used to expand on this. As an
+alternative to the prior example, the following example provides the component
+access to storage at `/cache` and allows the component to talk to the service
+located at `/svc/fuchsia.logger.LogSink`:
+
+```none
 {
     "program": {
         "binary": "test/hello_world_rust_bin_test"
@@ -76,10 +101,10 @@ allow it to talk to the service located at `/svc/fuchsia.logger.LogSink`.
 
 Test components can also have new instances of services created inside their
 test environment, thus isolating the impact of the test from the host. In the
-following example, the service available at `/svc/fuchsia.example.Service` will
-be handled by a brand new instance of the service referenced by the URL.
+following example, the service available at `/svc/fuchsia.example.Service` is be
+handled by a brand new instance of the service referenced by the URL:
 
-```cmx
+```none
 {
     "program": {
         "binary": "test/hello_world_rust_bin_test"
@@ -99,45 +124,113 @@ be handled by a brand new instance of the service referenced by the URL.
 }
 ```
 
-For a more thorough description of what is valid in a component manifest, please
-see the [documentation on component manifests][component_manifest].
+For more information on component manifests, see
+[Component manifests][component-manifest].
 
-### Component and package build rules
+### Package build rules for a test component {#package-build-rules-for-a-test-component}
 
-With a component manifest written the GN build rule can now be added to create a
-package that holds the test component.
+Once you have a component manifest, you can now add GN build rules in `BUILD.gn`
+to create a package for the test component.
 
-```GN
-import("//build/test/test_package.gni")
+The following example produces a new package named `hello-world-rust-tests` that
+contains the artifacts necessary to run a test component:
 
-test_package("hello_world_rust_tests") {
-  deps = [
-    ":bin",
-  ]
-  tests = [
-    {
-      name = "hello_world_rust_bin_test"
-    }
+Note: The legacy GN templates for packages (`package.gni` and `test_package.gni`)
+are being deprecated. See
+[New GN templates for components v1](#new-gn-templates-for-components-v1)
+for details.
+
+```none
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+fuchsia_unittest_component("hello-world-rust-test-component") {
+  executable_path = "test/hello_world_rust_bin_test"
+  component_name = "hello-world-rust-test"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("hello-world-rust-tests") {
+  test_components = [
+    ":hello-world-rust-test-component",
   ]
 }
 ```
 
-This example will produce a new package named `hello_world_rust_tests` that
-contains the artifacts necessary to run a test component. This example requires
-that the `:bin` target produce a test binary named `hello_world_rust_bin_test`.
+The example above requires that the `:bin` target produces a test binary named
+`hello_world_rust_bin_test`. The
+<code>[fuchsia_unittest_package][fuchsia-unittest-package-gni]</code>
+template requires that `meta/${TEST_NAME}.cmx` exists and that the destination
+of the test binary matches the target name. In the example, this means that
+`meta/hello_world_rust_bin_test.cmx` must exist.
 
-The `test_package` template requires that `meta/${TEST_NAME}.cmx` exist and that
-the destination of the test binary match the target name. In this example, this
-means that `meta/hello_world_rust_bin_test.cmx` must exist. This template
-produces a package in the same way that the `package` template does, but it has
-extra checks in place to ensure that the test is set up properly. For more
-information, please  see the [documentation on `test_package`][test_package].
+This template produces a package in the same way that the
+<code>[fuchsia_package][fuchsia-package-gni]</code> template does, but it
+has extra checks in place to ensure that the test is set up properly. For
+more information, see [Test packages][test-packages].
+
+## New GN templates for components v1 {#new-gn-templates-for-components-v1}
+
+The legacy GN templates for packages
+(<code>[test_package.gni][test-package-gni]</code> and
+<code>[package.gni][package-gni]</code>) are being deprecated in favor
+of the following new templates:
+
+*   <code>[fuchsia_package.gni][fuchsia-package-gni]</code>
+*   <code>[fuchsia_test_package.gni][fuchsia-test-package-gni]</code>
+*   <code>[fuchsia_unittest_package.gni][fuchsia-unittest-package-gni]</code>
+
+For instance, the examples below demonstrate how you can rewrite
+the `test_package` template's build rules using the
+`fuchsia_unittest_package` template:
+
+*   {`test_package`}
+
+    ```none
+    import("//build/test/test_package.gni")
+
+    test_package("hello-world-rust-tests") {
+      deps = [
+        ":bin",
+      ]
+      tests = [
+        {
+          name = "hello_world_rust_bin_test"
+        }
+      ]
+    }
+    ```
+
+*    {`fuchisa_unittest_package`}
+
+    ```none
+    import("//src/sys/build/fuchsia_unittest_package.gni")
+
+    fuchsia_unittest_component("hello-world-rust-test-component") {
+      executable_path = "test/hello_world_rust_bin_test"
+      component_name = "hello-world-rust-test"
+      deps = [ ":bin" ]
+    }
+
+    fuchsia_test_package("hello-world-rust-tests") {
+      test_components = [
+        ":hello-world-rust-test-component",
+      ]
+    }
+    ```
+
+For more examples on these templates, see [Test component][test-component].
 
 <!-- Reference links -->
 
-[component_manifest]: /docs/concepts/components/v1/component_manifests.md
-[rust_testing]: /docs/development/languages/rust/testing.md
-[test_package]: /docs/concepts/testing/test_component.md
-[fuchsia_package_url]: /docs/concepts/packages/package_url.md
-[glossary-components-v2]: /docs/glossary.md#components-v2
-[rust-glob-syntax]: https://docs.rs/glob/0.3.0/glob/struct.Pattern.html
+[components-v1]: /docs/glossary.md#components-v1
+[hello-world-rust]: /examples/hello_world/rust
+[run-fuchsia-test]: /docs/development/testing/run_fuchsia_tests.md
+[component-manifest]: /docs/concepts/components/v1/component_manifests.md
+[rust-testing]: /docs/development/languages/rust/testing.md
+[test-package-gni]: /build/test/test_package.gni
+[package-gni]: /build/package.gni
+[test-packages]: /docs/development/components/build.md#test-packages
+[fuchsia-package-gni]: /src/sys/build/fuchsia_package.gni
+[fuchsia-test-package-gni]: /src/sys/build/fuchsia_test_package.gni
+[fuchsia-unittest-package-gni]: /src/sys/build/fuchsia_unittest_package.gni
+[test-component]: /docs/concepts/testing/test_component.md
