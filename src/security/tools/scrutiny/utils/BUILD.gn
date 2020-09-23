@@ -20,7 +20,7 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:thiserror",
-      "//zircon/third_party/zstd",
+      "//zircon/third_party/ulib/zstd",
     ]
     test_deps = [ "//third_party/rust_crates:hex" ]
 

@@ -5,6 +5,6 @@
 #ifndef ZIRCON_THIRD_PARTY_ULIB_ZSTD_INCLUDE_ZSTD_ZSTD_SEEKABLE_H_
 #define ZIRCON_THIRD_PARTY_ULIB_ZSTD_INCLUDE_ZSTD_ZSTD_SEEKABLE_H_
 
-#include "../../../../../../third_party/zstd/contrib/seekable_format/zstd_seekable.h"
+#include "../../../../../third_party/zstd/contrib/seekable_format/zstd_seekable.h"
 
 #endif  // ZIRCON_THIRD_PARTY_ULIB_ZSTD_INCLUDE_ZSTD_ZSTD_SEEKABLE_H_

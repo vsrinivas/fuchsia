@@ -109,7 +109,7 @@ zx_library("blobfs") {
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
     # TODO(57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/zstd:zstdseek",
+    "//zircon/third_party/ulib/zstd:zstdseek",
   ]
   deps = [
     ":private_headers",
@@ -133,8 +133,8 @@ zx_library("blobfs") {
     "//zircon/system/ulib/storage/operation",
 
     # TODO(57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/zstd",
-    "//zircon/third_party/zstd:zstdseek",
+    "//zircon/third_party/ulib/zstd",
+    "//zircon/third_party/ulib/zstd:zstdseek",
   ]
   if (is_fuchsia) {
     sources += [

@@ -28,7 +28,7 @@ source_set("chunked-compression") {
     "//zircon/public/lib/fbl",
 
     # TODO(57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/zstd",
+    "//zircon/third_party/ulib/zstd",
   ]
 
   if (is_fuchsia) {

@@ -403,7 +403,7 @@ fuzzer("zstd-fuzzer") {
     "//src/storage/blobfs:private_headers",
 
     # TODO(57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/zstd",
+    "//zircon/third_party/ulib/zstd",
   ]
 }
 
@@ -423,7 +423,7 @@ fuzzer("zstd-seekable-symmetric-fuzzer") {
     "//src/storage/blobfs:private_headers",
 
     # TODO(57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/zstd:zstdseek",
+    "//zircon/third_party/ulib/zstd:zstdseek",
   ]
 }
 
@@ -434,7 +434,7 @@ fuzzer("zstd-seekable-fuzzer") {
     "//src/storage/blobfs:private_headers",
 
     # TODO(57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/zstd:zstdseek",
+    "//zircon/third_party/ulib/zstd:zstdseek",
   ]
 }
 

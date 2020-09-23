@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
 import("$zx_build_config/levels.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
@@ -71,6 +72,15 @@ zstd_decompress_sources = [
   "$zstd/lib/decompress/zstd_decompress_block.c",
 ]
 
+# The Zircon build, and zircon toolchains in the Fuchsia build
+# add warn-implicit-fallthrough as a default config, which needs to
+# be removed from several targets below. This variable helps.
+warn_implicit_fallthrough_configs = []
+if (zx == "/" || zircon_toolchain != false) {
+  warn_implicit_fallthrough_configs =
+      [ "$zx_build_config:warn-implicit-fallthrough" ]
+}
+
 zx_library("zstd") {
   host = true
   static = true
@@ -80,6 +90,7 @@ zx_library("zstd") {
   # this library.
   sdk = "static"
   sdk_headers = [ "zstd/zstd.h" ]
+  sdk_migrated = true
 
   sources = zstd_common_sources + zstd_compress_sources +
             zstd_decompress_sources + [ "$zstd/lib/common/zstd_common.c" ]
@@ -87,20 +98,25 @@ zx_library("zstd") {
   configs += [ ":zstd-config" ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+  configs -= warn_implicit_fallthrough_configs
 
-  # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
-  # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
-  # optimizations for just this library to speed up builds.
-  # See fxbug.dev/55297
-  configs -= [ "$zx_build_config:default_optimize" ]
-  configs += [ "$zx_build_config:optimize_speed" ]
+  if (zx == "/") {
+    # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
+    # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
+    # optimizations for just this library to speed up builds.
+    # See fxbug.dev/55297
+    configs -= [ "$zx_build_config:default_optimize" ]
+    configs += [ "$zx_build_config:optimize_speed" ]
+  }
 }
 
 # The standalone varaint of this library supports only decompression and does
 # not depend malloc or free so it is suitable for use in userboot and physboot.
 zx_library("zstd-decompress-standalone") {
   static = true
+  sdk = "static"
+  sdk_headers = []
+  sdk_migrated = true
 
   sources = zstd_common_sources + zstd_decompress_sources +
             [ "zstd_common_standalone.c" ]
@@ -118,7 +134,7 @@ zx_library("zstd-decompress-standalone") {
   configs += [ ":zstd-config" ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+  configs -= warn_implicit_fallthrough_configs
 }
 
 config("zstd-seekable-config") {
@@ -144,7 +160,9 @@ config("zstd-seekable-public-config") {
 zx_library("zstdseek") {
   host = true
   static = true
-
+  sdk = "static"
+  sdk_headers = []
+  sdk_migrated = true
   sources = [
     "$zstd/contrib/seekable_format/zstdseek_compress.c",
     "$zstd/contrib/seekable_format/zstdseek_decompress.c",
@@ -161,7 +179,7 @@ zx_library("zstdseek") {
   ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+  configs -= warn_implicit_fallthrough_configs
 }
 
 zx_host_tool("zstdcli") {
@@ -176,6 +194,7 @@ zx_host_tool("zstdcli") {
     "$zstd/programs/util.c",
     "$zstd/programs/zstdcli.c",
   ]
+  sdk_migrated = true
   deps = [ ":zstd" ]
   configs += [ ":zstd-config" ]
 }

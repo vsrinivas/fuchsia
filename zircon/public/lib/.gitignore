@@ -52,5 +52,4 @@ vdso-code-header/
 x86/
 zbitl/
 zircon-headers/
-zstd/
 zx-panic-libc/
