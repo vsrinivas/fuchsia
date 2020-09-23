@@ -12,13 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fbl/unique_fd.h>
-
-extern "C" {
 #include <acpica/acpi.h>
-#include <acpica/actables.h>
-#include <acpica/actypes.h>
-}
+#include <fbl/unique_fd.h>
 
 #include "src/virtualization/bin/vmm/arch/x64/io_port.h"
 
@@ -35,7 +30,7 @@ static uint8_t acpi_checksum(void* table, uint32_t length) {
 static void acpi_header(ACPI_TABLE_HEADER* header, const char* table_id, const char* signature,
                         uint8_t revision, uint32_t length) {
   memset(header, 0, sizeof(*header));
-  memcpy(header->Signature, signature, ACPI_NAME_SIZE);
+  memcpy(header->Signature, signature, ACPI_NAMESEG_SIZE);
   header->Revision = revision;
   header->Length = length;
   memcpy(header->OemId, "ZX", 2);

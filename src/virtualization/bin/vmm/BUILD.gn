@@ -107,8 +107,6 @@ source_set("lib") {
       "arch/x64/page_table.cc",
       "arch/x64/page_table.h",
     ]
-
-    include_dirs = [ "//zircon/third_party/lib/acpica/source/include" ]
   }
 
   configs += [ "//build/config:all_source" ]
@@ -134,6 +132,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/virtualization/bin/vmm/device",
+    "//third_party/acpica:headers",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/virtio",
