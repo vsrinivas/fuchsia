@@ -381,8 +381,22 @@ NETDUMP_TEST(IPv6PortsTest, PortFilter)
 #undef NETDUMP_TEST
 
 TEST(NetdumpFilterTest, UnsupportedIpVersionAssertTest) {
-  UnsupportedIpVersionAssertTest(CallConstructor<IpFilter>(), CallConstructor<IpFilter>(),
-                                 CallConstructor<IpFilter>());
+  // NB: We don't use CallConstructor here because it causes a leak when the assertion trips in the
+  // constructor, since the calling thread dies after the memory is allocated and unique_ptr's
+  // destructor doesn't get a chance to run.
+  UnsupportedIpVersionAssertTest(
+      [](uint8_t version) {
+        IpFilter filter(version);
+        return nullptr;
+      },
+      [](uint8_t version, uint16_t length, LengthComparator comparator) {
+        IpFilter filter(version, length, comparator);
+        return nullptr;
+      },
+      [](uint8_t version, uint8_t protocol) {
+        IpFilter filter(version, protocol);
+        return nullptr;
+      });
 }
 
 TEST(NetdumpFilterTest, CompositionTest) {
@@ -392,7 +406,6 @@ TEST(NetdumpFilterTest, CompositionTest) {
 
 // Tests for the `populate` method in the `Packet` class that finds the pointers to the headers.
 static constexpr uint16_t BUFFER_LENGTH = 256;
-static constexpr uint8_t IPV4_IHL = 12;  // 32-bit words
 
 inline struct ethhdr* SetupPopulateBuffer(uint16_t ethtype, uint8_t* buffer) {
   auto frame = reinterpret_cast<struct ethhdr*>(buffer);
@@ -477,16 +490,20 @@ TEST(NetdumpFilterTest, PopulatePacketIPv4Test) {
   uint8_t buffer[BUFFER_LENGTH];
   SetupPopulateBuffer(ntohs(ETH_P_IP), buffer);
   auto ip = reinterpret_cast<struct iphdr*>(buffer + ETH_HLEN);
-  ip->ihl = IPV4_IHL;
-  size_t iphdr_len = IPV4_IHL << 2;
-  PopulatePacketIPTest(iphdr_len, &ip->protocol, buffer);
+  // Make a copy of the IP header to prevent unaligned access in the Ethernet buffer.
+  struct iphdr copy = *ip;
+  // Set the IP header length, in units of 32 bit words.
+  copy.ihl = sizeof(struct iphdr) / sizeof(uint32_t);
+  *ip = copy;
+  PopulatePacketIPTest(sizeof(struct iphdr), &buffer[ETH_HLEN + offsetof(struct iphdr, protocol)],
+                       buffer);
 }
 
 TEST(NetdumpFilterTest, PopulatePacketIPv6Test) {
   uint8_t buffer[BUFFER_LENGTH];
   SetupPopulateBuffer(ntohs(ETH_P_IPV6), buffer);
-  auto ipv6 = reinterpret_cast<struct ip6_hdr*>(buffer + ETH_HLEN);
-  PopulatePacketIPTest(sizeof(struct ip6_hdr), &ipv6->ip6_nxt, buffer);
+  PopulatePacketIPTest(sizeof(struct ip6_hdr),
+                       &buffer[ETH_HLEN + offsetof(struct ip6_hdr, ip6_nxt)], buffer);
 }
 
 }  // namespace netdump::test

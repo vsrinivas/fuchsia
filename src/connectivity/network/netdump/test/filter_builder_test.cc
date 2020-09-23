@@ -4,10 +4,10 @@
 
 // Instantiations of filter tests with filter tree builder.
 
-#include <zxtest/zxtest.h>
-
 #include <type_traits>
 #include <unordered_map>
+
+#include <zxtest/zxtest.h>
 
 #include "filter_builder_impl.h"
 #include "filter_test.h"
@@ -137,11 +137,6 @@ NETDUMP_TEST(IPv4PortsTest, PortFilter)
 NETDUMP_TEST(IPv6PortsTest, PortFilter)
 
 #undef NETDUMP_TEST
-
-TEST(NetdumpFilterBuilderTest, UnsupportedIpVersionAssertTest) {
-  UnsupportedIpVersionAssertTest(CallFilterBuilder<IpFilter>(), CallFilterBuilder<IpFilter>(),
-                                 CallFilterBuilder<IpFilter>());
-}
 
 TEST(NetdumpFilterBuilderTest, CompositionTest) {
   CompositionTest(CallFilterBuilder<NegFilter>(), CallFilterBuilder<ConjFilter>(),
