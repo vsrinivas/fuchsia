@@ -16,12 +16,12 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/crash_register.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
-#include "src/developer/forensics/crash_reports/data_provider_ptr.h"
 #include "src/developer/forensics/crash_reports/info/crash_reporter_info.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fidl/device_id_provider_ptr.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
@@ -48,7 +48,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                 const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
                 const Config* config, const ErrorOr<std::string>& build_version,
-                CrashRegister* crash_register, std::unique_ptr<CrashServer> crash_server);
+                CrashRegister* crash_register, std::unique_ptr<SnapshotManager> snapshot_manager,
+                std::unique_ptr<CrashServer> crash_server);
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
@@ -61,16 +62,14 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   const ErrorOr<std::string> build_version_;
   CrashRegister* crash_register_;
   const UTCTimeProvider utc_provider_;
-  const std::unique_ptr<CrashServer> crash_server_;
+  std::unique_ptr<SnapshotManager> snapshot_manager_;
+  std::unique_ptr<CrashServer> crash_server_;
   Queue queue_;
 
   CrashReporterInfo info_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
-  DataProviderPtr data_provider_ptr_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);
 };
 
 }  // namespace crash_reports

@@ -10,6 +10,7 @@
 #include <set>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/sized_data.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -26,10 +27,12 @@ namespace {
 
 constexpr char kAnnotationsFilename[] = "annotations.json";
 constexpr char kMinidumpFilename[] = "minidump.dmp";
+constexpr char kSnapshotUuidFilename[] = "snapshot_uuid.txt";
 
 const std::set<std::string> kReservedAttachmentNames = {
     kAnnotationsFilename,
     kMinidumpFilename,
+    kSnapshotUuidFilename,
 };
 
 // Join |paths| in order into a single path.
@@ -114,13 +117,18 @@ bool ReadAnnotations(const std::string& path, std::map<std::string, std::string>
   return true;
 }
 
-bool WriteAttachment(const std::string& path, const SizedData& attachment) {
+template <typename T>
+bool WriteData(const std::string& path, const T& attachment) {
   return files::WriteFile(path, reinterpret_cast<const char*>(attachment.data()),
                           attachment.size());
 }
 
 bool ReadAttachment(const std::string& path, SizedData* attachment) {
   return files::ReadFileToVector(path, attachment);
+}
+
+bool ReadSnapshotUuid(const std::string& path, SnapshotUuid* snapshot_uuid) {
+  return files::ReadFileToString(path, snapshot_uuid);
 }
 
 }  // namespace
@@ -199,6 +207,7 @@ std::optional<Store::Uid> Store::Add(const Report report,
   for (const auto& [_, v] : report.Attachments()) {
     report_size += StorageSize::Bytes(v.size());
   }
+  report_size += StorageSize::Bytes(report.SnapshotUuid().size());
   if (report.Minidump().has_value()) {
     report_size += StorageSize::Bytes(report.Minidump().value().size());
   }
@@ -217,13 +226,17 @@ std::optional<Store::Uid> Store::Add(const Report report,
     return std::nullopt;
   }
   for (const auto& [filename, attachment] : report.Attachments()) {
-    if (!WriteAttachment(MakeFilepath(filename), attachment)) {
+    if (!WriteData(MakeFilepath(filename), attachment)) {
       FX_LOGS(ERROR) << "Failed to write attachment: " << filename;
       return std::nullopt;
     }
   }
+  if (!WriteData(MakeFilepath(kSnapshotUuidFilename), report.SnapshotUuid())) {
+    FX_LOGS(ERROR) << "Failed to write snapshot uuid";
+    return std::nullopt;
+  }
   if (report.Minidump().has_value()) {
-    if (!WriteAttachment(MakeFilepath(kMinidumpFilename), report.Minidump().value())) {
+    if (!WriteData(MakeFilepath(kMinidumpFilename), report.Minidump().value())) {
       FX_LOGS(ERROR) << "Failed to write minidump";
       return std::nullopt;
     }
@@ -258,6 +271,7 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
 
   std::map<std::string, std::string> annotations;
   std::map<std::string, SizedData> attachments;
+  SnapshotUuid snapshot_uuid;
   std::optional<SizedData> minidump;
 
   for (const auto& filename : report_files) {
@@ -265,6 +279,11 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
       if (!ReadAnnotations(MakeFilepath(filename), &annotations)) {
         return std::nullopt;
       }
+    } else if (filename == "snapshot_uuid.txt") {
+      if (!ReadSnapshotUuid(MakeFilepath(filename), &snapshot_uuid)) {
+        snapshot_uuid = SnapshotManager::UuidForNoSnapshotUuid();
+      }
+
     } else {
       SizedData attachment;
       if (!ReadAttachment(MakeFilepath(filename), &attachment)) {
@@ -280,7 +299,7 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
   }
 
   return Report(id_to_metadata_[id].program_shortname, std::move(annotations),
-                std::move(attachments), std::move(minidump));
+                std::move(attachments), std::move(snapshot_uuid), std::move(minidump));
 }
 
 std::vector<Store::Uid> Store::GetAllUids() const {

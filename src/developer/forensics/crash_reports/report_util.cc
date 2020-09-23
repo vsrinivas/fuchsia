@@ -208,37 +208,10 @@ void AddCrashServerAnnotations(const std::string& program_name,
   (*annotations)["should_process"] = should_process ? "true" : "false";
 }
 
-void AddSnapshotAnnotations(const fuchsia::feedback::Snapshot& snapshot,
-                            std::map<std::string, std::string>* annotations) {
-  if (!snapshot.has_annotations()) {
-    return;
-  }
-  for (const auto& annotation : snapshot.annotations()) {
-    (*annotations)[annotation.key] = annotation.value;
-  }
-}
-
-void AddSnapshotAsAttachment(fuchsia::feedback::Snapshot snapshot,
-                             std::map<std::string, fuchsia::mem::Buffer>* attachments) {
-  if (!snapshot.has_archive()) {
-    return;
-  }
-  auto* snapshot_attachment = snapshot.mutable_archive();
-  (*attachments)[snapshot_attachment->key] = std::move(snapshot_attachment->value);
-}
-
-void AddSnapshot(::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
-                 std::map<std::string, std::string>* annotations,
-                 std::map<std::string, fuchsia::mem::Buffer>* attachments) {
-  AddSnapshotAnnotations(snapshot.value(), annotations);
-
-  AddSnapshotAsAttachment(snapshot.take_value(), attachments);
-}
-
 }  // namespace
 
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
-                                 ::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
+                                 const SnapshotUuid& snapshot_uuid,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
                                  const ErrorOr<std::string>& os_version, const Product& product) {
@@ -258,10 +231,8 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
   AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
                             should_process, &annotations);
 
-  // Snapshot annotations and attachment common to all crash reports.
-  AddSnapshot(std::move(snapshot), &annotations, &attachments);
-
-  return Report::MakeReport(shortname, annotations, std::move(attachments), std::move(minidump));
+  return Report::MakeReport(shortname, annotations, std::move(attachments), snapshot_uuid,
+                            std::move(minidump));
 }
 
 }  // namespace crash_reports

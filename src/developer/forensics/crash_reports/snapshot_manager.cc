@@ -262,8 +262,11 @@ void SnapshotManager::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadlin
   if (const zx_status_t status = async::PostTaskForTime(
           dispatcher_,
           [this, idx, uuid] {
-            if (auto* request = FindSnapshotRequest(uuid); request) {
-              request->blocked_promises[idx].resume_task();
+            if (auto* request = FindSnapshotRequest(uuid); request && request->is_pending) {
+              FX_CHECK(idx < request->blocked_promises.size());
+              if (request->blocked_promises[idx]) {
+                request->blocked_promises[idx].resume_task();
+              }
             }
           },
           deadline);
@@ -286,7 +289,10 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   FX_CHECK(request->is_pending);
 
   // Add debug annotations.
-  AddAnnotation("debug.snapshot.shared-request.num-clients", request->blocked_promises.size(),
+  if (fidl_snapshot.IsEmpty()) {
+    AddAnnotation("debug.snapshot.present", std::string("false"), &fidl_snapshot);
+  }
+  AddAnnotation("debug.snapshot.shared-request.num-clients", data->num_clients_with_uuid,
                 &fidl_snapshot);
   AddAnnotation("debug.snapshot.shared-request.uuid", request->uuid, &fidl_snapshot);
 

@@ -149,14 +149,23 @@ class CrashReporterTest : public UnitTestFixture {
  protected:
   // Sets up the underlying crash reporter using the given |config| and |crash_server|.
   void SetUpCrashReporter(Config config, std::unique_ptr<StubCrashServer> crash_server) {
+    auto snapshot_manager = std::make_unique<SnapshotManager>(
+        dispatcher(), services(), std::make_unique<timekeeper::TestClock>(), zx::sec(5),
+        StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
+
     config_ = std::move(config);
     FX_CHECK((config_.crash_server.url && crash_server) ||
              (!config_.crash_server.url && !crash_server));
     crash_server_ = crash_server.get();
 
-    crash_reporter_ = std::make_unique<CrashReporter>(
-        dispatcher(), services(), clock_, info_context_, &config_,
-        ErrorOr<std::string>(kBuildVersion), crash_register_.get(), std::move(crash_server));
+    if (crash_server_) {
+      crash_server_->AddSnapshotManager(snapshot_manager.get());
+    }
+
+    crash_reporter_ =
+        std::make_unique<CrashReporter>(dispatcher(), services(), clock_, info_context_, &config_,
+                                        ErrorOr<std::string>(kBuildVersion), crash_register_.get(),
+                                        std::move(snapshot_manager), std::move(crash_server));
     FX_CHECK(crash_reporter_);
   }
 
@@ -236,9 +245,8 @@ class CrashReporterTest : public UnitTestFixture {
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},
         {"should_process", "false"},
-        {"debug.snapshot.pool.delta-seconds", Not(IsEmpty())},
-        {"debug.snapshot.pool.size", Not(IsEmpty())},
-        {"debug.snapshot.pool.uuid", Not(IsEmpty())},
+        {"debug.snapshot.shared-request.num-clients", Not(IsEmpty())},
+        {"debug.snapshot.shared-request.uuid", Not(IsEmpty())},
     };
     for (const auto& [key, value] : expected_extra_annotations) {
       expected_annotations[key] = value;
@@ -821,7 +829,7 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer({
-      {"debug.snapshot.empty", "true"},
+      {"debug.snapshot.present", "false"},
   });
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }

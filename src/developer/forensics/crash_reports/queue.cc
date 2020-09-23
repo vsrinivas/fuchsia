@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -21,7 +22,6 @@ using crashpad::FileReader;
 using UploadPolicy = Settings::UploadPolicy;
 
 constexpr char kStorePath[] = "/tmp/reports";
-constexpr StorageSize kStoreMaxSize = StorageSize::Kilobytes(5120u);
 
 void Queue::WatchSettings(Settings* settings) {
   settings->RegisterUploadPolicyWatcher(

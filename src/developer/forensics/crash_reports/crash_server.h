@@ -11,6 +11,7 @@
 #include <string>
 
 #include "src/developer/forensics/crash_reports/report.h"
+#include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/file/file_reader.h"
 #include "third_party/crashpad/util/net/http_body.h"
@@ -25,7 +26,8 @@ namespace crash_reports {
 // Represents the HTTP crash server to which the agent uploads crash reports to.
 class CrashServer {
  public:
-  explicit CrashServer(const std::string& url);
+  CrashServer(const std::string& url, SnapshotManager* snapshot_manager);
+
   virtual ~CrashServer() {}
 
   // Makes the HTTP request using |report|.
@@ -37,6 +39,7 @@ class CrashServer {
 
  private:
   const std::string url_;
+  SnapshotManager* snapshot_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashServer);
 };

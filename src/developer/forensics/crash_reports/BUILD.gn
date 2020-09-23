@@ -54,6 +54,8 @@ source_set("config") {
 source_set("constants") {
   sources = [ "constants.h" ]
 
+  public_deps = [ "//src/developer/forensics/utils:storage_size" ]
+
   visibility = [ "//src/developer/forensics/crash_reports/*" ]
 }
 
@@ -95,11 +97,11 @@ source_set("crash_reporter") {
   public_deps = [
     ":crash_register",
     ":crash_server",
-    ":data_provider_ptr",
     ":privacy_settings_ptr",
     ":product",
     ":queue",
     ":settings",
+    ":snapshot_manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
@@ -113,6 +115,7 @@ source_set("crash_reporter") {
   ]
 
   deps = [
+    ":constants",
     ":report_util",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
@@ -140,34 +143,6 @@ source_set("crash_server") {
   ]
 
   deps = [ "//src/developer/forensics/utils:sized_data" ]
-}
-
-source_set("data_provider_ptr") {
-  sources = [
-    "data_provider_ptr.cc",
-    "data_provider_ptr.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fit",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    ":errors",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/uuid",
-    "//zircon/public/lib/async-cpp",
-  ]
 }
 
 source_set("errors") {
@@ -250,6 +225,7 @@ source_set("queue") {
   ]
 
   deps = [
+    ":constants",
     ":report",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
@@ -264,6 +240,7 @@ source_set("report") {
   ]
 
   public_deps = [
+    ":snapshot_manager",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

@@ -24,8 +24,6 @@
 namespace forensics {
 namespace crash_reports {
 
-extern const StorageSize kStoreMaxSize;
-
 // Queues pending reports and processes them according to its internal State.
 class Queue {
  public:

@@ -41,6 +41,7 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::IsSupersetOf;
 using testing::Not;
+using testing::Pair;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
@@ -55,6 +56,7 @@ constexpr char kAttachmentKey[] = "attachment.key";
 constexpr char kAttachmentValue[] = "attachment.value";
 constexpr char kAnnotationKey[] = "annotation.key";
 constexpr char kAnnotationValue[] = "annotation.value";
+constexpr char kSnapshotUuidValue[] = "snapshot_uuid";
 constexpr char kMinidumpKey[] = "uploadFileMinidump";
 constexpr char kMinidumpValue[] = "minidump";
 
@@ -100,7 +102,7 @@ std::map<std::string, std::string> MakeAnnotations() {
 Report MakeReport(const std::size_t program_id) {
   std::optional<Report> report =
       Report::MakeReport(fxl::StringPrintf("program_%ld", program_id), MakeAnnotations(),
-                         MakeAttachments(), BuildAttachment(kMinidumpValue));
+                         MakeAttachments(), kSnapshotUuidValue, BuildAttachment(kMinidumpValue));
   FX_CHECK(report.has_value());
   return std::move(report.value());
 }
@@ -130,7 +132,11 @@ class QueueTest : public UnitTestFixture {
     expected_queue_contents_.clear();
     upload_attempt_results_ = upload_attempt_results;
     next_upload_attempt_result_ = upload_attempt_results_.cbegin();
+    snapshot_manager_ = std::make_unique<SnapshotManager>(
+        dispatcher(), services(), std::make_unique<timekeeper::TestClock>(), zx::sec(5),
+        StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
+    crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
     queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, crash_server_.get());
     ASSERT_TRUE(queue_);
@@ -201,8 +207,15 @@ class QueueTest : public UnitTestFixture {
 
   void CheckAnnotationsOnServer() {
     FX_CHECK(crash_server_);
+
+    // Expect annotations that |snapshot_manager_| will for using |kSnapshotUuidValue| as the
+    // snapshot uuid.
     EXPECT_THAT(crash_server_->latest_annotations(),
-                UnorderedElementsAre(testing::Pair(kAnnotationKey, kAnnotationValue)));
+                UnorderedElementsAreArray({
+                    Pair(kAnnotationKey, kAnnotationValue),
+                    Pair("debug.snapshot.error", "garbage collected"),
+                    Pair("debug.snapshot.present", "false"),
+                }));
   }
 
   void CheckAttachmentKeysOnServer() {
@@ -254,6 +267,7 @@ class QueueTest : public UnitTestFixture {
 
   Settings settings_;
   timekeeper::TestClock clock_;
+  std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<StubCrashServer> crash_server_;
   std::shared_ptr<InfoContext> info_context_;
   std::shared_ptr<cobalt::Logger> cobalt_;

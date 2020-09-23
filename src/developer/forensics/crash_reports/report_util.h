@@ -14,6 +14,7 @@
 
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
+#include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
@@ -36,7 +37,7 @@ std::string Shorten(std::string program_name);
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report,
-                                 ::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
+                                 const SnapshotUuid& snapshot_uuid,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
                                  const ErrorOr<std::string>& os_version, const Product& product);

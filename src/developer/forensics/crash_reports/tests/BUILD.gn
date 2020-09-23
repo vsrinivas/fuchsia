@@ -105,27 +105,6 @@ executable("crash_reports_integration_test_exe") {
   ]
 }
 
-executable("data_provider_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "data_provider_ptr_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/crash_reports:data_provider_ptr",
-    "//src/developer/forensics/crash_reports:errors",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:data_provider",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/fsl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("main_service_unittest_exe") {
   testonly = true
 
@@ -400,14 +379,6 @@ fuchsia_component("crash_reports_integration_test_valid_override_config") {
   ]
 }
 
-fuchsia_component("data_provider_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/data_provider_ptr_unittest.cmx"
-
-  deps = [ ":data_provider_ptr_unittest_exe" ]
-}
-
 fuchsia_component("inspect_manager_unittest") {
   testonly = true
 
@@ -483,7 +454,6 @@ fuchsia_test_package("crash-reports-tests") {
     ":crash_reports_integration_test",
     ":crash_reports_integration_test_invalid_override_config",
     ":crash_reports_integration_test_valid_override_config",
-    ":data_provider_ptr_unittest",
     ":snapshot_manager_unittest",
     ":inspect_manager_unittest",
     ":main_service_unittest",

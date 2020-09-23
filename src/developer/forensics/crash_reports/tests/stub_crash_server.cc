@@ -23,6 +23,11 @@ StubCrashServer::~StubCrashServer() {
       request_return_values_.size());
 }
 
+void StubCrashServer::AddSnapshotManager(SnapshotManager* snapshot_manager) {
+  FX_CHECK(snapshot_manager);
+  snapshot_manager_ = snapshot_manager;
+}
+
 bool StubCrashServer::MakeRequest(const Report& report, std::string* server_report_id) {
   latest_annotations_ = report.Annotations();
   latest_attachment_keys_.clear();
@@ -32,6 +37,19 @@ bool StubCrashServer::MakeRequest(const Report& report, std::string* server_repo
 
   if (report.Minidump().has_value()) {
     latest_attachment_keys_.push_back("uploadFileMinidump");
+  }
+
+  if (snapshot_manager_) {
+    auto snapshot = snapshot_manager_->GetSnapshot(report.SnapshotUuid());
+    if (auto annotations = snapshot.LockAnnotations(); annotations) {
+      for (const auto& [key, value] : *annotations) {
+        latest_annotations_.emplace(key, value);
+      }
+    }
+
+    if (auto archive = snapshot.LockArchive(); archive) {
+      latest_attachment_keys_.push_back(archive->key);
+    }
   }
 
   FX_CHECK(ExpectRequest()) << fxl::StringPrintf(

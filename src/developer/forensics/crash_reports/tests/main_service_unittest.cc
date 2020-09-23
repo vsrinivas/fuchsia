@@ -107,8 +107,8 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
           AllOf(NodeMatches(NameMatches("crash_reporter")),
                 ChildrenMatch(UnorderedElementsAreArray({
                     NodeMatches(AllOf(NameMatches("store"),
-                                      PropertyList(ElementsAre(UintIs(
-                                          "max_size_in_kb", kStoreMaxSize.ToKilobytes()))))),
+                                      PropertyList(ElementsAre(
+                                          UintIs("max_size_in_kb", kStoreMaxSize.ToKilobytes()))))),
                     NodeMatches(
                         AllOf(NameMatches("settings"),
                               PropertyList(ElementsAre(StringIs(

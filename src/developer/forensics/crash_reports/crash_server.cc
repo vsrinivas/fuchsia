@@ -19,11 +19,12 @@
 namespace forensics {
 namespace crash_reports {
 
-CrashServer::CrashServer(const std::string& url) : url_(url) {}
+CrashServer::CrashServer(const std::string& url, SnapshotManager* snapshot_manager)
+    : url_(url), snapshot_manager_(snapshot_manager) {}
 
 bool CrashServer::MakeRequest(const Report& report, std::string* server_report_id) {
   std::vector<SizedDataReader> attachment_readers;
-  attachment_readers.reserve(report.Attachments().size() + 1);
+  attachment_readers.reserve(report.Attachments().size() + 2u /*minidump and snapshot*/);
 
   std::map<std::string, crashpad::FileReaderInterface*> file_readers;
 
@@ -47,6 +48,20 @@ bool CrashServer::MakeRequest(const Report& report, std::string* server_report_i
   for (const auto& [key, value] : report.Annotations()) {
     http_multipart_builder.SetFormData(key, value);
   }
+
+  // Add the snapshot archive and annotations.
+  auto snapshot = snapshot_manager_->GetSnapshot(report.SnapshotUuid());
+  if (const auto archive = snapshot.LockArchive(); archive) {
+    attachment_readers.emplace_back(archive->value);
+    file_readers.emplace(archive->key, &attachment_readers.back());
+  }
+
+  if (const auto annotations = snapshot.LockAnnotations(); annotations) {
+    for (const auto& [key, value] : *annotations) {
+      http_multipart_builder.SetFormData(key, value);
+    }
+  }
+
   for (const auto& [filename, content] : file_readers) {
     http_multipart_builder.SetFileAttachment(filename, filename, content,
                                              "application/octet-stream");
@@ -61,7 +76,15 @@ bool CrashServer::MakeRequest(const Report& report, std::string* server_report_i
   http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
   http_transport->SetTimeout(60.0);  // 1 minute.
   http_transport->SetURL(url_);
-  return http_transport->ExecuteSynchronously(server_report_id);
+
+  // If the upload is successful, let |snapshot_manager_| know the snapshot isn't needed for this
+  // report any more.
+  if (http_transport->ExecuteSynchronously(server_report_id)) {
+    snapshot_manager_->Release(report.SnapshotUuid());
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace crash_reports
