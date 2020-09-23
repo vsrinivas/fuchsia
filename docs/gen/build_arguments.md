@@ -2,6 +2,13 @@
 
 ## All builds
 
+### acpica_debug_output
+Enable debug output in the ACPI library (used by the ACPI bus driver).
+
+**Current value (from the default):** `false`
+
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/43a1af390c18b298e0bf1a081cbb2f608a91cf98/BUILD.gn#9)
+
 ### active_partition
 
 **Current value (from the default):** `""`
@@ -40,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1106
+From //build/config/BUILDCONFIG.gn:1099
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -114,7 +121,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:85
+From //BUILD.gn:87
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -129,7 +136,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:29
+From //BUILD.gn:31
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
@@ -137,7 +144,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:29
+From //BUILD.gn:31
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -449,7 +456,7 @@ From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:37
+From //BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
@@ -457,7 +464,7 @@ From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:37
+From //BUILD.gn:39
 
 ### camera_debug
 
@@ -633,7 +640,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6506863fe54a27e6c258f6dcbdba1e1e1d5e0985/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -641,14 +648,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6506863fe54a27e6c258f6dcbdba1e1e1d5e0985/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/6506863fe54a27e6c258f6dcbdba1e1e1d5e0985/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -809,7 +816,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:869
+From //build/config/BUILDCONFIG.gn:862
 
 ### fastboot_product
 
@@ -857,7 +864,7 @@ From //build/images/args.gni:49
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6506863fe54a27e6c258f6dcbdba1e1e1d5e0985/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -872,14 +879,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/6506863fe54a27e6c258f6dcbdba1e1e1d5e0985/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6506863fe54a27e6c258f6dcbdba1e1e1d5e0985/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1127,7 +1134,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:56
+From //BUILD.gn:58
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -1135,7 +1142,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:56
+From //BUILD.gn:58
 
 ### host_os
 
@@ -1160,7 +1167,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/1be04b01dad80e4d77ddf711b2942288039f56b6/config.gni#12)
+From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/014c08a1e8b74eaffcd44a319dfc4893beda9e08/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1169,7 +1176,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"67"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/1be04b01dad80e4d77ddf711b2942288039f56b6/version.gni#9)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/014c08a1e8b74eaffcd44a319dfc4893beda9e08/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1177,7 +1184,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/1be04b01dad80e4d77ddf711b2942288039f56b6/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/014c08a1e8b74eaffcd44a319dfc4893beda9e08/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1436,7 +1443,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:779
+From //build/config/BUILDCONFIG.gn:772
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2001,7 +2008,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //src/ui/scenic/BUILD.gn:123
+From //src/ui/scenic/BUILD.gn:138
 
 ### scenic_ignore_vsync
 
@@ -2106,7 +2113,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1096
+From //build/config/BUILDCONFIG.gn:1089
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2115,7 +2122,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1101
+From //build/config/BUILDCONFIG.gn:1094
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2153,7 +2160,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:915
+From //build/config/BUILDCONFIG.gn:908
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2297,7 +2304,7 @@ and causes infra to schedule tests as if each one has the same duration.
 
 **Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:43
+From //BUILD.gn:45
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2407,7 +2414,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:889
+From //build/config/BUILDCONFIG.gn:882
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2423,7 +2430,7 @@ From //products/core.gni:86
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:51
+From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
@@ -2431,7 +2438,7 @@ From //products/core.gni:86
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:51
+From //BUILD.gn:53
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2699,7 +2706,7 @@ where `LEVEL` can be an integer or "max".
 
 **Current value (from the default):** `"zstd"`
 
-From //build/unification/zbi/migrated_zbi.gni:12
+From //build/zbi/zbi.gni:12
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
@@ -2769,7 +2776,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:110
+From //BUILD.gn:112
 
 ### zircon_asserts
 
@@ -2794,7 +2801,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"default"`
 
-From //BUILD.gn:80
+From //BUILD.gn:82
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2811,14 +2818,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:69
+From //BUILD.gn:71
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:73
+From //BUILD.gn:75
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -2860,7 +2867,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:77
+From //BUILD.gn:79
 
 ### zvb_partition_name
 Partition name from where image will be verified
@@ -2928,13 +2935,4 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
-
-## `target_cpu = "x64"`
-
-### acpica_debug_output
-Enable debug output in the ACPI library (used by the ACPI bus driver).
-
-**Current value (from the default):** `false`
-
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/43a1af390c18b298e0bf1a081cbb2f608a91cf98/BUILD.gn#9)
 
