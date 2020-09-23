@@ -45,16 +45,9 @@ zx::status<> add_entry(async_dispatcher_t* dispatcher, DriverRunner* runner,
 DriverComponent::DriverComponent(zx::channel exposed_dir, zx::channel driver)
     : exposed_dir_(std::move(exposed_dir)), driver_(std::move(driver)) {}
 
-void DriverComponent::Stop(DriverComponent::StopCompleter::Sync completer) {
-  // TODO: Remove this warning.
-  LOGF(WARNING, "\n\n==> DriverComponent::Stop\n");
-  driver_.reset();
-}
+void DriverComponent::Stop(DriverComponent::StopCompleter::Sync completer) { driver_.reset(); }
 
-void DriverComponent::Kill(DriverComponent::KillCompleter::Sync completer) {
-  // TODO: Remove this warning.
-  LOGF(WARNING, "\n\n==> DriverComponent::Kill\n");
-}
+void DriverComponent::Kill(DriverComponent::KillCompleter::Sync completer) {}
 
 DriverHostComponent::DriverHostComponent(
     zx::channel driver_host, async_dispatcher_t* dispatcher,
