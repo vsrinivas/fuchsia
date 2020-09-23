@@ -52,7 +52,7 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Bind(fidl::VectorView<uint8_t> addr, BindCompleter::Sync completer) override {
+  void Bind(::llcpp::fuchsia::net::SocketAddress addr, BindCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -60,7 +60,8 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Connect(fidl::VectorView<uint8_t> addr, ConnectCompleter::Sync completer) override {
+  void Connect(::llcpp::fuchsia::net::SocketAddress addr,
+               ConnectCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

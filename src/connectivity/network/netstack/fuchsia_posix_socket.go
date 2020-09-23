@@ -112,32 +112,28 @@ func (ep *endpoint) SetAttr(_ fidl.Context, flags uint32, attributes io.NodeAttr
 }
 
 // TODO(fxbug.dev/44347) Remove after soft transition.
-func (ep *endpoint) Bind(ctx fidl.Context, sockaddr []uint8) (socket.BaseSocketBindResult, error) {
-	addr, unspec, err := decodeAddr(sockaddr)
-	if err != nil || unspec {
-		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
-	}
-	result, err := ep.Bind2(ctx, addr)
+func (ep *endpoint) Bind2(ctx fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseSocketBind2Result, error) {
+	result, err := ep.Bind(ctx, sockaddr)
 	if err != nil {
-		return socket.BaseSocketBindResult{}, err
+		return socket.BaseSocketBind2Result{}, err
 	}
 	switch result.Which() {
-	case socket.BaseSocketBind2ResultResponse:
-		return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
-	case socket.BaseSocketBind2ResultErr:
-		return socket.BaseSocketBindResultWithErr(result.Err), nil
+	case socket.BaseSocketBindResultResponse:
+		return socket.BaseSocketBind2ResultWithResponse(socket.BaseSocketBind2Response{}), nil
+	case socket.BaseSocketBindResultErr:
+		return socket.BaseSocketBind2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("unrecognized Bind2 return %d", result.Which()))
+		panic(fmt.Sprintf("unrecognized Bind return %d", result.Which()))
 	}
 }
 
-func (ep *endpoint) Bind2(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseSocketBind2Result, error) {
+func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseSocketBindResult, error) {
 	addr, err := toTCPIPFullAddress(sockaddr)
 	if err != nil {
-		return socket.BaseSocketBind2ResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
 	}
 	if err := ep.ep.Bind(addr); err != nil {
-		return socket.BaseSocketBind2ResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
 	{
@@ -148,59 +144,42 @@ func (ep *endpoint) Bind2(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socke
 		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ep, localAddr)
 	}
 
-	return socket.BaseSocketBind2ResultWithResponse(socket.BaseSocketBind2Response{}), nil
+	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
 }
 
-func (ep *endpoint) Connect(ctx fidl.Context, sockaddr []uint8) (socket.BaseSocketConnectResult, error) {
-	addr, unspec, err := decodeAddr(sockaddr)
+// TODO(fxbug.dev/44347) Remove after soft transition.
+func (ep *endpoint) Connect2(ctx fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnect2Result, error) {
+	result, err := ep.Connect(ctx, address)
 	if err != nil {
-		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
-	}
-	if unspec {
-		result, err := ep.Disconnect(ctx)
-		if err != nil {
-			return socket.BaseSocketConnectResult{}, err
-		}
-		switch result.Which() {
-		case socket.BaseSocketDisconnectResultResponse:
-			return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
-		case socket.BaseSocketDisconnectResultErr:
-			return socket.BaseSocketConnectResultWithErr(result.Err), nil
-		default:
-			panic(fmt.Sprintf("unrecognized Disconnect return %d", result.Which()))
-		}
-	}
-	result, err := ep.Connect2(ctx, addr)
-	if err != nil {
-		return socket.BaseSocketConnectResult{}, err
+		return socket.BaseSocketConnect2Result{}, err
 	}
 	switch result.Which() {
-	case socket.BaseSocketConnect2ResultResponse:
-		return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
-	case socket.BaseSocketConnect2ResultErr:
-		return socket.BaseSocketConnectResultWithErr(result.Err), nil
+	case socket.BaseSocketConnectResultResponse:
+		return socket.BaseSocketConnect2ResultWithResponse(socket.BaseSocketConnect2Response{}), nil
+	case socket.BaseSocketConnectResultErr:
+		return socket.BaseSocketConnect2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("unrecognized Connect2 return %d", result.Which()))
+		panic(fmt.Sprintf("unrecognized Connect return %d", result.Which()))
 	}
 }
 
-func (ep *endpoint) Connect2(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnect2Result, error) {
+func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnectResult, error) {
 	addr, err := toTCPIPFullAddress(address)
 	if err != nil {
-		return socket.BaseSocketConnect2ResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
 	}
 	// NB: We can't just compare the length to zero because that would
 	// mishandle the IPv6-mapped IPv4 unspecified address.
 	disconnect := addr.Port == 0 && (len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified())
 	if disconnect {
 		if err := ep.ep.Disconnect(); err != nil {
-			return socket.BaseSocketConnect2ResultWithErr(tcpipErrorToCode(err)), nil
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	} else {
 		if l := len(addr.Addr); l > 0 {
 			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
 				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ep, addr.Addr)
-				return socket.BaseSocketConnect2ResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
+				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
 			}
 		}
 		if err := ep.ep.Connect(addr); err != nil {
@@ -211,7 +190,7 @@ func (ep *endpoint) Connect2(_ fidl.Context, address fidlnet.SocketAddress) (soc
 				}
 				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
 			}
-			return socket.BaseSocketConnect2ResultWithErr(tcpipErrorToCode(err)), nil
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	}
 
@@ -232,7 +211,7 @@ func (ep *endpoint) Connect2(_ fidl.Context, address fidlnet.SocketAddress) (soc
 		}
 	}
 
-	return socket.BaseSocketConnect2ResultWithResponse(socket.BaseSocketConnect2Response{}), nil
+	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
 }
 
 func (ep *endpoint) Disconnect(_ fidl.Context) (socket.BaseSocketDisconnectResult, error) {
@@ -242,52 +221,54 @@ func (ep *endpoint) Disconnect(_ fidl.Context) (socket.BaseSocketDisconnectResul
 	return socket.BaseSocketDisconnectResultWithResponse(socket.BaseSocketDisconnectResponse{}), nil
 }
 
-func (ep *endpoint) GetSockName(ctx fidl.Context) (socket.BaseSocketGetSockNameResult, error) {
-	result, err := ep.GetSockName2(ctx)
+// TODO(fxbug.dev/44347) Remove after soft transition.
+func (ep *endpoint) GetSockName2(ctx fidl.Context) (socket.BaseSocketGetSockName2Result, error) {
+	result, err := ep.GetSockName(ctx)
 	if err != nil {
-		return socket.BaseSocketGetSockNameResult{}, err
+		return socket.BaseSocketGetSockName2Result{}, err
 	}
 	switch result.Which() {
-	case socket.BaseSocketGetSockName2ResultResponse:
-		return socket.BaseSocketGetSockNameResultWithResponse(socket.BaseSocketGetSockNameResponse{Addr: encodeAddr(result.Response.Addr)}), nil
-	case socket.BaseSocketGetSockName2ResultErr:
-		return socket.BaseSocketGetSockNameResultWithErr(result.Err), nil
+	case socket.BaseSocketGetSockNameResultResponse:
+		return socket.BaseSocketGetSockName2ResultWithResponse(socket.BaseSocketGetSockName2Response{Addr: result.Response.Addr}), nil
+	case socket.BaseSocketGetSockNameResultErr:
+		return socket.BaseSocketGetSockName2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("unrecognized GetSocketName2 return %d", result.Which()))
+		panic(fmt.Sprintf("unrecognized GetSocketName return %d", result.Which()))
 	}
 }
 
-func (ep *endpoint) GetSockName2(fidl.Context) (socket.BaseSocketGetSockName2Result, error) {
+func (ep *endpoint) GetSockName(fidl.Context) (socket.BaseSocketGetSockNameResult, error) {
 	addr, err := ep.ep.GetLocalAddress()
 	if err != nil {
-		return socket.BaseSocketGetSockName2ResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetSockName2ResultWithResponse(socket.BaseSocketGetSockName2Response{
+	return socket.BaseSocketGetSockNameResultWithResponse(socket.BaseSocketGetSockNameResponse{
 		Addr: toNetSocketAddress(ep.netProto, addr),
 	}), nil
 }
 
-func (ep *endpoint) GetPeerName(ctx fidl.Context) (socket.BaseSocketGetPeerNameResult, error) {
-	result, err := ep.GetPeerName2(ctx)
+// TODO(fxbug.dev/44347) Remove after soft transition.
+func (ep *endpoint) GetPeerName2(ctx fidl.Context) (socket.BaseSocketGetPeerName2Result, error) {
+	result, err := ep.GetPeerName(ctx)
 	if err != nil {
-		return socket.BaseSocketGetPeerNameResult{}, err
+		return socket.BaseSocketGetPeerName2Result{}, err
 	}
 	switch result.Which() {
-	case socket.BaseSocketGetPeerName2ResultResponse:
-		return socket.BaseSocketGetPeerNameResultWithResponse(socket.BaseSocketGetPeerNameResponse{Addr: encodeAddr(result.Response.Addr)}), nil
-	case socket.BaseSocketGetPeerName2ResultErr:
-		return socket.BaseSocketGetPeerNameResultWithErr(result.Err), nil
+	case socket.BaseSocketGetPeerNameResultResponse:
+		return socket.BaseSocketGetPeerName2ResultWithResponse(socket.BaseSocketGetPeerName2Response{Addr: result.Response.Addr}), nil
+	case socket.BaseSocketGetPeerNameResultErr:
+		return socket.BaseSocketGetPeerName2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("unrecognized GetPeerName2 return %d", result.Which()))
+		panic(fmt.Sprintf("unrecognized GetPeerName return %d", result.Which()))
 	}
 }
 
-func (ep *endpoint) GetPeerName2(fidl.Context) (socket.BaseSocketGetPeerName2Result, error) {
+func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseSocketGetPeerNameResult, error) {
 	addr, err := ep.ep.GetRemoteAddress()
 	if err != nil {
-		return socket.BaseSocketGetPeerName2ResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetPeerName2ResultWithResponse(socket.BaseSocketGetPeerName2Response{
+	return socket.BaseSocketGetPeerNameResultWithResponse(socket.BaseSocketGetPeerNameResponse{
 		Addr: toNetSocketAddress(ep.netProto, addr),
 	}), nil
 }
@@ -509,7 +490,7 @@ func (epe *endpointWithEvent) Describe(fidl.Context) (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdown2Result, error) {
+func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdownResult, error) {
 	var signals zx.Signals
 	var flags tcpip.ShutdownFlags
 
@@ -522,42 +503,33 @@ func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode)
 		flags |= tcpip.ShutdownWrite
 	}
 	if flags == 0 {
-		return socket.DatagramSocketShutdown2ResultWithErr(C.EINVAL), nil
+		return socket.DatagramSocketShutdownResultWithErr(C.EINVAL), nil
 	}
 	if err := epe.ep.Shutdown(flags); err != nil {
-		return socket.DatagramSocketShutdown2ResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.DatagramSocketShutdownResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if flags&tcpip.ShutdownRead != 0 {
 		epe.wq.EventUnregister(&epe.entry)
 	}
 	if err := epe.local.SignalPeer(0, signals); err != nil {
-		return socket.DatagramSocketShutdown2Result{}, err
+		return socket.DatagramSocketShutdownResult{}, err
 	}
-	return socket.DatagramSocketShutdown2ResultWithResponse(socket.DatagramSocketShutdown2Response{}), nil
+	return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
 }
 
 // TODO(fxbug.dev/44347) Remove after soft transition.
-func (epe *endpointWithEvent) Shutdown(ctx fidl.Context, how int16) (socket.DatagramSocketShutdownResult, error) {
-	var mode socket.ShutdownMode
-	switch how {
-	case C.SHUT_RD:
-		mode = socket.ShutdownModeRead
-	case C.SHUT_WR:
-		mode = socket.ShutdownModeWrite
-	case C.SHUT_RDWR:
-		mode = socket.ShutdownModeRead | socket.ShutdownModeWrite
-	}
-	result, err := epe.Shutdown2(ctx, mode)
+func (epe *endpointWithEvent) Shutdown2(ctx fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdown2Result, error) {
+	result, err := epe.Shutdown(ctx, how)
 	if err != nil {
-		return socket.DatagramSocketShutdownResult{}, err
+		return socket.DatagramSocketShutdown2Result{}, err
 	}
 	switch result.Which() {
-	case socket.DatagramSocketShutdown2ResultResponse:
-		return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
-	case socket.DatagramSocketShutdown2ResultErr:
-		return socket.DatagramSocketShutdownResultWithErr(result.Err), nil
+	case socket.DatagramSocketShutdownResultResponse:
+		return socket.DatagramSocketShutdown2ResultWithResponse(socket.DatagramSocketShutdown2Response{}), nil
+	case socket.DatagramSocketShutdownResultErr:
+		return socket.DatagramSocketShutdown2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("unrecognized Shutdown2 return %d", result.Which()))
+		panic(fmt.Sprintf("unrecognized Shutdown return %d", result.Which()))
 	}
 }
 
@@ -1078,34 +1050,27 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.Nod
 }
 
 // TODO(fxbug.dev/44347) Remove after soft transition.
-func (s *datagramSocketImpl) RecvMsg(ctx fidl.Context, addrLen, dataLen, controlLen uint32, flags int16) (socket.DatagramSocketRecvMsgResult, error) {
-	result, err := s.RecvMsg2(ctx, addrLen != 0, dataLen, controlLen != 0, socket.RecvMsgFlags(flags))
+func (s *datagramSocketImpl) RecvMsg2(ctx fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsg2Result, error) {
+	result, err := s.RecvMsg(ctx, wantAddr, dataLen, wantControl, flags)
 	if err != nil {
-		return socket.DatagramSocketRecvMsgResult{}, err
+		return socket.DatagramSocketRecvMsg2Result{}, err
 	}
 	switch result.Which() {
-	case socket.DatagramSocketRecvMsg2ResultResponse:
-		var addr []uint8
-		if result.Response.Addr != nil {
-			addr = encodeAddr(*result.Response.Addr)
-			if uint32(len(addr)) > addrLen {
-				addr = addr[:addrLen]
-			}
-		}
-		return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
-			Addr:      addr,
+	case socket.DatagramSocketRecvMsgResultResponse:
+		return socket.DatagramSocketRecvMsg2ResultWithResponse(socket.DatagramSocketRecvMsg2Response{
+			Addr:      result.Response.Addr,
 			Data:      result.Response.Data,
-			Control:   nil,
+			Control:   result.Response.Control,
 			Truncated: result.Response.Truncated,
 		}), nil
-	case socket.DatagramSocketRecvMsg2ResultErr:
-		return socket.DatagramSocketRecvMsgResultWithErr(result.Err), nil
+	case socket.DatagramSocketRecvMsgResultErr:
+		return socket.DatagramSocketRecvMsg2ResultWithErr(result.Err), nil
 	default:
-		panic(fmt.Sprintf("unrecognized RecvMsg2 return %d", result.Which()))
+		panic(fmt.Sprintf("unrecognized RecvMsg return %d", result.Which()))
 	}
 }
 
-func (s *datagramSocketImpl) RecvMsg2(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsg2Result, error) {
+func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
 	s.mu.Lock()
 	var err *tcpip.Error
 	if len(s.mu.readView) == 0 {
@@ -1119,7 +1084,7 @@ func (s *datagramSocketImpl) RecvMsg2(_ fidl.Context, wantAddr bool, dataLen uin
 	}
 	s.mu.Unlock()
 	if err != nil {
-		return socket.DatagramSocketRecvMsg2ResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	{
 		var err error
@@ -1145,42 +1110,16 @@ func (s *datagramSocketImpl) RecvMsg2(_ fidl.Context, wantAddr bool, dataLen uin
 		truncated = uint32(t)
 		v = v[:dataLen]
 	}
-	return socket.DatagramSocketRecvMsg2ResultWithResponse(socket.DatagramSocketRecvMsg2Response{
+	return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
 		Addr:      addr,
 		Data:      v,
 		Truncated: truncated,
 	}), nil
 }
 
-// TODO(fxbug.dev/44347) Remove after soft transition.
-func (s *datagramSocketImpl) SendMsg2(ctx fidl.Context, addr []uint8, data []uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsg2Result, error) {
-	var sockaddr *fidlnet.SocketAddress
-	if len(addr) != 0 {
-		addr, unspec, err := decodeAddr(addr)
-		if err != nil || unspec {
-			return socket.DatagramSocketSendMsg2ResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
-		}
-		sockaddr = &addr
-	}
-	// NOTE: we're just dropping control, this is only safe because SendMsg also
-	// drops it.
-	result, err := s.SendMsg(ctx, sockaddr, data, socket.SendControlData{}, socket.SendMsgFlags(flags))
-	if err != nil {
-		return socket.DatagramSocketSendMsg2Result{}, err
-	}
-	switch result.Which() {
-	case socket.DatagramSocketSendMsgResultResponse:
-		return socket.DatagramSocketSendMsg2ResultWithResponse(socket.DatagramSocketSendMsg2Response{Len: result.Response.Len}), nil
-	case socket.DatagramSocketSendMsgResultErr:
-		return socket.DatagramSocketSendMsg2ResultWithErr(result.Err), nil
-	default:
-		panic(fmt.Sprintf("unrecognized SendMsg return %d", result.Which()))
-	}
-}
-
 // NB: Due to another soft transition that happened, SendMsg is the "final
 // state" we want to get at, while SendMsg2 is the "old" one.
-func (s *datagramSocketImpl) SendMsg(ctx fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, flags socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, flags socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
 	var writeOpts tcpip.WriteOptions
 	if addr != nil {
 		addr, err := toTCPIPFullAddress(*addr)
@@ -1542,82 +1481,6 @@ func (sp *providerImpl) StreamSocket(ctx fidl.Context, domain socket.Domain, pro
 	return socket.ProviderStreamSocketResultWithResponse(socket.ProviderStreamSocketResponse{
 		S: socket.StreamSocketWithCtxInterface{Channel: streamSocketInterface.Channel},
 	}), nil
-}
-
-// TODO(fxbug.dev/44347) Remove after soft transition.
-func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (socket.ProviderSocket2Result, error) {
-	var socketDomain socket.Domain
-	switch domain {
-	case C.AF_INET:
-		socketDomain = socket.DomainIpv4
-	case C.AF_INET6:
-		socketDomain = socket.DomainIpv6
-	case C.AF_PACKET:
-		return socket.ProviderSocket2ResultWithErr(posix.ErrnoEperm), nil
-	default:
-		return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
-	}
-	// Highest two bits modify the socket type.
-	const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
-
-	switch typ & sockTypesMask {
-	case C.SOCK_STREAM:
-		var socketProtocol socket.StreamSocketProtocol
-		switch protocol {
-		case C.IPPROTO_IP, C.IPPROTO_TCP:
-			socketProtocol = socket.StreamSocketProtocolTcp
-		default:
-			return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
-		}
-		result, err := sp.StreamSocket(ctx, socketDomain, socketProtocol)
-		if err != nil {
-			return socket.ProviderSocket2Result{}, nil
-		}
-		switch result.Which() {
-		case socket.ProviderStreamSocketResultResponse:
-			return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{S: socket.BaseSocketWithCtxInterface{
-				Channel: result.Response.S.Channel,
-			}}), nil
-		case socket.ProviderStreamSocketResultErr:
-			return socket.ProviderSocket2ResultWithErr(result.Err), nil
-		default:
-			panic(fmt.Sprintf("Unexpected socket.ProviderStreamSocketResult result ordinal %x", result.Which()))
-		}
-	case C.SOCK_DGRAM:
-		var socketProtocol socket.DatagramSocketProtocol
-		switch protocol {
-		case C.IPPROTO_IP, C.IPPROTO_UDP:
-			socketProtocol = socket.DatagramSocketProtocolUdp
-		case C.IPPROTO_ICMP:
-			if socketDomain != socket.DomainIpv4 {
-				return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
-			}
-			socketProtocol = socket.DatagramSocketProtocolIcmpEcho
-		case C.IPPROTO_ICMPV6:
-			if socketDomain != socket.DomainIpv6 {
-				return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
-			}
-			socketProtocol = socket.DatagramSocketProtocolIcmpEcho
-		default:
-			return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
-		}
-		result, err := sp.DatagramSocket(ctx, socketDomain, socketProtocol)
-		if err != nil {
-			return socket.ProviderSocket2Result{}, nil
-		}
-		switch result.Which() {
-		case socket.ProviderDatagramSocketResultResponse:
-			return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{S: socket.BaseSocketWithCtxInterface{
-				Channel: result.Response.S.Channel,
-			}}), nil
-		case socket.ProviderDatagramSocketResultErr:
-			return socket.ProviderSocket2ResultWithErr(result.Err), nil
-		default:
-			panic(fmt.Sprintf("Unexpected socket.ProviderStreamSocketResult result ordinal %x", result.Which()))
-		}
-	default:
-		return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
-	}
 }
 
 func (sp *providerImpl) InterfaceIndexToName(_ fidl.Context, index uint64) (socket.ProviderInterfaceIndexToNameResult, error) {

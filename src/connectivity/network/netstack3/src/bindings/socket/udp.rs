@@ -376,12 +376,11 @@ where
                                 responder_send!(responder, &mut info);
                             }
                         }
-                        psocket::DatagramSocketRequest::Connect { addr: _, responder } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
+                        psocket::DatagramSocketRequest::Connect { addr, responder } => {
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.connect(addr)
+                            );
                         }
                         psocket::DatagramSocketRequest::Connect2 { addr, responder } => {
                             responder_send!(
@@ -426,22 +425,17 @@ where
                         } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
-                        psocket::DatagramSocketRequest::Bind { addr: _, responder } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
+                        psocket::DatagramSocketRequest::Bind { addr, responder } => {
+                            responder_send!(responder, &mut self.make_handler().await.bind(addr));
                         }
                         psocket::DatagramSocketRequest::Bind2 { addr, responder } => {
                             responder_send!(responder, &mut self.make_handler().await.bind(addr));
                         }
                         psocket::DatagramSocketRequest::GetSockName { responder } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.get_sock_name()
+                            );
                         }
                         psocket::DatagramSocketRequest::GetSockName2 { responder } => {
                             responder_send!(
@@ -450,11 +444,10 @@ where
                             );
                         }
                         psocket::DatagramSocketRequest::GetPeerName { responder } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.get_peer_name()
+                            );
                         }
                         psocket::DatagramSocketRequest::GetPeerName2 { responder } => {
                             responder_send!(
@@ -479,31 +472,31 @@ where
                             warn!("UDP getsockopt {} {} not implemented", level, optname);
                             responder_send!(responder, &mut Err(Errno::Enoprotoopt))
                         }
-                        DatagramSocketRequest::Shutdown { how: _, responder } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
-                        }
+                        DatagramSocketRequest::Shutdown { mode, responder } => responder_send!(
+                            responder,
+                            &mut self.make_handler().await.shutdown(mode)
+                        ),
                         DatagramSocketRequest::Shutdown2 { mode, responder } => responder_send!(
                             responder,
                             &mut self.make_handler().await.shutdown(mode)
                         ),
-                        DatagramSocketRequest::RecvMsg {
-                            addr_len: _,
-                            data_len: _,
-                            control_len: _,
+                        DatagramSocketRequest::RecvMsg2 {
+                            want_addr,
+                            data_len,
+                            want_control: _,
                             flags: _,
                             responder,
                         } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
+                            // TODO(brunodalbo) handle control and flags
+                            responder_send!(
+                                responder,
+                                &mut self
+                                    .make_handler()
+                                    .await
+                                    .recv_msg(want_addr, data_len as usize)
+                            );
                         }
-                        DatagramSocketRequest::RecvMsg2 {
+                        DatagramSocketRequest::RecvMsg {
                             want_addr,
                             data_len,
                             want_control: _,
@@ -534,19 +527,6 @@ where
                                     .await
                                     .send_msg(addr.map(|addr| *addr), data)
                             );
-                        }
-                        DatagramSocketRequest::SendMsg2 {
-                            addr: _,
-                            data: _,
-                            control: _,
-                            flags: _,
-                            responder,
-                        } => {
-                            // NB: Netstack3 is not load-bearing enough to justify
-                            // maintaining two implementations.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
                         }
                         DatagramSocketRequest::NodeGetFlags { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
@@ -917,6 +897,7 @@ where
 mod tests {
     use super::*;
 
+    use anyhow::Context as _;
     use fidl::{endpoints::ServerEnd, AsyncChannel};
     use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
@@ -974,7 +955,7 @@ mod tests {
 
         // Pass a bad domain.
         let res = proxy
-            .connect2(&mut A::DifferentDomain::create(A::DifferentDomain::LOCAL_ADDR, 1010))
+            .connect(&mut A::DifferentDomain::create(A::DifferentDomain::LOCAL_ADDR, 1010))
             .await
             .unwrap()
             .expect_err("connect fails");
@@ -982,10 +963,7 @@ mod tests {
 
         // Pass an unspecified remote address.
         let res = proxy
-            .connect2(&mut A::create(
-                <A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS,
-                1010,
-            ))
+            .connect(&mut A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 1010))
             .await
             .unwrap()
             .expect_err("connect fails");
@@ -993,7 +971,7 @@ mod tests {
 
         // Pass a bad port.
         let res = proxy
-            .connect2(&mut A::create(A::LOCAL_ADDR, 0))
+            .connect(&mut A::create(A::LOCAL_ADDR, 0))
             .await
             .unwrap()
             .expect_err("connect fails");
@@ -1001,7 +979,7 @@ mod tests {
 
         // Pass an unreachable address (tests error forwarding from `udp_connect`).
         let res = proxy
-            .connect2(&mut A::create(A::UNREACHABLE_ADDR, 1010))
+            .connect(&mut A::create(A::UNREACHABLE_ADDR, 1010))
             .await
             .unwrap()
             .expect_err("connect fails");
@@ -1021,14 +999,14 @@ mod tests {
     async fn test_udp_connect<A: TestSockAddr>() {
         let (_t, proxy) = udp_prepare_test::<A>().await;
         let () = proxy
-            .connect2(&mut A::create(A::REMOTE_ADDR, 200))
+            .connect(&mut A::create(A::REMOTE_ADDR, 200))
             .await
             .unwrap()
             .expect("connect succeeds");
 
         // Can connect again to a different remote should succeed.
         let () = proxy
-            .connect2(&mut A::create(A::REMOTE_ADDR_2, 200))
+            .connect(&mut A::create(A::REMOTE_ADDR_2, 200))
             .await
             .unwrap()
             .expect("connect suceeds");
@@ -1049,25 +1027,22 @@ mod tests {
         let stack = t.get(0);
         // Can bind to local address.
         let () =
-            socket.bind2(&mut A::create(A::LOCAL_ADDR, 200)).await.unwrap().expect("bind succeeds");
+            socket.bind(&mut A::create(A::LOCAL_ADDR, 200)).await.unwrap().expect("bind succeeds");
 
         // Can't bind again (to another port).
-        let res = socket
-            .bind2(&mut A::create(A::LOCAL_ADDR, 201))
-            .await
-            .unwrap()
-            .expect_err("bind fails");
+        let res =
+            socket.bind(&mut A::create(A::LOCAL_ADDR, 201)).await.unwrap().expect_err("bind fails");
         assert_eq!(res, Errno::Ealready);
 
         // Can bind another socket to a different port.
         let socket = get_socket::<A>(stack).await;
         let () =
-            socket.bind2(&mut A::create(A::LOCAL_ADDR, 201)).await.unwrap().expect("bind succeeds");
+            socket.bind(&mut A::create(A::LOCAL_ADDR, 201)).await.unwrap().expect("bind succeeds");
 
         // Can bind to unspecified address in a different port.
         let socket = get_socket::<A>(stack).await;
         let () = socket
-            .bind2(&mut A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 202))
+            .bind(&mut A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 202))
             .await
             .unwrap()
             .expect("bind succeeds");
@@ -1087,10 +1062,10 @@ mod tests {
         let (_t, socket) = udp_prepare_test::<A>().await;
         // Can bind to local address.
         let () =
-            socket.bind2(&mut A::create(A::LOCAL_ADDR, 200)).await.unwrap().expect("bind suceeds");
+            socket.bind(&mut A::create(A::LOCAL_ADDR, 200)).await.unwrap().expect("bind suceeds");
 
         let () = socket
-            .connect2(&mut A::create(A::REMOTE_ADDR, 1010))
+            .connect(&mut A::create(A::REMOTE_ADDR, 1010))
             .await
             .unwrap()
             .expect("connect succeeds");
@@ -1136,14 +1111,14 @@ mod tests {
             Errno::Enotsock
         );
         assert_eq!(
-            alice_socket.get_peer_name2().await.unwrap().expect_err("alice getpeername fails"),
+            alice_socket.get_peer_name().await.unwrap().expect_err("alice getpeername fails"),
             Errno::Enotsock
         );
 
         // Setup Alice as a server, bound to LOCAL_ADDR:200
         println!("Configuring alice...");
         let () = alice_socket
-            .bind2(&mut A::create(A::LOCAL_ADDR, 200))
+            .bind(&mut A::create(A::LOCAL_ADDR, 200))
             .await
             .unwrap()
             .expect("alice bind suceeds");
@@ -1154,11 +1129,7 @@ mod tests {
             A::create(A::LOCAL_ADDR, 200)
         );
         assert_eq!(
-            alice_socket
-                .get_peer_name2()
-                .await
-                .unwrap()
-                .expect_err("alice getpeername should fail"),
+            alice_socket.get_peer_name().await.unwrap().expect_err("alice getpeername should fail"),
             Errno::Enotconn
         );
 
@@ -1166,7 +1137,7 @@ mod tests {
         // events:
         assert_eq!(
             alice_socket
-                .recv_msg2(false, 2048, false, psocket::RecvMsgFlags::empty())
+                .recv_msg(false, 2048, false, psocket::RecvMsgFlags::empty())
                 .await
                 .unwrap()
                 .expect_err("Reading from alice should fail"),
@@ -1184,7 +1155,7 @@ mod tests {
         let bob = t.get(1);
         let (bob_socket, bob_events) = get_socket_and_event::<A>(bob).await;
         let () = bob_socket
-            .bind2(&mut A::create(A::REMOTE_ADDR, 300))
+            .bind(&mut A::create(A::REMOTE_ADDR, 300))
             .await
             .unwrap()
             .expect("bob bind suceeds");
@@ -1196,7 +1167,7 @@ mod tests {
         );
         assert_eq!(
             bob_socket
-                .get_peer_name2()
+                .get_peer_name()
                 .await
                 .unwrap()
                 .expect_err("get peer name should fail before connected"),
@@ -1206,14 +1177,14 @@ mod tests {
         // Connect Bob to Alice on LOCAL_ADDR:200
         println!("Connecting bob to alice...");
         let () = bob_socket
-            .connect2(&mut A::create(A::LOCAL_ADDR, 200))
+            .connect(&mut A::create(A::LOCAL_ADDR, 200))
             .await
             .unwrap()
             .expect("Connect succeeds");
 
         // Verify that Bob has the peer socket set correctly
         assert_eq!(
-            bob_socket.get_peer_name2().await.unwrap().expect("bob getpeername suceeds"),
+            bob_socket.get_peer_name().await.unwrap().expect("bob getpeername suceeds"),
             A::create(A::LOCAL_ADDR, 200)
         );
 
@@ -1248,7 +1219,7 @@ mod tests {
             .expect("waiting for readable succeeds");
 
         let (from, data, _, truncated) = alice_socket
-            .recv_msg2(true, 2048, false, psocket::RecvMsgFlags::empty())
+            .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
             .await
             .unwrap()
             .expect("recvmsg suceeeds");
@@ -1348,14 +1319,14 @@ mod tests {
             ),
         }
 
-        alice_socket
-            .bind2(&mut A::create(A::LOCAL_ADDR, 200))
+        let () = alice_socket
+            .bind(&mut A::create(A::LOCAL_ADDR, 200))
             .await
             .unwrap()
             .expect("failed to bind for alice");
         // We should be able to read that back from the cloned socket.
         assert_eq!(
-            alice_cloned.get_sock_name2().await.unwrap().expect("failed to getsockname for alice"),
+            alice_cloned.get_sock_name().await.unwrap().expect("failed to getsockname for alice"),
             A::create(A::LOCAL_ADDR, 200)
         );
 
@@ -1363,14 +1334,14 @@ mod tests {
         let bob_cloned = socket_clone(&bob_socket, fio::CLONE_FLAG_SAME_RIGHTS)
             .await
             .expect("failed to clone socket");
-        bob_cloned
-            .bind2(&mut A::create(A::REMOTE_ADDR, 200))
+        let () = bob_cloned
+            .bind(&mut A::create(A::REMOTE_ADDR, 200))
             .await
             .unwrap()
             .expect("failed to bind for bob");
         // We should be able to read that back from the original socket.
         assert_eq!(
-            bob_socket.get_sock_name2().await.unwrap().expect("failed to getsockname for bob"),
+            bob_socket.get_sock_name().await.unwrap().expect("failed to getsockname for bob"),
             A::create(A::REMOTE_ADDR, 200)
         );
 
@@ -1395,7 +1366,7 @@ mod tests {
 
         // Receive from the cloned socket.
         let (from, data, _, truncated) = bob_cloned
-            .recv_msg2(true, 2048, false, psocket::RecvMsgFlags::empty())
+            .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
             .await
             .unwrap()
             .expect("failed to recv_msg");
@@ -1405,7 +1376,7 @@ mod tests {
         // The data have already been received on the cloned socket
         assert_eq!(
             bob_socket
-                .recv_msg2(false, 2048, false, psocket::RecvMsgFlags::empty())
+                .recv_msg(false, 2048, false, psocket::RecvMsgFlags::empty())
                 .await
                 .unwrap()
                 .expect_err("Reading from bob should fail"),
@@ -1436,7 +1407,7 @@ mod tests {
 
             assert_eq!(
                 bob_writeonly
-                    .recv_msg2(false, 2048, false, psocket::RecvMsgFlags::empty())
+                    .recv_msg(false, 2048, false, psocket::RecvMsgFlags::empty())
                     .await
                     .unwrap()
                     .expect_err("should not recv_msg on a writeonly socket"),
@@ -1467,7 +1438,7 @@ mod tests {
                 .expect("failed to wait for readable event on alice readonly");
 
             let (from, data, _, truncated) = alice_readonly
-                .recv_msg2(true, 2048, false, psocket::RecvMsgFlags::empty())
+                .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
                 .await
                 .unwrap()
                 .expect("failed to recv_msg on alice readonly");
@@ -1477,7 +1448,13 @@ mod tests {
         }
 
         // Close the socket should not invalidate the cloned socket.
-        bob_socket.close().await.expect("failed to close bob's socket");
+        let () = bob_socket
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close Bob's socket");
+
         assert_eq!(
             bob_cloned
                 .send_msg(
@@ -1492,13 +1469,18 @@ mod tests {
             body.len() as i64
         );
 
-        alice_cloned.close().await.expect("failed to close");
+        let () = alice_cloned
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close");
         fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING)
             .await
             .expect("failed to wait for readable event on alice");
 
         let (from, data, _, truncated) = alice_socket
-            .recv_msg2(true, 2048, false, psocket::RecvMsgFlags::empty())
+            .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
             .await
             .unwrap()
             .expect("failed to recv_msg");
@@ -1520,8 +1502,18 @@ mod tests {
                 .await;
         }
 
-        alice_socket.close().await.expect("failed to close");
-        bob_cloned.close().await.expect("failed to close");
+        let () = alice_socket
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close");
+        let () = bob_cloned
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close");
 
         // But the sockets should have gone here.
         for i in 0..2 {
@@ -1558,8 +1550,13 @@ mod tests {
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack).await;
         let cloned = socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap();
-        socket.close().await.expect("failed to close the socket");
-        socket
+        let () = socket
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close the socket");
+        let _: fidl::Error = socket
             .close()
             .await
             .expect_err("should not be able to close the socket twice on the same channel");
@@ -1573,7 +1570,12 @@ mod tests {
                 assert!(!udpsocks.binding_data.is_empty());
             })
             .await;
-        cloned.close().await.expect("failed to close the socket");
+        let () = cloned
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close the socket");
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
@@ -1607,7 +1609,12 @@ mod tests {
             // socket goes out of scope indicating an implicit close.
         };
         // Using an explicit close here.
-        cloned.close().await.expect("failed to close");
+        let () = cloned
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close");
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
@@ -1656,7 +1663,12 @@ mod tests {
         expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_ADMIN).await;
         // executable
         expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_EXECUTABLE).await;
-        socket.close().await.expect("failed to close");
+        let () = socket
+            .close()
+            .await
+            .context("FIDL error")
+            .and_then(|s| zx::Status::ok(s).context("close failed"))
+            .expect("failed to close");
 
         // make sure we don't leak anything.
         test_stack
@@ -1684,25 +1696,25 @@ mod tests {
         let mut remote = A::create(A::REMOTE_ADDR, 300);
         assert_eq!(
             socket
-                .shutdown2(psocket::ShutdownMode::Write)
+                .shutdown(psocket::ShutdownMode::Write)
                 .await
                 .unwrap()
                 .expect_err("should not shutdown an unconnected socket"),
             Errno::Enotconn,
         );
-        socket.bind2(&mut local).await.unwrap().expect("failed to bind");
+        let () = socket.bind(&mut local).await.unwrap().expect("failed to bind");
         assert_eq!(
             socket
-                .shutdown2(psocket::ShutdownMode::Write)
+                .shutdown(psocket::ShutdownMode::Write)
                 .await
                 .unwrap()
                 .expect_err("should not shutdown an unconnected socket"),
             Errno::Enotconn,
         );
-        socket.connect2(&mut remote).await.unwrap().expect("failed to connect");
+        let () = socket.connect(&mut remote).await.unwrap().expect("failed to connect");
         assert_eq!(
             socket
-                .shutdown2(psocket::ShutdownMode::empty())
+                .shutdown(psocket::ShutdownMode::empty())
                 .await
                 .unwrap()
                 .expect_err("invalid args"),
@@ -1711,7 +1723,11 @@ mod tests {
 
         // Cannot send
         let body = "Hello".as_bytes();
-        socket.shutdown2(psocket::ShutdownMode::Write).await.unwrap().expect("failed to shutdown");
+        let () = socket
+            .shutdown(psocket::ShutdownMode::Write)
+            .await
+            .unwrap()
+            .expect("failed to shutdown");
         assert_eq!(
             socket
                 .send_msg(
@@ -1743,9 +1759,13 @@ mod tests {
         })
         .detach();
 
-        socket.shutdown2(psocket::ShutdownMode::Read).await.unwrap().expect("failed to shutdown");
+        let () = socket
+            .shutdown(psocket::ShutdownMode::Read)
+            .await
+            .unwrap()
+            .expect("failed to shutdown");
         let (_, data, _, _) = socket
-            .recv_msg2(false, 2048, false, psocket::RecvMsgFlags::empty())
+            .recv_msg(false, 2048, false, psocket::RecvMsgFlags::empty())
             .await
             .unwrap()
             .expect("recvmsg should return empty data");
@@ -1753,18 +1773,18 @@ mod tests {
 
         fasync::OnSignals::new(&e2, zx::Signals::USER_0).await.expect("must be signaled");
 
-        socket
-            .shutdown2(psocket::ShutdownMode::Read)
+        let () = socket
+            .shutdown(psocket::ShutdownMode::Read)
             .await
             .unwrap()
             .expect("failed to shutdown the socket twice");
-        socket
-            .shutdown2(psocket::ShutdownMode::Write)
+        let () = socket
+            .shutdown(psocket::ShutdownMode::Write)
             .await
             .unwrap()
             .expect("failed to shutdown the socket twice");
-        socket
-            .shutdown2(psocket::ShutdownMode::Read | psocket::ShutdownMode::Write)
+        let () = socket
+            .shutdown(psocket::ShutdownMode::Read | psocket::ShutdownMode::Write)
             .await
             .unwrap()
             .expect("failed to shutdown the socket twice");

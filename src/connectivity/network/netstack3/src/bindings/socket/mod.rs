@@ -150,11 +150,6 @@ where
                 // TODO(https://fxbug.dev/48969): implement this method.
                 responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
             }
-            psocket::ProviderRequest::Socket2 { domain: _, type_: _, protocol: _, responder } => {
-                // NB: Netstack3 is not load-bearing enough to justify
-                // maintaining two implementations.
-                responder.control_handle().shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
-            }
             psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
                 responder_send!(responder, &mut Err(Errno::Eprotonosupport));
             }
