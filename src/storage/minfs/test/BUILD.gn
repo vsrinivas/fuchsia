@@ -19,6 +19,7 @@ import("//build/testing/bootfs_test.gni")
 group("test") {
   testonly = true
   deps = [
+    ":minfs-fuzzers",
     ":minfs-host($host_toolchain)",
     ":minfs-integration",
     ":minfs-power",
@@ -77,6 +78,11 @@ test("minfs-unit") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+bootfs_test("minfs-unit-bootfs-test") {
+  name = "minfs-unit"
+  deps = [ ":minfs-unit" ]
+}
+
 source_set("integration-fixtures") {
   testonly = true
   sources = [
@@ -128,6 +134,11 @@ test("minfs-integration") {
   ]
 }
 
+bootfs_test("minfs-integration-bootfs-test") {
+  name = "minfs-integration"
+  deps = [ ":minfs-integration" ]
+}
+
 test("minfs-power") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -153,6 +164,11 @@ test("minfs-power") {
   ]
 }
 
+bootfs_test("minfs-power-bootfs-test") {
+  name = "minfs-power"
+  deps = [ ":minfs-power" ]
+}
+
 test("minfs-host") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -176,19 +192,4 @@ fuzzer("minfs-fuzzer") {
 
 fuzzers_package("minfs-fuzzers") {
   cpp_fuzzers = [ ":minfs-fuzzer" ]
-}
-
-bootfs_test("minfs-integration-bootfs-test") {
-  name = "minfs-integration"
-  deps = [ ":minfs-integration" ]
-}
-
-bootfs_test("minfs-power-bootfs-test") {
-  name = "minfs-power"
-  deps = [ ":minfs-power" ]
-}
-
-bootfs_test("minfs-unit-bootfs-test") {
-  name = "minfs-unit"
-  deps = [ ":minfs-unit" ]
 }
