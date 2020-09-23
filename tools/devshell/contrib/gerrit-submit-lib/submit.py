@@ -7,25 +7,60 @@
 """Manage submitting a large number of CLs."""
 
 import argparse
+import enum
 import os
 import re
 import sys
 import time
 
+import ansi
 import util
 import gerrit_util
 
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Callable
+
+class ChangeStatus(enum.Enum):
+  UNKNOWN = 1
+  MISSING_VOTES = 2
+  UNRESOLVED_COMMENTS = 3
+  READY = 4
+  TESTING = 5
+  SUBMITTING = 6
+  MERGED = 7
+
+  def description(self) -> str:
+    return {
+        ChangeStatus.UNKNOWN: 'unknown',
+        ChangeStatus.MISSING_VOTES: 'missing votes',
+        ChangeStatus.UNRESOLVED_COMMENTS: 'comments',
+        ChangeStatus.READY: 'ready',
+        ChangeStatus.TESTING: 'testing',
+        ChangeStatus.SUBMITTING: 'submitting',
+        ChangeStatus.MERGED: 'merged',
+    }[self]
+
+  def color(self) -> Callable[[str], str]:
+    """Return a color function from the ansi module for this status."""
+    return {
+        ChangeStatus.UNKNOWN: ansi.red,
+        ChangeStatus.MISSING_VOTES: ansi.red,
+        ChangeStatus.UNRESOLVED_COMMENTS: ansi.yellow,
+        ChangeStatus.READY: ansi.green,
+        ChangeStatus.TESTING: ansi.green,
+        ChangeStatus.SUBMITTING: ansi.bright_green,
+        ChangeStatus.MERGED: ansi.gray,
+    }[self]
+
 
 class Change:
   """A Gerrit Changelist."""
 
   def __init__(self, change_id: str, json: Any):
     self.change_id: str = change_id
-    self.status: str = json.get('status', 'UNKNOWN')
     self.subject: str = json.get('subject', '<unknown>')
     self.id: int = int(json.get('_number', '-1'))
     self.json = json
+    self.status_string: str = json.get('status', 'UNKNOWN')
 
   @classmethod
   def from_json(cls, json: Any) -> 'Change':
@@ -51,6 +86,25 @@ class Change:
   def submittable(self) -> bool:
     is_submittable: bool = self.json.get('submittable', False)
     return is_submittable
+
+  @property
+  def status(self) -> ChangeStatus:
+    """Return a CL's status."""
+    # We expect a CL to either be 'NEW' or 'MERGED'.
+    if self.status_string == 'MERGED':
+      return ChangeStatus.MERGED
+    if self.status_string != 'NEW':
+      return ChangeStatus.UNKNOWN
+
+    if not self.submittable():
+      return ChangeStatus.MISSING_VOTES
+    if self.has_unresolved_comments():
+      return ChangeStatus.UNRESOLVED_COMMENTS
+    if self.cq_votes() == 1:
+      return ChangeStatus.TESTING
+    if self.cq_votes() == 2:
+      return ChangeStatus.SUBMITTING
+    return ChangeStatus.READY
 
 
 class GerritServer:
@@ -126,30 +180,15 @@ def shorten(s: str, max_len: int = 60) -> str:
   return s[:max_len-3] + '...'
 
 
-def status_string(cl : Change) -> str:
-  """Return a CL's status as a human-readable string."""
-  if cl.status == 'MERGED':
-    return 'merged'
-  if cl.status != 'NEW':
-    return 'UNKNOWN'
-  if cl.has_unresolved_comments():
-    return 'UNRESOLVED COMMENT'
-  if not cl.submittable():
-    return 'MISSING VOTES'
-  if cl.cq_votes() == 1:
-    return 'testing'
-  if cl.cq_votes() == 2:
-    return 'submitting'
-  return 'ready'
-
-
 def print_changes(results: List[Change]) -> None:
   """Display a list of results in a table."""
   print()
   print('%20s  %-10s  %-65s' % ('Status', 'CL Number', 'Subject'))
   print('%20s  %-10s  %-65s' % ('――――――', '――――――――――', '―――――――'))
   for result in results:
-    print('%20s  %-10s  %-65s' % (status_string(result), result.id, shorten(result.subject, 65)))
+    status = result.status
+    print('%s  %s  %s' % (status.color()('%20s' % status.description()), '%-10s' %
+                          result.id, '%-65s' % shorten(result.subject, 65)))
   print()
 
 
@@ -162,7 +201,7 @@ class SubmitError(Exception):
 def ensure_changes_submittable(changes: List[Change]) -> None:
   """Ensure that the given list of changes are submittable."""
   for cl in changes:
-    if not cl.status == 'MERGED' and not should_submit(cl):
+    if cl.status != ChangeStatus.MERGED and not should_submit(cl):
       raise SubmitError("CL %d can not be submitted." % cl.id)
 
 
@@ -173,7 +212,7 @@ def submit_changes(
     num_retries: int = 0
 ) -> None:
   # Strip out merged changes.
-  changes = [cl for cl in changes if not cl.status == 'MERGED']
+  changes = [cl for cl in changes if cl.status != ChangeStatus.MERGED]
 
   # For any CL that doesn't have a CQ+1, run it now to speed things up.
   # As long as the CL isn't changed in the mean-time, it won't be tested
@@ -202,27 +241,27 @@ def submit_changes(
         raise SubmitError("CL %s could not be found." % cl.id)
 
       # If it is merged, we are done.
-      if current_cl.status == 'MERGED':
+      if current_cl.status == ChangeStatus.MERGED:
         break
 
       # If it is not in CQ, add it to CQ.
       if current_cl.cq_votes() < 2:
         if num_attempts == 0:
-          print("  Adding to CQ.")
+          print(ansi.gray("  Adding to CQ."))
         elif num_attempts < max_attempts:
-          print("  CL failed in CQ. Retrying...")
+          print(ansi.yellow("  CL failed in CQ. Retrying..."))
         else:
-          print("  CL failed in CQ. Aborting.")
+          print(ansi.red("  CL failed in CQ. Aborting."))
           return
         num_attempts += 1
         server.set_cq_state(cl.change_id, 2)
 
       # wait.
       backoff.wait()
-      print('  Polling...')
+      print(ansi.gray('  Polling...'))
 
     # Did we fail?
-    print("  Submitted!")
+    print(ansi.green("  Submitted!"))
 
 
 def parse_args() -> Any:
