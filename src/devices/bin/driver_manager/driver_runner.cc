@@ -309,20 +309,20 @@ zx::status<zx::channel> DriverRunner::CreateComponent(std::string name, std::str
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  auto bind_cb = [name](auto result) {
+  auto bind_callback = [name](auto result) {
     if (result.is_err()) {
       LOGF(ERROR, "Failed to bind component '%s': %u", name.data(), result.err());
     }
   };
-  auto create_cb = [this, name, collection, server_end = std::move(server_end),
-                    bind_cb = std::move(bind_cb)](auto result) mutable {
+  auto create_callback = [this, name, collection, server_end = std::move(server_end),
+                          bind_callback = std::move(bind_callback)](auto result) mutable {
     if (result.is_err()) {
       LOGF(ERROR, "Failed to create component '%s': %u", name.data(), result.err());
       return;
     }
     auto bind = realm_->BindChild(fsys::ChildRef{.name = fidl::unowned_str(name),
                                                  .collection = fidl::unowned_str(collection)},
-                                  std::move(server_end), std::move(bind_cb));
+                                  std::move(server_end), std::move(bind_callback));
     if (!bind.ok()) {
       LOGF(ERROR, "Failed to bind component '%s': %s", name.data(), bind.error());
     }
@@ -335,7 +335,7 @@ zx::status<zx::channel> DriverRunner::CreateComponent(std::string name, std::str
                         .set_url(fidl::unowned_ptr(&unowned_url))
                         .set_startup(fidl::unowned_ptr(&startup));
   auto create = realm_->CreateChild(fsys::CollectionRef{.name = fidl::unowned_str(collection)},
-                                    child_decl.build(), std::move(create_cb));
+                                    child_decl.build(), std::move(create_callback));
   if (!create.ok()) {
     LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error());
     return zx::error(ZX_ERR_INTERNAL);
