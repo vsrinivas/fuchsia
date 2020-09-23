@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <arch/mp.h>
+#include <arch/vm.h>
 #include <arch/ops.h>
 #include <arch/riscv64/sbi.h>
 #include <arch/regs.h>
@@ -80,12 +81,29 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
 
 void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uintptr_t arg1,
                               uintptr_t arg2) {
+  iframe->epc = pc;
+  iframe->sp = sp;
+  iframe->status = RISCV64_CSR_SSTATUS_PIE | RISCV64_CSR_SSTATUS_IE;
+  iframe->a0 = arg1;
+  iframe->a1 = arg2;
 }
+
+extern "C" void riscv64_uspace_entry(iframe_t *iframe, vaddr_t tp);
 
 // Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
 // the top of the kernel stack.
 void arch_enter_uspace(iframe_t* iframe) {
-  while (1) ;
+  Thread* ct = Thread::Current::Get();
+
+  LTRACEF("riscv64_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ")\n",
+          iframe->a0, iframe->a1, ct->stack().top(), iframe->epc);
+
+  arch_disable_ints();
+
+  ASSERT(arch_is_valid_user_pc(iframe->epc));
+
+  riscv64_uspace_entry(iframe, ct->stack().top());
+  __UNREACHABLE;
 }
 
 /* unimplemented cache operations */

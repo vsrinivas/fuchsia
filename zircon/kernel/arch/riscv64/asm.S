@@ -53,6 +53,44 @@ FUNCTION(riscv64_context_switch)
     ret
 END_FUNCTION(riscv64_context_switch)
 
+// void riscv64_uspace_entry(iframe_t* iframe, void *tp) __NO_RETURN;
+FUNCTION(riscv64_uspace_entry)
+    // Save the thread pointer at the top of the stack
+    sd     tp, -REGOFF(1)(a1)
+
+    // Save the kernel stack pointer in iframe->scratch and the sscratch register
+    sd     a1, REGOFF(0)(a0)
+    csrw   sscratch, a1
+
+    // Load the iframe
+    ld     sp, REGOFF(1)(a0)
+    ld     t0, REGOFF(2)(a0)
+    csrw   sepc, t0
+    ld     t0, REGOFF(3)(a0)
+    csrw   sstatus, t0
+    ld     ra, REGOFF(4)(a0)
+    ld     tp, REGOFF(5)(a0)
+    ld     a1, REGOFF(7)(a0)
+    ld     a2, REGOFF(8)(a0)
+    ld     a3, REGOFF(9)(a0)
+    ld     a4, REGOFF(10)(a0)
+    ld     a5, REGOFF(11)(a0)
+    ld     a6, REGOFF(12)(a0)
+    ld     a7, REGOFF(13)(a0)
+    ld     t0, REGOFF(14)(a0)
+    ld     t1, REGOFF(15)(a0)
+    ld     t2, REGOFF(16)(a0)
+    ld     t3, REGOFF(17)(a0)
+    ld     t4, REGOFF(18)(a0)
+    ld     t5, REGOFF(19)(a0)
+    ld     t6, REGOFF(20)(a0)
+    ld     a0, REGOFF(6)(a0)
+
+    // TODO(revest): zero out remaining registers ?
+
+    sret
+END_FUNCTION(riscv64_uspace_entry)
+
 // top level exception handler for riscv64 in non vectored mode
 .balign 4
 FUNCTION(riscv64_exception_entry)
