@@ -163,7 +163,7 @@ def ensure_changes_submittable(changes: List[Change]) -> None:
   """Ensure that the given list of changes are submittable."""
   for cl in changes:
     if not cl.status == 'MERGED' and not should_submit(cl):
-      raise SubmitError("CL %s not submittable." % cl.change_id)
+      raise SubmitError("CL %d can not be submitted." % cl.id)
 
 
 def submit_changes(
@@ -182,7 +182,7 @@ def submit_changes(
   # We ignore the first one, because we are just about to +2 it anyway.
   for cl in changes[1:]:
     if cl.cq_votes() == 0:
-      print("Setting CQ state of %s to dry-run." % (cl.change_id))
+      print("Setting CQ state of CL %d to dry-run." % cl.id)
       server.set_cq_state(cl.change_id, 1)
 
   # Submit the changes in order.
