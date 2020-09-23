@@ -46,7 +46,7 @@ AudioDriverV1::AudioDriverV1(AudioDevice* owner) : AudioDriverV1(owner, LogMisse
 AudioDriverV1::AudioDriverV1(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
     : owner_(owner),
       timeout_handler_(std::move(timeout_handler)),
-      versioned_ref_time_to_frac_presentation_frame__(
+      versioned_ref_time_to_frac_presentation_frame_(
           fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
 }
@@ -108,7 +108,7 @@ void AudioDriverV1::Cleanup() {
     writable_ring_buffer = std::move(writable_ring_buffer_);
   }
 
-  versioned_ref_time_to_frac_presentation_frame__->Update({});
+  versioned_ref_time_to_frac_presentation_frame_->Update({});
   readable_ring_buffer = nullptr;
   writable_ring_buffer = nullptr;
 
@@ -360,7 +360,7 @@ zx_status_t AudioDriverV1::Stop() {
   }
 
   // Invalidate our timeline transformation here. To outside observers, we are now stopped.
-  versioned_ref_time_to_frac_presentation_frame__->Update({});
+  versioned_ref_time_to_frac_presentation_frame_->Update({});
 
   // Send the command to stop the ring buffer.
   audio_rb_cmd_start_req_t req;
@@ -895,7 +895,7 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
 
     if (owner_->is_input()) {
       readable_ring_buffer_ = BaseRingBuffer::CreateReadableHardwareBuffer(
-          *format, versioned_ref_time_to_frac_presentation_frame__, reference_clock(),
+          *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
           std::move(rb_vmo), resp.num_ring_buffer_frames, [this]() {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
             auto t = audio_clock_.Read();
@@ -904,7 +904,7 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
           });
     } else {
       writable_ring_buffer_ = BaseRingBuffer::CreateWritableHardwareBuffer(
-          *format, versioned_ref_time_to_frac_presentation_frame__, reference_clock(),
+          *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
           std::move(rb_vmo), resp.num_ring_buffer_frames, [this]() {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
             auto t = audio_clock_.Read();
@@ -916,7 +916,7 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;
     }
-    FX_DCHECK(!versioned_ref_time_to_frac_presentation_frame__->get().first.invertible());
+    FX_DCHECK(!versioned_ref_time_to_frac_presentation_frame_->get().first.invertible());
   }
 
   // We are now Configured. Let our owner know about this important milestone.
@@ -968,7 +968,7 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
     //
     // W is the lowest-numbered frame that may be written to the hardware buffer,
     // aka the "first safe" write position.
-    ref_time_to_frac_presentation_frame__ = TimelineFunction(
+    ref_time_to_frac_presentation_frame_ = TimelineFunction(
         0,                                          // first frame
         (ref_start_time_ + external_delay_).get(),  // first frame presented after external delay
         frac_fps                                    // fps in fractional frames
@@ -998,7 +998,7 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
     //
     // R is the highest-numbered frame that may be read from the hardware buffer,
     // aka the "last safe" read position.
-    ref_time_to_frac_presentation_frame__ = TimelineFunction(
+    ref_time_to_frac_presentation_frame_ = TimelineFunction(
         0,                                          // first frame
         (ref_start_time_ - external_delay_).get(),  // first frame presented external delay ago
         frac_fps                                    // fps in fractional frames
@@ -1010,7 +1010,7 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
     );
   }
 
-  versioned_ref_time_to_frac_presentation_frame__->Update(ref_time_to_frac_presentation_frame__);
+  versioned_ref_time_to_frac_presentation_frame_->Update(ref_time_to_frac_presentation_frame_);
 
   // We are now Started. Let our owner know about this important milestone.
   state_ = State::Started;

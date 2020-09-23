@@ -145,7 +145,7 @@ class AudioDriverV1 : public AudioDriver {
   const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
 
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
-    return ref_time_to_frac_presentation_frame__;
+    return ref_time_to_frac_presentation_frame_;
   }
   const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const override {
     return ref_time_to_frac_safe_read_or_write_frame_;
@@ -331,11 +331,11 @@ class AudioDriverV1 : public AudioDriver {
   // IOW - given a frame number in the stream, the inverse of this function can
   // be used to map to the time (on the device's reference clock) that the frame
   // either was captured, or will be presented.
-  fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame__;
+  fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame_;
 
   // Useful timeline functions which are computed after streaming starts.  See
   // the comments for the accessors in audio_device.h for detailed descriptions.
-  TimelineFunction ref_time_to_frac_presentation_frame__
+  TimelineFunction ref_time_to_frac_presentation_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
@@ -389,7 +389,7 @@ class AudioDriverV2 : public AudioDriver {
   const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
 
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
-    return ref_time_to_frac_presentation_frame__;
+    return ref_time_to_frac_presentation_frame_;
   }
   const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const override {
     return ref_time_to_frac_safe_read_or_write_frame_;
@@ -522,11 +522,11 @@ class AudioDriverV2 : public AudioDriver {
   // IOW - given a frame number in the stream, the inverse of this function can
   // be used to map to the time (on the device's reference clock) that the frame
   // either was captured, or will be presented.
-  fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame__;
+  fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame_;
 
   // Useful timeline functions which are computed after streaming starts.  See
   // the comments for the accessors in audio_device.h for detailed descriptions.
-  TimelineFunction ref_time_to_frac_presentation_frame__
+  TimelineFunction ref_time_to_frac_presentation_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
