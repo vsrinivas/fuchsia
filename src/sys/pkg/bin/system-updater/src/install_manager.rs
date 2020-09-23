@@ -29,7 +29,7 @@ pub async fn start_install_manager<N, U, E>(
     node: inspect::Node,
 ) -> (InstallManagerControlHandle<N>, impl Future<Output = ()>)
 where
-    N: Notify<State> + Send + 'static,
+    N: Notify<Event = State> + Send + 'static,
     U: Updater,
     E: EnvironmentConnector,
 {
@@ -43,7 +43,7 @@ async fn run<N, U, E>(
     mut updater: U,
     node: inspect::Node,
 ) where
-    N: Notify<State> + Send + 'static,
+    N: Notify<Event = State> + Send + 'static,
     U: Updater,
     E: EnvironmentConnector,
 {
@@ -100,7 +100,7 @@ async fn run<N, U, E>(
         loop {
             // We use this enum to make the body of the select as short as possible. Otherwise,
             // we'd need to set the crate's recursion_limit to be higher.
-            enum Op<N: Notify<State>> {
+            enum Op<N: Notify> {
                 Request(ControlRequest<N>),
                 Status(Option<State>),
             };
@@ -149,7 +149,7 @@ async fn handle_idle_control_request<N>(
     recv: &mut mpsc::Receiver<ControlRequest<N>>,
 ) -> Option<StartRequestData<N>>
 where
-    N: Notify<State>,
+    N: Notify,
 {
     // If the stream of control requests terminated while an update attempt was running,
     // this stream has already yielded None, and so further calls to next() may panic.
@@ -177,12 +177,12 @@ where
 /// while an update is underway.
 async fn handle_active_control_request<N>(
     req: ControlRequest<N>,
-    monitor_queue: &mut event_queue::ControlHandle<N, State>,
+    monitor_queue: &mut event_queue::ControlHandle<N>,
     attempt_id: &str,
     update_url: &fuchsia_url::pkg_url::PkgUrl,
     should_write_recovery: bool,
 ) where
-    N: Notify<State>,
+    N: Notify,
 {
     match req {
         ControlRequest::Start(StartRequestData {
@@ -228,7 +228,7 @@ async fn handle_active_control_request<N>(
 #[derive(Clone)]
 pub struct InstallManagerControlHandle<N>(mpsc::Sender<ControlRequest<N>>)
 where
-    N: Notify<State>;
+    N: Notify;
 
 /// Error indicating that the install manager task no longer exists.
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
@@ -250,7 +250,7 @@ impl From<oneshot::Canceled> for InstallManagerGone {
 /// This can be used to forward requests to the install manager task.
 impl<N> InstallManagerControlHandle<N>
 where
-    N: Notify<State>,
+    N: Notify,
 {
     /// Forward StartUpdate requests to the install manager task.
     pub async fn start_update(
@@ -288,7 +288,7 @@ where
 /// Requests that can be forwarded to the sinstall manager task.
 enum ControlRequest<N>
 where
-    N: Notify<State>,
+    N: Notify,
 {
     Start(StartRequestData<N>),
     Monitor(MonitorRequestData<N>),
@@ -296,7 +296,7 @@ where
 
 struct StartRequestData<N>
 where
-    N: Notify<State>,
+    N: Notify,
 {
     config: Config,
     monitor: N,
@@ -306,7 +306,7 @@ where
 
 struct MonitorRequestData<N>
 where
-    N: Notify<State>,
+    N: Notify,
 {
     attempt_id: Option<String>,
     monitor: N,
@@ -326,7 +326,6 @@ mod tests {
         fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
         fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo, UpdateInfoAndProgress},
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
-        futures::future::BoxFuture,
         mpsc::{Receiver, Sender},
         parking_lot::Mutex,
         std::sync::Arc,
@@ -343,10 +342,12 @@ mod tests {
             (Self { sender: Arc::new(Mutex::new(sender)) }, receiver)
         }
     }
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+    impl Notify for FakeStateNotifier {
+        type Event = State;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, state: State) -> Self::NotifyFuture {
             self.sender.lock().try_send(state).expect("FakeStateNotifier failed to send state");
-            future::ready(Ok(())).boxed()
+            future::ready(Ok(()))
         }
     }
 

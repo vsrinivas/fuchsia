@@ -759,8 +759,10 @@ pub(crate) mod tests {
 
     #[derive(Clone)]
     pub struct UnreachableNotifier;
-    impl Notify<State> for UnreachableNotifier {
-        fn notify(&self, _state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+    impl Notify for UnreachableNotifier {
+        type Event = State;
+        type NotifyFuture = BoxFuture<'static, Result<(), ClosedClient>>;
+        fn notify(&self, _state: State) -> Self::NotifyFuture {
             unreachable!();
         }
     }
@@ -777,10 +779,12 @@ pub(crate) mod tests {
             std::mem::replace(&mut self.states.lock(), vec![])
         }
     }
-    impl Notify<State> for StateChangeCollector {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+    impl Notify for StateChangeCollector {
+        type Event = State;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, state: State) -> Self::NotifyFuture {
             self.states.lock().push(state);
-            future::ready(Ok(())).boxed()
+            future::ready(Ok(()))
         }
     }
 
@@ -794,10 +798,12 @@ pub(crate) mod tests {
             (Self { sender: Arc::new(Mutex::new(sender)) }, receiver)
         }
     }
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+    impl Notify for FakeStateNotifier {
+        type Event = State;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, state: State) -> Self::NotifyFuture {
             self.sender.lock().try_send(state).expect("FakeStateNotifier failed to send state");
-            future::ready(Ok(())).boxed()
+            future::ready(Ok(()))
         }
     }
 

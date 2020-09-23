@@ -28,14 +28,17 @@
 //!     proxy: FooProxy,
 //! }
 //!
-//! impl Notify<FooEvent> for FooNotifier {
-//!     fn notify(&self, event: FooEvent) -> BoxFuture<'static, Result<(), ClosedClient>> {
+//! impl Notify for FooNotifier {
+//!     type Event = FooEvent;
+//!     type NotifyFuture = BoxFuture<'static, Result<(), ClosedClient>>;
+//!
+//!     fn notify(&self, event: FooEvent) -> Self::NotifyFuture {
 //!         self.proxy.on_event(&event).map(|result| result.map_err(|_| ClosedClient)).boxed()
 //!     }
 //! }
 //!
 //! async fn foo(proxy: FooProxy) {
-//!     let (event_queue, mut handle) = EventQueue::<FooNotifier, FooEvent>::new();
+//!     let (event_queue, mut handle) = EventQueue::<FooNotifier>::new();
 //!     let fut = async move {
 //!         handle.add_client(FooNotifier { proxy }).await.unwrap();
 //!         handle.queue_event(FooEvent { state: "new state".to_string(), progress: 0 }).await.unwrap();
@@ -46,12 +49,7 @@
 
 use {
     fuchsia_async::TimeoutExt,
-    futures::{
-        channel::mpsc,
-        future::{select_all, BoxFuture},
-        prelude::*,
-        select,
-    },
+    futures::{channel::mpsc, future::select_all, prelude::*, select},
     std::{collections::VecDeque, time::Duration},
     thiserror::Error,
 };
@@ -86,50 +84,62 @@ pub struct TimedOut;
 
 /// This trait defines how an event should be notified for a client. The struct that implements
 /// this trait can hold client specific data.
-pub trait Notify<E>
-where
-    E: Event,
-{
+pub trait Notify {
+    /// The type of the event that can be sent through this notification channel.
+    type Event: Event;
+
+    /// The type of the future that will resolve when the client acknowledges the event or the
+    /// client is lost.
+    type NotifyFuture: Future<Output = Result<(), ClosedClient>> + Send + Unpin;
+
     /// If the event was notified successfully, the future should return `Ok(())`, otherwise if the
     /// client is closed, the future should return `Err(ClosedClient)` which will results in the
     /// corresponding client being removed from the event queue.
-    fn notify(&self, event: E) -> BoxFuture<'static, Result<(), ClosedClient>>;
+    fn notify(&self, event: Self::Event) -> Self::NotifyFuture;
 }
 
 #[derive(Debug)]
-enum Command<N, E> {
+enum Command<N>
+where
+    N: Notify,
+{
     AddClient(N),
     Clear,
-    QueueEvent(E),
+    QueueEvent(N::Event),
     TryFlush(BarrierBlock),
 }
 
 /// A control handle that can control the event queue.
-#[derive(Debug)]
-pub struct ControlHandle<N, E>
+pub struct ControlHandle<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
-    sender: mpsc::Sender<Command<N, E>>,
+    sender: mpsc::Sender<Command<N>>,
 }
 
-impl<N, E> Clone for ControlHandle<N, E>
+impl<N> Clone for ControlHandle<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
     fn clone(&self) -> Self {
         ControlHandle { sender: self.sender.clone() }
     }
 }
 
-impl<N, E> ControlHandle<N, E>
+impl<N> std::fmt::Debug for ControlHandle<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
-    fn new(sender: mpsc::Sender<Command<N, E>>) -> Self {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ControlHandle").finish()
+    }
+}
+
+impl<N> ControlHandle<N>
+where
+    N: Notify,
+{
+    fn new(sender: mpsc::Sender<Command<N>>) -> Self {
         ControlHandle { sender }
     }
 
@@ -146,7 +156,7 @@ where
     }
 
     /// Queue an event that will be sent to all clients.
-    pub async fn queue_event(&mut self, event: E) -> Result<(), EventQueueDropped> {
+    pub async fn queue_event(&mut self, event: N::Event) -> Result<(), EventQueueDropped> {
         self.sender.send(Command::QueueEvent(event)).await.map_err(|_| EventQueueDropped)
     }
 
@@ -165,32 +175,30 @@ where
 
 /// An event queue for broadcasting events to multiple clients.
 /// Clients that failed to receive events or do not receive events fast enough will be dropped.
-pub struct EventQueue<N, E>
+pub struct EventQueue<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
-    clients: Vec<Client<N, E>>,
-    receiver: mpsc::Receiver<Command<N, E>>,
+    clients: Vec<Client<N>>,
+    receiver: mpsc::Receiver<Command<N>>,
     events_limit: usize,
-    last_event: Option<E>,
+    last_event: Option<N::Event>,
 }
 
-impl<N, E> EventQueue<N, E>
+impl<N> EventQueue<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
     /// Create a new `EventQueue` and returns a future for the event queue and a control handle
     /// to control the event queue.
-    pub fn new() -> (impl Future<Output = ()>, ControlHandle<N, E>) {
+    pub fn new() -> (impl Future<Output = ()>, ControlHandle<N>) {
         Self::with_limit(DEFAULT_EVENTS_LIMIT)
     }
 
     /// Set the maximum number of events each client can have in the queue.
     /// Clients exceeding this limit will be dropped.
     /// The default value if not set is 10.
-    pub fn with_limit(limit: usize) -> (impl Future<Output = ()>, ControlHandle<N, E>) {
+    pub fn with_limit(limit: usize) -> (impl Future<Output = ()>, ControlHandle<N>) {
         let (sender, receiver) = mpsc::channel(1);
         let event_queue =
             EventQueue { clients: Vec::new(), receiver, events_limit: limit, last_event: None };
@@ -202,12 +210,12 @@ where
         loop {
             // select_all will panic if the iterator has nothing in it, so we chain a
             // future::pending to it.
-            let mut pending = future::pending().boxed();
+            let pending = future::pending().right_future();
             let all_events = self
                 .clients
                 .iter_mut()
-                .filter_map(|c| c.pending_event.as_mut())
-                .chain(std::iter::once(&mut pending));
+                .filter_map(|c| c.pending_event.as_mut().map(|fut| fut.left_future()))
+                .chain(std::iter::once(pending));
             let mut select_all_events = select_all(all_events).fuse();
             select! {
                 (result, index, _) = select_all_events => {
@@ -254,7 +262,7 @@ where
         self.last_event = None;
     }
 
-    fn queue_event(&mut self, event: E) {
+    fn queue_event(&mut self, event: N::Event) {
         let mut i = 0;
         while i < self.clients.len() {
             if !self.clients[i].queue_event(event.clone(), self.events_limit) {
@@ -297,21 +305,19 @@ where
     }
 }
 
-struct Client<N, E>
+struct Client<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
     notifier: N,
-    pending_event: Option<BoxFuture<'static, Result<(), ClosedClient>>>,
-    commands: VecDeque<ClientCommand<E>>,
+    pending_event: Option<N::NotifyFuture>,
+    commands: VecDeque<ClientCommand<N::Event>>,
     accept_new_events: bool,
 }
 
-impl<N, E> Client<N, E>
+impl<N> Client<N>
 where
-    N: Notify<E>,
-    E: Event,
+    N: Notify,
 {
     fn new(notifier: N) -> Self {
         Client { notifier, pending_event: None, commands: VecDeque::new(), accept_new_events: true }
@@ -326,11 +332,11 @@ where
     }
 
     /// Find the most recently queued event, if one exists.
-    fn newest_queued_event(&mut self) -> Option<&mut E> {
+    fn newest_queued_event(&mut self) -> Option<&mut N::Event> {
         self.commands.iter_mut().rev().find_map(ClientCommand::event_mut)
     }
 
-    fn queue_event(&mut self, event: E, events_limit: usize) -> bool {
+    fn queue_event(&mut self, event: N::Event, events_limit: usize) -> bool {
         // Silently ignore new events if this client is part of a cleared session.
         if !self.accept_new_events {
             return true;
@@ -371,7 +377,7 @@ where
     }
 
     /// Enqueue the command for processing, and, if possible, process items from the queue.
-    fn queue_command(&mut self, cmd: ClientCommand<E>) {
+    fn queue_command(&mut self, cmd: ClientCommand<N::Event>) {
         self.commands.push_back(cmd);
         if self.pending_event.is_none() {
             self.process_queue();
@@ -424,11 +430,11 @@ mod tests {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_test_pkg_eventqueue::{
-            ExampleEventMonitorMarker, ExampleEventMonitorProxy, ExampleEventMonitorRequest,
-            ExampleEventMonitorRequestStream,
+            ExampleEventMonitorMarker, ExampleEventMonitorProxy, ExampleEventMonitorProxyInterface,
+            ExampleEventMonitorRequest, ExampleEventMonitorRequestStream,
         },
         fuchsia_async as fasync,
-        futures::{pin_mut, task::Poll},
+        futures::{future::BoxFuture, pin_mut, task::Poll},
         matches::assert_matches,
     };
 
@@ -436,9 +442,15 @@ mod tests {
         proxy: ExampleEventMonitorProxy,
     }
 
-    impl Notify<String> for FidlNotifier {
-        fn notify(&self, event: String) -> BoxFuture<'static, Result<(), ClosedClient>> {
-            self.proxy.on_event(&event).map(|result| result.map_err(|_| ClosedClient)).boxed()
+    impl Notify for FidlNotifier {
+        type Event = String;
+        type NotifyFuture = futures::future::Map<
+            <ExampleEventMonitorProxy as ExampleEventMonitorProxyInterface>::OnEventResponseFut,
+            fn(Result<(), fidl::Error>) -> Result<(), ClosedClient>,
+        >;
+
+        fn notify(&self, event: String) -> Self::NotifyFuture {
+            self.proxy.on_event(&event).map(|res| res.map_err(|_| ClosedClient))
         }
     }
 
@@ -446,10 +458,13 @@ mod tests {
         sender: mpsc::Sender<T>,
     }
 
-    impl<T> Notify<T> for MpscNotifier<T>
+    impl<T> Notify for MpscNotifier<T>
     where
         T: Event + Send + 'static,
     {
+        type Event = T;
+        type NotifyFuture = BoxFuture<'static, Result<(), ClosedClient>>;
+
         fn notify(&self, event: T) -> BoxFuture<'static, Result<(), ClosedClient>> {
             let mut sender = self.sender.clone();
             async move { sender.send(event).map(|result| result.map_err(|_| ClosedClient)).await }
@@ -469,14 +484,14 @@ mod tests {
         }
     }
 
-    fn start_event_queue() -> ControlHandle<FidlNotifier, String> {
-        let (event_queue, handle) = EventQueue::<FidlNotifier, String>::new();
+    fn start_event_queue() -> ControlHandle<FidlNotifier> {
+        let (event_queue, handle) = EventQueue::<FidlNotifier>::new();
         fasync::Task::local(event_queue).detach();
         handle
     }
 
     async fn add_client(
-        handle: &mut ControlHandle<FidlNotifier, String>,
+        handle: &mut ControlHandle<FidlNotifier>,
     ) -> ExampleEventMonitorRequestStream {
         let (proxy, stream) = create_proxy_and_stream::<ExampleEventMonitorMarker>().unwrap();
         handle.add_client(FidlNotifier { proxy }).await.unwrap();
@@ -512,7 +527,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_event_queue_simple() {
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, String>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<String>>::new();
         fasync::Task::local(event_queue).detach();
         let (sender, mut receiver) = mpsc::channel(1);
         handle.add_client(MpscNotifier { sender }).await.unwrap();
@@ -525,7 +540,7 @@ mod tests {
     #[test]
     fn flush_with_no_clients_completes_immediately() {
         let mut executor = fasync::Executor::new().unwrap();
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, String>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<String>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
         let wait_flush =
@@ -538,7 +553,7 @@ mod tests {
     #[test]
     fn flush_with_no_pending_events_completes_immediately() {
         let mut executor = fasync::Executor::new().unwrap();
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, String>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<String>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender, _receiver) = mpsc::channel(0);
@@ -554,7 +569,7 @@ mod tests {
     #[test]
     fn flush_with_pending_events_completes_once_events_are_flushed() {
         let mut executor = fasync::Executor::new().unwrap();
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, &'static str>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender1, mut receiver1) = mpsc::channel(0);
@@ -590,7 +605,7 @@ mod tests {
     #[test]
     fn flush_with_pending_events_fails_at_timeout() {
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, &'static str>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender, mut receiver) = mpsc::channel(0);
@@ -630,7 +645,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn flush_only_applies_to_active_clients() {
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, &'static str>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender1, mut receiver1) = mpsc::channel(0);
@@ -660,7 +675,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn notify_flush_commands_do_not_count_towards_limit() {
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, &'static str>::with_limit(2);
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::with_limit(2);
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender1, mut receiver1) = mpsc::channel(0);
@@ -697,7 +712,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn notify_flush_commands_do_not_interfere_with_event_merge() {
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<_>, &'static str>::new();
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender, mut receiver) = mpsc::channel(0);
@@ -777,7 +792,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_event_queue_drop_unresponsive_clients_custom_limit() {
-        let (event_queue, mut handle) = EventQueue::<FidlNotifier, String>::with_limit(2);
+        let (event_queue, mut handle) = EventQueue::<FidlNotifier>::with_limit(2);
         fasync::Task::local(event_queue).detach();
         let mut stream = add_client(&mut handle).await;
 
@@ -790,7 +805,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_event_queue_drop_unresponsive_clients_custom_limit_merge() {
-        let (event_queue, mut handle) = EventQueue::<FidlNotifier, String>::with_limit(2);
+        let (event_queue, mut handle) = EventQueue::<FidlNotifier>::with_limit(2);
         fasync::Task::local(event_queue).detach();
         let mut stream = add_client(&mut handle).await;
 

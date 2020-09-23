@@ -15,7 +15,7 @@ use fidl_fuchsia_update::{
     self as update, CheckNotStartedReason, CheckingForUpdatesData, ErrorCheckingForUpdateData,
     Initiator, InstallationDeferredData, InstallationErrorData, InstallationProgress,
     InstallingData, ManagerRequest, ManagerRequestStream, MonitorMarker, MonitorProxy,
-    NoUpdateAvailableData, UpdateInfo,
+    MonitorProxyInterface, NoUpdateAvailableData, UpdateInfo,
 };
 use fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
@@ -92,15 +92,25 @@ struct StateNotifier {
     proxy: MonitorProxy,
 }
 
-impl Notify<State> for StateNotifier {
-    fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+impl Notify for StateNotifier {
+    type Event = State;
+    type NotifyFuture = futures::future::Either<
+        futures::future::Map<
+            <MonitorProxy as MonitorProxyInterface>::OnStateResponseFut,
+            fn(Result<(), fidl::Error>) -> Result<(), ClosedClient>,
+        >,
+        futures::future::Ready<Result<(), ClosedClient>>,
+    >;
+
+    fn notify(&self, state: State) -> Self::NotifyFuture {
+        let map_fidl_err_to_closed: fn(Result<(), fidl::Error>) -> Result<(), ClosedClient> =
+            |res| res.map_err(|_| ClosedClient);
+
         match state.into() {
-            Some(mut state) => self
-                .proxy
-                .on_state(&mut state)
-                .map(|result| result.map_err(|_| ClosedClient))
-                .boxed(),
-            None => future::ready(Ok(())).boxed(),
+            Some(mut state) => {
+                self.proxy.on_state(&mut state).map(map_fidl_err_to_closed).left_future()
+            }
+            None => future::ready(Ok(())).right_future(),
         }
     }
 }
@@ -153,7 +163,7 @@ where
     // The current State, this is the internal representation of the fuchsia.update/State.
     state: State,
 
-    monitor_queue: ControlHandle<StateNotifier, State>,
+    monitor_queue: ControlHandle<StateNotifier>,
 
     metrics_reporter: Box<dyn ApiMetricsReporter>,
 

@@ -10,14 +10,14 @@ use {
     anyhow::{anyhow, Context, Error},
     event_queue::{ClosedClient, Notify},
     fidl_fuchsia_update_installer::{
-        InstallerRequest, InstallerRequestStream, MonitorProxy, RebootControllerRequest,
-        UpdateResult,
+        InstallerRequest, InstallerRequestStream, MonitorProxy, MonitorProxyInterface,
+        RebootControllerRequest, UpdateResult,
     },
     fidl_fuchsia_update_installer_ext::State,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_syslog::fx_log_err,
-    futures::{channel::mpsc, future::BoxFuture, prelude::*},
+    futures::{channel::mpsc, prelude::*},
     parking_lot::Mutex,
     std::{convert::TryInto, sync::Arc},
 };
@@ -38,12 +38,15 @@ impl UpdateStateNotifier {
     }
 }
 
-impl Notify<State> for UpdateStateNotifier {
-    fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-        self.proxy
-            .on_state(&mut state.into())
-            .map(|result| result.map_err(|_| ClosedClient))
-            .boxed()
+impl Notify for UpdateStateNotifier {
+    type Event = State;
+    type NotifyFuture = futures::future::Map<
+        <MonitorProxy as MonitorProxyInterface>::OnStateResponseFut,
+        fn(Result<(), fidl::Error>) -> Result<(), ClosedClient>,
+    >;
+
+    fn notify(&self, state: State) -> Self::NotifyFuture {
+        self.proxy.on_state(&mut state.into()).map(|result| result.map_err(|_| ClosedClient))
     }
 }
 

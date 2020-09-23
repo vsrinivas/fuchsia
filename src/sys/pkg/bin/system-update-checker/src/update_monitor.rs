@@ -11,16 +11,16 @@ use {
     futures::prelude::*,
 };
 
-pub trait StateNotifier: Notify<State> + Send + Sync + 'static {}
+pub trait StateNotifier: Notify<Event = State> + Send + Sync + 'static {}
 
-impl<T> StateNotifier for T where T: Notify<State> + Send + Sync + 'static {}
+impl<T> StateNotifier for T where T: Notify<Event = State> + Send + Sync + 'static {}
 
 #[derive(Debug)]
 pub struct UpdateMonitor<N>
 where
     N: StateNotifier,
 {
-    temporary_queue: ControlHandle<N, State>,
+    temporary_queue: ControlHandle<N>,
     update_state: InspectableDebugString<Option<State>>,
     version_available: InspectableDebugString<Option<String>>,
     inspect_node: fuchsia_inspect::Node,
@@ -87,7 +87,6 @@ mod test {
     use fidl_fuchsia_update_ext::random_version_available;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
-    use futures::future::BoxFuture;
     use parking_lot::Mutex;
     use proptest::prelude::*;
     use std::sync::Arc;
@@ -103,10 +102,12 @@ mod test {
             Self { states: Arc::new(Mutex::new(vec![])) }
         }
     }
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+    impl Notify for FakeStateNotifier {
+        type Event = State;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, state: State) -> Self::NotifyFuture {
             self.states.lock().push(state);
-            future::ready(Ok(())).boxed()
+            future::ready(Ok(()))
         }
     }
 
@@ -223,13 +224,14 @@ mod test_inspect {
     use event_queue::{ClosedClient, Notify};
     use fuchsia_async as fasync;
     use fuchsia_inspect::assert_inspect_tree;
-    use futures::future::BoxFuture;
 
     #[derive(Clone, Debug)]
     struct FakeStateNotifier;
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, _state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-            future::ready(Ok(())).boxed()
+    impl Notify for FakeStateNotifier {
+        type Event = State;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, _state: State) -> Self::NotifyFuture {
+            future::ready(Ok(()))
         }
     }
 

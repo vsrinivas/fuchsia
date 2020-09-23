@@ -11,7 +11,7 @@ use anyhow::{Context as _, Error};
 use event_queue::{ClosedClient, Notify};
 use fidl_fuchsia_update::{CheckNotStartedReason, ManagerRequest, ManagerRequestStream};
 use fidl_fuchsia_update_ext::{CheckOptions, State};
-use futures::{future::BoxFuture, prelude::*};
+use futures::prelude::*;
 use std::convert::TryInto;
 
 pub type RealTargetChannelUpdater = TargetChannelManager<ServiceConnector>;
@@ -90,12 +90,15 @@ pub struct RealStateNotifier {
     proxy: fidl_fuchsia_update::MonitorProxy,
 }
 
-impl Notify<State> for RealStateNotifier {
-    fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-        self.proxy
-            .on_state(&mut state.into())
-            .map(|result| result.map_err(|_| ClosedClient))
-            .boxed()
+impl Notify for RealStateNotifier {
+    type Event = State;
+    type NotifyFuture = futures::future::Map<
+        <fidl_fuchsia_update::MonitorProxy as fidl_fuchsia_update::MonitorProxyInterface>::OnStateResponseFut,
+        fn(Result<(), fidl::Error>) -> Result<(), ClosedClient>
+    >;
+
+    fn notify(&self, state: State) -> Self::NotifyFuture {
+        self.proxy.on_state(&mut state.into()).map(|result| result.map_err(|_| ClosedClient))
     }
 }
 
