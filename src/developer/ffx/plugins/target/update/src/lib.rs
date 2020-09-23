@@ -17,7 +17,7 @@ use {
 /// Main entry point for the `update` subcommand.
 #[ffx_plugin(
     "target_update",
-    ManagerProxy = "core/appmgr:out:fuchsia.update.ManagerProxy",
+    ManagerProxy = "core/appmgr:out:fuchsia.update.Manager",
     ChannelControlProxy = "core/appmgr:out:fuchsia.update.channelcontrol.ChannelControl"
 )]
 pub async fn update_cmd(
