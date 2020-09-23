@@ -94,7 +94,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
     metric_id: u32,
     expected_events: Vec<impl AsEventCode>,
 ) {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&pkg)
@@ -123,7 +123,8 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
 async fn repository_manager_load_static_configs_success() {
     let env = TestEnvBuilder::new()
         .mounts(lib::MountsBuilder::new().static_repository(make_repo()).build())
-        .build();
+        .build()
+        .await;
 
     assert_count_events(
         &env,
@@ -137,7 +138,7 @@ async fn repository_manager_load_static_configs_success() {
 
 #[fasync::run_singlethreaded(test)]
 async fn pkg_resolver_startup_duration() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let events = env
         .mocks
@@ -162,7 +163,7 @@ async fn pkg_resolver_startup_duration() {
 
 #[fasync::run_singlethreaded(test)]
 async fn repository_manager_load_static_configs_io() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     assert_count_events(
         &env,
@@ -182,7 +183,8 @@ async fn repository_manager_load_static_configs_parse() {
                 .custom_config_data("repositories/invalid.json", "invalid-json")
                 .build(),
         )
-        .build();
+        .build()
+        .await;
 
     assert_count_events(
         &env,
@@ -204,7 +206,8 @@ async fn repository_manager_load_static_configs_overridden() {
                 .custom_config_data("repositories/2.json", json)
                 .build(),
         )
-        .build();
+        .build()
+        .await;
 
     assert_count_events(
         &env,
@@ -218,7 +221,7 @@ async fn repository_manager_load_static_configs_overridden() {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolve_success_regular() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -252,7 +255,7 @@ async fn resolve_success_regular() {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolve_failure_regular_unreachable() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
         Err(Status::ADDRESS_UNREACHABLE),
@@ -272,7 +275,7 @@ async fn resolve_failure_regular_unreachable() {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolve_duration_success() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
     let repo = Arc::new(
@@ -307,7 +310,7 @@ async fn resolve_duration_success() {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolve_duration_failure() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
         Err(Status::ADDRESS_UNREACHABLE),
@@ -327,7 +330,7 @@ async fn resolve_duration_failure() {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolve_duration_font_test_failure() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let (_, server) = create_endpoints().unwrap();
     assert_eq!(
         env.proxies
@@ -474,7 +477,7 @@ async fn update_tuf_client_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn font_resolver_is_font_package_check_not_font() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
     let served_repository = repo.server().start().unwrap();
@@ -519,7 +522,8 @@ async fn font_manager_load_static_registry_success() {
     let json = serde_json::to_string(&json!(["fuchsia-pkg://fuchsia.com/font1"])).unwrap();
     let env = TestEnvBuilder::new()
         .mounts(MountsBuilder::new().custom_config_data("font_packages.json", json).build())
-        .build();
+        .build()
+        .await;
 
     assert_count_events(
         &env,
@@ -533,7 +537,7 @@ async fn font_manager_load_static_registry_success() {
 
 #[fasync::run_singlethreaded(test)]
 async fn font_manager_load_static_registry_failure_io() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     assert_count_events(
         &env,
@@ -551,7 +555,8 @@ async fn font_manager_load_static_registry_failure_parse() {
         .mounts(
             MountsBuilder::new().custom_config_data("font_packages.json", "invalid-json").build(),
         )
-        .build();
+        .build()
+        .await;
 
     assert_count_events(
         &env,
@@ -572,7 +577,8 @@ async fn font_manager_load_static_registry_failure_pkg_url() {
     .unwrap();
     let env = TestEnvBuilder::new()
         .mounts(MountsBuilder::new().custom_config_data("font_packages.json", json).build())
-        .build();
+        .build()
+        .await;
 
     assert_count_events(
         &env,
@@ -586,7 +592,7 @@ async fn font_manager_load_static_registry_failure_pkg_url() {
 
 #[fasync::run_singlethreaded(test)]
 async fn load_repository_for_channel_success_no_rewrite_rule() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     assert_count_events(
         &env,

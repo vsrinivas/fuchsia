@@ -8,11 +8,15 @@ use {
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_inspect::TreeMarker,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
+    },
     fidl_fuchsia_pkg::{
-        ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
-        PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
-        PackageResolverProxy, RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
+        ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, LocalMirrorMarker,
+        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverAdminProxy,
+        PackageResolverMarker, PackageResolverProxy, RepositoryManagerMarker,
+        RepositoryManagerProxy, UpdatePolicy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_rewrite::{
@@ -26,7 +30,7 @@ use {
     },
     fuchsia_inspect::reader::{self, NodeHierarchy},
     fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder},
+    fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
@@ -235,6 +239,7 @@ where
     pkgfs: PkgFsFn,
     mounts: MountsFn,
     boot_arguments_service: Option<BootArgumentsService<'static>>,
+    local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
@@ -243,12 +248,13 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
             pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
             // If it's not overriden, the default state of the mounts allows for dynamic configuration.
             // We do this because in the majority of tests, we'll want to use dynamic repos and rewrite rules.
-            // Note: this means that we'll produce different envs from TestEnvBuilder::new().build()
+            // Note: this means that we'll produce different envs from TestEnvBuilder::new().build().await
             // vs TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build()
             mounts: || {
                 MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build()
             },
             boot_arguments_service: None,
+            local_mirror_repo: None,
         }
     }
 }
@@ -259,12 +265,14 @@ where
     P: PkgFs,
     MountsFn: FnOnce() -> Mounts,
 {
-    pub fn build(self) -> TestEnv<P> {
+    pub async fn build(self) -> TestEnv<P> {
         TestEnv::new_with_pkg_fs_and_mounts_and_arguments_service(
             (self.pkgfs)(),
             (self.mounts)(),
             self.boot_arguments_service,
+            self.local_mirror_repo,
         )
+        .await
     }
     pub fn pkgfs<Pother>(
         self,
@@ -277,6 +285,7 @@ where
             pkgfs: || pkgfs,
             mounts: self.mounts,
             boot_arguments_service: self.boot_arguments_service,
+            local_mirror_repo: self.local_mirror_repo,
         }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
@@ -284,6 +293,7 @@ where
             pkgfs: self.pkgfs,
             mounts: || mounts,
             boot_arguments_service: self.boot_arguments_service,
+            local_mirror_repo: self.local_mirror_repo,
         }
     }
     pub fn boot_arguments_service(
@@ -294,13 +304,20 @@ where
             pkgfs: self.pkgfs,
             mounts: self.mounts,
             boot_arguments_service: Some(svc),
+            local_mirror_repo: self.local_mirror_repo,
         }
+    }
+
+    pub fn local_mirror_repo(mut self, repo: &Arc<Repository>, hostname: RepoUrl) -> Self {
+        self.local_mirror_repo = Some((repo.clone(), hostname));
+        self
     }
 }
 
 pub struct Apps {
     pub pkg_cache: App,
     pub pkg_resolver: App,
+    pub local_mirror: Option<App>,
 }
 
 pub struct Proxies {
@@ -345,6 +362,7 @@ pub struct TestEnv<P = PkgfsRamdisk> {
     pub _mounts: Mounts,
     pub nested_environment_label: String,
     pub mocks: Mocks,
+    pub local_mirror_dir: TempDir,
 }
 
 impl TestEnv<PkgfsRamdisk> {
@@ -521,10 +539,11 @@ impl MockLoggerFactory {
 }
 
 impl<P: PkgFs> TestEnv<P> {
-    fn new_with_pkg_fs_and_mounts_and_arguments_service(
+    async fn new_with_pkg_fs_and_mounts_and_arguments_service(
         pkgfs: P,
         mounts: Mounts,
         boot_arguments_service: Option<BootArgumentsService<'static>>,
+        local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
     ) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
@@ -534,6 +553,23 @@ impl<P: PkgFs> TestEnv<P> {
             "/pkgfs".to_owned(),
             pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
         );
+
+        let local_mirror_dir = tempfile::tempdir().unwrap();
+        let mut local_mirror = if let Some((repo, url)) = local_mirror_repo {
+            let proxy = io_util::directory::open_in_namespace(
+                local_mirror_dir.path().to_str().unwrap(),
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )
+            .unwrap();
+            repo.copy_local_repository_to_dir(&proxy, url).await;
+
+            Some(AppBuilder::new(
+                "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cmx"
+                    .to_owned(),
+            ).add_dir_to_namespace("/usb/0".to_owned(), std::fs::File::open(local_mirror_dir.path()).unwrap()).unwrap())
+        } else {
+            None
+        };
 
         let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
             .add_handle_to_namespace(
@@ -545,6 +581,12 @@ impl<P: PkgFs> TestEnv<P> {
             .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
             .unwrap();
 
+        let pkg_resolver = if local_mirror.is_some() {
+            pkg_resolver.args(vec!["--allow-local-mirror", "true"])
+        } else {
+            pkg_resolver
+        };
+
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
@@ -553,6 +595,11 @@ impl<P: PkgFs> TestEnv<P> {
             .add_proxy_service_to::<PackageCacheMarker, _>(
                 pkg_cache.directory_request().unwrap().clone(),
             );
+        if let Some(local_mirror) = local_mirror.as_mut() {
+            fs.add_proxy_service_to::<LocalMirrorMarker, _>(
+                local_mirror.directory_request().unwrap().clone(),
+            );
+        }
 
         if let Some(boot_arguments_service) = boot_arguments_service {
             let mock_arg_svc = Arc::new(boot_arguments_service);
@@ -578,15 +625,18 @@ impl<P: PkgFs> TestEnv<P> {
 
         let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
         let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
+        let local_mirror =
+            local_mirror.map(|app| app.spawn(env.launcher()).expect("local mirror to launch"));
 
         Self {
             env,
             pkgfs,
             proxies: Proxies::from_app(&pkg_resolver),
-            apps: Apps { pkg_cache: pkg_cache, pkg_resolver },
+            apps: Apps { pkg_cache, pkg_resolver, local_mirror },
             _mounts: mounts,
             nested_environment_label: environment_label,
             mocks: Mocks { logger_factory },
+            local_mirror_dir,
         }
     }
 

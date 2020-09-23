@@ -277,10 +277,10 @@ impl Repository {
     ///         ...
     ///         ff/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
     ///     repository_metadata/
-    ///         ${hostname}/
+    ///         ${url.host()}/
     ///             root.json
     ///             ...
-    pub async fn copy_local_repository_to_dir(&self, dst: &DirectoryProxy, hostname: &str) {
+    pub async fn copy_local_repository_to_dir(&self, dst: &DirectoryProxy, url: RepoUrl) {
         let src =
             directory::open_in_namespace(self.dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
                 .unwrap();
@@ -332,10 +332,13 @@ impl Repository {
         )
         .await
         .unwrap();
-        let hostname_dir =
-            open_directory(&repository_metadata, hostname, OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-                .await
-                .unwrap();
+        let hostname_dir = open_directory(
+            &repository_metadata,
+            url.host(),
+            OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .unwrap();
 
         for dirent in readdir(&src_metadata).await.unwrap() {
             if dirent.kind == files_async::DirentKind::File {
@@ -474,7 +477,7 @@ mod tests {
                 OPEN_RIGHT_WRITABLE,
             )
             .unwrap(),
-            "repo.example.org",
+            "fuchsia-pkg://repo.example.org".parse().unwrap(),
         )
         .await;
 

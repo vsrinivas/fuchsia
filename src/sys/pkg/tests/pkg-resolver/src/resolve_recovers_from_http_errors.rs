@@ -23,7 +23,7 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     handler: H,
     failure_status: Status,
 ) {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)

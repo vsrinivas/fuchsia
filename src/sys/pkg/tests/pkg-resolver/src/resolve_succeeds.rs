@@ -31,7 +31,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn package_resolution() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let s = "package_resolution";
     let pkg = PackageBuilder::new(s)
@@ -72,7 +72,7 @@ async fn package_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn separate_blobs_url() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let pkg_name = "separate_blobs_url";
     let pkg = make_pkg_with_extra_blobs(pkg_name, 3).await;
     let repo = Arc::new(
@@ -121,7 +121,7 @@ async fn verify_resolve_with_altered_env(
     pkg: Package,
     alter_env: impl FnOnce(&TestEnv, &Package),
 ) -> () {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -213,7 +213,7 @@ async fn many_blobs() {
 
 #[fasync::run_singlethreaded(test)]
 async fn pinned_merkle_resolution() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     // Since our test harness doesn't yet include a way to update a package, we generate two
     // separate packages to test resolution with a pinned merkle root.
@@ -255,7 +255,7 @@ async fn pinned_merkle_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn variant_resolution() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("variant-foo")
         .add_resource_at("data/foo", "foo".as_bytes())
         .build()
@@ -283,7 +283,7 @@ async fn variant_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn error_codes() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("error-foo")
         .add_resource_at("data/foo", "foo".as_bytes())
         .build()
@@ -324,7 +324,7 @@ async fn error_codes() {
 
 #[fasync::run_singlethreaded(test)]
 async fn retries() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let pkg = PackageBuilder::new("try-hard")
         .add_resource_at("data/foo", "bar".as_bytes())
@@ -375,7 +375,7 @@ async fn retries() {
 
 #[fasync::run_singlethreaded(test)]
 async fn handles_429_responses() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let pkg1 = PackageBuilder::new("rate-limit-far")
         .add_resource_at("data/foo", "foo".as_bytes())
@@ -447,7 +447,7 @@ async fn handles_429_responses() {
 
 #[fasync::run_singlethreaded(test)]
 async fn use_cached_package() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let pkg = PackageBuilder::new("resolve-twice")
         .add_resource_at("data/foo", "bar".as_bytes())
@@ -618,7 +618,7 @@ async fn test_concurrent_blob_writes() {
     );
 
     // Construct the repo
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&pkg1)
@@ -681,7 +681,7 @@ async fn test_concurrent_blob_writes() {
 
 #[fasync::run_singlethreaded(test)]
 async fn dedup_concurrent_content_blob_fetches() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     // Make a few test packages with no more than 6 blobs.  There is no guarantee what order the
     // package resolver will fetch blobs in other than it will fetch one of the meta FARs first and
@@ -777,7 +777,7 @@ async fn dedup_concurrent_content_blob_fetches() {
 #[fasync::run_singlethreaded(test)]
 #[ignore] // TODO(49866) Flaking when system time is unknown.
 async fn https_endpoint() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let s = "https_endpoints";
     let pkg = PackageBuilder::new(s)
@@ -808,7 +808,7 @@ async fn https_endpoint() {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_concurrent_resolve() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let pkg1 = make_pkg_with_extra_blobs("first_concurrent_resolve_pkg", 1).await;
     let pkg2 = make_pkg_with_extra_blobs("second_concurrent_resolve_pkg", 1).await;
@@ -856,7 +856,7 @@ async fn verify_concurrent_resolve() {
 // differ in size.
 #[fasync::run_singlethreaded(test)]
 async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     // Content chunks in FARs are 4k aligned, so a meta.far for an empty package will be 8k
     // because of meta/package (meta/contents is empty).
     let pkg_8k_tuf = PackageBuilder::new("merkle-pin-size").build().await.unwrap();

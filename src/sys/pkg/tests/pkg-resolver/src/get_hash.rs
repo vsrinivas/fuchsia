@@ -14,7 +14,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_if_package_present() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let pkg_name = "a-fake-pkg-name";
     let pkg = make_pkg_with_extra_blobs(pkg_name, 0).await;
     let repo = Arc::new(
@@ -38,7 +38,7 @@ async fn succeeds_if_package_present() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_if_package_absent() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
     let served_repository = Arc::clone(&repo).server().start().unwrap();

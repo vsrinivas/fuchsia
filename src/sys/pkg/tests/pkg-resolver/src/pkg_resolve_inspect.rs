@@ -19,7 +19,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_initial_inspect_state() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     // Wait for inspect to be created
     env.wait_for_pkg_resolver_to_start().await;
 
@@ -59,7 +59,7 @@ async fn test_initial_inspect_state() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_adding_repo_updates_inspect_state() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
     let config = RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build();
     let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
 
@@ -105,7 +105,7 @@ async fn test_adding_repo_updates_inspect_state() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_resolving_package_updates_inspect_state() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
     let repo = Arc::new(
@@ -203,7 +203,8 @@ async fn test_channel_in_vbmeta_appears_in_inspect_state() {
     let env = TestEnvBuilder::new()
         .boot_arguments_service(lib::BootArgumentsService::new("test-repo"))
         .mounts(lib::MountsBuilder::new().static_repository(config.clone()).build())
-        .build();
+        .build()
+        .await;
     env.wait_for_pkg_resolver_to_start().await;
 
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;

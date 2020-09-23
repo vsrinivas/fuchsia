@@ -49,7 +49,7 @@ async fn test_cache_fallback_succeeds_no_network() {
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -88,7 +88,7 @@ async fn test_cache_fallback_succeeds_if_url_merkle_matches() {
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -132,7 +132,7 @@ async fn test_cache_fallback_fails_if_url_merkle_differs() {
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -171,7 +171,7 @@ async fn test_cache_fallback_succeeds_no_targets() {
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -218,7 +218,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -263,7 +263,7 @@ async fn test_resolve_fails_not_in_repo() {
     let pkg = test_package(pkg_name, "stuff").await;
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     // Repo doesn't need any fault injection, it just doesn't know about the package.
     let repo = Arc::new(
@@ -298,7 +298,7 @@ async fn test_resolve_falls_back_not_in_repo() {
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     // Repo doesn't need any fault injection, it just doesn't know about the package.
     let repo =
@@ -362,7 +362,7 @@ async fn test_resolve_prefers_repo() {
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)

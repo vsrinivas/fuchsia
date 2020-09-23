@@ -412,7 +412,8 @@ async fn create_testenv_serves_repo<H: OpenRequestHandler + Send + Sync + 'stati
                 .pkg_resolver_data(DirOrProxy::Proxy(proxy))
                 .build(),
         )
-        .build();
+        .build()
+        .await;
 
     // Serve repo with package
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");

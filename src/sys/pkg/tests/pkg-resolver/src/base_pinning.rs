@@ -49,7 +49,7 @@ async fn test_base_package_found() {
         SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&base_pkg)).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -88,7 +88,7 @@ async fn test_base_pinning_rejects_urls_with_resource() {
     let pkg = test_package(pkg_name, "static").await;
     let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}/0#should-not-be-here", pkg_name,);
     assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::INVALID_ARGS));
@@ -108,7 +108,7 @@ async fn test_base_package_with_variant_found() {
         SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&base_pkg)).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -145,7 +145,7 @@ async fn test_absent_base_package() {
         SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, None).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -182,7 +182,7 @@ async fn test_base_package_with_merkle_pin() {
         SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&base_pkg)).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -218,7 +218,7 @@ async fn test_base_package_while_tuf_broken() {
         SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&base_pkg)).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
@@ -248,7 +248,7 @@ async fn test_base_package_without_repo_configured() {
         SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&base_pkg)).await;
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();

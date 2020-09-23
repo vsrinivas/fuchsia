@@ -13,6 +13,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
@@ -559,6 +560,7 @@ test_package("pkg-resolver-integration-tests") {
     "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pkg-cache:bin",
+    "//src/sys/pkg/bin/pkg-local-mirror:bin",
     "//src/sys/pkg/bin/pkg-resolver:bin",
   ]
 
@@ -571,6 +573,10 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "pkg-cache"
       source = "pkg_cache"
+    },
+    {
+      name = "pkg-local-mirror"
+      source = "pkg_local_mirror"
     },
     {
       name = "pkg-resolver"
@@ -594,6 +600,11 @@ test_package("pkg-resolver-integration-tests") {
       path =
           rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
       dest = "pkg-cache.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/pkg-local-mirror/meta/pkg-local-mirror.cmx")
+      dest = "pkg-local-mirror.cmx"
     },
     {
       path = rebase_path(
