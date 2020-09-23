@@ -36,18 +36,6 @@ class RootResourceFixture : public zxtest::Test {
   zx::bti bti_;
 };
 
-bool WaitThread(const zx::thread& thread, uint32_t reason) {
-  while (true) {
-    zx_info_thread_t info;
-    EXPECT_OK(thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr));
-    if (info.state == reason) {
-      return true;
-    }
-    zx::nanosleep(zx::deadline_after(zx::msec(1)));
-  }
-  return true;
-}
-
 // This is not really a function, but an entry point for a thread that has
 // a tiny stack and no other setup. It's not really entered with the C ABI
 // as such.  Rather, it's entered with the first argument register set to

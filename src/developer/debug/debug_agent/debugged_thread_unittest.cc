@@ -25,39 +25,6 @@ using namespace debug_ipc;
 
 namespace {
 
-// TODO(donosoc): These helpers are replicated throughout many tests.
-//                Collapse them into one place.
-std::vector<uint8_t> CreateData(size_t length) {
-  std::vector<uint8_t> data;
-  data.reserve(length);
-  // So that we get the number backwards (0x0102...).
-  uint8_t base = length;
-  for (size_t i = 0; i < length; i++) {
-    data.emplace_back(base - i);
-  }
-  return data;
-}
-
-bool FindRegister(const std::vector<Register>& regs, RegisterID id) {
-  for (const auto& reg : regs) {
-    if (reg.id == id)
-      return true;
-  }
-  return false;
-}
-
-// Sets the given register in the vector, overwriting an existing one of the same ID, or adding a
-// new one othewise.
-void SetRegister(const Register& reg, std::vector<Register>* regs) {
-  for (auto& cur : *regs) {
-    if (cur.id == reg.id) {
-      cur = reg;
-      return;
-    }
-  }
-  regs->push_back(reg);
-}
-
 TEST(DebuggedThread, Resume) {
   MockDebugAgentHarness harness;
 

@@ -571,7 +571,6 @@ config("Wno-reorder-init-list") {
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
   visibility = [
-    "//sdk/lib/fdio/*",
     "//src/bringup/bin/netsvc/*",
     "//src/media/audio/drivers/usb-audio/*",
     "//third_party/*",

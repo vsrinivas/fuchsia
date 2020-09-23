@@ -165,16 +165,6 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
   return MarkExceptionAsHandled(pe);
 }
 
-ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
-  // Translate the exception to the fidl format.
-  ExceptionInfo exception_info;
-  exception_info.process_koid = pe.exception_info.pid;
-  exception_info.thread_koid = pe.exception_info.tid;
-  exception_info.type = static_cast<ExceptionType>(pe.exception_info.type);
-
-  return exception_info;
-}
-
 // Utilities ---------------------------------------------------------------------------------------
 
 inline void ValidateGenericReport(const fuchsia::feedback::CrashReport& report,
@@ -186,41 +176,6 @@ inline void ValidateGenericReport(const fuchsia::feedback::CrashReport& report,
 
   ASSERT_TRUE(specific_report.generic().has_crash_signature());
   EXPECT_EQ(specific_report.generic().crash_signature(), crash_signature);
-}
-
-inline void ValidateNativeReport(const fuchsia::feedback::CrashReport& report,
-                                 bool validate_minidump) {
-  ASSERT_TRUE(report.has_specific_report());
-  const fuchsia::feedback::SpecificCrashReport& specific_report = report.specific_report();
-
-  ASSERT_TRUE(specific_report.is_native());
-  const auto& native_report = specific_report.native();
-
-  // If the crash reporter could not get a minidump, it will not send a mem buffer.
-  if (!validate_minidump) {
-    ASSERT_FALSE(native_report.has_minidump());
-    return;
-  }
-
-  ASSERT_TRUE(native_report.has_minidump());
-  const zx::vmo& minidump_vmo = native_report.minidump().vmo;
-
-  uint64_t vmo_size;
-  ASSERT_EQ(minidump_vmo.get_size(&vmo_size), ZX_OK);
-
-  auto buf = std::make_unique<uint8_t[]>(vmo_size);
-  ASSERT_EQ(minidump_vmo.read(buf.get(), 0, vmo_size), ZX_OK);
-
-  // Read the vmo back into a file writer/reader interface.
-  crashpad::StringFile string_file;
-  string_file.Write(buf.get(), vmo_size);
-
-  // Move the cursor to the beggining of the file.
-  ASSERT_EQ(string_file.Seek(0, SEEK_SET), 0);
-
-  // We verify that the minidump snapshot can validly read the file.
-  crashpad::ProcessSnapshotMinidump minidump_snapshot;
-  ASSERT_TRUE(minidump_snapshot.Initialize(&string_file));
 }
 
 inline void ValidateCrashReport(const fuchsia::feedback::CrashReport& report,

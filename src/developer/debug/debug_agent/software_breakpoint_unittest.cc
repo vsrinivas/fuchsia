@@ -83,9 +83,6 @@ std::vector<uint8_t> GetOriginalDataWithBreakpoint() {
 void LoadOriginalMemory(MockProcessHandle& handle) {
   handle.mock_memory().AddMemory(kAddress, GetOriginalData());
 }
-void LoadBreakMemory(MockProcessHandle& handle) {
-  handle.mock_memory().AddMemory(kAddress, GetOriginalDataWithBreakpoint());
-}
 
 bool MemoryContains(MockProcessHandle& handle, uint64_t address, const void* data,
                     size_t data_len) {

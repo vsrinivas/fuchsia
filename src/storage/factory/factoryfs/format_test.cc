@@ -22,20 +22,6 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   return Factoryfs::Create(nullptr, std::move(device), &options, &factoryfs);
 }
 
-void CheckDefaultDirectoryEntryCount(std::unique_ptr<BlockDevice> device) {
-  MountOptions options = {};
-  std::unique_ptr<Factoryfs> factoryfs;
-  ASSERT_OK(Factoryfs::Create(nullptr, std::move(device), &options, &factoryfs));
-  ASSERT_GE(factoryfs->Info().directory_entries, 2);
-}
-
-void CheckDefaultBlockSize(std::unique_ptr<BlockDevice> device) {
-  MountOptions options = {};
-  std::unique_ptr<Factoryfs> factoryfs;
-  ASSERT_OK(Factoryfs::Create(nullptr, std::move(device), &options, &factoryfs));
-  ASSERT_GE(factoryfs->Info().block_size, kFactoryfsBlockSize);
-}
-
 // Formatting filesystems should fail on devices that cannot be written.
 TEST(FormatFilesystemTest, CannotFormatReadOnlyDevice) {
   auto device = std::make_unique<FakeBlockDevice>(1 << 20, 512);

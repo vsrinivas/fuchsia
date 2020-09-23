@@ -104,21 +104,6 @@ std::vector<uint64_t> CreateAndSetDisplayLayers(
   return layers;
 }
 
-// Imports an image to the display controller and returns an ID by which that image can
-// be referenced by the display.
-uint64_t ImportImage(fuchsia::hardware::display::ControllerSyncPtr& display_controller,
-                     ImageMetadata image) {
-  uint64_t image_id;
-  fuchsia::hardware::display::ImageConfig image_config = {.width = image.width,
-                                                          .height = image.height};
-  zx_status_t import_image_status = ZX_OK;
-  display_controller->ImportImage(image_config, image.collection_id, image.vmo_idx,
-                                  &import_image_status, &image_id);
-  FX_DCHECK(import_image_status == ZX_OK);
-
-  return image_id;
-}
-
 // When setting an image on a layer in the display, you have to specify the "source"
 // and "destination", where the source represents the pixel offsets and dimensions to
 // use from the image and the destination represents where on the display the (cropped)

@@ -173,6 +173,18 @@ TEST_F(InterruptTest, VirtualInterrupts) {
   ASSERT_OK(interrupt.wait(&timestamp));
 }
 
+bool WaitThread(const zx::thread& thread, uint32_t reason) {
+  while (true) {
+    zx_info_thread_t info;
+    EXPECT_OK(thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr));
+    if (info.state == reason) {
+      return true;
+    }
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+  }
+  return true;
+}
+
 // Tests interrupt thread after suspend/resume
 TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   zx::interrupt interrupt;

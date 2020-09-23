@@ -42,16 +42,7 @@ class SampleBundleBuilder final {
   SampleBundle* sample_bundle_;
 
   SampleBundleBuilder() = delete;
-
-  friend std::ostream& operator<<(std::ostream& out,
-                                  const SampleBundleBuilder& bundle);
 };
-
-std::ostream& operator<<(std::ostream& out,
-                         const SampleBundleBuilder& builder) {
-  out << "SampleBundleBuilder: " << *builder.sample_bundle_ << std::endl;
-  return out;
-}
 
 // Add a value to the samples.
 void SampleBundleBuilder::AddKoidValue(zx_koid_t koid, const std::string& path,

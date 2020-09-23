@@ -95,23 +95,6 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
   return false;
 }
 
-static bool connect_to_service(const char* service, zx::channel* channel) {
-  zx::channel channel_remote;
-  zx_status_t status = zx::channel::create(0, channel, &channel_remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "failed to create channel: %d\n", status);
-    return false;
-  }
-
-  status = fdio_service_connect(service, channel_remote.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "failed to connect to service: %d\n", status);
-    return false;
-  }
-
-  return true;
-}
-
 // Process key sequences that affect the low-level control of the system
 // (switching display ownership, rebooting).  This returns whether this key press
 // was handled.

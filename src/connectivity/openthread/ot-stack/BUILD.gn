@@ -5,6 +5,20 @@
 import("//build/config/fuchsia/rules.gni")
 import("//src/sys/build/components.gni")
 
+# In file included from ../../src/connectivity/openthread/ot-stack/src/app.cc:17:
+# In file included from ../../src/connectivity/openthread/third_party/openthread/platform/radio.h:17:
+# In file included from ../../third_party/openthread/src/lib/spinel/radio_spinel.hpp:885:
+# ../../third_party/openthread/src/lib/spinel/radio_spinel_impl.hpp:80:16: error: 'static' function 'SpinelStatusToOtError' declared in header file should be declared 'static inline' [-Werror,-Wunneeded-internal-declaration]
+# static otError SpinelStatusToOtError(spinel_status_t aError)
+#                ^
+# ../../third_party/openthread/src/lib/spinel/radio_spinel_impl.hpp:154:13: error: 'static' function 'LogIfFail' declared in header file should be declared 'static inline' [-Werror,-Wunneeded-internal-declaration]
+# static void LogIfFail(const char *aText, otError aError)
+#             ^
+# 2 errors generated.
+config("unused") {
+  cflags = [ "-Wno-unneeded-internal-declaration" ]
+}
+
 source_set("app") {
   sources = [
     "src/app.cc",
@@ -50,6 +64,8 @@ source_set("app") {
     "PACKAGE_NAME=\"OPENTHREAD-CORE\"",
     "PACKAGE_VERSION=\"1.0.0\"",
   ]
+
+  configs += [ ":unused" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

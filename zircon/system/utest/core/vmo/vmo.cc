@@ -1360,8 +1360,6 @@ TEST(VmoTestCase, UncachedContiguous) {
   EXPECT_EQ(contig_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED), ZX_ERR_BAD_STATE);
 }
 
-static constexpr uint64_t PAGES(size_t n) { return PAGE_SIZE * n; }
-
 // Test various pinning operations.  In particular, we would like to test
 //
 // ++ Pinning of normal VMOs, contiguous VMOs, and RAM backed physical VMOs.
