@@ -38,6 +38,7 @@ class Device {
 
   void StartIrqThread();
   // interrupt cases that devices may override
+  pci_irq_mode_t InterruptMode() { return backend_->InterruptMode(); }
   virtual void IrqRingUpdate() = 0;
   virtual void IrqConfigChange() = 0;
 
@@ -72,7 +73,7 @@ class Device {
   void DeviceReset() { backend_->DeviceReset(); }
   void DriverStatusAck() { backend_->DriverStatusAck(); }
   void DriverStatusOk() { backend_->DriverStatusOk(); }
-  uint32_t IsrStatus() { return backend_->IsrStatus(); }
+  uint32_t IsrStatus() const { return backend_->IsrStatus(); }
 
   // Device config management
   zx_status_t CopyDeviceConfig(void* _buf, size_t len) const;
@@ -95,7 +96,6 @@ class Device {
   std::unique_ptr<Backend> backend_;
   // irq thread object
   thrd_t irq_thread_ = {};
-  zx::handle irq_handle_ = {};
   // Bus device is the parent device on the bus, device is this driver's device node.
   zx_device_t* bus_device_ = nullptr;
   zx_device_t* device_ = nullptr;

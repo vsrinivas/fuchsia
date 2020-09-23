@@ -89,14 +89,8 @@ class FakeBackend : public Backend {
     kicked_queues_.insert(ring_index);
   }
   uint32_t IsrStatus() override { return registers8_.find(kISRStatus)->second; }
-  zx_status_t InterruptValid() override {
-    if (!irq_handle_) {
-      return ZX_ERR_BAD_HANDLE;
-    }
-    return ZX_OK;
-  }
-  zx_status_t WaitForInterrupt() override { return ZX_OK; }
-  void InterruptAck() override {}
+  zx::status<uint32_t> WaitForInterrupt() override { return zx::ok(0); }
+  void InterruptAck(uint32_t key) override {}
 
  protected:
   // virtio header register offsets.
@@ -120,6 +114,10 @@ class FakeBackend : public Backend {
     registers16_.insert({kQueueNotify, 0});
     registers8_.insert({kDeviceStatus, 0});
     registers8_.insert({kISRStatus, 0});
+
+    // The mode is not actually used, but Device initialization verifies a valid
+    // mode has been configured.
+    irq_mode() = PCI_IRQ_MODE_LEGACY;
   }
 
   // Returns true if a queue has been kicked (notified) and clears the notified bit.

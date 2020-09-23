@@ -23,9 +23,14 @@ class PciBackend : public Backend {
   virtual zx_status_t Init() = 0;
   const char* tag() { return tag_; }
 
-  zx_status_t InterruptValid() final;
-  zx_status_t WaitForInterrupt() final;
-  void InterruptAck() final;
+  zx_status_t ConfigureIrqMode();
+  zx::status<uint32_t> WaitForInterrupt() final;
+  void InterruptAck(uint32_t key) final;
+
+  // Virtio spec 4.1.5.1.2 - MSI-X Vector Configuration
+  static constexpr uint16_t kVirtioMsiNoVector = 0xFFFF;
+  static constexpr uint16_t kMsiConfigVector = 0;
+  static constexpr uint16_t kMsiQueueVector = 1;
 
  protected:
   const ddk::PciProtocolClient& pci() { return pci_; }
@@ -42,6 +47,8 @@ class PciBackend : public Backend {
   DISALLOW_COPY_ASSIGN_AND_MOVE(PciBackend);
 };
 
+// PciLegacyBackend corresponds to the Virtio Legacy interface utilizing port IO and
+// the IO Bar 0. It has complications with address offsets when MSI-X is enabled.
 class PciLegacyBackend : public PciBackend {
  public:
   PciLegacyBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info)
@@ -92,6 +99,7 @@ class PciLegacyBackend : public PciBackend {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(PciLegacyBackend);
 };
 
+// PciModernBackend is for v1.0+ Virtio using MMIO mapped bars and PCI capabilities.
 class PciModernBackend : public PciBackend {
  public:
   PciModernBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info)

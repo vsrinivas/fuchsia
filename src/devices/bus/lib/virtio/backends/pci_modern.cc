@@ -4,8 +4,11 @@
 
 #include <inttypes.h>
 
+#include <cstdint>
+
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/protocol/pci.h>
 #include <ddktl/protocol/pci.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -146,7 +149,7 @@ zx_status_t PciModernBackend::Init() {
         CommonCfgCallbackLocked(cap);
         break;
       case VIRTIO_PCI_CAP_NOTIFY_CFG:
-        // Virtio 1.0 section 4.1.4.4
+        // Virtio 1.01`2Zxc vbnm1.4.4
         // notify_off_multiplier is a 32bit field following this capability
         pci().ConfigRead32(static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)), &notify_off_mul_);
         NotifyCfgCallbackLocked(cap);
@@ -167,6 +170,18 @@ zx_status_t PciModernBackend::Init() {
   if (common_cfg_ == nullptr || isr_status_ == nullptr || device_cfg_ == 0 || notify_base_ == 0) {
     zxlogf(ERROR, "%s: failed to bind, missing capabilities", tag());
     return ZX_ERR_BAD_STATE;
+  }
+
+  // Configuration of MSI-X varies depending on the legacy or modern interface
+  // to Virtio so the config vector is handled here and the queue vectors are
+  // handled in PciModern::SetRing.
+  if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
+    uint16_t vector = 0;
+    MmioRead(&common_cfg_->msix_config, &vector);
+    ZX_DEBUG_ASSERT(vector == PciBackend::kVirtioMsiNoVector);
+    MmioWrite(&common_cfg_->msix_config, PciBackend::kMsiConfigVector);
+    MmioRead(&common_cfg_->msix_config, &vector);
+    ZX_DEBUG_ASSERT(vector == PciBackend::kMsiConfigVector);
   }
 
   zxlogf(TRACE, "virtio: modern pci backend successfully initialized");
@@ -310,8 +325,17 @@ void PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_des
   MmioWrite(&common_cfg_->queue_desc, pa_desc);
   MmioWrite(&common_cfg_->queue_avail, pa_avail);
   MmioWrite(&common_cfg_->queue_used, pa_used);
-  MmioWrite<uint16_t>(&common_cfg_->queue_enable, 1);
 
+  if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
+    uint16_t vector = 0;
+    MmioRead(&common_cfg_->queue_msix_vector, &vector);
+    ZX_DEBUG_ASSERT(vector == PciBackend::kVirtioMsiNoVector);
+    MmioWrite(&common_cfg_->queue_msix_vector, PciBackend::kMsiQueueVector);
+    MmioRead(&common_cfg_->queue_msix_vector, &vector);
+    ZX_DEBUG_ASSERT(vector == PciBackend::kMsiQueueVector);
+  }
+
+  MmioWrite<uint16_t>(&common_cfg_->queue_enable, 1);
   // Assert that queue_notify_off is equal to the ring index.
   uint16_t queue_notify_off;
   MmioRead(&common_cfg_->queue_notify_off, &queue_notify_off);

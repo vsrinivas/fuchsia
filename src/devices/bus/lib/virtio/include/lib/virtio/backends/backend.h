@@ -6,6 +6,10 @@
 
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/port.h>
+#include <lib/zx/status.h>
+
+#include <vector>
 
 #include <ddk/protocol/pci.h>
 #include <fbl/mutex.h>
@@ -22,8 +26,8 @@ namespace virtio {
 
 class Backend {
  public:
-  Backend() {}
-  virtual ~Backend() { irq_handle_.reset(); }
+  Backend() = default;
+  virtual ~Backend() = default;
   virtual zx_status_t Bind() = 0;
   virtual void Unbind() {}
 
@@ -56,19 +60,32 @@ class Backend {
   // Expected to read the interrupt status out of the config based on the offset/address
   // specified by the isr capability.
   virtual uint32_t IsrStatus() = 0;
-  virtual zx_status_t InterruptValid() = 0;
+  virtual zx_status_t InterruptValid() {
+    if (irq_handles_.empty()) {
+      return ZX_ERR_BAD_HANDLE;
+    }
+    return ZX_OK;
+  }
+  // For Device level access to checking IRQ mode.
+  pci_irq_mode_t InterruptMode() const { return irq_mode_; }
+
   // Wait for the device to raise an interrupt; may return early or may time out after an
   // internal waiting period.
-  // Returns ZX_OK if woken by an interrupt
+  // Returns ZX_OK if woken by an interrupt along with the key of the interrupt to ack.
   //         ZX_ERR_TIMED_OUT if an internal timeout expired; there may be work from the device
-  virtual zx_status_t WaitForInterrupt() = 0;
-  virtual void InterruptAck() = 0;
+  virtual zx::status<uint32_t> WaitForInterrupt() = 0;
+  virtual void InterruptAck(uint32_t key) = 0;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Backend);
 
  protected:
-  // For protecting irq access / status
-  zx::handle irq_handle_;
+  // For derived backends who want to modify the IRQ mode
+  pci_irq_mode_t& irq_mode() { return irq_mode_; }
+  std::vector<zx::interrupt>& irq_handles() { return irq_handles_; }
+
+ private:
+  pci_irq_mode_t irq_mode_ = PCI_IRQ_MODE_DISABLED;
+  std::vector<zx::interrupt> irq_handles_;
 };
 
 }  // namespace virtio

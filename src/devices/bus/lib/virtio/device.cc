@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/virtio/backends/pci.h>
 #include <lib/virtio/device.h>
 #include <limits.h>
 #include <stddef.h>
@@ -18,19 +19,15 @@
 #include <hw/inout.h>
 #include <pretty/hexdump.h>
 
-#include "trace.h"
-
-#define LOCAL_TRACE 0
-
 namespace virtio {
 
 Device::Device(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : bti_(std::move(bti)), backend_(std::move(backend)), bus_device_(bus_device) {
-  LTRACE_ENTRY;
+  zxlogf(TRACE, "%s: entry", __func__);
   device_ops_.version = DEVICE_OPS_VERSION;
 }
 
-Device::~Device() { LTRACE_ENTRY; }
+Device::~Device() { zxlogf(TRACE, "%s: exit", __func__); }
 
 void Device::Unbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -41,38 +38,58 @@ void Device::Release() {
 }
 
 void Device::IrqWorker() {
-  zx_status_t rc;
-  zxlogf(DEBUG, "%s: starting irq worker", tag());
+  const auto irq_mode = backend_->InterruptMode();
+  ZX_DEBUG_ASSERT(irq_mode == PCI_IRQ_MODE_LEGACY || irq_mode == PCI_IRQ_MODE_MSI_X);
+  zxlogf(DEBUG, "%s: starting %s irq worker", tag(),
+         (irq_mode == PCI_IRQ_MODE_LEGACY) ? "legacy" : "msi-x");
 
   while (backend_->InterruptValid() == ZX_OK) {
-    rc = backend_->WaitForInterrupt();
-    if (rc != ZX_OK && rc != ZX_ERR_TIMED_OUT) {
-      zxlogf(TRACE, "%s: error while waiting for interrupt: %s", tag(), zx_status_get_string(rc));
+    auto result = backend_->WaitForInterrupt();
+    if (!result.is_ok()) {
+      // Timeouts are fine, but need to continue because there's nothing to ack.
+      if (result.status_value() == ZX_ERR_TIMED_OUT) {
+        continue;
+      }
+
+      zxlogf(DEBUG, "%s: error while waiting for interrupt: %s", tag(), result.status_string());
+      break;
     }
 
-    // The hardware interrupt may be masked; unmask it or we will never receive another
-    // interrupt from the device. Note this mask is distinct from the isr_status virtio
-    // interrupt mask.
-    backend_->InterruptAck();
+    // Ack the interrupt we saw based on the key returned from the port. For legacy interrupts
+    // this will always be 0, but MSI-X will depend on the number of vectors configured.
+    auto key = result.value();
+    backend_->InterruptAck(key);
 
     // Read the status before completing the interrupt in case
     // another interrupt fires and changes the status.
-    uint32_t irq_status = IsrStatus();
+    if (irq_mode == PCI_IRQ_MODE_LEGACY) {
+      uint32_t irq_status = IsrStatus();
+      zxlogf(TRACE, "%s: irq_status: %#x\n", __func__, irq_status);
 
-    LTRACEF_LEVEL(2, "irq_status %#x\n", irq_status);
-
-    // Since we handle both interrupt types here it's possible for a
-    // spurious interrupt if they come in sequence and we check IsrStatus
-    // after both have been triggered.
-    if (irq_status == 0)
-      continue;
-
-    if (irq_status & VIRTIO_ISR_QUEUE_INT) { /* used ring update */
-      IrqRingUpdate();
+      // Since we handle both interrupt types here it's possible for a
+      // spurious interrupt if they come in sequence and we check IsrStatus
+      // after both have been triggered.
+      if (irq_status) {
+        if (irq_status & VIRTIO_ISR_QUEUE_INT) { /* used ring update */
+          IrqRingUpdate();
+        }
+        if (irq_status & VIRTIO_ISR_DEV_CFG_INT) { /* config change */
+          IrqConfigChange();
+        }
+      }
+    } else {
+      // MSI-X
+      zxlogf(TRACE, "%s: irq key: %u\n", __func__, key);
+      switch (key) {
+        case PciBackend::kMsiConfigVector:
+          IrqConfigChange();
+          break;
+        case PciBackend::kMsiQueueVector:
+          IrqRingUpdate();
+          break;
+      }
     }
-    if (irq_status & VIRTIO_ISR_DEV_CFG_INT) { /* config change */
-      IrqConfigChange();
-    }
+
     if (irq_thread_should_exit_.load(std::memory_order_relaxed)) {
       break;
     }
@@ -81,9 +98,7 @@ void Device::IrqWorker() {
 
 int Device::IrqThreadEntry(void* arg) {
   Device* d = static_cast<Device*>(arg);
-
   d->IrqWorker();
-
   return 0;
 }
 
