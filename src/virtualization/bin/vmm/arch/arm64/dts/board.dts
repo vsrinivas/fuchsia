@@ -22,7 +22,7 @@
   };
 
   psci {
-    compatible = "arm,psci";
+    compatible = "arm,psci-0.2";
     method = "smc";
     cpu_on = <0xc4000003>;
   };
