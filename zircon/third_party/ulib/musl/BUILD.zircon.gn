@@ -8,8 +8,8 @@ declare_args() {
 
 config("headers") {
   visibility = [
-    "./*",
     "$zx/system/ulib/c:*",
+    "./*",
   ]
   cflags = [
     "-idirafter",
@@ -20,9 +20,9 @@ config("headers") {
 
 group("musl_internal") {
   visibility = [
-    "./*",
     "$zx/system/ulib/c/*",
     "$zx/third_party/ulib/$malloc:*",
+    "./*",
   ]
   public_deps = [
     "$zx/system/ulib/processargs",
@@ -39,10 +39,10 @@ group("musl_internal") {
 group("musl_internal_testing") {
   testonly = true
   visibility = [
-    "./*",
     "$zx/system/ulib/c/*",
     "$zx/system/utest/libc:*",
     "$zx/third_party/ulib/$malloc:*",
+    "./*",
   ]
   public_deps = [ ":musl_internal" ]
 }
@@ -70,14 +70,10 @@ config("musl_internal.config") {
     cflags += [ "-fno-stack-protector" ]
   }
 
-  configs = [
-    "$zx_build_config:freestanding",
-
-    # libfuzzer also uses libc internally, by removing the fuzzing
-    # instrumentation we avoid it adding noise to the fuzzing coverage.
-    # TODO(25073): Once a cleaner solution is found, remove this.
-    "$zx_build_config:no_fuzzer",
-  ]
+  # libfuzzer also uses libc internally, by removing the fuzzing
+  # instrumentation we avoid it adding noise to the fuzzing coverage.
+  # TODO(25073): Once a cleaner solution is found, remove this.
+  configs = [ "$zx_build_config:no_fuzzer" ]
 }
 
 if (toolchain.base_environment == "user") {

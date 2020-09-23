@@ -24,6 +24,16 @@ struct start_params {
   zx_handle_t utc_reference;
 };
 
+// See dynlink.c for the full explanation.  The compiler generates calls to
+// these implicitly.  They are PLT calls into the ASan runtime, which is fine
+// in and of itself at this point (unlike in dynlink.c).  But they might also
+// use ShadowCallStack, which is not set up yet.  So make sure references here
+// only use the libc-internal symbols, which don't have any setup requirements.
+#if __has_feature(address_sanitizer)
+__asm__(".weakref __asan_memcpy,__libc_memcpy");
+__asm__(".weakref __asan_memset,__libc_memset");
+#endif
+
 // This gets called via inline assembly below, after switching onto
 // the newly-allocated (safe) stack.
 static _Noreturn void start_main(const struct start_params*) __asm__("start_main")

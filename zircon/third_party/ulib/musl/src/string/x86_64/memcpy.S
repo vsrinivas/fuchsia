@@ -23,3 +23,7 @@ ASAN_WEAK_ALIAS(memcpy)
 #endif
 ALIAS(memcpy, __memcpy_fwd)
 .hidden __memcpy_fwd
+
+// This name is called from inside libc to avoid going through the PLT.
+.hidden __libc_memcpy
+ALIAS(memcpy, __libc_memcpy)

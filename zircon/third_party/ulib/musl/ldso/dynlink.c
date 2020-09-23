@@ -343,8 +343,13 @@ __NO_SAFESTACK NO_ASAN static inline void dso_set_prev(struct dso* p, struct dso
 // rather than explicitly using __libc_memset in the early-startup calls
 // here means that the compiler gets to decide whether to inline each case
 // or generate the memset call.
+//
+// All the same applies to memcpy calls here as well, since __asan_memcpy
+// is a PLT call that uses ShadowCallStack.
+__asm__(".weakref memcpy,__libc_memcpy");
 __asm__(".weakref memset,__libc_memset");
 #if __has_feature(address_sanitizer)
+__asm__(".weakref __asan_memcpy,__libc_memcpy");
 __asm__(".weakref __asan_memset,__libc_memset");
 #endif
 
@@ -2661,8 +2666,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   if ((status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE, &call, &reply_size,
                                  &handle_count)) != ZX_OK) {
     // Do nothing.
-  } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) ||
-             (rsp.header.ordinal != LDMSG_OP_CLONE)) {
+  } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) || (rsp.header.ordinal != LDMSG_OP_CLONE)) {
     status = ZX_ERR_INVALID_ARGS;
   } else if (rsp.rv != ZX_OK) {
     status = rsp.rv;

@@ -14,4 +14,8 @@
 #else
 ALIAS(memcpy, __unsanitized_memcpy)
 ASAN_WEAK_ALIAS(memcpy)
+
+// This name is called from inside libc to avoid going through the PLT.
+.hidden __libc_memcpy
+ALIAS(memcpy, __libc_memcpy)
 #endif

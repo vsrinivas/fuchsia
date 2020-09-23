@@ -8,6 +8,16 @@
 #include "threads_impl.h"
 #include "zircon_impl.h"
 
+// See dynlink.c for the full explanation.  The compiler generates calls to
+// these implicitly.  They are PLT calls into the ASan runtime, which is fine
+// in and of itself at this point (unlike in dynlink.c).  But they might also
+// use ShadowCallStack, which is not set up yet.  So make sure references here
+// only use the libc-internal symbols, which don't have any setup requirements.
+#if __has_feature(address_sanitizer)
+__asm__(".weakref __asan_memcpy,__libc_memcpy");
+__asm__(".weakref __asan_memset,__libc_memset");
+#endif
+
 #ifdef __aarch64__
 // Clang's <arm_acle.h> has __yield() but GCC doesn't (nor the intrinsic).
 __NO_SAFESTACK static inline void relax(void) { __asm__("yield"); }
