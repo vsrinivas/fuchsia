@@ -9,7 +9,7 @@
 set -eo pipefail
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
+FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../.."
 cd "${FUCHSIA_DIR}"
 
 # Check for the required tools.
@@ -27,7 +27,7 @@ which iasl > /dev/null || {
 
 # Generate device tree blobs.
 MAX_SIZE=8192
-for DTS in garnet/bin/guest/vmm/arch/arm64/dts/*.dts; do
+for DTS in src/virtualization/bin/vmm/arch/arm64/dts/*.dts; do
   DTB=${DTS%.dts}.dtb
   dtc $DTS -o $DTB -S $MAX_SIZE
 
@@ -39,6 +39,6 @@ for DTS in garnet/bin/guest/vmm/arch/arm64/dts/*.dts; do
 done
 
 # Generate ACPI blobs.
-for ASL in garnet/bin/guest/vmm/arch/x64/asl/*.asl; do
+for ASL in src/virtualization/bin/vmm/arch/x64/asl/*.asl; do
   iasl -vs -we $ASL
 done
