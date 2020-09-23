@@ -45,9 +45,15 @@
             directory: "/system",
             rights: [ "rx*" ],
         },
+
+        // NOTE: /tmp needs admin rights for bringup fs tests which mount a volume
+        // under /tmp.
         {
             directory: "/tmp",
-            rights: [ "rw*" ],
+            rights: [
+                "admin",
+                "rw*",
+            ],
         },
         {
             protocol: [

@@ -78,6 +78,7 @@
             protocol: [ "/svc/fuchsia.kernel.Stats" ],
             from: "parent",
             to: [
+                "#console-launcher",
                 "#driver_manager",
                 "#power_manager",
             ],
@@ -87,6 +88,7 @@
             from: "parent",
             to: [
                 "#console",
+                "#console-launcher",
                 "#driver_manager",
                 "#sysinfo",
             ],
@@ -143,11 +145,6 @@
             to: [ "#fshost" ],
         },
         {
-            protocol: [ "/svc/fuchsia.sysmem.Allocator" ],
-            from: "#driver_manager",
-            to: [ "#console-launcher" ],
-        },
-        {
             // TODO(fxb/34633): DEPRECATED. Do not add new dependencies on the fshost
             // loader service!
             protocol: "/svc/fuchsia.fshost.Loader",
@@ -157,9 +154,17 @@
         },
         {
             protocol: [
+                "/svc/fuchsia.device.manager.Administrator",
+                "/svc/fuchsia.device.manager.BindDebugger",
+                "/svc/fuchsia.device.manager.DebugDumper",
+                "/svc/fuchsia.device.NameProvider",
+                "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
                 "/svc/fuchsia.kernel.MexecBroker",
+                "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.scheduler.ProfileProvider",
+                "/svc/fuchsia.sysmem.Allocator",
+                "/svc/fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
             to: [ "#console-launcher" ],
@@ -292,7 +297,10 @@
         {
             protocol: "/svc/fuchsia.hardware.pty.Device",
             from: "#ptysvc",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
         },
 
         // driver_manager needs the v1 hub for the serial console
@@ -307,7 +315,10 @@
         {
             protocol: "/svc/fuchsia.sysinfo.SysInfo",
             from: "#sysinfo",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {
@@ -388,11 +399,19 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.fshost.Admin",
                 "/svc/fuchsia.fshost.BlockWatcher",
                 "/svc/fuchsia.fshost.Filesystems",
                 "/svc/fuchsia.fshost.Registry",
             ],
+            from: "#fshost",
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "/svc/fuchsia.fshost.Admin" ],
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
