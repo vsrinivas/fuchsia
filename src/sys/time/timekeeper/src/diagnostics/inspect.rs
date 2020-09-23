@@ -258,8 +258,9 @@ impl InspectDiagnostics {
 }
 
 impl Diagnostics for InspectDiagnostics {
-    fn record(&self, event: Event<'_>) {
+    fn record(&self, event: Event) {
         match event {
+            Event::Initialized { .. } => {}
             Event::NetworkAvailable => {
                 self.network_available_monotonic.lock().get_or_insert_with(|| {
                     self.node.create_int("network_available_monotonic", monotonic_time())
@@ -275,7 +276,7 @@ impl Diagnostics for InspectDiagnostics {
                     rtc_node.write(outcome);
                 }
             }
-            Event::UpdateClock => self.update_clock(),
+            Event::StartClock { .. } | Event::UpdateClock => self.update_clock(),
             Event::Failure { reason } => {
                 self.health.lock().set_unhealthy(reason);
             }

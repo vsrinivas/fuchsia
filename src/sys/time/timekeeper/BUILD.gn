@@ -44,6 +44,8 @@ rustc_binary("bin") {
 
   sources = [
     "src/diagnostics/cobalt.rs",
+    "src/diagnostics/composite.rs",
+    "src/diagnostics/fake.rs",
     "src/diagnostics/inspect.rs",
     "src/diagnostics/mod.rs",
     "src/enums.rs",

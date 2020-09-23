@@ -10,8 +10,15 @@ use {
     time_metrics_registry::RealTimeClockEventsMetricDimensionEventType as CobaltRtcEventType,
 };
 
+/// The state of the userspace UTC clock when Timekeeper was initialized.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum InitialClockState {
+    NotSet,
+    PreviouslySet,
+}
+
 /// The possible outcomes of an attempt to initialize and read the real time clock.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum InitializeRtcOutcome {
     NoDevices,
     MultipleDevices,
@@ -45,8 +52,24 @@ impl Into<CobaltRtcEventType> for InitializeRtcOutcome {
 }
 
 /// The possible outcomes of an attempt to write to the real time clock.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum WriteRtcOutcome {
     Failed,
     Succeeded,
+}
+
+impl Into<CobaltRtcEventType> for WriteRtcOutcome {
+    fn into(self) -> CobaltRtcEventType {
+        match self {
+            Self::Failed => CobaltRtcEventType::WriteFailed,
+            Self::Succeeded => CobaltRtcEventType::WriteSucceeded,
+        }
+    }
+}
+
+/// The sources from which the userspace clock might be started.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum StartClockSource {
+    Rtc,
+    Primary,
 }

@@ -15,9 +15,9 @@ mod time_source;
 use {
     crate::{
         diagnostics::{
-            CobaltDiagnostics, CobaltDiagnosticsImpl, Diagnostics, Event, InspectDiagnostics,
+            CobaltDiagnostics, CompositeDiagnostics, Diagnostics, Event, InspectDiagnostics,
         },
-        enums::{InitializeRtcOutcome, WriteRtcOutcome},
+        enums::{InitialClockState, InitializeRtcOutcome, StartClockSource, WriteRtcOutcome},
         network::{event_stream, wait_for_network_available},
         rtc::{Rtc, RtcImpl},
         time_source::{Event as SourceEvent, PushTimeSource, TimeSource},
@@ -31,10 +31,6 @@ use {
     futures::{lock::Mutex, StreamExt as _},
     log::{error, info, warn},
     std::sync::Arc,
-    time_metrics_registry::{
-        self, RealTimeClockEventsMetricDimensionEventType as RtcEventType,
-        TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType,
-    },
 };
 
 /// URL of the time source. In the future, this value belongs in a config file.
@@ -58,14 +54,14 @@ async fn main() -> Result<(), Error> {
 
     // Note: The diagnostics are placed in an Arc so they can survive a termination of the
     //       maintain_utc function.
-    let inspect =
-        Arc::new(InspectDiagnostics::new(diagnostics::INSPECTOR.root(), Arc::clone(&utc_clock)));
+    let diagnostics = Arc::new(CompositeDiagnostics::new(
+        InspectDiagnostics::new(diagnostics::INSPECTOR.root(), Arc::clone(&utc_clock)),
+        CobaltDiagnostics::new(),
+    ));
     let mut fs = ServiceFs::new();
-    info!("diagnostics initialized, serving on servicefs");
+    info!("diagnostics initialized, serving inspect on servicefs");
     diagnostics::INSPECTOR.serve(&mut fs)?;
 
-    info!("initializing Cobalt");
-    let mut cobalt = CobaltDiagnosticsImpl::new();
     let source = initial_utc_source(&*utc_clock);
     let notifier = Notifier::new(source);
 
@@ -74,9 +70,7 @@ async fn main() -> Result<(), Error> {
         Ok(rtc) => Some(Arc::new(rtc)),
         Err(err) => {
             warn!("failed to connect to RTC, ZX_CLOCK_UTC won't be updated: {}", err);
-            let outcome = err.into();
-            inspect.record(Event::InitializeRtc { outcome, time: None });
-            cobalt.log_rtc_event(outcome.into());
+            diagnostics.record(Event::InitializeRtc { outcome: err.into(), time: None });
             None
         }
     };
@@ -95,8 +89,7 @@ async fn main() -> Result<(), Error> {
             notifier_clone,
             time_source,
             interface_event_stream,
-            Arc::clone(&inspect),
-            cobalt,
+            Arc::clone(&diagnostics),
         )
         .await;
     })
@@ -127,64 +120,67 @@ fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
 /// Checks for network connectivity before attempting any time updates.
 ///
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
-async fn maintain_utc<C, R, T, S>(
+async fn maintain_utc<R, T, S, D>(
     utc_clock: Arc<zx::Clock>,
     mut optional_rtc: Option<Arc<R>>,
     notifs: Notifier,
     time_source: T,
     interface_event_stream: S,
-    inspect: Arc<InspectDiagnostics>,
-    mut cobalt: C,
+    diagnostics: Arc<D>,
 ) where
-    C: CobaltDiagnostics,
     R: Rtc,
     T: TimeSource,
     S: futures::Stream<Item = Result<finterfaces::Event, Error>>,
+    D: Diagnostics,
 {
     info!("record the state at initialization.");
-    match initial_utc_source(&*utc_clock) {
-        ftime::UtcSource::Backstop => {
-            cobalt.log_lifecycle_event(LifecycleEventType::InitializedBeforeUtcStart)
-        }
-        ftime::UtcSource::External => {
-            cobalt.log_lifecycle_event(LifecycleEventType::InitializedAfterUtcStart)
-        }
-    }
+    let initial_clock_state = match initial_utc_source(&*utc_clock) {
+        ftime::UtcSource::Backstop => InitialClockState::NotSet,
+        ftime::UtcSource::External => InitialClockState::PreviouslySet,
+    };
+    diagnostics.record(Event::Initialized { clock_state: initial_clock_state });
 
+    // At the moment, for the purpose of diagnostics, we consider "starting the clock" to be setting
+    // our first value, even if looks like the clock was already running when we came to life. We
+    // should reconsider this decision (and the use of RTC in this case) when Timekeeper is
+    // responsibile for starting the clock ticking.
+    let mut clock_started = false;
     if let Some(rtc) = &optional_rtc.as_mut() {
         info!("reading initial RTC time.");
         match rtc.get().await {
             Err(err) => {
                 warn!("failed to read RTC time: {}", err);
-                inspect.record(Event::InitializeRtc {
+                diagnostics.record(Event::InitializeRtc {
                     outcome: InitializeRtcOutcome::ReadFailed,
                     time: None,
                 });
-                cobalt.log_rtc_event(RtcEventType::ReadFailed);
             }
             Ok(time) => {
                 let backstop =
                     utc_clock.get_details().expect("failed to get UTC clock details").backstop;
                 let utc_chrono = Utc.timestamp_nanos(time.into_nanos());
-                let outcome = if time < backstop {
+                if time < backstop {
                     warn!("initial RTC time before backstop: {}", utc_chrono);
-                    InitializeRtcOutcome::InvalidBeforeBackstop
+                    diagnostics.record(Event::InitializeRtc {
+                        outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
+                        time: Some(time),
+                    });
                 } else {
-                    if let Err(update_status) = utc_clock.update(zx::ClockUpdate::new().value(time))
-                    {
+                    diagnostics.record(Event::InitializeRtc {
+                        outcome: InitializeRtcOutcome::Succeeded,
+                        time: Some(time),
+                    });
+                    if let Err(status) = utc_clock.update(zx::ClockUpdate::new().value(time)) {
                         warn!(
                             "failed to start UTC clock from RTC at time {}: {}",
-                            utc_chrono, update_status
+                            utc_chrono, status
                         );
                     } else {
-                        inspect.record(Event::UpdateClock);
-                        cobalt.log_lifecycle_event(LifecycleEventType::StartedUtcFromRtc);
+                        clock_started = true;
+                        diagnostics.record(Event::StartClock { source: StartClockSource::Rtc });
                         info!("started UTC clock from RTC at time: {}", utc_chrono);
                     }
-                    InitializeRtcOutcome::Succeeded
                 };
-                inspect.record(Event::InitializeRtc { outcome, time: Some(time) });
-                cobalt.log_rtc_event(outcome.into());
             }
         }
     }
@@ -193,7 +189,7 @@ async fn maintain_utc<C, R, T, S>(
     let mut time_source_events = match time_source.launch() {
         Err(err) => {
             error!("failed to launch time source, aborting: {}", err);
-            inspect.record(Event::Failure { reason: "Time source did not launch" });
+            diagnostics.record(Event::Failure { reason: "Time source did not launch" });
             return;
         }
         Ok(events) => events,
@@ -201,7 +197,7 @@ async fn maintain_utc<C, R, T, S>(
 
     info!("waiting for network connectivity before attempting network time sync...");
     match wait_for_network_available(interface_event_stream).await {
-        Ok(()) => inspect.record(Event::NetworkAvailable),
+        Ok(()) => diagnostics.record(Event::NetworkAvailable),
         Err(why) => warn!("failed to wait for network, attempted to sync time anyway: {:?}", why),
     }
 
@@ -214,7 +210,7 @@ async fn maintain_utc<C, R, T, S>(
                 // TODO(jsankey): Count failures and trigger a reset after some number of
                 // consecutive failures rather then abandoning on the first attempt.
                 error!("error waiting for time events, aborting: {}", err);
-                inspect.record(Event::Failure { reason: "Time source failure" });
+                diagnostics.record(Event::Failure { reason: "Time source failure" });
                 return;
             }
             Ok(SourceEvent::StatusChange { status }) => {
@@ -231,26 +227,29 @@ async fn maintain_utc<C, R, T, S>(
 
                 if let Err(status) = utc_clock.update(zx::ClockUpdate::new().value(utc)) {
                     error!("failed to update UTC clock to {}: {}", utc_chrono, status);
+                } else if !clock_started {
+                    diagnostics.record(Event::StartClock { source: StartClockSource::Primary });
+                    info!("started UTC time from external source at time {}", utc_chrono);
+                    clock_started = true;
                 } else {
-                    inspect.record(Event::UpdateClock);
+                    diagnostics.record(Event::UpdateClock);
                     info!("adjusted UTC time to {}", utc_chrono);
                 }
                 if let Some(ref rtc) = optional_rtc {
-                    match rtc.set(utc).await {
+                    let outcome = match rtc.set(utc).await {
                         Err(err) => {
                             error!(
                                 "failed to update RTC and ZX_CLOCK_UTC to {}: {}",
                                 utc_chrono, err
                             );
-                            inspect.record(Event::WriteRtc { outcome: WriteRtcOutcome::Failed });
-                            cobalt.log_rtc_event(RtcEventType::WriteFailed);
+                            WriteRtcOutcome::Failed
                         }
                         Ok(()) => {
                             info!("updated RTC to {}", utc_chrono);
-                            inspect.record(Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded });
-                            cobalt.log_rtc_event(RtcEventType::WriteSucceeded);
+                            WriteRtcOutcome::Succeeded
                         }
-                    }
+                    };
+                    diagnostics.record(Event::WriteRtc { outcome });
                 }
                 let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
                 let utc_now = Utc::now().timestamp_nanos();
@@ -259,20 +258,14 @@ async fn maintain_utc<C, R, T, S>(
                     "CF-884:monotonic_before={}:utc={}:monotonic_after={}",
                     monotonic_before, utc_now, monotonic_after,
                 );
-                if notifs.0.lock().await.set_source(ftime::UtcSource::External, monotonic_before) {
-                    // TODO(60074): Currently starting from RTC does not change the reported time
-                    // source and so StartedUtcFromRtc and StartedUtcFromTimeSource are both
-                    // reported. This will be corrected naturally when we have an appropriate
-                    // source enum that can be used when consuming the RTC.
-                    cobalt.log_lifecycle_event(LifecycleEventType::StartedUtcFromTimeSource);
-                }
+                notifs.0.lock().await.set_source(ftime::UtcSource::External, monotonic_before);
                 received_valid_update = true;
             }
         };
     }
 
     error!("time source event stream closed, time synchronization has stopped.");
-    inspect.record(Event::Failure { reason: "Time source closed" });
+    diagnostics.record(Event::Failure { reason: "Time source closed" });
 }
 
 /// Notifies waiting clients when the clock has been updated, wrapped in a lock to allow
@@ -356,11 +349,13 @@ impl NotifyInner {
 mod tests {
     use {
         super::*,
+        crate::diagnostics::FakeDiagnostics,
+        crate::enums::{
+            InitialClockState, InitializeRtcOutcome, StartClockSource, WriteRtcOutcome,
+        },
         crate::rtc::FakeRtc,
         crate::time_source::FakeTimeSource,
-        fidl_fuchsia_time_external as ftexternal,
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
-        fuchsia_zircon as zx,
+        fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
         futures::FutureExt,
         lazy_static::lazy_static,
         matches::assert_matches,
@@ -376,18 +371,20 @@ mod tests {
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn successful_update_single_notify_client() {
+    /// Creates and starts a new clock with default options, returning a tuple of the clock and its
+    /// initial update time in ticks.
+    fn create_clock() -> (Arc<zx::Clock>, i64) {
         let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
+        (clock, initial_update_ticks)
+    }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn successful_update_single_notify_client() {
+        let (clock, initial_update_ticks) = create_clock();
         let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
-
-        let inspector = Inspector::new();
-        let inspect_diagnostics =
-            Arc::new(diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock)));
-        let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
@@ -410,8 +407,7 @@ mod tests {
             notifier.clone(),
             time_source,
             interface_event_stream,
-            Arc::clone(&inspect_diagnostics),
-            cobalt_diagnostics,
+            Arc::clone(&diagnostics),
         ));
 
         // Checking that the reported time source has been updated to the first input
@@ -419,30 +415,25 @@ mod tests {
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
         assert_eq!(rtc.last_set().await, Some(*UPDATE_TIME));
 
-        // Checking that correct events were logged to Cobalt
-        cobalt_monitor.assert_lifecycle_events(&[
-            LifecycleEventType::InitializedBeforeUtcStart,
-            LifecycleEventType::StartedUtcFromTimeSource,
-        ]);
-        cobalt_monitor.assert_rtc_events(&[
-            RtcEventType::ReadInvalidBeforeBackstop,
-            RtcEventType::WriteSucceeded,
+        // Checking that the correct diagnostic events were logged.
+        diagnostics.assert_events(&[
+            Event::Initialized { clock_state: InitialClockState::NotSet },
+            Event::InitializeRtc {
+                outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
+                time: Some(*INVALID_RTC_TIME),
+            },
+            Event::NetworkAvailable,
+            Event::StartClock { source: StartClockSource::Primary },
+            Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
         ]);
     }
 
     #[test]
     fn no_update_invalid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
-        let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
-        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
-        let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
-
+        let (clock, initial_update_ticks) = create_clock();
         let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
-
-        let inspector = Inspector::new();
-        let inspect_diagnostics =
-            Arc::new(diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock)));
-        let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
@@ -465,8 +456,7 @@ mod tests {
             notifier.clone(),
             time_source,
             interface_event_stream,
-            Arc::clone(&inspect_diagnostics),
-            cobalt_diagnostics,
+            Arc::clone(&diagnostics),
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut2);
@@ -481,24 +471,23 @@ mod tests {
         futures::pin_mut!(fut4);
         assert_eq!(executor.run_until_stalled(&mut fut4), Poll::Ready(None));
 
-        // Checking that correct events were logged to Cobalt
-        cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
-        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadInvalidBeforeBackstop]);
+        // Checking that the correct diagnostic events were logged.
+        diagnostics.assert_events(&[
+            Event::Initialized { clock_state: InitialClockState::NotSet },
+            Event::InitializeRtc {
+                outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
+                time: Some(*INVALID_RTC_TIME),
+            },
+            Event::NetworkAvailable,
+        ]);
     }
 
     #[test]
     fn no_update_valid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
-        let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
-        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
-        let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
-
+        let (clock, initial_update_ticks) = create_clock();
         let rtc = Arc::new(FakeRtc::valid(*VALID_RTC_TIME));
-
-        let inspector = Inspector::new();
-        let inspect_diagnostics =
-            Arc::new(diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock)));
-        let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
@@ -521,8 +510,7 @@ mod tests {
             notifier.clone(),
             time_source,
             interface_event_stream,
-            Arc::clone(&inspect_diagnostics),
-            cobalt_diagnostics,
+            Arc::clone(&diagnostics),
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut2);
@@ -537,26 +525,23 @@ mod tests {
         futures::pin_mut!(fut4);
         assert_eq!(executor.run_until_stalled(&mut fut4), Poll::Ready(None));
 
-        // Checking that correct events were logged to Cobalt
-        cobalt_monitor.assert_lifecycle_events(&[
-            LifecycleEventType::InitializedBeforeUtcStart,
-            LifecycleEventType::StartedUtcFromRtc,
+        // Checking that the correct diagnostic events were logged.
+        diagnostics.assert_events(&[
+            Event::Initialized { clock_state: InitialClockState::NotSet },
+            Event::InitializeRtc {
+                outcome: InitializeRtcOutcome::Succeeded,
+                time: Some(*VALID_RTC_TIME),
+            },
+            Event::StartClock { source: StartClockSource::Rtc },
+            Event::NetworkAvailable,
         ]);
-        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadSucceeded]);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn failed_time_source() {
-        let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
-        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
-        let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
-
+        let (clock, initial_update_ticks) = create_clock();
         let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
-
-        let inspector = Inspector::new();
-        let inspect_diagnostics =
-            Arc::new(diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock)));
-        let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
 
         // Create a time source that will close the channel after the first status.
         let time_source = FakeTimeSource::events_then_terminate(vec![SourceEvent::StatusChange {
@@ -572,8 +557,7 @@ mod tests {
             notifier.clone(),
             time_source,
             interface_event_stream,
-            Arc::clone(&inspect_diagnostics),
-            cobalt_diagnostics,
+            Arc::clone(&diagnostics),
         )
         .await;
 
@@ -581,33 +565,23 @@ mod tests {
         assert_eq!(initial_update_ticks, clock.get_details().unwrap().last_value_update_ticks);
         assert_eq!(rtc.last_set().await, None);
 
-        // Checking that correct events were logged to Cobalt
-        cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
-        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadInvalidBeforeBackstop]);
-
-        // Checking the inspect data is available and unhealthy
-        assert_inspect_tree!(
-            inspector,
-            root: contains {
-                "fuchsia.inspect.Health": contains {
-                    status: "UNHEALTHY",
-                },
-            }
-        );
+        // Checking that the correct diagnostic events were logged.
+        diagnostics.assert_events(&[
+            Event::Initialized { clock_state: InitialClockState::NotSet },
+            Event::InitializeRtc {
+                outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
+                time: Some(*INVALID_RTC_TIME),
+            },
+            Event::NetworkAvailable,
+            Event::Failure { reason: "Time source closed" },
+        ]);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn unlaunchable_time_source() {
-        let clock = Arc::new(zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap());
-        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
-        let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
-
+        let (clock, initial_update_ticks) = create_clock();
         let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
-
-        let inspector = Inspector::new();
-        let inspect_diagnostics =
-            Arc::new(diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock)));
-        let (cobalt_diagnostics, cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let time_source = FakeTimeSource::failing();
         let interface_event_stream = network::create_stream_with_valid_interface();
@@ -619,8 +593,7 @@ mod tests {
             notifier.clone(),
             time_source,
             interface_event_stream,
-            Arc::clone(&inspect_diagnostics),
-            cobalt_diagnostics,
+            Arc::clone(&diagnostics),
         )
         .await;
 
@@ -628,19 +601,15 @@ mod tests {
         assert_eq!(initial_update_ticks, clock.get_details().unwrap().last_value_update_ticks);
         assert_eq!(rtc.last_set().await, None);
 
-        // Checking that correct events were logged to Cobalt
-        cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
-        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadInvalidBeforeBackstop]);
-
-        // Checking the inspect data is available and unhealthy
-        assert_inspect_tree!(
-            inspector,
-            root: contains {
-                "fuchsia.inspect.Health": contains {
-                    status: "UNHEALTHY",
-                },
-            }
-        );
+        // Checking that the correct diagnostic events were logged.
+        diagnostics.assert_events(&[
+            Event::Initialized { clock_state: InitialClockState::NotSet },
+            Event::InitializeRtc {
+                outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
+                time: Some(*INVALID_RTC_TIME),
+            },
+            Event::Failure { reason: "Time source did not launch" },
+        ]);
     }
 
     #[fasync::run_singlethreaded(test)]
