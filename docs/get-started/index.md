@@ -3,7 +3,7 @@
 Welcome to Fuchsia! This guide has everything you need to get started with
 Fuchsia.
 
-Note: The Fuchsia source includes [Zircon](/zircon/README.md), the core platform
+Note: The Fuchsia source includes [Zircon](/docs/concepts/kernel/README.md), the core platform
 that underpins Fuchsia. To work on Zircon, see
 [Getting started with Zircon](/docs/development/kernel/getting_started.md).
 
