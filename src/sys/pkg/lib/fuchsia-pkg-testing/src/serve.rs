@@ -8,7 +8,7 @@ use {
     crate::repo::Repository,
     anyhow::{format_err, Error},
     chrono::Utc,
-    fidl_fuchsia_pkg_ext::RepositoryConfig,
+    fidl_fuchsia_pkg_ext::{MirrorConfig, MirrorConfigBuilder, RepositoryConfig},
     fuchsia_async::{self as fasync, net::TcpListener},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
@@ -220,16 +220,31 @@ impl ServedRepository {
         Ok(packages)
     }
 
+    /// Generates a `MirrorConfig` that points to this served repository.
+    fn get_mirror_config(&self, subscribe: bool) -> MirrorConfig {
+        MirrorConfigBuilder::new(self.local_url().parse::<Uri>().unwrap())
+            .unwrap()
+            .subscribe(subscribe)
+            .build()
+    }
+
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
     pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url().parse::<Uri>().unwrap(), false)
+        self.repo.make_repo_config(url, Some(self.get_mirror_config(false)), false)
     }
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository. Set subscribe on the mirror configs to true.
     pub fn make_repo_config_with_subscribe(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url().parse::<Uri>().unwrap(), true)
+        self.repo.make_repo_config(url, Some(self.get_mirror_config(true)), false)
+    }
+
+    /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
+    /// served repository with local mirroring enabled.
+    // TODO(fxb/59827) delete this method once pkg-resolver can fetch metadata from a LocalMirror.
+    pub fn make_repo_config_with_local_mirror(&self, url: RepoUrl) -> RepositoryConfig {
+        self.repo.make_repo_config(url, Some(self.get_mirror_config(false)), true)
     }
 
     /// Send an SSE event to all clients subscribed to /auto.

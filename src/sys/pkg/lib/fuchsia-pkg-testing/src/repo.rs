@@ -9,7 +9,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg_ext::{
-        MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
+        MirrorConfig, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
     files_async::readdir,
     fuchsia_component::client::{launcher, AppBuilder},
@@ -205,8 +205,8 @@ impl Repository {
     pub fn make_repo_config(
         &self,
         url: RepoUrl,
-        mirror_url: http::Uri,
-        subscribe: bool,
+        mirror_config: Option<MirrorConfig>,
+        use_local_mirror: bool,
     ) -> RepositoryConfig {
         let mut builder = RepositoryConfigBuilder::new(url);
 
@@ -214,8 +214,10 @@ impl Repository {
             builder = builder.add_root_key(key);
         }
 
-        let mirror = MirrorConfigBuilder::new(mirror_url).unwrap().subscribe(subscribe);
-        builder.add_mirror(mirror.build()).build()
+        if let Some(mirror_config) = mirror_config {
+            builder = builder.add_mirror(mirror_config)
+        }
+        builder.use_local_mirror(use_local_mirror).build()
     }
 
     /// Get the root keys used by this repository.
@@ -475,6 +477,15 @@ mod tests {
             "repo.example.org",
         )
         .await;
+
+        let repo_config =
+            repo.make_repo_config("fuchsia-pkg://fuchsia.com".parse().unwrap(), None, true);
+        assert_eq!(repo_config.mirrors().len(), 0);
+        assert!(repo_config.use_local_mirror());
+        assert_eq!(
+            repo_config.repo_url(),
+            &"fuchsia-pkg://fuchsia.com".parse::<RepoUrl>().unwrap()
+        );
 
         assert_eq!(
             fs::read(local_repodir.path().join("fuchsia_pkg/FORMAT_VERSION")).unwrap(),
