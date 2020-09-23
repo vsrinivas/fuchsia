@@ -26,6 +26,8 @@ use {
     fidl_fuchsia_ui_app::ViewProviderMarker,
     fidl_fuchsia_ui_policy::PresentationMarker,
     fidl_fuchsia_ui_scenic::ScenicMarker,
+    fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_ui_views::ViewRefInstalledMarker,
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{connect_to_service, launch_with_options, App, LaunchOptions},
@@ -36,6 +38,7 @@ use {
     futures::{try_join, StreamExt},
     scene_management::{self, SceneManager},
     std::rc::Rc,
+    std::sync::{Arc, Weak},
 };
 
 enum ExposedServices {
@@ -103,6 +106,37 @@ async fn expose_services(
     Ok(())
 }
 
+async fn set_view_focus(
+    weak_focuser: Weak<ui_views::FocuserProxy>,
+    mut view_ref: ui_views::ViewRef,
+) -> Result<(), Error> {
+    // [ViewRef]'s are one-shot use only. Duplicate it for use in request_focus below.
+    let mut viewref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
+
+    // Wait for the view_ref to signal its ready to be focused.
+    let view_ref_installed = connect_to_service::<ViewRefInstalledMarker>()
+        .context("Could not connect to ViewRefInstalledMarker")?;
+    let watch_result = view_ref_installed.watch(&mut view_ref).await;
+    match watch_result {
+        // Handle fidl::Errors.
+        Err(e) => Err(anyhow::format_err!("Failed with err: {}", e)),
+        // Handle ui_views::ViewRefInstalledError.
+        Ok(Err(value)) => Err(anyhow::format_err!("Failed with err: {:?}", value)),
+        Ok(_) => {
+            // Now set focus on the view_ref.
+            if let Some(focuser) = weak_focuser.upgrade() {
+                let focus_result = focuser.request_focus(&mut viewref_dup).await?;
+                match focus_result {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(anyhow::format_err!("Failed with err: {:?}", e)),
+                }
+            } else {
+                Err(anyhow::format_err!("Failed to acquire Focuser"))
+            }
+        }
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["workstation_session"]).expect("Failed to initialize logger.");
@@ -122,7 +156,9 @@ async fn main() -> Result<(), Error> {
     let mut scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
 
     // This node can be used to move the associated view around.
-    let _node = scene_manager.add_view_to_scene(view_provider, Some("Ermine".to_string())).await?;
+    let view_ref =
+        scene_manager.add_view_to_scene(view_provider, Some("Ermine".to_string())).await?;
+    let set_focus_fut = set_view_focus(Arc::downgrade(&scene_manager.focuser), view_ref);
 
     let services_fut = expose_services(element_repository.make_server());
     let input_fut = workstation_input_pipeline::handle_input(scene_manager, &pointer_hack_server);
@@ -130,7 +166,7 @@ async fn main() -> Result<(), Error> {
     let focus_fut = input::focus_listening::handle_focus_changes();
 
     //TODO(47080) monitor the futures to see if they complete in an error.
-    let _ = try_join!(services_fut, input_fut, element_manager_fut, focus_fut);
+    let _ = try_join!(services_fut, input_fut, element_manager_fut, focus_fut, set_focus_fut);
 
     element_repository.shutdown()?;
 
