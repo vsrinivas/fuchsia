@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/unification/zbi/resource.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("echo_server_rust_bin") {
