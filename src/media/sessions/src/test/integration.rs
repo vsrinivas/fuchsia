@@ -1030,6 +1030,8 @@ test!(active_session_falls_back_when_session_removed, || async {
     Ok(())
 });
 
+// TODO(60352): deflake and re-enable.
+#[ignore]
 test!(inspect_tree_correct, || async {
     let mut service = TestService::new()?;
     let player1 = TestPlayer::new(&service).await?;
