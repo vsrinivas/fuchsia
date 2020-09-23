@@ -523,9 +523,10 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "composite-pd-little-core/power-1",
 
       // CPU Device.
-      "sys/platform/03:0c:6",
-      "class/cpu-ctrl/000",
-      "class/cpu-ctrl/001",
+      // TODO(fxbug.dev/60492): Temporarily removed.
+      // "sys/platform/03:0c:6",
+      // "class/cpu-ctrl/000",
+      // "class/cpu-ctrl/001",
 
       // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxb/58584 is
       // fixed.
