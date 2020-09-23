@@ -667,6 +667,29 @@ TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   EXPECT_FALSE(device.mounted());
 }
 
+TEST(AddDeviceTestCase, MinfsWithAlternateNameMounts) {
+  class ZxcryptDevice : public MockBlockDevice {
+   public:
+    using MockBlockDevice::MockBlockDevice;
+
+    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
+      static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
+      return guid;
+    }
+    zx_status_t UnsealZxcrypt() final { return ZX_OK; }
+  };
+  BlockDeviceManager manager(TestOptions());
+  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
+  EXPECT_OK(manager.AddDevice(fvm_device));
+  ZxcryptDevice zxcrypt_device(MockBlockDevice::MinfsZxcryptOptions());
+  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  auto minfs_options = MinfsDevice::MinfsOptions();
+  minfs_options.partition_name = GUID_DATA_NAME;
+  MinfsDevice device(minfs_options);
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
+  EXPECT_TRUE(device.mounted());
+}
+
 // Durable partition tests
 // Tests adding minfs on durable partition with a valid type GUID and valid metadata.
 TEST(AddDeviceTestCase, AddValidDurableDevice) {
