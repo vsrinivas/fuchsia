@@ -102,10 +102,11 @@ All test components are started in a new hermetic environment. By default, this
 environment only contains a few basic services (ambient):
 
 ```text
-"fuchsia.sys.Environment"
-"fuchsia.sys.Launcher"
 "fuchsia.process.Launcher"
 "fuchsia.process.Resolver"
+"fuchsia.sys.Environment"
+"fuchsia.sys.Launcher"
+"fuchsia.sys.Loader"
 ```
 
 Tests can use these services by mentioning them in their `sandbox > services`.
