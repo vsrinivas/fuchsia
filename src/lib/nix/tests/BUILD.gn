@@ -31,10 +31,10 @@ test("nix") {
 
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/nix",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/nix",
   ]
 }
 
