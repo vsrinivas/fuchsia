@@ -1020,11 +1020,9 @@ TEST_F(BlockWatcherTest, TestBlockWatcherAdd) {
   ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
   next_device_number++;
 
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
   fbl::unique_fd fd;
   // Look for the first partition of the device we just added.
   ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "class/block/001", &fd));
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
 
   ASSERT_OK(ramdisk_destroy(client));
 }
@@ -1081,6 +1079,39 @@ TEST_F(BlockWatcherTest, TestMultiplePause) {
   ASSERT_OK(ramdisk_destroy(client3));
   ASSERT_OK(ramdisk_destroy(client4));
   ASSERT_OK(ramdisk_destroy(client5));
+}
+
+TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  int next_device_number = 0;
+
+  // Add a block device, which should be ignored.
+  ramdisk_client* client;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+
+  // Resume.
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  // Pause immediately.
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+
+  // Add another block device, which should also be ignored.
+  ramdisk_client* client2;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client2));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+
+  // Resume again.
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+
+  // Make sure the block watcher correctly resumed.
+  ramdisk_client* client3;
+  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client3));
+
+  ASSERT_OK(ramdisk_destroy(client));
+  ASSERT_OK(ramdisk_destroy(client2));
+  ASSERT_OK(ramdisk_destroy(client3));
 }
 
 }  // namespace
