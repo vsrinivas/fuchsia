@@ -1047,14 +1047,6 @@ pub struct WithAndWithoutRequestResponseControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for WithAndWithoutRequestResponseControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl WithAndWithoutRequestResponseControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()
@@ -2016,14 +2008,6 @@ pub struct WithErrorSyntaxControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for WithErrorSyntaxControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl WithErrorSyntaxControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()
@@ -2916,14 +2900,6 @@ pub struct ChannelProtocolControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for ChannelProtocolControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl ChannelProtocolControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()
@@ -3599,14 +3575,6 @@ impl TransitionalEncoder {
 #[derive(Debug, Clone)]
 pub struct TransitionalControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
-}
-
-impl ::std::ops::Deref for TransitionalControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
 }
 
 impl TransitionalControlHandle {

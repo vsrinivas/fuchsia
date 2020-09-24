@@ -395,14 +395,6 @@ pub struct Super_ControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for Super_ControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl Super_ControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()
@@ -862,14 +854,6 @@ impl SubEncoder {
 #[derive(Debug, Clone)]
 pub struct SubControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
-}
-
-impl ::std::ops::Deref for SubControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
 }
 
 impl SubControlHandle {

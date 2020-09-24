@@ -394,14 +394,6 @@ pub struct TopControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for TopControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl TopControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()

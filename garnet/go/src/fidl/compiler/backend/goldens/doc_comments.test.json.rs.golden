@@ -530,14 +530,6 @@ pub struct InterfaceControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for InterfaceControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl InterfaceControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()

@@ -355,14 +355,6 @@ pub struct FirstProtocolControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for FirstProtocolControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl FirstProtocolControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()
@@ -704,14 +696,6 @@ impl SecondProtocolEncoder {
 #[derive(Debug, Clone)]
 pub struct SecondProtocolControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
-}
-
-impl ::std::ops::Deref for SecondProtocolControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
 }
 
 impl SecondProtocolControlHandle {

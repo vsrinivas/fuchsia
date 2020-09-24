@@ -457,14 +457,6 @@ pub struct ExampleProtocolControlHandle {
     inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for ExampleProtocolControlHandle {
-    type Target = ::std::sync::Arc<fidl::ServeInner>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl ExampleProtocolControlHandle {
     pub fn shutdown(&self) {
         self.inner.shutdown()
