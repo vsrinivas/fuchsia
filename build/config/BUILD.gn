@@ -1094,6 +1094,16 @@ config("no_sanitizers") {
   configs = [ ":no_stack_protector" ]
 }
 
+config("no_profile") {
+  # The difference between this config and removing //build/config/profile is
+  # the dynamic linker setting which is necessary for it to use at runtime with
+  # the libraries it was linked against.
+  cflags = [
+    "-fno-profile-instr-generate",
+    "-fno-coverage-mapping",
+  ]
+}
+
 # IMPORTANT: Keep the configs below in sync with //zircon/public/gn/config/BUILD.zircon.gn
 # TODO(54322): Remove above comment after build unification.
 
