@@ -358,12 +358,6 @@ Path to Mac SDK.
 
 From //public/gn/config/standard.gni:42
 
-### malloc
-
-**Current value (from the default):** `"scudo"`
-
-From //third_party/ulib/musl/BUILD.zircon.gn:6
-
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
 * `debug`: "optimized for debugging", light enough to avoid confusion
