@@ -10,7 +10,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.netstack.Netstack",
+            "fuchsia.net.interfaces.State",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher",
             "fuchsia.time.Maintenance"
