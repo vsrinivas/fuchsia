@@ -141,8 +141,7 @@ zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, 
     return status;
   }
 
-  auto response =
-      fsocket::BaseSocket::Call::Bind2(std::move(channel), std::move(fidl_addr.address));
+  auto response = fsocket::BaseSocket::Call::Bind(std::move(channel), std::move(fidl_addr.address));
   status = response.status();
   if (status != ZX_OK) {
     return status;
@@ -181,7 +180,7 @@ zx_status_t base_connect(zx::unowned_channel channel, const struct sockaddr* add
   }
 
   auto response =
-      fsocket::BaseSocket::Call::Connect2(std::move(channel), std::move(fidl_addr.address));
+      fsocket::BaseSocket::Call::Connect(std::move(channel), std::move(fidl_addr.address));
   status = response.status();
   if (status != ZX_OK) {
     return status;
@@ -218,13 +217,13 @@ zx_status_t base_getname(R response, struct sockaddr* addr, socklen_t* addrlen, 
 
 zx_status_t base_getsockname(zx::unowned_channel channel, struct sockaddr* addr, socklen_t* addrlen,
                              int16_t* out_code) {
-  return base_getname(fsocket::BaseSocket::Call::GetSockName2(std::move(channel)), addr, addrlen,
+  return base_getname(fsocket::BaseSocket::Call::GetSockName(std::move(channel)), addr, addrlen,
                       out_code);
 }
 
 zx_status_t base_getpeername(zx::unowned_channel channel, struct sockaddr* addr, socklen_t* addrlen,
                              int16_t* out_code) {
-  return base_getname(fsocket::BaseSocket::Call::GetPeerName2(std::move(channel)), addr, addrlen,
+  return base_getname(fsocket::BaseSocket::Call::GetPeerName(std::move(channel)), addr, addrlen,
                       out_code);
 }
 
@@ -605,8 +604,8 @@ static fdio_ops_t fdio_datagram_socket_ops = {
           }
 
           bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
-          auto response = sio->client.RecvMsg2(want_addr, static_cast<uint32_t>(datalen), false,
-                                               to_recvmsg_flags(flags));
+          auto response = sio->client.RecvMsg(want_addr, static_cast<uint32_t>(datalen), false,
+                                              to_recvmsg_flags(flags));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
@@ -732,7 +731,7 @@ static fdio_ops_t fdio_datagram_socket_ops = {
               return ZX_ERR_INVALID_ARGS;
           }
           auto const sio = reinterpret_cast<zxio_datagram_socket_t*>(fdio_get_zxio(io));
-          auto response = sio->client.Shutdown2(mode);
+          auto response = sio->client.Shutdown(mode);
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
