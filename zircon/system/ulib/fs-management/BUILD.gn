@@ -60,9 +60,6 @@ if (is_fuchsia) {
     ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
-    # TODO(fxb/58161): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-unused-function" ]
-
     data_deps = [
       "//src/storage/bin/blobfs",
       "//src/storage/bin/minfs",

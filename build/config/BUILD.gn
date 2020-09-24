@@ -574,7 +574,6 @@ config("Wno-unused-function") {
     "//third_party/*",
     "//zircon/kernel/lib/console/*",
     "//zircon/kernel/vm/*",
-    "//zircon/system/ulib/fs-management/*",
     "//zircon/system/ulib/fs/metrics/*",
     "//zircon/third_party/*",
   ]

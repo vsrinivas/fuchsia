@@ -40,18 +40,6 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace fs_management {
 namespace {
 
-void UnmountHandle(zx_handle_t root, bool wait_until_ready) {
-  // We've entered a failure case where the filesystem process (which may or may not be alive)
-  // had a *chance* to be spawned, but cannot be attached to a vnode (for whatever reason).
-  // Rather than abandoning the filesystem process (maybe causing dirty bits to be set), give it a
-  // chance to shutdown properly.
-  //
-  // The unmount process is a little atypical, since we're just sending a signal over a handle,
-  // rather than detaching the mounted filesystem from the "parent" filesystem.
-  fs::Vfs::UnmountHandle(zx::channel(root),
-                         wait_until_ready ? zx::time::infinite() : zx::time::infinite_past());
-}
-
 zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   // Open the parent path as O_ADMIN, and sent the mkdir+mount command
   // to that directory.
