@@ -29,7 +29,7 @@ use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsag
 use fuchsia_scenic::{EntityNode, ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_trace::{self, duration, instant};
 use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
-use futures::channel::mpsc::UnboundedSender;
+use futures::{channel::mpsc::UnboundedSender, TryStreamExt};
 use std::{
     collections::{BTreeMap, BTreeSet},
     iter,
@@ -153,9 +153,9 @@ pub(crate) struct ScenicViewStrategy {
     session: SessionPtr,
     view_key: ViewKey,
     pending_present_count: usize,
-    presentation_interval: u64,
-    next_presentation_time: u64,
-    last_presentation_time: u64,
+    next_presentation_times: Vec<i64>,
+    last_presentation_time: i64,
+    remaining_presents_in_flight_allowed: i64,
     render_timer_scheduled: bool,
     missed_frame: bool,
     app_sender: UnboundedSender<MessageInternal>,
@@ -205,15 +205,36 @@ impl ScenicViewStrategy {
             }),
         ));
 
+        let event_sender = app_sender.clone();
+        let mut event_stream = session.lock().take_event_stream();
+        fasync::Task::local(async move {
+            while let Some(event) = event_stream.try_next().await.expect("Failed to get next event")
+            {
+                match event {
+                    fidl_fuchsia_ui_scenic::SessionEvent::OnFramePresented {
+                        frame_presented_info,
+                    } => {
+                        event_sender
+                            .unbounded_send(MessageInternal::ScenicPresentDone(
+                                key,
+                                frame_presented_info,
+                            ))
+                            .expect("unbounded_send");
+                    }
+                }
+            }
+        })
+        .detach();
+
         let present_sender = app_sender.clone();
-        let info_fut = session.lock().present(0);
+        let info_fut = session.lock().present2(0, 0);
         fasync::Task::local(async move {
             match info_fut.await {
                 // TODO: figure out how to recover from this error
                 Err(err) => eprintln!("Present Error: {}", err),
                 Ok(info) => {
                     present_sender
-                        .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
+                        .unbounded_send(MessageInternal::ScenicPresentSubmitted(key, info))
                         .expect("unbounded_send");
                 }
             }
@@ -226,9 +247,9 @@ impl ScenicViewStrategy {
             view_key: key,
             app_sender: app_sender.clone(),
             pending_present_count: 1,
-            presentation_interval: 0,
-            next_presentation_time: 0,
+            next_presentation_times: Vec::new(),
             last_presentation_time: 0,
+            remaining_presents_in_flight_allowed: 3,
             render_timer_scheduled: false,
             missed_frame: false,
             root_node,
@@ -286,6 +307,13 @@ impl ScenicViewStrategy {
             .expect("VmoPlumber::new"),
         );
         Ok(())
+    }
+
+    fn next_presentation_time(&self) -> i64 {
+        // TODO: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=60306
+        let now = fasync::Time::now().into_nanos();
+        let next = self.next_presentation_times.iter().find(|time| **time >= now).unwrap_or(&now);
+        *next
     }
 
     fn schedule_render_timer(&mut self, presentation_time: i64) {
@@ -431,20 +459,34 @@ impl ViewStrategy for ScenicViewStrategy {
         }
     }
 
-    fn present(&mut self, view_details: &ViewDetails) {
+    fn present(&mut self, _view_details: &ViewDetails) {
         duration!("gfx", "ScenicViewStrategy::present");
-        if self.pending_present_count < 3 {
-            let app_sender = self.app_sender.clone();
-            let presentation_time = self.next_presentation_time;
-            let present_event = self.session.lock().present(presentation_time);
-            let key = view_details.key;
+        if self.remaining_presents_in_flight_allowed == 0 {
+            instant!(
+                "gfx",
+                "ScenicViewStrategy::zero_remaining_presents_in_flight_allowed",
+                fuchsia_trace::Scope::Process,
+                "remaining_presents_in_flight_allowed" => format!("{:?}", self.remaining_presents_in_flight_allowed).as_str()
+            );
+        } else if self.pending_present_count >= 3 {
+            instant!(
+                "gfx",
+                "ScenicViewStrategy::too_many_presents",
+                fuchsia_trace::Scope::Process,
+                "pending_present_count" => format!("{:?}", self.pending_present_count).as_str()
+            );
+        } else {
+            let presentation_time = self.next_presentation_time();
+            let present_event = self.session.lock().present2(presentation_time, 0);
+            let present_sender = self.app_sender.clone();
+            let view_key = self.view_key;
             fasync::Task::local(async move {
                 match present_event.await {
                     // TODO: figure out how to recover from this error
                     Err(err) => eprintln!("Present Error: {}", err),
                     Ok(info) => {
-                        app_sender
-                            .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
+                        present_sender
+                            .unbounded_send(MessageInternal::ScenicPresentSubmitted(view_key, info))
                             .expect("unbounded_send");
                     }
                 }
@@ -453,36 +495,32 @@ impl ViewStrategy for ScenicViewStrategy {
             // Advance presentation time.
             self.pending_present_count += 1;
             self.last_presentation_time = presentation_time;
-            self.next_presentation_time += self.presentation_interval;
-        } else {
-            instant!(
-                "gfx",
-                "ScenicViewStrategy::too_many_presents",
-                fuchsia_trace::Scope::Process,
-                "pending_present_count" => format!("{:?}", self.pending_present_count).as_str()
-            );
         }
+    }
+
+    fn present_submitted(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+        info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
+    ) {
+        self.next_presentation_times = info
+            .future_presentations
+            .iter()
+            .skip(1) // Skip the first one, as it is the time we are presenting to.
+            .filter_map(|info| info.presentation_time)
+            .collect();
+        self.remaining_presents_in_flight_allowed = info.remaining_presents_in_flight_allowed;
     }
 
     fn present_done(
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
-        info: fidl_fuchsia_images::PresentationInfo,
+        _info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
     ) {
         assert_ne!(self.pending_present_count, 0);
         self.pending_present_count -= 1;
-        self.presentation_interval = info.presentation_interval;
-        // Determine next presentation time relative to presentation that
-        // is no longer pending. Add one to ensure that presentation is past
-        // previous.
-        let next_presentation_time = info.presentation_time + 1;
-        // Re-calculate next presentation time based on number of
-        // presentations pending and make sure it is never before the
-        // last presentation time.
-        self.next_presentation_time = self.last_presentation_time.max(
-            next_presentation_time + info.presentation_interval * self.pending_present_count as u64,
-        );
     }
 
     fn handle_focus(
@@ -534,10 +572,6 @@ impl ViewStrategy for ScenicViewStrategy {
         );
 
         if self.missed_frame {
-            self.next_presentation_time = fasync::Time::after(fuchsia_zircon::Duration::from_nanos(
-                self.presentation_interval as i64,
-            ))
-            .into_nanos() as u64;
             self.render_requested();
         }
 
@@ -561,6 +595,6 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 
     fn render_requested(&mut self) {
-        self.schedule_render_timer(self.next_presentation_time as i64);
+        self.schedule_render_timer(self.next_presentation_time());
     }
 }

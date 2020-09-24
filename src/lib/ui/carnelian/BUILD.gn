@@ -22,6 +22,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.scenic.scheduling:fuchsia.scenic.scheduling-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",

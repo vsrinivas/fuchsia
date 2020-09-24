@@ -422,7 +422,17 @@ impl ViewController {
         }
     }
 
-    pub(crate) fn present_done(&mut self, info: fidl_fuchsia_images::PresentationInfo) {
+    pub(crate) fn present_submitted(
+        &mut self,
+        info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
+    ) {
+        self.strategy.present_submitted(&self.make_view_details(), &mut self.assistant, info);
+    }
+
+    pub(crate) fn present_done(
+        &mut self,
+        info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
+    ) {
         self.strategy.present_done(&self.make_view_details(), &mut self.assistant, info);
     }
 

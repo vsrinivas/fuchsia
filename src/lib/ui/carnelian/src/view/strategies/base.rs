@@ -38,7 +38,14 @@ pub(crate) trait ViewStrategy {
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
-        _info: fidl_fuchsia_images::PresentationInfo,
+        _info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
+    ) {
+    }
+    fn present_submitted(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+        _info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
     ) {
     }
     fn handle_scenic_input_event(
