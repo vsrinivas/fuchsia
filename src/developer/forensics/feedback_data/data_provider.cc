@@ -112,7 +112,7 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
               fuchsia::feedback::Attachment bundle;
               bundle.key = kSnapshotFilename;
               if (Archive(attachments, &(bundle.value))) {
-                cobalt_->LogCount(cobalt::SnapshotVersion::kV_01, (uint64_t)bundle.value.size);
+                cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)bundle.value.size);
                 snapshot.set_archive(std::move(bundle));
               }
             }

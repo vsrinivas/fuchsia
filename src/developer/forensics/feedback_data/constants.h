@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/forensics/utils/cobalt/metrics.h"
+
 namespace forensics {
 namespace feedback_data {
 
@@ -117,6 +119,12 @@ constexpr char kRepeatedFormatStr[] = "!!! MESSAGE REPEATED %lu MORE TIMES !!!\n
 
 // One repeated message can occupy up to "kMaxRepeatedBuffers" buffers.
 constexpr size_t kMaxRepeatedBuffers = 30;
+
+// The current version of the snapshot. Update these values together!
+struct SnapshotVersion {
+  static constexpr cobalt::SnapshotVersion kCobalt = cobalt::SnapshotVersion::kV_01;
+  static constexpr const char* kString = "1";
+};
 
 }  // namespace feedback_data
 }  // namespace forensics

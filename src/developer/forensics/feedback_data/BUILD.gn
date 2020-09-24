@@ -29,7 +29,10 @@ source_set("config") {
 source_set("constants") {
   sources = [ "constants.h" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/utils/cobalt",
+  ]
 
   visibility = [ "//src/developer/forensics/feedback_data/*" ]
 }
