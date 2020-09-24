@@ -1,2 +1,3 @@
 default
-minfs-ramdisk
+fvm-ramdisk
+zxcrypt-non-ramdisk

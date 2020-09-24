@@ -59,10 +59,22 @@ class ContentMatcher : public BlockDeviceManager::Matcher {
 // Matches devices that handle groups of partitions.
 class PartitionMapMatcher : public ContentMatcher {
  public:
-  // |suffix| is a device that is expected to appear when the driver is bound. For example,
-  // FVM, will add a "/fvm" device before adding children whilst GPT won't add anything.
-  PartitionMapMatcher(disk_format_t format, std::string_view suffix)
-      : ContentMatcher(format), suffix_(suffix) {}
+  // |suffix| is a device that is expected to appear when the driver is bound. For example, FVM,
+  // will add a "/fvm" device before adding children whilst GPT won't add anything.  If
+  // |ramdisk_required| is set, this matcher will only match against a ram-disk.
+  PartitionMapMatcher(disk_format_t format, std::string_view suffix, bool ramdisk_required)
+      : ContentMatcher(format), suffix_(suffix), ramdisk_required_(ramdisk_required) {}
+
+  bool ramdisk_required() const { return ramdisk_required_; }
+
+  disk_format_t Match(const BlockDeviceInterface& device) override {
+    constexpr std::string_view kRamdiskPrefix = "/dev/misc/ramctl/";
+    if (ramdisk_required_ &&
+        device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) != 0) {
+      return DISK_FORMAT_UNKNOWN;
+    }
+    return ContentMatcher::Match(device);
+  }
 
   // Returns true if |device| is a child of the device matched by this matcher.
   bool IsChild(const BlockDeviceInterface& device) const {
@@ -82,6 +94,7 @@ class PartitionMapMatcher : public ContentMatcher {
 
  private:
   const std::string suffix_;
+  const bool ramdisk_required_;
 };
 
 // Matches a partition with a given name and expected type GUID.
@@ -111,16 +124,31 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
 class MinfsMatcher : public BlockDeviceManager::Matcher {
  public:
   using PartitionNames = std::set<std::string, std::less<>>;
+  enum class Variant {
+    // A regular minfs partition backed by zxcrypt.
+    kNormal,
+    // A minfs partition not backed by zxcrypt.
+    kNoZxcrypt,
+    // Only attach and unseal the zxcrypt partition; doesn't mount minfs.
+    kZxcryptOnly
+  };
 
   static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
   MinfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
-               const fuchsia_hardware_block_partition_GUID& type_guid,
-               const BlockDeviceManager::Options& options)
+               const fuchsia_hardware_block_partition_GUID& type_guid, Variant variant)
       : map_(map),
         partition_names_(std::move(partition_names)),
         type_guid_(type_guid),
-        variant_(GetVariantFromOptions(options)) {}
+        variant_(variant) {}
+
+  static Variant GetVariantFromOptions(const BlockDeviceManager::Options& options) {
+    if (options.is_set(BlockDeviceManager::Options::kNoZxcrypt)) {
+      return Variant::kNoZxcrypt;
+    } else {
+      return Variant::kNormal;
+    }
+  }
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
     if (expected_inner_path_.empty()) {
@@ -129,19 +157,14 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
           !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
         switch (variant_) {
           case Variant::kNormal:
-            return DISK_FORMAT_ZXCRYPT;
-          case Variant::kRamdisk: {
-            constexpr std::string_view kRamdiskPrefix = "/dev/misc/ramctl/";
-            return device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) ==
-                           0
-                       ? DISK_FORMAT_MINFS
-                       : DISK_FORMAT_UNKNOWN;
-          }
+            return map_.ramdisk_required() ? DISK_FORMAT_MINFS : DISK_FORMAT_ZXCRYPT;
           case Variant::kNoZxcrypt:
             return DISK_FORMAT_MINFS;
+          case Variant::kZxcryptOnly:
+            return DISK_FORMAT_ZXCRYPT;
         }
       }
-    } else if (device.topological_path() == expected_inner_path_ &&
+    } else if (variant_ == Variant::kNormal && device.topological_path() == expected_inner_path_ &&
                !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
       return DISK_FORMAT_MINFS;
     }
@@ -186,18 +209,6 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   }
 
  private:
-  enum class Variant { kNormal, kRamdisk, kNoZxcrypt };
-
-  static Variant GetVariantFromOptions(const BlockDeviceManager::Options& options) {
-    if (options.is_set(BlockDeviceManager::Options::kMinfsRamdisk)) {
-      return Variant::kRamdisk;
-    } else if (options.is_set(BlockDeviceManager::Options::kNoZxcrypt)) {
-      return Variant::kNoZxcrypt;
-    } else {
-      return Variant::kNormal;
-    }
-  }
-
   const PartitionMapMatcher& map_;
   const PartitionNames partition_names_;
   const fuchsia_hardware_block_partition_GUID type_guid_;
@@ -261,6 +272,8 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
   }
 };
 
+MinfsMatcher::PartitionNames GetMinfsPartitionNames() { return {"minfs", GUID_DATA_NAME, "data"}; }
+
 }  // namespace
 
 BlockDeviceManager::Options BlockDeviceManager::ReadOptions(std::istream& stream) {
@@ -289,12 +302,15 @@ BlockDeviceManager::Options BlockDeviceManager::DefaultOptions() {
 }
 
 BlockDeviceManager::BlockDeviceManager(const Options& options) {
+  static constexpr fuchsia_hardware_block_partition_GUID minfs_type_guid = GUID_DATA_VALUE;
+
   if (options.is_set(Options::kBootpart)) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
   }
 
-  auto gpt = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_GPT, "");
-  auto fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, "/fvm");
+  auto gpt = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_GPT, "", /*ramdisk_required=*/false);
+  auto fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, "/fvm",
+                                                   options.is_set(Options::kFvmRamdisk));
 
   bool gpt_required = options.is_set(Options::kGpt);
   bool fvm_required = options.is_set(Options::kFvm);
@@ -305,7 +321,8 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
       static constexpr fuchsia_hardware_block_partition_GUID durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
       matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, durable_type_guid, options));
+          *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, durable_type_guid,
+          MinfsMatcher::GetVariantFromOptions(options)));
       gpt_required = true;
     }
     if (options.is_set(Options::kFactory)) {
@@ -321,22 +338,37 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
       fvm_required = true;
     }
     if (options.is_set(Options::kMinfs)) {
-      static constexpr fuchsia_hardware_block_partition_GUID minfs_type_guid = GUID_DATA_VALUE;
-      matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *fvm, MinfsMatcher::PartitionNames{"minfs", GUID_DATA_NAME}, minfs_type_guid, options));
+      matchers_.push_back(
+          std::make_unique<MinfsMatcher>(*fvm, GetMinfsPartitionNames(), minfs_type_guid,
+                                         MinfsMatcher::GetVariantFromOptions(options)));
       fvm_required = true;
     }
   }
 
   // The partition map matchers go last because they match on content.
   if (fvm_required) {
+    std::unique_ptr<PartitionMapMatcher> non_ramdisk_fvm;
+    if (options.is_set(Options::kFvmRamdisk)) {
+      // Add another matcher for the non-ramdisk version of FVM.
+      non_ramdisk_fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, "/fvm",
+                                                              /*ramdisk_required=*/false);
+      if (options.is_set(Options::kAttachZxcryptToNonRamdisk)) {
+        matchers_.push_back(
+            std::make_unique<MinfsMatcher>(*non_ramdisk_fvm, GetMinfsPartitionNames(),
+                                           minfs_type_guid, MinfsMatcher::Variant::kZxcryptOnly));
+      }
+    }
     matchers_.push_back(std::move(fvm));
+    if (non_ramdisk_fvm) {
+      matchers_.push_back(std::move(non_ramdisk_fvm));
+    }
   }
   if (gpt_required) {
     matchers_.push_back(std::move(gpt));
   }
   if (options.is_set(Options::kMbr)) {
-    matchers_.push_back(std::make_unique<PartitionMapMatcher>(DISK_FORMAT_MBR, ""));
+    matchers_.push_back(
+        std::make_unique<PartitionMapMatcher>(DISK_FORMAT_MBR, "", /*ramdisk_required=*/false));
   }
 }
 

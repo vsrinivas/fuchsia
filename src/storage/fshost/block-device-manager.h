@@ -46,8 +46,11 @@ class BlockDeviceManager {
     static constexpr char kNetboot[] =
         "netboot";  // Disables everything except fvm, gpt and bootpart.
     static constexpr char kNoZxcrypt[] = "no-zxcrypt";  // Disables zxcrypt for minfs partitions.
-    static constexpr char kMinfsRamdisk[] =
-        "minfs-ramdisk";  // Minfs is in FVM in a ram-disk, thus doesn't require zxcrypt.
+    static constexpr char kFvmRamdisk[] =
+        "fvm-ramdisk";  // FVM is in a ram-disk, thus minfs doesn't require zxcrypt.
+    static constexpr char kAttachZxcryptToNonRamdisk[] =
+        "zxcrypt-non-ramdisk";  // Attach and unseal zxcrypt to minfs partitions not in a ram-disk
+                                // (but don't mount).
 
     bool is_set(std::string_view option) const { return options.find(option) != options.end(); }
 
