@@ -4430,8 +4430,8 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
 }
 
 // Notify SME of channel switch
-static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
-                                               const struct brcmf_event_msg* e, void* data) {
+zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                        void* data) {
   uint16_t chanspec = 0;
   wlanif_channel_switch_info_t info;
   zx_status_t err = ZX_OK;
@@ -4440,7 +4440,10 @@ static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
   struct net_device* ndev = nullptr;
   struct wireless_dev* wdev = nullptr;
 
-  ZX_ASSERT(ifp);
+  if (!ifp) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   cfg = ifp->drvr->config;
   ndev = ifp->ndev;
   wdev = ndev_to_wdev(ndev);
@@ -4480,6 +4483,7 @@ static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
 
   return ZX_OK;
 }
+
 static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                            void* data) {
   BRCMF_DBG(EVENT, "AP Started Event");

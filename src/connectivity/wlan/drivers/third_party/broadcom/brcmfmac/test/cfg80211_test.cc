@@ -196,4 +196,10 @@ TEST(Cfg80211, SetAssocConfWmmParam_WmmParamNotPresent) {
   EXPECT_FALSE(confirm.wmm_param_present);
 }
 
+TEST(Cfg80211, ChannelSwitchTest) {
+  // The second and third arguments aren't required or used, so this is intended to test
+  // a NULL first parameter.
+  EXPECT_EQ(brcmf_notify_channel_switch(nullptr,  nullptr, nullptr), ZX_ERR_INVALID_ARGS);
+}
+
 }  // namespace
