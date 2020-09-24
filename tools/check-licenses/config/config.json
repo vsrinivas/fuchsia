@@ -20,7 +20,8 @@
     ".git",
     "out",
     ".cipd",
-    "testdata"
+    "testdata",
+    "prebuilt/third_party/sysroot/linux"
   ],
   "textExtensionList": [
     "ac",

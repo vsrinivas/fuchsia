@@ -26,7 +26,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 			if info.IsDir() {
 				// TODO regex instead of exact match
 				for _, skipDir := range config.SkipDirs {
-					if info.Name() == skipDir {
+					if info.Name() == skipDir || path == skipDir {
 						fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
 						return filepath.SkipDir
 					}
