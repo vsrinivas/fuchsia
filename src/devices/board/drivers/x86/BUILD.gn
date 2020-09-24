@@ -61,23 +61,20 @@ source_set("iommu") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-config("private_config") {
-  cflags = [ "-Wno-unused-function" ]
-}
-
 driver_module("platform-bus-x86") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    ":private_config",
-  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-unused-function" ]
+
   sources = [
     "acpi-dev/dev-battery.cc",
     "acpi-dev/dev-cros-ec/acpi.cc",

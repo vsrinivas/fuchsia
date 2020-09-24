@@ -4,9 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 
-config("internal") {
-  cflags = [ "-Wno-unused-function" ]
-}
 driver_module("aml-i2c") {
   configs += [
     "//build/config:all_source",
@@ -28,7 +25,9 @@ driver_module("aml-i2c") {
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-  public_configs = [ ":internal" ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-unused-function" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

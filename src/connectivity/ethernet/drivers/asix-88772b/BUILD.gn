@@ -4,10 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 
-config("internal") {
-  cflags = [ "-Wno-unused-function" ]
-}
-
 driver_module("asix-88772b") {
   configs += [
     "//build/config:all_source",
@@ -30,7 +26,8 @@ driver_module("asix-88772b") {
     "//zircon/public/lib/sync",
   ]
 
-  public_configs = [ ":internal" ]
+  # TODO(fxb/58161): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-unused-function" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

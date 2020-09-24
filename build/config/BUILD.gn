@@ -571,6 +571,10 @@ config("Wno-reorder-init-list") {
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
   visibility = [
+    "//src/connectivity/ethernet/drivers/asix-88772b",
+    "//src/devices/board/drivers/x86:platform-bus-x86",
+    "//src/devices/i2c/drivers/aml-i2c:aml-i2c",
+    "//src/devices/i2c/drivers/intel-i2c",
     "//third_party/*",
     "//zircon/kernel/lib/console/*",
     "//zircon/kernel/vm/*",
