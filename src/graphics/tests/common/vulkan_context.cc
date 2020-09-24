@@ -48,6 +48,7 @@ VulkanContext::VulkanContext(size_t physical_device_index, const vk::QueueFlagBi
       queue_family_index_(kInvalidQueueFamily),
       queue_info_(vk::DeviceQueueCreateFlags(), queue_family_index_, 1 /* queueCount */,
                   &queue_priority_),
+      debug_info_(default_debug_info_s_),
       queue_flag_bits_(queue_flag_bits),
       allocator_(allocator) {}
 
