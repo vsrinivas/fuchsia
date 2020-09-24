@@ -12,7 +12,7 @@ use {
     },
     banjo_ddk_protocol_wlan_info::*,
     fuchsia_zircon as zx,
-    log::error,
+    log::{debug, error},
     std::collections::VecDeque,
 };
 
@@ -152,9 +152,15 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
         let existing_channel = self.listener.device().channel();
         self.listener.on_pre_switch_channel(existing_channel, channel, meta.request_id);
         if existing_channel != channel {
+            debug!("Channel Scheduler switching channel {:?} -> {:?}", existing_channel, channel);
             if let Err(e) = self.listener.device().set_channel(channel) {
                 error!("Failed setting channel {:?} - error {}", channel, e);
             }
+        } else {
+            debug!(
+                "Channel Scheduler skipped channel switch {:?} -> {:?}",
+                existing_channel, channel
+            );
         }
         let deadline = self.listener.timer().now() + meta.dwell_time;
         self.chan_sched.timeout_id =

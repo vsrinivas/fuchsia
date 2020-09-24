@@ -136,8 +136,12 @@ struct ClientTest : public ::testing::Test {
   void AdvanceAutoDeauthenticationTimerByBeaconPeriods(size_t periods) {
     for (size_t i = 0; i < periods / kAssociationStatusBeaconCount; i++) {
       IncreaseTimeByBeaconPeriods(kAssociationStatusBeaconCount);
+      // TriggerTimeout() will cause MLME to go off channel if
+      // deauthentication occurs. In this case, we still need to check
+      // for a SignalReportIndication in the SME channel.
+      bool was_on_channel = client.OnChannel();
       TriggerTimeout();
-      if (client.OnChannel()) {
+      if (was_on_channel) {
         device.AssertNextMsgFromSmeChannel<wlan_mlme::SignalReportIndication>();
       }
     }

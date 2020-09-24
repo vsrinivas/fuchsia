@@ -9,7 +9,7 @@ use {
         timer::Timer,
     },
     banjo_ddk_protocol_wlan_info as banjo_wlan_info,
-    log::{error, warn},
+    log::{debug, error, warn},
 };
 
 #[cfg(test)]
@@ -150,6 +150,7 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
             (channel_scheduler::QueueState::Empty, Some(main_channel))
                 if self.ctx.device.channel() != main_channel =>
             {
+                debug!("Reverting back to main_channel {:?}", main_channel);
                 if let Err(e) = self.ctx.device.set_channel(main_channel) {
                     error!("Unable to revert back to main channel {:?}", e);
                 }

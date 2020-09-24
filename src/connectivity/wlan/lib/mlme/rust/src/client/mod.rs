@@ -633,8 +633,14 @@ impl<'a> BoundClient<'a> {
             },
         })?;
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(out_buf)
-            .map_err(|s| Error::Status(format!("error sending deauthenticate frame"), s))
+        let result = self
+            .send_mgmt_or_ctrl_frame(out_buf)
+            .map_err(|s| Error::Status(format!("error sending deauthenticate frame"), s));
+
+        // Clear main_channel since there is no "main channel" after deauthenticating
+        self.channel_state.main_channel = None;
+
+        result
     }
 
     /// Sends the given payload as a data frame over the air.
@@ -906,6 +912,9 @@ impl<'a> BoundClient<'a> {
         reason_code: fidl_mlme::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) {
+        // Clear main_channel since there is no "main channel" after deauthenticating
+        self.channel_state.main_channel = None;
+
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: self.sta.bssid.0,
