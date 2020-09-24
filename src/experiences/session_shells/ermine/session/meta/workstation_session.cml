@@ -32,6 +32,7 @@
                 "/svc/fuchsia.ui.input3.Keyboard",
                 "/svc/fuchsia.ui.scenic.Scenic",
                 "/svc/fuchsia.ui.shortcut.Manager",
+                "/svc/fuchsia.ui.views.ViewRefInstalled",
             ],
         },
     ],

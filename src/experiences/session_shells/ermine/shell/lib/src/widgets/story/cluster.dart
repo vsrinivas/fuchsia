@@ -8,6 +8,7 @@ import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 
 import '../../models/cluster_model.dart';
 import '../../models/ermine_story.dart';
+import 'post_render.dart';
 import 'tile_chrome.dart';
 import 'tile_sizer.dart';
 import 'tile_tab.dart';
@@ -66,7 +67,10 @@ class Cluster extends StatelessWidget {
                   showTitle: !custom,
                   focused: story.focused,
                   //TODO(47796) show a placeholder until the view loads
-                  child: ChildView(connection: story.childViewConnection),
+                  child: PostRender(
+                    child: ChildView(connection: story.childViewConnection),
+                    onRender: story.requestFocus,
+                  ),
                   onTap: story.focus,
                   onDelete: story.delete,
                   onFullscreen: story.maximize,

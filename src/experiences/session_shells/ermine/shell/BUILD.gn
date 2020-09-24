@@ -70,6 +70,7 @@ flutter_app("ermine") {
     "src/widgets/story/cluster.dart",
     "src/widgets/story/clusters.dart",
     "src/widgets/story/fullscreen_story.dart",
+    "src/widgets/story/post_render.dart",
     "src/widgets/story/thumbnails.dart",
     "src/widgets/story/tile_chrome.dart",
     "src/widgets/story/tile_sizer.dart",

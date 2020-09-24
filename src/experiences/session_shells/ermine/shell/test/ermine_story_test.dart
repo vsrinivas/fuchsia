@@ -8,8 +8,11 @@ import 'dart:async';
 import 'package:ermine/src/models/ermine_story.dart';
 import 'package:ermine/src/utils/presenter.dart';
 import 'package:ermine/src/utils/suggestion.dart';
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
+import 'package:zircon/zircon.dart';
 
 void main() {
   test('from suggestion sets id and title', () {
@@ -50,6 +53,58 @@ void main() {
     expect(didCallDelete, isTrue);
     verify(viewController.close()).called(1);
   });
+
+  test('Focus ErmineStory', () async {
+    final eventPair = MockEventPair();
+    final eventPairDup = MockEventPair();
+    final viewRef = MockViewRef();
+    final viewRefInstalled = MockViewRefInstalled();
+    final childViewConnection = MockChildViewConnection();
+
+    when(viewRef.reference).thenReturn(eventPair);
+    when(eventPair.duplicate(ZX.RIGHT_SAME_RIGHTS)).thenReturn(eventPairDup);
+    when(eventPairDup.isValid).thenReturn(true);
+
+    bool onChangeCalled = false;
+    final completer = Completer<bool>();
+    TestErmineStory(
+      onChange: (_) => onChangeCalled = true,
+      requestFocusCompleter: completer,
+    )
+      ..viewRef = viewRef
+      ..childViewConnectionNotifier.value = childViewConnection
+      ..focus(viewRefInstalled);
+
+    expect(onChangeCalled, true);
+    await completer.future;
+
+    verify(viewRefInstalled.watch(ViewRef(reference: eventPairDup))).called(1);
+    verify(childViewConnection.requestFocus()).called(1);
+  });
+}
+
+class TestErmineStory extends ErmineStory {
+  final Completer<bool> requestFocusCompleter;
+
+  TestErmineStory({
+    void Function(ErmineStory) onChange,
+    this.requestFocusCompleter,
+  }) : super(id: 'id', onChange: onChange);
+
+  @override
+  Future<void> requestFocus([ViewRefInstalledProxy viewRefInstalled]) async {
+    final result = await super.requestFocus(viewRefInstalled);
+    requestFocusCompleter.complete(true);
+    return result;
+  }
 }
 
 class MockViewControllerImpl extends Mock implements ViewControllerImpl {}
+
+class MockChildViewConnection extends Mock implements ChildViewConnection {}
+
+class MockViewRefInstalled extends Mock implements ViewRefInstalledProxy {}
+
+class MockViewRef extends Mock implements ViewRef {}
+
+class MockEventPair extends Mock implements EventPair {}

@@ -9,9 +9,12 @@ import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:uuid/uuid.dart';
+import 'package:zircon/zircon.dart';
 
 import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
+
+const double kFrameTime60FpsInMilliseconds = 16.3333;
 
 /// A function which can be used to launch the suggestion.
 typedef LaunchSuggestion = Future<void> Function(
@@ -101,7 +104,17 @@ class ErmineStory {
     _elementController?.ctrl?.close();
   }
 
-  void focus() => onChange?.call(this..focused = true);
+  /// Sets the focus state on this story.
+  ///
+  /// Also invokes [onChange] callback and request scenic to transfer input
+  /// focus to the associated [viewRef].
+  ///
+  /// Takes an optional [ViewRefInstalledProxy] to allow passing in a mocked
+  /// instance during test.
+  void focus([ViewRefInstalledProxy viewRefInstalled]) {
+    onChange?.call(this..focused = true);
+    requestFocus(viewRefInstalled);
+  }
 
   void maximize() => onChange?.call(this..fullscreen = true);
 
@@ -138,5 +151,36 @@ class ErmineStory {
     this.viewRef = viewRef;
     viewController = vc;
     viewController?.didPresent();
+  }
+
+  /// Requests focus to be transfered to this view given it's [viewRef].
+  Future<void> requestFocus([ViewRefInstalledProxy viewRefInstalled]) async {
+    // [requestFocus] is called for 'every' post render of ChildView widget,
+    // even when that child view is not focused. Skip focusing those views here.
+    if (childViewConnection == null || !focused) {
+      return;
+    }
+
+    // TODO(60528): Wait until child view is connected to view tree. Until the
+    // view connected event is plumbed to [ChildViewConnection], we use a flaky
+    // delay of 3 frames before attempting to request focus for the child view.
+    await Future.delayed(Duration(
+      milliseconds: (kFrameTime60FpsInMilliseconds * 3).toInt(),
+    ));
+
+    final viewRefService = viewRefInstalled ?? ViewRefInstalledProxy();
+    if (viewRefInstalled == null) {
+      StartupContext.fromStartupInfo()
+          .incoming
+          .connectToService(viewRefService);
+    }
+    try {
+      // Wait for [viewRef] to be attached to the view tree.
+      final eventPair = viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS);
+      assert(eventPair.isValid);
+
+      await viewRefService.watch(ViewRef(reference: eventPair));
+      childViewConnection.requestFocus();
+    } on Error catch (_) {}
   }
 }
