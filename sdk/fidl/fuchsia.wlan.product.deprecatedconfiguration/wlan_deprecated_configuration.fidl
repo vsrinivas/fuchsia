@@ -18,10 +18,6 @@ enum SuggestMacAddressError {
 [Discoverable]
 protocol DeprecatedConfigurator {
     /// Suggests a MAC address for [`fuchsia.wlan.policy/AccessPointProvider`] to use when creating
-    /// new access point interfaces.
-    SetPreferredAccessPointMacAddress(fuchsia.net.MacAddress mac);
-
-    /// Suggests a MAC address for [`fuchsia.wlan.policy/AccessPointProvider`] to use when creating
     /// new soft access point interfaces and notifies when the request is complete.
     SuggestAccessPointMacAddress(fuchsia.net.MacAddress mac) -> () error SuggestMacAddressError;
 };

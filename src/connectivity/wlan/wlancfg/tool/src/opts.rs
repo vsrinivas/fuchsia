@@ -146,11 +146,6 @@ pub enum PolicyAccessPointCmd {
 
 #[derive(StructOpt, Clone, Debug)]
 pub enum DeprecatedConfiguratorCmd {
-    #[structopt(name = "set-mac")]
-    SetPreferredAccessPointMacAddress {
-        #[structopt(raw(required = "true"))]
-        mac: MacAddress,
-    },
     #[structopt(name = "suggest-mac")]
     SuggestAccessPointMacAddress {
         #[structopt(raw(required = "true"))]

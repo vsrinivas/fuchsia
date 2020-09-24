@@ -29,15 +29,6 @@ impl DeprecatedConfigurator {
             select! {
                 req = requests.select_next_some() => match req {
                     Ok(req) => match req {
-                        fidl_deprecated::DeprecatedConfiguratorRequest::SetPreferredAccessPointMacAddress{mac, ..} => {
-                            info!("setting preferred AP MAC: {:?}", mac.octets);
-                            let mac = match MacAddress::from_bytes(&mac.octets) {
-                                Ok(mac) => mac,
-                                Err(_) => continue,
-                            };
-                            let mut phy_manager = self.phy_manager.lock().await;
-                            phy_manager.suggest_ap_mac(mac);
-                        }
                         fidl_deprecated::DeprecatedConfiguratorRequest::SuggestAccessPointMacAddress{mac, responder} => {
                             info!("setting suggested AP MAC: {:?}", mac.octets);
                             let mac = match MacAddress::from_bytes(&mac.octets) {
@@ -140,44 +131,6 @@ mod tests {
         fn get_phy_ids(&self) -> Vec<u16> {
             unimplemented!();
         }
-    }
-
-    #[test]
-    fn test_set_mac() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
-        // Set up the DeprecatedConfigurator.
-        let phy_manager = Arc::new(Mutex::new(StubPhyManager::new()));
-        let configurator = DeprecatedConfigurator::new(phy_manager.clone());
-
-        // Create the request stream and proxy.
-        let (configurator_proxy, remote) =
-            create_proxy::<fidl_deprecated::DeprecatedConfiguratorMarker>()
-                .expect("error creating proxy");
-        let stream = remote.into_stream().expect("error creating proxy");
-
-        // Kick off the serve loop and wait for it to stall out waiting for requests.
-        let fut = configurator.serve_deprecated_configuration(stream);
-        pin_mut!(fut);
-        assert!(exec.run_until_stalled(&mut fut).is_pending());
-
-        // Issue a request to set the MAC address.
-        let octets = [1, 2, 3, 4, 5, 6];
-        let mut mac = MacAddress { octets: octets };
-        assert!(configurator_proxy.set_preferred_access_point_mac_address(&mut mac).is_ok());
-        assert!(exec.run_until_stalled(&mut fut).is_pending());
-
-        // Verify that the MAC has been set on the PhyManager
-        let lock_fut = phy_manager.lock();
-        pin_mut!(lock_fut);
-        let phy_manager = assert_variant!(
-            exec.run_until_stalled(&mut lock_fut),
-            Poll::Ready(phy_manager) => {
-                phy_manager
-            }
-        );
-        let expected_mac = eui48::MacAddress::from_bytes(&octets).unwrap();
-        assert_eq!(Some(expected_mac), phy_manager.0);
     }
 
     #[test]

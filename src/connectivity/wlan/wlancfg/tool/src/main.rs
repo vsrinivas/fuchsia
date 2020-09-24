@@ -92,10 +92,6 @@ async fn do_policy_ap_cmd(cmd: opts::PolicyAccessPointCmd) -> Result<(), Error> 
 
 async fn do_deprecated_cmd(cmd: opts::DeprecatedConfiguratorCmd) -> Result<(), Error> {
     match cmd {
-        opts::DeprecatedConfiguratorCmd::SetPreferredAccessPointMacAddress { mac } => {
-            let configurator = get_deprecated_configurator()?;
-            handle_set_preferred_ap_mac(configurator, mac)?;
-        }
         opts::DeprecatedConfiguratorCmd::SuggestAccessPointMacAddress { mac } => {
             let configurator = get_deprecated_configurator()?;
             handle_suggest_ap_mac(configurator, mac).await?;

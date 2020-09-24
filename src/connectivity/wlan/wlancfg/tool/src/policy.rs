@@ -571,15 +571,6 @@ pub async fn handle_ap_listen(
     Ok(())
 }
 
-pub fn handle_set_preferred_ap_mac(
-    configurator: wlan_deprecated::DeprecatedConfiguratorProxy,
-    mac: MacAddress,
-) -> Result<(), Error> {
-    let mut mac = fidl_fuchsia_net::MacAddress { octets: mac.to_array() };
-    configurator.set_preferred_access_point_mac_address(&mut mac)?;
-    Ok(())
-}
-
 pub async fn handle_suggest_ap_mac(
     configurator: wlan_deprecated::DeprecatedConfiguratorProxy,
     mac: MacAddress,
@@ -1543,24 +1534,6 @@ mod tests {
             test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..1));
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-    }
-
-    #[test]
-    fn test_set_preferred_ap_mac() {
-        let mut exec = Executor::new().expect("failed to create an executor");
-
-        let (configurator_proxy, mut configurator_stream) =
-            endpoints::create_proxy_and_stream::<wlan_deprecated::DeprecatedConfiguratorMarker>()
-                .expect("failed to create DeprecatedConfigurator proxy");
-        let mac = MacAddress::from_bytes(&[0, 1, 2, 3, 4, 5]).unwrap();
-        assert!(handle_set_preferred_ap_mac(configurator_proxy, mac).is_ok());
-
-        assert_variant!(
-            exec.run_until_stalled(&mut configurator_stream.next()),
-            Poll::Ready(Some(Ok(wlan_deprecated::DeprecatedConfiguratorRequest::SetPreferredAccessPointMacAddress {
-                mac: fidl_fuchsia_net::MacAddress { octets: [0, 1, 2, 3, 4, 5] }, ..
-            })))
-        );
     }
 
     #[test]

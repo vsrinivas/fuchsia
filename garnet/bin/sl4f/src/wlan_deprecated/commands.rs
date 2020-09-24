@@ -14,17 +14,6 @@ use {
 impl Facade for WlanDeprecatedConfigurationFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
-            "set_preferred_ap_mac" => {
-                let mac = self.parse_mac_argument(args)?;
-                fx_log_info!(
-                    tag: "WlanDeprecatedConfigurationFacade", "setting preferred MAC to: {:?}",
-                    mac
-                );
-                let result = self.set_preferred_access_point_mac_address(mac)?;
-                to_value(result).map_err(|e| {
-                    format_err!("error parsing set preferred access point MAC result: {}", e)
-                })
-            }
             "suggest_ap_mac" => {
                 let mac = self.parse_mac_argument(args)?;
                 fx_log_info!(

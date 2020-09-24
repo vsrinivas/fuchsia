@@ -32,26 +32,6 @@ impl WlanDeprecatedConfigurationFacade {
     }
 
     /// Communicates with the DeprecatedConfigurator service to set a preferred MAC address to be
-    /// used for new soft APs.  This API returns without guaranteeing that the suggested MAC
-    /// address has been set.
-    ///
-    /// # Arguments
-    ///
-    /// `mac` - A MAC address in the form of an eui48::MacAddress.
-    pub fn set_preferred_access_point_mac_address(
-        &self,
-        mac: eui48::MacAddress,
-    ) -> Result<(), Error> {
-        let inner_guard = self.inner.read();
-        let controller = &inner_guard.controller;
-
-        let mut mac = fidl_fuchsia_net::MacAddress { octets: mac.to_array() };
-        controller
-            .set_preferred_access_point_mac_address(&mut mac)
-            .map_err(|e| format_err!("could not set preferred MAC: {:?}", e))
-    }
-
-    /// Communicates with the DeprecatedConfigurator service to set a preferred MAC address to be
     /// used for new soft APs.  This API waits for an acknowledgement from the
     /// DeprecatedConfigurator service indicating that the suggested MAC address has been set.
     ///
