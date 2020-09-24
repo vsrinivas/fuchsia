@@ -4,6 +4,8 @@
 toc:
 - title: "Overview"
   path: /docs/contribute/governance/README.md
+- title: "Eng Council"
+  path: /docs/contribute/governance/eng_council.md
 - title: "Project policy"
   section:
   - include: /docs/contribute/governance/policy/_toc.yaml

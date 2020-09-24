@@ -95,9 +95,8 @@ People interact with the RFC process in several roles:
    often *represented* by someone, often a technical lead or other person
    responsible for a group of stakeholders.
 
- * *RFC Editors.* The RFC Editors facilitate discussion and make the final
-   decision as to whether the project accepts an RFC. The RFC Editors are listed
-   in [`//docs/project/rfcs/OWNERS`](OWNERS).
+ * *Eng Council.* The [Eng Council](../eng_council.md) facilitate discussion
+   and make the final decision as to whether the project accepts an RFC.
 
 ### How the process works
 
@@ -170,7 +169,7 @@ so that people who were not at the meeting can understand what was discussed
 during the meeting.
 
 If the discussion becomes contentious, please escalate to one of the RFC
-Editors. The RFC Editors can help move the discussion forward, for example by
+Editors. The Eng Council can help move the discussion forward, for example by
 providing additional structure to the discussion or moving the discussion to
 another forum. Regardless of how the discussion proceeds, the results of any
 off-CL discussion must be captured in the CL, often by posting a summary of the
@@ -211,48 +210,49 @@ section](#how-decisions-are-made) below for more details about how the project
 decides whether to accept an RFC.
 
 After all the stakeholders have weighed in with their Code-Review flags, send an
-email to rfc-editors@fuchsia.com to prompt the RFC Editors to decide whether to
+email to rfc-editors@fuchsia.com to prompt the Eng Council to decide whether to
 accept your RFC.
 
 #### Step 5: Submit
 
-If the project decides to accept your RFC, an RFC Editor will comment on your CL
-stating that the RFC is accepted and will assign the RFC a number, typically the
-next available number in the series. If there are any -1 or -2 Code-Review
-flags, the RFC Editor will explicitly clear each flag by summarizing the
-objection and by describing why the RFC is moving forward despite the objection.
+If the project decides to accept your RFC, a member of the Eng Council will
+comment on your CL stating that the RFC is accepted and will assign the RFC a
+number, typically the next available number in the series. If there are any -1
+or -2 Code-Review flags, the Eng Council will explicitly clear each flag by
+summarizing the objection and by describing why the RFC is moving forward
+despite the objection.
 
-If the project decides to reject your RFC, an RFC Editor will comment on your CL
-stating that the RFC is rejected and providing a rationale for the rejection.
-Rejected RFCs are valuable engineering artifacts. The RFC Editors will work with
-the RFC Authors to land a version of the RFC that is marked as rejected and
-incorporates the rationale.
+If the project decides to reject your RFC, a member of the Eng Council will
+comment on your CL stating that the RFC is rejected and providing a rationale
+for the rejection.  Rejected RFCs are valuable engineering artifacts. The Eng
+Council will work with the RFC Authors to land a version of the RFC that is
+marked as rejected and incorporates the rationale.
 
 You should upload a new patchset of your RFC with the assigned number, both in
 the title of the RFC and in the filename. If your RFC is approved and requires
 implementation, please make sure you have an issue filed in the issue tracker
 and put a link to the issue in the header of your RFC.
 
-The RFC Editor will then mark your CL Code-Review +2 and you can land your RFC!
+The Eng Council will then mark your CL Code-Review +2 and you can land your RFC!
 
 *Congratulations! You have contributed a valuable engineering artifact to the
 project!*
 
 ### How decisions are made
 
-The decision whether to accept an RFC is made by the RFC Editors, acting in
+The decision whether to accept an RFC is made by the Eng Council, acting in
 [rough consensus](https://en.wikipedia.org/wiki/Rough_consensus) with each
-other. If the RFC Editors cannot reach rough consensus, the RFC is not accepted.
-In deciding whether to accept an RFC, the RFC Editors will consider the
+other. If the Eng Council cannot reach rough consensus, the RFC is not accepted.
+In deciding whether to accept an RFC, the Eng Council will consider the
 following factors:
 
  * Does the RFC advance the goals of the project?
  * Does the RFC uphold the values of the project?
  * Were all of the stakeholders appropriately represented in the discussion?
- * If any stakeholders objected, do the RFC Editors understand the objections
+ * If any stakeholders objected, does the Eng Council understand the objections
    fully?
 
-Decisions made by the RFC Editors can be escalated to the governing authority
+Decisions made by the Eng Council can be escalated to the governing authority
 for the project.
 
 ## Documentation
