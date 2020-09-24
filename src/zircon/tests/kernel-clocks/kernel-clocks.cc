@@ -632,26 +632,55 @@ TEST(KernelClocksTestCase, Backstop) {
 }
 
 TEST(KernelClocksTestCase, StartedSignal) {
-  //  Make a simple clock.
-  zx::clock clock;
-  ASSERT_OK(zx::clock::create(0, nullptr, &clock));
+  std::array OPTIONS{
+      static_cast<uint64_t>(0),
+      ZX_CLOCK_OPT_MONOTONIC,
+      ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS,
+  };
+  std::array VALUES{
+      zx::time(0),
+      zx::time(1),
+  };
+  std::array RATES{
+      std::optional<int32_t>(),
+      std::optional<int32_t>(0),
+      std::optional<int32_t>(1),
+  };
 
-  // Wait up to 50msec for the clock to become started.  This should time out,
-  // and the pending signals should come back as nothing.
-  zx_signals_t pending = 0;
-  ASSERT_STATUS(clock.wait_one(ZX_CLOCK_STARTED, zx::deadline_after(zx::msec(50)), &pending),
-                ZX_ERR_TIMED_OUT);
-  ASSERT_EQ(pending, 0);
+  for (auto option : OPTIONS) {
+    for (auto value : VALUES) {
+      for (auto rate : RATES) {
+        // Make a simple clock.
+        zx::clock clock;
+        ASSERT_OK(zx::clock::create(option, nullptr, &clock));
 
-  // Now go ahead and start the clock running.
-  zx::clock::update_args args;
-  ASSERT_OK(clock.update(args.set_value(zx::time(0))));
+        // Wait up to 50msec for the clock to become started.  This should time out,
+        // and the pending signals should come back as nothing.
+        zx_signals_t pending = 0;
+        ASSERT_STATUS(clock.wait_one(ZX_CLOCK_STARTED, zx::deadline_after(zx::msec(50)), &pending),
+                      ZX_ERR_TIMED_OUT);
+        ASSERT_EQ(pending, 0);
 
-  // This time, our wait should succeed and the pending signal should indicate
-  // ZX_CLOCK_STARTED.  No timeout should be needed.  This clock should already
-  // be started.
-  ASSERT_OK(clock.wait_one(ZX_CLOCK_STARTED, zx::time(0), &pending));
-  ASSERT_EQ(pending, ZX_CLOCK_STARTED);
+        // Now go ahead and start the clock running.
+        zx::clock::update_args args;
+        if (rate) {
+          args.set_rate_adjust(*rate);
+        }
+        ASSERT_OK(clock.update(args.set_value(value)));
+
+        // This time, our wait should succeed and the pending signal should indicate
+        // ZX_CLOCK_STARTED.  No timeout should be needed.  This clock should already
+        // be started.
+        ASSERT_OK(clock.wait_one(ZX_CLOCK_STARTED, zx::time(0), &pending));
+        ASSERT_EQ(pending, ZX_CLOCK_STARTED);
+
+        // When the clock is started, it should be ticking.
+        zx_clock_details_v1_t details;
+        ASSERT_OK(clock.get_details(&details));
+        ASSERT_GT(details.mono_to_synthetic.rate.synthetic_ticks, 0);
+      }
+    }
+  }
 }
 
 TEST(KernelClocksTestCase, DefaultRights) {

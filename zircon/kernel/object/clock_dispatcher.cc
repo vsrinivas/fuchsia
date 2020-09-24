@@ -255,7 +255,7 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
         // If the PPM adjustment being applied is identical to the last
         // adjustment being applied, then don't bother to recompute these.  Just
         // use the rates we already have.
-        if (args.rate_adjust != cur_ppm_adj_) {
+        if (do_set || args.rate_adjust != cur_ppm_adj_) {
           mono_to_synthetic_rate = {static_cast<uint32_t>(1000000 + args.rate_adjust), 1000000};
           ticks_to_synthetic_rate = ticks_to_mono_ratio * mono_to_synthetic_rate;
           cur_ppm_adj_ = args.rate_adjust;
@@ -268,7 +268,7 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
           // go ahead and skip the update of the transformation equations (even
           // though we will record the time of this update as the last rate
           // adjustment time).  See fxb/57593
-          skip_update = !do_set;
+          skip_update = true;
         }
         last_rate_adjust_update_ticks_ = now_ticks;
       } else if (!is_started()) {
