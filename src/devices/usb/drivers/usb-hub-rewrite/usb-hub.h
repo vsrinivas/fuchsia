@@ -61,8 +61,7 @@ struct PortStatus : public fbl::DoublyLinkedListable<PortStatus*> {
 };
 
 class UsbHubDevice;
-using UsbHub =
-    ddk::Device<UsbHubDevice, ddk::Unbindable, ddk::Initializable, ddk::GetProtocolable>;
+using UsbHub = ddk::Device<UsbHubDevice, ddk::Unbindable, ddk::Initializable, ddk::GetProtocolable>;
 using Request = usb::Request<void>;
 using CallbackRequest = usb::CallbackRequest<sizeof(std::max_align_t) * 4>;
 class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDevice> {
@@ -230,6 +229,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   ~UsbHubDevice();
 
  private:
+  std::atomic_bool request_pending_ = false;
   std::atomic<bool> shutting_down_ = false;
   fbl::Array<PortStatus> port_status_ __TA_GUARDED(async_execution_context_);
   fbl::DoublyLinkedList<PortStatus*> pending_enumeration_list_

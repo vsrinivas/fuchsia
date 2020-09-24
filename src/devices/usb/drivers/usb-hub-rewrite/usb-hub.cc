@@ -263,6 +263,7 @@ void UsbHubDevice::HandlePortStatusChanged(PortNumber port) {
 }
 
 void UsbHubDevice::InterruptCallback(CallbackRequest request) {
+  request_pending_ = false;
   if (shutting_down_ || (request.request()->response.status != ZX_OK)) {
     return;
   }
@@ -296,7 +297,7 @@ void UsbHubDevice::InterruptCallback(CallbackRequest request) {
       bit = 0;
     }
   }
-
+  request_pending_ = true;
   request.Queue(usb_);
 }
 
@@ -305,6 +306,7 @@ void UsbHubDevice::StartInterruptLoop() {
   CallbackRequest::Alloc(&request, usb_ep_max_packet(&interrupt_endpoint_),
                          interrupt_endpoint_.bEndpointAddress, usb_.GetRequestSize(),
                          fit::bind_member(this, &UsbHubDevice::InterruptCallback));
+  request_pending_ = true;
   request->Queue(usb_);
 }
 
@@ -592,7 +594,10 @@ zx_status_t UsbHubDevice::Bind(void* ctx, zx_device_t* parent) {
 
 void UsbHubDevice::DdkRelease() { delete this; }
 
-UsbHubDevice::~UsbHubDevice() { loop_.Shutdown(); }
+UsbHubDevice::~UsbHubDevice() {
+  loop_.Shutdown();
+  ZX_ASSERT(!request_pending_);
+}
 
 }  // namespace usb_hub
 static zx_driver_ops_t usb_hub_driver_ops = {
