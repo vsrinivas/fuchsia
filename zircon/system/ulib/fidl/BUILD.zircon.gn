@@ -154,7 +154,7 @@ if (is_fuchsia) {
     ]
 
     # TODO(fxb/58162): delete the below and fix compiler warnings
-    public_configs = [ "$zx_build_config:Wno-conversion" ]
+    configs += [ "$zx_build_config:Wno-conversion" ]
   }
 } else {
   zx_library("fidl-llcpp") {
@@ -189,6 +189,6 @@ if (is_fuchsia) {
     ]
 
     # TODO(fxb/58162): delete the below and fix compiler warnings
-    public_configs = [ "$zx_build_config:Wno-conversion" ]
+    configs += [ "$zx_build_config:Wno-conversion" ]
   }
 }
