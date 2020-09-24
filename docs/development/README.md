@@ -1,14 +1,14 @@
 # Development guides
 
 This document is a top-level entry point to all of Fuchsia documentation related
-to **developing** Fuchsia and software running on Fuchsia.
+to developing Fuchsia and software running on Fuchsia.
 
 ## Developer workflow
 
 This sections describes the workflows and tools for building, running, testing
 and debugging Fuchsia and programs running on Fuchsia.
 
- - [Getting started](/docs/get-started/index.md) - **start here**. This document
+ - [Getting started](/docs/get-started/index.md) - This document
    covers getting the source, building and running Fuchsia.
  - [Source code](/docs/get-started/get_fuchsia_source.md)
  - [fx workflows](build/fx.md)
