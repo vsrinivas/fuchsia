@@ -6,6 +6,7 @@ use {
     crate::client::{DeviceInfo, Ssid},
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanRequest, ScanResultCodes},
+    log::error,
     std::{
         collections::{hash_map, HashMap, HashSet},
         mem,
@@ -170,6 +171,7 @@ impl<D, J> ScanScheduler<D, J> {
     // Should be called for every OnScanResult event received from MLME.
     pub fn on_mlme_scan_result(&mut self, msg: fidl_mlme::ScanResult) {
         if !self.matching_mlme_txn_id(msg.txn_id) {
+            error!("rejecting scan result with wrong txn id");
             return;
         }
         match &mut self.current {
