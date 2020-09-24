@@ -99,6 +99,7 @@ pub struct Associating {
 #[derive(Debug)]
 pub struct Associated {
     cfg: ClientConfig,
+    responder: Option<Responder<ConnectResult>>,
     bss: Box<BssDescription>,
     last_rssi: i8,
     last_snr: i8,
@@ -390,15 +391,13 @@ impl Associating {
                         negotiated_cap.to_fidl_negotiated_capabilities(&self.chan),
                     ))
                 }
-                match LinkState::new(
-                    &self.cmd.bss,
-                    self.cmd.responder,
-                    self.cmd.protection,
-                    context,
-                ) {
-                    Some(link_state) => link_state,
-                    None => {
-                        state_change_ctx.set_msg(format!("supplicant failed to start"));
+
+                match LinkState::new(self.cmd.protection, context) {
+                    Ok(link_state) => link_state,
+                    Err(failure) => {
+                        state_change_ctx.set_msg(format!("failed to initialized LinkState"));
+                        send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
+                        report_connect_finished(self.cmd.responder, context, failure.into());
                         return Err(Idle { cfg: self.cfg });
                     }
                 }
@@ -415,8 +414,15 @@ impl Associating {
             }
         };
         state_change_ctx.set_msg("successful assoc".to_string());
+
+        let mut responder = self.cmd.responder;
+        if let LinkState::LinkUp(_) = link_state {
+            report_connect_finished(responder.take(), context, ConnectResult::Success);
+        }
+
         Ok(Associated {
             cfg: self.cfg,
+            responder,
             last_rssi: self.cmd.bss.rssi_dbm,
             last_snr: self.cmd.bss.snr_db,
             bss: self.cmd.bss,
@@ -491,7 +497,7 @@ impl Associated {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Associating {
-        let (responder, mut protection, connected_duration) = self.link_state.disconnect();
+        let (mut protection, connected_duration) = self.link_state.disconnect();
 
         // Only locally initiated disassociations are considered as lost connections.
         if ind.locally_initiated == true {
@@ -511,8 +517,12 @@ impl Associated {
         }
 
         context.att_id += 1;
-        let cmd =
-            ConnectCommand { bss: self.bss, responder, protection, radio_cfg: self.radio_cfg };
+        let cmd = ConnectCommand {
+            bss: self.bss,
+            responder: self.responder,
+            protection,
+            radio_cfg: self.radio_cfg,
+        };
         send_mlme_assoc_req(
             Bssid(cmd.bss.bssid.clone()),
             self.cap.as_ref(),
@@ -535,7 +545,7 @@ impl Associated {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
-        let (responder, _, connected_duration) = self.link_state.disconnect();
+        let (_, connected_duration) = self.link_state.disconnect();
         match connected_duration {
             Some(duration) => {
                 // Only locally initiated deauth is considered as lost connections.
@@ -550,7 +560,7 @@ impl Associated {
             }
             None => {
                 let connect_result = EstablishRsnaFailure::InternalError.into();
-                report_connect_finished(responder, context, connect_result);
+                report_connect_finished(self.responder, context, connect_result);
             }
         }
 
@@ -589,10 +599,21 @@ impl Associated {
 
         let link_state =
             match self.link_state.on_eapol_ind(ind, &self.bss, state_change_ctx, context) {
-                Some(link_state) => link_state,
-                None => return Err(Idle { cfg: self.cfg }),
+                Ok(link_state) => link_state,
+                Err(failure) => {
+                    report_connect_finished(self.responder, context, failure.into());
+                    send_deauthenticate_request(&self.bss, &context.mlme_sink);
+                    return Err(Idle { cfg: self.cfg });
+                }
             };
-        Ok(Self { link_state, ..self })
+
+        let mut responder = self.responder;
+        if let LinkState::LinkUp(_) = link_state {
+            context.info.report_rsna_established(context.att_id);
+            report_connect_finished(responder.take(), context, ConnectResult::Success);
+        }
+
+        Ok(Self { link_state, responder, ..self })
     }
 
     fn on_channel_switched(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
@@ -609,8 +630,9 @@ impl Associated {
         context: &mut Context,
     ) -> Result<Self, Idle> {
         match self.link_state.handle_timeout(event_id, event, state_change_ctx, context) {
-            Some(link_state) => Ok(Associated { link_state, ..self }),
-            None => {
+            Ok(link_state) => Ok(Associated { link_state, ..self }),
+            Err(failure) => {
+                report_connect_finished(self.responder, context, failure.into());
                 send_deauthenticate_request(&self.bss, &context.mlme_sink);
                 Err(Idle { cfg: self.cfg })
             }
@@ -1164,6 +1186,7 @@ mod tests {
         expect_result(receiver, ConnectResult::Success);
 
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
         expect_info_event(
             &mut h.info_stream,
             InfoEvent::ConnectFinished { result: ConnectResult::Success },
@@ -1214,6 +1237,7 @@ mod tests {
         expect_result(receiver, ConnectResult::Success);
 
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
         expect_info_event(
             &mut h.info_stream,
             InfoEvent::ConnectFinished { result: ConnectResult::Success },
@@ -1281,6 +1305,7 @@ mod tests {
 
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
         expect_result(receiver, ConnectResult::Success);
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
         expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
@@ -1349,6 +1374,7 @@ mod tests {
 
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
         expect_result(receiver, ConnectResult::Success);
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
         expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
@@ -1863,9 +1889,8 @@ mod tests {
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
-        // Discard AssociationSuccess and ConnectFinished info events
+        // Discard AssociationSuccess info event
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::AssociationSuccess { .. })));
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectFinished { .. })));
 
         // Verify ping timeout is scheduled
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
@@ -1879,6 +1904,9 @@ mod tests {
             assert_eq!(info.connected_since, info.now);
             assert!(info.last_reported.is_none());
         });
+
+        // Discard ConnectFinished info event
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectFinished { .. })));
 
         // Trigger the above timeout
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
@@ -2443,16 +2471,13 @@ mod tests {
 
     fn establishing_rsna_state(cmd: ConnectCommand) -> ClientState {
         let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
-        let link_state = testing::new_state(EstablishingRsna {
-            responder: cmd.responder,
-            rsna,
-            rsna_timeout: None,
-            resp_timeout: None,
-        })
-        .into();
+        let link_state =
+            testing::new_state(EstablishingRsna { rsna, rsna_timeout: None, resp_timeout: None })
+                .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss: cmd.bss,
+            responder: cmd.responder,
             last_rssi: 60,
             last_snr: 0,
             link_state,
@@ -2474,6 +2499,7 @@ mod tests {
         .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
+            responder: None,
             bss,
             last_rssi: 60,
             last_snr: 0,
@@ -2504,6 +2530,7 @@ mod tests {
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss: Box::new(bss),
+            responder: None,
             last_rssi: 60,
             last_snr: 0,
             link_state,

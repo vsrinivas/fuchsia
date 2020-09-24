@@ -1089,6 +1089,7 @@ mod tests {
         sme.on_mlme_event(create_assoc_conf(fidl_mlme::AssociateResultCodes::Success));
 
         expect_info_event(&mut info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
         expect_info_event(
             &mut info_stream,
             InfoEvent::ConnectFinished { result: ConnectResult::Success },
@@ -1107,7 +1108,6 @@ mod tests {
             assert!(stats.candidate_network.is_some());
             assert!(stats.previous_disconnect_info.is_none());
         });
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
     #[test]

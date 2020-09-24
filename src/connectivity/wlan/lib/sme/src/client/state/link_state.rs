@@ -3,19 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    super::{
-        now, report_connect_finished, send_deauthenticate_request, Protection, StateChangeContext,
-        StateChangeContextExt,
-    },
+    super::{now, Protection, StateChangeContext, StateChangeContextExt},
     crate::{
         client::{
             event::{self, Event},
             info::ConnectionPingInfo,
             internal::Context,
             rsn::Rsna,
-            ConnectResult, EstablishRsnaFailure,
+            EstablishRsnaFailure,
         },
-        responder::Responder,
         sink::MlmeSink,
         timer::EventId,
         MlmeRequest,
@@ -37,7 +33,6 @@ pub struct Init;
 
 #[derive(Debug)]
 pub struct EstablishingRsna {
-    pub responder: Option<Responder<ConnectResult>>,
     pub rsna: Rsna,
     // Timeout for the total duration RSNA may take to complete.
     pub rsna_timeout: Option<EventId>,
@@ -77,23 +72,11 @@ impl EstablishingRsna {
             peer_sta_address: bss.bssid.clone(),
             state: fidl_mlme::ControlledPortState::Open,
         }));
-        context.info.report_rsna_established(context.att_id);
-        report_connect_finished(self.responder, context, ConnectResult::Success);
 
         let now = now();
         let info = ConnectionPingInfo::first_connected(now);
         let ping_event = Some(report_ping(info, context));
         LinkUp { protection: Protection::Rsna(self.rsna), since: now, ping_event }
-    }
-
-    fn on_rsna_failed(
-        self,
-        failure: EstablishRsnaFailure,
-        bss: &BssDescription,
-        context: &mut Context,
-    ) {
-        report_connect_finished(self.responder, context, failure.into());
-        send_deauthenticate_request(bss, &context.mlme_sink);
     }
 
     fn on_rsna_progressed(mut self, new_resp_timeout: Option<EventId>) -> Self {
@@ -107,20 +90,14 @@ impl EstablishingRsna {
     fn handle_establishing_rsna_timeout(
         mut self,
         event_id: EventId,
-        context: &mut Context,
-    ) -> Option<Self> {
-        if triggered(&self.rsna_timeout, event_id) {
-            error!("timeout establishing RSNA; deauthenticating");
-            cancel(&mut self.rsna_timeout);
-            report_connect_finished(
-                self.responder,
-                context,
-                EstablishRsnaFailure::OverallTimeout.into(),
-            );
-            None
-        } else {
-            Some(self)
+    ) -> Result<Self, EstablishRsnaFailure> {
+        if !triggered(&self.rsna_timeout, event_id) {
+            return Ok(self);
         }
+
+        error!("timeout establishing RSNA");
+        cancel(&mut self.rsna_timeout);
+        Err(EstablishRsnaFailure::OverallTimeout)
     }
 
     fn handle_key_frame_exchange_timeout(
@@ -128,9 +105,8 @@ impl EstablishingRsna {
         timeout: event::KeyFrameExchangeTimeout,
         event_id: EventId,
         context: &mut Context,
-    ) -> Option<Self> {
+    ) -> Result<Self, EstablishRsnaFailure> {
         if triggered(&self.resp_timeout, event_id) {
-            context.info.report_key_exchange_timeout();
             if timeout.attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
                 warn!("timeout waiting for key frame for attempt {}; retrying", timeout.attempt);
                 let id = send_eapol_frame(
@@ -141,19 +117,14 @@ impl EstablishingRsna {
                     timeout.attempt + 1,
                 );
                 self.resp_timeout.replace(id);
-                Some(self)
+                Ok(self)
             } else {
                 error!("timeout waiting for key frame for last attempt; deauth");
                 cancel(&mut self.resp_timeout);
-                report_connect_finished(
-                    self.responder,
-                    context,
-                    EstablishRsnaFailure::KeyFrameExchangeTimeout.into(),
-                );
-                None
+                Err(EstablishRsnaFailure::KeyFrameExchangeTimeout)
             }
         } else {
-            Some(self)
+            Ok(self)
         }
     }
 }
@@ -174,11 +145,9 @@ impl LinkUp {
 
 impl LinkState {
     pub fn new(
-        bss: &BssDescription,
-        responder: Option<Responder<ConnectResult>>,
         protection: Protection,
         context: &mut Context,
-    ) -> Option<Self> {
+    ) -> Result<Self, EstablishRsnaFailure> {
         match protection {
             Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
                 context.info.report_rsna_started(context.att_id);
@@ -186,60 +155,42 @@ impl LinkState {
                     Ok(_) => {
                         let rsna_timeout =
                             Some(context.timer.schedule(event::EstablishingRsnaTimeout));
-                        Some(
-                            State::new(Init)
-                                .transition_to(EstablishingRsna {
-                                    responder,
-                                    rsna,
-                                    rsna_timeout,
-                                    resp_timeout: None,
-                                })
-                                .into(),
-                        )
+                        Ok(State::new(Init)
+                            .transition_to(EstablishingRsna {
+                                rsna,
+                                rsna_timeout,
+                                resp_timeout: None,
+                            })
+                            .into())
                     }
                     Err(e) => {
-                        error!("deauthenticating; could not start Supplicant: {}", e);
-                        send_deauthenticate_request(bss, &context.mlme_sink);
+                        error!("could not start Supplicant: {}", e);
                         context.info.report_supplicant_error(anyhow::anyhow!(e));
-                        report_connect_finished(
-                            responder,
-                            context,
-                            EstablishRsnaFailure::StartSupplicantFailed.into(),
-                        );
-                        None
+                        Err(EstablishRsnaFailure::StartSupplicantFailed)
                     }
                 }
             }
             Protection::Open | Protection::Wep(_) => {
-                report_connect_finished(responder, context, ConnectResult::Success);
                 let now = now();
                 let info = ConnectionPingInfo::first_connected(now);
                 let ping_event = Some(report_ping(info, context));
-                Some(
-                    State::new(Init)
-                        .transition_to(LinkUp {
-                            protection: Protection::Open,
-                            since: now,
-                            ping_event,
-                        })
-                        .into(),
-                )
+                Ok(State::new(Init)
+                    .transition_to(LinkUp { protection: Protection::Open, since: now, ping_event })
+                    .into())
             }
         }
     }
 
-    pub fn disconnect(
-        self,
-    ) -> (Option<Responder<ConnectResult>>, Protection, Option<zx::Duration>) {
+    pub fn disconnect(self) -> (Protection, Option<zx::Duration>) {
         match self {
             Self::EstablishingRsna(state) => {
                 let (_, state) = state.release_data();
-                (state.responder, Protection::Rsna(state.rsna), None)
+                (Protection::Rsna(state.rsna), None)
             }
             Self::LinkUp(state) => {
                 let (_, state) = state.release_data();
                 let connected_duration = now() - state.since;
-                (None, state.protection, Some(connected_duration))
+                (state.protection, Some(connected_duration))
             }
             _ => unreachable!(),
         }
@@ -251,7 +202,7 @@ impl LinkState {
         bss: &BssDescription,
         state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
-    ) -> Option<Self> {
+    ) -> Result<Self, EstablishRsnaFailure> {
         match self {
             Self::EstablishingRsna(state) => {
                 let (transition, mut state) = state.release_data();
@@ -259,17 +210,14 @@ impl LinkState {
                     RsnaStatus::Established => {
                         let link_up = state.on_rsna_established(bss, context);
                         state_change_msg.set_msg("RSNA established".to_string());
-                        Some(transition.to(link_up).into())
+                        Ok(transition.to(link_up).into())
                     }
-                    RsnaStatus::Failed(failure) => {
-                        state.on_rsna_failed(failure, bss, context);
-                        None
-                    }
+                    RsnaStatus::Failed(failure_reason) => Err(failure_reason),
                     RsnaStatus::Progressed { new_resp_timeout } => {
                         let still_establishing_rsna = state.on_rsna_progressed(new_resp_timeout);
-                        Some(transition.to(still_establishing_rsna).into())
+                        Ok(transition.to(still_establishing_rsna).into())
                     }
-                    RsnaStatus::Unchanged => Some(transition.to(state).into()),
+                    RsnaStatus::Unchanged => Ok(transition.to(state).into()),
                 }
             }
             Self::LinkUp(state) => {
@@ -288,7 +236,7 @@ impl LinkState {
                         s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
                     };
                 }
-                Some(transition.to(state).into())
+                Ok(transition.to(state).into())
             }
             _ => unreachable!(),
         }
@@ -300,41 +248,42 @@ impl LinkState {
         event: Event,
         state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
-    ) -> Option<Self> {
+    ) -> Result<Self, EstablishRsnaFailure> {
         match self {
             Self::EstablishingRsna(state) => match event {
                 Event::EstablishingRsnaTimeout(..) => {
                     let (transition, state) = state.release_data();
-                    match state.handle_establishing_rsna_timeout(event_id, context) {
-                        Some(still_establishing_rsna) => {
-                            Some(transition.to(still_establishing_rsna).into())
+                    match state.handle_establishing_rsna_timeout(event_id) {
+                        Ok(still_establishing_rsna) => {
+                            Ok(transition.to(still_establishing_rsna).into())
                         }
-                        None => {
+                        Err(failure) => {
                             state_change_msg.set_msg("RSNA timeout".to_string());
-                            None
+                            Err(failure)
                         }
                     }
                 }
                 Event::KeyFrameExchangeTimeout(timeout) => {
                     let (transition, state) = state.release_data();
+                    context.info.report_key_exchange_timeout();
                     match state.handle_key_frame_exchange_timeout(timeout, event_id, context) {
-                        Some(still_establishing_rsna) => {
-                            Some(transition.to(still_establishing_rsna).into())
+                        Ok(still_establishing_rsna) => {
+                            Ok(transition.to(still_establishing_rsna).into())
                         }
-                        None => {
+                        Err(failure) => {
                             state_change_msg.set_msg("key frame rx timeout".to_string());
-                            None
+                            Err(failure)
                         }
                     }
                 }
-                _ => Some(state.into()),
+                _ => Ok(state.into()),
             },
             Self::LinkUp(mut state) => match event {
                 Event::ConnectionPing(prev_ping) => {
                     state.handle_connection_ping(event_id, prev_ping, context);
-                    Some(state.into())
+                    Ok(state.into())
                 }
-                _ => Some(state.into()),
+                _ => Ok(state.into()),
             },
             _ => unreachable!(),
         }
