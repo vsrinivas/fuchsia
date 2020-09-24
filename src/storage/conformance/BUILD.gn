@@ -86,7 +86,7 @@ rustc_test("io1_conformance_test") {
 #       name = "io_conformance_fdio"
 #       environments = basic_envs
 
-#       # TODO(fxb/44968): Re-enable these tests once we fix race conditions involving starting
+#       # TODO(fxbug.dev/44968): Re-enable these tests once we fix race conditions involving starting
 #       # and connecting components.
 #       disabled = true
 #     },

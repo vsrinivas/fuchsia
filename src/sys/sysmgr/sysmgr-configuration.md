@@ -46,7 +46,7 @@ configuration. There are two supported ways to do so:
    line arguments passed to the component depending on the product config in
    order to modify its behavior.
 
-TODO(fxb/48215): There are recognized deficiencies with the centralized
+TODO(fxbug.dev/48215): There are recognized deficiencies with the centralized
 services.config file, such as the fact that it is difficult to understand which
 services are actually available on a given build since it depends on whether the
 relevant package is available. We plan to address this during the migration to
@@ -69,7 +69,7 @@ still the recommended default.
 > Duplicate configuration for service fuchsia.my.Service in files: ../../some/path/default.config, ../../some/path/alternative.config
 > ```
 >
-> TODO(fxb/48223): As a **TEMPORARY** workaround for build errors like this, you
+> TODO(fxbug.dev/48223): As a **TEMPORARY** workaround for build errors like this, you
 > can set the `dangerous_allow_sysmgr_config_conflicts` GN variable to true. This
 > variable will be removed shortly and should only be used locally by developers,
 > not in product configs, as it results in non-deterministic behavior (sysmgr may

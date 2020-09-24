@@ -103,7 +103,7 @@ where
             location_to_id_map: BTreeMap::new(),
             file_name_to_id_map: BTreeMap::new(),
             next_id: 0,
-            // TODO(fxb/45391): Factor this out into AssectCollectionInspectData
+            // TODO(fxbug.dev/45391): Factor this out into AssectCollectionInspectData
             inspect_node: AssetCollectionInspectData::make_node(parent_inspect_node),
         }
     }

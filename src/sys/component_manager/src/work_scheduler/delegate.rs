@@ -230,7 +230,7 @@ impl WorkSchedulerDelegate {
         });
 
         // Dispatch work items that are due.
-        // TODO(fxb/42310): It may be advantageous to spawn a separate task for each dispatcher.
+        // TODO(fxbug.dev/42310): It may be advantageous to spawn a separate task for each dispatcher.
         fasync::Task::spawn(async move {
             for (dispatcher, items) in to_dispatch.into_iter() {
                 let _ = dispatcher.dispatch(items).await;

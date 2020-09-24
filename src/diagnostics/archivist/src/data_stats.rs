@@ -73,7 +73,7 @@ async fn get_data_directory_stats(
                 }
                 _ => {
                     // Errors occur when reading dirs. We skip reading this dir.
-                    // TODO(fxb/49157): consider showing an error in the output if we failed to
+                    // TODO(fxbug.dev/49157): consider showing an error in the output if we failed to
                     // read this dir.
                     None
                 }

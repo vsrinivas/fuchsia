@@ -103,7 +103,7 @@ executable("vkcube-on-scenic-executable") {
     "third_party/vkcube/cube.h",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [
     "VK_USE_PLATFORM_FUCHSIA",
@@ -119,10 +119,10 @@ executable("vkcube-on-scenic-executable") {
     "//zircon/system/ulib/syslog",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -135,7 +135,7 @@ executable("vkcube-on-fb-executable") {
     "third_party/vkcube/cube.h",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
   deps = [
@@ -148,10 +148,10 @@ executable("vkcube-on-fb-executable") {
   ]
   public_deps = [ "//zircon/public/lib/fit" ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -164,7 +164,7 @@ executable("vkcube-skip-present-executable") {
     "third_party/vkcube/cube.h",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [
     "VK_USE_PLATFORM_FUCHSIA",
@@ -180,9 +180,9 @@ executable("vkcube-skip-present-executable") {
   ]
   public_deps = [ "//zircon/public/lib/fit" ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

@@ -82,7 +82,7 @@ pub async fn load_vmo<'a>(
     dir_proxy: &'a DirectoryProxy,
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
-    // TODO(fxb/52468): This does not ask or wait for a Describe event, which means a failure to
+    // TODO(fxbug.dev/52468): This does not ask or wait for a Describe event, which means a failure to
     // open the file will appear as a PEER_CLOSED on the get_buffer call. It also means this could
     // be a Vmofile node and that we're relying on it still supporting the File protocol.
     let file_proxy = io_util::open_file(
@@ -144,7 +144,7 @@ mod tests {
     async fn load_objects_test() -> Result<(), Error> {
         // Open this test's real /pkg/lib directory to use for this test, and then check to see
         // whether an asan subdirectory is present, and use it instead if so.
-        // TODO(fxb/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
+        // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
         // package layout (like whether sanitizers are in use) once Rust vfs supports
         // OPEN_RIGHT_EXECUTABLE
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
@@ -197,7 +197,7 @@ mod tests {
         // since we need a directory that supports OPEN_RIGHT_EXECUTABLE. It contains a file 'foo'
         // which contains 'hippos' and a file 'bar/baz' (that is, baz in a subdirectory bar) which
         // contains 'rule'.
-        // TODO(fxb/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
+        // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
         // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
         let pkg_lib = io_util::open_directory_in_namespace(
             "/pkg/lib/config_test/",

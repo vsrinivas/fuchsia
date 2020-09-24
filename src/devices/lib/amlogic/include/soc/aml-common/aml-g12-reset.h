@@ -43,7 +43,7 @@ class RESET_0 : public hwreg::RegisterBase<RESET_0, uint32_t> {
 class RESET_1 : public hwreg::RegisterBase<RESET_1, uint32_t> {
  public:
   DEF_BIT(29, audio_codec);
-  // TODO: See fxb/43747
+  // TODO: See fxbug.dev/43747
   DEF_BIT(17, unknown_field_b);
   DEF_BIT(16, unknown_field_a);
   DEF_BIT(14, sd_emmc_c);

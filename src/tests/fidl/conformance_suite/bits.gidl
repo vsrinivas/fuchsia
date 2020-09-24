@@ -101,7 +101,7 @@ success("FlexibleBitsKnownValue") {
 }
 
 success("FlexibleBitsUnknownValue") {
-    // TODO(fxb/7847): Implement flexible bits
+    // TODO(fxbug.dev/7847): Implement flexible bits
     // NOTE: Go does not validate bits so passes this test, but does not yet fully
     // implement flexible bits
     bindings_denylist = [dart,rust,cpp,llcpp],
@@ -116,7 +116,7 @@ success("FlexibleBitsUnknownValue") {
 }
 
 success("FlexibleBitsUint64UnknownValue") {
-    // TODO(fxb/7847): Implement flexible bits
+    // TODO(fxbug.dev/7847): Implement flexible bits
     // NOTE: Go does not validate bits so passes this test, but does not yet fully
     // implement flexible bits
     bindings_denylist = [dart,rust,cpp,llcpp],
@@ -131,7 +131,7 @@ success("FlexibleBitsUint64UnknownValue") {
 }
 
 encode_failure("StrictBitsUint8UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     // Rust: cannot construct invalid bits.
     bindings_denylist = [go,rust],
     value = StrictBitsUint8Struct {
@@ -141,7 +141,7 @@ encode_failure("StrictBitsUint8UnknownBit") {
 }
 
 encode_failure("StrictBitsUint16UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     // Rust: cannot construct invalid bits.
     bindings_denylist = [go,rust],
     value = StrictBitsUint16Struct {
@@ -151,7 +151,7 @@ encode_failure("StrictBitsUint16UnknownBit") {
 }
 
 encode_failure("StrictBitsUint32UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     // Rust: cannot construct invalid bits.
     bindings_denylist = [go,rust],
     value = StrictBitsUint32Struct {
@@ -161,7 +161,7 @@ encode_failure("StrictBitsUint32UnknownBit") {
 }
 
 encode_failure("StrictBitsUint64UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     // Rust: cannot construct invalid bits.
     bindings_denylist = [go,rust],
     value = StrictBitsUint64Struct {
@@ -171,7 +171,7 @@ encode_failure("StrictBitsUint64UnknownBit") {
 }
 
 decode_failure("StrictBitsUint8UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     bindings_denylist = [go],
     type = StrictBitsUint8Struct,
     bytes = {
@@ -183,7 +183,7 @@ decode_failure("StrictBitsUint8UnknownBit") {
 }
 
 decode_failure("StrictBitsUint16UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     bindings_denylist = [go],
     type = StrictBitsUint16Struct,
     bytes = {
@@ -195,7 +195,7 @@ decode_failure("StrictBitsUint16UnknownBit") {
 }
 
 decode_failure("StrictBitsUint32UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     bindings_denylist = [go],
     type = StrictBitsUint32Struct,
     bytes = {
@@ -207,7 +207,7 @@ decode_failure("StrictBitsUint32UnknownBit") {
 }
 
 decode_failure("StrictBitsUint64UnknownBit") {
-    // TODO(fxb/7847): Implement strict bits in Go.
+    // TODO(fxbug.dev/7847): Implement strict bits in Go.
     bindings_denylist = [go],
     type = StrictBitsUint64Struct,
     bytes = {

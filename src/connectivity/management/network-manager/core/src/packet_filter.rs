@@ -120,7 +120,7 @@ fn to_filter_action(action: netfilter::Action) -> netconfig::FilterAction {
     match action {
         netfilter::Action::Pass => netconfig::FilterAction::Allow,
         // TODO(cgibson): What is our default drop policy? Should we gloss over the difference
-        // to users of the Network Manager or should it become a parse error? fxb/45024
+        // to users of the Network Manager or should it become a parse error? fxbug.dev/45024
         netfilter::Action::Drop => netconfig::FilterAction::Drop,
         netfilter::Action::DropReset => netconfig::FilterAction::Drop,
     }
@@ -493,7 +493,7 @@ impl PacketFilter {
             return Err(error::NetworkManager::Service(error::Service::NatNotEnabled));
         }
         // TODO(cgibson): NAT should work on IP packets, we shouldn't need to provide a proto field
-        // here. This is a bug: fxb/35950.
+        // here. This is a bug: fxbug.dev/35950.
         //
         // Ultimately this should all collapse into a single rule.
         let mut nat_rules = vec![

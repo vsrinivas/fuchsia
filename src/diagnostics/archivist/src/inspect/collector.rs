@@ -67,7 +67,7 @@ impl InspectDataCollector {
         let entries = files_async::readdir_recursive(inspect_proxy, /* timeout= */ None)
             .filter_map(|result| {
                 async move {
-                    // TODO(fxb/49157): decide how to show directories that we failed to read.
+                    // TODO(fxbug.dev/49157): decide how to show directories that we failed to read.
                     result.ok()
                 }
             });

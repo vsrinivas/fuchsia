@@ -58,8 +58,8 @@ func getSysTime() zx.Time {
 // Advance the time by a constant, and ensure that time only advances by that
 // constant.
 func TestTimeAdvance(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 
@@ -75,8 +75,8 @@ func TestTimeAdvance(t *testing.T) {
 // Test the deadline_after syscall, ensure that the time returned is the paused
 // time plus the duration.
 func TestDeadlineAfter(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 
@@ -93,8 +93,8 @@ func TestDeadlineAfter(t *testing.T) {
 // Tests that the nanosleep blocking syscall wakes up after advancing the fake
 // clock by the expected number of ns.
 func TestNanosleep(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 	done := make(chan bool)
@@ -122,8 +122,8 @@ func TestNanosleep(t *testing.T) {
 // Ensures that the output of Sys_clock_get(ZX_CLOCK_MONOTONIC) matches the
 // output of Sys_clock_get_monotonic.
 func TestClockGet(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 
@@ -141,8 +141,8 @@ func TestClockGet(t *testing.T) {
 // Tests that timing out on a Wait works as expected and status/signals are
 // correct.
 func TestWaitOneTimeout(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 	done := make(chan bool)
@@ -186,8 +186,8 @@ func TestWaitOneTimeout(t *testing.T) {
 // Tests that signaling on a Wait works as expected and status/signals are
 // correct.
 func TestWaitOneSignal(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 	done := make(chan bool)
@@ -221,8 +221,8 @@ func TestWaitOneSignal(t *testing.T) {
 
 // Tests that zx.WaitMany times out as expected with just 2 WaitItems.
 func TestWaitManyTimeoutSmall(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 	done := make(chan bool)
@@ -277,8 +277,8 @@ func TestWaitManyTimeoutSmall(t *testing.T) {
 
 // Tests that zx.WaitMany signals as expected with just 2 WaitItems.
 func TestWaitManySignalSmall(t *testing.T) {
-	// TODO(fxb/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxb/45644)")
+	// TODO(fxbug.dev/45644): Disabled due to flake
+	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
 	control := setup(t)
 	defer control.Close()
 	done := make(chan bool)

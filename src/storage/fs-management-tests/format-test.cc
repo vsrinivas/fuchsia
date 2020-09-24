@@ -60,7 +60,7 @@ TEST(FormatDetectionTest, TestVbmetaRecognised) {
   // Add the MBR magic string to the end of the first sector. These bytes in
   // vbmeta tend to be randomish, and previously we've had bugs where if these
   // bytes happened to match the MBR magic, we would misrecognise the partition.
-  // (c.f. fxb/59374)
+  // (c.f. fxbug.dev/59374)
   const unsigned char kMbrMagic[] = {0x55, 0xaa};
   vmo.write(kMbrMagic, /*offset=*/510, sizeof(kMbrMagic));
 

@@ -122,7 +122,7 @@ async fn handle_check_now_cmd(
 
 /// Change to a specific version, regardless of whether it's newer or older than
 /// the current system software.
-// TODO(fxb/60019): implement force install.
+// TODO(fxbug.dev/60019): implement force install.
 async fn force_install(_update_pkg_url: String, _reboot: bool) -> Result<(), Error> {
     println!("The force install is not yet implemented in this tool.");
     println!("In the meantime, please use preexisting tools for a force install.");

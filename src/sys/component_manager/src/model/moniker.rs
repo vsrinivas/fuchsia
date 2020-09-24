@@ -237,7 +237,7 @@ impl AbsoluteMoniker {
     /// Parse the given string as an absolute moniker. The string should be a '/' delimited series
     /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
     /// "/name1:collection1".
-    // TODO(fxb/49968): Remove instance ID 0 assumption when removing instance IDs from
+    // TODO(fxbug.dev/49968): Remove instance ID 0 assumption when removing instance IDs from
     // AbsoluteMoniker/ChildMoniker (and rename to parse_str + add From<&str> impl).
     pub fn parse_string_without_instances(input: &str) -> Result<Self, MonikerError> {
         if input.chars().nth(0) != Some('/') {

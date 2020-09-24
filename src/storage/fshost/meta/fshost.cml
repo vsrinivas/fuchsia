@@ -159,7 +159,7 @@
         // name matches the protocol name. This is an implementation of
         // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
         // this implementation comes from fshost.
-        // TODO(fxb/34633): This service is deprecated and should only be routed to
+        // TODO(fxbug.dev/34633): This service is deprecated and should only be routed to
         // devcoordinator
         {
             protocol: "/svc/fuchsia.fshost.Loader",

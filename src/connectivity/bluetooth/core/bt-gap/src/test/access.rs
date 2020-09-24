@@ -159,7 +159,7 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         // so that the other futures may terminate. Then, assert Host #2 stops discovering.
         drop(discovery_session);
 
-        // TODO(fxb/59420): Remove the double refresh once the cause is understood and fixed
+        // TODO(fxbug.dev/59420): Remove the double refresh once the cause is understood and fixed
         host_device::refresh_host_info(host_2.clone())
             .await
             .expect("did not receive Host #2 info update");

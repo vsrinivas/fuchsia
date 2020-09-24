@@ -223,7 +223,7 @@ history is read.
 
 Commit messages should never contain references to any of:
 1. Relative moments in time
-1. Non-public URLs (such as go/, fxb/, fxr/, and the like)
+1. Non-public URLs
 1. Individuals
 1. Hosted code reviews (such as on fuchsia-review.googlesource.com)
     + Refer to commits in this repository by their SHA-1 hash

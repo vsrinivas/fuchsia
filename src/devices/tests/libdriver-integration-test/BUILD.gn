@@ -42,7 +42,7 @@ test("tests") {
     "//zircon/system/ulib/inspector",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -60,7 +60,7 @@ isolated_devmgr_unittest_package("libdriver-integration-test") {
 }
 
 fidl("mock-device") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "event-names-must-start-with-on" ]
 
   name = "fuchsia.device.mock"

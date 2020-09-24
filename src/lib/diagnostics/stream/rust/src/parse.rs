@@ -141,7 +141,7 @@ impl nom::error::ParseError<&[u8]> for ParseError {
     }
 
     fn append(_input: &[u8], kind: nom::error::ErrorKind, _prev: Self) -> Self {
-        // TODO(fxb/55841) support chaining these
+        // TODO(fxbug.dev/55841) support chaining these
         ParseError::Nom(kind)
     }
 }

@@ -551,7 +551,7 @@ impl DeviceState {
         }
 
         // TODO(cgibson): Once we can configure VLANs, we need to handle VLAN ID 0 vs None, since
-        // VLAN ID 0x0000 is a reserved value in dot1q. fxb/41746.
+        // VLAN ID 0x0000 is a reserved value in dot1q. fxbug.dev/41746.
         let vid = match vlan {
             Some(v) => v,
             None => 0,
@@ -746,7 +746,7 @@ impl DeviceState {
         // rules can be removed.
         warn!("Deleting numbered filter rules is not supported yet: Clearing all rules instead.");
 
-        // TODO(cgibson): Need to support tracking element numbers. fxb/44183.
+        // TODO(cgibson): Need to support tracking element numbers. fxbug.dev/44183.
         match self.packet_filter.clear_filters().await {
             Ok(_) => Ok(()),
             Err(e) => {

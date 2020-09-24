@@ -261,7 +261,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
                                  const AttemptBindFunc& attempt_bind);
 
   // Used to implement fuchsia::device::manager::Coordinator.
-  // TODO(fxb/43370): remove |always_init| once init tasks can be enabled for all devices.
+  // TODO(fxbug.dev/43370): remove |always_init| once init tasks can be enabled for all devices.
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
                         zx::channel coordinator,
                         const llcpp::fuchsia::device::manager::DeviceProperty* props_data,

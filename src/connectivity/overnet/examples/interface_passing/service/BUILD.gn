@@ -10,7 +10,7 @@ group("service") {
 }
 
 fidl("interface_passing") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "too-many-nested-libraries" ]
 
   name = "fuchsia.overnet.examples.interfacepassing"

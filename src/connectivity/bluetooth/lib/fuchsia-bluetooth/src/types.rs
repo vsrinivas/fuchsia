@@ -133,7 +133,7 @@ impl From<Technology> for sys::TechnologyType {
     }
 }
 
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<control::TechnologyType> for Technology {
     fn from(tech: control::TechnologyType) -> Self {
         match tech {
@@ -144,7 +144,7 @@ impl From<control::TechnologyType> for Technology {
     }
 }
 
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<Technology> for control::TechnologyType {
     fn from(tech: Technology) -> Self {
         match tech {

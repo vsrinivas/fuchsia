@@ -10,7 +10,7 @@ use {
     triage::{ActionTagDirective, DiagnosticData, ParseResult},
 };
 
-// TODO(fxb/50451): Add support for CSV.
+// TODO(fxbug.dev/50451): Add support for CSV.
 #[derive(Debug, PartialEq)]
 pub enum OutputFormat {
     Text,

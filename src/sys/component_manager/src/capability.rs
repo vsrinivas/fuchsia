@@ -849,7 +849,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    #[ignore] // fxb/40189
+    #[ignore] // fxbug.dev/40189
     fn find_expose_service_sources_with_unexpected_capability() {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
@@ -1019,7 +1019,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    #[ignore] // fxb/40189
+    #[ignore] // fxbug.dev/40189
     fn find_offer_service_sources_with_unexpected_capability() {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),

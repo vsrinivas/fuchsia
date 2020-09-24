@@ -35,7 +35,7 @@ pub const LINEAR_HISTOGRAM_EXTRA_SLOTS: usize = 4;
 /// step and step multiplier) and 2 overflow slots.
 pub const EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS: usize = 5;
 
-// TODO(fxb/43873): move LinkNodeDisposition and ArrayFormat to fuchsia-inspect-format
+// TODO(fxbug.dev/43873): move LinkNodeDisposition and ArrayFormat to fuchsia-inspect-format
 /// Disposition of a Link value.
 #[derive(Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum LinkNodeDisposition {

@@ -11,7 +11,7 @@ executable("sockettest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -24,7 +24,7 @@ executable("keepalivetest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -37,7 +37,7 @@ executable("mctest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -50,7 +50,7 @@ executable("nbiotest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -63,7 +63,7 @@ executable("polltest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -76,7 +76,7 @@ executable("selecttest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -89,7 +89,7 @@ executable("udptest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -102,7 +102,7 @@ executable("sockopttest") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -115,6 +115,6 @@ executable("gethostbyname_test") {
 
   deps = [ "//sdk/lib/fdio" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

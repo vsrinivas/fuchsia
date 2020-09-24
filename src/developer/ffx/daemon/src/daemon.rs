@@ -190,7 +190,7 @@ impl Daemon {
     /// device connected, that target will be returned.  If there are more devices and no target
     /// selector, an error is returned.  An error is also returned if there are no connected
     /// devices.
-    /// TODO(fxb/47843): Implement target lookup for commands to deprecate this
+    /// TODO(fxbug.dev/47843): Implement target lookup for commands to deprecate this
     /// function, and as a result remove the inner_lock() function.
     async fn target_from_cache(&self, target_selector: String) -> Result<Target> {
         let targets = self.target_collection.inner_lock().await;

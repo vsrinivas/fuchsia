@@ -60,7 +60,7 @@ impl TestHarness {
 
     /// Create a new test harness which will keep its LogSinks alive as long as it itself is,
     /// useful for testing inspect hierarchies for attribution.
-    // TODO(fxb/53932) this will be made unnecessary by historical retention of component stats
+    // TODO(fxbug.dev/53932) this will be made unnecessary by historical retention of component stats
     pub fn with_retained_sinks() -> Self {
         Self::make(true)
     }
@@ -96,7 +96,7 @@ impl TestHarness {
 
     /// Check to make sure all `TestStream`s have been dropped.
     fn check_pending_streams(&mut self) {
-        // TODO(fxb/56418) panic if the test hasn't dropped/closed pending streams
+        // TODO(fxbug.dev/56418) panic if the test hasn't dropped/closed pending streams
         self.pending_streams.retain(|w| w.upgrade().is_some());
     }
 
@@ -124,7 +124,7 @@ impl TestHarness {
         };
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
-        // TODO(fxb/56418) drop this stream before validating
+        // TODO(fxbug.dev/56418) drop this stream before validating
         let mut stream = self.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packet(&mut p);
 

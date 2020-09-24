@@ -441,7 +441,7 @@ void TestVmoManyToOne(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoManyToOne)
 
-// Disabled due to flakiness (see fxb/31974).
+// Disabled due to flakiness (see fxbug.dev/31974).
 void DISABLED_TestVmoStall(Volume::Version version, bool fvm) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());

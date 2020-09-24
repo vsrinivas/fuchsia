@@ -86,7 +86,7 @@ executable("chunk_input_stream_test_bin") {
     "//src/media/codec/codecs:chunk_input_stream",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -114,7 +114,7 @@ executable("output_sink_test_bin") {
     "//src/media/codec/codecs:output_sink",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

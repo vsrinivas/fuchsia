@@ -150,7 +150,7 @@ pub async fn delete_isolated_storage(
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     let mut local_server_end = local_server_end.into_channel();
     if let Some(dir_source_realm) = dir_source_realm.as_ref() {
-        // TODO(fxb/50716): This BindReason is wrong. We need to refactor the Storage
+        // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
         // capability to plumb through the correct BindReason.
         dir_source_realm
             .bind(&BindReason::Unsupported)

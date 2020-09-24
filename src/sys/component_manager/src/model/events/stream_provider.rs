@@ -108,7 +108,7 @@ impl EventStreamProvider {
         decl: &ComponentDecl,
     ) -> Result<(), ModelError> {
         // Make sure the CapabilityRequested event is not offered.
-        // TODO(fxb/53702): Consider moving this validation to cml/cm compilation.
+        // TODO(fxbug.dev/53702): Consider moving this validation to cml/cm compilation.
         for offer_decl in &decl.offers {
             match offer_decl {
                 OfferDecl::Event(OfferEventDecl { source_name, .. })
@@ -127,7 +127,7 @@ impl EventStreamProvider {
         for use_decl in &decl.uses {
             match use_decl {
                 // Make sure the CapabilityRequested event is only used from framework.
-                // TODO(fxb/53702): Consider moving this validation to cml/cm compilation.
+                // TODO(fxbug.dev/53702): Consider moving this validation to cml/cm compilation.
                 UseDecl::Event(UseEventDecl { source_name, source, .. })
                     if *source_name == EventType::CapabilityRequested.into()
                         && *source != UseSource::Framework =>

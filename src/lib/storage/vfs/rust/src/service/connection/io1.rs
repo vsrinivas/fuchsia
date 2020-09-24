@@ -132,7 +132,7 @@ impl Connection {
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
     async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
-        // TODO(fxb/37419): Remove `allow(unreachable_patterns)` when the bug is done.
+        // TODO(fxbug.dev/37419): Remove `allow(unreachable_patterns)` when the bug is done.
         #[allow(unreachable_patterns)]
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
@@ -195,7 +195,7 @@ impl Connection {
                 // There is no backing VMO.
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            // TODO(fxb/37419): Remove default handling after methods landed.
+            // TODO(fxbug.dev/37419): Remove default handling after methods landed.
             _ => {}
         }
         Ok(ConnectionState::Alive)

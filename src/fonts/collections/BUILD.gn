@@ -32,7 +32,7 @@ local_font_bundle("open-fonts-local") {
 # `base_package_labels` or `cache_package_labels`.
 font_collection("open-fonts-collection") {
   # Ephemeral font packages are temporarily disabled because they break
-  # Chromium/Cast tests (fxb/43327).
+  # Chromium/Cast tests (fxbug.dev/43327).
 
   # font_packages = [ ":open-fonts" ]
   product_config_path = "open-fonts-collection.fontcfg.json5"

@@ -82,7 +82,7 @@ test("ums") {
   # TODO(54514): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

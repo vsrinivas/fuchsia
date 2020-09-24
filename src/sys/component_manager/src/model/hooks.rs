@@ -163,7 +163,7 @@ events!([
     (Discovered, discovered),
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
-    /// TODO(fxb/39417): Ensure the instance is stopped before this event.
+    /// TODO(fxbug.dev/39417): Ensure the instance is stopped before this event.
     (MarkedForDestruction, marked_for_destruction),
     /// An instance's declaration was resolved successfully for the first time.
     (Resolved, resolved),

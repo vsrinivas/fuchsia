@@ -47,7 +47,7 @@ class InodeObject : public disk_inspector::DiskObject {
   // Position of inode in the inode table.
   const uint32_t inode_index_;
   const Inode inode_;
-  // TODO(fxb/37907): Currently the name is in the format "allocated #, inode #".
+  // TODO(fxbug.dev/37907): Currently the name is in the format "allocated #, inode #".
   // We should change this once disk-inspect does not index based on allocations
   // and rather the actual inode table index.
   const fbl::String name_;

@@ -24,7 +24,7 @@ success("UnionWithBoundString") {
 }
 
 encode_failure("UnionWithBoundString_ExceedsBounds") {
-    // TODO(fxb/37304) Enforce size bounds in rust
+    // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust, dart],
     value = UnionWithBoundStringStruct {
         v: UnionWithBoundString {

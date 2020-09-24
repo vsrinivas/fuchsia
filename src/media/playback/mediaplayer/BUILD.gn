@@ -230,7 +230,7 @@ test_package("mediaplayer_tests") {
     },
   ]
 
-  # TODO(fxb/58495): Fix the leaks and remove this.
+  # TODO(fxbug.dev/58495): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

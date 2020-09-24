@@ -31,7 +31,7 @@ test("display-core-unittests") {
     "//zircon/system/ulib/async-testing",
   ]
 
-  # TODO(fxb/58491): Fix the leaks and remove this.
+  # TODO(fxbug.dev/58491): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

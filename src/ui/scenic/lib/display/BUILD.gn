@@ -30,13 +30,13 @@ source_set("display") {
   ]
   deps = [
     # TODO(fxbug.dev/24590): For displayOwned/NotOwnedSignal.
-    # TODO(fxb/23686): Remove this when we externalize Displays.
+    # TODO(fxbug.dev/23686): Remove this when we externalize Displays.
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

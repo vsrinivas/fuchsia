@@ -4,7 +4,7 @@
 
 library conformance;
 
-// TODO(fxb/36441): Allow bindings to compile on host with handles.
+// TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
 
 [BindingsDenylist = "cpp, llcpp"]
 resource struct SingleHandle {

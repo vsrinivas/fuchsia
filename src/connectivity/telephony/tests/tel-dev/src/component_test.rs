@@ -12,7 +12,7 @@ use {
 };
 
 /// Resize vec to the size of qmi message
-// TODO (jiamingw): get message from driver without padding (fxb/39128)
+// TODO (jiamingw): get message from driver without padding (fxbug.dev/39128)
 pub fn qmi_vec_resize(qmi_vec: &mut Vec<u8>) -> Result<(), Error> {
     if qmi_vec.len() <= 1 {
         return Err(format_err!("qmi_vec_resize: QMI msg too short"));

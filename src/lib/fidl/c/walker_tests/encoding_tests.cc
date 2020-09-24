@@ -348,7 +348,7 @@ void encode_present_nonnullable_string_unaligned_error() {
   // NOTE: this code must be kept in sync with the layout in fidl_structs.h.
   // The offset is calculated manually because casting to the layout type and
   // accessing its members leads to an unaligned access error with UBSan
-  // (see fxb/55300)
+  // (see fxbug.dev/55300)
   auto* string_data_ptr = unaligned_ptr +
                           offsetof(unbounded_nonnullable_string_inline_data, string) +
                           offsetof(fidl_string_t, data);

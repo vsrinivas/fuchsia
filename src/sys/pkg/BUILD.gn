@@ -71,7 +71,7 @@ group("system-update-checker") {
     "bin/system-update-checker",
     "bin/system-update-checker:config",
   ]
-  # TODO(fxb/51214): Remove the comment after we update to omaha-client
+  # TODO(fxbug.dev/51214): Remove the comment after we update to omaha-client
   # for migration build.
   # deps = [ "//build/validate:non_production_tag" ]
 }

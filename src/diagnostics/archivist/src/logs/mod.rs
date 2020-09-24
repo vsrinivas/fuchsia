@@ -326,7 +326,7 @@ impl LogManager {
     }
 
     /// Extract the SourceIdentity from a components v2 event.
-    // TODO(fxb/54330): LogManager should have its own error type.
+    // TODO(fxbug.dev/54330): LogManager should have its own error type.
     fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, Error> {
         let target_moniker = event
             .descriptor
@@ -347,7 +347,7 @@ impl LogManager {
     }
 
     /// Extract the LogSinkRequestStream from a CapabilityRequested v2 event.
-    // TODO(fxb/54330): LogManager should have its own error type.
+    // TODO(fxbug.dev/54330): LogManager should have its own error type.
     fn log_sink_request_stream_from_event(
         event: fsys::Event,
     ) -> Result<LogSinkRequestStream, Error> {
@@ -390,7 +390,7 @@ impl LogManager {
                     log_listener, options, selectors, ..
                 } => (log_listener, options, false, Some(selectors)),
 
-                // TODO(fxb/48758) delete these methods!
+                // TODO(fxbug.dev/48758) delete these methods!
                 LogRequest::Listen { log_listener, options, .. } => {
                     warn!("Use of fuchsia.logger.Log.Listen. Use ListenSafe.");
                     let listener = pretend_scary_listener_is_safe(log_listener)?;

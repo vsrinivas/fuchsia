@@ -256,7 +256,7 @@ wlan_info_driver_feature_t WlanInterface::GetSupportedDriverFeatures(struct brcm
 }
 
 // TODO(chcl): Learn *all* capability flags from the firmware itself.
-// See fxb/29107 and b/158857812.
+// See fxbug.dev/29107 and b/158857812.
 // static
 wlan_info_hardware_capability_t WlanInterface::GetSupportedHardwareCapabilities(
     struct brcmf_pub* drvr) {
@@ -300,7 +300,7 @@ zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info)
     return false;
   }
 
-  // Skip setting the info.mac_addr field since this is a PHY query. See fxb/53991
+  // Skip setting the info.mac_addr field since this is a PHY query. See fxbug.dev/53991
 
   info.mac_role = GetMacRoles(drvr);
   info.supported_phys = GetSupportedPhyTypes(drvr);

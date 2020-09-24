@@ -48,14 +48,14 @@ enum class UpdateBackupSuperblock {
 };
 
 // Determines the kind of directory layout the filesystem server should expose to the outside world.
-// TODO(fxb/34531): When all users migrate to the export directory, delete this enum, since only
+// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since only
 // |kExportDirectory| would be used.
 enum class ServeLayout {
   // The root of the filesystem is exposed directly.
   kDataRootOnly,
 
   // Expose a pseudo-directory with the filesystem root located at "svc/root".
-  // TODO(fxb/34531): Also expose an administration service under "svc/fuchsia.fs.Admin".
+  // TODO(fxbug.dev/34531): Also expose an administration service under "svc/fuchsia.fs.Admin".
   kExportDirectory
 };
 
@@ -63,7 +63,7 @@ struct MountOptions {
   // When true, no changes are made to the file-system, including marking the volume as clean. This
   // differs from readonly_after_initialization which might replay the journal and mark the volume
   // as clean.
-  // TODO(fxb/51056): Unify the readonly and readonly_after_initialization flags.
+  // TODO(fxbug.dev/51056): Unify the readonly and readonly_after_initialization flags.
   bool readonly = false;
   // Determines whether the filesystem will be accessible as read-only.
   // This does not mean that access to the block device is exclusively read-only;

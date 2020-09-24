@@ -133,7 +133,7 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
               << "): " << decode_result.error << std::endl;
     return false;
   }
-  // TODO(fxb/7958): For now we are only checking that fidl::Decode succeeds.
+  // TODO(fxbug.dev/7958): For now we are only checking that fidl::Decode succeeds.
   // We need deep equality on FIDL objects to verify that
   // |decode_result.message| is the same as |value|.
   return true;

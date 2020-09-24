@@ -138,7 +138,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         contents.pop();
     }
 
-    // TODO(fxb/32998): Once we support structured logs we won't need this
+    // TODO(fxbug.dev/32998): Once we support structured logs we won't need this
     // hack to match a string in klogs.
     const MAX_STRING_SEARCH_SIZE: usize = 100;
     let last = contents

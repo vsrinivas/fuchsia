@@ -45,7 +45,7 @@ This test suite uses the
 [Fuchsia tracing system](https://fuchsia.dev/fuchsia-src/concepts/tracing) to
 collect metrics.
 
-TODO(fxb/50245): Add description about how trace metrics are tracked in CQ.
+TODO(fxbug.dev/50245): Add description about how trace metrics are tracked in CQ.
 
 ### Add trace metrics to the test
 

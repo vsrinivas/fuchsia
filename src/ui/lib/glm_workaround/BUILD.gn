@@ -12,7 +12,7 @@ source_set("glm_workaround") {
   public_configs = [
     ":public_glm_dirs",
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

@@ -92,7 +92,7 @@ driver_module("ft8201-module") {
     "FT8201_PRAMBOOT_PATH=\"$pramboot_path\"",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -118,7 +118,7 @@ executable("ft8201-test-bin") {
     "FT8201_PRAMBOOT_PATH=\"$pramboot_path\"",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

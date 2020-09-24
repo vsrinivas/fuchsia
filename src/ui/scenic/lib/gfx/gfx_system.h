@@ -31,7 +31,7 @@ class GfxSystem final : public System, public scenic_impl::TakeScreenshotDelegat
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) override;
 
-  // TODO(fxb/40795): Remove this.
+  // TODO(fxbug.dev/40795): Remove this.
   // |scenic_impl::TakeScreenshotDelegateDeprecated|
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 

@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup the fshost loader service, which can load libraries from either /system/lib or /boot/lib.
-  // TODO(fxb/34633): This loader is DEPRECATED and should be deleted. Do not add new usages.
+  // TODO(fxbug.dev/34633): This loader is DEPRECATED and should be deleted. Do not add new usages.
   async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loader_loop.StartThread("fshost-loader");
   if (status != ZX_OK) {

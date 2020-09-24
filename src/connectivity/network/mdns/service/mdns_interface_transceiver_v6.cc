@@ -79,7 +79,7 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
     if (errno == ENOPROTOOPT) {
       // TODO(fxbug.dev/41357): remove the bug reference when the bug is fixed.
       FX_LOGS(WARNING)
-          << "fxb/41357: IPV6_UNICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
+          << "fxbug.dev/41357: IPV6_UNICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
       FX_LOGS(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, " << strerror(errno);
@@ -112,7 +112,7 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
       // TODO(fxbug.dev/41358): remove the bug reference when the bug is fixed.
-      FX_LOGS(WARNING) << "fxb/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
+      FX_LOGS(WARNING) << "fxbug.dev/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
       FX_LOGS(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, " << strerror(errno);

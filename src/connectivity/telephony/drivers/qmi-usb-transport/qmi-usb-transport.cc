@@ -103,7 +103,7 @@ zx_status_t Device::HandleArpReq(const ArpFrame& arp_frame) {
 }
 
 void Device::GenEthArpResp(const ArpFrame& req, EthArpFrame* resp) {
-  // TODO (fxb/40051): Generate fake mac address to support multiple
+  // TODO (fxbug.dev/40051): Generate fake mac address to support multiple
   // cellular devices.
   // Eth header
   // eth_dst_mac_addr_ is ensured to be not null when calling this method.

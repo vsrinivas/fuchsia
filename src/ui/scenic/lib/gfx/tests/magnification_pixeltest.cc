@@ -19,7 +19,7 @@ namespace {
 
 constexpr char kEnvironment[] = "MagnificationPixelTest";
 
-// HACK(fxb/42459): This allows the test to feed in a clip-space transform that is semantically
+// HACK(fxbug.dev/42459): This allows the test to feed in a clip-space transform that is semantically
 // invariant against screen rotation. The only non-identity rotation we expect to run against soon
 // is 270 degrees. This doesn't generalize well, so it should be temporary.
 bool IsScreenRotated() {

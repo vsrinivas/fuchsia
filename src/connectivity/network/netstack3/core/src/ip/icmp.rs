@@ -1907,7 +1907,7 @@ fn receive_icmp_echo_reply<I: IcmpIpExt, B: BufferMut, C: BufferIcmpContext<I, B
             trace!("receive_icmp_echo_reply: Received echo reply for local socket");
             ctx.receive_icmp_echo_reply(IcmpConnId::new(conn), seq, body);
         } else {
-            // TODO(fxb/47952): Neither the ICMPv4 or ICMPv6 RFCs explicitly
+            // TODO(fxbug.dev/47952): Neither the ICMPv4 or ICMPv6 RFCs explicitly
             // state what to do in case we receive an "unsolicited" echo reply.
             // We only expose the replies if we have a registered connection for
             // the IcmpAddr of the incoming reply for now. Given that a reply
@@ -2290,7 +2290,7 @@ mod tests {
                 );
             }
 
-            // TODO(fxb/47953): We seem to fail to parse an IPv6 packet if its
+            // TODO(fxbug.dev/47953): We seem to fail to parse an IPv6 packet if its
             // Next Header value is unrecognized (rather than treating this as a
             // valid parsing but then replying with a parameter problem error
             // message). We should a) fix this and, b) expand this test to

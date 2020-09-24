@@ -250,7 +250,7 @@ test("netstack_bsdsocket_c_api_test") {
     "//zircon/public/lib/fbl",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -285,7 +285,7 @@ test("netstack_fuchsia_c_api_test") {
     "//zircon/public/lib/sync",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

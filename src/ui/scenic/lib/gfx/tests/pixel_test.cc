@@ -18,7 +18,7 @@ namespace gfx {
 
 namespace {
 
-// 15s is not enough time for some bots to launch Scenic, see fxb/52939.
+// 15s is not enough time for some bots to launch Scenic, see fxbug.dev/52939.
 constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::sec(15),
                        kIndirectPresentTimeout = zx::sec(30);
 

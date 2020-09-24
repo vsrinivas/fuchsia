@@ -9,7 +9,7 @@ use {
 
 /// In-progress impl to use io1 server requests to get back an interposed server request
 /// to allow for calls on the channel to be logged into the receiver.
-/// TODO(fxb/45617): In the future we might want to make this protocol specific.
+/// TODO(fxbug.dev/45617): In the future we might want to make this protocol specific.
 #[derive(Clone)]
 pub struct Io1RequestLoggerFactory {
     tx: mpsc::Sender<String>,

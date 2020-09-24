@@ -48,7 +48,7 @@ source_set("common") {
   ]
   public_configs = [ ":common_public_config" ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -65,7 +65,7 @@ source_set("common_test_utils") {
   ]
   testonly = true
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -85,7 +85,7 @@ graphics_compute_unittests("common_unittests") {
     ":common_test_utils",
   ]
   configs = [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -165,7 +165,7 @@ source_set("common_vk") {
   ]
   public_configs = [ ":common_public_config" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -183,7 +183,7 @@ graphics_compute_unittests("common_vk_unittests") {
   ]
   deps = [ ":common_vk" ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 

@@ -33,7 +33,7 @@ pub enum EnumerationError {
     #[error("can't get test list: {:?}", _0)]
     JsonParse(#[source] Arc<serde_json::error::Error>),
 
-    #[error("can't convert to string, refer fxb/4610: {:?}", _0)]
+    #[error("can't convert to string, refer fxbug.dev/4610: {:?}", _0)]
     Utf8ToString(#[from] std::str::Utf8Error),
 
     #[error("{:?}", _0)]
@@ -111,7 +111,7 @@ pub enum RunTestError {
     #[error("{:?}", _0)]
     Log(#[from] LogError),
 
-    #[error("can't convert to string, refer fxb/4610: {:?}", _0)]
+    #[error("can't convert to string, refer fxbug.dev/4610: {:?}", _0)]
     Utf8ToString(#[from] std::str::Utf8Error),
 
     #[error("cannot send start event: {:?}", _0)]

@@ -117,7 +117,7 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/inet6",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -146,7 +146,7 @@ test("netsvc-test") {
     "//zircon/system/ulib/ramdevice-client",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -167,7 +167,7 @@ test("netsvc-stress-test") {
     "//zircon/system/ulib/ramdevice-client",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

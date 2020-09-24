@@ -320,7 +320,7 @@ fn derive_ap_config(
         None => b"".to_vec(),
     };
 
-    // TODO(fxb/54033): Improve the channel selection algorithm.
+    // TODO(fxbug.dev/54033): Improve the channel selection algorithm.
     let channel = match band {
         fidl_policy::OperatingBand::Any => 11,
         fidl_policy::OperatingBand::Only24Ghz => 11,

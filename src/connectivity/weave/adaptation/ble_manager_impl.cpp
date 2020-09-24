@@ -125,7 +125,7 @@ WEAVE_ERROR BLEManagerImpl::_SetFastAdvertisingEnabled(bool fast_advertising_ena
   if (service_mode_ == ConnectivityManager::kWoBLEServiceMode_NotSupported) {
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
-  // TODO(fxb/52734): Enable bluetooth fast advertising when needed
+  // TODO(fxbug.dev/52734): Enable bluetooth fast advertising when needed
   return WEAVE_NO_ERROR;
 }
 
@@ -264,7 +264,7 @@ bool BLEManagerImpl::SendIndication(BLE_CONNECTION_OBJECT conId, const WeaveBleU
   connection_state->pending_ind_buf = data;
   data = NULL;
 
-  // TODO(fxb/53070, fxb/53966): The peer confirmation currently isn't returned to the caller.
+  // TODO(fxbug.dev/53070, fxbug.dev/53966): The peer confirmation currently isn't returned to the caller.
   // Proceed as if the confirmation is received, to avoid closing the connection. When the bug
   // is fixed, block until the confirmation is received and handle it.
   PacketBuffer::Free(connection_state->pending_ind_buf);

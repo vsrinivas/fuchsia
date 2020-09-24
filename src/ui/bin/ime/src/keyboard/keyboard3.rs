@@ -40,7 +40,7 @@ impl KeyboardService {
 
     /// Dispatches key event to clients.
     pub async fn handle_key_event(&self) -> Result<bool, Error> {
-        // TODO(fxb/)47684: implement
+        // TODO(fxbug.dev/)47684: implement
         Ok(false)
     }
 

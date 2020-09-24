@@ -74,7 +74,7 @@ test("usb-cdc-acm-integration") {
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

@@ -124,7 +124,7 @@ async fn dispatch(
         worker
             .do_work(&work_item.id)
             .await
-            // TODO(fxb/42310): It may be advantageous to accumulate errors and continue iterating
+            // TODO(fxbug.dev/42310): It may be advantageous to accumulate errors and continue iterating
             // over `work_items`.
             .map_err(|err| Error::FIDL(err))?
             .map_err(|err| Error::API(err))?;

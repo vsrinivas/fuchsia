@@ -76,17 +76,17 @@ int main(int argc, char* argv[]) {
     }
     if (failed) {
       LOGF("At least one sub-test failed, so fail.");
-      LOGF("WARNING - fxb/13483 - decode may have flaked - internally de-flaking (for now)");
+      LOGF("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)");
       continue;
     } else {
       if (try_ordinal != 0) {
-        LOGF("WARNING - fxb/13483 - internal de-flaking used - extra attempt count: %u",
+        LOGF("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u",
              try_ordinal);
       }
       LOGF("All streams worked.  PASS");
       return 0;
     }
-    LOGF("WARNING - fxb/13483 - decode may have flaked - internally de-flaking (for now)");
+    LOGF("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)");
   }
   LOGF("Incorrect hash seen every time despite de-flaking retries.  FAIL");
   return -1;

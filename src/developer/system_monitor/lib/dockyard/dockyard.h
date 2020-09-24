@@ -594,7 +594,7 @@ class Dockyard {
   std::ostringstream DebugDump() const;
 
  private:
-  // TODO(fxb/38): avoid having a global mutex. Use a queue to update
+  // TODO(fxbug.dev/38): avoid having a global mutex. Use a queue to update
   // data.
   mutable std::mutex mutex_;
   std::thread server_thread_;

@@ -178,7 +178,7 @@ impl BuiltinEnvironmentBuilder {
     ///         capability if one is exposed from the root component. (See fuchsia_base_pkg_resolver
     ///         for more details.)
     ///
-    /// TODO(fxb/46491): fuchsia_base_pkg_resolver should be replaced with a resolver provided by
+    /// TODO(fxbug.dev/46491): fuchsia_base_pkg_resolver should be replaced with a resolver provided by
     /// the topology.
     pub fn add_available_resolvers_from_namespace(mut self) -> Result<Self, Error> {
         // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.

@@ -32,7 +32,7 @@ const (
 	// 'static' to escape Netstack's DHCP-learned routes' lifecycle management
 	// hooks that 'dynamic' routes will be affected by.
 	//
-	// TODO(fxb/43503): Instead of adding routes as static, support a type
+	// TODO(fxbug.dev/43503): Instead of adding routes as static, support a type
 	// of dynamic route specifically for NDP.
 	staticRouteAvoidingLifeCycleHooks = false
 

@@ -787,7 +787,7 @@ macro_rules! impl_layout_int {
 // Caveat: bool uses &mut dyn ExactSizeIterator<Item = bool> because it cannot
 // be optimized. Floats f32 and f64, though they cannot be optimized either, use
 // &[f32] and &[f64].
-// TODO(fxb/54368): Resolve this inconsistency.
+// TODO(fxbug.dev/54368): Resolve this inconsistency.
 macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
     impl_layout_int!($int_ty);
 

@@ -211,7 +211,7 @@ static void mac_stop(void* ctx) {
 }
 
 static zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -353,29 +353,29 @@ exit:
 
 static zx_status_t mac_enable_beaconing(void* ctx, uint32_t options,
                                         const wlan_bcn_config_t* bcn_cfg) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t mac_configure_assoc(void* ctx, uint32_t options,
                                        const wlan_assoc_ctx_t* assoc_ctx) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
                                    size_t peer_addr_size) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -450,14 +450,14 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
 
   memcpy(info->wlan_info.mac_addr, nvm_data->hw_addr, sizeof(info->wlan_info.mac_addr));
 
-  // TODO(fxb/36677): supports AP role
+  // TODO(fxbug.dev/36677): supports AP role
   info->wlan_info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
 
   // TODO(43517): Better handling of driver features bits/flags
   info->wlan_info.supported_phys =
       WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK | WLAN_INFO_PHY_TYPE_OFDM;
-  // TODO(fxb/36683): supports HT (802.11n): WLAN_INFO_PHY_TYPE_HT
-  // TODO(fxb/36684): suuports VHT (802.11ac): WLAN_INFO_PHY_TYPE_VHT
+  // TODO(fxbug.dev/36683): supports HT (802.11n): WLAN_INFO_PHY_TYPE_HT
+  // TODO(fxbug.dev/36684): suuports VHT (802.11ac): WLAN_INFO_PHY_TYPE_VHT
 
   info->wlan_info.driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
 

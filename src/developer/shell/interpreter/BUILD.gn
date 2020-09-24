@@ -28,7 +28,7 @@ static_library("shell_interpreter") {
 
   deps = [ "//sdk/lib/syslog/cpp" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -50,7 +50,7 @@ static_library("shell_server_lib") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

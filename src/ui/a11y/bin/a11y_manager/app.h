@@ -34,7 +34,7 @@
 namespace a11y_manager {
 
 // Internal representation of the current state of the accessibility manager features.
-// TODO(fxb/41768): Add in color correction and inversion
+// TODO(fxbug.dev/41768): Add in color correction and inversion
 class A11yManagerState {
  public:
   // Default state with all values as disabled

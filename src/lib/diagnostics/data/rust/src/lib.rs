@@ -307,7 +307,7 @@ impl From<FidlSeverity> for Severity {
 pub struct Data<D: DiagnosticsData> {
     /// The source of the data.
     #[serde(default)]
-    // TODO(fxb/58033) remove this once the Metadata enum is gone everywhere
+    // TODO(fxbug.dev/58033) remove this once the Metadata enum is gone everywhere
     pub data_source: DataSource,
 
     /// The metadata for the diagnostics payload.

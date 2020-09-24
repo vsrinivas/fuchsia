@@ -42,7 +42,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   bool running = true;
   uint64_t host_packets = 0;
   // Test recovery from CancelAll
-  // TODO (fxb/33848): Add asserts on every CancelAll when the rewrite goes in.
+  // TODO (fxbug.dev/33848): Add asserts on every CancelAll when the rewrite goes in.
   usb_.CancelAll(bulk_out_.bEndpointAddress);
   struct {
     uint64_t start;
@@ -192,7 +192,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   uint64_t dropped_packets = 0;
   uint64_t isoch_packets = 0;
   // Timestamp in 125 microsecond intervals
-  // TODO (fxb/34507): Run isochronous test under load (at the same time as bulk)
+  // TODO (fxbug.dev/34507): Run isochronous test under load (at the same time as bulk)
   // once we get scheduling issues fixed.
   uint64_t timestamp = (usb_.GetCurrentFrame() + 20) * 8;
   running = true;

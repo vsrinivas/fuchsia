@@ -45,12 +45,12 @@ int main(int argc, char* argv[]) {
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
                                     /*min_output_buffer_count=*/0, kGoldenSha256, &test_params)) {
       if (try_ordinal != 0) {
-        LOGF("WARNING - fxb/13483 - internal de-flaking used - extra attempt count: %u",
+        LOGF("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u",
              try_ordinal);
       }
       return 0;
     }
-    LOGF("WARNING - fxb/13483 - decode may have flaked - internally de-flaking (for now)");
+    LOGF("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)");
   }
   LOGF("Incorrect hash seen every time despite de-flaking retries.  FAIL");
   return -1;

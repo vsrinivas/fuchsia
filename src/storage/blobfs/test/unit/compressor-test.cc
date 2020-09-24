@@ -383,7 +383,7 @@ class NonZeroHintNonAdvancingZSTDDecompressor : public AbstractZSTDDecompressor 
   static const size_t kDecompressStreamReturn = 1;
 };
 
-// Regression test for fxb/44603.
+// Regression test for fxbug.dev/44603.
 // This test prevents regressing to the following *incorrect* logic:
 //
 //     do { ... r = ZSTD_decompressStream(...) ... } while (r != 0);
@@ -391,7 +391,7 @@ class NonZeroHintNonAdvancingZSTDDecompressor : public AbstractZSTDDecompressor 
 // The value of `r`, when not an error code, is a hint at the size of the next chunk to pass to
 // `ZSTD_decompressStream`. Sometimes, this value is non-zero even though invoking
 // `ZSTD_decompressStream` again will make no progress, inducing an infinite loop.
-// See fxb/44603 for details.
+// See fxbug.dev/44603 for details.
 TEST(CompressorTests, DecompressZSTDNonZeroNonAdvancing) {
   constexpr size_t kCompressedSize = 1;
   constexpr size_t kUncompressedSize = 2;

@@ -213,7 +213,7 @@ impl LeData {
             Address::Random(_) => control::AddressType::LeRandom,
         };
         let ltk = {
-            // TODO(fxb/2411): bt-host currently supports the exchange of only a single LTK during
+            // TODO(fxbug.dev/2411): bt-host currently supports the exchange of only a single LTK during
             // LE legacy pairing and still reports this in the singular `ltk` field of the control
             // library `BondingData` type. Until bt-host's dependency on control gets removed, we
             // map both peer and local LTKs in the new internal representations to this singular
@@ -364,7 +364,7 @@ impl TryFrom<control::LeData> for LeData {
                 .connection_parameters
                 .map(|params| compat::sys_conn_params_from_control(*params)),
             services: services?,
-            // TODO(fxb/35008): For now we map the singular control LTK to both the local and peer
+            // TODO(fxbug.dev/35008): For now we map the singular control LTK to both the local and peer
             // types, which should match the current behavior of bt-host. Remove this logic once
             // bt-host generates separate local and peer keys during legacy pairing.
             peer_ltk: src.ltk.clone().map(|ltk| compat::ltk_from_control(*ltk)),

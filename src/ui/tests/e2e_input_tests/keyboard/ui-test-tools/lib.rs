@@ -100,7 +100,7 @@ pub async fn setup(environment: EnvironmentType) -> Result<Service, Error> {
     // Wait for the ViewHolderConnected Scenic event to ensure RootPresenter is up and running.
     service.view_holder_connected().await.context("view_holder_connected")?;
 
-    // Second present is required because of http://fxb/42737
+    // Second present is required because of http://fxbug.dev/42737
     service.present().await?;
 
     Ok(service)

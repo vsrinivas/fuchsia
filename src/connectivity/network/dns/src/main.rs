@@ -354,7 +354,7 @@ async fn run_name_lookup<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     stream: NameLookupRequestStream,
 ) -> Result<(), fidl::Error> {
-    // TODO(fxb/45035):Limit the number of parallel requests to 1000.
+    // TODO(fxbug.dev/45035):Limit the number of parallel requests to 1000.
     stream
         .try_for_each_concurrent(None, |request| async {
             match request {

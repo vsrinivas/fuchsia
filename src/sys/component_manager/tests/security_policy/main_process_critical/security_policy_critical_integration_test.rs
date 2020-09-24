@@ -136,7 +136,7 @@ async fn verify_main_process_critical_denied() -> Result<(), Error> {
     // asks the runner to start the component. We watch for the exposed_dir to get dropped to
     // detect the launch failure.
     // N.B. We could alternatively look for a Started and then a Stopped event to verify that the
-    // component failed to launch, but fxb/53414 prevented that at the time this was written.
+    // component failed to launch, but fxbug.dev/53414 prevented that at the time this was written.
     let child_name = "policy_denied";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
 

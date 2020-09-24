@@ -102,7 +102,7 @@ type Instance struct {
 
 // Unpack unpacks the QEMU distribution.
 //
-// TODO(fxb/58804): Replace all call sites to UnpackFrom.
+// TODO(fxbug.dev/58804): Replace all call sites to UnpackFrom.
 func Unpack() (*Distribution, error) {
 	ex, err := os.Executable()
 	if err != nil {
@@ -253,7 +253,7 @@ func (d *Distribution) Create(params Params) *Instance {
 	// QEMU looks in the cwd for some specially named files, in particular
 	// multiboot.bin, so avoid picking those up accidentally. See
 	// https://fxbug.dev/53751.
-	// TODO(fxb/58804): Remove this.
+	// TODO(fxbug.dev/58804): Remove this.
 	i.cmd.Dir = "/"
 
 	return i
@@ -337,7 +337,7 @@ dm poweroff
 	// QEMU looks in the cwd for some specially named files, in particular
 	// multiboot.bin, so avoid picking those up accidentally. See
 	// https://fxbug.dev/53751.
-	// TODO(fxb/58804): Remove this.
+	// TODO(fxbug.dev/58804): Remove this.
 	cmd.Dir = "/"
 	if err := cmd.Start(); err != nil {
 		return "", "", err

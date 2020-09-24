@@ -77,7 +77,7 @@ static_library("libunwindstack") {
     deps += [ ":copy_elf_h" ]
   }
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

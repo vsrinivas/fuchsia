@@ -70,7 +70,7 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 			if dynamicIndexHasPackageName(pr.fs, packageName) {
 				// This package is on the system (indicated by presence in the _dynamic_ index),
 				// but we don't want it to be accessed. Log an error
-				log.Printf("pkgfs: attempted open of non-static package %s from /pkgfs/packages, which is deprecated. Please use the package resolver for accessing package directories, or /pkg to access your own package. See fxb/44527. Full path: %s", packageName, name)
+				log.Printf("pkgfs: attempted open of non-static package %s from /pkgfs/packages, which is deprecated. Please use the package resolver for accessing package directories, or /pkg to access your own package. See fxbug.dev/44527. Full path: %s", packageName, name)
 
 				if pr.enforceNonStaticAllowlist {
 					return nil, nil, nil, fs.ErrPermission

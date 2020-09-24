@@ -58,7 +58,7 @@ source_set("mixer") {
   configs -= [ "//build/config:default_optimize" ]
   configs += [ "//build/config:optimize_speed" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -108,6 +108,6 @@ executable("unittest_bin") {
     "//zircon/public/lib/fbl",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

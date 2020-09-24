@@ -26,7 +26,7 @@
 namespace scenic_impl::gfx {
 
 // Forward declaration to avoid circular include.
-// TODO(fxb/59407): Disentangle the annotation logic from ViewTree.
+// TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
 class ViewHolder;
 
 // Forward declaration to keep implementation at bottom of class.
@@ -100,7 +100,7 @@ class ViewTree {
         hit_test;
 
     // Park a function that creates an annotation ViewHolder using given ViewHolderToken.
-    // TODO(fxb/59407): Disentangle the annotation logic from ViewTree.
+    // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
     fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
 
     scheduling::SessionId session_id = 0u;  // Default value: an invalid ID.
@@ -205,7 +205,7 @@ class ViewTree {
 
   // Try creating an annotation ViewHolder as the child of the View "koid" refers to.
   // Return the creation result enum.
-  // TODO(fxb/59407): Disentangle the annotation logic from ViewTree.
+  // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
   zx_status_t AddAnnotationViewHolder(zx_koid_t koid, fxl::RefPtr<ViewHolder> view_holder) const;
 
   // Debug-only check for state validity.  See "Invariants" section in class comment.
@@ -255,7 +255,7 @@ class ViewTree {
   // Pre: koid exists in nodes_ map
   // Post: if koid is a valid RefNode, koid.add_annotation_view_holder is nullptr
   // NOTE: Scene connectivity is not required.
-  // TODO(fxb/59407): Disentangle the annotation logic from ViewTree.
+  // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
   void InvalidateAnnotationViewHolder(zx_koid_t koid);
 
   // To be called after a batch of ViewTree updates have been applied.
@@ -327,7 +327,7 @@ struct ViewTreeNewRefNode {
   fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
                      bool semantic_hit_test)>
       hit_test;
-  // TODO(fxb/59407): Disentangle the annotation logic from ViewTree.
+  // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
   fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
   scheduling::SessionId session_id = 0u;
 };

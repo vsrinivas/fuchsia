@@ -15,7 +15,7 @@
 namespace a11y {
 
 // An interface for a11y query existing semantic information.
-// TODO(fxb/46164): Move all semantic consuming methods from View manager to this interface.
+// TODO(fxbug.dev/46164): Move all semantic consuming methods from View manager to this interface.
 class SemanticsSource {
  public:
   SemanticsSource() = default;
@@ -25,7 +25,7 @@ class SemanticsSource {
   virtual bool ViewHasSemantics(zx_koid_t view_ref_koid) = 0;
 
   // Returns a clone of the ViewRef referenced by |view_ref_koid| if it is known.
-  // TODO(fxb/47136): Move ViewRefClone from SemanticsSource to ViewRefWrapper.
+  // TODO(fxbug.dev/47136): Move ViewRefClone from SemanticsSource to ViewRefWrapper.
   virtual std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) = 0;
 
   // Returns the semantic node with id |node_id| in the semantic tree with koid |koid|, if one

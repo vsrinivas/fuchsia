@@ -63,7 +63,7 @@ executable("bin") {
   public_deps = [ "//zircon/system/ulib/perftest" ]
   libs = [ "zircon" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -89,7 +89,7 @@ executable("context_switch_overhead_helper") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -103,12 +103,12 @@ executable("get_info_helper") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fidl_interface") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "protocol-name-includes-service" ]
 
   testonly = true

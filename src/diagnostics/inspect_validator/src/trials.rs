@@ -546,7 +546,7 @@ fn deletions_trial() -> Trial {
     steps.push(Step::WithMetrics(vec![d1(), d2()], "Delete Except Grandchild".into()));
     steps.push(Step::WithMetrics(vec![d3(), x3(), x2(), x1()], "Deleted Grandchild".into()));
     // This list tests all 6 sequences of node deletion.
-    // TODO(fxb/40843): Get the permutohedron crate and test all 720 sequences.
+    // TODO(fxbug.dev/40843): Get the permutohedron crate and test all 720 sequences.
     steps.push(Step::Actions(create()));
     steps.push(Step::Actions(vec![d1(), d2(), d3(), x3(), x2(), x1()]));
     steps.push(Step::Actions(create2()));

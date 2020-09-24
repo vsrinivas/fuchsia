@@ -350,7 +350,7 @@ impl TestStack {
     pub(crate) fn new() -> Self {
         // Create a new TestStack with Duplicate Address Detection disabled for tests.
         //
-        // TODO(fxb/36238): Remove this code when an event is dispatched when Duplicate Address
+        // TODO(fxbug.dev/36238): Remove this code when an event is dispatched when Duplicate Address
         // Detection finishes or when an IPv6 address has been assigned. Without such events, tests
         // do not know how long to wait for the stack to be ready for events.
         use netstack3_core::NdpConfigurations;

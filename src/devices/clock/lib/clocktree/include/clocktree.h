@@ -17,7 +17,7 @@ namespace clk {
 class BaseClock;
 
 // clk::Tree class manages an array of BaseClock objects that represent a clock tree
-// For more information see ClockTree.md -- TODO(fxb/45916): Write documentation.
+// For more information see ClockTree.md -- TODO(fxbug.dev/45916): Write documentation.
 //
 // Example Usage:
 //   // Create some clock classes that inherit from BaseClock

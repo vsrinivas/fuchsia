@@ -54,7 +54,7 @@ source_set("msd_intel_entry") {
   ]
   libs = [ "zircon" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -86,7 +86,7 @@ source_set("msd_intel_test_entry") {
     "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

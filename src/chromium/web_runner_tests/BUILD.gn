@@ -39,7 +39,7 @@ source_set("test_server") {
     "//zircon/public/lib/fit",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -161,7 +161,7 @@ group("tests") {
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
 
-    # TODO(fxb/24643): Remove keyboard dispatch from Scenic
+    # TODO(fxbug.dev/24643): Remove keyboard dispatch from Scenic
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/scenic",

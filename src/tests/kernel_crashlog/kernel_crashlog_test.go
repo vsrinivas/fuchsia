@@ -81,7 +81,7 @@ func TestKernelCrashlog(t *testing.T) {
 
 	// See that it contains ESR and FAR.
 	//
-	// This is a regression test for fxb/52182.
+	// This is a regression test for fxbug.dev/52182.
 	i.WaitForLogMessage("esr:         0x96000045")
 	i.WaitForLogMessage("far:                0x1")
 

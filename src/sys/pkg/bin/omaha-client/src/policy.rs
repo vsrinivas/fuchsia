@@ -118,7 +118,7 @@ impl Policy for FuchsiaPolicy {
                         info!("Using Startup Mode logic.");
                         CheckTiming::builder()
                             // TODO Switch back the line below after channel is in vbmeta
-                            //      (fxb/39970)
+                            //      (fxbug.dev/39970)
                             // .time(last_wall_time.complete_with(policy_data.current_time) + interval)
                             .time(policy_data.current_time + policy_data.config.startup_delay)
                             .minimum_wait(policy_data.config.startup_delay)
@@ -567,7 +567,7 @@ mod tests {
 
        #[test]
        fn test_compute_next_update_time(interval_fuzz_seed: u64) {
-           // TODO(fxb/58338) derive arbitrary on UpdateCheckSchedule, FuchsiaUpdatePolicyData
+           // TODO(fxbug.dev/58338) derive arbitrary on UpdateCheckSchedule, FuchsiaUpdatePolicyData
            let mock_time = MockTimeSource::new_from_now();
            let now = mock_time.now();
            // The current context:
@@ -706,7 +706,7 @@ mod tests {
         //  - There's a minimum wait of STARTUP_DELAY
         let expected = CheckTiming::builder()
             // TODO Switch back the line below after channel is in vbmeta
-            //      (fxb/39970)
+            //      (fxbug.dev/39970)
             // .time((
             //     last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
             //     Instant::from(now) + PERIODIC_INTERVAL,
@@ -757,7 +757,7 @@ mod tests {
         //  - There's a minimum wait of STARTUP_DELAY
         let expected = CheckTiming::builder()
             // TODO Switch back the line below after channel is in vbmeta
-            //      (fxb/39970)
+            //      (fxbug.dev/39970)
             // .time((
             //     last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
             //     Instant::from(now) + PERIODIC_INTERVAL,

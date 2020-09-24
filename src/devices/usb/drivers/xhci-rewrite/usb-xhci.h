@@ -344,7 +344,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // This is a high-priority profile used for increasing the priority
   // of the interrupt thread. This is currently necessary to mitigate
-  // fxb/34507, and can be removed once the scheduling problem is fixed.
+  // fxbug.dev/34507, and can be removed once the scheduling problem is fixed.
   zx::profile profile_;
   // Performs the initialization sequence defined in section
   // 4.2 of the xHCI specification.

@@ -73,13 +73,13 @@ template("driver_source_template") {
 driver_source_template("driver_sources") {
   developer_build = false
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs = [ "//build/config:Wno-conversion" ]
 }
 
 driver_source_template("test_driver_sources") {
   developer_build = true
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs = [ "//build/config:Wno-conversion" ]
 }

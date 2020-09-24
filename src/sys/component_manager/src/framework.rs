@@ -941,7 +941,7 @@ mod tests {
             .await
             .expect("fidl call failed")
             .expect("bind failed");
-        // TODO(fxb/46913): Assert that `server_end` closes once instance death is monitored.
+        // TODO(fxbug.dev/46913): Assert that `server_end` closes once instance death is monitored.
     }
 
     fn child_decl(name: &str) -> fsys::ChildDecl {

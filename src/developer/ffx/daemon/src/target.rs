@@ -354,7 +354,7 @@ impl Debug for Target {
     }
 }
 
-// TODO(fxb/52733): Have `TargetAddr` support serial numbers.
+// TODO(fxbug.dev/52733): Have `TargetAddr` support serial numbers.
 #[derive(Hash, Clone, Debug, Copy, Eq, PartialEq)]
 pub struct TargetAddr {
     ip: IpAddr,
@@ -380,7 +380,7 @@ impl From<bridge::TargetAddrInfo> for TargetAddr {
                 IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),
                 IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), ip.scope_id),
             },
-            // TODO(fxb/52733): Add serial numbers.,
+            // TODO(fxbug.dev/52733): Add serial numbers.,
         };
 
         (addr, scope).into()

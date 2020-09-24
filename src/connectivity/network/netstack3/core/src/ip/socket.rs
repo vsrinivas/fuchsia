@@ -486,7 +486,7 @@ fn select_ipv6_source_address_cmp<Instant>(
     b: &AddressEntry<Ipv6Addr, Instant>,
     b_device: &DeviceId,
 ) -> Ordering {
-    // TODO(fxb/46822): Implement rules 2, 4, 5.5, 6, 7, and 8.
+    // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, 7, and 8.
 
     let a_state = a.state();
     let a = a.addr_sub().addr();

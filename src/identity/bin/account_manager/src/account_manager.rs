@@ -225,10 +225,10 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         account_handler.terminate().await;
         // Emphemeral accounts were never included in the StoredAccountList and so it does not need
         // to be modified when they are removed.
-        // TODO(fxb/39455): Handle irrecoverable, corrupt state.
+        // TODO(fxbug.dev/39455): Handle irrecoverable, corrupt state.
         account_map.remove_account(&account_id).await.map_err(|err| {
             warn!("Could not remove account: {:?}", err);
-            // TODO(fxb/39829): Improve error mapping.
+            // TODO(fxbug.dev/39829): Improve error mapping.
             if err.api_error == ApiError::NotFound {
                 // We already checked for existence, so NotFound is unexpected
                 ApiError::Internal
@@ -375,7 +375,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 
         account_map.add_account(Arc::clone(&account_handler)).await.map_err(|err| {
             warn!("Could not add account: {:?}", err);
-            // TODO(fxb/39829): Improve error mapping.
+            // TODO(fxbug.dev/39829): Improve error mapping.
             if err.api_error == ApiError::FailedPrecondition {
                 ApiError::Internal
             } else {
@@ -441,7 +441,7 @@ mod tests {
 
         let account_manager_arc = Arc::new(account_manager);
         let account_manager_clone = Arc::clone(&account_manager_arc);
-        // TODO(fxb/39745): Migrate off of fuchsia_async::spawn.
+        // TODO(fxbug.dev/39745): Migrate off of fuchsia_async::spawn.
         fasync::Task::spawn(async move {
             account_manager_clone
                 .handle_requests_from_stream(request_stream)

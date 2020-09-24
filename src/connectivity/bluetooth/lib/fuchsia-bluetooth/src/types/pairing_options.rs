@@ -53,7 +53,7 @@ impl From<SecurityLevel> for sys::PairingSecurityLevel {
     }
 }
 
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<control::PairingSecurityLevel> for SecurityLevel {
     fn from(level: control::PairingSecurityLevel) -> Self {
         match level {
@@ -62,7 +62,7 @@ impl From<control::PairingSecurityLevel> for SecurityLevel {
         }
     }
 }
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<SecurityLevel> for control::PairingSecurityLevel {
     fn from(level: SecurityLevel) -> Self {
         match level {
@@ -103,13 +103,13 @@ impl From<PairingOptions> for sys::PairingOptions {
     }
 }
 
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<control::PairingOptions> for PairingOptions {
     fn from(opts: control::PairingOptions) -> Self {
         (&opts).into()
     }
 }
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<&control::PairingOptions> for PairingOptions {
     fn from(opts: &control::PairingOptions) -> Self {
         let bondable = match opts.non_bondable {
@@ -124,7 +124,7 @@ impl From<&control::PairingOptions> for PairingOptions {
     }
 }
 
-// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
 impl From<PairingOptions> for control::PairingOptions {
     fn from(opts: PairingOptions) -> Self {
         let non_bondable = match opts.bondable {

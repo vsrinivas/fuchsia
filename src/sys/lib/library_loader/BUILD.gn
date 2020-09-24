@@ -33,7 +33,7 @@ rustc_library("library_loader") {
 # the config_test unit test. This is necessary because the library loader must be able to load the
 # files using OPEN_RIGHT_EXECUTABLE/VMO_FLAG_EXEC, and the easiest way to provide a test directory
 # that supports that is a real pkgfs directory.
-# TODO(fxb/37534): Remove this once Rust vfs supports OPEN_RIGHT_EXECUTABLE
+# TODO(fxbug.dev/37534): Remove this once Rust vfs supports OPEN_RIGHT_EXECUTABLE
 generate_manifest("config_test_files") {
   args = [
     "--entry=lib/config_test/foo=" +

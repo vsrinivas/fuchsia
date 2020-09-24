@@ -26,7 +26,7 @@ pub trait PackageReader: Send + Sync {
     /// archive pointed to by the merkle hash are parsed and returned.
     /// The package name is not validated.
     ///
-    /// Currently only CFv1 is supported, CFv2 support is tracked here (fxb/53347).
+    /// Currently only CFv1 is supported, CFv2 support is tracked here (fxbug.dev/53347).
     fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition>;
     /// Reads the service package defined by the merkle hash.
     fn read_service_package_definition(&self, merkle: &str) -> Result<ServicePackageDefinition>;

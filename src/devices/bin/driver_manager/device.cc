@@ -523,7 +523,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
     // If the device is already dead, we are detecting an expected disconnect from the driver_host.
     if (dev->state() != Device::State::kDead) {
       // TODO(fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
-      LOGF(WARNING, "Disconnected device %p '%s', see fxb/56208 for potential cause", dev.get(),
+      LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause", dev.get(),
            dev->name().data());
       dev->coordinator->RemoveDevice(dev, true);
     }

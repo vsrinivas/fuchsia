@@ -109,7 +109,7 @@ void LaunchTestCase(const char* test_case, zx_info_process_t* proc_info) {
   ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, proc_info, sizeof(*proc_info), nullptr, nullptr));
 }
 
-// This is a test for fxb/41780 where we accidentally enforced the BAD_HANDLE policy in a case
+// This is a test for fxbug.dev/41780 where we accidentally enforced the BAD_HANDLE policy in a case
 // where the futex value mismatched expectations.
 TEST(BadHandleTest, WaitBadHandleWithMismatchedValueDoesNotExit) {
   zx_info_process_t proc_info;

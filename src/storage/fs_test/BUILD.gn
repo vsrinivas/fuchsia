@@ -615,7 +615,7 @@ fuchsia_test_package("fs-tests") {
     ":case-sensitivity-tests",
     ":clone-tests",
 
-    # Uncomment this when fxb/53973 is fixed.
+    # Uncomment this when fxbug.dev/53973 is fixed.
     # ":corrupt-tests",
     ":directory-tests",
     ":dot-dot-tests",

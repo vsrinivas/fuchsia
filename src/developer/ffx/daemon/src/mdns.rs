@@ -215,7 +215,7 @@ async fn query_recv_loop(
     log::info!("mdns: shut down query socket {}", addr);
 }
 
-// TODO(fxb/44855): This needs to be e2e tested.
+// TODO(fxbug.dev/44855): This needs to be e2e tested.
 impl TargetFinder for MdnsTargetFinder {
     fn new(config: &TargetFinderConfig) -> Result<Self> {
         Ok(Self {

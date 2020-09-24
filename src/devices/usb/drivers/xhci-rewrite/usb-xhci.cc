@@ -701,7 +701,7 @@ void UsbXhci::DdkUnbind(ddk::UnbindTxn txn) {
       }
       // Ensure that we've actually invoked the completions above
       // before moving to the next step.
-      // TODO (fxb/44375): Migrate to joins
+      // TODO (fxbug.dev/44375): Migrate to joins
       RunUntilIdle();
       for (size_t i = 0; i < max_slots_; i++) {
         fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
@@ -726,7 +726,7 @@ void UsbXhci::DdkUnbind(ddk::UnbindTxn txn) {
         }
       }
       // Flush any outstanding async I/O
-      // TODO (fxb/44375): Migrate to joins
+      // TODO (fxbug.dev/44375): Migrate to joins
       RunUntilIdle();
     } while (pending);
     interrupters_.reset();

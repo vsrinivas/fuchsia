@@ -164,7 +164,7 @@ static_library("client") {
     "//zircon/third_party/rapidjson",
   ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -197,7 +197,7 @@ source_set("test_support") {
     "//third_party/googletest:gtest",
   ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -294,7 +294,7 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

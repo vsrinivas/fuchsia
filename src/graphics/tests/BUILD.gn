@@ -61,7 +61,7 @@ test_package("vulkan-tests") {
     {
       name = "vkreadback"
 
-      # TODO(fxb/47373): Restore astro_env when fxb/44570 is fixed.
+      # TODO(fxbug.dev/47373): Restore astro_env when fxbug.dev/44570 is fixed.
       environments = [ aemu_env ] + magma_libvulkan_hardware_envs +
                      [ astro_env ] - [ astro_env ]
     },

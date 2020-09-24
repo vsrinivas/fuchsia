@@ -192,7 +192,7 @@ void RunBlobCorruptionTest() {
   loop.Shutdown();
   ASSERT_TRUE(corruption_server->IsCalled());
 }
-// TODO Enable these fxb/56432
+// TODO Enable these fxbug.dev/56432
 TEST_F(BlobfsTest, DISABLED_CorruptBlobNotify) { RunBlobCorruptionTest(); }
 
 TEST_F(BlobfsTestWithFvm, DISABLED_CorruptBlobNotify) { RunBlobCorruptionTest(); }
@@ -1576,7 +1576,7 @@ void CloneThread(CloneThreadArgs* args) {
     // Explicitly close |fd| before unmapping.
     fd.reset();
     // Yielding before unmapping significantly improves the ability of this test to detect bugs
-    // (e.g. fxb/53882) by increasing the length of time that the file is closed but still has a
+    // (e.g. fxbug.dev/53882) by increasing the length of time that the file is closed but still has a
     // VMO clone.
     zx_nanosleep(0);
     ASSERT_EQ(0, munmap(addr, args->info->size_data));
@@ -1586,7 +1586,7 @@ void CloneThread(CloneThreadArgs* args) {
 // This test ensures that blobfs' lifecycle management correctly deals with a highly volatile
 // number of VMO clones (which blobfs has special logic to handle, preventing the in-memory
 // blob from being discarded while there are active clones).
-// See fxb/53882 for background on this test case.
+// See fxbug.dev/53882 for background on this test case.
 void RunVmoCloneWatchingTest(const RamDisk* disk) {
   if (!disk) {
     return;

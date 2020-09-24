@@ -681,7 +681,7 @@ success("Sandwich6Case5") {
     value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
-            // TODO(fxb/36441): Support handles in GIDL.
+            // TODO(fxbug.dev/36441): Support handles in GIDL.
             handles: [
                 0xffffffff,
                 0xffffffff,
@@ -1178,7 +1178,7 @@ success("Size5Alignment4Vector") {
 }
 
 success("Table_NoFields") {
-    // TODO(fxb/40782): Fix encoding bug in LLCPP.
+    // TODO(fxbug.dev/40782): Fix encoding bug in LLCPP.
     bindings_denylist = [llcpp],
     value = Struct_Table_NoFields {
         t: Table_NoFields {},
@@ -1194,7 +1194,7 @@ success("Table_NoFields") {
 }
 
 success("Table_TwoReservedFields") {
-    // TODO(fxb/40782): Fix encoding bug in LLCPP.
+    // TODO(fxbug.dev/40782): Fix encoding bug in LLCPP.
     bindings_denylist = [llcpp],
     value = Struct_Table_TwoReservedFields {
         t: Table_TwoReservedFields {},
@@ -2616,7 +2616,7 @@ success("RegressionNoUnionLauncherCreateComponentRequest") {
     value = CreateComponentRequest {
         launch_info: LaunchInfo {
             url: "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_rust_write_xunion#meta/fidl_compatibility_test_server_rust_write_xunion.cmx",
-            // TODO(fxb/36441): Support handles in GIDL.
+            // TODO(fxbug.dev/36441): Support handles in GIDL.
             directory_request: 0xffffffff,
         },
         controller: 0xffffffff,

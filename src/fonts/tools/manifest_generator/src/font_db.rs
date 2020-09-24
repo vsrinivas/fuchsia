@@ -115,7 +115,7 @@ impl FontDb {
         };
 
         let mut fallback_typeface_counts: BTreeMap<v2::TypefaceId, usize> = BTreeMap::new();
-        // TODO(fxb/46156): Switch to iter_fallback_chain() when legacy fallbacks are removed.
+        // TODO(fxbug.dev/46156): Switch to iter_fallback_chain() when legacy fallbacks are removed.
         for typeface_id in db.iter_explicit_fallback_chain() {
             *fallback_typeface_counts.entry(typeface_id.clone()).or_insert(0) += 1;
             if db.get_assets_by_name(&typeface_id.file_name).is_empty() {
@@ -262,7 +262,7 @@ impl FontDb {
     }
 
     /// Iterates over legacy fallbacks specified by `"fallback": true` in the font catalog.
-    // TODO(fxb/46156): Remove this code after all product font collections and font catalogs
+    // TODO(fxbug.dev/46156): Remove this code after all product font collections and font catalogs
     // are updated.
     fn iter_legacy_fallback_chain<'a>(&'a self) -> impl Iterator<Item = v2::TypefaceId> + 'a {
         self.iter_families()

@@ -155,7 +155,7 @@ impl<'entries> Simple<'entries> {
         }
     }
 
-    // TODO(fxb/37419): Remove default handling after methods landed.
+    // TODO(fxbug.dev/37419): Remove default handling after methods landed.
     #[allow(unreachable_patterns)]
     fn handle_request(
         &mut self,

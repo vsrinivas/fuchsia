@@ -54,7 +54,7 @@ source_set("user_pci") {
     "//src/devices/lib/mmio",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -87,7 +87,7 @@ if (platform_enable_user_pci) {
     ]
     deps = [ ":user_pci" ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 
@@ -126,7 +126,7 @@ if (platform_enable_user_pci) {
       "//zircon/public/lib/fidl",
     ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 
@@ -151,7 +151,7 @@ if (platform_enable_user_pci) {
       "//src/lib/ddktl",
     ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 }

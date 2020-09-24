@@ -11,7 +11,7 @@ Functionality covered includes:
 The tests use the HCI driver emulator, so no hardware is required, and they can be run on qemu (e.g. via `fx qemu`).
 
 ## Known issues
-**The tests cannot run correctly if `bt-gap` is already running on the system, as drivers are not sandboxed sufficiently. The existing bt-gap may claim the host.fidl channel from the bt-host, which will prevent the emulated drivers behaving correctly for our tests.** *see fxb/1395*
+**The tests cannot run correctly if `bt-gap` is already running on the system, as drivers are not sandboxed sufficiently. The existing bt-gap may claim the host.fidl channel from the bt-host, which will prevent the emulated drivers behaving correctly for our tests.** *see fxbug.dev/1395*
 
 ## Build the tests
 To ensure the tests build correctly, build the integration test package:

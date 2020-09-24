@@ -58,7 +58,7 @@ malloc
 posix_memalign
 realloc
 
-# IO - no implementation needed (pending fxb/13095)
+# IO - no implementation needed (pending fxbug.dev/13095)
 fchmod
 chdir
 chmod
@@ -448,7 +448,7 @@ zx_object_wait_async
 zx_object_wait_many
 zx_object_wait_one
 zx_pager_create
-# workaround for fxb/40168
+# workaround for fxbug.dev/40168
 zx_pager_create_vmo
 zx_pager_detach_vmo
 zx_port_cancel
@@ -501,6 +501,6 @@ _zx_futex_wake
 # ZX_PANIC_LIB
 __zx_panic
 
-# To be removed (fxb/38657)
+# To be removed (fxbug.dev/38657)
 async_get_default_dispatcher
 async_set_default_dispatcher

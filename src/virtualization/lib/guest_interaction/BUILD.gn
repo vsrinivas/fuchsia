@@ -57,7 +57,7 @@ source_set("platform_interface_posix") {
     "//third_party/protobuf:protobuf_full",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -74,7 +74,7 @@ source_set("client_lib") {
     "//third_party/grpc:grpc++",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -90,7 +90,7 @@ source_set("server_lib") {
     "//third_party/grpc:grpc++",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 

@@ -261,7 +261,7 @@ executable("stories_share_session_runners_test") {
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/58038) use thiserror for library errors
+// TODO(fxbug.dev/58038) use thiserror for library errors
 use anyhow::{Context as _, Error};
 use diagnostics_data::{Data, DiagnosticsData, InspectData};
 use fidl;
@@ -206,7 +206,7 @@ impl ArchiveReader {
         let archive = if let Some(archive) = &self.archive {
             archive.clone()
         } else {
-            // TODO(fxb/58051) this should be done in an ArchiveReaderBuilder -> Reader init
+            // TODO(fxbug.dev/58051) this should be done in an ArchiveReaderBuilder -> Reader init
             client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?
         };
 

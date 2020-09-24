@@ -59,7 +59,7 @@ constexpr int kLargePathLength = 128;
 
 TEST_P(DirectoryTest, Large) {
   // Write a bunch of files to a directory.
-  // FAT is very slow (see fxb/56389), so limit the number of files for that filesystem.
+  // FAT is very slow (see fxbug.dev/56389), so limit the number of files for that filesystem.
   const int num_files = fs().GetTraits().is_fat ? 100 : 1024;
   for (int i = 0; i < num_files; i++) {
     char path[kLargePathLength + 1];
@@ -251,7 +251,7 @@ TEST_P(DirectoryTest, TestDirectoryReaddir) {
 }
 
 TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
-  // FAT is very slow (see fxb/56389), so limit the number of directories for that filesystem.
+  // FAT is very slow (see fxbug.dev/56389), so limit the number of directories for that filesystem.
   const size_t kNumEntries = fs().GetTraits().is_fat ? 100 : 1000;
 
   // Create a directory named GetPath("dir").c_str() with entries "00000", "00001" ... up to

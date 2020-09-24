@@ -91,7 +91,7 @@ success("FlexibleEnumUint64") {
 }
 
 success("FlexibleEnumInt8UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumInt8Struct {
         e: 0x0f,
@@ -104,7 +104,7 @@ success("FlexibleEnumInt8UnknownValue") {
 }
 
 success("FlexibleEnumInt16UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumInt16Struct {
         e: 0x0fee,
@@ -117,7 +117,7 @@ success("FlexibleEnumInt16UnknownValue") {
 }
 
 success("FlexibleEnumInt32UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumInt32Struct {
         e: 0x0feeddcc,
@@ -130,7 +130,7 @@ success("FlexibleEnumInt32UnknownValue") {
 }
 
 success("FlexibleEnumInt64UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumInt64Struct {
         e: 0x0feeddccbbaa9988,
@@ -143,7 +143,7 @@ success("FlexibleEnumInt64UnknownValue") {
 }
 
 success("FlexibleEnumUint8UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumUint8Struct {
         e: 0xff,
@@ -156,7 +156,7 @@ success("FlexibleEnumUint8UnknownValue") {
 }
 
 success("FlexibleEnumUint16UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumUint16Struct {
         e: 0xffee,
@@ -169,7 +169,7 @@ success("FlexibleEnumUint16UnknownValue") {
 }
 
 success("FlexibleEnumUint32UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumUint32Struct {
         e: 0xffeeddcc,
@@ -182,7 +182,7 @@ success("FlexibleEnumUint32UnknownValue") {
 }
 
 success("FlexibleEnumUint64UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    // TODO(fxbug.dev/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
     bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumUint64Struct {
         e: 0xffeeddccbbaa9988,

@@ -29,7 +29,7 @@ test_package("tests") {
           dimensions = {
             device_type = "QEMU"
           }
-          tags = [ "flaky" ]  # fxb/49570
+          tags = [ "flaky" ]  # fxbug.dev/49570
         },
       ]
     },

@@ -658,8 +658,8 @@ encode_failure("StrictXUnion Field Not Set") {
 }
 
 success("RecursiveVectorUnionStruct") {
-    // TODO(fxb/38191): Fix stack overflow and enable for Go.
-    // TODO(fxb/7644): Fix self-references and enable for Dart.
+    // TODO(fxbug.dev/38191): Fix stack overflow and enable for Go.
+    // TODO(fxbug.dev/7644): Fix self-references and enable for Dart.
     bindings_denylist = [go,dart],
     value = RecursiveVectorUnionStruct {
         u: RecursiveVectorUnion {
@@ -691,8 +691,8 @@ success("RecursiveVectorUnionStruct") {
 }
 
 success("MutualRecursionUnionStruct") {
-    // TODO(fxb/38191): Fix stack overflow and enable for Go.
-    // TODO(fxb/7644): Fix self-references and enable for Dart.
+    // TODO(fxbug.dev/38191): Fix stack overflow and enable for Go.
+    // TODO(fxbug.dev/7644): Fix self-references and enable for Dart.
     bindings_denylist = [go,dart],
     value = MutualRecursionUnionStruct {
         u: MutualRecursionUnion {

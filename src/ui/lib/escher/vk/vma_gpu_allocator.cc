@@ -187,7 +187,7 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
                                          nullptr};
 
   // Create dedicated memory to reduce memory footprint of protected memory allocations, see
-  // fxb/36620 for motivation.
+  // fxbug.dev/36620 for motivation.
   if (out_ptr || c_image_info.flags & VK_IMAGE_CREATE_PROTECTED_BIT) {
     create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
   }

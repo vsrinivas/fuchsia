@@ -14,8 +14,8 @@ rustc_library("lib") {
   # Only to be used by internal bin and tests.
   visibility = [
     ":*",
-    "tests/*",
     "ffx/*",
+    "tests/*",
     "//src/sys/test_runners/rust/tests/*",
   ]
 
@@ -67,7 +67,7 @@ package("run_test_suite_pkg") {
   ]
 }
 
-# fxb/44251: Packages cannot include other packages, so making a group here for dependency.
+# fxbug.dev/44251: Packages cannot include other packages, so making a group here for dependency.
 group("run_test_suite") {
   testonly = true
   deps = [

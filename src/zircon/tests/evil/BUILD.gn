@@ -9,6 +9,6 @@ executable("evil") {
   deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

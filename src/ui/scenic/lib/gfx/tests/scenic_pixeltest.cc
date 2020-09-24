@@ -1595,7 +1595,7 @@ TEST_F(ScenicPixelTest, ViewHolderDetach) {
 }
 
 // This test case tests if Scenic can generate and present external GPU images correctly without
-// causing any Vulkan validation errors (fxb/35652).
+// causing any Vulkan validation errors (fxbug.dev/35652).
 //
 // This test first creates an escher Image and GPU memory bound to it, and uploaded plain color
 // pixels (#FF8000) to that image. Then we export image as a vmo object, create that image using vmo

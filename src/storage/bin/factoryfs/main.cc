@@ -38,7 +38,7 @@ using block_client::RemoteBlockDevice;
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* options) {
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  // TODO(fxb/34531): Support both methods (outgoing_server and root_server) till fixed.
+  // TODO(fxbug.dev/34531): Support both methods (outgoing_server and root_server) till fixed.
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
   zx::channel diagnostics_dir = zx::channel(zx_take_startup_handle(FS_HANDLE_DIAGNOSTICS_DIR));
 

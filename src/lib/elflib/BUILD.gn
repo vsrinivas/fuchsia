@@ -15,7 +15,7 @@ static_library("elflib") {
 
   public_deps = [ "//zircon/public/lib/fbl" ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -38,14 +38,14 @@ test("elflib_unittest") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
   # TODO(46795): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

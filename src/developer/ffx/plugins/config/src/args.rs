@@ -41,7 +41,7 @@ pub struct SetCommand {
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
-    // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
+    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
     #[argh(option)]
     /// an optional build directory to associate the build config provided - use used for "build"
@@ -68,7 +68,7 @@ pub struct GetCommand {
     /// to "raw". Currently only supported if a name is given.
     pub process: ProcessMode,
 
-    // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
+    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
     #[argh(option)]
     /// an optional build directory to associate the build config provided - use used for "build"
@@ -95,7 +95,7 @@ pub struct RemoveCommand {
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
-    // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
+    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
     #[argh(option)]
     /// an optional build directory to associate the build config provided - use used for "build"
@@ -127,7 +127,7 @@ pub struct AddCommand {
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
-    // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
+    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
     #[argh(option)]
     /// an optional build directory to associate the build config provided - use used for "build"

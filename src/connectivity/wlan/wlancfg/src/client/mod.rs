@@ -112,7 +112,7 @@ pub(crate) async fn serve_provider_requests(
             },
             // Progress internal messages.
             msg = internal_messages_stream.select_next_some() => match msg {
-                // TODO(fxb/53779): Flatten out the handling of futures.
+                // TODO(fxbug.dev/53779): Flatten out the handling of futures.
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
                     pending_scans.push(scan::perform_scan(
                         Arc::clone(&iface_manager),
@@ -520,7 +520,7 @@ pub(crate) async fn handle_client_state_machine_event(
                         .await
                         .is_ok()
                     {
-                        // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+                        // TODO(fxbug.dev/54046): Centralize the calls that reconnect a disconnected client.
                         connect_to_best_network(iface_manager, selector).await;
                     }
                 }

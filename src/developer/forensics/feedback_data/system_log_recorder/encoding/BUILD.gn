@@ -52,7 +52,7 @@ source_set("lz4_decoder") {
     "//src/lib/fxl",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -75,7 +75,7 @@ source_set("lz4_encoder") {
     "//sdk/lib/syslog/cpp",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -87,7 +87,7 @@ source_set("lz4_utils") {
     "//zircon/public/lib/lz4",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 

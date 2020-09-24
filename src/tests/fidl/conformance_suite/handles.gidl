@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 success("SingleHandle") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     handle_defs = {
         #0 = event(),
@@ -24,7 +24,7 @@ success("SingleHandle") {
 }
 
 success("SingleOptionalHandlePresent") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     handle_defs = {
         #0 = event(),
@@ -45,7 +45,7 @@ success("SingleOptionalHandlePresent") {
 }
 
 success("SingleOptionalHandleAbsent") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     value = SingleOptionalHandle {},
     bytes = {
@@ -56,7 +56,7 @@ success("SingleOptionalHandleAbsent") {
 }
 
 success("ArrayOfHandles") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     handle_defs = {
         #0 = event(),
@@ -79,7 +79,7 @@ success("ArrayOfHandles") {
 }
 
 success("ArrayOfOptionalHandles") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     handle_defs = {
         #0 = event(),
@@ -100,7 +100,7 @@ success("ArrayOfOptionalHandles") {
 }
 
 success("VectorOfHandles") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     handle_defs = {
         #0 = event(),
@@ -124,7 +124,7 @@ success("VectorOfHandles") {
 }
 
 success("VectorOfOptionalHandles") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [go,rust],
     handle_defs = {
         #0 = event(),
@@ -146,7 +146,7 @@ success("VectorOfOptionalHandles") {
 }
 
 success("MultipleHandleSubtypes") {
-    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],
     handle_defs = {
         #0 = channel(),
@@ -171,8 +171,8 @@ success("MultipleHandleSubtypes") {
 }
 
 decode_failure("TooManyHandles") {
-    // TODO(fxb/36441): Implement handles in all backends.
-    // TODO(fxb/58385): Close handles on encode/decode failure in Dart, Rust.
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure in Dart, Rust.
     bindings_allowlist = [],
     handle_defs = {
         #0 = event(),

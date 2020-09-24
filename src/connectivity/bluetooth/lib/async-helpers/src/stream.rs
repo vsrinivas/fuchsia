@@ -135,7 +135,7 @@ impl<K: Eq + Hash + Unpin, St: Stream> StreamMap<K, St> {
 impl<K: Clone + Eq + Hash + Unpin, St: Stream> Stream for StreamMap<K, St> {
     type Item = St::Item;
 
-    // TODO(fxb/52050) - This implementation is a simple one, which is convenient to write but
+    // TODO(fxbug.dev/52050) - This implementation is a simple one, which is convenient to write but
     // suffers from a couple of known issues:
     // * The implementation is O(n) wrt the number of streams in the map. We should
     //   be able to produce an O(1) implementation at the cost of internal complexity by

@@ -23,7 +23,7 @@ source_set("gpu_lib") {
     "//zircon/system/ulib/image-format",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

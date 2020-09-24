@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 encode_failure("StringExceedsLimit") {
-    // TODO(fxb/37304) Enforce size bounds in rust
+    // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust, dart],
     value = Length2StringWrapper {
         length_2_string: "abc", // exceeds the string length

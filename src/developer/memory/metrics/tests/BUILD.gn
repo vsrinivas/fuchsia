@@ -23,7 +23,7 @@ source_set("utils") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -46,10 +46,10 @@ executable("memory_metrics_unittests") {
     "//src/lib/fxl/test:gtest_main",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

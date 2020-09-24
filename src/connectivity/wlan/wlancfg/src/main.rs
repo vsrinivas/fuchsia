@@ -90,7 +90,7 @@ async fn monitor_client_connectivity(
                 drop(temp_iface_manager);
                 if scan_for_network_selector(iface_manager.clone(), selector.clone()).await.is_ok()
                 {
-                    // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+                    // TODO(fxbug.dev/54046): Centralize the calls that reconnect a disconnected client.
                     connect_to_best_network(iface_manager.clone(), selector.clone()).await;
 
                     // Reset the retry interval to 1 second.

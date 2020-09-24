@@ -135,7 +135,7 @@ fn select_mcast_interfaces(
 
 /// get_mcast_interfaces retrieves all local interfaces that are local
 /// multicast enabled. See McastInterface for more detials.
-// TODO(fxb/44855): This needs to be e2e tested.
+// TODO(fxbug.dev/44855): This needs to be e2e tested.
 pub fn get_mcast_interfaces() -> Result<Vec<McastInterface>> {
     Ok(select_mcast_interfaces(&mut getifaddrs().context("Failed to get all interface addresses")?))
 }

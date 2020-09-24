@@ -1110,7 +1110,7 @@ impl Data {
         }
 
         // There are issues with displaying a tree that has no properties.
-        // TODO(fxb/49861): Support empty trees in archive.
+        // TODO(fxbug.dev/49861): Support empty trees in archive.
         if self.properties.len() == 0 {
             return true;
         }

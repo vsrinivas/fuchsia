@@ -303,7 +303,7 @@ mod tests {
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
         // When the server is blocked, we should fail at get_merkle_at_path
-        // TODO(fxb/39651) if the Repository can't connect to the remote server AND
+        // TODO(fxbug.dev/39651) if the Repository can't connect to the remote server AND
         // we've updated our local repo recently, then it should return the merkle that is stored locally
         should_fail.set();
         assert_matches!(repo.get_merkle_at_path(&target_path).await, Err(MerkleForError::NotFound));

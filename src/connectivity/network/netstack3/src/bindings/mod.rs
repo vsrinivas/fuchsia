@@ -344,7 +344,7 @@ impl<I: icmp::IpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BindingsD
         let packet =
             fidl_icmp::EchoPacket { sequence_num: seq_num, payload: data.as_ref().to_vec() };
 
-        // TODO(fxb/39186): Consider not dropping ICMP replies when the channel is full.
+        // TODO(fxbug.dev/39186): Consider not dropping ICMP replies when the channel is full.
         match socket.try_send(packet) {
             Ok(()) => {
                 trace!("Processed ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());

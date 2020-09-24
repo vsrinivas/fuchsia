@@ -4,7 +4,7 @@
 
 package fake_clock
 
-// TODO(fxb/45644): Disabled due to flake
+// TODO(fxbug.dev/45644): Disabled due to flake
 // // #cgo LDFLAGS: -lfake_clock
 // import "C"
 

@@ -162,7 +162,7 @@ static_assert(sizeof(Superblock) == kMinfsBlockSize, "minfs info size is wrong")
 // Superblock, Inode bitmap, Data bitmap, Inode Table, Journal (2), and actual data.
 constexpr size_t kMinfsMinimumSlices = 7;
 
-// TODO(fxb/39993)
+// TODO(fxbug.dev/39993)
 constexpr uint64_t kMinfsDefaultInodeCount = 4096;
 
 struct Inode {

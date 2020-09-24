@@ -9,7 +9,7 @@ use {
     std::{mem, time::Duration},
 };
 fn main() {
-    // TODO(fxb/52171): Do not use Criterion.
+    // TODO(fxbug.dev/52171): Do not use Criterion.
     let all = &benchmark_suite::ALL_BENCHMARKS;
     let mut benchmark_defs = all.iter().copied().flatten();
     let (first_label, first_function) = benchmark_defs.next().unwrap();

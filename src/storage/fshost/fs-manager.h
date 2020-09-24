@@ -42,7 +42,7 @@ class FsManager {
 
   ~FsManager();
 
-  // TODO(fxb/39588): delete this
+  // TODO(fxbug.dev/39588): delete this
   // Starts servicing the delayed portion of the outgoing directory, called once
   // "/system" has been mounted.
   void FuchsiaStart() { delayed_outdir_.Start(); }
@@ -124,7 +124,7 @@ class FsManager {
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   std::shared_ptr<devmgr::FshostBootArgs> boot_args_;
 
-  // TODO(fxb/39588): delete this
+  // TODO(fxbug.dev/39588): delete this
   // A RemoteDir in the outgoing directory that ignores requests until Start is
   // called on it.
   DelayedOutdir delayed_outdir_;

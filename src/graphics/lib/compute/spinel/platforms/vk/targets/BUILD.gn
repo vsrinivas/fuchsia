@@ -10,7 +10,7 @@ if (is_host) {
   executable("spinel_modules_to_literals") {
     sources = [ "spinel_modules_to_literals.c" ]
     configs += [
-      # TODO(fxb/58162): delete the below and fix compiler warnings
+      # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
       "//build/config:Wno-conversion",
     ]
   }

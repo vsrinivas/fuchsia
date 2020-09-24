@@ -41,11 +41,11 @@ int main(int argc, char* argv[]) {
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
                                     /*min_output_buffer_count=*/0, kGoldenSha256, &test_params)) {
       if (i != 0) {
-        printf("WARNING - fxb/13483 - internal de-flaking used - extra attempt count: %u\n", i);
+        printf("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u\n", i);
       }
       return 0;
     }
-    printf("WARNING - fxb/13483 - decode may have flaked - internally de-flaking (for now)\n");
+    printf("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)\n");
   }
   printf("Incorrect hash seen every time despite de-flaking retries.  FAIL\n");
   return -1;

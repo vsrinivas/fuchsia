@@ -70,35 +70,35 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 }
 
 func (n *neighborImpl) GetUnreachabilityConfig(ctx fidl.Context, interfaceID uint64) (neighbor.ViewGetUnreachabilityConfigResult, error) {
-	// TODO(fxb/51776): Implement fuchsia.net.neighbor/View.GetUnreachabilityConfigs
+	// TODO(fxbug.dev/51776): Implement fuchsia.net.neighbor/View.GetUnreachabilityConfigs
 	return neighbor.ViewGetUnreachabilityConfigResult{}, ErrNotImplemented
 }
 
 var _ neighbor.ControllerWithCtx = (*neighborImpl)(nil)
 
 func (n *neighborImpl) AddEntry(ctx fidl.Context, interfaceID uint64, neighborIP net.IpAddress, mac net.MacAddress) (neighbor.ControllerAddEntryResult, error) {
-	// TODO(fxb/51777): Implement fuchsia.net.neighbor/Controller.AddEntry
+	// TODO(fxbug.dev/51777): Implement fuchsia.net.neighbor/Controller.AddEntry
 	resp := neighbor.ControllerAddEntryResponse{}
 	result := neighbor.ControllerAddEntryResultWithResponse(resp)
 	return result, ErrNotImplemented
 }
 
 func (n *neighborImpl) RemoveEntry(ctx fidl.Context, interfaceID uint64, neighborIP net.IpAddress) (neighbor.ControllerRemoveEntryResult, error) {
-	// TODO(fxb/51778): Implement fuchsia.net.neighbor/Controller.RemoveEntry
+	// TODO(fxbug.dev/51778): Implement fuchsia.net.neighbor/Controller.RemoveEntry
 	resp := neighbor.ControllerRemoveEntryResponse{}
 	result := neighbor.ControllerRemoveEntryResultWithResponse(resp)
 	return result, ErrNotImplemented
 }
 
 func (n *neighborImpl) ClearEntries(ctx fidl.Context, interfaceID uint64) (neighbor.ControllerClearEntriesResult, error) {
-	// TODO(fxb/51779): Implement fuchsia.net.neighbor/Controller.ClearEntries
+	// TODO(fxbug.dev/51779): Implement fuchsia.net.neighbor/Controller.ClearEntries
 	resp := neighbor.ControllerClearEntriesResponse{}
 	result := neighbor.ControllerClearEntriesResultWithResponse(resp)
 	return result, ErrNotImplemented
 }
 
 func (n *neighborImpl) UpdateUnreachabilityConfig(ctx fidl.Context, interfaceID uint64, config neighbor.UnreachabilityConfig) (neighbor.ControllerUpdateUnreachabilityConfigResult, error) {
-	// TODO(fxb/51780): Implement fuchsia.net.neighbor/Controller.UpdateUnreachabilityConfig
+	// TODO(fxbug.dev/51780): Implement fuchsia.net.neighbor/Controller.UpdateUnreachabilityConfig
 	resp := neighbor.ControllerUpdateUnreachabilityConfigResponse{}
 	result := neighbor.ControllerUpdateUnreachabilityConfigResultWithResponse(resp)
 	return result, ErrNotImplemented

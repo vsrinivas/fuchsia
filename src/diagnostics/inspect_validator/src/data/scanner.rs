@@ -314,7 +314,7 @@ impl Scanner {
     // VMO's blocks, so indexes of the blocks themselves will never be duplicated; that's one
     // thing we don't have to verify.
     fn process_free(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
-        // TODO(fxb/39975): Uncomment or delete this line depending on the resolution of fxb/40012.
+        // TODO(fxbug.dev/39975): Uncomment or delete this line depending on the resolution of fxbug.dev/40012.
         // check_zero_bits(buffer, &block, 64, MAX_BLOCK_BITS)?;
         self.metrics.process(block)?;
         Ok(())
@@ -649,7 +649,7 @@ mod tests {
         },
     };
 
-    // TODO(fxb/39975): Depending on the resolution of fxb/40012, move this const out of mod test.
+    // TODO(fxbug.dev/39975): Depending on the resolution of fxbug.dev/40012, move this const out of mod test.
     const MAX_BLOCK_BITS: usize = constants::MAX_ORDER_SIZE * BITS_PER_BYTE;
 
     fn copy_into(source: &[u8], dest: &mut [u8], offset: usize) {
@@ -1044,7 +1044,7 @@ mod tests {
         // Let's make sure it scans.
         try_byte(&mut buffer, (16, 0), 0, Some("root ->\n> value ->"));
         // Put garbage in a random FREE block body - should fail.
-        // TODO(fxb/39975): Depending on the resolution of fxb/40012, uncomment or delete this test.
+        // TODO(fxbug.dev/39975): Depending on the resolution of fxbug.dev/40012, uncomment or delete this test.
         //try_byte(&mut buffer, (6, 9), 42, None);
         // Put garbage in a random FREE block header - should be fine.
         try_byte(&mut buffer, (6, 7), 42, Some("root ->\n> value ->"));

@@ -23,14 +23,14 @@ using block_client::BlockDevice;
 #define FS_HANDLE_DIAGNOSTICS_DIR PA_HND(PA_USER0, 2)
 
 // Determines the kind of directory layout the filesystem server should expose to the outside world.
-// TODO(fxb/34531): When all users migrate to the export directory, delete this enum, since only
+// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since only
 // |kExportDirectory| would be used.
 enum class ServeLayout {
   // The root of the filesystem is exposed directly
   kDataRootOnly,
 
   // Expose a pseudo-directory with the filesystem root located at "/root".
-  // TODO(fxb/34531): Also expose an administration service under "/svc/fuchsia.fs.Admin".
+  // TODO(fxbug.dev/34531): Also expose an administration service under "/svc/fuchsia.fs.Admin".
   kExportDirectory
 };
 

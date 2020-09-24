@@ -17,7 +17,7 @@ import 'package:retry/retry.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
-// TODO(fxb/53292): update to use test size.
+// TODO(fxbug.dev/53292): update to use test size.
 const _timeout = Timeout(Duration(minutes: 5));
 
 void printErrorHelp() {

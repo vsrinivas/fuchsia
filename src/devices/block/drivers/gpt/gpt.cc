@@ -275,7 +275,7 @@ zx_status_t PartitionTable::Bind() {
   zx_status_t status;
   status =
       device_get_metadata(parent_, DEVICE_METADATA_GUID_MAP, guid_map_, sizeof(guid_map_), &actual);
-  // TODO(http://fxb/33999): We should not continue loading the driver here. Upper layer
+  // TODO(http://fxbug.dev/33999): We should not continue loading the driver here. Upper layer
   //                may rely on guid to take action on a partition.
   if (status != ZX_OK) {
     zxlogf(INFO, "gpt: device_get_metadata failed (%d)", status);

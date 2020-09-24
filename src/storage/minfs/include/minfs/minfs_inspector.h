@@ -19,7 +19,7 @@ namespace minfs {
 
 // Bare-bone minfs inspector that loads metadata from the backing block
 // device and provides functions to return parsed structs.
-// TODO(fxb/47359): Since this can run on corrupt data, more thought needs
+// TODO(fxbug.dev/47359): Since this can run on corrupt data, more thought needs
 // to be put on the potential edge cases that can happen during corruption.
 // Care needs to be put into what dependencies are used when exposing new
 // information from this class.

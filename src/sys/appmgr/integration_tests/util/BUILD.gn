@@ -11,7 +11,7 @@ group("util") {
 }
 
 fidl("data_file_reader_writer") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
   testonly = true
@@ -55,7 +55,7 @@ executable("persistent_storage_test_util_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

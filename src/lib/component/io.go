@@ -52,7 +52,7 @@ type Node interface {
 
 type addFn func(fidl.Context, zx.Channel) error
 
-// TODO(fxb/37419): Remove TransitionalBase after methods landed.
+// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type Service struct {
 	*fidlio.NodeWithCtxTransitionalBase
 	AddFn addFn
@@ -174,7 +174,7 @@ func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32,
 
 var _ fidlio.DirectoryWithCtx = (*directoryState)(nil)
 
-// TODO(fxb/37419): Remove TransitionalBase after methods landed.
+// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type directoryState struct {
 	*fidlio.DirectoryWithCtxTransitionalBase
 	*DirectoryWrapper
@@ -375,7 +375,7 @@ type Reader interface {
 	io.Seeker
 }
 
-// TODO(fxb/37419): Remove TransitionalBase after methods landed.
+// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type fileState struct {
 	*fidlio.FileWithCtxTransitionalBase
 	*FileWrapper

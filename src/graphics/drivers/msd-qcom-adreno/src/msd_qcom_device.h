@@ -56,7 +56,7 @@ class MsdQcomDevice : public msd_device_t,
   // Maximum size for system allocations (firmware, ringbuffers).
   static constexpr uint64_t kSystemGpuAddrSize = 0x01000000;
   // Remainder of the address space allocated to client.
-  // TODO(fxb/44002) - support for greater than 32 bits of address space.
+  // TODO(fxbug.dev/44002) - support for greater than 32 bits of address space.
   static constexpr uint64_t kClientGpuAddrSize =
       (1ull << 32) - kGmemGpuAddrSize - kSystemGpuAddrSize;
 

@@ -118,7 +118,7 @@ source_set("lib") {
     "//src/modular/lib/fidl:environment",
   ]
 
-  # TODO(fxb/58160): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
   if (auto_login_to_guest) {

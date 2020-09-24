@@ -83,7 +83,7 @@ fn get_user_selection(mut choices: Vec<&String>) -> Result<&String, Error> {
     let selected = loop {
         let mut input = String::new();
         handle.read_line(&mut input).context("Reading stdin")?;
-        print!("{}", input); // TODO(fxb/47155): why does echo not work?
+        print!("{}", input); // TODO(fxbug.dev/47155): why does echo not work?
         match input.trim().parse::<usize>() {
             Ok(selection) if selection < choices.len() => {
                 break selection;
@@ -186,7 +186,7 @@ async fn get_bootloader_type() -> Result<BootloaderType, Error> {
 fn do_confirmation_prompt() -> Result<bool, Error> {
     print!("Do you wish to proceed? (yes/[no]) ");
     io::stdout().flush()?;
-    // TODO(fxb/47155): Why does this not echo what you type in?
+    // TODO(fxbug.dev/47155): Why does this not echo what you type in?
     let mut input = String::new();
     if let Err(e) = io::stdin().read_line(&mut input) {
         println!("Failed to read stdin: {}", e);

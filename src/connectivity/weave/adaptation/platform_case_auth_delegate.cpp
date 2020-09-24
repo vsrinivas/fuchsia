@@ -22,7 +22,7 @@ using namespace ::nl::Weave::TLV;
 using namespace ::nl::Weave::Profiles;
 using namespace ::nl::Weave::Profiles::Security;
 
-// TODO(fxb/51130): Allow build-time configuration of these values.
+// TODO(fxbug.dev/51130): Allow build-time configuration of these values.
 constexpr size_t kMaxCerts = 10;
 constexpr size_t kMaxServiceConfigSize = 10000;
 constexpr size_t kCertDecodeBufferSize = 5000;
@@ -174,12 +174,12 @@ WEAVE_ERROR PlatformCASEAuthDelegate::BeginValidation(const BeginSessionContext&
   // peer's certificate.
   err = System::Layer::GetClock_RealTimeMS(now_ms);
   if (err == WEAVE_NO_ERROR) {
-    // TODO(fxb/51890): The default implementation of GetClock_RealTimeMS only returns
+    // TODO(fxbug.dev/51890): The default implementation of GetClock_RealTimeMS only returns
     // not-synced if the value is before Jan 1, 2000. Use the UTC fidl instead
     // to confirm whether the clock source is from some external source.
     valid_ctx.EffectiveTime = SecondsSinceEpochToPackedCertTime((uint32_t)(now_ms / 1000));
   } else if (err == WEAVE_SYSTEM_ERROR_REAL_TIME_NOT_SYNCED) {
-    // TODO(fxb/51890): Acquire the firmware build time, for now we set it to Jan 1, 2020
+    // TODO(fxbug.dev/51890): Acquire the firmware build time, for now we set it to Jan 1, 2020
     // as sane default time.
     valid_ctx.EffectiveTime = SecondsSinceEpochToPackedCertTime(1577836800U);
     valid_ctx.ValidateFlags |= kValidateFlag_IgnoreNotBefore;

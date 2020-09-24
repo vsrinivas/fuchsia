@@ -64,12 +64,12 @@ executable("bin") {
 
   # Disable ShadowCallStack, since there seem to be some issues with the call
   # stack after exceptions are caught.
-  # TODO(fxb/41627): Re-enable.
+  # TODO(fxbug.dev/41627): Re-enable.
   cflags = [ "-fno-sanitize=shadow-call-stack" ]
 
   # HWCPipe uses exceptions to report errors, so they must be left enabled.
   configs -= [ "//build/config:no_exceptions" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

@@ -40,7 +40,7 @@ pub struct EventSource {
     registry: Weak<EventRegistry>,
 
     /// Used for `BlockingEventSource.StartComponentTree`.
-    // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
+    // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
     resolve_instance_event_stream: Arc<Mutex<Option<EventStream>>>,
 
     /// The options used to subscribe to events.
@@ -55,7 +55,7 @@ impl EventSource {
         options: SubscriptionOptions,
         registry: Weak<EventRegistry>,
     ) -> Result<Self, ModelError> {
-        // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
+        // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
         let resolve_instance_event_stream = Arc::new(Mutex::new(match options.sync_mode {
             SyncMode::Async => None,
             SyncMode::Sync => {

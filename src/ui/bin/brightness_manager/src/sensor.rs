@@ -67,7 +67,7 @@ async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error
     })
 }
 
-/// TODO(lingxueluo) Default and temporary report when sensor is not valid(fxb/42782).
+/// TODO(lingxueluo) Default and temporary report when sensor is not valid(fxbug.dev/42782).
 fn default_report() -> Result<AmbientLightInputRpt, Error> {
     Ok(AmbientLightInputRpt {
         rpt_id: 0,

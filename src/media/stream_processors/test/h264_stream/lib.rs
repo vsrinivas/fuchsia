@@ -36,7 +36,7 @@ impl H264Stream {
     /// Returns an iterator over H264 chunks (pictures and anything preceding each picture) that
     /// does not copy.
     //
-    // TODO(fxb/13483): Make H264ChunkIter capable of iterating NALs or iterating pictures with any
+    // TODO(fxbug.dev/13483): Make H264ChunkIter capable of iterating NALs or iterating pictures with any
     // non-picture NALs in front of each picture prepended (the current behavior).
     fn chunk_iter(&self) -> impl Iterator<Item = H264Chunk<'_>> {
         H264ChunkIter::create(&self.data)

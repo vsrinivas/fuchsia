@@ -162,7 +162,7 @@ void Coordinator::ShutdownFilesystems() {
 zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_client,
                                                   zx::channel system_state_transition_client,
                                                   zx::channel devfs_handle) {
-  // This request is called with a timeout until fxb/53240 is resolved.
+  // This request is called with a timeout until fxbug.dev/53240 is resolved.
   power_manager_fidl::DriverManagerRegistration::ResultOf::Register result(
       power_manager_client.get(), system_state_transition_client, devfs_handle,
       zx::deadline_after(kPowerManagerConnectionTimeout).get());
@@ -1102,7 +1102,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
   const char* arg0 = dev->args().data();
   const char* arg1 = strchr(arg0, ',');
   if (arg1 == nullptr) {
-    LOGF(ERROR, "Missing proxy arguments, expected '%s,args' (see fxb/33674)", arg0);
+    LOGF(ERROR, "Missing proxy arguments, expected '%s,args' (see fxbug.dev/33674)", arg0);
     return ZX_ERR_INTERNAL;
   }
   size_t arg0len = arg1 - arg0;

@@ -68,7 +68,7 @@ pub struct Table {
     _object_name: inspect::StringProperty,
     _binary_data: inspect::BytesProperty,
 
-    // TODO(fxb/41953): remove when the FIDL service is deprecated
+    // TODO(fxbug.dev/41953): remove when the FIDL service is deprecated
     data: TableData,
 }
 
@@ -110,7 +110,7 @@ struct Cell {
     _value: inspect::IntProperty,
     _double_value: inspect::DoubleProperty,
 
-    // TODO(fxb/41953): remove when the FIDL service is deprecated.
+    // TODO(fxbug.dev/41953): remove when the FIDL service is deprecated.
     data: CellData,
 }
 
@@ -139,7 +139,7 @@ struct Row {
     node: inspect::Node,
     cells: Vec<Cell>,
 
-    // TODO(fxb/41953): remove when the FIDL service is deprecated.
+    // TODO(fxbug.dev/41953): remove when the FIDL service is deprecated.
     data: RowData,
 }
 

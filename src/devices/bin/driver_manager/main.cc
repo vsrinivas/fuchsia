@@ -65,7 +65,7 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
       {"devmgr.devhost.strict-linking", false},
       {"devmgr.log-to-debuglog", false},
       {"devmgr.require-system", false},
-      // Turn it on by default. See fxb/34577
+      // Turn it on by default. See fxbug.dev/34577
       {"devmgr.suspend-timeout-fallback", true},
       {"devmgr.verbose", false},
   };

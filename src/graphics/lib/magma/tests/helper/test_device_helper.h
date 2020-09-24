@@ -79,7 +79,7 @@ class TestDeviceBase {
     // Rebinding the device immediately after unbinding it sometimes causes the new device to be
     // created before the old one is released, which can cause problems since the old device can
     // hold onto interrupts and other resources. Delay recreation to make that less likely.
-    // TODO(fxb/39852): Remove when the driver framework bug is fixed.
+    // TODO(fxbug.dev/39852): Remove when the driver framework bug is fixed.
     constexpr uint32_t kRecreateDelayMs = 1000;
     zx::nanosleep(zx::deadline_after(zx::msec(kRecreateDelayMs)));
 

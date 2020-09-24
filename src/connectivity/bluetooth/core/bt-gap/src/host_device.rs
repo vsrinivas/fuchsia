@@ -122,7 +122,7 @@ impl HostDevice {
         self.host.add_bonded_devices(&mut bonds.iter_mut()).map(|r| {
             match r {
                 Err(fidl_error) => Err(Error::from(fidl_error)),
-                // TODO(fxb/44616) - remove when fbt::status is no longer used
+                // TODO(fxbug.dev/44616) - remove when fbt::status is no longer used
                 Ok(fbt::Status { error: Some(error) }) => Err(format_err!(
                     "Host Error: {}",
                     error.description.unwrap_or("Unknown Host Error".to_string())

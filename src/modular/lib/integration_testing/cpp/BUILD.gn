@@ -17,6 +17,6 @@ source_set("cpp") {
   ]
   public_deps = [ "//sdk/fidl/fuchsia.testing.runner" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

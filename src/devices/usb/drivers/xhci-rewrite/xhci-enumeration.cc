@@ -69,7 +69,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
 // See section 4.3 of revision 1.2 of the xHCI specification for details
 TRBPromise RetryEnumeration(UsbXhci* hci, uint8_t port, uint8_t old_slot,
                             std::optional<HubInfo> hub_info, fbl::RefPtr<AsyncState> state) {
-  // Disabling the slot is required due to fxb/41924
+  // Disabling the slot is required due to fxbug.dev/41924
   return hci->DisableSlotCommand(old_slot)
       .and_then([=](TRB*& result) {
         // DisableSlotCommand will never return an error in the TRB.

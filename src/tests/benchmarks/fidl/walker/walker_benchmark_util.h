@@ -26,7 +26,7 @@ struct LinearizedResult {
 // Linearizes by encoding and then decoding into a linearized form.
 // fidl::Linearize is being removed in favor of fidl::LinearizeAndEncode,
 // so it is no longer possible to directly linearize arbitrary values.
-// TODO(fxb/53743) Change the walker to walk encoded bytes.
+// TODO(fxbug.dev/53743) Change the walker to walk encoded bytes.
 template <typename FidlType>
 LinearizedResult<FidlType> LinearizeForBenchmark(FidlType* value) {
   LinearizedResult<FidlType> result;

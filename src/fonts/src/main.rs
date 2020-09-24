@@ -21,7 +21,7 @@ use {
 };
 
 const FONT_MANIFEST_PATH: &str = "/config/data/all.font_manifest.json";
-/// TODO(fxb/43936): Remove after Chromium tests are made hermetic.
+/// TODO(fxbug.dev/43936): Remove after Chromium tests are made hermetic.
 const TEST_COMPATIBILITY_FONT_MANIFEST_PATH: &str =
     "/config/data/downstream_test_fonts.font_manifest.json";
 
@@ -29,7 +29,7 @@ const TEST_COMPATIBILITY_FONT_MANIFEST_PATH: &str =
 ///
 /// 4 MB is enough to fit several smaller fonts; large fonts will never be cached.
 ///
-/// TODO(fxb/48654): Listen for memory pressure events and trim cache.
+/// TODO(fxbug.dev/48654): Listen for memory pressure events and trim cache.
 const DEFAULT_CACHE_CAPACITY_BYTES: u64 = 4_000_000;
 
 #[derive(FromArgs)]
@@ -100,7 +100,7 @@ async fn main() -> Result<(), Error> {
 }
 
 /// Negotiate which manifest(s) to load.
-/// TODO(fxb/43936): Remove compatibility manifest after Chromium tests are made hermetic.
+/// TODO(fxbug.dev/43936): Remove compatibility manifest after Chromium tests are made hermetic.
 fn select_manifests(args: &Args) -> Result<Vec<PathBuf>, Error> {
     let mut manifest_paths: Vec<PathBuf> = vec![];
     let main_manifest_path = match &args.font_manifest {

@@ -44,7 +44,7 @@ async fn main() -> Result<(), Error> {
 //   2. The 2nd mode fakes a connection inside the pkgfs root directory, and thus supports opening
 //   path "packages/base_resolver_test/0/". It handles that open by connecting to this component's own real
 //   package directory.
-// TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding to
+// TODO(fxbug.dev/37534): This is implemented by manually handling the Directory.Open and forwarding to
 // the test's real package directory because Rust vfs does not yet support OPEN_RIGHT_EXECUTABLE.
 // Simplify in the future.
 struct FakePkgfs;

@@ -90,7 +90,7 @@ source_set("magma_util_tests") {
     ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -131,7 +131,7 @@ source_set("magma_platform_tests") {
     deps += [ "$magma_build_root/src/magma_util/platform/zircon:connection" ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -180,7 +180,7 @@ source_set("magma_platform_hardware_tests") {
     deps += [ "//zircon/public/lib/zx" ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -207,6 +207,6 @@ source_set("msd_abi_conformance_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

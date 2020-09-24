@@ -146,7 +146,7 @@ impl FileSystem for RealFileSystem {
     }
 }
 
-// TODO(fxb/22779): Undo this once we do this for all base packages by default.
+// TODO(fxbug.dev/22779): Undo this once we do this for all base packages by default.
 fn get_system_updater_resource_url(file_system: &impl FileSystem) -> Result<String, Error> {
     // Attempt to find pinned version.
     let file = file_system

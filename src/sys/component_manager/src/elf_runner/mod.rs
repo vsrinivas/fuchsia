@@ -46,7 +46,7 @@ type RuntimeDirectory = Arc<pfs::Simple>;
 // Minimum timer slack amount and default mode. The amount should be large enough to allow for some
 // coalescing of timers, but small enough to ensure applications don't miss deadlines.
 //
-// TODO(fxb/43934): For now, set the value to 50us to avoid delaying performance-critical
+// TODO(fxbug.dev/43934): For now, set the value to 50us to avoid delaying performance-critical
 // timers in Scenic and other system services.
 const TIMER_SLACK_DURATION: zx::Duration = zx::Duration::from_micros(50);
 
@@ -236,7 +236,7 @@ impl ElfRunner {
         let args = runner::get_program_args(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
-        // TODO(fxb/45586): runtime_dir may be unavailable in tests. We should fix tests so
+        // TODO(fxbug.dev/45586): runtime_dir may be unavailable in tests. We should fix tests so
         // that we don't have to have this check here.
         let runtime_dir = match start_info.runtime_dir {
             Some(dir) => self.create_runtime_directory(dir, &args).await,
@@ -720,7 +720,7 @@ impl Runner for ScopedElfRunner {
                     )
                     .await;
                     // Process exit code '0' is considered a clean return.
-                    // TODO (fxb/57024) If we create an epitaph that indicates
+                    // TODO (fxbug.dev/57024) If we create an epitaph that indicates
                     // intentional, non-zero exit, use that for all non-0 exit
                     // codes.
                     let exit_status: ChannelEpitaph = match proc_copy.info() {
@@ -759,7 +759,7 @@ impl Runner for ScopedElfRunner {
             }
 
             Ok(None) => {
-                // TODO(fxb/): Should this signal an error?
+                // TODO(fxbug.dev/): Should this signal an error?
             }
             Err(err) => {
                 runner::component::report_start_error(

@@ -31,7 +31,7 @@ namespace scenic_impl {
 //   - provide a host environment for Services
 class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::SessionUpdater {
  public:
-  // TODO(fxb/23686): Remove when we get rid of Scenic.GetDisplayInfo().
+  // TODO(fxbug.dev/23686): Remove when we get rid of Scenic.GetDisplayInfo().
   class GetDisplayInfoDelegateDeprecated {
    public:
     virtual ~GetDisplayInfoDelegateDeprecated() = default;

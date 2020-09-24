@@ -176,7 +176,7 @@ async fn main() -> Result<(), Error> {
             inspect::service::spawn_tree_server(inspector_clone.clone(), stream);
         });
 
-    // TODO(fxb/41952): remove when all clients writing VMO files today have been migrated to write
+    // TODO(fxbug.dev/41952): remove when all clients writing VMO files today have been migrated to write
     // to Tree.
     inspector
         .duplicate_vmo()

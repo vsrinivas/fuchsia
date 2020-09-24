@@ -9,7 +9,7 @@
 
 namespace a11y {
 
-// TODO(fxb/55220): Refine definition of describability.
+// TODO(fxbug.dev/55220): Refine definition of describability.
 bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node);
 
 // Converts floating point to a string and strips trailing zeros.

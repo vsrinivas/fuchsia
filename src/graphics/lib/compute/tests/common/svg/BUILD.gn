@@ -37,7 +37,7 @@ source_set("svg") {
   ]
   public_configs = [ ":public_config" ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -60,7 +60,7 @@ graphics_compute_unittests("unittests") {
     "${graphics_compute_dir}/tests:common_test_utils",
   ]
   configs = [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

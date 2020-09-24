@@ -38,7 +38,7 @@ pub static SCHEME: &str = "fuchsia-pkg";
 ///
 /// See the fuchsia_pkg_url crate for URL syntax.
 ///
-/// TODO(fxb/46491): Replace this with one or more v2 resolver capabilities implemented and exposed
+/// TODO(fxbug.dev/46491): Replace this with one or more v2 resolver capabilities implemented and exposed
 /// by the package system, and simply used appropriately in the component topology.
 pub struct FuchsiaPkgResolver {
     model: Mutex<oneshot::Receiver<Weak<Model>>>,
@@ -195,7 +195,7 @@ mod tests {
     // Simulate a fake pkgfs Directory service that only contains a single package ("hello_world"),
     // using our own package directory (hosted by the real pkgfs) as the contents. In other words,
     // connect the path "packages/hello_world/0/" to "/pkg" from our namespace.
-    // TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding
+    // TODO(fxbug.dev/37534): This is implemented by manually handling the Directory.Open and forwarding
     // to the test's real package directory because Rust vfs does not yet support
     // OPEN_RIGHT_EXECUTABLE. Simplify in the future.
     struct FakePkgfs;

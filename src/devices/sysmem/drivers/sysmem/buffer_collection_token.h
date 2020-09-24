@@ -59,7 +59,7 @@ class BufferCollectionToken
   fbl::RefPtr<LogicalBufferCollection> parent_;
   // 1 bit means the right is allowed.  0 bit means the right is attenuated.
   //
-  // TODO(fxb/50578): Finish plumbing this.
+  // TODO(fxbug.dev/50578): Finish plumbing this.
   uint32_t rights_attenuation_mask_ = std::numeric_limits<uint32_t>::max();
 
   zx_koid_t server_koid_ = ZX_KOID_INVALID;

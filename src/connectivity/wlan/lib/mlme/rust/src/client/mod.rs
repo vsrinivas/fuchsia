@@ -545,7 +545,7 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an association request frame based on device capability.
-    // TODO(fxb/39148): Use an IE set instead of individual IEs.
+    // TODO(fxbug.dev/39148): Use an IE set instead of individual IEs.
     pub fn send_assoc_req_frame(
         &mut self,
         cap_info: u16,

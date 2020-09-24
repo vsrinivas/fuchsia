@@ -134,7 +134,7 @@ mod tests {
             proxy
         }
 
-        // TODO(fxb/37534): This can be simplified to no longer need to use the test's real package
+        // TODO(fxbug.dev/37534): This can be simplified to no longer need to use the test's real package
         // directory once Rust vfs supports OPEN_RIGHT_EXECUTABLE.
         fn load_url(&self, package_url: &str) -> Option<Package> {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();

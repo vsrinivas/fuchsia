@@ -117,7 +117,7 @@ union UnionWithVector {
     3: string s;
     4: vector<StructSize3Align1> vector_s3_a1;
     5: vector<StructSize3Align2> vector_s3_a2;
-    // 6: vector<handle> handles;  // TODO(fxb/36441): Support handles in GIDL.
+    // 6: vector<handle> handles;  // TODO(fxbug.dev/36441): Support handles in GIDL.
     6: vector<uint32> handles;
     7: array<StructSize3Align1>:2 array_s3_a1;
     8: array<StructSize3Align2>:2 array_s3_a2;
@@ -553,7 +553,7 @@ struct LaunchInfo {
     vector<string>? arguments;
     TransformerEmptyStruct? out;
     TransformerEmptyStruct? err;
-    // zx.handle:CHANNEL? directory_request; // TODO(fxb/36441): Support handles in GIDL.
+    // zx.handle:CHANNEL? directory_request; // TODO(fxbug.dev/36441): Support handles in GIDL.
     uint32 directory_request;
     TransformerEmptyStruct? flat_namespace;
     TransformerEmptyStruct? additional_services;
@@ -561,7 +561,7 @@ struct LaunchInfo {
 
 struct CreateComponentRequest {
     LaunchInfo launch_info;
-    // request<ComponentController>? controller;  // TODO(fxb/36441): Support handles in GIDL.
+    // request<ComponentController>? controller;  // TODO(fxbug.dev/36441): Support handles in GIDL.
     uint32 controller;
 };
 

@@ -118,7 +118,7 @@ source_set("source_set") {
     defines = [ "MDNS_TRACE" ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -147,7 +147,7 @@ test("mdns_test") {
     defines = [ "MDNS_TRACE" ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -222,7 +222,7 @@ fuzzer("packet_reader_fuzzer") {
     "//src/lib/inet",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

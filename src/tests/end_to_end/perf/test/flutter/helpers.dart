@@ -167,12 +167,12 @@ class FlutterTestHelper {
 
       // TODO: Sometimes this thread doesn't get a name, so we also have to
       // accept threads without names for now. It is unclear whether this is a
-      // tracing issue (related to fxb/32554?) or a flutter engine issue.
+      // tracing issue (related to fxbug.dev/32554?) or a flutter engine issue.
       // The trace for button_flutter seems to consistently have names for the
       // .platform and .raster threads but not .io or .ui (.ui being the problem
       // here). However, the .io and .ui threads are always(?) present in the
       // clockface-flutter and scroll-flutter benchmarks. In clockface-flutter,
-      // meanwhile, the .raster thread is occasionally unnamed (fxb/56644).
+      // meanwhile, the .raster thread is occasionally unnamed (fxbug.dev/56644).
       if (threadName.startsWith('pthread_t:')) {
         Logger('FlutterStartupTimeMetricsProcessor').warning(
             'Assuming thread $threadName is supposed to be $appName.cmx.ui');

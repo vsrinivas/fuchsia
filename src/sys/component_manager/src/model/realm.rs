@@ -62,7 +62,7 @@ pub enum BindReason {
     /// Indicates that the component is starting because a call to bind_child was made.
     BindChild { parent: AbsoluteMoniker },
     /// Indicates that the component was marked as eagerly starting by the parent.
-    // TODO(fxb/50714): Include the parent BindReason.
+    // TODO(fxbug.dev/50714): Include the parent BindReason.
     // parent: ExtendedMoniker,
     // parent_bind_reason: Option<Arc<BindReason>>
     Eager,
@@ -620,7 +620,7 @@ impl Realm {
             .expect("bind_instance_open_exposed: no runtime")
             .exposed_dir;
 
-        // TODO(fxb/36541): Until directory capabilities specify rights, we always open
+        // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always open
         // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
         // the same directory rights as the parent directory connection.
         let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;

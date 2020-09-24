@@ -53,7 +53,7 @@ impl Backlight {
     }
 
     fn set(&mut self, value: f64) -> Result<(), Error> {
-        // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
+        // TODO(fxbug.dev/36302): Handle error here as well, similar to get_brightness above. Might involve
         let regulated_value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
         let _result = self.proxy.set_state_normalized(&mut BacklightCommand {
             backlight_on: value > 0.0,

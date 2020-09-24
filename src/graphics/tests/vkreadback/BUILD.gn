@@ -15,7 +15,7 @@ source_set("vkreadback_src") {
   ]
   public_deps += [ "//src/lib/vulkan" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -26,6 +26,6 @@ executable("vkreadback") {
 
   deps = [ ":vkreadback_src" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

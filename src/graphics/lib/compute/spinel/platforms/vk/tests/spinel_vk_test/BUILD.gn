@@ -40,7 +40,7 @@ graphics_compute_unittests("spinel_vk_api_unittests") {
   sources = [ "spinel_vk_api_unittests.cc" ]
   deps = [ ":spinel_vk_test" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -48,7 +48,7 @@ graphics_compute_unittests("spinel_vk_simple_unittests") {
   sources = [ "spinel_vk_simple_unittests.cc" ]
   deps = [ ":spinel_vk_test" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs = [ "//build/config:Wno-conversion" ]
 }
 

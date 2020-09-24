@@ -67,7 +67,7 @@ def use(func):
 @use
 def constants(f, idents):
     for ident in idents:
-        # TODO(fxb/38124): Enable this case once we've clarified these edge cases
+        # TODO(fxbug.dev/38124): Enable this case once we've clarified these edge cases
         # and chosen a way to unambiguously reference the root library. Currently,
         # "const uint32 uint32 = 1;" will fail with an includes-cycle fidlc error.
         if ident == "uint32":

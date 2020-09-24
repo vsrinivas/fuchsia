@@ -82,8 +82,8 @@
                 // Services for serial console, not used by driver_manager or
                 // drivers.
 
-                // TODO(fxb/51234) Split serial console into separate component
-                // Amber control is thought to be used by serial console (fxb/50992)
+                // TODO(fxbug.dev/51234) Split serial console into separate component
+                // Amber control is thought to be used by serial console (fxbug.dev/50992)
                 "/svc/fuchsia.amber.Control",
 
                 // The following are non-Zircon services that some zircon tests assume they
@@ -100,10 +100,10 @@
                 "/svc/fuchsia.boot.RootResource",
                 "/svc/fuchsia.boot.WriteOnlyLog",
 
-                // Used by a test (fxb/50992)
+                // Used by a test (fxbug.dev/50992)
                 "/svc/fuchsia.cobalt.LoggerFactory",
 
-                // Used by crashsvc to report exceptions (fxb/50992)
+                // Used by crashsvc to report exceptions (fxbug.dev/50992)
                 "/svc/fuchsia.exception.Handler",
 
                 // These are services from fshost that driver_manager uses directly
@@ -146,7 +146,7 @@
                 // Service from appmgr
                 "/svc/fuchsia.tracing.provider.Registry",
 
-                // Thought to be used by serial console only (fxb/50992)
+                // Thought to be used by serial console only (fxbug.dev/50992)
                 "/svc/fuchsia.wlan.service.Wlan",
             ],
         },

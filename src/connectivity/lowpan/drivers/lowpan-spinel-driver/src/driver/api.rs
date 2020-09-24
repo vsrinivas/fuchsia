@@ -702,7 +702,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     // Returns the current RSSI measured by the radio.
-    // <fxb/44668>
+    // <fxbug.dev/44668>
     async fn get_current_rssi(&self) -> ZxResult<i32> {
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;

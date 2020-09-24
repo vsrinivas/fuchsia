@@ -164,7 +164,7 @@ impl HostPipeConnection {
                 cmd.wait()
                     .map_err(|e| format!("host-pipe error running try-wait: {}", e.to_string()))?;
 
-                // TODO(fxb/52038): Want an exponential backoff that
+                // TODO(fxbug.dev/52038): Want an exponential backoff that
                 // is sync'd with an explicit "try to start this again
                 // anyway" channel using a select! between the two of them.
                 task::sleep(relaunch_command_delay).await;

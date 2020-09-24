@@ -272,7 +272,7 @@ source_set("object_linker") {
     "//zircon/public/lib/fit",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

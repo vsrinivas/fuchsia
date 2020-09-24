@@ -323,7 +323,7 @@ TEST_F(PlatformCASEAuthDelegateTest, EncodeNodeCertInfoInvalidCert) {
             WEAVE_ERROR_INVALID_ARGUMENT);
   EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
 
-  // TODO(fxb/51891): Test when manufacturer certificate does not exist. This
+  // TODO(fxbug.dev/51891): Test when manufacturer certificate does not exist. This
   // requires initializing ConfigurationMgr from this test, or removing the lazy
   // init from the factory certificate read operation.
 
@@ -510,7 +510,7 @@ TEST_F(PlatformCASEAuthDelegateTest, HandleValidationResult) {
   EXPECT_EQ(result, WEAVE_ERROR_CERT_USAGE_NOT_ALLOWED);
 }
 
-// TODO(fxb/51892): Add tests for intermediate CA certs.
+// TODO(fxbug.dev/51892): Add tests for intermediate CA certs.
 
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

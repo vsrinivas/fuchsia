@@ -206,7 +206,7 @@ impl EventRegistry {
         options: &SubscriptionOptions,
         events: Vec<RoutedEvent>,
     ) -> Result<EventStream, ModelError> {
-        // TODO(fxb/48510): get rid of this channel and use FIDL directly.
+        // TODO(fxbug.dev/48510): get rid of this channel and use FIDL directly.
         let mut event_stream = EventStream::new(options.clone());
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
@@ -227,7 +227,7 @@ impl EventRegistry {
         Ok(event_stream)
     }
 
-    // TODO(fxb/48510): get rid of this
+    // TODO(fxbug.dev/48510): get rid of this
     /// Sends the event to all dispatchers and waits to be unblocked by all
     async fn dispatch(&self, event: &ComponentEvent) -> Result<(), ModelError> {
         // Copy the senders so we don't hold onto the sender map lock
@@ -361,7 +361,7 @@ impl Hook for EventRegistry {
             Ok(EventPayload::CapabilityRouted { source, .. }) => {
                 // Only dispatch the CapabilityRouted event for capabilities
                 // that can be in a component's namespace.
-                // TODO(fxb/54251): In the future, if we wish to be able to mock or
+                // TODO(fxbug.dev/54251): In the future, if we wish to be able to mock or
                 // interpose runners, we can introduce, a new, separate event
                 // type.
                 if source.can_be_in_namespace() {

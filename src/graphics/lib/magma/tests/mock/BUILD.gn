@@ -59,6 +59,6 @@ source_set("address_space") {
     "$magma_build_root/src/magma_util/platform:buffer",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }

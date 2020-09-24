@@ -6,7 +6,7 @@ use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
 use crate::{timer::TimeoutDuration, MacAddr};
 
-// fxb/53818 exposed the issue that longer timeout is needed for starting AP while the
+// fxbug.dev/53818 exposed the issue that longer timeout is needed for starting AP while the
 // client iface is scanning, this is not a magic number, but a number we chose after
 // discussion.
 pub const START_TIMEOUT_SECONDS: i64 = 10;

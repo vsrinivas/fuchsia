@@ -97,7 +97,7 @@ var cases = []interface{}{
 	validCase{"\xdf\xbf\xef\xbf\xbf\xe1\x80\x80", "mix and match from earlier cases"},
 
 	// UTF-8 BOM
-	// TODO(fxb/52104): Dart consumes the UTF-8 BOM
+	// TODO(fxbug.dev/52104): Dart consumes the UTF-8 BOM
 	exclude{validCase{"\xef\xbb\xbf", "UTF-8 BOM"}, "[go,rust,]"},
 	invalidCase{"\xef", "Partial UTF-8 BOM (1)"},
 	invalidCase{"\xef\xbb", "Partial UTF-8 BOM (2)"},
@@ -119,7 +119,7 @@ var cases = []interface{}{
 	validCase{"\xc2\x81", ""},
 	validCase{"\xe1\x80\xbf", ""},
 	validCase{"\xf1\x80\xa0\xbf", ""},
-	// TODO(fxb/52104): Dart consumes the UTF-8 BOM
+	// TODO(fxbug.dev/52104): Dart consumes the UTF-8 BOM
 	exclude{validCase{"\xef\xbb\xbf", "UTF-8 BOM"}, "[go,rust,]"},
 
 	// always invalid bytes
@@ -166,7 +166,7 @@ var cases = []interface{}{
 	invalidCase{"\xff\xfe", "BOMs in UTF-16 LE"},
 }
 
-// TODO(fxb/52104): UTF8 encoding and decoding is not conformant in Dart.
+// TODO(fxbug.dev/52104): UTF8 encoding and decoding is not conformant in Dart.
 
 var successTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}

@@ -50,7 +50,7 @@ source_set("array_to_string") {
 
   deps = [ "//sdk/lib/fidl/cpp" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -69,7 +69,7 @@ source_set("json_xdr") {
     "//zircon/third_party/rapidjson",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 

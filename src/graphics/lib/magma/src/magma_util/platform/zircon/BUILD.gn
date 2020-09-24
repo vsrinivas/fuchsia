@@ -23,7 +23,7 @@ source_set("buffer") {
     "..:object",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -85,7 +85,7 @@ source_set("entry") {
   sources = [ "zircon_entry.cc" ]
   deps = entry_deps
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -94,7 +94,7 @@ source_set("entry_test") {
   defines = [ "MAGMA_TEST_DRIVER=1" ]
   deps = entry_deps
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -103,7 +103,7 @@ source_set("interrupt") {
 
   public_deps = [ "$zircon_build_root/public/lib/zx" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -139,7 +139,7 @@ source_set("device") {
     "//src/devices/pci/lib/device-protocol-pci",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -164,7 +164,7 @@ source_set("connection_client") {
   # Fidl bindings should not introduce a dep on libasync-default.so
   assert_no_deps = [ "//zircon/system/ulib/async-default" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -189,7 +189,7 @@ source_set("connection") {
   # Fidl bindings should not introduce a dep on libasync-default.so
   assert_no_deps = [ "//zircon/system/ulib/async-default" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -226,7 +226,7 @@ source_set("sysmem_connection") {
   # Fidl bindings should not introduce a dep on libasync-default.so
   assert_no_deps = [ "//zircon/system/ulib/async-default" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -375,7 +375,7 @@ source_set("trace") {
 
   public_deps = [ "//zircon/public/lib/fit" ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

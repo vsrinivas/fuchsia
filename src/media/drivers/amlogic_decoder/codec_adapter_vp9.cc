@@ -995,7 +995,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
     uint32_t size = paddr_size ? paddr_size : vaddr_size;
     if (size + sizeof(kFlushThroughZeroes) > video_->GetStreamBufferEmptySpace()) {
       // We don't want the parser to hang waiting for output buffer space, since new space will
-      // never be released to it since we need to manually update the read pointer. TODO(fxb/41825):
+      // never be released to it since we need to manually update the read pointer. TODO(fxbug.dev/41825):
       // Handle copying only as much as can fit and waiting for kVp9InputBufferEmpty to continue
       // copying the remainder.
       DECODE_ERROR("Empty space in stream buffer %d too small for video data (%lu)",

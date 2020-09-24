@@ -463,7 +463,7 @@ zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
     }
 #endif  // NEEDS_PORTING
 
-#if 0  // TODO(fxb/36682): We need nvm.c porting iwl_nvm_init()
+#if 0  // TODO(fxbug.dev/36682): We need nvm.c porting iwl_nvm_init()
     /* Extract MAC address */
     memcpy(mvm->addresses[0].addr, mvm->nvm_data->hw_addr, ETH_ALEN);
 

@@ -50,7 +50,7 @@ TEST_F(GatherTasksTest, MemoryData) {
 
   // For the moment we send both mapped_bytes and private_scaled_shared_bytes.
   // Once the front-end no longer expects memory_mapped_bytes that value will
-  // go away (fxb/43887).
+  // go away (fxbug.dev/43887).
   EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent("memory_mapped_bytes"));
   EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent(
       "memory_private_scaled_shared_bytes"));

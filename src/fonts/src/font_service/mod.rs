@@ -164,7 +164,7 @@ where
             "fonts",
             "service:match_request",
             "family" => &query_family_string[..]);
-        // TODO(fxb/44328): If support for lazy trace args is added, include more query params, e.g.
+        // TODO(fxbug.dev/44328): If support for lazy trace args is added, include more query params, e.g.
         // code points.
 
         let matched_family: Option<FontFamilyMatch<'_>> =

@@ -95,7 +95,7 @@ executable("bin") {
     }
   }
 
-  # TODO(fxb/58615): Fix the leaks and remove this.
+  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   data = [
@@ -103,7 +103,7 @@ executable("bin") {
     "../common/shaders/vert.spv",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

@@ -28,7 +28,7 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
  public:
   DisplayInfoDelegate(std::shared_ptr<display::Display> display);
 
-  // TODO(fxb/23686): Remove this when we externalize Displays.
+  // TODO(fxbug.dev/23686): Remove this when we externalize Displays.
   // |Scenic::GetDisplayInfoDelegateDeprecated|
   void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
   // |Scenic::GetDisplayInfoDelegateDeprecated|

@@ -457,7 +457,7 @@ class Minfs :
   MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
   uint64_t fs_id_ = 0;
-  // TODO(fxb/51057): Git rid of MountState.
+  // TODO(fxbug.dev/51057): Git rid of MountState.
   MountState mount_state_ = {};
 #else
   // Store start block + length for all extents. These may differ from info block for

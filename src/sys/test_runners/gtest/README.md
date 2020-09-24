@@ -40,7 +40,7 @@ Partial Support
 
 -   gtest runner supports printing stdout from the test but if a newline is not
     added at the end of every printf message, the developer will see some extra
-    prints from gtest framework. This limitation will be solved with fxb/53955.
+    prints from gtest framework. This limitation will be solved with fxbug.dev/53955.
 
 ## Testing
 

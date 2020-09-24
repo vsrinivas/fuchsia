@@ -67,7 +67,7 @@ TEST_F(TransitionalTest, CallImplementedMethod) {
 }
 
 // The unimplemented transitional call should error with not supported in an
-// epitaph. However, epitaphs are currently not supported (fxb/35445) so the
+// epitaph. However, epitaphs are currently not supported (fxbug.dev/35445) so the
 // server closes the connection on an unsupported call. This results in a peer
 // connection closed error instead.
 TEST_F(TransitionalTest, CallUnimplementedMethod) {

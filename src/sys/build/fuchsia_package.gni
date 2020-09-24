@@ -140,7 +140,7 @@ template("fuchsia_package") {
       if (!bootfs_only) {
         # If the bringup configuration is being built, the contents need to be
         # exposed to other containers.
-        # See fxb/45680 for more information.
+        # See fxbug.dev/45680 for more information.
         distribution_entries_barrier = []
       }
     }

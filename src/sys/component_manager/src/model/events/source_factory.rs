@@ -40,7 +40,7 @@ pub struct EventSourceFactory {
 
     /// The event registry. It subscribes to all events happening in the system and
     /// routes them to subscribers.
-    // TODO(fxb/48512): instead of using a global registry integrate more with the hooks model.
+    // TODO(fxbug.dev/48512): instead of using a global registry integrate more with the hooks model.
     event_registry: Weak<EventRegistry>,
 
     /// Tracks the event source used by each component identified with the given `moniker`.

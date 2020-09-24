@@ -718,7 +718,7 @@ pub struct EventError {
 ///   * server_protocols -> If a payload contains server-side protocols, describe
 ///     the additional params:
 ///     * name -> FIDL name for the protocol
-// TODO(fxb/53937): This marco is getting complicated. Consider replacing it
+// TODO(fxbug.dev/53937): This marco is getting complicated. Consider replacing it
 //                  with a procedural macro.
 macro_rules! create_event {
     // Entry points

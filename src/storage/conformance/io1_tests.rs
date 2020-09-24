@@ -164,7 +164,7 @@ async fn open_remote_directory_test() {
     // Wait on an open call to the interposed remote directory.
     let open_request_string = rx.next().await.expect("Local tx/rx channel was closed");
 
-    // TODO(fxb/45613):: Bare-metal testing against returned request string. We need
+    // TODO(fxbug.dev/45613):: Bare-metal testing against returned request string. We need
     // to find a more ergonomic return format.
     assert_eq!(open_request_string, "remote_directory flags:1, mode:16384, path:.");
 }

@@ -16,7 +16,7 @@ use {
     std::sync::{Arc, Mutex},
 };
 
-// TODO(fxb/53159): refactor fuchsia-runtime so we can use the constant from there on the host,
+// TODO(fxbug.dev/53159): refactor fuchsia-runtime so we can use the constant from there on the host,
 // rather than redefining it here.
 const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 

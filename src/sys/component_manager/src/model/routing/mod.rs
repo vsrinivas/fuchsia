@@ -90,7 +90,7 @@ pub(super) async fn route_use_capability<'a>(
             .await
         }
         UseDecl::Storage(storage_decl) => {
-            // TODO(fxb/50716): This BindReason is wrong. We need to refactor the Storage
+            // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
             // capability to plumb through the correct BindReason.
             route_and_open_storage_capability(
                 storage_decl,

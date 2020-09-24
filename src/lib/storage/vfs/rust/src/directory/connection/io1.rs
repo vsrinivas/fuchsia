@@ -292,7 +292,7 @@ where
 
     /// Handle a [`DirectoryRequest`].  This function is responsible for handing all the basic
     /// directory operations.
-    // TODO(fxb/37419): Remove default handling after methods landed.
+    // TODO(fxbug.dev/37419): Remove default handling after methods landed.
     #[allow(unreachable_patterns)]
     pub(in crate::directory) async fn handle_request(
         &mut self,

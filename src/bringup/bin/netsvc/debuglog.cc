@@ -116,7 +116,7 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
   if ((len != 8) || is_mcast) {
     return;
   }
-  // Copied not cast in-place to satisfy alignment requirements flagged by ubsan (see fxb/45798).
+  // Copied not cast in-place to satisfy alignment requirements flagged by ubsan (see fxbug.dev/45798).
   logpacket_t pkt;
   memcpy(&pkt, data, sizeof(logpacket_t));
   if ((pkt.magic != NB_DEBUGLOG_MAGIC) || (pkt.seqno != seqno)) {

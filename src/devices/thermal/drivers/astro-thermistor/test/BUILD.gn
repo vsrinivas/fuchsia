@@ -33,7 +33,7 @@ executable("astro-thermistor-test-bin") {
     "//zircon/system/ulib/fzl",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

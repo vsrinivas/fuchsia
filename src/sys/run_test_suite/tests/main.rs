@@ -159,7 +159,7 @@ async fn launch_and_test_empty_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-#[ignore = "fxb/47166: test is timing out"]
+#[ignore = "fxbug.dev/47166: test is timing out"]
 async fn launch_and_test_huge_test() {
     let mut output: Vec<u8> = vec![];
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()

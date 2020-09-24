@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "panic_test")]
-    #[ignore] // TODO(fxb/40189)
+    #[ignore] // TODO(fxbug.dev/40189)
     fn log_panic_test() {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();

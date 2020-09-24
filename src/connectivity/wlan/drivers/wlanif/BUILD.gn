@@ -37,7 +37,7 @@ source_set("lib_source") {
   sources = all_src
   public_deps = all_deps
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -47,7 +47,7 @@ source_set("test_source") {
   sources = all_src
   public_deps = all_deps
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

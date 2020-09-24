@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/48186) Auto-generate this file.
+// TODO(fxbug.dev/48186) Auto-generate this file.
 
 #ifndef SRC_LIB_FIDL_C_WALKER_TESTS_EXTRA_MESSAGES_H_
 #define SRC_LIB_FIDL_C_WALKER_TESTS_EXTRA_MESSAGES_H_

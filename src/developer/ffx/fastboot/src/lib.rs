@@ -12,7 +12,7 @@ use {
     usb_bulk::{Interface, InterfaceInfo, Open},
 };
 
-//TODO(fxb/52733) - this info will probably get rolled into the target struct
+//TODO(fxbug.dev/52733) - this info will probably get rolled into the target struct
 #[derive(Debug)]
 pub struct FastbootDevice {
     pub product: String,

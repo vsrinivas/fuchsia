@@ -14,7 +14,7 @@
 
         // Children below this line may be present on some but not all product configurations (whereas
         // children above it are expected to be present on all configs that include core.cml)
-        // TODO(fxb/48215): Decide how to make it easier to understand which children aren't present.
+        // TODO(fxbug.dev/48215): Decide how to make it easier to understand which children aren't present.
         {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",

@@ -129,7 +129,7 @@ impl<'a> Capability<'a> {
             is_set(control.can_be_64bit())
         )?;
 
-        // Due to fxb/59245 we need to include repr(packed) in our structs.
+        // Due to fxbug.dev/59245 we need to include repr(packed) in our structs.
         // Unfortunately, this results in the compiler warning of a misaligned
         // reference which requires unsafe (E0133
         // https://github.com/rust-lang/rust/issues/46043).

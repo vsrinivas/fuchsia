@@ -166,12 +166,12 @@ void Streamer::WaitForBuffersAllocatedCallback(uint32_t stream_index, zx_status_
 
   connected_stream_count_++;
 
-  // BEGIN: Daisy-chain work around for fxb/42241
+  // BEGIN: Daisy-chain work around for fxbug.dev/42241
   const uint32_t stream_count = configurations_[connected_config_index_].streams.size();
   if (connected_stream_count_ < stream_count) {
     ConnectToStream(connected_config_index_, connected_stream_count_);
   }
-  // END: Daisy-chain work around for fxb/42241
+  // END: Daisy-chain work around for fxbug.dev/42241
 
   auto& stream = stream_infos_[stream_index].stream;
   stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {

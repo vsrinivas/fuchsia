@@ -23,7 +23,7 @@ unittest_package("shared-buffer-tests") {
     },
   ]
 
-  # TODO(fxb/47262): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47262): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

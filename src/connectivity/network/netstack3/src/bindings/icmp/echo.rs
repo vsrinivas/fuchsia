@@ -198,7 +198,7 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnI
         payload: B,
     ) {
         trace!("Sending ICMP Echo request for {:?} w/ sequence number {}", self.conn, seq_num);
-        // TODO(fxb/37143): Report ICMP errors to responders, once implemented
+        // TODO(fxbug.dev/37143): Report ICMP errors to responders, once implemented
         // in the core, by pushing a `zx::Status` to `self.results`.
         let _ = match self.conn {
             InnerIcmpConnId::V4(conn) => {

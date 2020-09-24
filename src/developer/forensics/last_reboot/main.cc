@@ -91,7 +91,7 @@ int main() {
     // all and specifically the data from memory_monitor) is included in the snapshot.zip generated
     // by the Feedback service. The memory_monitor Inspect data is critical to debug OOM crash
     // reports.
-    // TODO(fxb/46216, fxb/48485): remove delay.
+    // TODO(fxbug.dev/46216, fxbug.dev/48485): remove delay.
     main_service.Report(/*crash_reporting_delay=*/zx::sec(90));
   }
 

@@ -61,7 +61,7 @@ void StmMcu::DdkUnbind(ddk::UnbindTxn txn) {
 void StmMcu::DdkRelease() { delete this; }
 
 zx_status_t StmMcu::SetFanLevel(FanLevel level) {
-  // TODO fxb/56400: rsubr clean this up to implement outward intf for rd/wr
+  // TODO fxbug.dev/56400: rsubr clean this up to implement outward intf for rd/wr
   // for now just turning on the fan to prevent soc from overheating
   fbl::AutoLock lock(&i2c_lock_);
   uint8_t cmd[] = {STM_MCU_REG_CMD_FAN_STATUS_CTRL_REG, static_cast<uint8_t>(level)};

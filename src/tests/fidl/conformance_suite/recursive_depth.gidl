@@ -4,7 +4,7 @@
 
 
 success("RecursiveOptionalStructUnderLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
@@ -82,7 +82,7 @@ success("RecursiveOptionalStructUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
@@ -157,7 +157,7 @@ encode_failure("RecursiveOptionalStructExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalStructExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalStruct,
     bytes = {
@@ -170,7 +170,7 @@ decode_failure("RecursiveOptionalStructExceedLimit") {
 }
 
 success("RecursiveOptionalStructArrayWrapperUnderLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStructArrayWrapper { // 0
     arr: [ // 0
@@ -252,7 +252,7 @@ success("RecursiveOptionalStructArrayWrapperUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStructArrayWrapper { // 0
     arr: [ // 0
@@ -331,7 +331,7 @@ encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalStructArrayWrapper,
     bytes = {
@@ -344,7 +344,7 @@ decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
 }
 
 success("RecursiveOptionalAndUnionUnderLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
@@ -427,7 +427,7 @@ success("RecursiveOptionalAndUnionUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndUnionExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
@@ -504,7 +504,7 @@ encode_failure("RecursiveOptionalAndUnionExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalAndUnionExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalAndUnionStruct,
     bytes = {
@@ -520,7 +520,7 @@ decode_failure("RecursiveOptionalAndUnionExceedLimit") {
 }
 
 success("RecursiveOptionalAndTableUnderLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalAndTableStruct { // 0
     t: RecursiveOptionalAndTable { // 0
@@ -602,7 +602,7 @@ success("RecursiveOptionalAndTableUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndTableExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalAndTableStruct { // 0
     t: RecursiveOptionalAndTable { // 0
@@ -677,7 +677,7 @@ encode_failure("RecursiveOptionalAndTableExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalAndTableExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalAndTableStruct,
     bytes = {
@@ -694,7 +694,7 @@ decode_failure("RecursiveOptionalAndTableExceedLimit") {
 }
 
 success("RecursiveOptionalAndVectorUnderLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalAndVectorStruct { // 0
     vec: [ RecursiveOptionalStruct { // 1
@@ -775,7 +775,7 @@ success("RecursiveOptionalAndVectorUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndVectorExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalAndVectorStruct { // 0
     vec: [ RecursiveOptionalStruct { // 1
@@ -851,7 +851,7 @@ encode_failure("RecursiveOptionalAndVectorExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalAndVectorExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalAndVectorStruct,
     bytes = {
@@ -866,7 +866,7 @@ decode_failure("RecursiveOptionalAndVectorExceedLimit") {
 }
 
 success("RecursiveOptionalStructWithStringUnderLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1
@@ -1070,7 +1070,7 @@ success("RecursiveOptionalStructWithStringUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1
@@ -1143,7 +1143,7 @@ encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalStructWithStringExceedLimit") {
-    // TODO(fxb/53616) Enable in all bindings.
+    // TODO(fxbug.dev/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalStructWithString,
     bytes = {

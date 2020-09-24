@@ -54,7 +54,7 @@ func newPackageDir(name, version string, filesystem *Filesystem, executable bool
 }
 
 func isExecutablePath(path string) bool {
-	// TODO(fxb/37328): try limiting this to just lib/, bin/, and test/
+	// TODO(fxbug.dev/37328): try limiting this to just lib/, bin/, and test/
 	// prefixes?  Or put explicit bits for each file in the manifest.
 	return true
 }

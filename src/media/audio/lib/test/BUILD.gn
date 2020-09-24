@@ -87,7 +87,7 @@ source_set("hermetic_audio_test") {
     "//src/lib/fxl",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -121,7 +121,7 @@ source_set("message_transceiver") {
     "//zircon/public/lib/async-cpp",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

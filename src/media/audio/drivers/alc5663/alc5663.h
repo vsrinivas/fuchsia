@@ -84,7 +84,7 @@ struct PllParameters {
 
 // Input data format.
 //
-// TODO(fxb/35648): Allow this to be configured at runtime.
+// TODO(fxbug.dev/35648): Allow this to be configured at runtime.
 const uint32_t kBitsPerSample = 24;
 const uint32_t kBitsPerChannel = 25;  // Pixelbook Eve NHLT configures 25 bits (sic) per channel.
 const uint32_t kNumChannels = 2;

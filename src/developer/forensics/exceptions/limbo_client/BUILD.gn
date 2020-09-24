@@ -20,7 +20,7 @@ source_set("lib") {
 
   public_deps = [ "//sdk/fidl/fuchsia.exception" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -37,7 +37,7 @@ executable("exe") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

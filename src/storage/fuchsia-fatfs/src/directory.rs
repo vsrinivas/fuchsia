@@ -553,7 +553,7 @@ impl MutableDirectory for FatDirectory {
     }
 
     fn sync(&self) -> Result<(), Status> {
-        // TODO(fxb/55291): Support sync on root of fatfs volume.
+        // TODO(fxbug.dev/55291): Support sync on root of fatfs volume.
         Ok(())
     }
 }

@@ -887,7 +887,7 @@ impl HostDispatcher {
             |r| {
                 r.unwrap_or_else(|err| {
                     warn!("Error handling host event: {:?}", err);
-                    // TODO(fxb/44180): This should probably remove the bt-host since termination of the
+                    // TODO(fxbug.dev/44180): This should probably remove the bt-host since termination of the
                     // `watch_events` task indicates that it no longer functions properly.
                 })
             },

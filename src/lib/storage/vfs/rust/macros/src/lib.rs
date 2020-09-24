@@ -27,7 +27,7 @@ use {
 
 /// See [//src/lib/storage/vfs/rust:vfs/src/lib.rs] for the documentation for this macro usage.
 //
-// TODO(fxb/35904) It would be nice to provide support for "shorthand" syntax for the on_read
+// TODO(fxbug.dev/35904) It would be nice to provide support for "shorthand" syntax for the on_read
 // expression.  When the value of the expression is a String, &str, &[u8], or &[u8; N] it can be
 // trivially wrapped in a closure that returns the expression.  I think a way to do it is to change
 // read_only, write_only and read_write to accept a type that accepts conversion from all of these
@@ -108,7 +108,7 @@ fn pseudo_directory_impl(mutable: bool, input: TokenStream) -> TokenStream {
             quote! { #ident.clone() },
         ),
         None => {
-            // TODO(fxb/35905) Remove the underscores when span becomes Span::def_site().
+            // TODO(fxbug.dev/35905) Remove the underscores when span becomes Span::def_site().
             let ident = Ident::new("__dir", span);
             (
                 ident.clone(),

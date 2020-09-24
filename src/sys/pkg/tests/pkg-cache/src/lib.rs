@@ -60,7 +60,7 @@ struct TestEnv<P = PkgfsRamdisk> {
 }
 
 impl TestEnv<PkgfsRamdisk> {
-    // workaround for fxb/38162
+    // workaround for fxbug.dev/38162
     async fn stop(self) {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);

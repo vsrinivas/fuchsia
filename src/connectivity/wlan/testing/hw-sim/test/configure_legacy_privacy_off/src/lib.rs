@@ -19,7 +19,7 @@ const SSID_WEP: &[u8] = b"wep_is_soooo_secure";
 const BSS_MIXED: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a]);
 const SSID_MIXED: &[u8] = b"this_is_fine";
 
-// TODO(fxb/36399): Refactor this test and other config tests to remove duplicate scan code.
+// TODO(fxbug.dev/36399): Refactor this test and other config tests to remove duplicate scan code.
 async fn scan(
     wlan_service: &WlanProxy,
     phy: &WlantapPhyProxy,

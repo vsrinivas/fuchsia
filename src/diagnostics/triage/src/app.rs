@@ -28,7 +28,7 @@ impl App {
     /// to examine results. If an error occurs during the running of the app
     /// it will be returned as an Error.
     pub fn run(self) -> Result<RunResult, Error> {
-        // TODO(fxb/50449): Use 'argh' crate.
+        // TODO(fxbug.dev/50449): Use 'argh' crate.
         let ProgramStateHolder { parse_result, diagnostic_data, output_format } =
             config::initialize(self.options)?;
 

@@ -82,7 +82,7 @@ TEST_F(PhyQueryTest, VerifyQueryData) {
   PhyQuery(&impl_info);
   wlan_info_t wlan_info = impl_info.wlan_info;
 
-  // The Broadcom driver does not set MAC address in PHY query. See fxb/53991
+  // The Broadcom driver does not set MAC address in PHY query. See fxbug.dev/53991
   EXPECT_THAT(wlan_info.mac_addr, Each(0U));
 
   VerifyMacRoleBitfield(wlan_info.mac_role);

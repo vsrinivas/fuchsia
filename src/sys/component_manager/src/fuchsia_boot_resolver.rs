@@ -130,7 +130,7 @@ mod tests {
     // Simulate a fake bootfs Directory service that only contains a single directory
     // ("packages/hello-world"), using our own package directory (hosted by the real pkgfs) as the
     // contents.
-    // TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding
+    // TODO(fxbug.dev/37534): This is implemented by manually handling the Directory.Open and forwarding
     // to the test's real package directory because Rust vfs does not yet support
     // OPEN_RIGHT_EXECUTABLE. Simplify in the future.
     // TODO: Switch this test to use a hardcoded manifest string & consider removing this test

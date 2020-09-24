@@ -22,7 +22,7 @@
 
 namespace devmgr {
 
-// TODO(fxb/39588): This class is used to create a new RemoteDir that doesn't
+// TODO(fxbug.dev/39588): This class is used to create a new RemoteDir that doesn't
 // respond to any messages until `.Start()` is called. This is important for
 // signaling to devcoordinator and component manager when they can start
 // accessing data from pkgfs. This solution is fairly hacky, and will hopefully

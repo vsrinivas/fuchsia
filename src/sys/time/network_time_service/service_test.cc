@@ -98,7 +98,7 @@ TEST_F(PushSourceTest, PushSourceRejectsMultipleClients) {
   local_roughtime_server_->SetTime(kExpectedTimeNanos / 1000);
   auto first_client = ConnectToService(roughtime_port);
 
-  // Currently the PushSource implementation accepts only one client at a time - see fxb/58068
+  // Currently the PushSource implementation accepts only one client at a time - see fxbug.dev/58068
   auto second_client = ConnectToService(roughtime_port);
   bool error_handler_called = false;
   second_client.set_error_handler([&](zx_status_t status) {

@@ -18,9 +18,9 @@ constexpr char kInodeTableName[] = "inode table";
 
 // The current implementation of the InodeTableObject prints out every inode
 // that is allocated in the inode table.
-// TODO(fxb/37907): Change this implementation once we have a better format
+// TODO(fxbug.dev/37907): Change this implementation once we have a better format
 // for how to display inodes when making disk-inspect interactive.
-// Refer to (fxb/39660) for more details about the current implementation.
+// Refer to (fxbug.dev/39660) for more details about the current implementation.
 class InodeTableObject : public disk_inspector::DiskObject {
  public:
   InodeTableObject() = delete;

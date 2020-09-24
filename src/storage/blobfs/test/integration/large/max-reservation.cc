@@ -22,7 +22,7 @@ using blobfs::StreamAll;
 TEST_F(BlobfsTest, MaxReservation) {
   // Create and destroy kBlobfsDefaultInodeCount number of blobs.
   // This verifies that creating blobs does not lead to stray node reservations.
-  // Refer to fxb/54001 for the bug that lead to this test.
+  // Refer to fxbug.dev/54001 for the bug that lead to this test.
   size_t count = 0;
   for (uint64_t i = 0; i < blobfs::kBlobfsDefaultInodeCount; i++) {
     std::unique_ptr<BlobInfo> info;

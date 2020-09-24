@@ -194,14 +194,14 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
                                                       hub_descriptor_.bNbrPorts);
               }
               auto raw_desc = descriptor.descriptor;
-              // TODO (fxb/57998): Don't pass zxdev() around.
+              // TODO (fxbug.dev/57998): Don't pass zxdev() around.
               return RunBlocking<zx_status_t>([raw_desc, this]() {
                        auto status =
                            bus_.SetHubInterface(zxdev(), this, &usb_hub_interface_protocol_ops_);
                        if (status != ZX_OK) {
                          return status;
                        }
-                       // TODO (fxb/56002): Support multi-TT hubs properly. Currently, we operate in
+                       // TODO (fxbug.dev/56002): Support multi-TT hubs properly. Currently, we operate in
                        // single-TT mode even if the hub supports multiple TTs.
                        return bus_.ConfigureHub(zxdev(), speed_, &raw_desc, false);
                      })
@@ -273,7 +273,7 @@ void UsbHubDevice::InterruptCallback(CallbackRequest request) {
 
   // bit zero is hub status
   if (bitmap[0] & 1) {
-    // TODO(fxb/58148) what to do here?
+    // TODO(fxbug.dev/58148) what to do here?
     zxlogf(ERROR, "usb_hub_interrupt_complete hub status changed");
   }
   int port = 1;

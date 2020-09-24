@@ -135,7 +135,7 @@ TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
   RunLoopUntilIdle();
 }
 
-// Test fix for fxb/47251
+// Test fix for fxbug.dev/47251
 TEST_F(DriverOutputTest, HandlePlugDetectBeforeStartResponse) {
   // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
   auto rb_bytes = RingBuffer<uint8_t>();

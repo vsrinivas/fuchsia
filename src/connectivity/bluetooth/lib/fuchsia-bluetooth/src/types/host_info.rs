@@ -84,7 +84,7 @@ impl From<HostInfo> for fsys::HostInfo {
     }
 }
 
-// TODO(fxb/36378): Remove this conversion function when we no longer need to support
+// TODO(fxbug.dev/36378): Remove this conversion function when we no longer need to support
 // fuchsia.bluetooth.control.
 impl From<HostInfo> for fctrl::AdapterInfo {
     fn from(src: HostInfo) -> fctrl::AdapterInfo {

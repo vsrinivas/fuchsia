@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore] // See http://fxb/58383
+    #[ignore] // See http://fxbug.dev/58383
     async fn check_reported_time_in_dart_vm_no_update() -> Result<(), Error> {
         syslog::init_with_tags(&["check_reported_time_in_dart_vm_no_update"])
             .context("Can't init logger")?;

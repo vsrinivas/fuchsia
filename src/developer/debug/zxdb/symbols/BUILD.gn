@@ -165,7 +165,7 @@ static_library("symbols") {
     "//src/lib/llvm:LLVMDebugInfoDWARF",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -199,7 +199,7 @@ static_library("test_support") {
     "//src/lib/llvm:LLVMDebugInfoDWARF",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-conversion" ]
 }
 
@@ -297,7 +297,7 @@ source_set("tests") {
     ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

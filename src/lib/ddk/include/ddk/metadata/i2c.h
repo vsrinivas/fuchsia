@@ -26,7 +26,7 @@ typedef struct {
 // A representation of I2C device metadata which exists in ACPI and is needed by
 // the Intel I2C bus drivers.
 //
-// TODO(fxb/56832): Remove this when we have a better way to manage driver
+// TODO(fxbug.dev/56832): Remove this when we have a better way to manage driver
 // dependencies on ACPI.
 #define ACPI_I2C_MAX_DEVPROPS 5
 typedef struct acpi_i2c_device {

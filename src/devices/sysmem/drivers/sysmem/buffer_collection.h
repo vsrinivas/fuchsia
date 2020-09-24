@@ -152,7 +152,7 @@ class BufferCollection
   // rights_attenuation_mask parameter(s) as the token is duplicated,
   // potentially via multiple participants.
   //
-  // TODO(fxb/50578): Finish plumbing this.
+  // TODO(fxbug.dev/50578): Finish plumbing this.
   uint32_t client_rights_attenuation_mask_ = std::numeric_limits<uint32_t>::max();
 
   std::list<std::pair</*async_id*/ uint64_t, std::unique_ptr<BindingType::Txn>>>

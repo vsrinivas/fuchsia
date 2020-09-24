@@ -213,7 +213,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
     Ok(())
 }
 
-// TODO(fxb/1252): the rest of connect_l2cap tests (that actually succeed)
+// TODO(fxbug.dev/1252): the rest of connect_l2cap tests (that actually succeed)
 
 /// Run all test cases.
 pub fn run_all() -> Result<(), Error> {

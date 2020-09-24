@@ -101,7 +101,7 @@ void UserPager::SetDeadlineProfile(thrd_t thread) {
   zx::profile profile;
 
   // Deadline profile parameters for the pager thread.
-  // Details on the performance analysis to arrive at these numbers can be found in fxb/56291.
+  // Details on the performance analysis to arrive at these numbers can be found in fxbug.dev/56291.
   //
   // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
@@ -156,7 +156,7 @@ UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(const UserPagerInfo
   //
   // Read in at least 32KB at a time. This gives us the best performance numbers w.r.t. memory
   // savings and observed latencies. Detailed results from experiments to tune this can be found in
-  // fxb/48519.
+  // fxbug.dev/48519.
   constexpr uint64_t kReadAheadClusterSize = (32 * (1 << 10));
 
   size_t read_ahead_offset = offset;

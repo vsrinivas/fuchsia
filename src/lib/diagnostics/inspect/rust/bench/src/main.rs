@@ -449,8 +449,8 @@ reader_bench_fn!(bench_1m_100khz, 4096 * 256, 100000, "Snapshot/1M/100khz");
 reader_bench_fn!(bench_1m_1mhz, 4096 * 256, 1000000, "Snapshot/1M/1mhz");
 
 fn reader_benchmark(iterations: usize) {
-    // TODO(fxb/43505): Implement benchmarks where the real size doesn't match the inspector size.
-    // TODO(fxb/43505): Enforce threads starting before benches run.
+    // TODO(fxbug.dev/43505): Implement benchmarks where the real size doesn't match the inspector size.
+    // TODO(fxbug.dev/43505): Enforce threads starting before benches run.
 
     bench_4k_1hz(iterations);
     bench_4k_10hz(iterations);

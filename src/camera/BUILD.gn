@@ -47,7 +47,7 @@ group("tests") {
 
   # Build dependencies should be captured in the "camera_tests.deps" list referenced below.
   # Cross-package dependencies must be included in this target due to transitively included
-  # packages being ignored. See fxb/44251 for details.
+  # packages being ignored. See fxbug.dev/44251 for details.
   deps = [
     ":camera_tests",
     "bin",

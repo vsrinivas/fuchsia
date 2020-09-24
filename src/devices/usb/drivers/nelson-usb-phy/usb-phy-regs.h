@@ -151,7 +151,7 @@ class A0_RTI_GEN_PWR_ISO0 : public hwreg::RegisterBase<A0_RTI_GEN_PWR_ISO0, uint
   static auto Get() { return hwreg::RegisterAddr<A0_RTI_GEN_PWR_ISO0>(0x4); }
 };
 
-// TODO: See fxb/43747
+// TODO: See fxbug.dev/43747
 class UNKNOWN_REGISTER : public hwreg::RegisterBase<UNKNOWN_REGISTER, uint32_t> {
  public:
   DEF_BIT(18, unknown_18);
@@ -167,7 +167,7 @@ class UNKNOWN_REGISTER : public hwreg::RegisterBase<UNKNOWN_REGISTER, uint32_t> 
   static auto Get() { return hwreg::RegisterAddr<UNKNOWN_REGISTER>(0x0); }
 };
 
-// TODO: See fxb/43747
+// TODO: See fxbug.dev/43747
 class UNKNOWN_REGISTER1 : public hwreg::RegisterBase<UNKNOWN_REGISTER1, uint32_t> {
  public:
   DEF_BIT(2, unknown_2);

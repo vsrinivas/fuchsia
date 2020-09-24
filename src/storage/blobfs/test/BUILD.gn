@@ -56,7 +56,7 @@ source_set("test-utils-zxtest") {
   ]
   public_configs = [ ":test-utils-headers" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -78,7 +78,7 @@ source_set("test-utils") {
   ]
   public_configs = [ ":test-utils-headers" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -136,7 +136,7 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/storage/operation",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -251,7 +251,7 @@ test("blobfs-integration-paged-test") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 
   public_deps = [ ":test-utils-zxtest" ]

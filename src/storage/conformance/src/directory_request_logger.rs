@@ -23,7 +23,7 @@ impl DirectoryRequestLogger {
 
     /// Forwards requests to the server end of the connection and also sends
     /// a string message about the request to the tx log channel.
-    /// TODO(fxb/45613): Currently we are only supporting forwarding Directory.Open calls.
+    /// TODO(fxbug.dev/45613): Currently we are only supporting forwarding Directory.Open calls.
     /// We need a better generic way to forward requests. Also, the logged open request
     /// format is a custom string. This could be made into a better format as well.
     pub async fn log_requests(

@@ -1131,7 +1131,7 @@ impl Config {
                     msg: "Interface must have at least one \'subinterface\' definition".to_string(),
                 }));
             }
-            // TODO(cgibson): LIFProperties doesn't support vectors of IP addresses yet. fxb/42315.
+            // TODO(cgibson): LIFProperties doesn't support vectors of IP addresses yet. fxbug.dev/42315.
             if subifs.len() != 1 {
                 warn!("LIFProperties does not support multiple addresses yet.")
             }

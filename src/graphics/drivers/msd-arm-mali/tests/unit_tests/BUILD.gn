@@ -38,7 +38,7 @@ source_set("tests_not_requiring_hardware") {
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -54,7 +54,7 @@ source_set("tests_requiring_hardware") {
 
   deps = [ ":test_deps" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

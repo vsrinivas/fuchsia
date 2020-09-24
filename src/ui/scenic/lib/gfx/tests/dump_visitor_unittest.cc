@@ -65,7 +65,7 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
 
   EXPECT_TRUE(ostream.str().find("> Image") != std::string::npos);
   EXPECT_TRUE(ostream.str().find("> ImagePipe") != std::string::npos);
-  // fxb/39484. Re-enable this by injecting an Image with an associated escher::Image,
+  // fxbug.dev/39484. Re-enable this by injecting an Image with an associated escher::Image,
   // or by refactoring gfx::Image itself and updating RenderVisitor.
   // EXPECT_TRUE(ostream.str().find("use_protected_memory:") != std::string::npos);
 }

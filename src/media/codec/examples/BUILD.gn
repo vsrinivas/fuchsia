@@ -202,10 +202,10 @@ package("use_h264_decoder_stream_switching_test") {
       # Should pass when run on VIM2, sherlock, or QEMU.
       name = "use_h264_decoder_stream_switching_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable in
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
       # astro_env.
       #
-      # Disable on qemu because the test flakes so far. TODO(fxb/49932) Re-enable in emu_env.
+      # Disable on qemu because the test flakes so far. TODO(fxbug.dev/49932) Re-enable in emu_env.
       environments = [
         sherlock_env,
         # emu_env,
@@ -242,7 +242,7 @@ package("use-h264-multi-decoder-stream-switching-test") {
       # Should pass when run on VIM2, sherlock, or QEMU.
       name = "use_h264_multi_decoder_stream_switching_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable in
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
       # astro_env.
       environments = [ sherlock_env ]
     },
@@ -406,7 +406,7 @@ package("h264_decoder_fuzzer_test") {
       # Should pass when run on VIM2, sherlock, or QEMU.
       name = "h264_decoder_fuzzer_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [
         sherlock_env,
         emu_env,
@@ -416,14 +416,14 @@ package("h264_decoder_fuzzer_test") {
       # Should pass when run on VIM2, sherlock.
       name = "h264_multi_decoder_fuzzer_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [ sherlock_env ]
     },
     {
       # Should pass when run on VIM2, sherlock, or QEMU.
       name = "h264_decoder_malformed_stream_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [
         sherlock_env,
         emu_env,
@@ -457,7 +457,7 @@ package("vp9_decoder_fuzzer_test") {
     {
       name = "vp9_decoder_fuzzer_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [ sherlock_env ]
     },
   ]
@@ -576,7 +576,7 @@ package("use-vp9-decoder-stream-switching-test") {
     {
       name = "use_vp9_decoder_stream_switching_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [ sherlock_env ]
     },
   ]
@@ -609,7 +609,7 @@ package("use_vp9_decoder_skip_first_frame_test") {
     {
       name = "use_vp9_decoder_skip_first_frame_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [ sherlock_env ]
     },
   ]
@@ -645,7 +645,7 @@ package("use_vp9_decoder_24_output_frames_test") {
       # Should pass when run on VIM2, sherlock.  Astro may not have enough
       # contiguous pool.
       #
-      # TODO(fxb/41735): Depending on how we re-enable, maybe we can also enable
+      # TODO(fxbug.dev/41735): Depending on how we re-enable, maybe we can also enable
       # this one.
       environments = [ sherlock_env ]
     },
@@ -745,7 +745,7 @@ template("vp9_file_decoder_conformance_test") {
 
         # This should pass when run on VIM2 or astro, and will fail in any env
         # that lacks VP9 decode.
-        # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+        # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
         environments = [ sherlock_env ]
       },
     ]

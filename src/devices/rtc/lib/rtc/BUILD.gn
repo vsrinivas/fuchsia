@@ -6,7 +6,7 @@
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
 # build.                                 #
-# See fxb/36548.                         #
+# See fxbug.dev/36548.                   #
 ##########################################
 
 assert(!defined(zx) || zx != "/",
@@ -29,6 +29,6 @@ zx_library("rtc") {
     "//src/lib/ddk",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

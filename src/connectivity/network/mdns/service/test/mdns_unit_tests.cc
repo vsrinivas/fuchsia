@@ -263,7 +263,7 @@ TEST_F(MdnsUnitTests, Subscribe) {
   RunLoopUntilIdle();
 }
 
-// Regression test for fxb/55116.
+// Regression test for fxbug.dev/55116.
 TEST_F(MdnsUnitTests, Regression55116) {
   // Start.
   SetHasInterfaces(true);
@@ -368,7 +368,7 @@ TEST_F(MdnsUnitTests, AsyncSendMessage) {
   (void)get_and_clear_send_message_called();
 
   // We should see |SendMessage| happening immediately after the callback, which ensures that
-  // asynchronous callbacks produce immediate results (fxb/58141).
+  // asynchronous callbacks produce immediate results (fxbug.dev/58141).
   callback(Mdns::Publication::Create(inet::IpPort::From_in_port_t(5353), {}));
   EXPECT_TRUE(get_and_clear_send_message_called());
 
