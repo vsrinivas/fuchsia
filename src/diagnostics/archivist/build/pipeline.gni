@@ -1,0 +1,32 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Define a filtered ArchiveAccessor pipeline.
+#
+# Parameters
+#
+#   name
+#     Type: string
+#     Optional: defaults to target_name
+#
+#   inspect
+#     Type: list of files
+#     Required: inspect selector configurations for the pipeline
+# TODO(fxbug.dev/60611) update public pipeline docs with this template
+template("archive_pipeline") {
+  assert(defined(invoker.inspect), "Must define inspect selectors")
+
+  name = target_name
+  if (defined(invoker.name)) {
+    name = invoker.name
+  }
+
+  config_data(target_name) {
+    for_pkg = "archivist"
+    outputs = [ "${name}/{{source_file_part}}" ]
+    sources = invoker.inspect
+  }
+}
