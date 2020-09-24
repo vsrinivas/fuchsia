@@ -70,6 +70,20 @@ process_args() {
 read_rspfile < "$RSPFILE"
 process_args "$@"
 
+# Ninja created directories for the output file, but not for the depfile.
+OUTPUT_DIR="$(dirname "$OUTPUT")"
+DEPFILE_DIR="$(dirname "$DEPFILE")"
+if [ "$DEPFILE_DIR" != "$OUTPUT_DIR" ]; then
+  mkdir -p "$DEPFILE_DIR"
+fi
+if [ "$ORIG_DEPFILE" != - ]; then
+  ORIG_DEPFILE_DIR="$(dirname "$ORIG_DEPFILE")"
+  if [ "$ORIG_DEPFILE_DIR" != "$DEPFILE_DIR" ] &&
+     [ "$ORIG_DEPFILE_DIR" != "$OUTPUT_DIR" ]; then
+    mkdir -p "$ORIG_DEPFILE_DIR"
+  fi
+fi
+
 "${CMD[@]}"
 
 if [ "$ORIG_DEPFILE" = - ]; then
