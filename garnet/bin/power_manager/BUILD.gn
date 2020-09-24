@@ -68,9 +68,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
   ]
 
-  # TODO(47946): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/cobalt_metrics.rs",
     "src/cpu_control_handler.rs",
