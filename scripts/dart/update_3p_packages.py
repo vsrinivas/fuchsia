@@ -53,8 +53,8 @@ def main():
     else:
         print('Unsupported platform: %s' % sys.platform)
         return 1
-    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'topaz', 'tools',
-                            'prebuilt-dart-sdk', platform, 'bin', 'pub')
+    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'prebuilt', 'third_party',
+                            'dart', platform, 'bin', 'pub')
     importer_path = os.path.join(paths.FUCHSIA_ROOT, 'scripts', 'dart',
                                  'package_importer.py')
     output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',

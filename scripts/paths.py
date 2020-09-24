@@ -23,5 +23,4 @@ PREBUILT_PLATFORM = {
 }[platform.system()]
 
 FLUTTER_ROOT = os.path.join(FUCHSIA_DIR, "third_party", "dart-pkg", "git", "flutter")
-DART_ROOT = os.path.join(FUCHSIA_DIR, "topaz", "tools", "prebuilt-dart-sdk",
-                         PREBUILT_PLATFORM)
+DART_ROOT = os.path.join(PREBUILT_DIR, "third_party", "dart", PREBUILT_PLATFORM)
