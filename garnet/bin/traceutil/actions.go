@@ -19,7 +19,7 @@ import (
 
 // This list should be kept in sync with DEFAULT_CATEGORIES in
 // //garnet/bin/sl4f/src/tracing/facade.rs
-const defaultCategories = "app,audio,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm"
+const defaultCategories = "app,audio,benchmark,blobfs,gfx,input,kernel:meta,kernel:sched,ledger,magma,minfs,modular,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm"
 
 type captureTraceConfig struct {
 	Categories    string
