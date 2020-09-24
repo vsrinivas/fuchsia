@@ -15,25 +15,18 @@ bool PlatformLogger::IsInitialized() { return true; }
 
 bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) { return true; }
 
-static void log_cstr(PlatformLogger::LogLevel level, const char* cstr) {
-  const char* fmt = "%s\n";
+void PlatformLogger::LogVa(LogLevel level, const char* fmt, va_list args) {
   switch (level) {
     case PlatformLogger::LOG_ERROR:
-      zxlogf(ERROR, fmt, cstr);
+      zxlogvf(ERROR, fmt, args);
       return;
     case PlatformLogger::LOG_WARNING:
-      zxlogf(WARNING, fmt, cstr);
+      zxlogvf(WARNING, fmt, args);
       return;
     case PlatformLogger::LOG_INFO:
-      zxlogf(INFO, fmt, cstr);
+      zxlogvf(INFO, fmt, args);
       return;
   }
-}
-
-void PlatformLogger::LogVa(LogLevel level, const char* msg, va_list args) {
-  char buffer[512];
-  vsnprintf(buffer, sizeof(buffer), msg, args);
-  log_cstr(level, buffer);
 }
 
 }  // namespace magma
