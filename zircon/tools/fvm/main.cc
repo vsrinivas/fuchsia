@@ -722,7 +722,6 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    fprintf(stderr, "FTL Image write finished.\n");
     return 0;
   }
 
