@@ -13,18 +13,14 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
   deps = [ ":memfs-tests" ]
 }
 
-test("memfs-tests") {
-  output_name = "memfs-tests-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
+test("memfs-test") {
   sources = [ "memfs-tests.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -43,7 +39,7 @@ test("memfs-tests") {
   ]
 }
 
-bootfs_test("memfs-tests-bootfs-test") {
-  name = "memfs-tests-test"
-  deps = [ ":memfs-tests" ]
+fuchsia_unittest_package("memfs-tests") {
+  manifest = "memfs-unit-test.cmx"
+  deps = [ ":memfs-test" ]
 }

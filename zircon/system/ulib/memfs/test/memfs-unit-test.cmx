@@ -1,0 +1,11 @@
+{
+    "program" : {
+        "binary" : "test/memfs-test"
+    },
+    "sandbox" : {
+        "services" : [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

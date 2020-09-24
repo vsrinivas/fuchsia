@@ -30,6 +30,7 @@ group("tests") {
     "fzl:tests",
     "hid-parser/test:tests",
     "inspect:tests",
+    "memfs/test:tests",
     "storage/buffer/test",
     "storage/operation/test",
     "sysconfig-client:tests",
