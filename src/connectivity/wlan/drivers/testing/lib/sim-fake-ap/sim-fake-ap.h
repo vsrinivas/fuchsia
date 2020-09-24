@@ -9,12 +9,14 @@
 #include <stdint.h>
 
 #include <array>
+#include <functional>
 #include <list>
 
 #include <wlan/protocol/ieee80211.h>
 
 #include "netinet/if_ether.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "zircon/types.h"
 
@@ -95,6 +97,13 @@ class FakeAp : public StationIfc {
   // Disassociate a Station
   zx_status_t DisassocSta(const common::MacAddr& sta_mac, uint16_t reason);
 
+  // Beacon-specific error injection.
+  // The beacon_mutator functor will be applied to each beacon frame before transmission.
+  void AddErrInjBeacon(std::function<SimBeaconFrame(const SimBeaconFrame&)> beacon_mutator);
+
+  void DelErrInjBeacon();
+  bool CheckIfErrInjBeaconEnabled() const;
+
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
   void Rx(std::shared_ptr<const SimFrame> frame, std::shared_ptr<const WlanRxInfo> info) override;
@@ -154,6 +163,10 @@ class FakeAp : public StationIfc {
 
     // There is only one static copy of beacon frame, and AP can modify it according to state.
     simulation::SimBeaconFrame beacon_frame_;
+
+    // Functor that will mutate beacon frames if error injection is enabled.
+    // If this is nullptr, beacon error injection is disabled.
+    std::function<SimBeaconFrame(const SimBeaconFrame&)> beacon_mutator;
   } beacon_state_;
 
   enum AssocHandling assoc_handling_mode_ = ASSOC_ALLOWED;

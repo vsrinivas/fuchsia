@@ -115,7 +115,8 @@ class SimManagementFrame : public SimFrame {
     FRAME_TYPE_DEAUTH,
   };
 
-  SimManagementFrame(){};
+  SimManagementFrame() = default;
+
   SimManagementFrame(const common::MacAddr& src, const common::MacAddr& dst)
       : src_addr_(src), dst_addr_(dst){};
 

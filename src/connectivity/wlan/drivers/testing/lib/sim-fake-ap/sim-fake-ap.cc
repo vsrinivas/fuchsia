@@ -105,6 +105,9 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
 
   // First beacon is sent out immediately
   SimBeaconFrame tmp_beacon_frame(beacon_state_.beacon_frame_);
+  if (CheckIfErrInjBeaconEnabled()) {
+    tmp_beacon_frame = beacon_state_.beacon_mutator(tmp_beacon_frame);
+  }
   environment_->Tx(tmp_beacon_frame, tx_info_, this);
 
   beacon_state_.is_beaconing = true;
@@ -435,6 +438,9 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
 void FakeAp::HandleBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
   SimBeaconFrame tmp_beacon_frame(beacon_state_.beacon_frame_);
+  if (CheckIfErrInjBeaconEnabled()) {
+    tmp_beacon_frame = beacon_state_.beacon_mutator(tmp_beacon_frame);
+  }
   environment_->Tx(tmp_beacon_frame, tx_info_, this);
   // Channel switch count decrease by 1 each time after sending a CSA beacon.
   if (beacon_state_.is_switching_channel) {
@@ -443,6 +449,14 @@ void FakeAp::HandleBeaconNotification() {
   }
   ScheduleNextBeacon();
 }
+
+void FakeAp::AddErrInjBeacon(std::function<SimBeaconFrame(const SimBeaconFrame&)> beacon_mutator) {
+  beacon_state_.beacon_mutator = std::move(beacon_mutator);
+}
+
+void FakeAp::DelErrInjBeacon() { beacon_state_.beacon_mutator = nullptr; }
+
+bool FakeAp::CheckIfErrInjBeaconEnabled() const { return beacon_state_.beacon_mutator != nullptr; }
 
 void FakeAp::HandleStopCSABeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);

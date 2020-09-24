@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstring>
+#include <functional>
+#include <list>
 #include <memory>
 
 #include <gmock/gmock.h>
@@ -55,6 +58,7 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
   void ValidateChannelSwitchBeacons();
   void ValidateOverlapChannelSwitches();
   void ValidateSetSecurity();
+  void ValidateErrInjBeacon();
 
   void ScheduleCall(void (BeaconTest::*fn)(), zx::duration when);
   void ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t& channel,
@@ -117,6 +121,8 @@ constexpr wlan_ssid_t kDefaultSsid = {
     .ssid = "Fuchsia Fake AP",
 };
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
+
+constexpr wlan_ssid_t kErrInjBeaconSsid = {.len = 7, .ssid = "Changed"};
 
 void BeaconTest::ScheduleCall(void (BeaconTest::*fn)(), zx::duration when) {
   auto cb_fn = std::make_unique<std::function<void()>>();
@@ -479,6 +485,45 @@ TEST_F(BeaconTest, SetSecurity) {
   ScheduleCall(&BeaconTest::StopBeaconCallback, kSecurityEndTime);
   env_.Run();
   ValidateSetSecurity();
+}
+
+void BeaconTest::ValidateErrInjBeacon() {
+  // Check that we received all the beacons we expected, with the mutated SSID.
+  zx::time next_event_time = ABSOLUTE_TIME(kStartTime);
+  while (next_event_time < ABSOLUTE_TIME(kEndTime)) {
+    ASSERT_EQ(beacons_received_.empty(), false);
+    Beacon received_beacon = beacons_received_.front();
+    EXPECT_EQ(received_beacon.time_, next_event_time);
+    EXPECT_EQ(received_beacon.channel_.primary, kDefaultTxInfo.channel.primary);
+    EXPECT_EQ(received_beacon.ssid_.len, kErrInjBeaconSsid.len);
+    EXPECT_EQ(
+        std::memcmp(received_beacon.ssid_.ssid, kErrInjBeaconSsid.ssid, kErrInjBeaconSsid.len), 0);
+    EXPECT_EQ(received_beacon.bssid_, kDefaultBssid);
+    beacons_received_.pop_front();
+    next_event_time += kBeaconPeriod;
+  }
+  EXPECT_EQ(beacons_received_.empty(), true);
+}
+
+TEST_F(BeaconTest, ErrInjBeacon) {
+  EXPECT_FALSE(ap_.CheckIfErrInjBeaconEnabled());
+  // Beacon mutator functor that changes the SSID of the beacon.
+  auto mutator = [](const simulation::SimBeaconFrame& b) {
+    auto mutated_beacon = b;
+    mutated_beacon.AddSSIDIE(kErrInjBeaconSsid);
+    return mutated_beacon;
+  };
+  ap_.AddErrInjBeacon(mutator);
+  EXPECT_TRUE(ap_.CheckIfErrInjBeaconEnabled());
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
+  env_.Run();
+
+  ValidateErrInjBeacon();
+
+  EXPECT_TRUE(ap_.CheckIfErrInjBeaconEnabled());
+  ap_.DelErrInjBeacon();
+  EXPECT_FALSE(ap_.CheckIfErrInjBeaconEnabled());
 }
 
 }  // namespace wlan::testing
