@@ -149,10 +149,10 @@ TEST(vkAppStateTest, EnableComputeQueueAndSwapchain)
   vk_app_state_t app = {};
 
   const vk_app_state_config_t config = {
-    .require_swapchain = true,
     .device_config = {
       .required_queues = VK_QUEUE_COMPUTE_BIT,
     },
+    .require_swapchain = true,
   };
 
   ASSERT_TRUE(vk_app_state_init(&app, &config)) << "Could not initialize vk_app_state_t instance";

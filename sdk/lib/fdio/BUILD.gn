@@ -103,7 +103,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    public_configs = [ "//build/config:Wno-conversion" ]
+    configs += [ "//build/config:Wno-conversion" ]
   }
 } else {
   source_set("fdio") {

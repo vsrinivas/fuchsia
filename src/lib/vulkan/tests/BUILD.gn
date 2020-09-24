@@ -56,7 +56,7 @@ executable("test_image_pipe_swapchain") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+  configs += [ "//build/config:Wno-reorder-init-list" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

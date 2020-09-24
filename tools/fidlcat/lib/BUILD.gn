@@ -66,7 +66,7 @@ if (is_host) {
     public_deps = [ "//zircon/system/public" ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    public_configs = [ "//build/config:Wno-conversion" ]
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("host_tests") {

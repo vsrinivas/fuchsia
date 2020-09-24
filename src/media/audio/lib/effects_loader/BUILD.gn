@@ -29,7 +29,7 @@ source_set("effects_loader") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("test") {

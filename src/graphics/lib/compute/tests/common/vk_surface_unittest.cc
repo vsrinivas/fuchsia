@@ -22,8 +22,8 @@ TEST(VkSurface, Creation)
   vk_surface_config_t config = {
     .instance           = app.instance,
     .physical_device    = app.pd,
-    .allocator          = app.ac,
     .queue_family_index = app.qfi,
+    .allocator          = app.ac,
   };
   vk_surface * surface = vk_surface_create(&config);
   ASSERT_TRUE(surface) << "Could not create surface!";
@@ -48,8 +48,8 @@ TEST(VkSurface, CreationWithDisableSwapchainPresent)
   vk_surface_config_t config = {
     .instance           = app.instance,
     .physical_device    = app.pd,
-    .allocator          = app.ac,
     .queue_family_index = app.qfi,
+    .allocator          = app.ac,
   };
   vk_surface * surface = vk_surface_create(&config);
   ASSERT_TRUE(surface) << "Could not create surface!";

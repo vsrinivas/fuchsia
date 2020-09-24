@@ -262,7 +262,7 @@ executable("stories_share_session_runners_test") {
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+  configs += [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("module_with_fake_runner_bin") {

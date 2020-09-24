@@ -21,7 +21,7 @@ executable("intl_wisdom_test_bin") {
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+  configs += [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("intl_wisdom_test") {

@@ -38,7 +38,7 @@ source_set("address_space") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("macros") {
@@ -56,7 +56,7 @@ source_set("macros") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs += [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("status") {
@@ -69,7 +69,7 @@ source_set("status") {
   public_deps = [ "$magma_build_root/include:magma_abi_common" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs += [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("mapped_batch") {

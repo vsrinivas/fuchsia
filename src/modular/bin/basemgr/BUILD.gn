@@ -119,7 +119,7 @@ source_set("lib") {
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+  configs += [ "//build/config:Wno-reorder-init-list" ]
 
   if (auto_login_to_guest) {
     public_configs += [ ":auto_login_to_guest" ]

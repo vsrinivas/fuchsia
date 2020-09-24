@@ -33,7 +33,7 @@ source_set("fostr") {
   public_configs = [ "//garnet/public:config" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs += [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 shared_library("fostr_shared") {
@@ -43,7 +43,7 @@ shared_library("fostr_shared") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (is_host) {

@@ -182,9 +182,6 @@ graphics_compute_unittests("common_vk_unittests") {
     "common/vk_utils_unittest.cc",
   ]
   deps = [ ":common_vk" ]
-
-  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 group("tests") {

@@ -19,8 +19,8 @@ CreateSurface(vk_app_state_t * app_state)
   vk_surface_config_t config = {
     .instance           = app_state->instance,
     .physical_device    = app_state->pd,
-    .allocator          = app_state->ac,
     .queue_family_index = app_state->qfi,
+    .allocator          = app_state->ac,
   };
   return vk_surface_create(&config);
 }

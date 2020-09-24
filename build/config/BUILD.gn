@@ -554,7 +554,7 @@ config("default_warnings") {
 config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
   visibility = [
-    "//garnet/examples/intl/wisdom/test/*",
+    "//garnet/examples/intl/wisdom/tests/*",
     "//src/developer/memory/metrics/tests/*",
     "//src/graphics/examples/vkcube/*",
     "//src/graphics/lib/compute/tests/*",
@@ -615,6 +615,7 @@ config("Wno-conversion") {
     "//garnet/public/lib/fostr/*",
     "//garnet/public/lib/test_runner/cpp/*",
     "//garnet/tests/fdio_spawn/*",
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp/*",
     "//sdk/lib/media/audio/cpp/*",
     "//sdk/lib/media/cpp/*",
@@ -880,6 +881,10 @@ config("Wno-conversion") {
     "//src/sys/time/network_time_service/*",
     "//src/sys/tools/log/*",
     "//src/testing/loadbench/*",
+    "//src/tests/benchmarks/fidl/hlcpp:benchmark_suite_hlcpp",
+    "//src/tests/benchmarks/fidl/llcpp:benchmark_suite_llcpp",
+    "//src/tests/benchmarks/fidl/reference:benchmark_suite_reference",
+    "//src/tests/benchmarks/fidl/walker:benchmark_suite_walker",
     "//src/tests/fidl/compatibility/*",
     "//src/tests/microbenchmarks/*",
     "//src/ui/a11y/bin/a11y_manager/tests/util/*",

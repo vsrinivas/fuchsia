@@ -143,7 +143,7 @@ template("gidl_single_file_source_set") {
                            ])
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    public_configs = [ "//build/config:Wno-conversion" ]
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
@@ -323,7 +323,7 @@ template("gidl_multiple_file_source_set") {
                            ])
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    public_configs = [ "//build/config:Wno-conversion" ]
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
