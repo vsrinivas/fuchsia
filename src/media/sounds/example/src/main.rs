@@ -11,7 +11,7 @@ use fuchsia_async::{self as fasync, Time, Timer};
 use fuchsia_component as component;
 use fuchsia_zircon::{self as zx, Vmo};
 use futures::{join, FutureExt};
-use std::{convert::TryInto, fs::File};
+use std::{convert::TryInto, fs::*};
 use zerocopy::AsBytes;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -20,6 +20,37 @@ type Result<T> = std::result::Result<T, Error>;
 async fn main() -> Result<()> {
     let player_proxy = component::client::connect_to_service::<PlayerMarker>()
         .context("Connecting to fuchsia.media.sounds.Player")?;
+
+    // If there are files in the isolated /tmp directory, play them and quit.
+    if let Ok(tmpdir) = read_dir("/tmp") {
+        let mut id = 0;
+        let mut found_file = false;
+        for entry in tmpdir {
+            if let Ok(entry) = entry {
+                if entry.path().is_file() {
+                    found_file = true;
+                    print!("{} ", entry.path().to_str().unwrap());
+                    let duration = player_proxy
+                        .add_sound_from_file(id, sound_file(entry.path().to_str().unwrap())?)
+                        .await?
+                        .map_err(|status| {
+                            anyhow::format_err!("AddSoundFromFile failed {}", status)
+                        })?;
+                    print!("{:?}\n", std::time::Duration::from_nanos(duration.try_into().unwrap()));
+                    player_proxy
+                        .play_sound(id, AudioRenderUsage::Media)
+                        .await?
+                        .map_err(|err| anyhow::format_err!("PlaySound failed: {:?}", err))?;
+
+                    id = id + 1;
+                }
+            }
+        }
+
+        if found_file {
+            return Ok(());
+        }
+    }
 
     player_proxy
         .add_sound_from_file(0, resource_file("sfx.wav")?)
@@ -85,6 +116,15 @@ fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_i
                 })
                 .context("Opening package data file")?,
         )?,
+    )))
+}
+
+/// Creates a file channel from a file name.
+fn sound_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>> {
+    // We try two paths here, because normal components see their package data resources in
+    // /pkg/data and shell tools see them in /pkgfs/packages/<pkg>>/0/data.
+    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
+        fdio::transfer_fd(File::open(name).context("Opening sound file")?)?,
     )))
 }
 

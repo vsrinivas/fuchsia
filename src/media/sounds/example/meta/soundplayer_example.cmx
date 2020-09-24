@@ -3,6 +3,9 @@
         "binary": "bin/soundplayer_example"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.media.sounds.Player"
