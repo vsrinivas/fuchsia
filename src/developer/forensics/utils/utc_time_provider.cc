@@ -31,6 +31,7 @@ std::optional<zx::time_utc> UTCTimeProvider::CurrentTime() const {
 void UTCTimeProvider::WatchForAccurateUtcTime() {
   utc_->WatchState([this](const fuchsia::time::UtcState& state) {
     switch (state.source()) {
+      case fuchsia::time::UtcSource::UNVERIFIED:
       case fuchsia::time::UtcSource::EXTERNAL:
         is_utc_time_accurate_ = true;
         utc_.Unbind();

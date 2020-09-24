@@ -59,6 +59,21 @@ class FuchsiaSystemClockTest : public ::gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 };
 
+TEST_F(FuchsiaSystemClockTest, AwaitUnverifiedSourceInitiallyAccurate) {
+  fuchsia::time::UtcState utc_state;
+  utc_state.set_source(fuchsia::time::UtcSource::UNVERIFIED);
+  utc_state.set_timestamp(1234);
+
+  EXPECT_CALL(utc_impl_, MockWatchState).Times(1).WillOnce(Return(&utc_state));
+
+  bool called = false;
+  clock_->AwaitExternalSource([&called]() { called = true; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(called);
+}
+
 TEST_F(FuchsiaSystemClockTest, AwaitExternalSourceInitiallyAccurate) {
   fuchsia::time::UtcState utc_state;
   utc_state.set_source(fuchsia::time::UtcSource::EXTERNAL);

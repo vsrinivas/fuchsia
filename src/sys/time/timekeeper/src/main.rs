@@ -62,7 +62,10 @@ async fn main() -> Result<(), Error> {
     info!("diagnostics initialized, serving inspect on servicefs");
     diagnostics::INSPECTOR.serve(&mut fs)?;
 
-    let source = initial_utc_source(&*utc_clock);
+    let source = match initial_clock_state(&*utc_clock) {
+        InitialClockState::NotSet => ftime::UtcSource::Backstop,
+        InitialClockState::PreviouslySet => ftime::UtcSource::Unverified,
+    };
     let notifier = Notifier::new(source);
 
     info!("connecting to real time clock");
@@ -104,14 +107,14 @@ async fn main() -> Result<(), Error> {
     Ok(fs.collect().await)
 }
 
-fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
+fn initial_clock_state(utc_clock: &zx::Clock) -> InitialClockState {
     let clock_details = utc_clock.get_details().expect("failed to get UTC clock details");
     // When the clock is first initialized to the backstop time, its synthetic offset should
     // be identical. Once the clock is updated, this is no longer true.
     if clock_details.backstop.into_nanos() == clock_details.ticks_to_synthetic.synthetic_offset {
-        ftime::UtcSource::Backstop
+        InitialClockState::NotSet
     } else {
-        ftime::UtcSource::External
+        InitialClockState::PreviouslySet
     }
 }
 
@@ -134,11 +137,7 @@ async fn maintain_utc<R, T, S, D>(
     D: Diagnostics,
 {
     info!("record the state at initialization.");
-    let initial_clock_state = match initial_utc_source(&*utc_clock) {
-        ftime::UtcSource::Backstop => InitialClockState::NotSet,
-        ftime::UtcSource::External => InitialClockState::PreviouslySet,
-    };
-    diagnostics.record(Event::Initialized { clock_state: initial_clock_state });
+    diagnostics.record(Event::Initialized { clock_state: initial_clock_state(&*utc_clock) });
 
     // At the moment, for the purpose of diagnostics, we consider "starting the clock" to be setting
     // our first value, even if looks like the clock was already running when we came to life. We
@@ -176,9 +175,11 @@ async fn maintain_utc<R, T, S, D>(
                             utc_chrono, status
                         );
                     } else {
-                        clock_started = true;
+                        let monotonic = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+                        notifs.0.lock().await.set_source(ftime::UtcSource::Unverified, monotonic);
                         diagnostics.record(Event::StartClock { source: StartClockSource::Rtc });
                         info!("started UTC clock from RTC at time: {}", utc_chrono);
+                        clock_started = true;
                     }
                 };
             }
@@ -358,7 +359,6 @@ mod tests {
         fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
         futures::FutureExt,
         lazy_static::lazy_static,
-        matches::assert_matches,
         std::task::Poll,
     };
 
@@ -515,10 +515,14 @@ mod tests {
         .boxed();
         let _ = executor.run_until_stalled(&mut fut2);
 
-        // Checking that the reported time source has not been updated but that the clock was
-        // updated to use the Valid RTC time.
+        // Checking that the reported time source has been updated to reflect the use of RTC
         let mut fut3 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut3), Poll::Pending);
+        assert_eq!(
+            executor.run_until_stalled(&mut fut3),
+            Poll::Ready(ftime::UtcSource::Unverified)
+        );
+
+        // Checking that the clock was updated to use the valid RTC time.
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
         assert!(clock.read().unwrap() >= *VALID_RTC_TIME);
         let fut4 = rtc.last_set();
@@ -612,18 +616,16 @@ mod tests {
         ]);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn initial_utc_source_initialized() {
+    #[test]
+    fn test_initial_clock_state() {
         let clock =
             zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(1_000))).unwrap();
         // The clock must be started with an initial value.
         clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1_000))).unwrap();
-        let source = initial_utc_source(&clock);
-        assert_matches!(source, ftime::UtcSource::Backstop);
+        assert_eq!(initial_clock_state(&clock), InitialClockState::NotSet);
 
         // Update the clock, which is already running.
         clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1_000_000))).unwrap();
-        let source = initial_utc_source(&clock);
-        assert_matches!(source, ftime::UtcSource::External);
+        assert_eq!(initial_clock_state(&clock), InitialClockState::PreviouslySet);
     }
 }

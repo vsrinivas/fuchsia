@@ -28,6 +28,12 @@ void FuchsiaSystemClock::AwaitExternalSource(std::function<void()> callback) {
 void FuchsiaSystemClock::WatchExternalSource(std::function<void()> callback) {
   utc_->WatchState([this, callback = std::move(callback)](const fuchsia::time::UtcState& state) {
     switch (state.source()) {
+      case fuchsia::time::UtcSource::UNVERIFIED:
+        FX_LOGS(INFO) << "Clock has been initialized from an unverified source";
+        accurate_ = true;
+        utc_.Unbind();
+        callback();
+        break;
       case fuchsia::time::UtcSource::EXTERNAL:
         FX_LOGS(INFO) << "Clock has been initialized from an external source";
         accurate_ = true;

@@ -5,7 +5,7 @@
 library fuchsia.time;
 using zx;
 
-/// Metadata about a device's approximation of UTC time, commonly referred to as "system time."
+/// Metadata about a device's approximation of UTC time, commonly referred to as "system time".
 [Discoverable]
 protocol Utc {
     /// Notifies clients of updates to the UTC timeline. The first call on a channel returns
@@ -26,7 +26,11 @@ table UtcState {
 enum UtcSource {
     /// The clock has been initialized to a known-prior reference time but may be highly inaccurate.
     BACKSTOP = 2;
-    /// The clock has been initialized from a suitably accurate external time source. For many
-    /// devices the most common external time source is a network time server.
+    /// The clock has been initialized from a time source that is believed to be to accurate but
+    /// that could not be verified. An example might be a battery-backed real time clock.
+    UNVERIFIED = 4;
+    /// The clock has been initialized from a suitably accurate and verified external time source.
+    /// For many devices the most common external time source is a network time server using some
+    /// protocol with cryptographic authentication such as Roughtime or HTTPSdate.
     EXTERNAL = 3;
 };

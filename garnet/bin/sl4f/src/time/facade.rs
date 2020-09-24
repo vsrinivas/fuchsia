@@ -42,6 +42,7 @@ impl TimeFacade {
         let source = state.source.ok_or(anyhow!("Utc service returned no source"))?;
         Ok(match source {
             UtcSource::Backstop => false,
+            UtcSource::Unverified => true,
             UtcSource::External => true,
         })
     }

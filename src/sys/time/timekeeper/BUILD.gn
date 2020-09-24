@@ -60,7 +60,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",
-    "//third_party/rust_crates:matches",
   ]
 }
 
