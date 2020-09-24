@@ -181,6 +181,6 @@ class ErmineStory {
 
       await viewRefService.watch(ViewRef(reference: eventPair));
       childViewConnection.requestFocus();
-    } on Error catch (_) {}
+    } on Exception catch (_) {}
   }
 }
