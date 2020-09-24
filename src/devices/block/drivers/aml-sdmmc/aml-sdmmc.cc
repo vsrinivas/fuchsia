@@ -924,9 +924,12 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     pending_txn_ = true;
   }
 
-zxlogf(INFO, "%s: cmd%d arg 0x%08x", __func__, req->cmd_idx, req->arg);  
+// zxlogf(INFO, "%s: cmd%d arg 0x%08x", __func__, req->cmd_idx, req->arg);  
 // Wait for the bus to become idle before issuing the next request. This could be necessary if the
   // card is driving CMD low after a voltage switch.
+  if (max_freq_ == 50'000'000) {  // Janky way to determine if this is SDIO or eMMC
+  zxlogf(INFO, "%s: cmd%d arg 0x%08x", __func__, req->cmd_idx, req->arg);  
+  }
   WaitForBus();
 
   zx_status_t status = ZX_OK;
