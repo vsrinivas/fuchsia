@@ -315,17 +315,6 @@ static zx_status_t efi_range_init(boot_addr_range_t* range, efi_range_seq_t* seq
   }
 }
 
-static int addr_range_cmp(const void* p1, const void* p2) {
-  const struct addr_range* a1 = static_cast<const struct addr_range*>(p1);
-  const struct addr_range* a2 = static_cast<const struct addr_range*>(p2);
-
-  if (a1->base < a2->base)
-    return -1;
-  else if (a1->base == a2->base)
-    return 0;
-  return 1;
-}
-
 static zx_status_t platform_mem_range_init(void) {
   zx_status_t status;
   boot_addr_range_t range;

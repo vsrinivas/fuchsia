@@ -240,7 +240,6 @@ template("zircon_library") {
                              "deps",
                              "dir",
                              "disable_ubsan",
-                             "disable_unused_function",
                              "disable_sanitizers",
                              "headers",
                              "include_dirs",
@@ -256,10 +255,6 @@ template("zircon_library") {
     if (!is_prebuilt) {
       if (defined(invoker.disable_ubsan) && invoker.disable_ubsan) {
         configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
-      }
-      if (defined(invoker.disable_unused_function) &&
-          invoker.disable_unused_function) {
-        configs += [ "//build/config:Wno-unused-function" ]
       }
       if (defined(invoker.disable_sanitizers) && invoker.disable_sanitizers) {
         configs += [ "//build/config:no_sanitizers" ]

@@ -97,20 +97,6 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
   list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(VM_PAGE_STATE_WIRED); }
 }
 
-zx_status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
-  auto r = aspace->FindRegion(va);
-  if (!r) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  auto vm_mapping = r->as_vm_mapping();
-  if (!vm_mapping) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
-}
-
 }  // namespace
 
 void vm_init_preheap() {

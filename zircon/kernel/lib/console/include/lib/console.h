@@ -49,10 +49,10 @@ typedef struct {
 
 #if LK_DEBUGLEVEL == 0
 
-#define STATIC_COMMAND_START
-#define STATIC_COMMAND_END(name)
-#define STATIC_COMMAND(command_str, help_str, func)
-#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask)
+#define STATIC_COMMAND_START [[maybe_unused]] static void _cmd_list() {
+#define STATIC_COMMAND_END(name) }
+#define STATIC_COMMAND(command_str, help_str, func) (void)(func);
+#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) (void)(func);
 
 #else  // LK_DEBUGLEVEL != 0
 

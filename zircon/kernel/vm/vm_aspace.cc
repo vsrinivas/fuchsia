@@ -90,29 +90,6 @@ static inline bool is_inside(VmAspace& aspace, vaddr_t vaddr) {
   return (vaddr >= aspace.base() && vaddr <= aspace.base() + aspace.size() - 1);
 }
 
-static inline bool is_inside(VmAspace& aspace, VmAddressRegion& r) {
-  // is the starting address within the address space
-  if (!is_inside(aspace, r.base())) {
-    return false;
-  }
-
-  if (r.size() == 0) {
-    return true;
-  }
-
-  // see if the size is enough to wrap the integer
-  if (r.base() + r.size() - 1 < r.base()) {
-    return false;
-  }
-
-  // test to see if the end address is within the address space's
-  if (r.base() + r.size() - 1 > aspace.base() + aspace.size() - 1) {
-    return false;
-  }
-
-  return true;
-}
-
 static inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size) {
   DEBUG_ASSERT(is_inside(aspace, vaddr));
 

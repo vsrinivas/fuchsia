@@ -478,6 +478,11 @@ static void calibrate_tsc(bool has_pv_clock) {
   LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
+static uint64_t hpet_ticks_per_ms(void) {
+  extern uint64_t _hpet_ticks_per_ms;
+  return _hpet_ticks_per_ms;
+}
+
 static void pc_init_timer(uint level) {
   const struct x86_model_info* cpu_model = x86_get_model();
 

@@ -979,6 +979,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
   __UNREACHABLE;
 }
 
+#if ARCH_X86
 static zx_status_t is_current_thread(fbl::RefPtr<Dispatcher>* dispatcher) {
   auto thread_dispatcher = DownCastDispatcher<ThreadDispatcher>(dispatcher);
   if (!thread_dispatcher)
@@ -987,6 +988,7 @@ static zx_status_t is_current_thread(fbl::RefPtr<Dispatcher>* dispatcher) {
     return ZX_ERR_ACCESS_DENIED;
   return ZX_OK;
 }
+#endif
 
 // zx_status_t zx_object_set_property
 zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,

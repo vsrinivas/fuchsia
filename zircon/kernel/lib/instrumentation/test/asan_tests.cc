@@ -53,6 +53,9 @@ bool kasan_test_malloc_poisons() {
 // Makes sure that a region recently freed is poisoned.
 bool kasan_test_free_poisons() {
   BEGIN_TEST;
+  // TODO(fxbug.dev/52129): Test is flaky. Fix and re-enable.
+  END_TEST;
+
   constexpr size_t sizes[] = {1, 10, 32, 1023, 1024};
 
   for (auto size : sizes) {
@@ -294,8 +297,7 @@ UNITTEST_START_TESTCASE(kasan_tests)
 UNITTEST("small_poison", kasan_test_poison_small)
 UNITTEST("unaligned_poison", kasan_test_poison_unaligned_offsets)
 UNITTEST("malloc_unpoisons", kasan_test_malloc_poisons)
-// TODO(fxbug.dev/52129): Test is flaky. Fix and re-enable.
-// UNITTEST("free_poisons", kasan_test_free_poisons)
+UNITTEST("free_poisons", kasan_test_free_poisons)
 UNITTEST("detects_buffer_overflows", kasan_test_detects_buffer_overflows)
 UNITTEST("test_poisoning_heap", kasan_test_poison_heap)
 UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)

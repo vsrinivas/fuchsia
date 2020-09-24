@@ -575,10 +575,7 @@ config("Wno-unused-function") {
     "//src/devices/board/drivers/x86:platform-bus-x86",
     "//src/devices/i2c/drivers/aml-i2c:aml-i2c",
     "//src/devices/i2c/drivers/intel-i2c",
-    "//third_party/*",
-    "//zircon/kernel/lib/console/*",
-    "//zircon/kernel/vm/*",
-    "//zircon/third_party/*",
+    "//zircon/third_party/uapp/dash",
   ]
 }
 

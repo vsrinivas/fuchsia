@@ -37,11 +37,7 @@
 #endif
 
 /* heap tracing */
-#if LK_DEBUGLEVEL > 1
 static bool heap_trace = false;
-#else
-#define heap_trace (false)
-#endif
 
 // keep a list of unique caller:size sites in a list
 namespace {
@@ -328,8 +324,6 @@ void heap_page_free(void* _ptr, size_t pages) {
   pmm_free(&list);
 }
 
-#if LK_DEBUGLEVEL > 1
-
 #include <lib/console.h>
 
 static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags);
@@ -372,5 +366,3 @@ static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
 
   return 0;
 }
-
-#endif

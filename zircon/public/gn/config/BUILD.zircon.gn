@@ -615,6 +615,12 @@ config("default_warnings") {
 
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
+
+  visibility = [
+    "$zx/third_party/ulib/musl/ldso",
+    "$zx/third_party/ulib/musl/src/network",
+    "$zx/third_party/ulib/musl/src/time",
+  ]
 }
 
 # TODO(fxb/58162): clean up usages of this config
@@ -627,6 +633,7 @@ config("Wno-conversion") {
     "$zx/kernel/dev/iommu/dummy/*",
     "$zx/kernel/dev/pcie/*",
     "$zx/kernel/lib/cmdline/*",
+    "$zx/kernel/lib/console",
     "$zx/kernel/lib/heap/cmpctmalloc/*",
     "$zx/kernel/object/*",
     "$zx/kernel/phys/*",

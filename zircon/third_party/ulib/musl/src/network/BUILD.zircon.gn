@@ -67,5 +67,7 @@ source_set("network") {
   ]
 
   configs -= [ "$zx_build_config:visibility_hidden" ]
-  public_configs = [ "$zx_build_config:Wno-unused-function" ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-unused-function" ]
 }

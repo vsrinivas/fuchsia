@@ -15,11 +15,6 @@ __BEGIN_CDECLS
 
 bool hpet_is_present(void);
 
-static uint64_t hpet_ticks_per_ms(void) {
-  extern uint64_t _hpet_ticks_per_ms;
-  return _hpet_ticks_per_ms;
-}
-
 uint64_t hpet_get_value(void);
 zx_status_t hpet_set_value(uint64_t v);
 

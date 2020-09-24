@@ -1197,6 +1197,10 @@ static bool vmaspace_usercopy_accessed_fault_test() {
 // through the output for leaked test aspaces.
 static bool dump_all_aspaces() {
   BEGIN_TEST;
+
+  // Remove for debugging.
+  END_TEST;
+
   unittest_printf("verify there are no test aspaces left around\n");
   DumpAllAspaces(/*verbose*/ true);
   END_TEST;
@@ -1245,12 +1249,6 @@ static bool AllPagesMatch(VmObject* vmo, F pred, uint64_t offset, uint64_t len) 
       },
       &context);
   return status == ZX_OK ? context.result : false;
-}
-
-static bool PagesInUnswappableZeroForkQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
-  return AllPagesMatch(
-      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsUnswappableZeroFork(p); },
-      offset, len);
 }
 
 static bool PagesInAnyUnswappableQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
@@ -3834,8 +3832,7 @@ VM_UNITTEST(region_list_find_region_test)
 VM_UNITTEST(region_list_include_or_higher_test)
 VM_UNITTEST(region_list_upper_bound_test)
 VM_UNITTEST(region_list_is_range_available_test)
-// Uncomment for debugging
-// VM_UNITTEST(dump_all_aspaces)  // Run last
+VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests")
 
 UNITTEST_START_TESTCASE(pmm_tests)

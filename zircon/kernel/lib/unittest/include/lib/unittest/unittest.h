@@ -396,9 +396,10 @@ typedef struct unitest_testcase_registration {
 
 #if LK_DEBUGLEVEL == 0
 
-#define UNITTEST_START_TESTCASE(_global_id)
-#define UNITTEST(_name, _fn)
-#define UNITTEST_END_TESTCASE(_global_id, _name, _desc)
+#define UNITTEST_START_TESTCASE(_global_id) \
+  [[maybe_unused]] static void __unittest_table_##_global_id() {
+#define UNITTEST(_name, _fn) (void)(_fn);
+#define UNITTEST_END_TESTCASE(_global_id, _name, _desc) }
 
 #else  // LK_DEBUGLEVEL != 0
 

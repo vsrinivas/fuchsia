@@ -39,14 +39,6 @@ static uint rand_range(uint low, uint high) {
   return result;
 }
 
-static int sleep_thread(void* arg) {
-  for (;;) {
-    printf("sleeper %p\n", Thread::Current::Get());
-    Thread::Current::SleepRelative(ZX_MSEC(rand() % 500));
-  }
-  return 0;
-}
-
 static int mutex_thread(void* arg) {
   int i;
   const int iterations = 1000000;

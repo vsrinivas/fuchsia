@@ -12,7 +12,7 @@
 //
 // Thus, this file only contains some negative compilation tests.
 
-static void wont_compile_heap_functions() {
+[[maybe_unused]] static void wont_compile_heap_functions() {
   constexpr size_t kTooBig = fbl::kDefaultInlineCallableSize * 2;
   char too_big[kTooBig];
   // Capture by value, not reference.
