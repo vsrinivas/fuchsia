@@ -86,6 +86,12 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::UintProperty size_property_;
   inspect::UintProperty high_water_mark_property_;
   inspect::UintProperty used_size_property_;
+  inspect::UintProperty allocations_failed_property_;
+  // Keeps track of how many allocations would have succeeded but failed due to fragmentation.
+  inspect::UintProperty allocations_failed_fragmentation_property_;
+  // This is the size of a the largest free contiguous region when high_water_mark_property_ was
+  // last modified. It can be used to determine how much space was wasted due to fragmentation.
+  inspect::UintProperty max_free_at_high_water_property_;
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,

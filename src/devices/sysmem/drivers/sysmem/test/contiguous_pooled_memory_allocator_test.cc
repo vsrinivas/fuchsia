@@ -5,6 +5,7 @@
 #include "contiguous_pooled_memory_allocator.h"
 
 #include <lib/fake-bti/bti.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/zx/vmar.h>
 
 #include <vector>
@@ -93,6 +94,23 @@ TEST_F(ContiguousPooledSystem, Full) {
   // allocator's layout strategy changes this check might start to fail
   // without there necessarily being a real problem.
   EXPECT_NOT_OK(allocator_.Allocate(kVmoSize + 1, {}, &vmo));
+
+  // This allocation should fail because there's not enough space in the pool, with or without
+  // fragmentation.:
+  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize * kVmoCount - 1, {}, &vmo));
+
+  auto hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
+  auto* value = hierarchy.value().GetByPath({"test-pool"});
+  ASSERT_TRUE(value);
+  EXPECT_EQ(3u,
+            value->node().get_property<inspect::UintPropertyValue>("allocations_failed")->value());
+  EXPECT_EQ(1u, value->node()
+                    .get_property<inspect::UintPropertyValue>("allocations_failed_fragmentation")
+                    ->value());
+  // All memory was used at high water.
+  EXPECT_EQ(
+      0u,
+      value->node().get_property<inspect::UintPropertyValue>("max_free_at_high_water")->value());
 }
 
 TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {

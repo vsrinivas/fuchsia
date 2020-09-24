@@ -54,6 +54,10 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   size_property_ = node_.CreateUint("size", size);
   high_water_mark_property_ = node_.CreateUint("high_water_mark", 0);
   used_size_property_ = node_.CreateUint("used_size", 0);
+  allocations_failed_property_ = node_.CreateUint("allocations_failed", 0);
+  allocations_failed_fragmentation_property_ =
+      node_.CreateUint("allocations_failed_fragmentation", 0);
+  max_free_at_high_water_property_ = node_.CreateUint("max_free_at_high_water", size);
 
   if (dispatcher) {
     zx_status_t status = zx::event::create(0, &trace_observer_event_);
@@ -201,6 +205,17 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   if (status != ZX_OK) {
     DRIVER_INFO("GetRegion failed (out of space?) - size: %zu status: %d", size, status);
     DumpPoolStats();
+    allocations_failed_property_.Add(1);
+    uint64_t unused_size = 0;
+    region_allocator_.WalkAvailableRegions([&unused_size](const ralloc_region_t* r) -> bool {
+      unused_size += r->size;
+      return true;
+    });
+    if (unused_size >= size) {
+      // There's enough unused memory total, so the allocation must have failed due to
+      // fragmentation.
+      allocations_failed_fragmentation_property_.Add(1);
+    }
     return status;
   }
 
@@ -310,6 +325,12 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
     high_water_mark_ = used_size;
     trace_high_water_mark = true;
     high_water_mark_property_.Set(high_water_mark_);
+    uint64_t max_free_size = 0;
+    region_allocator_.WalkAvailableRegions([&max_free_size](const ralloc_region_t* r) -> bool {
+      max_free_size = std::max(max_free_size, r->size);
+      return true;
+    });
+    max_free_at_high_water_property_.Set(max_free_size);
   }
   if (trace_high_water_mark) {
     TRACE_INSTANT("gfx", "Increased high water mark", TRACE_SCOPE_THREAD, "allocation_name",
