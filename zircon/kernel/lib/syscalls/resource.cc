@@ -59,8 +59,8 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint6
   // If the resource is a slice of a larger resource then neither
   // the new resource nor its parent are permitted to be exclusive
   // resources. In this case, its |kind| will be something other
-  // than ROOT.
-  if (parent->get_kind() != ZX_RSRC_KIND_ROOT &&
+  // than ROOT and |parent_rsrc| will not be the ranged root resource for |kind|.
+  if (parent->get_kind() != ZX_RSRC_KIND_ROOT && !parent->IsRangedRoot(kind) &&
       (parent->get_flags() & ZX_RSRC_FLAG_EXCLUSIVE || flags & ZX_RSRC_FLAG_EXCLUSIVE)) {
     return ZX_ERR_INVALID_ARGS;
   }

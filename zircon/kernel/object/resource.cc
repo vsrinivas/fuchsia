@@ -58,7 +58,7 @@ zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, z
   // Enforce that policy here by disallowing resource minting for any request
   // which touches any disallowed ranges.
   //
-  if (resource->get_kind() == ZX_RSRC_KIND_ROOT) {
+  if (resource->get_kind() == ZX_RSRC_KIND_ROOT || resource->IsRangedRoot(kind)) {
     if (!root_resource_filter_can_access_region(base, size, kind)) {
       return ZX_ERR_ACCESS_DENIED;
     }

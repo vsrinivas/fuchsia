@@ -166,6 +166,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   child_message.info[kProcSelf] = PA_HND(PA_PROC_SELF, 0);
   child_message.info[kRootJob] = PA_HND(PA_JOB_DEFAULT, 0);
   child_message.info[kRootResource] = PA_HND(PA_RESOURCE, 0);
+  child_message.info[kMmioResource] = PA_HND(PA_MMIO_RESOURCE, 0);
   child_message.info[kThreadSelf] = PA_HND(PA_THREAD_SELF, 0);
   child_message.info[kVmarRootSelf] = PA_HND(PA_VMAR_ROOT, 0);
   child_message.info[kZbi] = PA_HND(PA_VMO_BOOTDATA, 0);

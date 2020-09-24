@@ -46,6 +46,11 @@ class ResourceDispatcher final
   static zx_status_t Create(KernelHandle<ResourceDispatcher>* handle, zx_rights_t* rights,
                             zx_rsrc_kind_t kind, uint64_t base, size_t size, uint32_t flags,
                             const char name[ZX_MAX_NAME_LEN], ResourceStorage* = nullptr);
+  // Creates ResourceDispatcher object representing access rights to all
+  // regions of address space for a ranged resource.
+  static zx_status_t CreateRangedRoot(KernelHandle<ResourceDispatcher>* handle, zx_rights_t* rights,
+                                      zx_rsrc_kind_t kind, const char name[ZX_MAX_NAME_LEN],
+                                      ResourceStorage* storage = nullptr);
   // Initializes the static mmembers used for bookkeeping and storage.
   static zx_status_t InitializeAllocator(zx_rsrc_kind_t kind, uint64_t base, size_t size,
                                          ResourceStorage* = nullptr);
@@ -56,6 +61,16 @@ class ResourceDispatcher final
       TA_EXCL(ResourcesLock::Get()) {
     Guard<Mutex> guard{ResourcesLock::Get()};
     return ForEachResourceLocked(func, (storage != nullptr) ? storage : &static_storage_);
+  }
+
+  bool IsRangedRoot(zx_rsrc_kind_t kind) const {
+    switch (kind_) {
+      case ZX_RSRC_KIND_ROOT:
+      case ZX_RSRC_KIND_HYPERVISOR:
+      case ZX_RSRC_KIND_VMEX:
+        return false;
+    }
+    return (kind_ == kind && base_ == 0 && size_ == 0);
   }
 
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_RESOURCE; }

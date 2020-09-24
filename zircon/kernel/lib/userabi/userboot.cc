@@ -14,6 +14,7 @@
 #include <lib/instrumentation/vmo.h>
 #include <lib/userabi/rodso.h>
 #include <lib/userabi/userboot.h>
+#include <lib/userabi/userboot_internal.h>
 #include <lib/userabi/vdso.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <mexec.h>
@@ -43,6 +44,54 @@
 #endif
 
 static_assert(userboot::kCmdlineMax == Cmdline::kCmdlineMax);
+
+HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
+  char name[ZX_MAX_NAME_LEN];
+  switch (kind) {
+    case ZX_RSRC_KIND_MMIO:
+      strlcpy(name, "mmio", ZX_MAX_NAME_LEN);
+      break;
+    case ZX_RSRC_KIND_IRQ:
+      strlcpy(name, "irq", ZX_MAX_NAME_LEN);
+      break;
+    case ZX_RSRC_KIND_IOPORT:
+      strlcpy(name, "io_port", ZX_MAX_NAME_LEN);
+      break;
+    case ZX_RSRC_KIND_HYPERVISOR:
+      strlcpy(name, "hypervisor", ZX_MAX_NAME_LEN);
+      break;
+    case ZX_RSRC_KIND_ROOT:
+      strlcpy(name, "root", ZX_MAX_NAME_LEN);
+      break;
+    case ZX_RSRC_KIND_VMEX:
+      strlcpy(name, "vmex", ZX_MAX_NAME_LEN);
+      break;
+    case ZX_RSRC_KIND_SMC:
+      strlcpy(name, "smc", ZX_MAX_NAME_LEN);
+      break;
+  }
+  zx_rights_t rights;
+  KernelHandle<ResourceDispatcher> rsrc;
+  zx_status_t result;
+  switch (kind) {
+    case ZX_RSRC_KIND_HYPERVISOR:
+    case ZX_RSRC_KIND_ROOT:
+    case ZX_RSRC_KIND_VMEX:
+      result = ResourceDispatcher::Create(&rsrc, &rights, kind, 0, 0, 0, name);
+      break;
+    case ZX_RSRC_KIND_MMIO:
+    case ZX_RSRC_KIND_IRQ:
+    case ZX_RSRC_KIND_IOPORT:
+    case ZX_RSRC_KIND_SMC:
+      result = ResourceDispatcher::CreateRangedRoot(&rsrc, &rights, kind, name);
+      break;
+    default:
+      result = ZX_ERR_WRONG_TYPE;
+      break;
+  }
+  ASSERT(result == ZX_OK);
+  return Handle::Make(ktl::move(rsrc), rights);
+}
 
 namespace {
 
@@ -133,15 +182,6 @@ zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly, uint64_t co
 
 HandleOwner get_job_handle() {
   return Handle::Dup(GetRootJobHandle(), JobDispatcher::default_rights());
-}
-
-HandleOwner get_resource_handle() {
-  zx_rights_t rights;
-  KernelHandle<ResourceDispatcher> root;
-  zx_status_t result =
-      ResourceDispatcher::Create(&root, &rights, ZX_RSRC_KIND_ROOT, 0, 0, 0, "root");
-  ASSERT(result == ZX_OK);
-  return Handle::Make(ktl::move(root), rights);
 }
 
 void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) {
@@ -270,8 +310,10 @@ void userboot_init(uint) {
   handles[userboot::kVmarRootSelf] = vmar_handle_owner.release();
 
   // It gets the root resource and job handles.
-  handles[userboot::kRootResource] = get_resource_handle().release();
+  handles[userboot::kRootResource] = get_resource_handle(ZX_RSRC_KIND_ROOT).release();
   ASSERT(handles[userboot::kRootResource]);
+  handles[userboot::kMmioResource] = get_resource_handle(ZX_RSRC_KIND_MMIO).release();
+  ASSERT(handles[userboot::kMmioResource]);
   handles[userboot::kRootJob] = get_job_handle().release();
   ASSERT(handles[userboot::kRootJob]);
 

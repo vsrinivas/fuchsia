@@ -158,6 +158,9 @@ struct zx_proc_args {
 //
 #define PA_CLOCK_UTC 0x40u
 
+// --- Resource handles ---
+#define PA_MMIO_RESOURCE 0x50
+
 // --- Various ---
 
 // Handle types for one-off use and prototyping

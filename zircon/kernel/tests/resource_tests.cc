@@ -93,14 +93,14 @@ static bool shared_then_exclusive() {
             ZX_OK);
   // Creating the shared resource will succeed.
   EXPECT_EQ(ResourceDispatcher::Create(&handle1, &rights, ZX_RSRC_KIND_MMIO, base, size, flags,
-                                       "ets-disp1", &storage),
+                                       "ste-disp1", &storage),
             ZX_OK, "Creating the exclusive resource failed.");
 
   EXPECT_EQ(storage.resource_list.size_slow(), 1u);
   // Creating the exclusive resource should fail
   flags = ZX_RSRC_FLAG_EXCLUSIVE;
   EXPECT_EQ(ResourceDispatcher::Create(&handle2, &rights, ZX_RSRC_KIND_MMIO, base, size, flags,
-                                       "ets-disp2", &storage),
+                                       "ste-disp2", &storage),
             ZX_ERR_NOT_FOUND, "Creating the shared resource succeeded.");
 
   EXPECT_EQ(storage.resource_list.size_slow(), 1u);
@@ -204,6 +204,27 @@ static bool root_resource_filter() {
   END_TEST;
 }
 
+static bool create_root_ranged() {
+  BEGIN_TEST;
+
+  ResourceDispatcher::ResourceStorage storage;
+  KernelHandle<ResourceDispatcher> handle;
+  zx_rights_t rights;
+  ASSERT_EQ(ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_MMIO, 0, UINT32_MAX - 1, &storage),
+            ZX_OK);
+  // Creating a root resource should fail.
+  EXPECT_EQ(ResourceDispatcher::CreateRangedRoot(&handle, &rights, ZX_RSRC_KIND_ROOT, "crr-disp1",
+                                                 &storage),
+            ZX_ERR_WRONG_TYPE, "Creating a root resource succeeded.");
+  // Creating the shared resource will succeed.
+  EXPECT_EQ(ResourceDispatcher::CreateRangedRoot(&handle, &rights, ZX_RSRC_KIND_MMIO, "crr-disp2",
+                                                 &storage),
+            ZX_OK, "Creating the shared resource failed.");
+
+  EXPECT_EQ(storage.resource_list.size_slow(), 1u);
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(resources)
 UNITTEST("test unconfigured allocators", unconfigured)
 UNITTEST("test setting up allocators", allocators_configured)
@@ -211,4 +232,5 @@ UNITTEST("test exclusive then shared overlap", exclusive_then_shared)
 UNITTEST("test shared then exclusive overlap", shared_then_exclusive)
 UNITTEST("test allocating out of range", out_of_allocator_range)
 UNITTEST("test root_resource_filter", root_resource_filter)
+UNITTEST("test root ranged resource creation", create_root_ranged)
 UNITTEST_END_TESTCASE(resources, "resource", "Tests for Resource bookkeeping")

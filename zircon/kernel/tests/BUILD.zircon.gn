@@ -96,6 +96,7 @@ if (toolchain.environment == "kernel") {
       "thread_tests.cc",
       "timer_tests.cc",
       "uart_tests.cc",
+      "userboot_tests.cc",
       "variant_tests.cc",
     ]
     deps = [
@@ -108,6 +109,7 @@ if (toolchain.environment == "kernel") {
       "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/root_resource_filter",
       "$zx/kernel/lib/unittest",
+      "$zx/kernel/lib/userabi",
       "$zx/kernel/lib/zxc",
       "$zx/kernel/object",
       "$zx/system/ulib/affine",

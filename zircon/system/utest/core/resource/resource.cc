@@ -18,6 +18,7 @@
 #include <zxtest/zxtest.h>
 
 extern "C" zx_handle_t get_root_resource(void);
+extern "C" zx_handle_t get_mmio_root_resource(void);
 
 static const size_t mmio_test_size = (PAGE_SIZE * 4);
 static uint64_t mmio_test_base;
@@ -26,6 +27,11 @@ const zx::unowned_resource root() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   static zx_handle_t root = get_root_resource();
   return zx::unowned_resource(root);
+}
+
+const zx::unowned_resource mmio_root() {
+  static zx_handle_t mmio_root = get_mmio_root_resource();
+  return zx::unowned_resource(mmio_root);
 }
 
 // Physical memory is reserved during boot and its location varies based on
@@ -148,6 +154,16 @@ TEST(Resource, SharedExclusive) {
   EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                  mmio_test_base, mmio_test_size, NULL, 0, &mmio_2),
             ZX_ERR_NOT_FOUND);
+}
+
+TEST(Resource, CreateFromRangedRoot) {
+  // Try to create an exclusive resource from a ranged root resource.
+  zx::resource mmio, mmio_root_dup;
+  EXPECT_EQ(zx::resource::create(*mmio_root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
+                                 mmio_test_base, mmio_test_size, NULL, 0, &mmio),
+            ZX_OK);
+  // Try to duplicate a ranged root resource.
+  EXPECT_EQ(mmio_root()->duplicate(ZX_RIGHT_SAME_RIGHTS, &mmio_root_dup), ZX_OK);
 }
 
 TEST(Resource, VmoCreation) {

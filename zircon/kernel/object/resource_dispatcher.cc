@@ -141,6 +141,62 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   return ZX_OK;
 }
 
+// The CreateRootRanged() method here does not validate exclusive allocations because
+// it represents a ranged resource with all valid regions.
+// Validation of regions is handled at the syscall boundary in the
+// implementation for |zx_resource_create|.
+zx_status_t ResourceDispatcher::CreateRangedRoot(KernelHandle<ResourceDispatcher>* handle,
+                                                 zx_rights_t* rights, zx_rsrc_kind_t kind,
+                                                 const char name[ZX_MAX_NAME_LEN],
+                                                 ResourceStorage* storage) {
+  Guard<Mutex> guard{ResourcesLock::Get()};
+  if (kind >= ZX_RSRC_KIND_COUNT) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Use the local static bookkeeping for system resources unless mocks are passed in.
+  if (storage == nullptr) {
+    storage = &static_storage_;
+  }
+
+  // Abstract resource types have no size. Ranged resource types are given infinite size to
+  // indicate that they represent all valid ranges.
+  switch (kind) {
+    // TODO(smpham): remove this when root resource is removed.
+    case ZX_RSRC_KIND_ROOT:
+    case ZX_RSRC_KIND_HYPERVISOR:
+    case ZX_RSRC_KIND_VMEX:
+      // The Create() method should be used for making these resource kinds.
+      return ZX_ERR_WRONG_TYPE;
+    default:
+      // If we have not assigned a region pool to our allocator yet, then we are not
+      // yet initialized and should return ZX_ERR_BAD_STATE.
+      if (!storage->rallocs[kind].HasRegionPool()) {
+        return ZX_ERR_BAD_STATE;
+      }
+  }
+
+  // We've passed the first hurdle, so it's time to construct the dispatcher
+  // itself. The constructor will handle adding itself to the shared list if
+  // necessary.
+  fbl::AllocChecker ac;
+  KernelHandle new_handle(
+      fbl::AdoptRef(new (&ac) ResourceDispatcher(kind, 0, 0, 0, nullptr, storage)));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  if (name != nullptr) {
+    new_handle.dispatcher()->set_name(name, ZX_MAX_NAME_LEN);
+  }
+
+  *rights = default_rights();
+  *handle = ktl::move(new_handle);
+
+  LTRACEF("%s [%u] ranged root resource created.\n", kLogTag, kind);
+  return ZX_OK;
+}
+
 ResourceDispatcher::ResourceDispatcher(zx_rsrc_kind_t kind, uint64_t base, uint64_t size,
                                        uint32_t flags, RegionAllocator::Region::UPtr&& region,
                                        ResourceStorage* storage)
