@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include <functional>
+#include <list>
+#include <memory>
+#include <optional>
 
 #include <gtest/gtest.h>
 
@@ -106,8 +109,8 @@ void ActiveScanTest::StartScan(const wlanif_scan_req_t* req) {
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
 void ActiveScanTest::EndSimulation() {
-  for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
-    (*ap_info)->ap_.DisableBeacon();
+  for (auto& ap_info : aps_) {
+    ap_info->ap_.DisableBeacon();
   }
 }
 
@@ -125,21 +128,21 @@ void ActiveScanTest::VerifyScanResults() {
   for (auto result : client_ifc_.scan_results_) {
     int matches_seen = 0;
 
-    for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
-      common::MacAddr mac_addr = (*ap_info)->ap_.GetBssid();
+    for (auto& ap_info : aps_) {
+      common::MacAddr mac_addr = ap_info->ap_.GetBssid();
       ASSERT_EQ(sizeof(result.bss.bssid), sizeof(mac_addr.byte));
       if (!std::memcmp(result.bss.bssid, mac_addr.byte, sizeof(mac_addr.byte))) {
-        (*ap_info)->probe_resp_seen_ = true;
+        ap_info->probe_resp_seen_ = true;
         matches_seen++;
 
         // Verify SSID
-        wlan_ssid_t ssid_info = (*ap_info)->ap_.GetSsid();
+        wlan_ssid_t ssid_info = ap_info->ap_.GetSsid();
         EXPECT_EQ(result.bss.ssid.len, ssid_info.len);
         ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
         EXPECT_EQ(memcmp(result.bss.ssid.data, ssid_info.ssid, ssid_info.len), 0);
 
         // Verify channel
-        wlan_channel_t channel = (*ap_info)->ap_.GetChannel();
+        wlan_channel_t channel = ap_info->ap_.GetChannel();
         EXPECT_EQ(result.bss.chan.primary, channel.primary);
         EXPECT_EQ(result.bss.chan.cbw, channel.cbw);
         EXPECT_EQ(result.bss.chan.secondary80, channel.secondary80);
@@ -153,8 +156,8 @@ void ActiveScanTest::VerifyScanResults() {
     EXPECT_EQ(matches_seen, 1);
   }
 
-  for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
-    if ((*ap_info)->probe_resp_seen_ == false) {
+  for (auto& ap_info : aps_) {
+    if (ap_info->probe_resp_seen_ == false) {
       // Failure
       return;
     }
