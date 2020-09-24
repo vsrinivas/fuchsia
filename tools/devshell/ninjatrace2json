@@ -8,17 +8,37 @@
 
 ## Usage: fx ninjatrace2json
 ##
-## Use this after a build to write "ninjatrace.json" files in the build
-## directories (separately for Zircon and Fuchsia build directories).
-## Then use the chrome://tracing view to load that file into your browser.
+## Use this after a build to write "ninjatrace.json" and
+## "ninjatrace_critical_path.json" files in the build directories (separately
+## for Zircon and Fuchsia build directories). Then use the chrome://tracing view
+## to load that file into your browser.
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
+TMP_DIR="$(mktemp -d)"
+readonly TMP_DIR
+trap 'rm -rf "${TMP_DIR}"' EXIT
+
 for dir in "$ZIRCON_BUILDROOT" "$FUCHSIA_BUILD_DIR"; do
-  "$HOST_OUT_DIR/ninjatrace" \
-    -ninjalog "$dir/.ninja_log" -trace-json "$dir/ninjatrace.json"
-  echo "Now visit chrome://tracing and load $dir/ninjatrace.json"
+  artifacts_dir="$(mktemp -d -p ${TMP_DIR})"
+  "${PREBUILT_NINJA}" -C "${dir}" -t compdb > "${artifacts_dir}/compdb.json"
+  "${PREBUILT_NINJA}" -C "${dir}" -t graph > "${artifacts_dir}/graph.dot"
+
+  "${HOST_OUT_DIR}/ninjatrace" \
+    -ninjalog "${dir}/.ninja_log" \
+    -compdb "${artifacts_dir}/compdb.json" \
+    -graph "{$artifacts_dir}/graph.dot" \
+    -trace-json "${dir}/ninjatrace.json"
+  echo "Now visit chrome://tracing and load ${dir}/ninjatrace.json"
+
+  "${HOST_OUT_DIR}/ninjatrace" \
+    -ninjalog "${dir}/.ninja_log" \
+    -compdb "${artifacts_dir}/compdb.json" \
+    -graph "${artifacts_dir}/graph.dot" \
+    -trace-json "${dir}/ninjatrace_critical_path.json" \
+    -critical-path
+  echo "Now visit chrome://tracing and load ${dir}/ninjatrace_critical_path.json"
 done

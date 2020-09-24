@@ -30,7 +30,7 @@ var (
 	ninjalogPath = flag.String("ninjalog", "", "path of .ninja_log")
 	compdbPath   = flag.String("compdb", "", "path of JSON compilation database")
 	graphPath    = flag.String("graph", "", "path of graphviz dot file for ninja targets")
-	criticalPath = flag.Bool("critical-path", false, "whether only include critical path in the trace, --ninjagraph must be set for this to work")
+	criticalPath = flag.Bool("critical-path", false, "whether only include critical path in the trace, --graph must be set for this to work")
 	buildDir     = flag.String("build-dir", "", "path of the directory where ninja is run; when non-empty, ninjatrace will look for subtraces in this directory to interleave in the main trace")
 	granularity  = flag.Duration("granularity", 100*time.Millisecond, "time granularity used to filter short events in interleaved sub traces, for example traces from clang and rustc; this flag does NOT affect the main trace")
 
