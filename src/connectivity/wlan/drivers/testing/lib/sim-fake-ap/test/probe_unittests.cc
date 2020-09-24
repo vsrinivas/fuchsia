@@ -69,9 +69,9 @@ void ProbeTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
   auto probe_resp_frame = std::static_pointer_cast<const simulation::SimProbeRespFrame>(mgmt_frame);
   bssid_resp_list_.push_back(probe_resp_frame->src_addr_);
   std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
-      probe_resp_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+      probe_resp_frame->FindIe(simulation::InformationElement::IE_TYPE_SSID);
   ASSERT_THAT(ssid_generic_ie, NotNull());
-  auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+  auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ssid_generic_ie);
   ssid_resp_list_.push_back(ssid_ie->ssid_);
 }
 

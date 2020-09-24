@@ -59,10 +59,10 @@ class SimStation : public wlan::simulation::StationIfc {
       case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
         auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
         std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
-            beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+            beacon_frame->FindIe(simulation::InformationElement::IE_TYPE_SSID);
         ASSERT_THAT(ssid_generic_ie, NotNull());
         auto ssid_ie =
-            std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+            std::static_pointer_cast<simulation::SsidInformationElement>(ssid_generic_ie);
         checkSsid(ssid_ie->ssid_);
         EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);
         signal_received = true;

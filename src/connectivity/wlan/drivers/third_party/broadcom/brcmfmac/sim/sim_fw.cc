@@ -764,8 +764,8 @@ void SimFirmware::AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_
 void SimFirmware::AssocScanResultSeen(const ScanResult& scan_result) {
   std::optional<wlan_ssid_t> scan_result_ssid;
   for (const auto& ie : scan_result.ies) {
-    if (ie != nullptr && ie->IEType() == simulation::InformationElement::IE_TYPE_SSID) {
-      auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ie);
+    if (ie != nullptr && ie->IeType() == simulation::InformationElement::IE_TYPE_SSID) {
+      auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ie);
       scan_result_ssid.emplace(ssid_ie->ssid_);
     }
   }
@@ -1055,9 +1055,9 @@ std::shared_ptr<SimFirmware::Client> SimFirmware::FindClient(const common::MacAd
 
   auto& clients = iface_tbl_[softap_ifidx_.value()].ap_config.clients;
 
-  for (auto it = clients.begin(); it != clients.end(); it++) {
-    if ((*it)->mac_addr == client_mac) {
-      return *it;
+  for (auto& client : clients) {
+    if (client->mac_addr == client_mac) {
+      return client;
     }
   }
 
@@ -2333,12 +2333,12 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel,
     // if we're associated with this AP, start/restart the beacon watchdog
     RestartBeaconWatchdog();
 
-    auto ie = frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
+    auto ie = frame->FindIe(simulation::InformationElement::IE_TYPE_CSA);
     if (ie == nullptr) {
       return;
     }
     // If CSA IE exists.
-    auto csa_ie = static_cast<simulation::CSAInformationElement*>(ie.get());
+    auto csa_ie = std::static_pointer_cast<simulation::CsaInformationElement>(ie);
 
     // Get current chanspec of client ifidx and convert to channel.
     wlan_channel_t channel = GetIfChannel(false);
@@ -2414,15 +2414,15 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
     if (ie == nullptr) {
       continue;
     }
-    switch (ie->IEType()) {
+    switch (ie->IeType()) {
       case simulation::InformationElement::IE_TYPE_SSID: {
-        const auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ie);
+        const auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ie);
         std::vector<uint8_t> current_ie_buf = ssid_ie->ToRawIe();
         ie_buf.insert(ie_buf.end(), current_ie_buf.begin(), current_ie_buf.end());
         break;
       }
       case simulation::InformationElement::IE_TYPE_CSA: {
-        const auto csa_ie = std::static_pointer_cast<simulation::CSAInformationElement>(ie);
+        const auto csa_ie = std::static_pointer_cast<simulation::CsaInformationElement>(ie);
         std::vector<uint8_t> current_ie_buf = csa_ie->ToRawIe();
         ie_buf.insert(ie_buf.end(), current_ie_buf.begin(), current_ie_buf.end());
         break;

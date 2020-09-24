@@ -40,27 +40,27 @@ enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
 
 class InformationElement {
  public:
-  enum SimIEType { IE_TYPE_SSID = 0, IE_TYPE_CSA = 37, IE_TYPE_WPA1 = 221, IE_TYPE_WPA2 = 48 };
+  enum SimIeType { IE_TYPE_SSID = 0, IE_TYPE_CSA = 37, IE_TYPE_WPA1 = 221, IE_TYPE_WPA2 = 48 };
 
   explicit InformationElement() = default;
   virtual ~InformationElement();
 
-  virtual SimIEType IEType() const = 0;
+  virtual SimIeType IeType() const = 0;
 
   // Return the IE as a buffer of bytes, in the 802.11-specified format for this IE type.
   virtual std::vector<uint8_t> ToRawIe() const = 0;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.2
-class SSIDInformationElement : public InformationElement {
+class SsidInformationElement : public InformationElement {
  public:
-  explicit SSIDInformationElement(const wlan_ssid_t& ssid) : ssid_(ssid){};
+  explicit SsidInformationElement(const wlan_ssid_t& ssid) : ssid_(ssid){};
 
-  SSIDInformationElement(const SSIDInformationElement& ssid_ie);
+  SsidInformationElement(const SsidInformationElement& ssid_ie);
 
-  ~SSIDInformationElement() override;
+  ~SsidInformationElement() override;
 
-  SimIEType IEType() const override;
+  SimIeType IeType() const override;
 
   std::vector<uint8_t> ToRawIe() const override;
 
@@ -68,19 +68,19 @@ class SSIDInformationElement : public InformationElement {
 };
 
 // IEEE Std 802.11-2016, 9.4.2.19
-class CSAInformationElement : public InformationElement {
+class CsaInformationElement : public InformationElement {
  public:
-  explicit CSAInformationElement(bool switch_mode, uint8_t new_channel, uint8_t switch_count) {
+  explicit CsaInformationElement(bool switch_mode, uint8_t new_channel, uint8_t switch_count) {
     channel_switch_mode_ = switch_mode;
     new_channel_number_ = new_channel;
     channel_switch_count_ = switch_count;
   };
 
-  CSAInformationElement(const CSAInformationElement& csa_ie);
+  CsaInformationElement(const CsaInformationElement& csa_ie);
 
-  ~CSAInformationElement() override;
+  ~CsaInformationElement() override;
 
-  SimIEType IEType() const override;
+  SimIeType IeType() const override;
 
   std::vector<uint8_t> ToRawIe() const override;
 
@@ -127,11 +127,11 @@ class SimManagementFrame : public SimFrame {
   SimFrameType FrameType() const override;
   // Frame subtype identifier for management frames
   virtual SimMgmtFrameType MgmtFrameType() const = 0;
-  void AddSSIDIE(const wlan_ssid_t& ssid);
-  void AddCSAIE(const wlan_channel_t& channel, uint8_t channel_switch_count);
+  void AddSsidIe(const wlan_ssid_t& ssid);
+  void AddCsaIe(const wlan_channel_t& channel, uint8_t channel_switch_count);
   void AddRawIes(fbl::Span<const uint8_t> raw_ies);
-  std::shared_ptr<InformationElement> FindIE(InformationElement::SimIEType ie_type) const;
-  void RemoveIE(InformationElement::SimIEType);
+  std::shared_ptr<InformationElement> FindIe(InformationElement::SimIeType ie_type) const;
+  void RemoveIe(InformationElement::SimIeType);
 
   common::MacAddr src_addr_ = {};
   common::MacAddr dst_addr_ = {};
@@ -142,7 +142,7 @@ class SimManagementFrame : public SimFrame {
   enum SimSecProtoType sec_proto_type_ = SEC_PROTO_TYPE_OPEN;
 
  private:
-  void AddIE(InformationElement::SimIEType ie_type, std::shared_ptr<InformationElement> ie);
+  void AddIe(InformationElement::SimIeType ie_type, std::shared_ptr<InformationElement> ie);
 };
 
 class SimBeaconFrame : public SimManagementFrame {

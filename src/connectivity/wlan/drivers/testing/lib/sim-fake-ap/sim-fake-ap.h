@@ -60,7 +60,7 @@ class FakeAp : public StationIfc {
     environ->AddStation(this);
     tx_info_.channel = chan;
     beacon_state_.beacon_frame_.bssid_ = bssid;
-    beacon_state_.beacon_frame_.AddSSIDIE(ssid);
+    beacon_state_.beacon_frame_.AddSsidIe(ssid);
     // By default, assume AP is part of an infrastructure network
     beacon_state_.beacon_frame_.capability_info_.set_ibss(0);
     beacon_state_.beacon_frame_.capability_info_.set_ess(1);
@@ -71,7 +71,7 @@ class FakeAp : public StationIfc {
   void SetChannel(const wlan_channel_t& channel);
   void SetBssid(const common::MacAddr& bssid);
   void SetSsid(const wlan_ssid_t& ssid);
-  void SetCSABeaconInterval(zx::duration interval);
+  void SetCsaBeaconInterval(zx::duration interval);
 
   wlan_channel_t GetChannel() const { return tx_info_.channel; }
   common::MacAddr GetBssid() const { return bssid_; }
@@ -128,7 +128,7 @@ class FakeAp : public StationIfc {
 
   // Event handlers
   void HandleBeaconNotification();
-  void HandleStopCSABeaconNotification();
+  void HandleStopCsaBeaconNotification();
   void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
   void HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst, SimAuthType auth_type,
@@ -152,7 +152,7 @@ class FakeAp : public StationIfc {
     // Are we waiting for the execution of scheduled channel switch announcement?
     bool is_switching_channel = false;
     // This is the channel AP about to change to
-    wlan_channel_t channel_after_CSA;
+    wlan_channel_t channel_after_csa;
 
     // Unique value that is associated with the next beacon event
     uint64_t beacon_notification_id;
@@ -172,7 +172,7 @@ class FakeAp : public StationIfc {
   enum AssocHandling assoc_handling_mode_ = ASSOC_ALLOWED;
 
   // Delay between start and stop sending CSA beacon to old channel
-  zx::duration CSA_beacon_interval_ = zx::msec(150);
+  zx::duration csa_beacon_interval_ = zx::msec(150);
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);
   // Delay between an Disassociation request and an Disassociation response

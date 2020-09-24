@@ -91,9 +91,9 @@ void SimStation::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFram
     case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
       auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
       std::shared_ptr<simulation::InformationElement> ssid_generic_ie =
-          beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_SSID);
+          beacon_frame->FindIe(simulation::InformationElement::IE_TYPE_SSID);
       ASSERT_THAT(ssid_generic_ie, NotNull());
-      auto ssid_ie = std::static_pointer_cast<simulation::SSIDInformationElement>(ssid_generic_ie);
+      auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ssid_generic_ie);
       EXPECT_EQ(ssid_ie->ssid_.len, kDefaultSsid.len);
       EXPECT_EQ(std::memcmp(ssid_ie->ssid_.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
       EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);

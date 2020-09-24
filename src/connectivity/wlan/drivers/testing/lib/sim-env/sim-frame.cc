@@ -11,16 +11,16 @@ namespace wlan::simulation {
 /* InformationElement function implementations.*/
 InformationElement::~InformationElement() = default;
 
-// SSIDInformationElement function implementations.
-SSIDInformationElement::SSIDInformationElement(
-    const wlan::simulation::SSIDInformationElement& ssid_ie) {
+// SsidInformationElement function implementations.
+SsidInformationElement::SsidInformationElement(
+    const wlan::simulation::SsidInformationElement& ssid_ie) {
   ssid_.len = ssid_ie.ssid_.len;
   std::memcpy(ssid_.ssid, ssid_ie.ssid_.ssid, ssid_.len);
 };
 
-InformationElement::SimIEType SSIDInformationElement::IEType() const { return IE_TYPE_SSID; }
+InformationElement::SimIeType SsidInformationElement::IeType() const { return IE_TYPE_SSID; }
 
-std::vector<uint8_t> SSIDInformationElement::ToRawIe() const {
+std::vector<uint8_t> SsidInformationElement::ToRawIe() const {
   std::vector<uint8_t> buf = {IE_TYPE_SSID, ssid_.len};
   for (int i = 0; i < ssid_.len; ++i) {
     buf.push_back(ssid_.ssid[i]);
@@ -28,19 +28,19 @@ std::vector<uint8_t> SSIDInformationElement::ToRawIe() const {
   return buf;
 }
 
-SSIDInformationElement::~SSIDInformationElement() = default;
+SsidInformationElement::~SsidInformationElement() = default;
 
-// CSAInformationElement function implementations.
-CSAInformationElement::CSAInformationElement(
-    const wlan::simulation::CSAInformationElement& csa_ie) {
+// CsaInformationElement function implementations.
+CsaInformationElement::CsaInformationElement(
+    const wlan::simulation::CsaInformationElement& csa_ie) {
   channel_switch_mode_ = csa_ie.channel_switch_mode_;
   new_channel_number_ = csa_ie.new_channel_number_;
   channel_switch_count_ = csa_ie.channel_switch_count_;
 }
 
-InformationElement::SimIEType CSAInformationElement::IEType() const { return IE_TYPE_CSA; }
+InformationElement::SimIeType CsaInformationElement::IeType() const { return IE_TYPE_CSA; }
 
-std::vector<uint8_t> CSAInformationElement::ToRawIe() const {
+std::vector<uint8_t> CsaInformationElement::ToRawIe() const {
   const uint8_t csa_len = 3;  // CSA variable is 3 bytes long: CSM + NCN + CSC.
   std::vector<uint8_t> buf = {IE_TYPE_CSA, csa_len,
                               static_cast<uint8_t>(channel_switch_mode_ ? 1 : 0),
@@ -48,7 +48,7 @@ std::vector<uint8_t> CSAInformationElement::ToRawIe() const {
   return buf;
 }
 
-CSAInformationElement::~CSAInformationElement() = default;
+CsaInformationElement::~CsaInformationElement() = default;
 
 /* SimFrame function implementations.*/
 SimFrame::~SimFrame() = default;
@@ -60,14 +60,14 @@ SimManagementFrame::SimManagementFrame(const SimManagementFrame& mgmt_frame) {
   sec_proto_type_ = mgmt_frame.sec_proto_type_;
 
   for (const auto& ie : mgmt_frame.IEs_) {
-    switch (ie->IEType()) {
-      case SSIDInformationElement::IE_TYPE_SSID:
-        IEs_.push_back(std::make_shared<SSIDInformationElement>(
-            *(std::static_pointer_cast<SSIDInformationElement>(ie))));
+    switch (ie->IeType()) {
+      case SsidInformationElement::IE_TYPE_SSID:
+        IEs_.push_back(std::make_shared<SsidInformationElement>(
+            *(std::static_pointer_cast<SsidInformationElement>(ie))));
         break;
-      case CSAInformationElement::IE_TYPE_CSA:
-        IEs_.push_back(std::make_shared<CSAInformationElement>(
-            *(std::static_pointer_cast<CSAInformationElement>(ie))));
+      case CsaInformationElement::IE_TYPE_CSA:
+        IEs_.push_back(std::make_shared<CsaInformationElement>(
+            *(std::static_pointer_cast<CsaInformationElement>(ie))));
         break;
       default:;
     }
@@ -79,10 +79,10 @@ SimManagementFrame::~SimManagementFrame() = default;
 
 SimFrame::SimFrameType SimManagementFrame::FrameType() const { return FRAME_TYPE_MGMT; }
 
-std::shared_ptr<InformationElement> SimManagementFrame::FindIE(
-    InformationElement::SimIEType ie_type) const {
+std::shared_ptr<InformationElement> SimManagementFrame::FindIe(
+    InformationElement::SimIeType ie_type) const {
   for (const auto& ie : IEs_) {
-    if (ie->IEType() == ie_type) {
+    if (ie->IeType() == ie_type) {
       return ie;
     }
   }
@@ -90,35 +90,35 @@ std::shared_ptr<InformationElement> SimManagementFrame::FindIE(
   return std::shared_ptr<InformationElement>(nullptr);
 }
 
-void SimManagementFrame::AddSSIDIE(const wlan_ssid_t& ssid) {
-  auto ie = std::make_shared<SSIDInformationElement>(ssid);
+void SimManagementFrame::AddSsidIe(const wlan_ssid_t& ssid) {
+  auto ie = std::make_shared<SsidInformationElement>(ssid);
   // Ensure no IE with this IE type exists.
-  AddIE(InformationElement::IE_TYPE_SSID, ie);
+  AddIe(InformationElement::IE_TYPE_SSID, ie);
 }
 
-void SimManagementFrame::AddCSAIE(const wlan_channel_t& channel, uint8_t channel_switch_count) {
+void SimManagementFrame::AddCsaIe(const wlan_channel_t& channel, uint8_t channel_switch_count) {
   // for nonmesh STAs, this field either is set to the number of TBTTs until the STA sending the
   // Channel Switch Announcement element switches to the new channel or is set to 0.
-  auto ie = std::make_shared<CSAInformationElement>(false, channel.primary, channel_switch_count);
+  auto ie = std::make_shared<CsaInformationElement>(false, channel.primary, channel_switch_count);
   // Ensure no IE with this IE type exist
-  AddIE(InformationElement::IE_TYPE_CSA, ie);
+  AddIe(InformationElement::IE_TYPE_CSA, ie);
 }
 
 void SimManagementFrame::AddRawIes(fbl::Span<const uint8_t> raw_ies) {
   raw_ies_.insert(raw_ies_.end(), raw_ies.begin(), raw_ies.end());
 }
 
-void SimManagementFrame::AddIE(InformationElement::SimIEType ie_type,
+void SimManagementFrame::AddIe(InformationElement::SimIeType ie_type,
                                std::shared_ptr<InformationElement> ie) {
-  if (FindIE(ie_type)) {
-    RemoveIE(ie_type);
+  if (FindIe(ie_type)) {
+    RemoveIe(ie_type);
   }
   IEs_.push_back(ie);
 }
 
-void SimManagementFrame::RemoveIE(InformationElement::SimIEType ie_type) {
+void SimManagementFrame::RemoveIe(InformationElement::SimIeType ie_type) {
   for (auto it = IEs_.begin(); it != IEs_.end();) {
-    if ((*it)->IEType() == ie_type) {
+    if ((*it)->IeType() == ie_type) {
       it = IEs_.erase(it);
     } else {
       it++;
@@ -130,7 +130,7 @@ void SimManagementFrame::RemoveIE(InformationElement::SimIEType ie_type) {
 SimBeaconFrame::SimBeaconFrame(const wlan_ssid_t& ssid, const common::MacAddr& bssid)
     : bssid_(bssid) {
   // Beacon automatically gets the SSID information element.
-  AddSSIDIE(ssid);
+  AddSsidIe(ssid);
 }
 
 SimBeaconFrame::SimBeaconFrame(const SimBeaconFrame& beacon) : SimManagementFrame(beacon) {
@@ -163,7 +163,7 @@ SimProbeRespFrame::SimProbeRespFrame(const common::MacAddr& src, const common::M
                                      const wlan_ssid_t& ssid)
     : SimManagementFrame(src, dst) {
   // Probe response automatically gets the SSID information element.
-  AddSSIDIE(ssid);
+  AddSsidIe(ssid);
 }
 
 SimProbeRespFrame::SimProbeRespFrame(const SimProbeRespFrame& probe_resp)

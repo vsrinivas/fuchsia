@@ -184,7 +184,7 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
   // Functor that will remove the SSID information element from a beacon frame.
   auto beacon_mutator = [](const SimBeaconFrame& beacon) {
     auto tmp_beacon(beacon);
-    tmp_beacon.RemoveIE(InformationElement::IE_TYPE_SSID);
+    tmp_beacon.RemoveIe(InformationElement::IE_TYPE_SSID);
     return tmp_beacon;
   };
 

@@ -16,12 +16,12 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
 
   // If any station is associating with this AP, trigger channel switch.
   if (GetNumAssociatedClient() > 0 && beacon_state_.is_beaconing &&
-      (CSA_beacon_interval_ >= diff_to_next_beacon)) {
+      (csa_beacon_interval_ >= diff_to_next_beacon)) {
     // If a new CSA is triggered, then it will override the previous one, and schedule a new channel
     // switch time.
     uint8_t cs_count = 0;
     // This is the time period start from next beacon to the end of CSA beacon interval.
-    zx::duration cover = CSA_beacon_interval_ - diff_to_next_beacon;
+    zx::duration cover = csa_beacon_interval_ - diff_to_next_beacon;
     // This value is zero means next beacon is scheduled at the same time as CSA beacon interval
     // end, and due to the mechanism of sim_env, this beacon will be sent out because it's scheduled
     // earlier than we actually change channel.
@@ -36,12 +36,12 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
       CancelNotification(beacon_state_.channel_switch_notification_id);
     }
 
-    beacon_state_.beacon_frame_.AddCSAIE(channel, cs_count);
-    beacon_state_.channel_after_CSA = channel;
+    beacon_state_.beacon_frame_.AddCsaIe(channel, cs_count);
+    beacon_state_.channel_after_csa = channel;
 
-    auto stop_CSAbeacon_handler = std::make_unique<std::function<void()>>();
-    *stop_CSAbeacon_handler = std::bind(&FakeAp::HandleStopCSABeaconNotification, this);
-    environment_->ScheduleNotification(std::move(stop_CSAbeacon_handler), CSA_beacon_interval_,
+    auto stop_csa_beacon_handler = std::make_unique<std::function<void()>>();
+    *stop_csa_beacon_handler = std::bind(&FakeAp::HandleStopCsaBeaconNotification, this);
+    environment_->ScheduleNotification(std::move(stop_csa_beacon_handler), csa_beacon_interval_,
                                        &beacon_state_.channel_switch_notification_id);
     beacon_state_.is_switching_channel = true;
   } else {
@@ -56,13 +56,13 @@ void FakeAp::SetBssid(const common::MacAddr& bssid) {
 
 void FakeAp::SetSsid(const wlan_ssid_t& ssid) {
   ssid_ = ssid;
-  beacon_state_.beacon_frame_.AddSSIDIE(ssid);
+  beacon_state_.beacon_frame_.AddSsidIe(ssid);
 }
 
-void FakeAp::SetCSABeaconInterval(zx::duration interval) {
+void FakeAp::SetCsaBeaconInterval(zx::duration interval) {
   // Meaningless to set CSA_beacon_interval to 0.
   ZX_ASSERT(interval.get() != 0);
-  CSA_beacon_interval_ = interval;
+  csa_beacon_interval_ = interval;
 }
 
 zx_status_t FakeAp::SetSecurity(struct Security sec) {
@@ -125,7 +125,7 @@ void FakeAp::DisableBeacon() {
   // If we stop beaconing when channel is switching, we cancel the channel switch event and directly
   // set channel to new channel.
   if (beacon_state_.is_switching_channel) {
-    tx_info_.channel = beacon_state_.channel_after_CSA;
+    tx_info_.channel = beacon_state_.channel_after_csa;
     beacon_state_.is_switching_channel = false;
     CancelNotification(beacon_state_.channel_switch_notification_id);
   }
@@ -444,8 +444,11 @@ void FakeAp::HandleBeaconNotification() {
   environment_->Tx(tmp_beacon_frame, tx_info_, this);
   // Channel switch count decrease by 1 each time after sending a CSA beacon.
   if (beacon_state_.is_switching_channel) {
-    auto CSA_ie = beacon_state_.beacon_frame_.FindIE(InformationElement::IE_TYPE_CSA);
-    ZX_ASSERT(static_cast<CSAInformationElement*>(CSA_ie.get())->channel_switch_count_-- > 0);
+    auto csa_generic_ie = beacon_state_.beacon_frame_.FindIe(InformationElement::IE_TYPE_CSA);
+    ZX_ASSERT(csa_generic_ie != nullptr);
+    auto csa_ie = std::static_pointer_cast<CsaInformationElement>(csa_generic_ie);
+    ZX_ASSERT(csa_ie->channel_switch_count_ > 0);
+    csa_ie->channel_switch_count_--;
   }
   ScheduleNextBeacon();
 }
@@ -458,10 +461,10 @@ void FakeAp::DelErrInjBeacon() { beacon_state_.beacon_mutator = nullptr; }
 
 bool FakeAp::CheckIfErrInjBeaconEnabled() const { return beacon_state_.beacon_mutator != nullptr; }
 
-void FakeAp::HandleStopCSABeaconNotification() {
+void FakeAp::HandleStopCsaBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
-  beacon_state_.beacon_frame_.RemoveIE(InformationElement::SimIEType::IE_TYPE_CSA);
-  tx_info_.channel = beacon_state_.channel_after_CSA;
+  beacon_state_.beacon_frame_.RemoveIe(InformationElement::IE_TYPE_CSA);
+  tx_info_.channel = beacon_state_.channel_after_csa;
   beacon_state_.is_switching_channel = false;
 }
 
