@@ -32,6 +32,8 @@ foreach(host, standard_build_hosts) {
     # This covers all the host tools intended to be used directly by
     # developers.  Not listed here are tools whose only use is via GN rules
     # in this build.
+    # TODO(60423): Remove these once //vendor/... targets point to the
+    # corresponding Fuchsia build host tool targets.
     deps = [
       "kazoo",
       "lz4",

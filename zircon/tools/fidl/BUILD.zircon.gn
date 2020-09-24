@@ -113,11 +113,13 @@ group("tools") {
 zx_host_tool("fidlc") {
   sources = [ "compiler/main.cc" ]
   deps = [ ":fidl" ]
+  sdk_migrated = true
 }
 
 zx_host_tool("fidl-format") {
   sources = [ "formatter/main.cc" ]
   deps = [ ":fidl" ]
+  sdk_migrated = true
 }
 
 zx_host_tool("fidl-lint") {
@@ -126,6 +128,7 @@ zx_host_tool("fidl-lint") {
     "linter/main.cc",
   ]
   deps = [ ":fidl" ]
+  sdk_migrated = true
 }
 
 template("fidlgen_executable") {
