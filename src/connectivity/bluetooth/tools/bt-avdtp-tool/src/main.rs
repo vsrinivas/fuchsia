@@ -9,11 +9,11 @@ use {
     fidl_fuchsia_bluetooth_avdtp::*,
     fuchsia_async as fasync,
     fuchsia_component::{client, fuchsia_single_component_package_url},
-    fuchsia_syslog::{self as syslog, fx_log_info},
     futures::{
         channel::mpsc::{channel, SendError},
         try_join, FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
     },
+    log::info,
     parking_lot::RwLock,
     pin_utils::pin_mut,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
@@ -65,12 +65,12 @@ async fn peer_manager_listener(
                     Entry::Occupied(_) => {}
                     Entry::Vacant(entry) => {
                         entry.insert(peer);
-                        fx_log_info!("Inserted device into PeerFactoryMap");
+                        info!("Inserted device into PeerFactoryMap");
                     }
                 };
                 // Establish channel with the given peer_id and server endpoint.
                 let _ = avdtp_svc.get_peer(&mut peer_id, server);
-                fx_log_info!("Getting peer with peer_id: {} and local id: {}", id, id_count);
+                info!("Getting peer with peer_id: {} and local id: {}", id, id_count);
                 // Increment id count every time a new peer connects.
                 id_count = next_string(&id_count);
             }
@@ -284,7 +284,7 @@ async fn handle_cmd<'a>(
         Ok(Cmd::Help) => handle_help(args),
         Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
         Err(_) => {
-            fx_log_info!("{} is not a valid command.", raw_cmd);
+            info!("{} is not a valid command.", raw_cmd);
             Ok(format!("\"{}\" is not a valid command", raw_cmd))
         }
     }?;
@@ -370,7 +370,7 @@ async fn run_repl<'a>(peer_map: Arc<RwLock<PeerFactoryMap>>) -> Result<(), Error
 async fn main() -> Result<(), Error> {
     let args: Options = argh::from_env();
 
-    syslog::init_with_tags(&["bt-avdtp-tool"]).expect("Can't init logger");
+    fuchsia_syslog::init_with_tags(&["bt-avdtp-tool"]).expect("Can't init logger");
 
     // Launch the A2DP `profile` locally, and connect to the local service.
     // If an invalid `profile` is given, the tool will exit with an error.
@@ -384,7 +384,7 @@ async fn main() -> Result<(), Error> {
     };
 
     let bt_a2dp = client::launch(&launcher, profile, None)?;
-    fx_log_info!("Running bt-avdtp-tool with A2DP {}", &args.profile);
+    info!("Running bt-avdtp-tool with A2DP {}", &args.profile);
 
     let avdtp_svc = bt_a2dp
         .connect_to_service::<PeerManagerMarker>()
