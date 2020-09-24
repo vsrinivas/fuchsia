@@ -41,6 +41,15 @@ pub struct Interface {
     interface: *mut usb::UsbInterface,
 }
 
+/// Send implementation for USB interface.
+///
+///  This struct wraps a raw pointer which according to the Rust documentation found at
+///  https://doc.rust-lang.org/nomicon/send-and-sync.html: "However raw pointers
+///  are, strictly speaking, marked as thread-unsafe as more of a lint. Doing anything useful with
+///  a raw pointer requires dereferencing it, which is already unsafe. In that sense, one could
+///  argue that it would be "fine" for them to be marked as thread safe."
+unsafe impl Send for Interface {}
+
 impl Open<Interface> for Interface {
     fn open<F>(matcher: &mut F) -> Result<Interface, Error>
     where
