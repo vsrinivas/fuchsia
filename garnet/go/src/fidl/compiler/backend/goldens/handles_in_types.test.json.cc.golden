@@ -40,8 +40,8 @@ UnionWithHandle& UnionWithHandle::operator=(UnionWithHandle&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_) decltype(unknown_data_);
-        unknown_data_ = std::move(other.unknown_data_);
+        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
+        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
         break;
     }
   }
@@ -68,9 +68,8 @@ void UnionWithHandle::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.size());
-      std::copy(unknown_data_.begin(), unknown_data_.end(),
-                encoder->template GetPtr<uint8_t>(envelope_offset));
+      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
+      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
       break;
     default:
       break;
@@ -108,9 +107,9 @@ void UnionWithHandle::Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
       ::fidl::Decode(decoder, &value->h_, envelope_offset);
       break;
     default:
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
-      memcpy(value->unknown_data_.data(), xunion->envelope.data,
-             xunion->envelope.num_bytes);
+      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
+      value->unknown_data_.handles.resize(xunion->envelope.num_handles);
+      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
       break;
   }
 }
@@ -126,7 +125,7 @@ zx_status_t UnionWithHandle::Clone(UnionWithHandle* result) const {
       return ::fidl::Clone(h_, &result->h_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
-      result->unknown_data_ = unknown_data_;
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
       return ZX_OK;
   }
 }
@@ -137,9 +136,11 @@ UnionWithHandle& UnionWithHandle::set_h(::zx::vmo value) {
   return *this;
 }
 UnionWithHandle& UnionWithHandle::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes,
+    std::vector<zx::handle> handles) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_ = std::move(value);
+  unknown_data_.bytes = std::move(bytes);
+  unknown_data_.handles = std::move(handles);
   return *this;
 }
 
@@ -152,7 +153,7 @@ void UnionWithHandle::Destroy() {
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
-      unknown_data_.~vector();
+      unknown_data_.~decltype(unknown_data_)();
       break;
   }
   tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);

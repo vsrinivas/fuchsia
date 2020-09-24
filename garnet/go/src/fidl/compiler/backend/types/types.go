@@ -526,10 +526,11 @@ type FieldShape struct {
 // Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes
-	Name        EncodedCompoundIdentifier `json:"name"`
-	Members     []UnionMember             `json:"members"`
-	Strictness  `json:"strict"`
-	TypeShapeV1 TypeShape `json:"type_shape_v1"`
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Members      []UnionMember             `json:"members"`
+	Strictness   `json:"strict"`
+	Resourceness `json:"resource"`
+	TypeShapeV1  TypeShape `json:"type_shape_v1"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL extensible
@@ -824,6 +825,26 @@ func (s Strictness) IsStrict() bool {
 // IsFlexible indicates whether this type is flexible.
 func (s Strictness) IsFlexible() bool {
 	return s == IsFlexible
+}
+
+// Resourceness represents whether a FIDL object may contain any resource types,
+// such as handles. See https://fuchsia.dev/fuchsia-src/contribute/governance/fidl/ftp/ftp-057
+// for more information.
+type Resourceness bool
+
+const (
+	IsResourceType Resourceness = true
+	IsValueType    Resourceness = false
+)
+
+// IsResourceType indicates whether this type is marked as a resource type
+func (r Resourceness) IsResourceType() bool {
+	return r == IsResourceType
+}
+
+// IsValueType indicates whether this type is not marked as a resource type
+func (r Resourceness) IsValueType() bool {
+	return r == IsValueType
 }
 
 type DeclType string

@@ -156,8 +156,8 @@ ExampleXUnion& ExampleXUnion::operator=(ExampleXUnion&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_) decltype(unknown_data_);
-        unknown_data_ = std::move(other.unknown_data_);
+        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
+        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
         break;
     }
   }
@@ -184,9 +184,8 @@ void ExampleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.size());
-      std::copy(unknown_data_.begin(), unknown_data_.end(),
-                encoder->template GetPtr<uint8_t>(envelope_offset));
+      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
+      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
       break;
     default:
       break;
@@ -223,9 +222,8 @@ void ExampleXUnion::Decode(::fidl::Decoder* decoder, ExampleXUnion* value,
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
     default:
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
-      memcpy(value->unknown_data_.data(), xunion->envelope.data,
-             xunion->envelope.num_bytes);
+      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
+      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
       break;
   }
 }
@@ -240,7 +238,7 @@ zx_status_t ExampleXUnion::Clone(ExampleXUnion* result) const {
       return ::fidl::Clone(variant_, &result->variant_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
-      result->unknown_data_ = unknown_data_;
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
       return ZX_OK;
   }
 }
@@ -251,9 +249,9 @@ ExampleXUnion& ExampleXUnion::set_variant(uint32_t value) {
   return *this;
 }
 ExampleXUnion& ExampleXUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_ = std::move(value);
+  unknown_data_.bytes = std::move(bytes);
   return *this;
 }
 
@@ -265,7 +263,7 @@ void ExampleXUnion::Destroy() {
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
-      unknown_data_.~vector();
+      unknown_data_.~decltype(unknown_data_)();
       break;
   }
   tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
@@ -371,6 +369,8 @@ void ExampleUnion::Decode(::fidl::Decoder* decoder, ExampleUnion* value,
   switch (value->tag_) {
     case Tag::kVariant:
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
+      break;
+    default:
       break;
   }
 }

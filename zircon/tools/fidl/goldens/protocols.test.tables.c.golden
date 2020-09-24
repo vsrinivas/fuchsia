@@ -158,24 +158,24 @@ static const struct FidlXUnionField Fields49test_name_WithErrorSyntax_ResponseAs
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields49test_name_WithErrorSyntax_ResponseAsStruct_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields49test_name_WithErrorSyntax_ResponseAsStruct_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
 static const struct FidlXUnionField Fields60test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
 const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response"};
 
 static const struct FidlXUnionField Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
 static const struct FidlXUnionField Fields60test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
 const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response"};
 
 static bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) {
@@ -194,9 +194,9 @@ static const struct FidlXUnionField Fields44test_name_WithErrorSyntax_ErrorAsEnu
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_ErrorEnunTable)}
 };
-const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
 static const struct FidlXUnionField Fields55test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_ErrorEnunTable)}
 };
-const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields55test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields55test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};

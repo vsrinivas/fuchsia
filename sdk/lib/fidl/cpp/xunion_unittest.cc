@@ -54,11 +54,11 @@ TEST(XUnion, FlexibleXUnionsEquality) {
 
   EXPECT_EQ(xu.Which(), SampleXUnion::Tag::kUnknown);
   EXPECT_EQ(xu.Ordinal(), 0xba5eba11);
-  EXPECT_EQ(*xu.UnknownData(),
+  EXPECT_EQ(*xu.UnknownBytes(),
             std::vector<uint8_t>(input.cbegin() + sizeof(fidl_xunion_t), input.cend()));
 
   EXPECT_EQ(xu.Ordinal(), xu2.Ordinal());
-  EXPECT_EQ(*xu.UnknownData(), *xu2.UnknownData());
+  EXPECT_EQ(*xu.UnknownBytes(), *xu2.UnknownBytes());
   EXPECT_TRUE(fidl::Equals(xu, xu2));
 
   std::vector<uint8_t> different_unknown_data = {
@@ -72,7 +72,7 @@ TEST(XUnion, FlexibleXUnionsEquality) {
   auto xu3 = std::move(s3.xu);
 
   EXPECT_EQ(xu.Ordinal(), xu3.Ordinal());
-  EXPECT_NE(*xu.UnknownData(), *xu3.UnknownData());
+  EXPECT_NE(*xu.UnknownBytes(), *xu3.UnknownBytes());
   EXPECT_FALSE(fidl::Equals(xu, xu3));
 
   std::vector<uint8_t> different_ordinal = {
@@ -86,7 +86,7 @@ TEST(XUnion, FlexibleXUnionsEquality) {
   auto xu4 = std::move(s4.xu);
 
   EXPECT_NE(xu.Ordinal(), xu4.Ordinal());
-  EXPECT_EQ(*xu.UnknownData(), *xu4.UnknownData());
+  EXPECT_EQ(*xu.UnknownBytes(), *xu4.UnknownBytes());
   EXPECT_FALSE(fidl::Equals(xu, xu4));
 }
 
@@ -99,7 +99,7 @@ TEST(XUnion, XUnionFactoryFunctions) {
   EXPECT_EQ(prim_xu.i(), 123);
   EXPECT_EQ(prim_xu.Which(), SampleXUnion::Tag::kI);
   EXPECT_EQ(prim_xu.Ordinal(), SampleXUnion::Tag::kI);
-  EXPECT_EQ(prim_xu.UnknownData(), nullptr);
+  EXPECT_EQ(prim_xu.UnknownBytes(), nullptr);
 
   // Test passing an object with no copy constructor (only move) to the
   // factory function.
@@ -108,7 +108,7 @@ TEST(XUnion, XUnionFactoryFunctions) {
 
   EXPECT_EQ(tbl_xu.Which(), SampleXUnion::Tag::kSt);
   EXPECT_EQ(tbl_xu.Ordinal(), SampleXUnion::Tag::kSt);
-  EXPECT_EQ(tbl_xu.UnknownData(), nullptr);
+  EXPECT_EQ(tbl_xu.UnknownBytes(), nullptr);
 }
 
 // Confirms that an xunion can have a variant with both type and name identifiers as "empty" and not

@@ -90,6 +90,8 @@ void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
     case Tag::kField:
       ::fidl::Decode(decoder, &value->Field_, envelope_offset);
       break;
+    default:
+      break;
   }
 }
 

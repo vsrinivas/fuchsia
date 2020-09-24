@@ -259,6 +259,12 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, xunion_type.qname);
   Emit(&tables_file_, "\", .strictness=");
   Emit(&tables_file_, xunion_type.strictness);
+  Emit(&tables_file_, ", .is_resource=");
+  if (xunion_type.is_resource) {
+    Emit(&tables_file_, "kFidlIsResource_Resource");
+  } else {
+    Emit(&tables_file_, "kFidlIsResource_NotResource");
+  }
   Emit(&tables_file_, "};\n");
 }
 

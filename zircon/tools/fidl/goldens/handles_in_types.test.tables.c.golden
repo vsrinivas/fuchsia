@@ -34,11 +34,11 @@ const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .under
 static const struct FidlXUnionField Fields25test_name_UnionWithHandle[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable)}
 };
-const struct FidlCodedXUnion test_name_UnionWithHandleTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields25test_name_UnionWithHandle, .nullable=kFidlNullability_Nonnullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible};
+const struct FidlCodedXUnion test_name_UnionWithHandleTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields25test_name_UnionWithHandle, .nullable=kFidlNullability_Nonnullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_Resource};
 static const struct FidlXUnionField Fields36test_name_UnionWithHandleNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable)}
 };
-const struct FidlCodedXUnion test_name_UnionWithHandleNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields36test_name_UnionWithHandleNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible};
+const struct FidlCodedXUnion test_name_UnionWithHandleNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields36test_name_UnionWithHandleNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_Resource};
 static const struct FidlTableField Fields25test_name_TableWithHandle[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable), .ordinal=1u}
 };

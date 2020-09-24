@@ -438,8 +438,6 @@ class SimpleUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::nullable::SimpleUnion>;
 
  private:

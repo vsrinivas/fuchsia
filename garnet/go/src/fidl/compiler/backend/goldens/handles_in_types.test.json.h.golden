@@ -67,8 +67,9 @@ class UnionWithHandle final {
     return h_;
   }
   UnionWithHandle& set_h(::zx::vmo value);
-  UnionWithHandle& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                  std::vector<uint8_t> value);
+  UnionWithHandle& _experimental_set_unknown_data(
+      fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes,
+      std::vector<zx::handle> handles);
 
   Tag Which() const {
     switch (tag_) {
@@ -83,13 +84,17 @@ class UnionWithHandle final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
+  }
+  const std::vector<zx::handle>* UnknownHandles() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_.handles;
   }
 
   friend ::fidl::Equality<::test::name::UnionWithHandle>;
@@ -101,7 +106,7 @@ class UnionWithHandle final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
     ::zx::vmo h_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownData unknown_data_;
   };
 };
 
@@ -305,7 +310,7 @@ struct Equality<::test::name::UnionWithHandle> {
       case ::test::name::UnionWithHandle::Tag::kH:
         return ::fidl::Equals(_lhs.h_, _rhs.h_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };

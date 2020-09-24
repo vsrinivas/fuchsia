@@ -66,6 +66,12 @@ zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value, 
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out);
+// Perform a fidl_decode, but leave unknown handles in flexible resource union types intact
+// instead of closing them.
+zx_status_t fidl_decode_skip_unknown_union_handles(const fidl_type_t* type, void* bytes,
+                                                   uint32_t num_bytes, const zx_handle_t* handles,
+                                                   uint32_t num_handles,
+                                                   const char** error_msg_out);
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out);

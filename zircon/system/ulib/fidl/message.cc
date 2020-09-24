@@ -52,8 +52,8 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
-                                   handles_.actual(), error_msg_out);
+  zx_status_t status = fidl_decode_skip_unknown_union_handles(
+      type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
   fidl_trace(DidHLCPPDecode);
 
   ClearHandlesUnsafe();

@@ -40,19 +40,19 @@ static const struct FidlXUnionField Fields24fidl_test_json_StrictFoo[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_json_StrictFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields24fidl_test_json_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion fidl_test_json_StrictFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields24fidl_test_json_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields35fidl_test_json_StrictFooNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_json_StrictFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields35fidl_test_json_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion fidl_test_json_StrictFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields35fidl_test_json_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields26fidl_test_json_FlexibleFoo[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_json_FlexibleFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields26fidl_test_json_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible};
+const struct FidlCodedXUnion fidl_test_json_FlexibleFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields26fidl_test_json_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields37fidl_test_json_FlexibleFooNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_json_FlexibleFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields37fidl_test_json_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible};
+const struct FidlCodedXUnion fidl_test_json_FlexibleFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields37fidl_test_json_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};

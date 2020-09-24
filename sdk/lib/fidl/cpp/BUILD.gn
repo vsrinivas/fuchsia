@@ -114,6 +114,7 @@ sdk_source_set("cpp_base") {
     "string.h",
     "traits.h",
     "transition.h",
+    "types.h",
     "vector.h",
   ]
 
@@ -142,10 +143,7 @@ sdk_source_set("cpp_base") {
 source_set("test_util") {
   testonly = true
 
-  sources = [
-    "test/test_util.cc",
-    "test/test_util.h",
-  ]
+  sources = [ "test/test_util.h" ]
 
   public_deps = [ ":cpp_base" ]
 
@@ -197,6 +195,7 @@ source_set("host_test_sources") {
     "array_unittest.cc",
     "bits_unittest.cc",
     "clone_unittest.cc",
+    "comparison_unittest.cc",
     "defaults_unittest.cc",
     "fidl_test.cc",
     "internal/bitset_unittest.cc",
@@ -241,6 +240,7 @@ source_set("test_sources") {
     "internal/stub_controller_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
     "thread_safe_binding_set_unittest.cc",
+    "xunion_handles_unittest.cc",
   ]
 
   deps = [

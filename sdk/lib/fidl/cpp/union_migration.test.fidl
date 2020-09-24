@@ -11,12 +11,20 @@ flexible union BasicXUnion {
     1: int32 i32;
 };
 
+flexible resource union BasicResourceXUnion {
+    1: int32 i32;
+};
+
 union BasicUnion {
     1: int32 i32;
 };
 
 struct BasicXUnionStruct {
     BasicXUnion val;
+};
+
+resource struct BasicResourceXUnionStruct {
+    BasicResourceXUnion val;
 };
 
 struct BasicUnionStruct {

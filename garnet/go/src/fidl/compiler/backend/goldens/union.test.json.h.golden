@@ -138,8 +138,6 @@ class Union final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::Union>;
 
  private:
@@ -269,8 +267,6 @@ class StrictUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::StrictUnion>;
 
  private:
@@ -370,8 +366,6 @@ class StrictSimpleXUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::StrictSimpleXUnion>;
 
  private:
@@ -455,8 +449,6 @@ class StrictFoo final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::StrictFoo>;
 
  private:
@@ -524,8 +516,6 @@ class StrictBoundedXUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::StrictBoundedXUnion>;
 
@@ -608,8 +598,6 @@ class ReverseOrdinalUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::ReverseOrdinalUnion>;
 
@@ -738,8 +726,6 @@ class StrictPizzaOrPasta final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::StrictPizzaOrPasta>;
 
  private:
@@ -823,8 +809,6 @@ class PizzaOrPasta final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::PizzaOrPasta>;
 
  private:
@@ -904,7 +888,7 @@ class FlexiblePizzaOrPasta final {
   }
   FlexiblePizzaOrPasta& set_pasta(class Pasta value);
   FlexiblePizzaOrPasta& _experimental_set_unknown_data(
-      fidl_xunion_tag_t ordinal, std::vector<uint8_t> value);
+      fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -920,13 +904,11 @@ class FlexiblePizzaOrPasta final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::FlexiblePizzaOrPasta>;
@@ -939,7 +921,7 @@ class FlexiblePizzaOrPasta final {
   union {
     class Pizza pizza_;
     class Pasta pasta_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -1012,8 +994,6 @@ class ExplicitPizzaOrPasta final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::ExplicitPizzaOrPasta>;
 
@@ -1094,7 +1074,7 @@ class OlderSimpleUnion final {
   }
   OlderSimpleUnion& set_f(float value);
   OlderSimpleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                   std::vector<uint8_t> value);
+                                                   std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1110,13 +1090,11 @@ class OlderSimpleUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::OlderSimpleUnion>;
@@ -1129,7 +1107,7 @@ class OlderSimpleUnion final {
   union {
     int64_t i_;
     float f_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -1475,7 +1453,7 @@ class NewerSimpleUnion final {
   }
   NewerSimpleUnion& set_v(::std::vector<::std::string> value);
   NewerSimpleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                   std::vector<uint8_t> value);
+                                                   std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1492,13 +1470,11 @@ class NewerSimpleUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::NewerSimpleUnion>;
@@ -1512,7 +1488,7 @@ class NewerSimpleUnion final {
     int64_t i_;
     ::std::string s_;
     ::std::vector<::std::string> v_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -1603,7 +1579,7 @@ class FlexibleUnion final {
   FlexibleUnion& set_VectorStringAlsoNeedsConstructor(
       ::std::vector<::std::string> value);
   FlexibleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                std::vector<uint8_t> value);
+                                                std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1620,13 +1596,11 @@ class FlexibleUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::FlexibleUnion>;
@@ -1640,7 +1614,7 @@ class FlexibleUnion final {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
     ::std::vector<::std::string> VectorStringAlsoNeedsConstructor_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -1710,7 +1684,7 @@ class FlexibleFoo final {
   }
   FlexibleFoo& set_i(int32_t value);
   FlexibleFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                              std::vector<uint8_t> value);
+                                              std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1726,13 +1700,11 @@ class FlexibleFoo final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::FlexibleFoo>;
@@ -1745,7 +1717,7 @@ class FlexibleFoo final {
   union {
     ::std::string s_;
     int32_t i_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -1805,8 +1777,6 @@ class FieldCollision final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::FieldCollision>;
 
@@ -1886,7 +1856,7 @@ class ExplicitXUnion final {
   }
   ExplicitXUnion& set_f(float value);
   ExplicitXUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                 std::vector<uint8_t> value);
+                                                 std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1902,13 +1872,11 @@ class ExplicitXUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::ExplicitXUnion>;
@@ -1921,7 +1889,7 @@ class ExplicitXUnion final {
   union {
     int64_t i_;
     float f_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -1996,8 +1964,6 @@ class ExplicitUnion final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::ExplicitUnion>;
 
@@ -2082,8 +2048,6 @@ class ExplicitStrictFoo final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::ExplicitStrictFoo>;
 
  private:
@@ -2163,7 +2127,7 @@ class ExplicitFoo final {
   }
   ExplicitFoo& set_i(int32_t value);
   ExplicitFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                              std::vector<uint8_t> value);
+                                              std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -2179,13 +2143,11 @@ class ExplicitFoo final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::ExplicitFoo>;
@@ -2198,7 +2160,7 @@ class ExplicitFoo final {
   union {
     ::std::string s_;
     int32_t i_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -2275,7 +2237,7 @@ class XUnionContainingEmptyStruct final {
   }
   XUnionContainingEmptyStruct& set_empty(class Empty value);
   XUnionContainingEmptyStruct& _experimental_set_unknown_data(
-      fidl_xunion_tag_t ordinal, std::vector<uint8_t> value);
+      fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -2290,13 +2252,11 @@ class XUnionContainingEmptyStruct final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const {
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
+    return &unknown_data_.bytes;
   }
 
   friend ::fidl::Equality<::fidl::test::json::XUnionContainingEmptyStruct>;
@@ -2308,7 +2268,7 @@ class XUnionContainingEmptyStruct final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
     class Empty empty_;
-    std::vector<uint8_t> unknown_data_;
+    ::fidl::UnknownBytes unknown_data_;
   };
 };
 
@@ -3003,7 +2963,7 @@ struct Equality<::fidl::test::json::FlexiblePizzaOrPasta> {
       case ::fidl::test::json::FlexiblePizzaOrPasta::Tag::kPasta:
         return ::fidl::Equals(_lhs.pasta_, _rhs.pasta_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3134,7 +3094,7 @@ struct Equality<::fidl::test::json::OlderSimpleUnion> {
       case ::fidl::test::json::OlderSimpleUnion::Tag::kF:
         return ::fidl::Equals(_lhs.f_, _rhs.f_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3231,7 +3191,7 @@ struct Equality<::fidl::test::json::NewerSimpleUnion> {
       case ::fidl::test::json::NewerSimpleUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3298,7 +3258,7 @@ struct Equality<::fidl::test::json::FlexibleUnion> {
         return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor_,
                               _rhs.VectorStringAlsoNeedsConstructor_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3359,7 +3319,7 @@ struct Equality<::fidl::test::json::FlexibleFoo> {
       case ::fidl::test::json::FlexibleFoo::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3483,7 +3443,7 @@ struct Equality<::fidl::test::json::ExplicitXUnion> {
       case ::fidl::test::json::ExplicitXUnion::Tag::kF:
         return ::fidl::Equals(_lhs.f_, _rhs.f_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3675,7 +3635,7 @@ struct Equality<::fidl::test::json::ExplicitFoo> {
       case ::fidl::test::json::ExplicitFoo::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };
@@ -3767,7 +3727,7 @@ struct Equality<::fidl::test::json::XUnionContainingEmptyStruct> {
       case ::fidl::test::json::XUnionContainingEmptyStruct::Tag::kEmpty:
         return ::fidl::Equals(_lhs.empty_, _rhs.empty_);
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
   }
 };

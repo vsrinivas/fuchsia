@@ -120,8 +120,6 @@ class Example_foo_Result final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::fidl::test::json::Example_foo_Result>;
   Example_foo_Result(fit::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());

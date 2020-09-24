@@ -245,8 +245,6 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<
       ::test::name::WithErrorSyntax_ResponseAsStruct_Result>;
   WithErrorSyntax_ResponseAsStruct_Result(
@@ -397,8 +395,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<
       ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>;
@@ -1458,8 +1454,6 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result>;
   WithErrorSyntax_ErrorAsEnum_Result(fit::result<void, ErrorEnun>&& result) {

@@ -902,4 +902,42 @@ table Table {
   check_duplicate_coded_type_names(gen);
 }
 
+TEST(CodedTypesGeneratorTests, UnionResourceness) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource union ResourceUnion {
+  1: bool first;
+};
+
+union NonResourceUnion {
+  1: bool first;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  {
+    auto name = fidl::flat::Name::Key(library.library(), "ResourceUnion");
+    auto type = gen.CodedTypeFor(name);
+    ASSERT_NOT_NULL(type);
+    ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
+
+    auto coded_union = static_cast<const fidl::coded::XUnionType*>(type);
+    EXPECT_EQ(true, coded_union->is_resource);
+  }
+
+  {
+    auto name = fidl::flat::Name::Key(library.library(), "NonResourceUnion");
+    auto type = gen.CodedTypeFor(name);
+    ASSERT_NOT_NULL(type);
+    ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
+
+    auto coded_union = static_cast<const fidl::coded::XUnionType*>(type);
+    EXPECT_EQ(false, coded_union->is_resource);
+  }
+}
+
 }  // namespace

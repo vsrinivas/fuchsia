@@ -222,7 +222,7 @@ type EnumMember struct {
 }
 
 type Union struct {
-	types.Attributes
+	types.Union
 	Namespace    string
 	Name         string
 	TableType    string
@@ -234,7 +234,6 @@ type Union struct {
 	HasPointer   bool
 	IsResource   bool
 	Kind         unionKind
-	types.Strictness
 }
 
 func (u Union) isResource() bool {
@@ -616,6 +615,8 @@ var reservedWords = map[string]struct{}{
 	"which":           {},
 	"Unknown":         {},
 	"unknown":         {},
+	"UnknownBytes":    {},
+	"UnknownData":     {},
 	"IsEmpty":         {},
 	"HandleEvents":    {},
 	// TODO(ianloic) add: "Clone"
@@ -1465,14 +1466,13 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 	tableType := c.compileTableType(val.Name)
 	r := Union{
-		Attributes:   val.Attributes,
+		Union:        val,
 		Namespace:    c.namespace,
 		Name:         name,
 		TableType:    tableType,
 		InlineSize:   val.TypeShapeV1.InlineSize,
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
-		Strictness:   val.Strictness,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
 		IsResource:   val.TypeShapeV1.IsResource,
 	}

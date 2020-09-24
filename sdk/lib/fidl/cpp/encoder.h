@@ -40,6 +40,11 @@ class Encoder final {
 
 #ifdef __Fuchsia__
   void EncodeHandle(zx::object_base* value, size_t offset);
+
+  // Add a handle to the encoder's handles without encoding it into the bytes.
+  // This is used to re-encode unknown handles, since their "encoded form" is
+  // already in the unknown bytes somewhere.
+  void EncodeUnknownHandle(zx::object_base* value);
 #endif
 
   Message GetMessage();

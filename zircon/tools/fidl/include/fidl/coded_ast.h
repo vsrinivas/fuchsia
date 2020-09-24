@@ -249,18 +249,20 @@ struct TableType : public Type {
 
 struct XUnionType : public Type {
   XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
-             types::Nullability nullability, types::Strictness strictness)
+             types::Nullability nullability, types::Strictness strictness, bool is_resource)
       : Type(Kind::kXUnion, std::move(name), 24u, true, false),
         fields(std::move(fields)),
         qname(std::move(qname)),
         nullability(nullability),
-        strictness(strictness) {}
+        strictness(strictness),
+        is_resource(is_resource) {}
 
   std::vector<XUnionField> fields;
   const std::string qname;
   types::Nullability nullability;
   types::Strictness strictness;
   XUnionType* maybe_reference_type = nullptr;
+  bool is_resource;
 };
 
 struct MessageType : public Type {

@@ -63,7 +63,7 @@ inline
     typename std::enable_if<!IsPrimitive<T>::value && !std::is_base_of<zx::object_base, T>::value &&
                                 !IsStdVector<T>::value && !IsStdArray<T>::value,
                             zx_status_t>::type
-#else   // __Fuchsia__
+#else  // __Fuchsia__
     typename std::enable_if<!IsPrimitive<T>::value && !IsStdVector<T>::value &&
                                 !IsStdArray<T>::value,
                             zx_status_t>::type
@@ -160,6 +160,18 @@ Clone(const std::array<T, N>& value, std::array<T, N>* result) {
   }
   return ZX_OK;
 }
+
+inline zx_status_t Clone(const UnknownBytes& value, UnknownBytes* result) {
+  result->bytes = value.bytes;
+  return ZX_OK;
+}
+
+#ifdef __Fuchsia__
+inline zx_status_t Clone(const UnknownData& value, UnknownData* result) {
+  result->bytes = value.bytes;
+  return Clone(value.handles, &(result->handles));
+}
+#endif
 
 // Returns a deep copy of |value|.
 // This operation also attempts to duplicate any handles the value contains.

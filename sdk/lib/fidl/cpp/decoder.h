@@ -9,6 +9,7 @@
 #include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
+#include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #endif
 
@@ -37,11 +38,19 @@ class Decoder final {
     zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
     value->reset(*handle);
     *handle = ZX_HANDLE_INVALID;
+    if (value->is_valid()) {
+      ++handle_index_;
+    }
   }
+
+  zx::handle ClaimHandle() { return zx::handle(message_.handles().data()[handle_index_++]); }
 #endif
 
  private:
   Message message_;
+#ifdef __Fuchsia__
+  uint32_t handle_index_ = 0;
+#endif
 };
 
 }  // namespace fidl

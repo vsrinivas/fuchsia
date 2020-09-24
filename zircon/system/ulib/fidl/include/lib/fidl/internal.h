@@ -345,6 +345,7 @@ struct FidlCodedXUnion FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
   const FidlNullability nullable;
   const FidlStrictness strictness;
+  const FidlIsResource is_resource;
   const uint32_t field_count;
   // The fields are in ordinal order, with ordinal 1 at index 0.
   const struct FidlXUnionField* const fields;

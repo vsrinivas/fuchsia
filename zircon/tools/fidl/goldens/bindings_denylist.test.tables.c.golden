@@ -25,11 +25,11 @@ const struct FidlCodedTable test_name_OnlyRustTable = {.tag=kFidlTypeTable, .fie
 static const struct FidlXUnionField Fields19test_name_OnlyLlcpp[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion test_name_OnlyLlcppTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields19test_name_OnlyLlcpp, .nullable=kFidlNullability_Nonnullable, .name="test.name/OnlyLlcpp", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_OnlyLlcppTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields19test_name_OnlyLlcpp, .nullable=kFidlNullability_Nonnullable, .name="test.name/OnlyLlcpp", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields30test_name_OnlyLlcppNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion test_name_OnlyLlcppNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields30test_name_OnlyLlcppNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/OnlyLlcpp", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_OnlyLlcppNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields30test_name_OnlyLlcppNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/OnlyLlcpp", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 const struct FidlCodedStruct test_name_OnlyGoTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="test.name/OnlyGo"};
 
 static bool EnumValidatorFor_test_name_OnlyDart(uint64_t v) {

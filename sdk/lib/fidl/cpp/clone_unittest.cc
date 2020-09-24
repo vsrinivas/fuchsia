@@ -8,6 +8,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <lib/zx/socket.h>
 #endif
 
@@ -154,6 +155,48 @@ TEST(Clone, VectorPtrVector) {
   EXPECT_TRUE(cloned_empty.has_value());
   EXPECT_EQ(cloned_empty->size(), 0u);
 }
+
+TEST(Clone, UnknownBytes) {
+  UnknownBytes bytes = {
+      .bytes = {0xde, 0xad, 0xbe, 0xef},
+  };
+
+  UnknownBytes copy;
+  ASSERT_EQ(ZX_OK, Clone(bytes, &copy));
+  ASSERT_EQ(copy.bytes.size(), 4u);
+  EXPECT_EQ(copy.bytes[0], 0xde);
+  EXPECT_EQ(copy.bytes[1], 0xad);
+  EXPECT_EQ(copy.bytes[2], 0xbe);
+  EXPECT_EQ(copy.bytes[3], 0xef);
+}
+
+#ifdef __Fuchsia__
+TEST(Clone, UnknownHandles) {
+  zx_handle_t h;
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &h));
+  UnknownData data = {
+      .bytes = {0xde, 0xad},
+      .handles = {},
+  };
+  data.handles.push_back(zx::handle(h));
+
+  UnknownData copy;
+  ASSERT_EQ(ZX_OK, Clone(data, &copy));
+
+  ASSERT_EQ(copy.bytes.size(), 2u);
+  EXPECT_EQ(copy.bytes[0], 0xde);
+  EXPECT_EQ(copy.bytes[1], 0xad);
+
+  ASSERT_EQ(copy.handles.size(), 1u);
+  zx_info_handle_basic_t info_orig = {};
+  ASSERT_EQ(ZX_OK, data.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_orig, sizeof(info_orig),
+                                            nullptr, nullptr));
+  zx_info_handle_basic_t info_copy = {};
+  ASSERT_EQ(ZX_OK, data.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_copy, sizeof(info_copy),
+                                            nullptr, nullptr));
+  EXPECT_EQ(info_orig.koid, info_copy.koid);
+}
+#endif
 
 }  // namespace
 }  // namespace fidl

@@ -21,11 +21,11 @@ const struct FidlCodedStruct test_name_InterfaceOnEventEventTable = {.tag=kFidlT
 static const struct FidlXUnionField Fields15test_name_Union[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion test_name_UnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields15test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_UnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields15test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields26test_name_UnionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion test_name_UnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields26test_name_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion test_name_UnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields26test_name_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlTableField Fields15test_name_Table[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table), .ordinal=1u}
 };

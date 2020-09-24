@@ -491,15 +491,15 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           // Always create the reference type
           auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
               std::move(nullable_xunion_name), std::vector<coded::XUnionField>(),
-              NameFlatName(union_decl->name), types::Nullability::kNullable,
-              union_decl->strictness);
+              NameFlatName(union_decl->name), types::Nullability::kNullable, union_decl->strictness,
+              union_decl->resourceness == types::Resourceness::kResource);
           coded::XUnionType* nullable_xunion_ptr = nullable_xunion_type.get();
           coded_types_.push_back(std::move(nullable_xunion_type));
 
           auto xunion_type = std::make_unique<coded::XUnionType>(
               std::move(union_name), std::vector<coded::XUnionField>(),
               NameFlatName(union_decl->name), types::Nullability::kNonnullable,
-              union_decl->strictness);
+              union_decl->strictness, union_decl->resourceness == types::Resourceness::kResource);
           xunion_type->maybe_reference_type = nullable_xunion_ptr;
           named_coded_types_.emplace(decl->name, std::move(xunion_type));
           break;

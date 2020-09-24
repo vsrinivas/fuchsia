@@ -76,11 +76,11 @@ static const struct FidlXUnionField Fields30fidl_test_nullable_SimpleUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kFloat32Table)}
 };
-const struct FidlCodedXUnion fidl_test_nullable_SimpleUnionTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields30fidl_test_nullable_SimpleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion fidl_test_nullable_SimpleUnionTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields30fidl_test_nullable_SimpleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields41fidl_test_nullable_SimpleUnionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kFloat32Table)}
 };
-const struct FidlCodedXUnion fidl_test_nullable_SimpleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields41fidl_test_nullable_SimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion fidl_test_nullable_SimpleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields41fidl_test_nullable_SimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 const struct FidlCodedStruct fidl_test_nullable_Int32WrapperTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="fidl.test.nullable/Int32Wrapper"};
 

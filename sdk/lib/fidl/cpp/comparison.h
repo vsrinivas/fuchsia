@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "lib/fidl/cpp/types.h"
+
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>
 #endif
@@ -79,6 +81,23 @@ struct Equality<std::unique_ptr<T>> {
     return ::fidl::Equality<T>{}(*lhs, *rhs);
   }
 };
+
+template <>
+struct Equality<UnknownBytes> {
+  bool operator()(const UnknownBytes& lhs, const UnknownBytes& rhs) const {
+    return ::fidl::Equality<std::vector<uint8_t>>{}(lhs.bytes, rhs.bytes);
+  }
+};
+
+#ifdef __Fuchsia__
+template <>
+struct Equality<UnknownData> {
+  bool operator()(const UnknownData& lhs, const UnknownData& rhs) const {
+    return ::fidl::Equality<std::vector<uint8_t>>{}(lhs.bytes, rhs.bytes) &&
+           ::fidl::Equality<std::vector<zx::handle>>{}(lhs.handles, rhs.handles);
+  }
+};
+#endif
 
 template <class T>
 bool Equals(const T& lhs, const T& rhs) {

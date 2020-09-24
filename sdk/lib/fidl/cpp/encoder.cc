@@ -50,6 +50,12 @@ void Encoder::EncodeHandle(zx::object_base* value, size_t offset) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_ABSENT;
   }
 }
+
+void Encoder::EncodeUnknownHandle(zx::object_base* value) {
+  if (value->is_valid()) {
+    handles_.push_back(value->release());
+  }
+}
 #endif
 
 Message Encoder::GetMessage() {

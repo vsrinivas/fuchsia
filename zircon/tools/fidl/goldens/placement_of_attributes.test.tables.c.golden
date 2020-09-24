@@ -25,19 +25,19 @@ const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable = {.tag=k
 static const struct FidlXUnionField Fields21example_ExampleXUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleXUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields21example_ExampleXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible};
+const struct FidlCodedXUnion example_ExampleXUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields21example_ExampleXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields32example_ExampleXUnionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleXUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields32example_ExampleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible};
+const struct FidlCodedXUnion example_ExampleXUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields32example_ExampleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields20example_ExampleUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields20example_ExampleUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion example_ExampleUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields20example_ExampleUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields31example_ExampleUnionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields31example_ExampleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict};
+const struct FidlCodedXUnion example_ExampleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields31example_ExampleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlTableField Fields20example_ExampleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=1u}
 };

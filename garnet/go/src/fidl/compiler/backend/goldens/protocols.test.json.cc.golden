@@ -177,6 +177,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(
     case Tag::kErr:
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
+    default:
+      break;
   }
 }
 
@@ -408,6 +410,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
       break;
     case Tag::kErr:
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
+      break;
+    default:
       break;
   }
 }
@@ -1720,6 +1724,8 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(
     case Tag::kErr:
       new (&value->err_) ErrorEnun();
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
+      break;
+    default:
       break;
   }
 }

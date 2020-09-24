@@ -148,6 +148,8 @@ void Example_foo_Result::Decode(::fidl::Decoder* decoder,
     case Tag::kErr:
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
+    default:
+      break;
   }
 }
 

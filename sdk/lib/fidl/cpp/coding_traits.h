@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/decoder.h"
 #include "lib/fidl/cpp/encoder.h"
 #include "lib/fidl/cpp/traits.h"
+#include "lib/fidl/cpp/types.h"
 #include "lib/fidl/cpp/vector.h"
 
 namespace fidl {
@@ -223,6 +224,38 @@ struct CodingTraits<::std::array<T, N>> {
     }
   }
 };
+
+template <>
+struct CodingTraits<UnknownBytes> {
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, UnknownBytes* value, size_t offset) {
+    std::copy(value->bytes.begin(), value->bytes.end(), encoder->template GetPtr<uint8_t>(offset));
+  }
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder, UnknownBytes* value, size_t offset) {
+    memcpy(value->bytes.data(), decoder->template GetPtr<void>(offset), value->bytes.size());
+  }
+};
+
+#ifdef __Fuchsia__
+template <>
+struct CodingTraits<UnknownData> {
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, UnknownData* value, size_t offset) {
+    std::copy(value->bytes.begin(), value->bytes.end(), encoder->template GetPtr<uint8_t>(offset));
+    for (auto& handle : value->handles) {
+      encoder->EncodeUnknownHandle(&handle);
+    }
+  }
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder, UnknownData* value, size_t offset) {
+    memcpy(value->bytes.data(), decoder->template GetPtr<void>(offset), value->bytes.size());
+    for (auto& h : value->handles) {
+      h = decoder->ClaimHandle();
+    }
+  }
+};
+#endif
 
 template <typename T, size_t InlineSizeV1NoEE>
 struct EncodableCodingTraits {

@@ -42,14 +42,14 @@ class {{ .Name }} final {
         kEmpty is intended for internal use only; clients should use ::Tag instead.
       * Ordinal() will return kEmpty.
       * Which() will return Tag::kUnknown.
-      * UnknownData() will return nullptr.
     * if the xunion is non-strict (flexible) and has been de-serialized from a xunion with an
       ordinal that's unknown to the client's schema:
       * tag_ will be the raw ordinal from the serialized xunion,
       * Ordinal() will return tag_,
       * Which() will return Tag::kUnknown.
-      * UnknownData() will return a pointer to a valid std::vector<uint8_t> with the unknown data.
-
+      * UnknownBytes() will return a pointer to a valid std::vector<uint8_t> with the unknown bytes.
+      * if the xunion is a resource type:
+        * UnknownHandles() will return a pointer to a valid std::vector<zx::handle> with the unknown handles.
     */ -}}
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -95,7 +95,7 @@ class {{ .Name }} final {
   {{- end }}
 
   {{- if .IsFlexible }}
-  {{ .Name }}& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> value);
+  {{ .Name }}& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }});
   {{- end }}
 
   Tag Which() const {
@@ -120,17 +120,23 @@ class {{ .Name }} final {
     return tag_;
   }
 
-  const std::vector<uint8_t>* UnknownData() const {
-    {{- if .IsStrict }}
-    return nullptr;
-    {{- else }}
+{{- if .IsFlexible }}
+  const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-
-    return &unknown_data_;
-    {{- end }}
+    return &unknown_data_.bytes;
   }
+
+  {{- if .IsResourceType }}
+  const std::vector<zx::handle>* UnknownHandles() const { 
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_.handles;
+  }
+  {{- end }}
+{{- end }}
 
   friend ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>;
 
@@ -176,7 +182,7 @@ class {{ .Name }} final {
     {{ .Type.Identifier }} {{ .StorageName }};
   {{- end }}
   {{- if .IsFlexible }}
-    std::vector<uint8_t> unknown_data_;
+    {{ if .IsResourceType }}::fidl::UnknownData{{ else }}::fidl::UnknownBytes{{ end }} unknown_data_;
   {{- end }}
   };
 };
@@ -237,8 +243,8 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
         break;
     {{- if .IsFlexible }}
       default:
-        new (&unknown_data_) decltype(unknown_data_);
-        unknown_data_ = std::move(other.unknown_data_);
+        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
+        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
         break;
     {{- end }}
     }
@@ -270,8 +276,8 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
     {{- end }}
     {{- if .IsFlexible }}
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.size());
-      std::copy(unknown_data_.begin(), unknown_data_.end(), encoder->template GetPtr<uint8_t>(envelope_offset));
+      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
+      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
       break;
     {{- end }}
     default:
@@ -315,12 +321,15 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
       ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
       break;
   {{- end }}
-  {{ if .IsFlexible -}}
     default:
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
-      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
-      break;
+  {{ if .IsFlexible -}}
+      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
+    {{- if .IsResourceType }}
+      value->unknown_data_.handles.resize(xunion->envelope.num_handles);
+    {{- end }}
+      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
   {{ end -}}
+      break;
   }
 {{ end }}
 }
@@ -341,7 +350,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
     default:
     {{- if .IsFlexible }}
       new (&result->unknown_data_) decltype(unknown_data_);
-      result->unknown_data_ = unknown_data_;
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
     {{ end -}}
       return ZX_OK;
   }
@@ -358,9 +367,12 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- end }}
 
 {{- if .IsFlexible }}
-{{ .Name }}& {{ .Name }}::_experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+{{ .Name }}& {{ .Name }}::_experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }}) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_ = std::move(value);
+  unknown_data_.bytes = std::move(bytes);
+  {{- if .IsResourceType }}
+  unknown_data_.handles = std::move(handles);
+  {{- end }}
   return *this;
 }
 {{- end }}
@@ -378,7 +390,7 @@ void {{ .Name }}::Destroy() {
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
-      unknown_data_.~vector();
+      unknown_data_.~decltype(unknown_data_)();
       break;
   {{ else }}
     default:
@@ -468,7 +480,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
       {{- end }}
       {{ if .IsFlexible -}}
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
       {{ else }}
       default:
         return false;

@@ -91,6 +91,7 @@ TEST(MyXUnion, CodingTableWhenNullable) {
   ASSERT_STR_EQ("fidl.test.example.codingtables/MyXUnion", my_xunion_table.name);
 
   ASSERT_EQ(kFidlStrictness_Flexible, my_xunion_type.coded_xunion().strictness);
+  ASSERT_EQ(kFidlIsResource_NotResource, my_xunion_type.coded_xunion().is_resource);
 }
 
 TEST(MyStrictXUnion, CodingTableWhenNullable) {
@@ -122,6 +123,7 @@ TEST(MyStrictXUnion, CodingTableWhenNullable) {
   ASSERT_STR_EQ("fidl.test.example.codingtables/MyStrictXUnion", my_strict_xunion_table.name);
 
   ASSERT_EQ(kFidlStrictness_Strict, my_strict_xunion_type.coded_xunion().strictness);
+  ASSERT_EQ(kFidlIsResource_NotResource, my_strict_xunion_type.coded_xunion().is_resource);
 }
 
 TEST(MyTable, CodingTable) {
@@ -186,6 +188,7 @@ TEST(MyXUnion, CodingTableWhenNonnullable) {
   ASSERT_EQ(kFidlNullability_Nonnullable, coded_xunion.nullable);
 
   ASSERT_EQ(kFidlStrictness_Flexible, coded_xunion.strictness);
+  ASSERT_EQ(kFidlIsResource_NotResource, coded_xunion.is_resource);
 }
 
 TEST(MyStrictXUnion, CodingTableWhenNonnullable) {
@@ -211,6 +214,7 @@ TEST(MyStrictXUnion, CodingTableWhenNonnullable) {
   ASSERT_EQ(kFidlNullability_Nonnullable, coded_xunion.nullable);
 
   ASSERT_EQ(kFidlStrictness_Strict, coded_xunion.strictness);
+  ASSERT_EQ(kFidlIsResource_NotResource, coded_xunion.is_resource);
 }
 
 TEST(MyBits, CodingTable) {
@@ -285,6 +289,7 @@ TEST(ForeignXUnions, CodingTable) {
   const FidlCodedXUnion& tx_table = tx_type.coded_xunion();
   ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", tx_table.name);
   ASSERT_EQ(kFidlNullability_Nonnullable, tx_table.nullable);
+  ASSERT_EQ(kFidlIsResource_NotResource, tx_table.is_resource);
   ASSERT_EQ(2, tx_table.field_count);
 
   const fidl_type& resp_type = llcpp::fidl::test::example::codingtables::
@@ -302,5 +307,6 @@ TEST(ForeignXUnions, CodingTable) {
   const FidlCodedXUnion& rx_table = rx_type.coded_xunion();
   ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", rx_table.name);
   ASSERT_EQ(kFidlNullability_Nullable, rx_table.nullable);
+  ASSERT_EQ(kFidlIsResource_NotResource, rx_table.is_resource);
   ASSERT_EQ(2, rx_table.field_count);
 }

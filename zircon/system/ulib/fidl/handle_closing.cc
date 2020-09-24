@@ -78,7 +78,9 @@ class FidlHandleCloser final
     return Status::kSuccess;
   }
 
-  Status VisitUnknownEnvelope(EnvelopePointer envelope) { return Status::kSuccess; }
+  Status VisitUnknownEnvelope(EnvelopePointer envelope, fidl::EnvelopeSource source) {
+    return Status::kSuccess;
+  }
 
   void OnError(const char* error) { SetError(error); }
 

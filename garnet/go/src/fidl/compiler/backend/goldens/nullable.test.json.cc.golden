@@ -497,6 +497,8 @@ void SimpleUnion::Decode(::fidl::Decoder* decoder, SimpleUnion* value,
     case Tag::kB:
       ::fidl::Decode(decoder, &value->b_, envelope_offset);
       break;
+    default:
+      break;
   }
 }
 

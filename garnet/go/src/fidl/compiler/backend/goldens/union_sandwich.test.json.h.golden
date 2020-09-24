@@ -66,8 +66,6 @@ class UnionSize8Alignment4 final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::test::fidl::unionsandwich::UnionSize8Alignment4>;
 
  private:
@@ -165,8 +163,6 @@ class UnionSize36Alignment4 final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
-
   friend ::fidl::Equality<::test::fidl::unionsandwich::UnionSize36Alignment4>;
 
  private:
@@ -263,8 +259,6 @@ class UnionSize12Alignment4 final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::test::fidl::unionsandwich::UnionSize12Alignment4>;
 
@@ -388,8 +382,6 @@ class UnionSize24Alignment8 final {
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::test::fidl::unionsandwich::UnionSize24Alignment8>;
 
