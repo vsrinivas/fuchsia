@@ -20,6 +20,10 @@
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
+#include <cstring>
+#include <optional>
+#include <vector>
+
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
@@ -42,11 +46,10 @@ class SimErrorInjector {
                       const std::vector<uint8_t>* alt_data = nullptr);
   void DelErrInjIovar(const char* iovar);
   bool CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
-                                 const std::vector<uint8_t>** alt_value_out,
-                                 uint16_t ifidx);
+                                 const std::vector<uint8_t>** alt_value_out, uint16_t ifidx);
 
   void SetSignalErrInj(bool enable);
-  bool HandleRxFrameErrorInjection(uint8_t* buffer);
+  bool HandleRxFrameErrorInjection(uint8_t* buffer) const;
 
  private:
   struct ErrInjCmd {
@@ -74,7 +77,7 @@ class SimErrorInjector {
     ErrInjIovar(const char* iovar_str, zx_status_t status, std::optional<uint16_t> ifidx = {},
                 const std::vector<uint8_t>* alt_data = nullptr)
         : iovar(strlen(iovar_str) + 1), ifidx(ifidx), ret_status(status), alt_data(alt_data) {
-      memcpy(iovar.data(), iovar_str, strlen(iovar_str) + 1);
+      std::memcpy(iovar.data(), iovar_str, strlen(iovar_str) + 1);
     }
   };
   std::list<ErrInjCmd> cmds_;

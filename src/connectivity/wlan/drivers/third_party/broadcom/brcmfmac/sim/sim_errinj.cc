@@ -16,8 +16,6 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_errinj.h"
 
-#include <cstring>
-
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
@@ -25,18 +23,18 @@
 
 namespace wlan::brcmfmac {
 
-SimErrorInjector::SimErrorInjector() {}
-SimErrorInjector::~SimErrorInjector() {}
+SimErrorInjector::SimErrorInjector() = default;
+SimErrorInjector::~SimErrorInjector() = default;
 
 void SimErrorInjector::AddErrInjCmd(uint32_t cmd, zx_status_t status,
                                     std::optional<uint16_t> ifidx) {
-  for (auto it = cmds_.begin(); it != cmds_.end(); ++it) {
-    if (it->cmd == cmd) {
+  for (auto& existing_cmd : cmds_) {
+    if (existing_cmd.cmd == cmd) {
       // Entry already present, just replace with the new values
       BRCMF_DBG(SIMERRINJ, "entry cmd: %d if:%d status:%d present, replace", cmd,
                 ifidx.value_or(-1), status);
-      it->ifidx = ifidx;
-      it->ret_status = status;
+      existing_cmd.ifidx = ifidx;
+      existing_cmd.ret_status = status;
       return;
     }
   }
@@ -60,14 +58,14 @@ void SimErrorInjector::DelErrInjCmd(uint32_t cmd) {
 void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
                                       std::optional<uint16_t> ifidx,
                                       const std::vector<uint8_t>* alt_data) {
-  for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
-    if (it->iovar.size() == strlen(iovar) + 1 &&
-        (memcmp(iovar, it->iovar.data(), it->iovar.size()) == 0)) {
+  for (auto& existing_iovar : iovars_) {
+    if (existing_iovar.iovar.size() == strlen(iovar) + 1 &&
+        std::memcmp(iovar, existing_iovar.iovar.data(), existing_iovar.iovar.size()) == 0) {
       // Entry already present
       BRCMF_DBG(SIMERRINJ, "entry iovar: %s if:%d status:%d present, replace", iovar,
                 ifidx.value_or(-1), status);
-      it->ifidx = ifidx;
-      it->ret_status = status;
+      existing_iovar.ifidx = ifidx;
+      existing_iovar.ret_status = status;
       return;
     }
   }
@@ -78,7 +76,7 @@ void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
 
 void SimErrorInjector::DelErrInjIovar(const char* iovar) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
-    if (it->iovar.size() > 0 && memcmp(it->iovar.data(), iovar, strlen(iovar) + 1)) {
+    if (!it->iovar.empty() && std::memcmp(it->iovar.data(), iovar, strlen(iovar) + 1) != 0) {
       BRCMF_DBG(SIMERRINJ, "Del Err Inj entry found status:%d iovar:%s", it->ret_status, iovar);
       iovars_.erase(it);
       BRCMF_DBG(SIMERRINJ, "Num entries in list: %lu\n", iovars_.size());
@@ -90,13 +88,14 @@ void SimErrorInjector::DelErrInjIovar(const char* iovar) {
 
 bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_status,
                                                uint16_t ifidx) {
-  for (auto it = cmds_.begin(); it != cmds_.end(); ++it) {
-    if (((it->ifidx.has_value() && (it->ifidx == ifidx)) || !it->ifidx.has_value()) &&
-        (it->cmd == cmd)) {
-      BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d cmd:%d", ifidx, it->ret_status,
-                cmd);
+  for (auto& existing_cmd : cmds_) {
+    if (((existing_cmd.ifidx.has_value() && existing_cmd.ifidx == ifidx) ||
+         !existing_cmd.ifidx.has_value()) &&
+        existing_cmd.cmd == cmd) {
+      BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d cmd:%d", ifidx,
+                existing_cmd.ret_status, cmd);
       if (ret_status) {
-        *ret_status = it->ret_status;
+        *ret_status = existing_cmd.ret_status;
       }
       return true;
     }
@@ -108,17 +107,18 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
 bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
                                                  const std::vector<uint8_t>** alt_value_out,
                                                  uint16_t ifidx) {
-  for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
-    if (((it->ifidx.has_value() && (it->ifidx == ifidx)) || !it->ifidx.has_value()) &&
-        it->iovar.size() == strlen(iovar) + 1 &&
-        (!std::memcmp(it->iovar.data(), iovar, it->iovar.size()))) {
-      BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d iovar:%s", ifidx, it->ret_status,
-                iovar);
+  for (auto& existing_iovar : iovars_) {
+    if (((existing_iovar.ifidx.has_value() && existing_iovar.ifidx == ifidx) ||
+         !existing_iovar.ifidx.has_value()) &&
+        existing_iovar.iovar.size() == strlen(iovar) + 1 &&
+        !std::memcmp(existing_iovar.iovar.data(), iovar, existing_iovar.iovar.size())) {
+      BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d iovar:%s", ifidx,
+                existing_iovar.ret_status, iovar);
       if (alt_value_out) {
-        *alt_value_out = it->alt_data;
+        *alt_value_out = existing_iovar.alt_data;
       }
       if (ret_status) {
-        *ret_status = it->ret_status;
+        *ret_status = existing_iovar.ret_status;
       }
       return true;
     }
@@ -130,7 +130,7 @@ bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t*
 void SimErrorInjector::SetSignalErrInj(bool enable) { enable_rssi_sig_err_ = enable; }
 
 // Rx frame related error injection. Currently, supports only rssi signal error injection.
-bool SimErrorInjector::HandleRxFrameErrorInjection(uint8_t* buffer) {
+bool SimErrorInjector::HandleRxFrameErrorInjection(uint8_t* buffer) const {
   // This could potentially become a switch statement if we need to other types of
   // error injection into the Rx frame.
   if (enable_rssi_sig_err_ == false)
