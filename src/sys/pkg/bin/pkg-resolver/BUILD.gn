@@ -48,6 +48,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/tuf",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
@@ -72,6 +73,7 @@ rustc_binary("bin") {
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
 
   sources = [
+    "src/args.rs",
     "src/cache.rs",
     "src/cache/base_package_index.rs",
     "src/cache/retry.rs",

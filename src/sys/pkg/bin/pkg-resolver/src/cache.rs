@@ -9,7 +9,7 @@ use {
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::PackageCacheProxy,
+    fidl_fuchsia_pkg::{LocalMirrorProxy, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -187,6 +187,7 @@ pub async fn cache_package<'a>(
                 blob_kind: BlobKind::Package,
                 mirrors: Arc::clone(&mirrors),
                 expected_len: size,
+                use_local_mirror: config.use_local_mirror(),
             },
         )
         .await
@@ -207,6 +208,7 @@ pub async fn cache_package<'a>(
                             blob_kind: BlobKind::Data,
                             mirrors: Arc::clone(&mirrors),
                             expected_len: None,
+                            use_local_mirror: config.use_local_mirror(),
                         },
                     )
                 }))
@@ -318,6 +320,11 @@ impl ToResolveStatus for FetchError {
             FetchError::Write(e) => e.to_resolve_status(),
             FetchError::NoMirrors => Status::INTERNAL,
             FetchError::BlobUrl(_) => Status::INTERNAL,
+            FetchError::FidlError(_) => Status::INTERNAL,
+            FetchError::IoError(_) => Status::IO,
+            FetchError::LocalMirror(_) => Status::INTERNAL,
+            FetchError::NoBlobSource { .. } => Status::INTERNAL,
+            FetchError::ConflictingBlobSources => Status::INTERNAL,
         }
     }
 }
@@ -384,6 +391,7 @@ pub struct FetchBlobContext {
     blob_kind: BlobKind,
     mirrors: Arc<[MirrorConfig]>,
     expected_len: Option<u64>,
+    use_local_mirror: bool,
 }
 
 impl queue::TryMerge for FetchBlobContext {
@@ -424,41 +432,89 @@ pub fn make_blob_fetch_queue(
     max_concurrency: usize,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
+    local_mirror_proxy: Option<LocalMirrorProxy>,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
 
-    let (blob_fetch_queue, blob_fetcher) = queue::work_queue(
-        max_concurrency,
-        move |merkle: BlobId, context: FetchBlobContext| {
+    let (blob_fetch_queue, blob_fetcher) =
+        queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
             let http_client = Arc::clone(&http_client);
             let cache = cache.clone();
             let stats = Arc::clone(&stats);
             let cobalt_sender = cobalt_sender.clone();
+            let local_mirror_proxy = local_mirror_proxy.clone();
 
             async move {
-                trace::duration_begin!("app", "fetch_blob", "merkle" => merkle.to_string().as_str());
                 let res = fetch_blob(
-                    &*http_client,
-                    &context.mirrors,
-                    merkle,
-                    context.blob_kind,
-                    context.expected_len,
-                    &cache,
+                    &http_client,
+                    cache,
                     stats,
                     cobalt_sender,
+                    merkle,
+                    context,
+                    local_mirror_proxy.as_ref(),
                 )
                 .map_err(Arc::new)
                 .await;
-                trace::duration_end!("app", "fetch_blob", "result" => format!("{:?}", res).as_str());
                 res
             }
-        },
-    );
+        });
 
     (blob_fetch_queue.into_future(), blob_fetcher)
 }
 
 async fn fetch_blob(
+    http_client: &fuchsia_hyper::HttpsClient,
+    cache: PackageCache,
+    stats: Arc<Mutex<Stats>>,
+    cobalt_sender: CobaltSender,
+    merkle: BlobId,
+    context: FetchBlobContext,
+    local_mirror_proxy: Option<&LocalMirrorProxy>,
+) -> Result<(), FetchError> {
+    let use_remote_mirror = context.mirrors.len() != 0;
+    let use_local_mirror = context.use_local_mirror;
+
+    match (use_remote_mirror, use_local_mirror, local_mirror_proxy) {
+        (true, true, _) => Err(FetchError::ConflictingBlobSources),
+        (false, true, Some(local_mirror)) => {
+            trace::duration_begin!("app", "fetch_blob_local", "merkle" => merkle.to_string().as_str());
+            let res = fetch_blob_local(
+                local_mirror,
+                merkle,
+                context.blob_kind,
+                context.expected_len,
+                &cache,
+            )
+            .await;
+            trace::duration_end!("app", "fetch_blob_local", "result" => format!("{:?}", res).as_str());
+            res
+        }
+        (true, false, _) => {
+            trace::duration_begin!("app", "fetch_blob_http", "merkle" => merkle.to_string().as_str());
+            let res = fetch_blob_http(
+                http_client,
+                &context.mirrors,
+                merkle,
+                context.blob_kind,
+                context.expected_len,
+                &cache,
+                stats,
+                cobalt_sender,
+            )
+            .await;
+            trace::duration_end!("app", "fetch_blob_http", "result" => format!("{:?}", res).as_str());
+            res
+        }
+        (use_remote_mirror, use_local_mirror, local_mirror) => Err(FetchError::NoBlobSource {
+            use_remote_mirror,
+            use_local_mirror,
+            allow_local_mirror: local_mirror.is_some(),
+        }),
+    }
+}
+
+async fn fetch_blob_http(
     client: &fuchsia_hyper::HttpsClient,
     mirrors: &[MirrorConfig],
     merkle: BlobId,
@@ -519,6 +575,66 @@ async fn fetch_blob(
         })
     })
     .await
+}
+
+async fn fetch_blob_local(
+    local_mirror: &LocalMirrorProxy,
+    merkle: BlobId,
+    blob_kind: BlobKind,
+    expected_len: Option<u64>,
+    cache: &PackageCache,
+) -> Result<(), FetchError> {
+    if let Some((blob, blob_closer)) =
+        cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
+    {
+        let res = read_local_blob(local_mirror, merkle, expected_len, blob).await;
+        blob_closer.close().await;
+        res?;
+    }
+    Ok(())
+}
+
+async fn read_local_blob(
+    proxy: &LocalMirrorProxy,
+    merkle: BlobId,
+    expected_len: Option<u64>,
+    dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
+) -> Result<(), FetchError> {
+    let (local_file, remote) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::FileMarker>()
+        .map_err(FetchError::FidlError)?;
+
+    proxy
+        .get_blob(&mut merkle.into(), remote)
+        .await
+        .map_err(FetchError::FidlError)?
+        .map_err(FetchError::LocalMirror)?;
+
+    let (status, info) = local_file.get_attr().await.map_err(FetchError::FidlError)?;
+    Status::ok(status).map_err(FetchError::IoError)?;
+
+    if let Some(ref val) = expected_len {
+        if val > &info.content_size {
+            return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
+        } else if val < &info.content_size {
+            return Err(FetchError::BlobTooLarge { uri: merkle.to_string() });
+        }
+    }
+
+    let mut dest = dest.truncate(info.content_size).await.map_err(FetchError::Truncate)?;
+
+    loop {
+        let (status, data) =
+            local_file.read(fidl_fuchsia_io::MAX_BUF).await.map_err(FetchError::FidlError)?;
+        Status::ok(status).map_err(FetchError::IoError)?;
+        if data.len() == 0 {
+            return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
+        }
+        dest = match dest.write(&data).await.map_err(FetchError::Write)? {
+            pkgfs::install::BlobWriteSuccess::MoreToWrite(blob) => blob,
+            pkgfs::install::BlobWriteSuccess::Done => break,
+        }
+    }
+    Ok(())
 }
 
 fn make_blob_url(
@@ -635,6 +751,28 @@ pub enum FetchError {
 
     #[error("blob url error")]
     BlobUrl(#[source] http_uri_ext::Error),
+
+    #[error("FIDL error while fetching blob")]
+    FidlError(#[source] fidl::Error),
+
+    #[error("IO error while reading blob")]
+    IoError(#[source] Status),
+
+    #[error("LocalMirror error while fetching {0:?}")]
+    LocalMirror(
+        // The FIDL error type doesn't derive Error, so we can't use #[source].
+        fidl_fuchsia_pkg::GetBlobError,
+    ),
+
+    #[error(
+        "No valid source could be found for the requested blob. \
+        use_remote_mirror={use_remote_mirror}, use_local_mirror={use_local_mirror}, \
+        allow_local_mirror={allow_local_mirror}"
+    )]
+    NoBlobSource { use_remote_mirror: bool, use_local_mirror: bool, allow_local_mirror: bool },
+
+    #[error("Tried to request a blob with HTTP and local mirrors")]
+    ConflictingBlobSources,
 }
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
@@ -662,6 +800,8 @@ impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
             FetchError::Hyper { .. } => metrics::FetchBlobMetricDimensionResult::Hyper,
             FetchError::Http { .. } => metrics::FetchBlobMetricDimensionResult::Http,
             FetchError::BlobUrl(_) => metrics::FetchBlobMetricDimensionResult::BlobUrl,
+            // TODO(fxbug.dev/59837): wire up LocalMirror errors to cobalt.
+            _ => todo!(),
         }
     }
 }

@@ -1,12 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {
     anyhow::{anyhow, Context as _, Error},
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::PackageCacheMarker,
+    fidl_fuchsia_pkg::{LocalMirrorMarker, PackageCacheMarker},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
@@ -20,6 +19,7 @@ use {
     system_image::CachePackages,
 };
 
+mod args;
 mod cache;
 mod clock;
 mod config;
@@ -40,6 +40,7 @@ mod rewrite_service;
 mod test_util;
 
 use crate::{
+    args::Args,
     cache::PackageCache,
     config::Config,
     experiment::Experiments,
@@ -78,14 +79,23 @@ fn main() -> Result<(), Error> {
     fx_log_info!("starting package resolver");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
-    executor.run_singlethreaded(main_inner_async(startup_time))
+    executor.run_singlethreaded(main_inner_async(startup_time, argh::from_env()))
 }
 
-async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
+async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
 
     let pkg_cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
+    let local_mirror = if args.allow_local_mirror {
+        Some(
+            connect_to_service::<LocalMirrorMarker>()
+                .context("error connecting to local mirror")?,
+        )
+    } else {
+        None
+    };
+
     let pkgfs_install = pkgfs::install::Client::open_from_namespace()
         .context("error connecting to pkgfs/install")?;
     let pkgfs_needs =
@@ -136,6 +146,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         MAX_CONCURRENT_BLOB_FETCHES,
         repo_manager.read().stats(),
         cobalt_sender.clone(),
+        local_mirror,
     );
     futures.push(blob_fetch_queue.boxed_local());
 

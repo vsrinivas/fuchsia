@@ -897,3 +897,41 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
 
     env.stop().await;
 }
+
+#[fasync::run_singlethreaded(test)]
+#[ignore] // TODO(fxb/59827): enable this test once pkg-resolver fetches metadata from LocalMirror.
+async fn resolve_local_mirror() {
+    let pkg = PackageBuilder::new("test")
+        .add_resource_at("test_file", "hi there".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let env = TestEnvBuilder::new()
+        .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
+        .build()
+        .await;
+    // TODO(fxb/59827): don't serve a repository, use the below line instead.
+    // let repo_config = repo.make_repo_config("fuchsia-pkg://test".parse().unwrap(), None, false, true);
+    let served = repo.clone().server().start().unwrap();
+    let repo_config =
+        served.make_repo_config_with_local_mirror("fuchsia-pkg://test".parse().unwrap());
+
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
+
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+
+    pkg.verify_contents(&package_dir).await.unwrap();
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+
+    env.stop().await;
+}
