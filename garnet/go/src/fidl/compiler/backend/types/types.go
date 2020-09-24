@@ -881,8 +881,8 @@ type Root struct {
 	Interfaces []Protocol
 }
 
-// DeclsWithDependencies returns a single DeclMap containining the FIDL
-// library's declarations and those of its depedencies.
+// DeclsWithDependencies returns a single DeclMap containing the FIDL
+// library's declarations and those of its dependencies.
 func (r *Root) DeclsWithDependencies() DeclMap {
 	decls := DeclMap{}
 	for k, v := range r.Decls {
