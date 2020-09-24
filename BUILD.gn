@@ -38,11 +38,11 @@ declare_args() {
   # pressure arises or other policies indicate.
   cache_package_labels = []
 
-  # A file in integration containing historical test duration data for this
-  # build configuration. This file is used by infra to efficiently schedule
-  # tests. "default.json" is a dummy file that contains no real duration data,
-  # and causes infra to schedule tests as if each one has the same duration.
-  test_durations_file = "//integration/infra/test_durations/default.json"
+  # A file in containing historical test duration data for this build
+  # configuration, used used by testsharder to evenly split tests across
+  # shards. It should be set for any builds where testsharder will be run
+  # afterwards.
+  test_durations_file = ""
 
   # If you add package labels to this variable, the packages will be included
   # in the 'universe' package set, which represents all software that is
@@ -683,7 +683,10 @@ build_api_module("tests") {
 #
 build_api_module("test_durations") {
   testonly = true
-  contents = read_file(test_durations_file, "json")
+  contents = []
+  if (test_durations_file != "") {
+    contents = read_file(test_durations_file, "json")
+  }
 }
 
 # See //zircon:tool_paths for a description and schema definition.
