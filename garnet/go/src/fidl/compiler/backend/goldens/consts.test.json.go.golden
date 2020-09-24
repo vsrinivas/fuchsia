@@ -67,7 +67,24 @@ type BitsType uint32
 const (
 	BitsTypeValue BitsType = 1
 	BitsTypeTrue  BitsType = 2
+	BitsType_Mask BitsType = 3
 )
+
+func (_ BitsType) I_BitsMask() BitsType {
+	return BitsType_Mask
+}
+
+func (_ BitsType) I_BitsIsStrict() bool {
+	return true
+}
+
+func (x BitsType) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x BitsType) GetUnknownBits() uint64 {
+	return uint64(^BitsType_Mask & x)
+}
 
 func (x BitsType) String() string {
 	switch x {

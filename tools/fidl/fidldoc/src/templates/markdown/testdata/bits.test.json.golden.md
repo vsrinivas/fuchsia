@@ -31,12 +31,16 @@ Type: <code>uint32</code>
             <td>MY_OTHER_BIT</td>
             <td>2</td>
             <td></td>
+        </tr><tr>
+            <td>MASK</td>
+            <td>4</td>
+            <td></td>
         </tr></table>
 
 ### StrictBits {#StrictBits}
 Type: <code>uint64</code>
 
-*Defined in [fidl.test.json/bits.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bits.test.fidl#8)*
+*Defined in [fidl.test.json/bits.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bits.test.fidl#10)*
 
 
 
@@ -54,7 +58,7 @@ Type: <code>uint64</code>
 ### FlexibleBits {#FlexibleBits}
 Type: <code>uint64</code>
 
-*Defined in [fidl.test.json/bits.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bits.test.fidl#13)*
+*Defined in [fidl.test.json/bits.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bits.test.fidl#15)*
 
 
 

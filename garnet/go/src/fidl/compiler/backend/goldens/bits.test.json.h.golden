@@ -71,9 +71,11 @@ enum class MyBits : uint32_t {
   MY_FIRST_BIT = 1u,
 
   MY_OTHER_BIT = 2u,
+
+  MASK = 4u,
 };
 
-const static MyBits MyBitsMask = static_cast<MyBits>(3u);
+const static MyBits MyBitsMask = static_cast<MyBits>(7u);
 
 inline zx_status_t Clone(::fidl::test::json::MyBits value,
                          ::fidl::test::json::MyBits* result) {

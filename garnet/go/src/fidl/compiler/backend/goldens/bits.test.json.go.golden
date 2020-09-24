@@ -7,7 +7,25 @@ type MyBits uint32
 const (
 	MyBitsMyFirstBit MyBits = 1
 	MyBitsMyOtherBit MyBits = 2
+	MyBitsMask       MyBits = 4
+	MyBits_Mask      MyBits = 7
 )
+
+func (_ MyBits) I_BitsMask() MyBits {
+	return MyBits_Mask
+}
+
+func (_ MyBits) I_BitsIsStrict() bool {
+	return true
+}
+
+func (x MyBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x MyBits) GetUnknownBits() uint64 {
+	return uint64(^MyBits_Mask & x)
+}
 
 func (x MyBits) String() string {
 	switch x {
@@ -15,6 +33,8 @@ func (x MyBits) String() string {
 		return "MyFirstBit"
 	case 2:
 		return "MyOtherBit"
+	case 4:
+		return "Mask"
 	}
 	return "Unknown"
 }
@@ -24,7 +44,24 @@ type StrictBits uint64
 const (
 	StrictBitsSmallest StrictBits = 1
 	StrictBitsBiggest  StrictBits = 9223372036854775808
+	StrictBits_Mask    StrictBits = 9223372036854775809
 )
+
+func (_ StrictBits) I_BitsMask() StrictBits {
+	return StrictBits_Mask
+}
+
+func (_ StrictBits) I_BitsIsStrict() bool {
+	return true
+}
+
+func (x StrictBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x StrictBits) GetUnknownBits() uint64 {
+	return uint64(^StrictBits_Mask & x)
+}
 
 func (x StrictBits) String() string {
 	switch x {
@@ -41,7 +78,24 @@ type FlexibleBits uint64
 const (
 	FlexibleBitsSmallest FlexibleBits = 1
 	FlexibleBitsBiggest  FlexibleBits = 9223372036854775808
+	FlexibleBits_Mask    FlexibleBits = 9223372036854775809
 )
+
+func (_ FlexibleBits) I_BitsMask() FlexibleBits {
+	return FlexibleBits_Mask
+}
+
+func (_ FlexibleBits) I_BitsIsStrict() bool {
+	return false
+}
+
+func (x FlexibleBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x FlexibleBits) GetUnknownBits() uint64 {
+	return uint64(^FlexibleBits_Mask & x)
+}
 
 func (x FlexibleBits) String() string {
 	switch x {

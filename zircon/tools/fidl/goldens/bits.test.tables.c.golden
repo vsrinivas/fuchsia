@@ -11,7 +11,7 @@ extern const struct FidlCodedBits fidl_test_json_FlexibleBitsTable;
 
 const struct FidlCodedBits fidl_test_json_StrictBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint64, .mask=9223372036854775809ul, .name="fidl.test.json/StrictBits"};
 
-const struct FidlCodedBits fidl_test_json_MyBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=3ul, .name="fidl.test.json/MyBits"};
+const struct FidlCodedBits fidl_test_json_MyBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=7ul, .name="fidl.test.json/MyBits"};
 
 const struct FidlCodedBits fidl_test_json_FlexibleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint64, .mask=9223372036854775809ul, .name="fidl.test.json/FlexibleBits"};
 

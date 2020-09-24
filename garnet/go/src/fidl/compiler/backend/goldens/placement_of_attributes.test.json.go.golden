@@ -49,7 +49,24 @@ type ExampleBits uint32
 
 const (
 	ExampleBitsMember ExampleBits = 1
+	ExampleBits_Mask  ExampleBits = 1
 )
+
+func (_ ExampleBits) I_BitsMask() ExampleBits {
+	return ExampleBits_Mask
+}
+
+func (_ ExampleBits) I_BitsIsStrict() bool {
+	return true
+}
+
+func (x ExampleBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x ExampleBits) GetUnknownBits() uint64 {
+	return uint64(^ExampleBits_Mask & x)
+}
 
 func (x ExampleBits) String() string {
 	switch x {

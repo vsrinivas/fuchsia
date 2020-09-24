@@ -60,7 +60,7 @@ type Const struct {
 //    ...
 // )
 type Bits struct {
-	types.Attributes
+	types.Bits
 
 	// Name is the name of the bits type alias.
 	Name string
@@ -749,9 +749,9 @@ func (c *compiler) compileBitsMember(val types.BitsMember) BitsMember {
 func (c *compiler) compileBits(val types.Bits) Bits {
 	t, _ := c.compileType(val.Type)
 	r := Bits{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		Type:       t,
+		Bits: val,
+		Name: c.compileCompoundIdentifier(val.Name, true, ""),
+		Type: t,
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileBitsMember(v))

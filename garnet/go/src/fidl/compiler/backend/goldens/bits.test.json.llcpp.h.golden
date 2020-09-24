@@ -118,6 +118,7 @@ class MyBits final {
   explicit constexpr MyBits(uint32_t value) : value_(value) {}
   const static MyBits MY_FIRST_BIT;
   const static MyBits MY_OTHER_BIT;
+  const static MyBits MASK;
   const static MyBits mask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
@@ -145,8 +146,10 @@ constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MY_FIRST_BIT =
     ::llcpp::fidl::test::json::MyBits(1u);
 constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MY_OTHER_BIT =
     ::llcpp::fidl::test::json::MyBits(2u);
+constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MASK =
+    ::llcpp::fidl::test::json::MyBits(4u);
 constexpr const ::llcpp::fidl::test::json::MyBits MyBits::mask =
-    ::llcpp::fidl::test::json::MyBits(3u);
+    ::llcpp::fidl::test::json::MyBits(7u);
 
 constexpr inline ::llcpp::fidl::test::json::MyBits MyBits::operator~() const {
   return ::llcpp::fidl::test::json::MyBits(

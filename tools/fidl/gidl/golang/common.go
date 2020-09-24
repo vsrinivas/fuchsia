@@ -266,6 +266,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:    "ErrInvalidXUnionTag",
 	gidlir.InvalidPaddingByte:         "ErrNonZeroPadding",
 	gidlir.StrictEnumUnknownValue:     "ErrInvalidEnumValue",
+	gidlir.StrictBitsUnknownBit:       "ErrInvalidBitsValue",
 	gidlir.ExtraHandles:               "ErrTooManyHandles",
 	gidlir.TooFewHandles:              "ErrNotEnoughHandles",
 }

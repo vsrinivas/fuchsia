@@ -26,6 +26,7 @@ bitflags! {
     pub struct MyBits: u32 {
         const MyFirstBit = 1;
         const MyOtherBit = 2;
+        const Mask = 4;
     }
 }
 

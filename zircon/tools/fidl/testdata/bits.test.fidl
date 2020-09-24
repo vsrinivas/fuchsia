@@ -3,6 +3,8 @@ library fidl.test.json;
 bits MyBits : uint32 {
     MY_FIRST_BIT = 1;
     MY_OTHER_BIT = 2;
+    // check for any collisions between the bitmask and a "mask" member
+    MASK = 4;
 };
 
 strict bits StrictBits : uint64 {

@@ -63,7 +63,24 @@ type MyBits uint32
 const (
 	MyBitsMyFirstBit MyBits = 1
 	MyBitsMyOtherBit MyBits = 2
+	MyBits_Mask      MyBits = 3
 )
+
+func (_ MyBits) I_BitsMask() MyBits {
+	return MyBits_Mask
+}
+
+func (_ MyBits) I_BitsIsStrict() bool {
+	return true
+}
+
+func (x MyBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x MyBits) GetUnknownBits() uint64 {
+	return uint64(^MyBits_Mask & x)
+}
 
 func (x MyBits) String() string {
 	switch x {
