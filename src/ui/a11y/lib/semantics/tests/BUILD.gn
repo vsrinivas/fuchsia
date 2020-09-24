@@ -68,17 +68,11 @@ test_package("semantics-integration-tests") {
   tests = [
     {
       name = "flutter_semantics_tests"
-      environments = [
-        aemu_env,
-        nuc_env,
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "web_semantics_tests"
-      environments = [
-        aemu_env,
-        nuc_env,
-      ]
+      environments = [ nuc_env ]
     },
   ]
 
