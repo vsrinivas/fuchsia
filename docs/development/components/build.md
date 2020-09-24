@@ -691,7 +691,7 @@ target that produces an executable ensures that the executable is included in
 the package.
 
 Sometimes there is the need to include additional files. Below we demonstrate
-the use of the [`resource.gni`](/build/unification/zbi/resource.gni) template.
+the use of the [`resource.gni`](/build/dist/resource.gni) template.
 
 ### Example: fonts
 
