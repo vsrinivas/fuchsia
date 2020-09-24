@@ -217,7 +217,7 @@ if (current_toolchain == default_toolchain) {
       ":goldens",
       "//third_party/boringssl",
       "//zircon/public/lib/zxtest",
-      "//zircon/tools/fidl:compiler",
+      "//zircon/tools/fidl:fidl",
     ]
   }
 

@@ -12,7 +12,7 @@ template("fidl_ir") {
   json_ir = invoker.output
 
   compiled_action(target_name) {
-    tool = "//zircon/public/tool/fidlc"
+    tool = "//zircon/tools/fidl:fidlc"
 
     inputs = invoker.sources
 

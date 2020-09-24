@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 config("fidlc_config") {
   defines = []
   if (defined(fidlc_deprecate_c_unions) && fidlc_deprecate_c_unions) {
@@ -9,8 +11,21 @@ config("fidlc_config") {
   }
 }
 
+if (zx != "/") {
+  group("headers") {
+    public_configs = [ ":headers.config" ]
+  }
+
+  config("headers.config") {
+    include_dirs = [ "include" ]
+  }
+}
+
 zx_library("fidl") {
   host = true
+  sdk = "source"
+  sdk_headers = []
+  sdk_migrated = true
   sources = [
     "lib/attributes.cc",
     "lib/c_generator.cc",
@@ -50,9 +65,16 @@ zx_library("fidl") {
     ":json_schema",
     "$zx/system/ulib/cmdline",
     "$zx/system/ulib/fit",
-    "$zx/third_party/ulib/boringssl",
   ]
-  assert_no_deps = [ "//zircon/system/public" ]
+  if (zx == "/") {
+    deps += [ "$zx/third_party/ulib/boringssl" ]
+  } else {
+    deps += [ "//third_party/boringssl" ]
+  }
+
+  if (zx == "/") {
+    assert_no_deps = [ "//zircon/system/public" ]
+  }
   configs += [ ":fidlc_config" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

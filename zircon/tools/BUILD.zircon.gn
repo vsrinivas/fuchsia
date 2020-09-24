@@ -33,7 +33,6 @@ foreach(host, standard_build_hosts) {
     # developers.  Not listed here are tools whose only use is via GN rules
     # in this build.
     deps = [
-      "fidl:tools",
       "kazoo",
       "lz4",
       "zbi",

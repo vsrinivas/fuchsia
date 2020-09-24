@@ -820,6 +820,10 @@ config("temporarily_disable_ubsan_do_not_use") {
     # TODO(46944): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/perftest:*",
+
+    # TODO(60442): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until is is migrated into CI/CQ.
+    "$zx/tools/fidl:*",
   ]
 
   if (!is_gcc) {
