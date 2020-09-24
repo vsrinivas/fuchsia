@@ -201,5 +201,10 @@ TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
   EXPECT_TRUE(links.empty());
 }
 
+// LinkSystem::UpdateLinks() requires substantial setup to unit test: GraphLink/ContentLink
+// protocols attached to the correct TransformHandles in a correctly constructed global topology.
+// As a result, LinkSystem::UpdateLinks() is effectively tested in the Flatland unit tests in
+// flatland_unittest.cc, since those tests simplify performing the correct setup.
+
 }  // namespace test
 }  // namespace flatland

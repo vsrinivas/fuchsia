@@ -166,8 +166,8 @@ std::vector<Engine::RenderData> Engine::ComputeRenderData() {
     const auto image_rectangles =
         ComputeGlobalRectangles(SelectMatrices(global_matrices, image_indices));
 
-    link_system_->UpdateLinks(topology_data.topology_vector, topology_data.child_counts,
-                              topology_data.live_handles, global_matrices, resolution, snapshot);
+    link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
+                              global_matrices, resolution, snapshot);
 
     FX_DCHECK(image_rectangles.size() == images.size());
     image_list_per_display.push_back({.rectangles = std::move(image_rectangles),

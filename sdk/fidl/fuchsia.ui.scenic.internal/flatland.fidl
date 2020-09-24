@@ -74,9 +74,9 @@ protocol GraphLink {
 };
 
 enum ContentLinkStatus {
-    /// The underlying Graph has connected its Link, called Present(), the acquisition fences of
-    /// the Present() call have all be reached, and the Graph's content has been rendered to an
-    /// output device.
+    /// The underlying Graph has connected its Link, called Present(), and the acquisition fences
+    /// of the Present() call have all be reached, indicating that it has some content ready to be
+    /// displayed.
     CONTENT_HAS_PRESENTED = 0;
 };
 

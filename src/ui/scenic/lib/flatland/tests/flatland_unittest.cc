@@ -14,7 +14,6 @@
 #include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
@@ -23,7 +22,6 @@
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
-#include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 
 using ::testing::_;
@@ -36,9 +34,7 @@ using TransformId = flatland::Flatland::TransformId;
 using flatland::BufferCollectionMetadata;
 using flatland::Flatland;
 using flatland::FlatlandPresenter;
-using flatland::GlobalImageVector;
 using flatland::GlobalMatrixVector;
-using flatland::GlobalRectangleVector;
 using flatland::GlobalTopologyData;
 using flatland::ImageMetadata;
 using flatland::LinkSystem;
@@ -54,6 +50,7 @@ using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
 using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 using fuchsia::ui::scenic::internal::GraphLink;
+using fuchsia::ui::scenic::internal::GraphLinkStatus;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::ImageProperties;
 using fuchsia::ui::scenic::internal::LayoutInfo;
@@ -245,18 +242,11 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return uber_struct;
   }
 
-  // The render loop computes this data to hand off to the Renderer, so we return it here for test
-  // validation purposes.
-  struct GlobalFlatlandData {
-    GlobalTopologyData topology_data;
-    GlobalMatrixVector matrix_vector;
-    GlobalRectangleVector rectangle_vector;
-    GlobalImageVector image_vector;
-  };
-
-  // Processing the main loop involves generating a global topology. For testing, the root transform
-  // is provided directly to this function.
-  GlobalFlatlandData ProcessMainLoop(TransformHandle root_transform) {
+  // Updates all Links reachable from |root_transform|, which must be the root transform of one of
+  // the active Flatland instances.
+  //
+  // Tests that call this function are testing both Flatland and LinkSystem::UpdateLinks().
+  void UpdateLinks(TransformHandle root_transform) {
     // Run the looper in case there are queued commands in, e.g., ObjectLinker.
     RunLoopUntilIdle();
 
@@ -267,19 +257,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
         snapshot, links, link_system_->GetInstanceId(), root_transform);
     const auto matrices =
         flatland::ComputeGlobalMatrices(data.topology_vector, data.parent_indices, snapshot);
-    const auto rectangles = flatland::ComputeGlobalRectangles(matrices);
-    const auto image_data = flatland::ComputeGlobalImageData(data.topology_vector, snapshot);
 
-    link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, matrices,
+    link_system_->UpdateLinks(data.topology_vector, data.live_handles, matrices,
                               display_pixel_scale_, snapshot);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
-
-    return {.topology_data = std::move(data),
-            .matrix_vector = std::move(matrices),
-            .rectangle_vector = std::move(rectangles),
-            .image_vector = std::move(image_data.images)};
   }
 
   void CreateLink(Flatland* parent, Flatland* child, ContentId id,
@@ -1351,7 +1334,210 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
-TEST_F(FlatlandTest, ValidParentToChildFlow) {
+TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  // Set up a link, but don't call Present() on either instance.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const ContentId kLinkId = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size({1.0f, 2.0f});
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    content_link.NewRequest());
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  // Request a layout update.
+  bool layout_updated = false;
+  graph_link->GetLayout([&](LayoutInfo info) {
+    EXPECT_EQ(1.0f, info.logical_size().x);
+    EXPECT_EQ(2.0f, info.logical_size().y);
+    layout_updated = true;
+  });
+
+  // Without even presenting, the child is able to get the initial properties from the parent.
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(layout_updated);
+}
+
+// This test doesn't use the helper function to create a link, because it tests intermediate steps
+// and timing corner cases.
+TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const TransformId kTransformId = 1;
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+
+  const ContentId kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size({1.0f, 2.0f});
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    content_link.NewRequest());
+  parent.SetContentOnTransform(kLinkId, kTransformId);
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  // Request a status update.
+  bool status_updated = false;
+  graph_link->GetStatus([&](GraphLinkStatus status) {
+    EXPECT_EQ(status, GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+    status_updated = true;
+  });
+
+  // The child begins disconnected from the display.
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(status_updated);
+
+  // The GraphLinkStatus will update when both the parent and child Present().
+  status_updated = false;
+  graph_link->GetStatus([&](GraphLinkStatus status) {
+    EXPECT_EQ(status, GraphLinkStatus::CONNECTED_TO_DISPLAY);
+    status_updated = true;
+  });
+
+  // The parent presents first, no update.
+  PRESENT(parent, true);
+  UpdateLinks(parent.GetRoot());
+  EXPECT_FALSE(status_updated);
+
+  // The child presents second and the status updates.
+  PRESENT(child, true);
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(status_updated);
+}
+
+// This test doesn't use the helper function to create a link, because it tests intermediate steps
+// and timing corner cases.
+TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const TransformId kTransformId = 1;
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+
+  const ContentId kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size({1.0f, 2.0f});
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    content_link.NewRequest());
+  parent.SetContentOnTransform(kLinkId, kTransformId);
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  // Request a status update.
+  bool status_updated = false;
+  graph_link->GetStatus([&](GraphLinkStatus status) {
+    EXPECT_EQ(status, GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+    status_updated = true;
+  });
+
+  // The child begins disconnected from the display.
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(status_updated);
+
+  // The GraphLinkStatus will update when both the parent and child Present().
+  status_updated = false;
+  graph_link->GetStatus([&](GraphLinkStatus status) {
+    EXPECT_EQ(status, GraphLinkStatus::CONNECTED_TO_DISPLAY);
+    status_updated = true;
+  });
+
+  // The child presents first, no update.
+  PRESENT(child, true);
+  UpdateLinks(parent.GetRoot());
+  EXPECT_FALSE(status_updated);
+
+  // The parent presents second and the status updates.
+  PRESENT(parent, true);
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(status_updated);
+}
+
+// This test doesn't use the helper function to create a link, because it tests intermediate steps
+// and timing corner cases.
+TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const TransformId kTransformId = 1;
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+
+  const ContentId kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size({1.0f, 2.0f});
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    content_link.NewRequest());
+  parent.SetContentOnTransform(kLinkId, kTransformId);
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  // The GraphLinkStatus will update when both the parent and child Present().
+  bool status_updated = false;
+  graph_link->GetStatus([&](GraphLinkStatus status) {
+    EXPECT_EQ(status, GraphLinkStatus::CONNECTED_TO_DISPLAY);
+    status_updated = true;
+  });
+
+  PRESENT(child, true);
+  PRESENT(parent, true);
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(status_updated);
+
+  // The GraphLinkStatus will update again if the parent removes the child link from its topology.
+  status_updated = false;
+  graph_link->GetStatus([&](GraphLinkStatus status) {
+    EXPECT_EQ(status, GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+    status_updated = true;
+  });
+
+  parent.SetContentOnTransform(0, kTransformId);
+  PRESENT(parent, true);
+
+  UpdateLinks(parent.GetRoot());
+  EXPECT_TRUE(status_updated);
+}
+
+// This test doesn't use the helper function to create a link, because it tests intermediate steps
+// and timing corner cases.
+TEST_F(FlatlandTest, ValidChildToParentFlow) {
   Flatland parent = CreateFlatland();
   Flatland child = CreateFlatland();
 
@@ -1370,61 +1556,18 @@ TEST_F(FlatlandTest, ValidParentToChildFlow) {
   fidl::InterfacePtr<GraphLink> graph_link;
   child.LinkToParent(std::move(child_token), graph_link.NewRequest());
 
-  bool layout_updated = false;
-  graph_link->GetLayout([&](LayoutInfo info) {
-    EXPECT_EQ(1.0f, info.logical_size().x);
-    EXPECT_EQ(2.0f, info.logical_size().y);
-    layout_updated = true;
-  });
-
-  // Without even presenting, the child is able to get the initial properties from the parent.
-  ProcessMainLoop(parent.GetRoot());
-  EXPECT_TRUE(layout_updated);
-}
-
-// This test doesn't use the helper function to create a link, because it tests intermediate steps
-// and timing corner cases.
-TEST_F(FlatlandTest, ValidChildToParentFlow) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
-
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
-
-  const TransformId kTransformId = 1;
-  const ContentId kLinkId = 2;
-
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kTransformId);
-
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
-
   bool status_updated = false;
   content_link->GetStatus([&](ContentLinkStatus status) {
     ASSERT_EQ(ContentLinkStatus::CONTENT_HAS_PRESENTED, status);
     status_updated = true;
   });
 
-  // The content link status cannot change until both parties have presented -- the parent Flatland
-  // instance must Present() so that the graph is part of the global topology, and the child
-  // Flatland instance must Present() so that CONTENT_HAS_PRESENTED can be true.
-  EXPECT_FALSE(status_updated);
-
-  PRESENT(parent, true);
-  ProcessMainLoop(parent.GetRoot());
+  // The content link status changes as soon as the child presents - the parent does not have to
+  // present.
   EXPECT_FALSE(status_updated);
 
   PRESENT(child, true);
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
   EXPECT_TRUE(status_updated);
 }
 
@@ -1438,7 +1581,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
   CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
 
   // Confirm that the initial logical size is available immediately.
   {
@@ -1450,7 +1593,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1468,7 +1611,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
     graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_FALSE(layout_updated);
   }
 
@@ -1488,7 +1631,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
@@ -1509,7 +1652,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   parent.SetContentOnTransform(kLinkId, kTransformId);
   PRESENT(parent, true);
 
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
 
   // Confirm that the initial layout is the default.
   {
@@ -1521,7 +1664,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1543,7 +1686,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1560,7 +1703,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_FALSE(layout_updated);
   }
 }
@@ -1586,7 +1729,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     });
 
     EXPECT_EQ(0, num_updates);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_EQ(1, num_updates);
   }
 
@@ -1619,7 +1762,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     });
 
     EXPECT_EQ(0, num_updates);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_EQ(1, num_updates);
   }
 
@@ -1636,7 +1779,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   });
 
   EXPECT_EQ(0, num_updates);
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
   EXPECT_EQ(0, num_updates);
 
   // Update the properties twice, once with the old value, once with the new value.
@@ -1652,7 +1795,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
 
   // Confirm that we receive the update.
   EXPECT_EQ(0, num_updates);
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
   EXPECT_EQ(1, num_updates);
 }
 
@@ -1676,7 +1819,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     CreateLink(&parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
     parent.SetContentOnTransform(kLinkIds[i], kTransformIds[i]);
   }
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
 
   const float kDefaultSize = 1.0f;
 
@@ -1690,7 +1833,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1712,7 +1855,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
@@ -1733,7 +1876,7 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
   parent.SetContentOnTransform(kLinkId, kTransformId);
   PRESENT(parent, true);
 
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
 
   // Change the display pixel scale.
   const glm::vec2 new_display_pixel_scale = {0.1f, 0.2f};
@@ -1752,7 +1895,7 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
@@ -1773,7 +1916,7 @@ TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
   parent.SetContentOnTransform(kLinkId, kTransformId);
   PRESENT(parent, true);
 
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
 
   // Change the link size and logical size of the link.
   const Vec2 kNewLinkSize = {2.f, 3.f};
@@ -1801,7 +1944,7 @@ TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
@@ -1822,7 +1965,7 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
   parent.SetContentOnTransform(kLinkId, kTransformId);
   PRESENT(parent, true);
 
-  ProcessMainLoop(parent.GetRoot());
+  UpdateLinks(parent.GetRoot());
 
   // Set a scale on the parent transform.
   const Vec2 scale = {2.f, 3.f};
@@ -1842,7 +1985,7 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1859,7 +2002,7 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
     graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_FALSE(layout_updated);
   }
 
@@ -1880,7 +2023,7 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetRoot());
+    UpdateLinks(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
