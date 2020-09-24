@@ -165,7 +165,9 @@ type Const struct {
 	Type      Type
 	Name      string
 	Value     string
-	Kind      constKind
+
+	// Kind should be default initialized.
+	Kind constKind
 }
 
 func (c Const) isResource() bool {
@@ -183,7 +185,9 @@ type Bits struct {
 	Mask      string
 	MaskName  string
 	Members   []BitsMember
-	Kind      bitsKind
+
+	// Kind should be default initialized.
+	Kind bitsKind
 }
 
 func (b Bits) isResource() bool {
@@ -205,7 +209,9 @@ type Enum struct {
 	Type      string
 	Name      string
 	Members   []EnumMember
-	Kind      enumKind
+
+	// Kind should be default initialized.
+	Kind enumKind
 }
 
 func (e Enum) isResource() bool {
@@ -233,7 +239,9 @@ type Union struct {
 	Result       *Result
 	HasPointer   bool
 	IsResource   bool
-	Kind         unionKind
+
+	// Kind should be default initialized.
+	Kind unionKind
 }
 
 func (u Union) isResource() bool {
@@ -277,9 +285,11 @@ type Table struct {
 	MaxOutOfLine   int
 	HasPointer     bool
 	IsResource     bool
-	Kind           tableKind
 	// Types of the members in ordinal order, "void" for reserved.
 	FrameItems []TableFrameItem
+
+	// Kind should be default initialized.
+	Kind tableKind
 }
 
 func (t Table) isResource() bool {
@@ -321,12 +331,14 @@ type Struct struct {
 	HasPointer    bool
 	IsResource    bool
 	Result        *Result
-	Kind          structKind
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
 	// See the struct template for usage.
 	FullDeclMemcpyCompatibleDeps []string
+
+	// Kind should be default initialized.
+	Kind structKind
 }
 
 func (s Struct) isResource() bool {
@@ -364,7 +376,9 @@ type Protocol struct {
 	ResponseDecoderName string
 	Methods             []Method
 	HasEvents           bool
-	Kind                protocolKind
+
+	// Kind should be default initialized.
+	Kind protocolKind
 }
 
 func (p Protocol) isResource() bool {
@@ -383,7 +397,9 @@ type Service struct {
 	Name        string
 	ServiceName string
 	Members     []ServiceMember
-	Kind        serviceKind
+
+	// Kind should be default initialized.
+	Kind serviceKind
 }
 
 func (s Service) isResource() bool {
