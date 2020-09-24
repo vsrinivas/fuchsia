@@ -297,6 +297,7 @@ template("flutter_dart_component") {
                            [
                              "testonly",
                              "visibility",
+                             "component_name",
                            ])
     deps = _component_deps
     manifest = _merged_manifest
