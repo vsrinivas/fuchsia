@@ -1000,6 +1000,16 @@ config("Wno-conversion") {
   ]
 }
 
+# TODO(fxb/58162): clean up instances of this outside of third party code.
+# This is the same as "Wno-conversion" above but without a visibility list.
+# This in turn allows us to have generated code depend on this config. Having
+# an explicit allowlist for generated code (e.g. fidl_cpp template expansions)
+# is not practical.
+# Please use with care, or not at all.
+config("Wno-conversion-generated") {
+  cflags = [ "-Wno-conversion" ]
+}
+
 config("symbol_visibility_hidden") {
   # Disable libc++ visibility annotations to make sure that the compiler option
   # has effect on symbols defined in libc++ headers. Note that we don't want to

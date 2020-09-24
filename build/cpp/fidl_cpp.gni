@@ -232,6 +232,9 @@ template("fidl_cpp_library") {
     if (defined(invoker.deps)) {
       public_deps += invoker.deps
     }
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion-generated" ]
   }
 }
 
