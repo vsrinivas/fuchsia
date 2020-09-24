@@ -65,7 +65,7 @@ impl Handle {
 
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
-    pub unsafe fn from_raw(raw: sys::zx_handle_t) -> Handle {
+    pub const unsafe fn from_raw(raw: sys::zx_handle_t) -> Handle {
         Handle(raw)
     }
 
@@ -418,12 +418,70 @@ unsafe impl ObjectQuery for HandleBasicInfoQuery {
     type InfoTy = sys::zx_info_handle_basic_t;
 }
 
+/// Handle operation.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[repr(transparent)]
+pub struct HandleOp(sys::zx_handle_op_t);
+
+assoc_values!(HandleOp, [
+    MOVE            = sys::ZX_HANDLE_OP_MOVE;
+    DUPLICATE         = sys::ZX_HANDLE_OP_DUPLICATE;
+]);
+
+/// Operation to perform on handles during write.
+/// Based on zx_handle_disposition_t.
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct HandleDisposition {
+    pub operation: HandleOp,
+    pub handle: Handle,
+    pub rights: Rights,
+    pub object_type: ObjectType,
+    pub result: Status,
+}
+
+impl HandleDisposition {
+    pub unsafe fn into_raw(self) -> sys::zx_handle_disposition_t {
+        sys::zx_handle_disposition_t {
+            operation: self.operation.0,
+            handle: self.handle.into_raw(),
+            rights: self.rights.bits(),
+            type_: self.object_type.0,
+            result: self.result.into_raw(),
+        }
+    }
+}
+
+/// Information on handles that were read.
+/// Based on zx_handle_info_t.
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct HandleInfo {
+    pub handle: Handle,
+    pub object_type: ObjectType,
+    pub rights: Rights,
+}
+
+impl HandleInfo {
+    pub const unsafe fn from_raw(raw: sys::zx_handle_info_t) -> HandleInfo {
+        HandleInfo {
+            handle: Handle::from_raw(raw.handle),
+            object_type: ObjectType(raw.ty),
+            rights: Rights::from_bits_unchecked(raw.rights),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
     // fuchsia_zircon::Vmar that we need to use.
-    use fuchsia_zircon::{AsHandleRef, Channel, HandleBased, ObjectType, Rights, Status, Vmo};
+    use fuchsia_zircon::{
+        AsHandleRef, Channel, Handle, HandleBased, HandleDisposition, HandleInfo, HandleOp,
+        ObjectType, Rights, Status, Vmo,
+    };
+    use fuchsia_zircon_sys as sys;
 
     #[test]
     fn set_get_name() {
@@ -478,5 +536,38 @@ mod tests {
         let info = root_vmar.basic_info().expect("vmar basic_info failed");
         assert_eq!(info.object_type, ObjectType::VMAR);
         assert!(!info.rights.contains(Rights::WAIT));
+    }
+
+    #[test]
+    fn handle_disposition_into_raw() {
+        const RAW_HANDLE: sys::zx_handle_t = 1;
+        let hd = HandleDisposition {
+            operation: HandleOp::MOVE,
+            handle: unsafe { Handle::from_raw(RAW_HANDLE) },
+            rights: Rights::EXECUTE,
+            object_type: ObjectType::VMO,
+            result: Status::OK,
+        };
+        let raw_hd = unsafe { hd.into_raw() };
+        assert_eq!(raw_hd.operation, sys::ZX_HANDLE_OP_MOVE);
+        assert_eq!(raw_hd.handle, RAW_HANDLE);
+        assert_eq!(raw_hd.rights, sys::ZX_RIGHT_EXECUTE);
+        assert_eq!(raw_hd.type_, sys::ZX_OBJ_TYPE_VMO);
+        assert_eq!(raw_hd.result, sys::ZX_OK);
+    }
+
+    #[test]
+    fn handle_info_from_raw() {
+        const RAW_HANDLE: sys::zx_handle_t = 1;
+        let raw_hi = sys::zx_handle_info_t {
+            handle: RAW_HANDLE,
+            ty: sys::ZX_OBJ_TYPE_VMO,
+            rights: sys::ZX_RIGHT_EXECUTE,
+            unused: 128,
+        };
+        let hi = unsafe { HandleInfo::from_raw(raw_hi) };
+        assert_eq!(hi.handle.into_raw(), RAW_HANDLE);
+        assert_eq!(hi.object_type, ObjectType::VMO);
+        assert_eq!(hi.rights, Rights::EXECUTE);
     }
 }
