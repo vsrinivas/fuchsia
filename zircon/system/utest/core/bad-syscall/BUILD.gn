@@ -9,6 +9,8 @@
 # See fxb/36139.                         #
 ##########################################
 
+# for 'platform_enable_user_pci'
+import("//src/devices/bus/drivers/pci/pci.gni")
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
@@ -32,4 +34,8 @@ source_set("bad-syscall") {
     "//zircon/public/lib/syscalls-headers",
     "//zircon/public/lib/zxtest",
   ]
+
+  if (platform_enable_user_pci) {
+    defines = [ "ENABLE_USER_PCI" ]
+  }
 }

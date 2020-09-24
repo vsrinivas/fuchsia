@@ -56,7 +56,7 @@ TEST(BadAccessTest, SyscallNumTest) {
   ASSERT_DEATH(([]() { bad_syscall(0xff00ff0000000010ull); }));
 }
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(ENABLE_USER_PCI)
 TEST(BadAccessTest, PciCfgPioRw) {
   EXPECT_EQ(zx_pci_cfg_pio_rw(get_root_resource(), 0, 0, 0, 0,
                               reinterpret_cast<uint32_t*>(unmapped_addr), 0, true),
