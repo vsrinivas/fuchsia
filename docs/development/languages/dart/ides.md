@@ -3,7 +3,7 @@
 ### Dart SDK
 
 A prebuilt Dart SDK is available for IDE consumption at:
-`third_party/dart/{linux|mac|windows}-x64/bin/dart`.
+`prebuilt/third_party/dart/{linux|mac|windows}-x64/bin/dart`.
 
 ## Visual Studio Code
 
@@ -157,4 +157,4 @@ _See the recommended VS Code options above._
 #### IntelliJ
 
 1.  Open Settings
-1.  Under *Languages & Frameworks* > *Dart*, enter "[YOUR FUCHSIA DIR LOCATION]/third_party/dart/tools/sdks/dart-sdk"
+1.  Under *Languages & Frameworks* > *Dart*, enter "[YOUR FUCHSIA DIR LOCATION]/prebuilt/third_party/dart/{mac,linux}-x64"
