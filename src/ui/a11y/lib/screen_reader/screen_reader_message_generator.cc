@@ -83,6 +83,11 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
       } else if (node->role() == Role::LINK) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_LINK));
+      } else if (node->role() == Role::CHECK_BOX) {
+        auto check_box_description = DescribeCheckBox(node);
+        std::copy(std::make_move_iterator(check_box_description.begin()),
+                  std::make_move_iterator(check_box_description.end()),
+                  std::back_inserter(description));
       } else if (node->role() == Role::SLIDER) {
         // Add the slider's range value to the label utterance, if specified.
         auto& label_utterance = description.back().utterance;
@@ -125,6 +130,34 @@ ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
   return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
                                       {name_value});
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeCheckBox(
+    const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::CHECK_BOX);
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_CHECKBOX, kDefaultDelay));
+  if (node->has_states() && node->states().has_checked_state() &&
+      node->states().checked_state() != fuchsia::accessibility::semantics::CheckedState::NONE) {
+    MessageIds message_id = MessageIds::ELEMENT_NOT_CHECKED;
+    switch (node->states().checked_state()) {
+      case fuchsia::accessibility::semantics::CheckedState::CHECKED:
+        message_id = MessageIds::ELEMENT_CHECKED;
+        break;
+      case fuchsia::accessibility::semantics::CheckedState::UNCHECKED:
+        message_id = MessageIds::ELEMENT_NOT_CHECKED;
+        break;
+      case fuchsia::accessibility::semantics::CheckedState::MIXED:
+        message_id = MessageIds::ELEMENT_PARTIALLY_CHECKED;
+        break;
+      case fuchsia::accessibility::semantics::CheckedState::NONE:
+        // When none is present, return without a description of the state.
+        return description;
+    }
+    description.emplace_back(GenerateUtteranceByMessageId(message_id));
+  }
+  return description;
 }
 
 }  // namespace a11y

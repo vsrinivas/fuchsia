@@ -179,5 +179,76 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeLink) {
   ASSERT_EQ(result[1].utterance.message(), "link");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, NodeCheckBoxWithoutStates) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::CHECK_BOX);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_CHECKBOX),
+                                               "check box");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "check box");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeCheckBoxWithStates) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::CHECK_BOX);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_CHECKBOX),
+                                               "check box");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ELEMENT_CHECKED),
+                                               "checked");
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::ELEMENT_NOT_CHECKED), "not checked");
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::ELEMENT_PARTIALLY_CHECKED), "partially checked");
+  node.mutable_states()->set_checked_state(
+      fuchsia::accessibility::semantics::CheckedState::CHECKED);
+
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 3u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "check box");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "checked");
+
+  node.mutable_states()->set_checked_state(
+      fuchsia::accessibility::semantics::CheckedState::UNCHECKED);
+
+  result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 3u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "check box");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "not checked");
+
+  node.mutable_states()->set_checked_state(fuchsia::accessibility::semantics::CheckedState::MIXED);
+
+  result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 3u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "check box");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "partially checked");
+
+  node.mutable_states()->set_checked_state(fuchsia::accessibility::semantics::CheckedState::NONE);
+
+  result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "check box");
+}
+
 }  // namespace
 }  // namespace accessibility_test
