@@ -6,10 +6,14 @@ use anyhow::Context as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn cobalt_metrics() -> Result<(), anyhow::Error> {
-    // NB: netstack aggregates observations and logs them to cobalt once per minute.  We wait for
-    // calls to LogCobaltEvents to be made, so this test takes about 180 seconds to run at the time
-    // of writing. If you're modifying this test and have the ability to change the netstack
-    // implementation, reducing that log period will improve the cycle time of this test.
+    // NB: netstack aggregates observations and logs them to cobalt once per
+    // minute. We wait for calls to LogCobaltEvents to be made, so this test
+    // takes about 180 seconds to run at the time of writing. If you're
+    // modifying this test and have the ability to change the netstack
+    // implementation, reducing that log period will improve the cycle time of
+    // this test. The test assumes, nonetheless, a large enough cobalt logging
+    // period so that the test always advances faster than the cobalt client in
+    // Netstack produces new sets of logs.
 
     // netstack is launched here so that watch_logs(networking_metrics::PROJECT_ID, ...)
     // can be called before the first socket is created.

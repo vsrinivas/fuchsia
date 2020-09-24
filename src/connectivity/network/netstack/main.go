@@ -318,7 +318,7 @@ func Main() {
 	statsObserver.init(func() {
 		cobaltClient.Register(&statsObserver)
 	})
-	go statsObserver.run(context.Background(), time.Minute, &ns.stats, ns.stack)
+	go statsObserver.run(context.Background(), cobaltStatsObserverTickerPeriod, &ns.stats, ns.stack)
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{

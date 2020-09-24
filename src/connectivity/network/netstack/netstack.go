@@ -53,6 +53,9 @@ const (
 	dhcpAcquisition    = 60 * time.Second
 	dhcpBackoff        = 1 * time.Second
 	dhcpRetransmission = 4 * time.Second
+
+	cobaltClientTickerPeriod        = 1 * time.Minute
+	cobaltStatsObserverTickerPeriod = 1 * time.Minute
 )
 
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
@@ -106,7 +109,7 @@ func (c *cobaltClient) Collect() []cobalt.CobaltEvent {
 }
 
 func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface) error {
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(cobaltClientTickerPeriod)
 	defer ticker.Stop()
 
 	ids := func(events []cobalt.CobaltEvent) []uint32 {
@@ -123,6 +126,9 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 			return ctx.Err()
 		case <-ticker.C:
 			events := c.Collect()
+			if len(events) == 0 {
+				continue
+			}
 			if status, err := cobaltLogger.LogCobaltEvents(context.Background(), events); err != nil {
 				_ = syslog.Warnf("cobaltLogger.LogCobaltEvents(_, MetricId: %d) failed: %s", ids(events), err)
 			} else if status != cobalt.StatusOk {
