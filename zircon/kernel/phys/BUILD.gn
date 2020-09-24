@@ -6,15 +6,12 @@
 
 # TODO(54160): Keep in sync with BUILD.zircon.gn
 
+import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
 
 if (current_toolchain == default_toolchain) {
-  foreach(cpu,
-          [
-            "x64",
-            "arm64",
-          ]) {
+  foreach(cpu, standard_fuchsia_cpus) {
     kernel_cpu = cpu
     if (cpu == "x64") {
       kernel_cpu = "x86"

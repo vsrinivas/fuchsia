@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/zircon/standard.gni")
+
 if (current_toolchain == default_toolchain) {
   # In the default toolchain, simply define the bootloader toolchains
   # to be used to build Gigaboot as a Win32 PE32+ executable.
@@ -37,12 +39,10 @@ if (current_toolchain == default_toolchain) {
   }
 
   # These toolchains will be used to build the EFI bootloader.
-  zircon_efi_toolchain("efi_x64") {
-    cpu = "x64"
-  }
-
-  zircon_efi_toolchain("efi_arm64") {
-    cpu = "arm64"
+  foreach(cpu, standard_fuchsia_cpus) {
+    zircon_efi_toolchain("efi_$cpu") {
+      cpu = "$cpu"
+    }
   }
 }
 

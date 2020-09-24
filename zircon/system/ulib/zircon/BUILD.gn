@@ -8,16 +8,13 @@
 # But the vDSO needs to be able to use some other library code defined
 # elsewhere.
 
+import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
 
 if (current_toolchain == default_toolchain) {
   # Define the special toolchain itself only in the default toolchain.
-  foreach(cpu,
-          [
-            "x64",
-            "arm64",
-          ]) {
+  foreach(cpu, standard_fuchsia_cpus) {
     zircon_toolchain_suite("user.vdso_$cpu") {
       cpu = cpu
       os = current_os

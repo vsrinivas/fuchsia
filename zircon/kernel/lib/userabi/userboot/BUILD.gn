@@ -6,17 +6,14 @@
 
 # TODO(54160) Keep in sync with BUILD.zircon.gn
 
+import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
 
 # userboot gets its own toolchain for its special build requirements.
 if (current_toolchain == default_toolchain) {
   # Define the special toolchain itself only in the default toolchain.
-  foreach(cpu,
-          [
-            "arm64",
-            "x64",
-          ]) {
+  foreach(cpu, standard_fuchsia_cpus) {
     zircon_toolchain_suite("userboot_$cpu") {
       cpu = cpu
       os = "fuchsia"
