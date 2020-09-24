@@ -146,7 +146,8 @@ fuchsia_test_package("audio-core-api-tests") {
   deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]
 }
 
-# These tests must run on real hardware because they depend on real time.
+# These tests must run on real hardware because they have hard real-time restraints.
+# Emulators are too slow.
 fuchsia_test_package("audio-core-api-pipeline-tests") {
   test_components = [
     ":audio-capturer-pipeline-test",

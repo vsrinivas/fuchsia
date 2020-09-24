@@ -5,7 +5,6 @@
 group("test") {
   testonly = true
   deps = [
-    "api:audio-core-api-pipeline-tests",
     "api:audio-core-api-tests",
     "api:audio-core-with-test-effects",
     "api/testdata:tests",
@@ -13,4 +12,9 @@ group("test") {
     "//src/media/audio/audio_core:audio-core-for-test",
     "//src/media/audio/virtual_audio_service:virtual-audio-service-for-test",
   ]
+  # These tests must run in release builds because they have hard real-time restraints.
+  # Debug builds are too slow.
+  if (!is_debug) {
+    deps += [ "api:audio-core-api-pipeline-tests" ]
+  }
 }
