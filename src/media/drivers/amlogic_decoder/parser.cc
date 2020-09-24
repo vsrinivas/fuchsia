@@ -10,6 +10,7 @@
 
 #include "decoder_core.h"
 #include "decoder_instance.h"
+#include "src/media/drivers/amlogic_decoder/memory_barriers.h"
 #include "stream_buffer.h"
 #include "util.h"
 
@@ -109,6 +110,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
 
     memcpy(io_buffer_virt(&search_pattern_), input_search_pattern, kSearchPatternSize);
     io_buffer_cache_flush(&search_pattern_, 0, kSearchPatternSize);
+    BarrierAfterFlush();
   }
 
   // This check exists so we can call InitializeEsParser() more than once, when

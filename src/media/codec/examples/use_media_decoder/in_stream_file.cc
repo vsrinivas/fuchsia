@@ -78,3 +78,16 @@ zx_status_t InStreamFile::ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t
   // InStream::ReadBytes() takes care of advancing cursor_position_.
   return ZX_OK;
 }
+
+zx_status_t InStreamFile::ResetToStartInternal(zx::time just_fail_deadline) {
+  // This sub-class doesn't envorce just_fail_deadline for now.
+  (void)just_fail_deadline;
+
+  file_.seekg(0, std::ios::beg);
+  if (!file_) {
+    Exit("file_.seekg(0, beg) failed");
+  }
+  cursor_position_ = 0;
+
+  return ZX_OK;
+}

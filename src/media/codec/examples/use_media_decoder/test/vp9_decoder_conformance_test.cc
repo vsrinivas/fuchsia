@@ -41,5 +41,5 @@ constexpr char kI420Md5FilePath[] = "/pkg/data/vp9.md5";
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  decoder_conformance_test(argc, argv, use_vp9_decoder, kInputFilePath, kI420Md5FilePath);
+  return decoder_conformance_test(argc, argv, use_vp9_decoder, kInputFilePath, kI420Md5FilePath);
 }

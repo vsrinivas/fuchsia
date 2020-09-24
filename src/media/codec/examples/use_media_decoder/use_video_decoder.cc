@@ -17,6 +17,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/time.h>
 
 #include <thread>
 #include <vector>
@@ -519,9 +520,12 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
       Exit("Frame header truncated.");
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == sizeof(frame_header));
-    LOGF("input stream: %" PRIu64 " stream_frame_ordinal: %" PRId64 " input_pts_counter: %" PRIu64
-         " frame_header.size_bytes: %u",
-         stream_lifetime_ordinal, stream_frame_ordinal, input_pts_counter, frame_header.size_bytes);
+    if (params_.test_params->per_frame_debug_output) {
+      LOGF("input stream: %" PRIu64 " stream_frame_ordinal: %" PRId64 " input_pts_counter: %" PRIu64
+           " frame_header.size_bytes: %u",
+           stream_lifetime_ordinal, stream_frame_ordinal, input_pts_counter,
+           frame_header.size_bytes);
+    }
     if (!queue_access_unit(frame_header.size_bytes)) {
       // can be fine in case of vp9 input fuzzing test
       break;
@@ -687,6 +691,8 @@ void VideoDecoderRunner::Run() {
     // packets in between since that's not compliant with the protocol rules.
     std::shared_ptr<const fuchsia::media::StreamOutputFormat> prev_stream_format;
     const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
+    std::optional<zx::time> frame_zero_time;
+    uint64_t frame_index = 0;
     while (true) {
       VLOGF("BlockingGetEmittedOutput()...");
       std::unique_ptr<CodecOutput> output = codec_client_->BlockingGetEmittedOutput();
@@ -735,11 +741,13 @@ void VideoDecoderRunner::Run() {
       // is ok with that.  In addition, cleanup can run after codec_client is
       // gone, since we don't block return from use_video_decoder() on Scenic
       // actually freeing up all previously-queued frames.
-      auto cleanup = fit::defer([this, packet_header = fidl::Clone(packet.header())]() mutable {
-        // Using an auto call for this helps avoid losing track of the
-        // output_buffer.
-        codec_client_->RecycleOutputPacket(std::move(packet_header));
-      });
+      auto cleanup =
+          fit::defer([this, packet_header = fidl::Clone(packet.header()), &frame_index]() mutable {
+            // Using an auto call for this helps avoid losing track of the
+            // output_buffer.
+            codec_client_->RecycleOutputPacket(std::move(packet_header));
+            ++frame_index;
+          });
       std::shared_ptr<const fuchsia::media::StreamOutputFormat> format = output->format();
 
       if (!packet.has_buffer_index()) {
@@ -844,6 +852,21 @@ void VideoDecoderRunner::Run() {
           }
           default:
             Exit("fourcc != NV12 && fourcc != YV12");
+        }
+      }
+
+      if (frame_index == 0) {
+        ZX_ASSERT(!frame_zero_time);
+        frame_zero_time.emplace(zx::clock::get_monotonic());
+      }
+      if (params_.test_params->print_fps) {
+        zx::time now = zx::clock::get_monotonic();
+        zx::duration duration = now - frame_zero_time.value();
+        if (frame_index != 0 && frame_index % params_.test_params->print_fps_modulus == 0) {
+          printf("frame_index: %" PRIu64 " fps: %g\n", frame_index,
+                 static_cast<double>(frame_index) * 1000000.0 /
+                     static_cast<double>(duration.to_usecs()));
+          fflush(nullptr);
         }
       }
 

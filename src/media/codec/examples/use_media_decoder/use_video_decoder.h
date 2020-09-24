@@ -85,6 +85,19 @@ struct UseVideoDecoderTestParams final {
     }
     ZX_ASSERT(max_num_reorder_frames_threshold >= 0);
 
+    if (print_fps != kDefaultPrintFps) {
+      printf("print_fps: %u\n", print_fps);
+    }
+
+    if (print_fps_modulus != kDefaultPrintFpsModulus) {
+      printf("print_fps_modulus: %" PRIu64 "\n", print_fps_modulus);
+    }
+    ZX_ASSERT(print_fps_modulus != 0);
+
+    if (per_frame_debug_output != kDefaultPerFrameDebugOutput) {
+      printf("per_frame_debug_output: %u", per_frame_debug_output);
+    }
+
     magic_validated_ = kPrivateMagicValidated;
   }
 
@@ -117,6 +130,9 @@ struct UseVideoDecoderTestParams final {
   //
   // By setting this to an even number larger than 2, some streams don't get flushed, which allows a
   // test to cover that discard doesn't cause problems.
+  //
+  // The hash only pays attention to the frames from streams whose stream_lifetime_ordinal %
+  // keep_stream_modulo == 0.
   //
   // By default every stream is flushed.
   static constexpr uint64_t kDefaultKeepStreamModulo = 2;
@@ -151,6 +167,17 @@ struct UseVideoDecoderTestParams final {
   static constexpr int64_t kDefaultMaxNumReorderFramesThreshold =
       std::numeric_limits<uint32_t>::max();
   int64_t max_num_reorder_frames_threshold = kDefaultMaxNumReorderFramesThreshold;
+
+  // If true, print the frames-per-second each print_fps_modulus frames.
+  static constexpr bool kDefaultPrintFps = false;
+  bool print_fps = kDefaultPrintFps;
+
+  // If print_fps is true, print the frames-per-second each print_fps_modulus frames.
+  static constexpr uint64_t kDefaultPrintFpsModulus = 1;
+  uint64_t print_fps_modulus = kDefaultPrintFpsModulus;
+
+  static constexpr bool kDefaultPerFrameDebugOutput = true;
+  bool per_frame_debug_output = kDefaultPerFrameDebugOutput;
 
  private:
   // Client code should not exploit knowledge of this value, and should not directly initialize or

@@ -32,7 +32,6 @@ std::optional<InternalBuffer> HevcDec::LoadFirmwareToBuffer(const uint8_t* data,
   auto buffer = create_result.take_value();
   memcpy(buffer.virt_base(), data, std::min(len, kFirmwareSize));
   buffer.CacheFlush(0, kFirmwareSize);
-  BarrierAfterFlush();
   return std::move(buffer);
 }
 
@@ -106,14 +105,42 @@ void HevcDec::PowerOn() {
     kG12xXtal = 7,  // 24 MHz
   };
 
-  // Pick 500 MHz. The maximum frequency used in linux is 648 MHz, but that
-  // requires using GP0, which is already being used by the GPU.
-  // The linux driver also uses 200MHz in some circumstances for videos <=
+  // Pick 285.7 MHz for now.
+  //
+  // Repro runs for incorrect output pixels were done using this file:
+  // Profile_0_8bit/sub8X8/grass_1_640X384_fr30_bd8_sub8X8_l21.webm.ivf
+  // 640x384 luma dimensions, 300 frames.
+  //
+  // At 400 MHz on sherlock, one repro run so far:
+  // Bad output seen after 73925 iterations (73925*300 frames).
+  // Kept going until 79401 with no more bad output until network dropped.
+  //
+  // At 500 MHz on sherlock, a few repro runs so far:
+  // Two repro runs with bad output at around 500 iterations.
+  // One repro run with bad output at around 1600 iterations.
+  //
+  // At 285.7 MHz on sherlock, a few repro runs so far:
+  // A few runs with zero bad output reaching thousands or tens of thousands of
+  // iterations without bad output, but unfortunately so far the network has dropped before getting
+  // a very large number of iterations.
+  //
+  // So for now we're picking 285.7 since it should be fast enough for now, at ~136 fps observed at
+  // 1080p (Big Buck Bunny trailer, decoded repeatedly in a loop, without computing output hash),
+  // since 285.7 MHz has yet to emit incorrect output pixels in any repro run.
+  //
+  // It's unclear (to me) whether we could run faster without incorrect output pixels if we adjusted
+  // voltage settings, or if there's some other HW glitch mitigation we're missing in the Fuchsia
+  // driver(s).
+  //
+  // For VP9, we haven't yet determined if the incorrect output pixels are visually noticable.
+  //
+  // The maximum frequency used in linux is 648 MHz, but that requires using GP0, which is already
+  // being used by the GPU. The linux driver also uses 200MHz in some circumstances for videos <=
   // 1080p30.
   uint32_t clock_sel =
       (owner_->device_type() == DeviceType::kG12A || owner_->device_type() == DeviceType::kG12B)
-          ? kG12xFclkDiv4
-          : kGxmFclkDiv4;
+          ? kG12xFclkDiv7
+          : kGxmFclkDiv7;
 
   auto clock_cntl = HhiHevcClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(clock_sel);
   // GXM HEVC doesn't have a front half.

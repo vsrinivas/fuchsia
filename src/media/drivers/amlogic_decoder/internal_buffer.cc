@@ -116,6 +116,9 @@ void InternalBuffer::CacheFlushPossibleInvalidate(size_t offset, size_t length, 
   if (is_secure_) {
     return;
   }
+  if (invalidate) {
+    BarrierBeforeInvalidate();
+  }
   if (is_mapping_needed_) {
     ZX_DEBUG_ASSERT(virt_base_);
     status = zx_cache_flush(virt_base_ + offset, length,

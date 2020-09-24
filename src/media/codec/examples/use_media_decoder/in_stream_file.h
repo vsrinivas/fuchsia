@@ -20,6 +20,8 @@ class InStreamFile : public InStream {
   zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
                                 uint8_t* buffer_out, zx::time deadline) override;
 
+  zx_status_t ResetToStartInternal(zx::time just_fail_deadline) override;
+
   std::string input_file_name_;
   std::ifstream file_;
 };

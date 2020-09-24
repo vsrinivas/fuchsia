@@ -497,6 +497,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
   ZX_ASSERT(owner_->IsDecoderCurrent(this));
   ZX_DEBUG_ASSERT(valid_frames_count_ == 0);
   uint32_t frame_vmo_bytes = stride * coded_height * 3 / 2;
+  BarrierBeforeInvalidate();
   for (uint32_t i = 0; i < frames.size(); i++) {
     auto video_frame = std::make_shared<VideoFrame>();
 
@@ -541,11 +542,11 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
       }
     }
 
-    io_buffer_cache_flush(&video_frame->buffer, 0, io_buffer_size(&video_frame->buffer, 0));
+    io_buffer_cache_flush_invalidate(&video_frame->buffer, 0,
+                                     io_buffer_size(&video_frame->buffer, 0));
     frames_[i]->on_deck_frame = std::move(video_frame);
   }
   valid_frames_count_ = frames.size();
-
   BarrierAfterFlush();
 
   ZX_DEBUG_ASSERT(waiting_for_new_frames_);
@@ -908,7 +909,8 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
         DECODE_ERROR("Couldn't map compressed frame data: %d", status);
         return;
       }
-      io_buffer_cache_flush(&current_frame_->compressed_data, 0, frame_buffer_size);
+      BarrierBeforeInvalidate();
+      io_buffer_cache_flush_invalidate(&current_frame_->compressed_data, 0, frame_buffer_size);
       BarrierAfterFlush();
     }
 
@@ -928,7 +930,6 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
         mmu_data[i] = current_frame_->compressed_data.phys_list[i] >> 12;
       }
       working_buffers_.frame_map_mmu.buffer().CacheFlush(0, frame_count * 4);
-      BarrierAfterFlush();
     }
   }
 
@@ -1087,7 +1088,8 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   }
 
   HardwareRenderParams params;
-  BarrierBeforeInvalidate();
+  // BarrierBeforeInvalidate() and BarrierAfterFlush() are handled within
+  // CacheFlushInvalidate():
   working_buffers_.rpm.buffer().CacheFlushInvalidate(0, sizeof(HardwareRenderParams));
   uint16_t* input_params = reinterpret_cast<uint16_t*>(working_buffers_.rpm.buffer().virt_base());
 
@@ -1144,6 +1146,24 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   if (!FindNewFrameBuffer(&params, params_checked_previously)) {
     return;
   }
+
+  // We invalidate here just in case another participant is somehow creating dirty cache lines.  If
+  // the participant is doing that only while the frame isn't being written to by HW, and the data
+  // in the CPU cache remains equal to what's in RAM, then the harm is only the need for this
+  // invalidate.  If the participant is creating such cache lines while the frame is also being
+  // written by HW, then corrupted/invalid decode is possible; participants should not do that.
+  //
+  // Consumers should never write to frames at any time.  Frames can be used as reference frames
+  // while simultaneously downstream for display, so writes to frames (of non-equal data especially)
+  // can corrupt the decode of other frames.
+  //
+  // TODO(dustingreen): Audit sysmem initiators for attenuation of write right for consumer
+  // participants that should be read-only, which may remove any need for this invalidate.  The
+  // invalidate after frame decode is still necessary regardless.
+  BarrierBeforeInvalidate();
+  io_buffer_cache_flush_invalidate(&current_frame_->frame->buffer, 0,
+                                   io_buffer_size(&current_frame_->frame->buffer, 0));
+  BarrierAfterFlush();
 
   last_frame_data_ = current_frame_data_;
   // See comments about stream_offset above. Multiple frames will return the
@@ -1242,7 +1262,6 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     return false;
   }
 
-  // If !is_current_output_buffer_collection_usable_, then we don't support dynamic dimensions.
   bool buffers_allocated = !!frames_[0]->frame || !!frames_[0]->on_deck_frame;
   // For VP9 we have kMinFrames and kMaxFrames as the min/max bounds on # of frames the decoder is
   // able/willing to handle/track, and those constants are completely independent of any information
@@ -1415,7 +1434,6 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     }
     current_mpred_buffer_->mv_mpred_buffer.emplace(internal_buffer.take_value());
     current_mpred_buffer_->mv_mpred_buffer->CacheFlushInvalidate(0, rounded_up_size);
-    BarrierAfterFlush();
   }
 
   return true;

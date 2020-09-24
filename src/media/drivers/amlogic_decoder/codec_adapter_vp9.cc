@@ -12,6 +12,7 @@
 #include "device_ctx.h"
 #include "hevcdec.h"
 #include "pts_manager.h"
+#include "src/media/drivers/amlogic_decoder/memory_barriers.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
 
@@ -394,9 +395,11 @@ void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   // invalidate call here instead of two with no downsides.
   //
   // TODO(dustingreen): Skip this when the buffer isn't map-able.
+  BarrierBeforeInvalidate();
   io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
   io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                    frame->stride * frame->coded_height / 2);
+  BarrierAfterFlush();
 
   uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
   const CodecBuffer* buffer = frame->codec_buffer;
