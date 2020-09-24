@@ -23,9 +23,8 @@ group("dart_unittests") {
   _flutter_tester_tests = []
   if (host_os != "mac") {
     _flutter_tester_tests += [
-      # TODO(fxb/54945): Temporarily disable tests
-      #"simple_browser:simple_browser_unittests($host_toolchain)",
-      #"terminal_settings:terminal_settings_unittests($host_toolchain)",
+      "simple_browser:simple_browser_unittests($host_toolchain)",
+      "terminal_settings:terminal_settings_unittests($host_toolchain)",
     ]
   }
 

@@ -94,10 +94,13 @@ flutter_test("simple_browser_unittests") {
 
   deps = [
     ":simple_browser_dart_library",
+    "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.web",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
+    "//topaz/public/dart/fuchsia_logger",
   ]
 }
 

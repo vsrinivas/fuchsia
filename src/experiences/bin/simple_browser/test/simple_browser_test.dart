@@ -40,10 +40,7 @@ void main() {
     final app = App(model);
 
     await tester.pumpWidget(app);
-
-    // to resolve the FutureBuilder in the App widget.
-    await tester.pumpWidget(app);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
         find.byWidgetPredicate(

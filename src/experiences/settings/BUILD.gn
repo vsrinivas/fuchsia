@@ -26,8 +26,7 @@ group("dart_unittests") {
   if (host_os != "mac") {
     _flutter_tester_tests += [
       "//src/experiences/settings/bin:settings_tests($host_toolchain)",
-      #TODO(fxb/54945) Temporarly disable test
-      #"//src/experiences/settings/lib/widgets:dart_widget_tests($host_toolchain)",
+      "//src/experiences/settings/lib/widgets:dart_widget_tests($host_toolchain)",
     ]
   }
 

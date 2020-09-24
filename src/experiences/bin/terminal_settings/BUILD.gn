@@ -36,6 +36,7 @@ flutter_test("terminal_settings_unittests") {
 
   deps = [
     ":terminal_settings_dart_library",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/test",
   ]
