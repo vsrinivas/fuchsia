@@ -21,6 +21,7 @@ zx_library("c") {
   deps = [
     ":exit",
     "$zx/system/ulib/zx-panic-libc:as_source",
+    "$zx/third_party/scudo",
     "$zx/third_party/ulib/musl",
     "sanitizers",
     "setjmp",

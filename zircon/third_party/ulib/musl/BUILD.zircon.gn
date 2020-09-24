@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  malloc = "scudo"
-}
-
 config("headers") {
   visibility = [
     "$zx/system/ulib/c:*",
@@ -21,7 +17,7 @@ config("headers") {
 group("musl_internal") {
   visibility = [
     "$zx/system/ulib/c/*",
-    "$zx/third_party/ulib/$malloc:*",
+    "$zx/third_party/scudo/*",
     "./*",
   ]
   public_deps = [
@@ -41,7 +37,6 @@ group("musl_internal_testing") {
   visibility = [
     "$zx/system/ulib/c/*",
     "$zx/system/utest/libc:*",
-    "$zx/third_party/ulib/$malloc:*",
     "./*",
   ]
   public_deps = [ ":musl_internal" ]
@@ -80,7 +75,6 @@ if (toolchain.base_environment == "user") {
   group("musl") {
     visibility = [ "$zx/system/ulib/c:*" ]
     deps = [
-      "$zx/third_party/ulib/$malloc",
       "ldso",
       "pthread",
       "src/complex",

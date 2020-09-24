@@ -232,6 +232,7 @@ group("tests") {
     "//zircon/system/utest/trace:trace-bootfs-test",
     "//zircon/system/utest/trace:trace-static-engine-bootfs-test",
     "//zircon/system/utest/utc-procargs:utc-procargs-bootfs-test",
+    "//zircon/third_party/scudo:tests",
     "//zircon/third_party/ulib/linenoise/test:linenoise-test-bootfs-test",
   ]
 

@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia)
+
+scudo_sources = []
+foreach(file,
+        [
+          "checksum.cpp",
+          "common.cpp",
+          "crc32_hw.cpp",
+          "flags.cpp",
+          "flags_parser.cpp",
+          "fuchsia.cpp",
+          "release.cpp",
+          "report.cpp",
+          "string_utils.cpp",
+          "wrappers_c.cpp",
+
+          # "wrappers_cpp.cpp", TODO(mcgrathr): maybe use this later
+        ]) {
+  scudo_sources += [ "src/$file" ]
+}

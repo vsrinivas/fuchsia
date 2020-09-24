@@ -1,30 +1,28 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("scudo_sources.gni")
+
 source_set("scudo") {
+  sources = scudo_sources
+
+  include_dirs = [ "src/include" ]
+
   deps = [
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
-  sources = [
-    "checksum.cc",
-    "common.cc",
-    "crc32_hw.cc",
-    "flags.cc",
-    "flags_parser.cc",
-    "fuchsia.cc",
-    "report.cc",
-    "string_utils.cc",
-    "wrappers_c.cc",
-  ]
+
+  # Tell the code to use "scudo_platform_tls_slot.h" and where to find it.
+  # This uses libc internals, so it needs access to the internal headers.
+  defines = [ "SCUDO_HAS_PLATFORM_TLS_SLOT=1" ]
+  include_dirs += [ "." ]
+  deps += [ "$zx/third_party/ulib/musl:musl_internal" ]
 
   # This library is linked into libc, which is used by libfuzzer.
   # Don't instrument it to avoid getting noise in code coverage.
   # TODO(25073): Once a cleaner solution is found, remove this.
   configs += [ "$zx_build_config:no_fuzzer" ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }
