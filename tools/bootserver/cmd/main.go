@@ -21,8 +21,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
-
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -64,7 +62,7 @@ var (
 	vbmetaa                        string
 	vbmetab                        string
 	vbmetar                        string
-	authorizedKeys                 string
+	authorizedKeysFile             string
 	failFast                       bool
 	useNetboot                     bool
 	useTftp                        bool
@@ -103,7 +101,7 @@ func init() {
 	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
 
 	flag.BoolVar(&allowZedbootVersionMismatch, "allow-zedboot-version-mismatch", false, "warn on zedboot version mismatch rather than fail")
-	flag.StringVar(&authorizedKeys, "authorized-keys", "", "use the supplied file as an authorized_keys file")
+	flag.StringVar(&authorizedKeysFile, "authorized-keys", "", "use the supplied file as an authorized_keys file")
 	flag.StringVar(&boardName, "board_name", "", "name of the board files are meant for")
 	flag.BoolVar(&bootOnce, "1", true, "only boot once, then exit")
 	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
@@ -279,7 +277,7 @@ func populateReaders(imgs []bootserver.Image) (func() error, error) {
 	return closeFunc, nil
 }
 
-func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string, signers []ssh.Signer) error {
+func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string, authorizedKeys []byte) error {
 	addr, msg, conn, err := netutil.GetAdvertisement(ctx, nodename)
 	if err != nil {
 		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
@@ -314,7 +312,7 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 
 	logger.Infof(ctx, "Proceeding with nodename %s", msg.Nodename)
 
-	if err := bootserver.Boot(ctx, client, imgs, cmdlineArgs, signers); err != nil {
+	if err := bootserver.Boot(ctx, client, imgs, cmdlineArgs, authorizedKeys); err != nil {
 		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
 	}
 	return nil
@@ -368,22 +366,17 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 		return fmt.Errorf("only one of allow-zedboot-version-mismatch and fail-fast-if-version-mismatch can be true")
 	}
 
-	var signers []ssh.Signer
-	if authorizedKeys != "" {
-		p, err := ioutil.ReadFile(authorizedKeys)
+	var authorizedKeys []byte
+	if authorizedKeysFile != "" {
+		authorizedKeys, err = ioutil.ReadFile(authorizedKeysFile)
 		if err != nil {
-			return fmt.Errorf("could not read SSH key file %q: %v", authorizedKeys, err)
+			return fmt.Errorf("could not read SSH key file %q: %v", authorizedKeysFile, err)
 		}
-		signer, err := ssh.ParsePrivateKey(p)
-		if err != nil {
-			return err
-		}
-		signers = append(signers, signer)
 	}
 
 	// Keep discovering and booting devices.
 	for {
-		err = connectAndBoot(ctx, n, imgs, cmdlineArgs, signers)
+		err = connectAndBoot(ctx, n, imgs, cmdlineArgs, authorizedKeys)
 		if !(err == nil || errors.Is(err, errIncompleteTransfer)) {
 			// Exit early for any error other than an errIncompleteTransfer.
 			return err

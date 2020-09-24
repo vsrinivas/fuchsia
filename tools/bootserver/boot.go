@@ -24,7 +24,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -170,7 +169,7 @@ func downloadAndOpenImage(ctx context.Context, dest string, img Image) (*os.File
 
 // Prepares and transfers images to the given client.
 // Returns whether the images contained a RAM kernel or not, or error on failure.
-func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) (bool, error) {
+func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, authorizedKeys []byte) (bool, error) {
 	var files []*netsvcFile
 	if len(cmdlineArgs) > 0 {
 		var buf bytes.Buffer
@@ -213,12 +212,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 	}
 
 	// Convert the authorized keys into a netsvc file.
-	if len(signers) > 0 {
-		var authorizedKeys []byte
-		for _, s := range signers {
-			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
-			authorizedKeys = append(authorizedKeys, authorizedKey...)
-		}
+	if len(authorizedKeys) > 0 {
 		reader := bytes.NewReader(authorizedKeys)
 		authorizedKeysFile, err := newNetsvcFile(constants.AuthorizedKeysNetsvcName, reader, reader.Size())
 		if err != nil {
@@ -296,8 +290,8 @@ func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
 }
 
 // Boot prepares and boots a device at the given IP address.
-func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) error {
-	hasRAMKernel, err := transferImages(ctx, t, imgs, cmdlineArgs, signers)
+func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, authorizedKeys []byte) error {
+	hasRAMKernel, err := transferImages(ctx, t, imgs, cmdlineArgs, authorizedKeys)
 	if err != nil {
 		return err
 	}

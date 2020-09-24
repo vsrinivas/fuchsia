@@ -182,16 +182,21 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		}
 	}()
 
-	// Get ssh signers.
+	// Get authorized keys from the ssh signers.
 	// We cannot have signers in netboot because there is no notion
 	// of a hardware backed key when you are not booting from disk
-	var signers []ssh.Signer
+	var authorizedKeys []byte
 	if !t.opts.Netboot {
-		signers = t.signers
+		if len(t.signers) > 0 {
+			for _, s := range t.signers {
+				authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
+				authorizedKeys = append(authorizedKeys, authorizedKey...)
+			}
+		}
 	}
 
 	// Boot Fuchsia.
-	return bootserver.Boot(ctx, t.Tftp(), images, args, signers)
+	return bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys)
 }
 
 // Stop stops the device.
