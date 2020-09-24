@@ -428,9 +428,7 @@ group("sbase") {
 
 # WARNING: Known to topaz & vendor.
 group("scenic") {
-  public_deps = [
-    "//src/ui/scenic:runtime",
-  ]
+  public_deps = [ "//src/ui/scenic:runtime" ]
 }
 
 group("sched") {
@@ -531,6 +529,5 @@ group("wlan_drivers") {
     "//garnet/packages/prod:broadcom",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
-    "//garnet/packages/prod:wifi_intel",
   ]
 }
