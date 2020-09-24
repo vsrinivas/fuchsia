@@ -156,6 +156,11 @@ test_package("pkg-resolver-unit-tests") {
       name = "pkg_resolver_bin_test"
       dest = "pkg-resolver-bin-test"
       environments = basic_envs
+
+      # TODO(60612): Remove this override.
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

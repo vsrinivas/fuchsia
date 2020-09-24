@@ -16,6 +16,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
