@@ -20,7 +20,7 @@ test("kcounter") {
   deps = [
     "//sdk/lib/fdio",
     "//src/zircon/bin/kcounter:cmdline",
-    "//zircon/public/lib/counters",
+    "//zircon/kernel/lib/counters",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",

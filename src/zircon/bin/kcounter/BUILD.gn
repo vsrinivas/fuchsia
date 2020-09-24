@@ -24,7 +24,7 @@ executable("kcounter") {
   deps = [
     ":cmdline",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/counters",
+    "//zircon/kernel/lib/counters",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",

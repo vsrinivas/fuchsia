@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("lazy_init") {
   sdk = "source"
   sdk_headers = [ "lib/lazy_init/lazy_init.h" ]
+  sdk_migrated = true
   sources = []
   kernel = true
   static = true

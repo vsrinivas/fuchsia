@@ -16,16 +16,12 @@ assert(current_cpu != "")
 group("ulib") {
   testonly = true
   deps = [
-    "$zx/kernel/lib/counters",
     "c",
     "c:crt1",
-    "ddk-platform-defs",
     "elf-psabi",
     "elfload",
     "explicit-memory",
-    "lazy_init",
     "ldmsg",
-    "lockdep",
     "ram-crashlog",
     "region-alloc",
     "runtime",

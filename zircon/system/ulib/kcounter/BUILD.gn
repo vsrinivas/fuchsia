@@ -24,7 +24,7 @@ zx_library("kcounter") {
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/counters",
+    "//zircon/kernel/lib/counters",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",

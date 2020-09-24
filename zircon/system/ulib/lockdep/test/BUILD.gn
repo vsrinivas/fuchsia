@@ -33,9 +33,9 @@ test("lockdep-test") {
   sources = [ "lock_dep_test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/lockdep",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/lockdep",
   ]
   configs += [ ":unused" ]
 }

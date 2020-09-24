@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("lockdep") {
   sdk = "source"
   sdk_headers = [
@@ -18,6 +20,7 @@ zx_library("lockdep") {
     "lockdep/runtime_api.h",
     "lockdep/thread_lock_state.h",
   ]
+  sdk_migrated = true
   kernel = true
   static = true
   sources = []
