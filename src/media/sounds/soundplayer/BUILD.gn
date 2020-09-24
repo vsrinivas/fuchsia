@@ -1,12 +1,10 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/config.gni")
 import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 package("soundplayer") {
   deps = [ ":bin" ]
@@ -24,39 +22,50 @@ package("soundplayer") {
   ]
 }
 
-rustc_binary("bin") {
-  name = "soundplayer"
-  edition = "2018"
-  with_unit_tests = true
+executable("bin") {
+  output_name = "soundplayer"
+
+  sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
+    ":source",
+    "//sdk/fidl/fuchsia.media.sounds",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
 
-  test_deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//third_party/rust_crates:futures-test",
-    "//third_party/rust_crates:matches",
-  ]
-
+source_set("source") {
   sources = [
-    "src/main.rs",
-    "src/sound_player.rs",
-    "src/sound_player/wav_reader.rs",
-    "src/test.rs",
+    "ogg_demux.cc",
+    "ogg_demux.h",
+    "opus_decoder.cc",
+    "opus_decoder.h",
+    "sound.cc",
+    "sound.h",
+    "sound_player_impl.cc",
+    "sound_player_impl.h",
+    "wav_reader.cc",
+    "wav_reader.h",
+  ]
+
+  public_deps = [
+    "//third_party/ogg",
+    "//third_party/opus",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media.sounds",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/files",
+    "//zircon/public/lib/fbl",
   ]
 }
 
@@ -66,17 +75,52 @@ config_data("configs") {
   sources = [ "service.config" ]
 }
 
-test_package("soundplayer_tests") {
-  deps = [ ":bin_test" ]
+group("tests") {
+  testonly = true
+  deps = [ ":soundplayer-tests" ]
+}
+
+executable("soundplayer-tests-bin") {
+  testonly = true
+  output_name = "soundplayer-tests"
+
+  sources = [
+    "test/fake_audio_renderer.cc",
+    "test/fake_audio_renderer.h",
+    "test/ogg_opus_tests.cc",
+    "test/soundplayer_tests.cc",
+    "test/wav_reader_tests.cc",
+  ]
+
+  deps = [
+    ":source",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media.sounds",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//third_party/ogg",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("soundplayer-tests") {
+  deps = [ ":soundplayer-tests-bin" ]
 
   tests = [
     {
-      name = "soundplayer_bin_test"
+      name = "soundplayer-tests"
       environments = basic_envs
     },
   ]
 
   resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-opus.ogg")
+      dest = "testfile.ogg"
+    },
     {
       path = rebase_path(
               "//garnet/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav")

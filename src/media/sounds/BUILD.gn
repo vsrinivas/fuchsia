@@ -14,5 +14,5 @@ group("sounds") {
 
 group("tests") {
   testonly = true
-  public_deps = [ "//src/media/sounds/soundplayer:soundplayer_tests" ]
+  public_deps = [ "//src/media/sounds/soundplayer:soundplayer-tests" ]
 }

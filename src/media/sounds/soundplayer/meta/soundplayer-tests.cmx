@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/soundplayer_bin_test"
+        "binary": "test/soundplayer-tests"
     },
     "sandbox": {
         "services": [

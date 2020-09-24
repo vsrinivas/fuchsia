@@ -17,7 +17,7 @@ protocol Player {
     /// connection. Returns the duration of the sound or an error status returned from an I/O
     /// operation.
     ///
-    /// Currently, only PCM WAV files are supported.
+    /// Currently, only PCM WAV files and Ogg/Opus files are supported.
     AddSoundFromFile(uint32 id, fuchsia.io.File file) -> (zx.duration duration) error zx.status;
 
     /// Adds a sound, in the form of a buffer containing raw PCM samples, to the collection
