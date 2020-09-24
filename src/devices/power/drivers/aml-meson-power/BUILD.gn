@@ -12,10 +12,12 @@ driver_module("aml-meson-power") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "aml-power.cc" ]
+  sources = [
+    "aml-power.cc",
+    "aml-power.h",
+  ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/banjo/ddk.protocol.pwm",
@@ -39,6 +41,7 @@ test("aml-meson-power-test") {
   sources = [
     "aml-power-test.cc",
     "aml-power.cc",
+    "aml-power.h",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
@@ -46,6 +49,7 @@ test("aml-meson-power-test") {
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/banjo/ddk.protocol.pwm",
     "//sdk/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
     "//sdk/banjo/ddk.protocol.scpi",
