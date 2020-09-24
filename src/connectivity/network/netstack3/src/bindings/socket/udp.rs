@@ -1107,7 +1107,7 @@ mod tests {
 
         // Verify that Alice has no local or peer addresses bound
         assert_eq!(
-            alice_socket.get_sock_name2().await.unwrap().expect_err("alice getsockname fails"),
+            alice_socket.get_sock_name().await.unwrap().expect_err("alice getsockname fails"),
             Errno::Enotsock
         );
         assert_eq!(
@@ -1125,7 +1125,7 @@ mod tests {
 
         // Verify that Alice is listening on the local socket, but still has no peer socket
         assert_eq!(
-            alice_socket.get_sock_name2().await.unwrap().expect("alice getsockname succeeds"),
+            alice_socket.get_sock_name().await.unwrap().expect("alice getsockname succeeds"),
             A::create(A::LOCAL_ADDR, 200)
         );
         assert_eq!(
@@ -1162,7 +1162,7 @@ mod tests {
 
         // Verify that Bob is listening on the local socket, but has no peer socket
         assert_eq!(
-            bob_socket.get_sock_name2().await.unwrap().expect("bob getsockname suceeds"),
+            bob_socket.get_sock_name().await.unwrap().expect("bob getsockname suceeds"),
             A::create(A::REMOTE_ADDR, 300)
         );
         assert_eq!(
