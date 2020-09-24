@@ -155,12 +155,11 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 throttling_state: Cell::new(ThrottlingState::ThrottlingInactive),
                 throttle_end_deadline: Cell::new(None),
             },
+            inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string(), &self.config),
             config: self.config,
-            inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string()),
             thermal_metrics,
         });
 
-        node.inspect.set_thermal_config(&node.config);
         futures_out.push(node.clone().periodic_thermal_loop());
         Ok(node)
     }
@@ -423,7 +422,7 @@ impl ThermalPolicy {
         self.thermal_metrics.log_raw_temperature(raw_temperature);
         self.inspect.timestamp.set(timestamp.0);
         self.inspect.time_delta.set(time_delta.0);
-        self.inspect.temperature_raw.set(raw_temperature.0);
+        self.inspect.log_raw_cpu_temperature(raw_temperature);
         self.inspect.temperature_filtered.set(filtered_temperature.0);
         self.inspect.thermal_load.set(thermal_load.0.into());
         self.inspect.throttling_state.set(format!("{:?}", throttling_state).as_str());
@@ -796,13 +795,14 @@ struct InspectData {
     throttling_state: inspect::StringProperty,
     max_time_delta: inspect::DoubleProperty,
     throttle_history: RefCell<InspectThrottleHistory>,
+    historical_max_cpu_temperature: RefCell<HistoricalMaxCpuTemperature>,
 }
 
 impl InspectData {
     /// Rolling number of throttle events to store in `throttle_history`.
     const NUM_THROTTLE_EVENTS: usize = 10;
 
-    fn new(parent: &inspect::Node, name: String) -> Self {
+    fn new(parent: &inspect::Node, name: String, config: &ThermalConfig) -> Self {
         // Create a local root node and properties
         let root_node = parent.create_child(name);
         let state_node = root_node.create_child("state");
@@ -823,11 +823,21 @@ impl InspectData {
             Self::NUM_THROTTLE_EVENTS,
         ));
 
+        let platform_metrics_node = parent.create_child("platform_metrics");
+
+        // Every 60 seconds record the max observed CPU temperature. Configured based on the thermal
+        // controller sample interval.
+        let historical_max_cpu_temperature = RefCell::new(HistoricalMaxCpuTemperature::new(
+            &platform_metrics_node,
+            (60.0 / config.policy_params.controller_params.sample_interval.0) as usize,
+        ));
+
         // Pass ownership of the new nodes to the root node, otherwise they'll be dropped
         root_node.record(state_node);
         root_node.record(stats_node);
+        parent.record(platform_metrics_node);
 
-        InspectData {
+        let inspect_data = InspectData {
             root_node,
             timestamp,
             time_delta,
@@ -838,7 +848,10 @@ impl InspectData {
             thermal_load,
             throttling_state,
             throttle_history,
-        }
+            historical_max_cpu_temperature,
+        };
+        inspect_data.set_thermal_config(config);
+        inspect_data
     }
 
     fn set_thermal_config(&self, config: &ThermalConfig) {
@@ -858,9 +871,215 @@ impl InspectData {
         self.root_node.record(policy_params_node);
     }
 
+    fn log_raw_cpu_temperature(&self, temperature: Celsius) {
+        self.temperature_raw.set(temperature.0);
+        self.historical_max_cpu_temperature.borrow_mut().log_raw_cpu_temperature(temperature);
+    }
+
     /// A convenient wrapper to mutably borrow `throttle_history`.
     fn throttle_history(&self) -> RefMut<'_, InspectThrottleHistory> {
         self.throttle_history.borrow_mut()
+    }
+}
+
+/// Tracks the max CPU temperature observed over the last 60 seconds and writes the most recent two
+/// values to Inspect.
+struct HistoricalMaxCpuTemperature {
+    /// Stores the two max temperature values.
+    inspect_node: inspect::Node,
+    entries: VecDeque<inspect::IntProperty>,
+
+    /// Number of samples before recording the max temperature to Inspect.
+    max_sample_count: usize,
+
+    /// Current number of samples observed. Resets back to zero after reaching `max_sample_count`.
+    sample_count: usize,
+
+    /// Current observed max temperature.
+    max_temperature: Celsius,
+}
+
+impl HistoricalMaxCpuTemperature {
+    /// Number of temperature values to record in the Inspect BoundedListNode.
+    const RECORD_COUNT: usize = 2;
+
+    const INVALID_TEMPERATURE: Celsius = Celsius(f64::NEG_INFINITY);
+
+    fn new(platform_metrics_root: &inspect::Node, max_sample_count: usize) -> Self {
+        Self {
+            inspect_node: platform_metrics_root.create_child("historical_max_cpu_temperature_c"),
+            entries: VecDeque::with_capacity(Self::RECORD_COUNT),
+            max_sample_count,
+            sample_count: 0,
+            max_temperature: Self::INVALID_TEMPERATURE,
+        }
+    }
+
+    /// Logs a raw CPU temperature reading and updates the max temperature observed. After
+    /// `max_sample_count` times, records the max temperature to Inspect and resets the sample count
+    /// and max values.
+    fn log_raw_cpu_temperature(&mut self, temperature: Celsius) {
+        if temperature > self.max_temperature {
+            self.max_temperature = temperature
+        }
+
+        self.sample_count += 1;
+        if self.sample_count == self.max_sample_count {
+            self.record_temperature_entry(self.max_temperature);
+            self.sample_count = 0;
+            self.max_temperature = Self::INVALID_TEMPERATURE;
+        }
+    }
+
+    /// Records the temperature to Inspect while removing stale records according to `RECORD_COUNT`.
+    /// The current timestamp in seconds after system boot is used as the property key, and
+    /// temperature is recorded in Celsius as an integer.
+    fn record_temperature_entry(&mut self, temperature: Celsius) {
+        while self.entries.len() >= Self::RECORD_COUNT {
+            self.entries.pop_front();
+        }
+
+        let time = Seconds::from(get_current_timestamp()).0 as i64;
+        let temperature = temperature.0 as i64;
+        self.entries.push_back(self.inspect_node.create_int(time.to_string(), temperature));
+    }
+}
+
+#[cfg(test)]
+mod historical_max_cpu_temperature_tests {
+    use super::*;
+    use inspect::assert_inspect_tree;
+
+    /// Tests that after each max temperature recording, the max temperature is reset for the next
+    /// round. The test would fail if HistoricalMaxCpuTemperature was not resetting the previous max
+    /// temperature at the end of each N samples.
+    #[test]
+    fn test_reset_max_temperature_after_sample_count() {
+        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let inspector = inspect::Inspector::new();
+        let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 10);
+
+        // Log 10 samples to dispatch the first max temperature reading
+        executor.set_fake_time(Seconds(0.0).into());
+        for _ in 0..10 {
+            max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
+        }
+
+        // Log 10 more samples to disaptch the second max temperature reading (with a lower max
+        // temperature)
+        executor.set_fake_time(Seconds(1.0).into());
+        for _ in 0..10 {
+            max_temperatures.log_raw_cpu_temperature(Celsius(40.0));
+        }
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                historical_max_cpu_temperature_c: {
+                    "0": 50i64,
+                    "1": 40i64
+                }
+            }
+        );
+    }
+
+    /// Tests that the max CPU temperature isn't logged until after the specified number of
+    /// temperature samples are observed.
+    #[test]
+    fn test_dispatch_reading_after_n_samples() {
+        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let inspector = inspect::Inspector::new();
+        let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 10);
+
+        executor.set_fake_time(Seconds(0.0).into());
+
+        // Tree is initially empty
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                historical_max_cpu_temperature_c: {}
+            }
+        );
+
+        // Observe n-1 temperature samples
+        for _ in 0..9 {
+            max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
+        }
+
+        // Tree is still empty
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                historical_max_cpu_temperature_c: {}
+            }
+        );
+
+        // After one more temperature sample, the max temperature should be logged
+        max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                historical_max_cpu_temperature_c: {
+                    "0": 50i64
+                }
+            }
+        );
+    }
+
+    /// Tests that there are never more than the two most recent max temperature recordings logged
+    /// into Inspect.
+    #[test]
+    fn test_max_record_count() {
+        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let inspector = inspect::Inspector::new();
+        let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 2);
+
+        executor.set_fake_time(Seconds(0.0).into());
+        for _ in 0..2 {
+            max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
+        }
+
+        executor.set_fake_time(Seconds(1.0).into());
+        for _ in 0..2 {
+            max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
+        }
+
+        executor.set_fake_time(Seconds(2.0).into());
+        for _ in 0..2 {
+            max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
+        }
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                historical_max_cpu_temperature_c: {
+                    "1": 50i64,
+                    "2": 50i64
+                }
+            }
+        );
+    }
+
+    /// Tests that the actual max value is recorded after varying temperature values were logged.
+    #[test]
+    fn test_max_temperature_selection() {
+        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let inspector = inspect::Inspector::new();
+        let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 3);
+
+        executor.set_fake_time(Seconds(0.0).into());
+        max_temperatures.log_raw_cpu_temperature(Celsius(10.0));
+        max_temperatures.log_raw_cpu_temperature(Celsius(30.0));
+        max_temperatures.log_raw_cpu_temperature(Celsius(20.0));
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                historical_max_cpu_temperature_c: {
+                    "0": 30i64
+                }
+            }
+        );
     }
 }
 
@@ -1243,6 +1462,9 @@ pub mod tests {
                             "integral_gain": policy_params.controller_params.integral_gain,
                         }
                     }
+                },
+                platform_metrics: {
+                    historical_max_cpu_temperature_c: {}
                 }
             }
         );
@@ -1347,7 +1569,7 @@ pub mod tests {
 
         assert_inspect_tree!(
             inspector,
-            root: {
+            root: contains {
                 ThermalPolicy: contains {
                     throttle_history: {
                         "0": {
@@ -1393,6 +1615,56 @@ pub mod tests {
         assert_eq!(throttle_history.throttle_history_list.len(), 1);
         assert_eq!(throttle_history.throttle_history_list.capacity(), 1);
         assert_eq!(throttle_history.entry_count, 2);
+    }
+
+    /// Tests that the platform_metrics Inspect node is present and correctly populated. The test
+    /// works by iteration the thermal policy 200 times, then verifying that (200 % 60 = 20) max CPU
+    /// temperature entries were made to the platform_metrics Inspect node.
+    #[test]
+    fn test_inspect_platform_metrics() {
+        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(Seconds(0.0).into());
+
+        let mut mock_maker = MockNodeMaker::new();
+
+        let thermal_config = ThermalConfig {
+            temperature_node: mock_maker.make(
+                "TemperatureNode",
+                (0..60)
+                    .map(|_| {
+                        (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(50.0))))
+                    })
+                    .collect(),
+            ),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
+            policy_params: default_policy_params(),
+        };
+        let inspector = inspect::Inspector::new();
+        let node_futures = FuturesUnordered::new();
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .with_inspect_root(inspector.root())
+            .build(&node_futures)
+            .unwrap();
+
+        for _ in 0..60 {
+            assert!(executor
+                .run_until_stalled(&mut node.iterate_thermal_control().boxed_local())
+                .is_ready());
+        }
+
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                platform_metrics: {
+                    historical_max_cpu_temperature_c: {
+                        "0": 50i64
+                    }
+                }
+            }
+        );
     }
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.

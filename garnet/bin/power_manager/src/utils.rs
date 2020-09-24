@@ -24,7 +24,7 @@ pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
     Ok(proxy)
 }
 
-/// Returns the current timestamp in Nanoseconds.
+/// The number of nanoseconds since the system was powered on.
 pub fn get_current_timestamp() -> crate::types::Nanoseconds {
     crate::types::Nanoseconds(fuchsia_async::Time::now().into_nanos())
 }
