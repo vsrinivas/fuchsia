@@ -283,6 +283,11 @@ class SchedulerState {
   // Tracks the exponential moving average of the runtime of the thread.
   SchedDuration expected_runtime_ns_{0};
 
+  // Tracks runtime accumulated until voluntarily blocking or exhausiting the
+  // allocated time slice. Used to exclude involuntary preemption when updating
+  // the expected runtime estimate to improve accuracy.
+  SchedDuration banked_runtime_ns_{0};
+
   // Takes the value of Scheduler::generation_count_ + 1 at the time this node
   // is added to the run queue.
   uint64_t generation_{0};

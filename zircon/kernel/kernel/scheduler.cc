@@ -171,14 +171,64 @@ inline bool IsThreadAdjustable(const Thread* thread) {
   return !thread->IsIdle() && IsFairThread(thread) && thread->state() == THREAD_READY;
 }
 
+// Returns a delta value to additively update a predictor. Compares the given
+// sample to the current value of the predictor and returns a delta such that
+// the predictor either exponentially peaks or decays toward the sample. The
+// rate of decay depends on the alpha parameter, while the rate of peaking
+// depends on the beta parameter. The predictor is not permitted to become
+// negative.
+//
+// A single-rate exponential moving average is updated as follows:
+//
+//   Sn = Sn-1 + a * (Yn - Sn-1)
+//
+// This function updates the exponential moving average using potentially
+// different rates for peak and decay:
+//
+//   D = Yn - Sn-1
+//        / Sn-1 + a * D      if D < 0
+//   Sn = \ Sn-1 + b * D      if D >= 0
+//
+template <typename T, typename Alpha, typename Beta>
+constexpr T PeakDecayDelta(T value, T sample, Alpha alpha, Beta beta) {
+  const T delta = sample - value;
+  return ktl::max<T>(delta >= 0 ? T{beta * delta} : T{alpha * delta}, -value);
+}
+
 }  // anonymous namespace
 
-inline void Scheduler::UpdateTotalExpectedRuntime(SchedDuration delta) {
-  total_expected_runtime_ns_ += delta;
+// Scales the given value up by the reciprocal of the CPU performance scale.
+template <typename T>
+inline T Scheduler::ScaleUp(T value) const {
+  return value * performance_scale_reciprocal();
+}
+
+// Scales the given value down by the CPU performance scale.
+template <typename T>
+inline T Scheduler::ScaleDown(T value) const {
+  return value * performance_scale();
+}
+
+// Updates the total expected runtime estimator with the given delta. The
+// exported value is scaled by the relative performance factor of the CPU to
+// account for performance differences in the estimate.
+inline void Scheduler::UpdateTotalExpectedRuntime(SchedDuration delta_ns) {
+  total_expected_runtime_ns_ += delta_ns;
   DEBUG_ASSERT(total_expected_runtime_ns_ >= 0);
-  exported_total_expected_runtime_ns_ = total_expected_runtime_ns_;
-  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Est Load", total_expected_runtime_ns_.raw_value(),
-                       this_cpu());
+  const SchedDuration scaled_ns = ScaleUp(total_expected_runtime_ns_);
+  exported_total_expected_runtime_ns_ = scaled_ns;
+  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Est Load", scaled_ns.raw_value(), this_cpu());
+}
+
+// Updates the total deadline utilization estimator with the given delta. The
+// exported value is scaled by the relative performance factor of the CPU to
+// account for performance differences in the estimate.
+inline void Scheduler::UpdateTotalDeadlineUtilization(SchedUtilization delta) {
+  total_deadline_utilization_ += delta;
+  DEBUG_ASSERT(total_deadline_utilization_ >= 0);
+  const SchedUtilization scaled = ScaleUp(total_deadline_utilization_);
+  exported_total_deadline_utilization_ = scaled;
+  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Est Util", Round<uint64_t>(scaled * 10000), this_cpu());
 }
 
 inline void Scheduler::TraceTotalRunnableThreads() const {
@@ -186,14 +236,8 @@ inline void Scheduler::TraceTotalRunnableThreads() const {
                        runnable_fair_task_count_ + runnable_deadline_task_count_, this_cpu());
 }
 
-inline void Scheduler::UpdateTotalDeadlineUtilization(SchedUtilization delta) {
-  total_deadline_utilization_ += delta;
-  exported_total_deadline_utilization_ = total_deadline_utilization_;
-  DEBUG_ASSERT(total_deadline_utilization_ >= 0);
-}
-
 void Scheduler::Dump() {
-  printf("\ttweight=%s nfair=%d ndeadline=%d vtime=%" PRId64 " period=%" PRId64 " ema=%" PRId64
+  printf("\ttweight=%s nfair=%d ndeadline=%d vtime=%" PRId64 " period=%" PRId64 " tema=%" PRId64
          " tutil=%s\n",
          Format(weight_total_).c_str(), runnable_fair_task_count_, runnable_deadline_task_count_,
          virtual_time_.raw_value(), scheduling_period_grans_.raw_value(),
@@ -249,7 +293,8 @@ size_t Scheduler::GetRunnableTasks() const {
 }
 
 // Performs an augmented binary search for the task with the earliest finish
-// time that is also equal to or later than the given eligible time.
+// time that also has a start time equal to or later than the given eligible
+// time.
 //
 // The tree is ordered by start time and is augmented by maintaining an
 // additional invariant: each task node in the tree stores the minimum finish
@@ -326,7 +371,7 @@ void Scheduler::InitializeThread(Thread* thread, int priority) {
   thread->scheduler_state().base_priority_ = priority;
   thread->scheduler_state().effective_priority_ = priority;
   thread->scheduler_state().inherited_priority_ = -1;
-  thread->scheduler_state().expected_runtime_ns_ = kDefaultTargetLatency;
+  thread->scheduler_state().expected_runtime_ns_ = kDefaultMinimumGranularity;
 }
 
 void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_t& params) {
@@ -446,7 +491,7 @@ void Scheduler::UpdateCounters(SchedDuration queue_time_ns) {
 // Selects a thread to run. Performs any necessary maintenanace if the current
 // thread is changing, depending on the reason for the change.
 Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, bool timeslice_expired,
-                                      SchedDuration total_runtime_ns) {
+                                      SchedDuration scaled_total_runtime_ns) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"find_thread"_stringref};
 
   const bool is_idle = current_thread->IsIdle();
@@ -462,7 +507,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   if (is_active && likely(!is_idle)) {
     if (timeslice_expired) {
       // If the timeslice expired insert the current thread into the run queue.
-      QueueThread(current_thread, Placement::Insertion, now, total_runtime_ns);
+      QueueThread(current_thread, Placement::Insertion, now, scaled_total_runtime_ns);
     } else if (is_new_deadline_eligible && is_deadline) {
       // The current thread is deadline scheduled and there is at least one
       // eligible deadline thread in the run queue: select the eligible thread
@@ -470,7 +515,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
       const SchedTime deadline_ns = current_thread->scheduler_state().finish_time_;
       if (Thread* const earlier_thread = DequeueEarlierDeadlineThread(now, deadline_ns);
           earlier_thread != nullptr) {
-        QueueThread(current_thread, Placement::Preemption, now, total_runtime_ns);
+        QueueThread(current_thread, Placement::Preemption, now, scaled_total_runtime_ns);
         next_thread = earlier_thread;
       } else {
         // The current thread still has the earliest deadline.
@@ -479,7 +524,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
     } else if (is_new_deadline_eligible && !is_deadline) {
       // The current thread is fair scheduled and there is at least one eligible
       // deadline thread in the run queue: return this thread to the run queue.
-      QueueThread(current_thread, Placement::Preemption, now, total_runtime_ns);
+      QueueThread(current_thread, Placement::Preemption, now, scaled_total_runtime_ns);
     } else {
       // The current thread has remaining time and no eligible contender.
       next_thread = current_thread;
@@ -595,30 +640,72 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   const cpu_num_t last_cpu = thread->scheduler_state().last_cpu_;
   const cpu_mask_t last_cpu_mask = cpu_num_to_mask(last_cpu);
 
-  const bool is_fair = IsFairThread(thread);
-  const auto compare = [is_fair](Scheduler* const queue_a,
-                                 Scheduler* const queue_b) TA_REQ(thread_lock) {
-    if (is_fair) {
-      ktl::pair a{queue_a->predicted_queue_time_ns(), queue_a->predicted_deadline_utilization()};
-      ktl::pair b{queue_b->predicted_queue_time_ns(), queue_b->predicted_deadline_utilization()};
-      return a < b;
-    } else {
-      ktl::pair a{queue_a->predicted_deadline_utilization(), queue_a->predicted_queue_time_ns()};
-      ktl::pair b{queue_b->predicted_deadline_utilization(), queue_b->predicted_queue_time_ns()};
-      return a < b;
-    }
-  };
-  const auto is_idle = [is_fair](Scheduler* const queue) TA_REQ(thread_lock) {
-    if (is_fair) {
-      return queue->predicted_queue_time_ns() == 0;
-    }
-    return queue->predicted_deadline_utilization() == 0 && queue->predicted_queue_time_ns() == 0;
-  };
-
   // Find the best target CPU starting at the last CPU the task ran on, if any.
+  // Alternatives are considered in order of best to worst potential cache
+  // affinity.
   const cpu_num_t starting_cpu = last_cpu != INVALID_CPU ? last_cpu : current_cpu;
   const CpuSearchSet& search_set = percpu::Get(starting_cpu).search_set;
 
+  // Compares candidate queues and returns true if |queue_a| is a better
+  // alternative than |queue_b|. This is used by the target selection loop to
+  // determine whether the next candidate is better than the current target.
+  const auto compare = [thread](const Scheduler* queue_a,
+                                const Scheduler* queue_b) TA_REQ(thread_lock) {
+    const SchedDuration a_predicted_queue_time_ns = queue_a->predicted_queue_time_ns();
+    const SchedDuration b_predicted_queue_time_ns = queue_b->predicted_queue_time_ns();
+    LocalTraceDuration<KTRACE_COMMON> trace_compare{"compare: qtime,qtime"_stringref,
+                                                    Round<uint64_t>(a_predicted_queue_time_ns),
+                                                    Round<uint64_t>(b_predicted_queue_time_ns)};
+    if (IsFairThread(thread)) {
+      // CPUs in the same logical cluster are considered equivalent in terms of
+      // cache affinity. Choose the least loaded among the members of a cluster.
+      if (queue_a->cluster() == queue_b->cluster()) {
+        ktl::pair a{a_predicted_queue_time_ns, queue_a->predicted_deadline_utilization()};
+        ktl::pair b{b_predicted_queue_time_ns, queue_b->predicted_deadline_utilization()};
+        return a < b;
+      }
+
+      // When crossing a cluster boundary, compare both the candidate and
+      // current target to the threshold.
+      return a_predicted_queue_time_ns <= kInterClusterThreshold &&
+             b_predicted_queue_time_ns > kInterClusterThreshold;
+    } else {
+      const SchedUtilization utilization = thread->scheduler_state().deadline_.utilization;
+      const SchedUtilization scaled_utilization_a = queue_a->ScaleUp(utilization);
+      const SchedUtilization scaled_utilization_b = queue_b->ScaleUp(utilization);
+
+      ktl::pair a{scaled_utilization_a, a_predicted_queue_time_ns};
+      ktl::pair b{scaled_utilization_b, b_predicted_queue_time_ns};
+      ktl::pair a_prime{queue_a->predicted_deadline_utilization(), a};
+      ktl::pair b_prime{queue_b->predicted_deadline_utilization(), b};
+      return a_prime < b_prime;
+    }
+  };
+
+  // Determines whether the current target is sufficiently good to terminate the
+  // selection loop.
+  const auto is_sufficient = [thread](const Scheduler* queue) {
+    const SchedDuration candidate_queue_time_ns = queue->predicted_queue_time_ns();
+
+    LocalTraceDuration<KTRACE_DETAILED> sufficient_trace{"is_sufficient: thresh,qtime"_stringref,
+                                                         Round<uint64_t>(kIntraClusterThreshold),
+                                                         Round<uint64_t>(candidate_queue_time_ns)};
+
+    if (IsFairThread(thread)) {
+      return candidate_queue_time_ns <= kIntraClusterThreshold;
+    }
+
+    const SchedUtilization predicted_utilization = queue->predicted_deadline_utilization();
+    const SchedUtilization utilization = thread->scheduler_state().deadline_.utilization;
+    const SchedUtilization scaled_utilization = queue->ScaleUp(utilization);
+
+    return candidate_queue_time_ns <= kIntraClusterThreshold &&
+           scaled_utilization <= kThreadUtilizationMax &&
+           predicted_utilization + scaled_utilization <= kCpuUtilizationLimit;
+  };
+
+  // Loop over the search set for CPU the task last ran on to find a suitable
+  // target.
   cpu_num_t target_cpu = INVALID_CPU;
   Scheduler* target_queue = nullptr;
 
@@ -632,9 +719,8 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
       target_cpu = candidate_cpu;
       target_queue = candidate_queue;
 
-      // Stop searching at the first idle CPU.
-      // TODO(eieio): Use the load threshold instead.
-      if (is_idle(target_queue)) {
+      // Stop searching at the first sufficiently unloaded CPU.
+      if (is_sufficient(target_queue)) {
         break;
       }
     }
@@ -727,17 +813,23 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                           Round<uint64_t>(total_runtime_ns));
   }
 
+  // Scale the total runtime of deadline tasks by the relative performance of
+  // the CPU, effectively increasing the capacity of the task in proportion to
+  // the performance ratio.
+  const SchedDuration scaled_total_runtime_ns =
+      IsDeadlineThread(current_thread) ? ScaleDown(total_runtime_ns) : total_runtime_ns;
+
   // A deadline can expire when there is still time left in the time slice if
   // the task wakes up late. This is handled the same as the time slice
   // expiring.
   const bool deadline_expired =
       IsDeadlineThread(current_thread) && now >= current_state->finish_time_;
   const bool timeslice_expired =
-      deadline_expired || total_runtime_ns >= current_state->time_slice_ns_;
+      deadline_expired || scaled_total_runtime_ns >= current_state->time_slice_ns_;
 
   // Select a thread to run.
   Thread* const next_thread =
-      EvaluateNextThread(now, current_thread, timeslice_expired, total_runtime_ns);
+      EvaluateNextThread(now, current_thread, timeslice_expired, scaled_total_runtime_ns);
   DEBUG_ASSERT(next_thread != nullptr);
   SchedulerState* const next_state = &next_thread->scheduler_state();
 
@@ -771,20 +863,25 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
       (timeslice_expired || current_thread != next_thread)) {
     LocalTraceDuration<KTRACE_DETAILED> update_ema_trace{"update_expected_runtime"_stringref};
 
-    // The expected runtime is an exponential moving average updated as follows:
-    //
-    // Sn = Sn-1 + a * (Yn - Sn-1)
-    //
-    const SchedDuration delta_ns = total_runtime_ns - current_state->expected_runtime_ns_;
-    const SchedDuration scaled_ns = delta_ns * kExpectedRuntimeAlpha;
-    const SchedDuration clamped_ns =
-        ktl::max<SchedDuration>(scaled_ns, -current_state->expected_runtime_ns_);
-    current_state->expected_runtime_ns_ += clamped_ns;
+    // Adjust the runtime for the relative performance of the CPU to account for
+    // different performance levels in the estimate. The relative performance
+    // scale is in the range (0.0, 1.0], such that the adjusted runtime is
+    // always less than or equal to the monotonic runtime.
+    const SchedDuration adjusted_total_runtime_ns = ScaleDown(total_runtime_ns);
+    current_state->banked_runtime_ns_ += adjusted_total_runtime_ns;
 
-    // Adjust the aggregate value by the same amount. The adjustment is only
-    // necessary when the thread is still active on this CPU.
-    if (current_state->active()) {
-      UpdateTotalExpectedRuntime(clamped_ns);
+    if (timeslice_expired || !current_state->active()) {
+      const SchedDuration delta_ns =
+          PeakDecayDelta(current_state->expected_runtime_ns_, current_state->banked_runtime_ns_,
+                         kExpectedRuntimeAlpha, kExpectedRuntimeBeta);
+      current_state->expected_runtime_ns_ += delta_ns;
+      current_state->banked_runtime_ns_ = SchedDuration{0};
+
+      // Adjust the aggregate value by the same amount. The adjustment is only
+      // necessary when the thread is still active on this CPU.
+      if (current_state->active()) {
+        UpdateTotalExpectedRuntime(delta_ns);
+      }
     }
   }
 
@@ -976,7 +1073,7 @@ SchedTime Scheduler::ClampToDeadline(SchedTime completion_time) {
 SchedTime Scheduler::ClampToEarlierDeadline(SchedTime completion_time, SchedTime finish_time) {
   Thread* const thread = FindEarlierDeadlineThread(completion_time, finish_time);
   return thread ? ktl::min(completion_time, thread->scheduler_state().start_time_)
-                : completion_time;
+                : ktl::min(completion_time, finish_time);
 }
 
 SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
@@ -1010,26 +1107,31 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
                   static_cast<uint32_t>(weight_total_.raw_value()),
                   static_cast<uint32_t>(state->fair_.weight.raw_value()),
                   state->time_slice_ns_.raw_value());
+    trace.End(Round<uint64_t>(state->time_slice_ns_), Round<uint64_t>(absolute_deadline_ns));
   } else {
     // Calculate the deadline when the remaining time slice is completed. The
     // time slice is maintained by the deadline queuing logic, no need to update
-    // it here.
-    const SchedTime slice_deadline_ns = now + state->time_slice_ns_;
+    // it here. The absolute deadline is based on the time slice scaled by the
+    // performance of the CPU and clamped to the next deadline. This increases
+    // capacity on slower processors, however, bandwidth isolation is preserved
+    // because CPU selection attempts to keep scaled total capacity below one.
+    const SchedDuration scaled_time_slice_ns = ScaleUp(state->time_slice_ns_);
+    const SchedTime slice_deadline_ns = now + scaled_time_slice_ns;
     absolute_deadline_ns = ClampToEarlierDeadline(slice_deadline_ns, state->finish_time_);
 
     SCHED_LTRACEF("name=%s capacity=%" PRId64 " deadline=%" PRId64 " period=%" PRId64
-                  " time_slice_ns=%" PRId64 "\n",
+                  " scaled_time_slice_ns=%" PRId64 "\n",
                   thread->name(), state->deadline_.capacity_ns.raw_value(),
                   state->deadline_.deadline_ns.raw_value(), state->deadline_.period_ns.raw_value(),
-                  state->time_slice_ns_.raw_value());
+                  scaled_time_slice_ns.raw_value());
+    trace.End(Round<uint64_t>(scaled_time_slice_ns), Round<uint64_t>(absolute_deadline_ns));
   }
 
-  trace.End(Round<uint64_t>(state->time_slice_ns_), Round<uint64_t>(absolute_deadline_ns));
   return absolute_deadline_ns;
 }
 
 void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
-                            SchedDuration total_runtime_ns) {
+                            SchedDuration scaled_total_runtime_ns) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"queue_thread: s,f"_stringref};
 
   DEBUG_ASSERT(thread->state() == THREAD_READY);
@@ -1041,7 +1143,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
   // Account for the consumed time slice. The consumed time is zero when the
   // thread is unblocking, migrating, or adjusting queue position. The
   // remaining time slice may become negative due to scheduler overhead.
-  state->time_slice_ns_ -= total_runtime_ns;
+  state->time_slice_ns_ -= scaled_total_runtime_ns;
 
   if (IsFairThread(thread)) {
     // Compute the ratio of remaining time slice to ideal time slice. This may

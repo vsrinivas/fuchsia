@@ -38,19 +38,44 @@ using SchedPerformanceScale = ffl::Fixed<int32_t, 8>;
 class Scheduler {
  public:
   // Default minimum granularity of time slices.
-  static constexpr SchedDuration kDefaultMinimumGranularity = SchedUs(750);
+  static constexpr SchedDuration kDefaultMinimumGranularity = SchedMs(1);
 
   // Default target latency for a scheduling period.
-  static constexpr SchedDuration kDefaultTargetLatency = SchedMs(16);
+  static constexpr SchedDuration kDefaultTargetLatency = SchedMs(8);
 
-  // Default peak latency for a scheduling period.
-  static constexpr SchedDuration kDefaultPeakLatency = SchedMs(24);
+  // The threshold for cross-cluster work stealing. Queues with an estimated
+  // runtime below this value are not stolen from if the target and destination
+  // CPUs are in different logical clusters. This tunable value approximates the
+  // cost of cross-cluster migration due to cache misses, assuming a task has
+  // high cache affinity in its current cluster.
+  static constexpr SchedDuration kInterClusterThreshold = SchedUs(50);
 
-  static_assert(kDefaultPeakLatency >= kDefaultTargetLatency);
+  // The threshold for early termination when searching for a CPU to place a
+  // task. Queues with an estimated runtime below this value are sufficiently
+  // unloaded. This tunable value approximates the cost of intra-cluster
+  // migration due to cache misses, assuming a task has high cache affinity with
+  // the last CPU it ran on.
+  static constexpr SchedDuration kIntraClusterThreshold = SchedUs(50);
 
-  // The adjustment rate of the exponential moving average tracking the expected
-  // runtime of each thread.
-  static constexpr ffl::Fixed<int32_t, 2> kExpectedRuntimeAlpha = ffl::FromRatio(3, 4);
+  // The per-CPU deadline utilization limit to attempt to honor when selecting a
+  // CPU to place a task. It is up to userspace to ensure that the total set of
+  // deadline tasks can honor this limit. Even if userspace ensures the total
+  // set of deadline utilizations is within the total available processor
+  // resources, when total utilization is high enough it may not be possible to
+  // honor this limit due to the bin packing problem.
+  static constexpr SchedUtilization kCpuUtilizationLimit{1};
+
+  // The maximum deadline utilization permitted for a single thread. This limit
+  // is applied when scaling the utilization of a deadline task to the relative
+  // performance of a candidate target processor -- placing a task on a
+  // processor that would cause the scaled thread utilization to exceed this
+  // value is avoided if possible.
+  static constexpr SchedUtilization kThreadUtilizationMax{1};
+
+  // The adjustment rates of the exponential moving averages tracking the
+  // expected runtimes of each thread.
+  static constexpr ffl::Fixed<int32_t, 2> kExpectedRuntimeAlpha = ffl::FromRatio(1, 4);
+  static constexpr ffl::Fixed<int32_t, 0> kExpectedRuntimeBeta = ffl::FromRatio(1, 1);
 
   Scheduler() = default;
   ~Scheduler() = default;
@@ -203,12 +228,12 @@ class Scheduler {
   // Evaluates the schedule and returns the thread that should execute,
   // updating the run queue as necessary.
   Thread* EvaluateNextThread(SchedTime now, Thread* current_thread, bool timeslice_expired,
-                             SchedDuration total_runtime_ns) TA_REQ(thread_lock);
+                             SchedDuration scaled_total_runtime_ns) TA_REQ(thread_lock);
 
   // Adds a thread to the run queue tree. The thread must be active on this
   // CPU.
   void QueueThread(Thread* thread, Placement placement, SchedTime now = SchedTime{0},
-                   SchedDuration total_runtime_ns = SchedDuration{0}) TA_REQ(thread_lock);
+                   SchedDuration scaled_total_runtime_ns = SchedDuration{0}) TA_REQ(thread_lock);
 
   // Removes the thread at the head of the first eligible run queue.
   Thread* DequeueThread(SchedTime now) TA_REQ(thread_lock);
@@ -277,11 +302,17 @@ class Scheduler {
 
   // Updates the total expected runtime estimator and exports the atomic shadow
   // variable for cross-CPU readers.
-  inline void UpdateTotalExpectedRuntime(SchedDuration delta) TA_REQ(thread_lock);
+  inline void UpdateTotalExpectedRuntime(SchedDuration delta_ns) TA_REQ(thread_lock);
 
   // Updates to total deadline utilization estimator and exports the atomic
   // shadow variable for cross-CPU readers.
-  inline void UpdateTotalDeadlineUtilization(SchedUtilization delta) TA_REQ(thread_lock);
+  inline void UpdateTotalDeadlineUtilization(SchedUtilization delta_ns) TA_REQ(thread_lock);
+
+  // Utilities to scale up or down the given value by the performace scale of the CPU.
+  template <typename T>
+  inline T ScaleUp(T value) const;
+  template <typename T>
+  inline T ScaleDown(T value) const;
 
   // Update trace counters which track the total number of runnable threads for a CPU
   inline void TraceTotalRunnableThreads() const TA_REQ(thread_lock);
