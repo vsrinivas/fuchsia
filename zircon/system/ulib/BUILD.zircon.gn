@@ -17,7 +17,6 @@ group("ulib") {
   testonly = true
   deps = [
     "$zx/kernel/lib/counters",
-    "$zx/third_party/ulib",
     "c",
     "c:crt1",
     "ddk-platform-defs",

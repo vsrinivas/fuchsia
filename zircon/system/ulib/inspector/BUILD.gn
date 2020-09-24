@@ -30,10 +30,10 @@ zx_library("inspector") {
   ]
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/ngunwind",
     "//zircon/public/lib/pretty",
     "//zircon/system/ulib/backtrace-request:backtrace-request-utils",
     "//zircon/system/ulib/elf-search",
+    "//zircon/third_party/ulib/ngunwind",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 

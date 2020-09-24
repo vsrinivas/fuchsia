@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
 import("$zx_build_config/levels.gni")
+if (zx != "/") {
+  optimize = zircon_optimize
+}
 
 zx_library("ngunwind") {
   # This library is very crufty and should not be used in general.  It's
@@ -11,6 +15,7 @@ zx_library("ngunwind") {
   visibility = [
     ":*",
     "$zx/system/ulib/inspector/*",
+    "//src/developer/debug/debug_agent:lib",
   ]
 
   # Unfortunately ngunwind is used directly by
@@ -43,6 +48,7 @@ zx_library("ngunwind") {
     "ngunwind/fuchsia.h",
     "ngunwind/libunwind.h",
   ]
+  sdk_migrated = true
 
   configs += [ ":private_config" ]
   deps = [ "$zx/system/ulib/zircon" ]

@@ -110,10 +110,10 @@ static_library("lib") {
     "//src/lib/fxl",
     "//third_party/googletest:gtest_prod",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/ngunwind",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/third_party/ulib/ngunwind",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
