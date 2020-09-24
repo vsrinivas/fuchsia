@@ -48,7 +48,4 @@ driver_module("usb-audio") {
     "//zircon/system/ulib/digest",
     "//zircon/system/ulib/dispatcher-pool",
   ]
-
-  # TODO(fxb/58161): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-unused-function" ]
 }

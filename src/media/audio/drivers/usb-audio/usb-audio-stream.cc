@@ -34,11 +34,6 @@ namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 3;
 
-static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
-  return static_cast<uint32_t>(sr.freq[0]) | (static_cast<uint32_t>(sr.freq[1]) << 8) |
-         (static_cast<uint32_t>(sr.freq[2]) << 16);
-}
-
 UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc,
                                fbl::RefPtr<dispatcher::ExecutionDomain> default_domain)
     : UsbAudioStreamBase(parent->zxdev()),
