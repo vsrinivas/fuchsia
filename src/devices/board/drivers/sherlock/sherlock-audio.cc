@@ -313,6 +313,7 @@ zx_status_t Sherlock::AudioInit() {
   // Compatible clocks with other TDM drivers.
   metadata.mClockDivFactor = 10;
   metadata.sClockDivFactor = 25;
+  metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
   metadata.bus = metadata::AmlBus::TDM_C;
   metadata.version = metadata::AmlVersion::kS905D2G;  // Also works with T931G.
   metadata.tdm.type = metadata::TdmType::I2s;
@@ -401,10 +402,15 @@ zx_status_t Sherlock::AudioInit() {
     // Compatible clocks with other TDM drivers.
     metadata.mClockDivFactor = 10;
     metadata.sClockDivFactor = 25;
+    metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.tdm.sclk_on_raising = true;
+    metadata.tdm.bits_per_sample = 16;
+    metadata.tdm.bits_per_slot = 16;
     metadata.number_of_channels = 1;
+    metadata.dai_number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
     pbus_metadata_t tdm_metadata[] = {
         {
@@ -503,10 +509,15 @@ zx_status_t Sherlock::AudioInit() {
     // Compatible clocks with other TDM drivers.
     metadata.mClockDivFactor = 10;
     metadata.sClockDivFactor = 25;
+    metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.tdm.sclk_on_raising = true;
+    metadata.tdm.bits_per_sample = 16;
+    metadata.tdm.bits_per_slot = 16;
     metadata.number_of_channels = 1;
+    metadata.dai_number_of_channels = 1;
     metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
     pbus_metadata_t tdm_metadata[] = {

@@ -61,56 +61,36 @@ zx_status_t AmlG12TdmStream::InitHW() {
   aml_audio_->Initialize();
 
   // Setup TDM.
-  // TODO(andresoportus): Allow more flexibility by providing some of these parameters via metadata.
-  uint8_t bits_per_bitoffset = 0;
-  uint8_t number_of_slots = 0;
-  uint8_t bits_per_slot = 0;
-  uint8_t bits_per_sample = 0;
   constexpr uint32_t kMaxLanes = metadata::kMaxNumberOfLanes;
   uint32_t lanes_mutes[kMaxLanes] = {};
-  switch (metadata_.tdm.type) {
-    case metadata::TdmType::I2s:
-    case metadata::TdmType::LeftJustified:
-      // bitoffset, 2 slots (regardless of number of channels), 32 bits/slot, 16 bits/sample.
-      // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
-      // to provide i2s framing.
-      if (metadata_.tdm.type == metadata::TdmType::I2s) {
-        bits_per_bitoffset = metadata_.is_input ? 3 : 2;
-      } else {
-        bits_per_bitoffset = metadata_.is_input ? 4 : 3;
-      }
-      number_of_slots = 2;
-      bits_per_slot = 32;
-      bits_per_sample = 16;
-
-      // Configure lanes mute masks.
-      for (size_t i = 0; i < kMaxLanes; ++i) {
-        lanes_mutes[i] = (channels_to_use_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
-                             ? ((~channels_to_use_) >> (i * 2)) & 3
-                             : 0;
-      }
-      break;
-    case metadata::TdmType::Pcm:
-      if (metadata_.number_of_channels != 1) {
-        zxlogf(ERROR, "%s Unsupported number of channels for PCM %d", __FILE__,
-               metadata_.number_of_channels);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      // bitoffset, 1 slot, 16 bits/slot, 16 bits/sample.
-      // For output bitoffest 3 places msb of sample one sclk period after fsync to provide PCM
-      // framing.
-      bits_per_bitoffset = metadata_.is_input ? 3 : 2;
-      number_of_slots = 1;
-      bits_per_slot = 16;
-      bits_per_sample = 16;
-
-      lanes_mutes[0] =
-          (channels_to_use_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED) ? (~channels_to_use_ & 1) : 0;
-      break;
+  // bitoffset defines samples start relative to the edge of fsync.
+  uint8_t bitoffset = metadata_.is_input ? 4 : 3;
+  if (metadata_.tdm.type == metadata::TdmType::I2s) {
+    bitoffset--;
   }
-  aml_audio_->ConfigTdmSlot(bits_per_bitoffset, number_of_slots - 1, bits_per_slot - 1,
-                            bits_per_sample - 1, metadata_.mix_mask,
-                            metadata_.tdm.type == metadata::TdmType::I2s);
+  if (metadata_.tdm.sclk_on_raising) {
+    bitoffset--;
+  }
+
+  // Configure lanes mute masks based on channels_to_use_ and lane enable mask.
+  if (channels_to_use_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED) {
+    uint32_t channel = 0;
+    size_t lane_start = 0;
+    for (size_t i = 0; i < kMaxLanes; ++i) {
+      for (size_t j = 0; j < 64; ++j) {
+        if (metadata_.lanes_enable_mask[i] & (static_cast<uint64_t>(1) << j)) {
+          if (~channels_to_use_ & (1 << channel)) {
+            lanes_mutes[i] |= ((~channels_to_use_ & (1 << channel)) >> lane_start);
+          }
+          channel++;
+        }
+      }
+      lane_start = channel;
+    }
+  }
+  aml_audio_->ConfigTdmSlot(bitoffset, static_cast<uint8_t>(metadata_.dai_number_of_channels - 1),
+                            metadata_.tdm.bits_per_slot - 1, metadata_.tdm.bits_per_sample - 1,
+                            metadata_.mix_mask, metadata_.tdm.type == metadata::TdmType::I2s);
   aml_audio_->ConfigTdmSwaps(metadata_.swaps);
   for (size_t i = 0; i < kMaxLanes; ++i) {
     status = aml_audio_->ConfigTdmLane(i, metadata_.lanes_enable_mask[i], lanes_mutes[i]);
@@ -136,30 +116,25 @@ zx_status_t AmlG12TdmStream::InitHW() {
     aml_audio_->SetMClkPad(MCLK_PAD_0);
   }
   if (metadata_.sClockDivFactor) {
-    // 48kHz: sclk=76.8MHz/25 = 3.072MHz, 3.072MHz/64=48kkHz
-    // 96kHz: sclk=153.6MHz/25 = 6.144MHz, 6.144MHz/64=96kHz
+    uint32_t frame_sync_clks = 0;
     switch (metadata_.tdm.type) {
       case metadata::TdmType::I2s:
       case metadata::TdmType::LeftJustified:
-        // lrduty = 32 sclk cycles (write 31) for i2s
-        // invert sclk = true = sclk is rising edge in middle of bit for i2s
-        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 31, 63, true);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
-          return status;
-        }
+        // For I2S and Stereo Left Justified we have a 50% duty cycle, hence the frame sync clocks
+        // is set to the size of one slot.
+        frame_sync_clks = metadata_.tdm.bits_per_slot;
         break;
       case metadata::TdmType::Pcm:
-        // lrduty = 1 sclk cycles (write 0) for PCM
-        // invert sclk = false. Note this is true for one PCM device, not sure if true for all.
-        // TODO(andresoportus): Allow more flexibility by providing some of these parameters via
-        // metadata in particular if it is a part configuration.
-        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 0, bits_per_slot - 1, false);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
-          return status;
-        }
+        frame_sync_clks = 1;
         break;
+    }
+    status =
+        aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, frame_sync_clks - 1,
+                               (metadata_.tdm.bits_per_slot * metadata_.dai_number_of_channels) - 1,
+                               !metadata_.tdm.sclk_on_raising);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
+      return status;
     }
   }
 
@@ -175,15 +150,19 @@ zx_status_t AmlG12TdmStream::InitHW() {
   return ZX_OK;
 }
 
+// See //docs/concepts/drivers/driver_interfaces/audio_codec.md for a description of DAI terms used.
+// See //src/lib/ddktl/include/ddktl/metadata/audio.h for descriptions of audio metadata.
+// See //src/devices/lib/amlogic/include/soc/aml-common/aml-audio.h for descriptions of AMLogic
+// specific metadata.
 void AmlG12TdmStream::InitDaiFormats() {
   frame_rate_ = kMinSampleRate;
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+    // Only the PCM signed sample format is supported.
     dai_formats_[i].sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     dai_formats_[i].frame_rate = frame_rate_;
-    dai_formats_[i].bits_per_sample = 16;
-    dai_formats_[i].bits_per_channel = 32;
-    dai_formats_[i].number_of_channels =
-        metadata_.tdm.type == metadata::TdmType::I2s ? 2 : metadata_.codecs_number_of_channels[i];
+    dai_formats_[i].bits_per_sample = metadata_.tdm.bits_per_sample;
+    dai_formats_[i].bits_per_channel = metadata_.tdm.bits_per_slot;
+    dai_formats_[i].number_of_channels = metadata_.dai_number_of_channels;
     dai_formats_[i].channels_to_use.clear();
     for (uint32_t j = 0; j < 32; ++j) {
       if (metadata_.codecs_channels_mask[i] & (1 << j)) {
@@ -195,8 +174,10 @@ void AmlG12TdmStream::InitDaiFormats() {
         dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
         break;
       case metadata::TdmType::LeftJustified:
-      case metadata::TdmType::Pcm:
         dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;
+        break;
+      case metadata::TdmType::Pcm:
+        dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_TDM1;
         break;
     }
   }
@@ -220,7 +201,37 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
-
+  // Only the PCM signed sample format is supported.
+  if (metadata_.tdm.sample_format != metadata::SampleFormat::PcmSigned) {
+    zxlogf(ERROR, "%s metadata unsupported sample type %d", __FILE__,
+           static_cast<int>(metadata_.tdm.sample_format));
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (metadata_.tdm.type == metadata::TdmType::I2s ||
+      metadata_.tdm.type == metadata::TdmType::LeftJustified) {
+    metadata_.dai_number_of_channels = 2;
+  }
+  if (metadata_.tdm.bits_per_sample == 0) {
+    metadata_.tdm.bits_per_sample = 16;
+  }
+  if (metadata_.tdm.bits_per_slot == 0) {
+    metadata_.tdm.bits_per_slot = 32;
+  }
+  if (metadata_.tdm.bits_per_slot != 32 && metadata_.tdm.bits_per_slot != 16) {
+    zxlogf(ERROR, "%s metadata unsupported bits per slot %d", __FILE__,
+           metadata_.tdm.bits_per_slot);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (metadata_.tdm.bits_per_sample != 32 && metadata_.tdm.bits_per_sample != 16) {
+    zxlogf(ERROR, "%s metadata unsupported bits per sample %d", __FILE__,
+           metadata_.tdm.bits_per_sample);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (metadata_.tdm.bits_per_sample > metadata_.tdm.bits_per_slot) {
+    zxlogf(ERROR, "%s metadata unsupported bits per sample bits per slot combination %u/%u",
+           __FILE__, metadata_.tdm.bits_per_sample, metadata_.tdm.bits_per_slot);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   InitDaiFormats();
 
   zx_device_t* fragments[FRAGMENT_COUNT] = {};
@@ -455,20 +466,20 @@ zx_status_t AmlG12TdmStream::Init() {
   }
   strncpy(mfr_name_, metadata_.manufacturer, sizeof(mfr_name_));
   strncpy(prod_name_, metadata_.product_name, sizeof(prod_name_));
+  unique_id_ = metadata_.unique_id;
+  const char* tdm_type = nullptr;
   switch (metadata_.tdm.type) {
     case metadata::TdmType::I2s:
-      snprintf(device_name_, sizeof(device_name_), "%s-audio-i2s-%s", prod_name_, in_out);
-      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
+      tdm_type = "i2s";
       break;
     case metadata::TdmType::LeftJustified:
-      snprintf(device_name_, sizeof(device_name_), "%s-audio-tdm-%s", prod_name_, in_out);
-      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
+      tdm_type = "ljt";
       break;
     case metadata::TdmType::Pcm:
-      snprintf(device_name_, sizeof(device_name_), "%s-audio-pcm-%s", prod_name_, in_out);
-      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
+      tdm_type = "pcm";
       break;
   }
+  snprintf(device_name_, sizeof(device_name_), "%s-audio-%s-%s", prod_name_, tdm_type, in_out);
 
   // TODO(mpuryear): change this to the domain of the clock received from the board driver
   clock_domain_ = 0;
