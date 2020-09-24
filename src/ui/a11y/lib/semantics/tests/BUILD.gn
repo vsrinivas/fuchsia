@@ -39,7 +39,6 @@ executable("semantics_tests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -113,7 +112,6 @@ executable("flutter_semantics_tests") {
   deps = [
     ":semantics_integration_test_fixture",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
@@ -127,7 +125,6 @@ executable("web_semantics_tests") {
   deps = [
     ":semantics_integration_test_fixture",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/chromium/web_runner_tests:mock_server",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -161,7 +158,6 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/zx",
   ]

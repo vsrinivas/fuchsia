@@ -18,7 +18,6 @@ source_set("test_lib") {
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
   ]
@@ -140,7 +139,6 @@ executable("limbo_client_unittest_exe") {
     "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/exceptions/limbo_client:lib",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gtest",

@@ -17,7 +17,6 @@ executable("netstack_intermediary") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/testing/netemul/lib/network:ethertap",
     "//src/lib/fxl",

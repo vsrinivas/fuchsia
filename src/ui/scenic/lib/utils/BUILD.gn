@@ -42,7 +42,6 @@ executable("sequential_fence_signaller_unittest") {
     ":utils",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

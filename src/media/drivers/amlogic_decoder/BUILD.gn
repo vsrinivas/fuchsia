@@ -168,6 +168,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/syslog",
       "//zircon/system/ulib/tee-client-api",
       "//zircon/system/ulib/trace:trace-driver",
     ]

@@ -40,7 +40,6 @@ source_set("app_client") {
     ":clone",
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/modular/lib/common:async_holder",
   ]
@@ -64,7 +63,6 @@ source_set("json_xdr") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/json_parser",
 
     # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
@@ -84,7 +82,6 @@ source_set("proxy") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
   ]
 }
@@ -104,7 +101,6 @@ source_set("environment") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/fs",
   ]
 }
@@ -119,7 +115,6 @@ source_set("single_service_app") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
@@ -135,7 +130,6 @@ source_set("view_host") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
   ]

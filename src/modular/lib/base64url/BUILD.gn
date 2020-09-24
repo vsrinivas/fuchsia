@@ -17,7 +17,6 @@ source_set("base64url") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/modp_b64",
   ]
 }

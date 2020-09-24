@@ -18,7 +18,6 @@ executable("tts_manager_tests") {
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/tts",
   ]

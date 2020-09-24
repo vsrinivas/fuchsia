@@ -97,7 +97,6 @@ source_set("pixel_test") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
   ]
 }

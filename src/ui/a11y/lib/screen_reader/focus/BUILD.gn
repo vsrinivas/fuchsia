@@ -19,7 +19,6 @@ source_set("focus") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/focus_chain",

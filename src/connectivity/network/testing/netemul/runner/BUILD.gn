@@ -59,7 +59,6 @@ source_set("src") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
@@ -80,6 +79,7 @@ source_set("src") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs:memfs-cpp",
+    "//zircon/system/ulib/syslog",
 
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",

@@ -31,7 +31,6 @@ source_set("encode_module_path") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/modular/lib/string_escape",
   ]

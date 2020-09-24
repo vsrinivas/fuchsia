@@ -48,7 +48,6 @@ executable("bin") {
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

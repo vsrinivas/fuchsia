@@ -8,7 +8,6 @@ executable("test") {
   sources = [ "image_io_util_test.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/stream_utils",
     "//src/lib/files",

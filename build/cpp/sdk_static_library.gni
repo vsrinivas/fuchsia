@@ -66,8 +66,8 @@ template("sdk_static_library") {
 
   no_headers = defined(invoker.no_headers) && invoker.no_headers
 
-  if ((invoker.category == "partner" || invoker.category == "public") &&
-      !no_headers) {
+  if (!no_headers &&
+      (invoker.category == "partner" || invoker.category == "public")) {
     api_reference = "${atom_name}.api"
     if (defined(invoker.api)) {
       api_reference = invoker.api

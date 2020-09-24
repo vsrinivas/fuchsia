@@ -119,7 +119,6 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -220,8 +219,11 @@ rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
     ":lib",
     "//src/lib/fuzzing/rust:fuzz",
     "//src/lib/syslog/rust:syslog",
+    "//zircon/system/ulib/syslog",
   ]
-  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  non_rust_deps = []
+
   source_root = "src/fuzzer.rs"
 
   sources = [ "src/fuzzer.rs" ]

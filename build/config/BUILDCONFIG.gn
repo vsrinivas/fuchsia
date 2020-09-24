@@ -1581,7 +1581,17 @@ template("executable") {
   _variant_shared = false
   variant_target("executable") {
     deps = []
+    assert_no_deps = []
     target_name = _executable_name
+
+    # NOTE: Zircon-specific toolchains don't need a syslog backend.
+    # TODO(60072): Clean up logging backends for executables.
+    disable_syslog_backend = defined(invoker.disable_syslog_backend) &&
+                             invoker.disable_syslog_backend
+
+    if (zircon_toolchain != false) {
+      disable_syslog_backend = true
+    }
 
     # TODO(aarongreen): This shouldn't be required, but without it the
     # fuzzers fail to link.  Investigate and remove when resolved.
@@ -1644,6 +1654,25 @@ template("executable") {
     # the bug for more info/discussion.
     if (is_host) {
       deps += [ "//zircon/system/ulib/zx-panic-libc" ]
+    }
+
+    if (disable_syslog_backend) {
+      assert_no_deps += [ "//sdk/lib/syslog/cpp" ]
+    } else {
+      has_syslog_backend = false
+
+      foreach(dep, deps) {
+        dep = get_label_info(dep, "label_no_toolchain")
+        has_syslog_backend =
+            has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
+            dep == "//sdk/lib/syslog/cpp:backend_legacy"
+      }
+
+      if (!has_syslog_backend) {
+        # All executables automatically get the legacy backend.
+        deps += [ "//sdk/lib/syslog/cpp:backend_legacy" ]
+        assert_no_deps += [ "//sdk/lib/syslog/cpp:backend" ]
+      }
     }
 
     add_distribution_metadata = is_fuchsia

@@ -146,8 +146,8 @@ isolated_devmgr_unittest_package("driver-host-tests") {
   executable_path = "test/driver_host_test"
 
   deps = [
-    ":driver-host-test-driver",
     ":driver-host-test-child-driver",
+    ":driver-host-test-driver",
     ":driver_host_test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",

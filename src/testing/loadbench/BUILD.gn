@@ -44,6 +44,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "loadbench"
   sources = [ "loadbench.cc" ]
+
   deps = [ ":lib" ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

@@ -16,6 +16,8 @@ executable("echo1") {
 
   sources = [ "echo.cc" ]
 
+  deps = []
+
   public_deps = [ "//src/lib/fxl" ]
 }
 
@@ -23,6 +25,8 @@ executable("echo2") {
   output_name = "components_test_echo2"
 
   sources = [ "echo.cc" ]
+
+  deps = []
 
   public_deps = [ "//src/lib/fxl" ]
 }
@@ -32,6 +36,8 @@ executable("echo_stdin") {
 
   sources = [ "echo_stdin.cc" ]
 
+  deps = []
+
   public_deps = [ "//src/lib/fxl" ]
 }
 
@@ -39,6 +45,8 @@ executable("getenv") {
   output_name = "components_test_getenv"
 
   sources = [ "getenv.cc" ]
+
+  deps = []
 
   public_deps = [ "//src/lib/fxl" ]
 }

@@ -45,6 +45,7 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
+  deps = []
   public_deps = [
     ":lib",
     "//sdk/lib/fidl/cpp",

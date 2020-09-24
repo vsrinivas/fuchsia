@@ -14,7 +14,6 @@ source_set("analysis") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 
   deps = [

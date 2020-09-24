@@ -20,7 +20,6 @@ executable("test") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/bin/device:lib",
     "//src/camera/lib/fake_controller",
     "//src/camera/lib/fake_legacy_stream",

@@ -25,7 +25,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.time.external",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/sys/time/lib/network_time:lib",
     "//third_party/roughtime:client_lib",

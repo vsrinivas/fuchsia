@@ -127,6 +127,10 @@ config("static-pie-config") {
 # executables.  Warning: Don't copy this unless you know what you're doing.
 executable("static_pie_test_util") {
   testonly = true
+
+  # TODO(60072): Support syslog backend here.
+  disable_syslog_backend = true
+
   sources = [ "test/static_pie_test_util.c" ]
   configs += [
     ":static-pie-config",

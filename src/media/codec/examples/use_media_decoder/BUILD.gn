@@ -48,6 +48,7 @@ source_set("use_media_decoder_source_set") {
     "//src/media/lib/test:one_shot_event",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/tee-client-api",
   ]
 }
@@ -270,7 +271,7 @@ source_set("decoder_fuzzer") {
   public_deps = [
     ":use_media_decoder_source_set",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/system/ulib/syslog",
   ]
 }
 

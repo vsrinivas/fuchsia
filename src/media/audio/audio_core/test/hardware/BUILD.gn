@@ -31,7 +31,6 @@ executable("audio_core_hardware_tests_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/lib/test:test_fixture",

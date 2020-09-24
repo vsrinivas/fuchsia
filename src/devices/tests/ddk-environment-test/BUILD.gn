@@ -25,6 +25,7 @@ driver_module("ddk-environment-test") {
   deps = [
     ":fuchsia.device.environment.test_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

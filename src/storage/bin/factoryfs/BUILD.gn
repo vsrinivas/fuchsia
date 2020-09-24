@@ -6,7 +6,6 @@ executable("factoryfs") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/factory/factoryfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

@@ -34,7 +34,6 @@ executable("kcounter_inspect_unittest") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

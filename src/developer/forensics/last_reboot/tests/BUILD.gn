@@ -37,7 +37,6 @@ executable("main_service_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/last_reboot:main_service",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -57,7 +56,6 @@ executable("reboot_log_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/last_reboot:reboot_log",
     "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/testing:gpretty_printers",

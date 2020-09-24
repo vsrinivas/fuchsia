@@ -28,7 +28,6 @@ static_library("fs_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs",
     "//src/storage/fuchsia-fatfs:fatfs",
@@ -667,7 +666,6 @@ test("max_file_tests") {
   deps = [
     ":fs_test",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]

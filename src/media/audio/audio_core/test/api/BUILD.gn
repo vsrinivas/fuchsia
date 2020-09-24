@@ -14,7 +14,6 @@ loadable_module("audio-core-api-test-effects") {
   deps = [
     "//sdk/lib/media/audio/effects",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/fzl",
 
     # TODO(57392): Move it back to //third_party once unification completes.
@@ -48,6 +47,7 @@ resource("audio-core-config-with-ultrasound") {
 
 audio_core_api_test_component("activity-reporter-test") {
   source = "activity_reporter_test.cc"
+  executable_deps = []
 }
 
 audio_core_api_test_component("audio-capturer-test") {
@@ -100,6 +100,7 @@ audio_core_api_test_component("audio-tuner-test") {
 
 audio_core_api_test_component("gain-control-test") {
   source = "gain_control_test.cc"
+  executable_deps = []
 }
 
 audio_core_api_test_component("ultrasound-test") {
@@ -118,10 +119,12 @@ audio_core_api_test_component("usage-gain-reporter-test") {
 
 audio_core_api_test_component("usage-reporter-test") {
   source = "usage_reporter_test.cc"
+  executable_deps = []
 }
 
 audio_core_api_test_component("volume-control-test") {
   source = "volume_control_test.cc"
+  executable_deps = []
 }
 
 # These tests can run anywhere, including in emulators.

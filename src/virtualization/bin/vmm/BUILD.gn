@@ -23,7 +23,6 @@ source_set("guest_config") {
   deps = [
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/virtualization/bin/vmm/device",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

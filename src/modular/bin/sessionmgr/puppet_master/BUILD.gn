@@ -102,7 +102,6 @@ source_set("dispatch_story_command_executor") {
     ":story_command_executor",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:command_runner",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/async/cpp:operation",

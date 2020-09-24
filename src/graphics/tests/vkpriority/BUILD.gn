@@ -10,6 +10,8 @@ executable("vkpriority") {
     "vkpriority.cc",
   ]
 
+  deps = []
+
   public_deps = [
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

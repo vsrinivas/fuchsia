@@ -93,6 +93,7 @@ group("tests") {
   deps = [
     ":elflib_fuzzers",
     ":elflib_tests",
+    "//sdk/lib/syslog/cpp",
   ]
 }
 

@@ -70,7 +70,6 @@ source_set("hermetic_audio_test") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/clock",
@@ -119,7 +118,6 @@ source_set("message_transceiver") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
   ]
 

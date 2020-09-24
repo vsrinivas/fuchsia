@@ -34,7 +34,6 @@ source_set("add_mod_command_runner") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
   ]
 
@@ -65,10 +64,7 @@ source_set("remove_mod_command_runner") {
     "remove_mod_command_runner.h",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
   public_deps = [
     ":command_runner",

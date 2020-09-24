@@ -26,8 +26,6 @@ source_set("files") {
   ]
 
   deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl:memory",
     "//zircon/public/lib/fit",
   ]
@@ -51,6 +49,7 @@ executable("files_unittests") {
 
   deps = [
     ":files",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl:common",
     "//src/lib/fxl:strings",
     "//src/lib/fxl/test:gtest_main",

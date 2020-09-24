@@ -41,10 +41,7 @@ openweave_adaptation_layer("adaptation") {
     "weave_device_platform_error.h",
     "weave_device_platform_event.h",
   ]
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
   public_configs = [ ":adaptation_config" ]
   public_deps = [
     "//sdk/fidl/fuchsia.bluetooth.le",

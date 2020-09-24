@@ -29,6 +29,7 @@ source_set("src") {
 executable("bin") {
   output_name = "sockscripter"
   sources = [ "main.cc" ]
+
   deps = [ ":src" ]
 }
 

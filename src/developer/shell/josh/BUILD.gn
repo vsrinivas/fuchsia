@@ -44,6 +44,5 @@ executable("bin") {
   deps += [
     "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }

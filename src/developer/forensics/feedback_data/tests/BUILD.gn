@@ -36,7 +36,6 @@ executable("channel_provider_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:channel_provider",
     "//src/developer/forensics/feedback_data/annotations:types",
@@ -200,7 +199,6 @@ executable("feedback_data_integration_test_exe") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing/fakes:cobalt",
@@ -229,7 +227,6 @@ executable("main_service_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:main_service",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -283,7 +280,6 @@ executable("integrity_reporter_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:integrity_reporter",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
@@ -415,7 +411,6 @@ source_set("zx_object_util") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 }

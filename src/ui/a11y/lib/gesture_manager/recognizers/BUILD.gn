@@ -25,8 +25,5 @@ source_set("recognizers") {
     "//zircon/public/lib/fit",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }

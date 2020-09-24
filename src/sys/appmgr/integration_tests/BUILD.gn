@@ -70,7 +70,6 @@ executable("realm_tests") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

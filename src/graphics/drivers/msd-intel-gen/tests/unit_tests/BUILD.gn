@@ -9,6 +9,7 @@ executable("msd_intel_gen_nonhardware_tests") {
 
   sources = []
 
+  deps = []
   public_deps = [
     ":nonhardware_tests",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
@@ -17,7 +18,7 @@ executable("msd_intel_gen_nonhardware_tests") {
   ]
 
   # TODO(47456): Fix the leaks and remove this.
-  deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # These tests don't require Intel graphics hardware to run, so they

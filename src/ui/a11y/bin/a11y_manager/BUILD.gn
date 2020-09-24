@@ -145,7 +145,6 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/view",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -182,7 +181,6 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]

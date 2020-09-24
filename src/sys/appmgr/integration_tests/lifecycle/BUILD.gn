@@ -23,7 +23,6 @@ executable("appmgr-lifecycle-tests-bin") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr:appmgr_for_test",
     "//src/sys/appmgr:lib",
@@ -42,7 +41,6 @@ executable("test-lifecycle-component") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -56,7 +54,6 @@ executable("test-sysmgr-bin") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

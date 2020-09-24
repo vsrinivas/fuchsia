@@ -151,7 +151,6 @@ executable("server_operation_test") {
     ":server_lib",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/grpc:grpc++",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -224,7 +223,6 @@ executable("debian_guest_interaction_daemon") {
     ":proto",
     ":server_lib",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/grpc:grpc++",
   ]
 }

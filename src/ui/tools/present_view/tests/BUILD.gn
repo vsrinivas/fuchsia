@@ -79,7 +79,6 @@ executable("present_view_integration_tests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/tools/present_view",
     "//third_party/googletest:gmock",

@@ -13,7 +13,6 @@ source_set("process") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/metrics",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

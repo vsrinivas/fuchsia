@@ -17,7 +17,6 @@ source_set("mocks") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/ui/a11y/lib/focus_chain",
     "//src/ui/a11y/lib/screen_reader/focus",

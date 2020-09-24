@@ -39,7 +39,6 @@ executable("tones_bin") {
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",

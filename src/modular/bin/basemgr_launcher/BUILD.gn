@@ -15,7 +15,6 @@ executable("basemgr_launcher_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/modular/lib/modular_config",

@@ -23,7 +23,6 @@ static_library("parser") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/icu",
     "//zircon/public/lib/fit",
   ]

@@ -17,7 +17,6 @@ source_set("util") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",

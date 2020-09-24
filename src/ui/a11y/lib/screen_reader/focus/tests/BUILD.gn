@@ -21,7 +21,6 @@ executable("focus_manager_tests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/focus_chain/tests/mocks",

@@ -49,7 +49,6 @@ source_set("shared") {
   sources = [ "wire_format.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/debug/shared",
   ]
 

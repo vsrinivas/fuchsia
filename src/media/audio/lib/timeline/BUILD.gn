@@ -12,10 +12,7 @@ source_set("timeline") {
     "timeline_rate.h",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
   public_deps = [ "//zircon/public/lib/zx" ]
 
@@ -36,7 +33,6 @@ executable("unittest_bin") {
   deps = [
     ":timeline",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
   ]
 
