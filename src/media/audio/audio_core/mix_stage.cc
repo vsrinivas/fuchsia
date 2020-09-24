@@ -566,8 +566,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                    << info.next_frac_source_frame.raw_value();
 
     // Also should reset the PID controls in the relevant clocks.
-    reference_clock().ResetRateAdjustmentTuning(curr_dest_frame);
-    stream.reference_clock().ResetRateAdjustmentTuning(curr_dest_frame);
+    reference_clock().ResetRateAdjustment(curr_dest_frame);
+    stream.reference_clock().ResetRateAdjustment(curr_dest_frame);
   } else if (reference_clock() == stream.reference_clock()) {
     // Same clock on both sides can occur when multiple MixStages are connected serially (should
     // both be device clocks). Don't synchronize: use frac_src_frames_per_dest_frame as-is.
@@ -617,8 +617,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                      << info.next_frac_source_frame.raw_value();
 
       // Reset the PID controls, in the relevant clocks.
-      client_clock.ResetRateAdjustmentTuning(curr_dest_frame);
-      device_clock.ResetRateAdjustmentTuning(curr_dest_frame);
+      client_clock.ResetRateAdjustment(curr_dest_frame);
+      device_clock.ResetRateAdjustment(curr_dest_frame);
     } else {
       // No error is too small to worry about; handle them all.
       FX_LOGS(TRACE) << "frac_source_error: tuning reference clock at dest " << curr_dest_frame
@@ -628,7 +628,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       } else if (device_clock.is_adjustable() && client_clock.controls_hardware_clock()) {
         // Adjust device_clock's hardware clock rate based on the frac_source_error
       } else {
-        client_clock.TuneRateForError(info.frac_source_error, curr_dest_frame);
+        client_clock.TuneRateForError(curr_dest_frame, info.frac_source_error);
 
         // Using this rate adjustment factor, adjust step_size, so future src_positions converge to
         // what these two clocks require. The product might exceed uint64/uint64: allow reduction.

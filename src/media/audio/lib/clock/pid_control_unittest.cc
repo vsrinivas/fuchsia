@@ -33,10 +33,10 @@ class PidControlTest : public testing::Test {
     auto control = PidControl(0, iFactor, 0);
     auto expected = 0.0;
 
-    zx_time_t previous_time = 0;
+    int64_t previous_time = 0;
     control.Start(previous_time);
 
-    zx_time_t tune_time = previous_time + 10;
+    int64_t tune_time = previous_time + 10;
     // curr_err=50, dur=10: accum_err+=500
     control.TuneForError(tune_time, 50);
 
@@ -69,7 +69,7 @@ class PidControlTest : public testing::Test {
     double error, previous_error;
     double error_rate;
 
-    zx_time_t previous_time, tune_time = 0;
+    int64_t previous_time, tune_time = 0;
     control.Start(tune_time);
 
     previous_time = tune_time;
@@ -106,6 +106,7 @@ class PidControlTest : public testing::Test {
     EXPECT_FLOAT_EQ(control.Read(), dFactor * error_rate);
   }
 
+  // This test uses time units of nanoseconds (as produced by the ZX_SEC macro).
   static void SmoothlyChaseToClockRate(const int32_t rate_adjust_ppm,
                                        const uint32_t num_iterations_limit) {
     // These PID factors were determined experimentally, from manual tuning and rule-of-thumb
@@ -118,8 +119,8 @@ class PidControlTest : public testing::Test {
     constexpr zx_duration_t kIterationTimeslice = ZX_MSEC(10);
     const double ref_rate = (1'000'000 + rate_adjust_ppm) / 1'000'000.0;
 
-    zx_time_t rate_change_mono_time = ZX_SEC(1);
-    zx_time_t rate_change_ref_time = ZX_SEC(11);
+    int64_t rate_change_mono_time = ZX_SEC(1);
+    int64_t rate_change_ref_time = ZX_SEC(11);
 
     control.Start(0);
     control.TuneForError(rate_change_mono_time, 0);
@@ -129,8 +130,8 @@ class PidControlTest : public testing::Test {
     uint32_t consecutive_prediction = UINT32_MAX;
     bool previous_prediction_accurate = false;
 
-    zx_time_t previous_ref_time = rate_change_ref_time;
-    for (zx_time_t mono_time = rate_change_mono_time + ZX_MSEC(10); mono_time < ZX_SEC(2);
+    int64_t previous_ref_time = rate_change_ref_time;
+    for (int64_t mono_time = rate_change_mono_time + ZX_MSEC(10); mono_time < ZX_SEC(2);
          mono_time += kIterationTimeslice) {
       ++num_iterations;
 
@@ -150,9 +151,9 @@ class PidControlTest : public testing::Test {
         previous_prediction_accurate = false;
       }
 
-      zx_time_t predict_ref_time =
+      int64_t predict_ref_time =
           previous_ref_time + (kIterationTimeslice * (1'000'000 + predict_ppm)) / 1'000'000;
-      zx_time_t ref_time = rate_change_ref_time + (mono_time - rate_change_mono_time) * ref_rate;
+      int64_t ref_time = rate_change_ref_time + (mono_time - rate_change_mono_time) * ref_rate;
 
       control.TuneForError(mono_time, ref_time - predict_ref_time);
       previous_ref_time = predict_ref_time;

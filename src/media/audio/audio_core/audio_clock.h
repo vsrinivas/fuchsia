@@ -159,7 +159,7 @@ class AudioClock {
   //
   // At a given dest_frame, the source position error is provided (in fractional frames). This is
   // used to maintain a rate_adjustment() factor that eliminates the error over time.
-  void TuneRateForError(Fixed frac_src_error, int64_t dest_frame);
+  void TuneRateForError(int64_t dest_frame, Fixed frac_src_error);
 
   // This returns the current rate adjustment factor (a rate close to 1.0) that should be applied,
   // to chase the actual source in an optimal manner.
@@ -167,7 +167,7 @@ class AudioClock {
 
   // Clear any internal running state (except the PID coefficients themselves), and restart the
   // feedback loop at the given destination frame.
-  void ResetRateAdjustmentTuning(int64_t dest_frame);
+  void ResetRateAdjustment(int64_t dest_frame);
 
  private:
   enum class Source { Device, Client };
