@@ -199,11 +199,13 @@ class StatisticsTest(TempDirTestCase):
         dir_path = self.MakeTempDir()
         os.mkdir(os.path.join(dir_path, 'by_boot'))
         for boot_idx, results_for_boot in enumerate(data):
-            boot_dir = os.path.join(dir_path, 'by_boot', 'boot%06d' % boot_idx)
-            os.mkdir(boot_dir)
+            test_dir = os.path.join(
+                dir_path, 'by_boot', 'boot%06d' % boot_idx, 'test-name',
+                'subdir')
+            os.makedirs(test_dir)
             for process_idx, run_values in enumerate(results_for_boot):
                 dest_file = os.path.join(
-                    boot_dir,
+                    test_dir,
                     'example_process%06d.fuchsiaperf.json' % process_idx)
                 WriteJsonFile(dest_file, [self.ResultsDictForValues(run_values)])
         return dir_path

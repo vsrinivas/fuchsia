@@ -193,7 +193,7 @@ class SingleBootDataset(object):
         self._filename = filename
 
     def GetProcessDatasets(self):
-        # Note that sorting the filename listing (from os.listdir() or from
+        # Note that sorting the filename listing (from os.walk() or from
         # tarfile) is not essential, but it helps to make any later processing
         # more deterministic.
         if os.path.isfile(self._filename):
@@ -205,9 +205,10 @@ class SingleBootDataset(object):
                         yield json.load(tar.extractfile(member))
         else:
             # Read from directory.
-            for name in sorted(os.listdir(self._filename)):
-                if IsResultsFilename(name):
-                    yield ReadJsonFile(os.path.join(self._filename, name))
+            for dir_path, _, file_names in sorted(os.walk(self._filename)):
+                for name in sorted(file_names):
+                    if IsResultsFilename(name):
+                        yield ReadJsonFile(os.path.join(dir_path, name))
 
 
 class MultiBootDataset(object):
