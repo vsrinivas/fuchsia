@@ -13,14 +13,18 @@
 
 namespace modular_testing {
 
-// TesHarnessFixture is a googletest fixture that starts up the modular
-// test harness component and provides the |fuchsia.modular.testing.TestHarness|
-// service.
+// TestHarnessFixture is a googletest fixture that starts up the Modular test harness component
+// and provides the |fuchsia.modular.testing.TestHarness| service.
 class TestHarnessFixture : public sys::testing::TestWithEnvironment {
  public:
   TestHarnessFixture();
 
  protected:
+  void TearDown() override;
+
+  // Returns the |TestHarnessLauncher| started by this fixture.
+  modular_testing::TestHarnessLauncher* test_harness_launcher() { return &test_harness_launcher_; }
+
   const fuchsia::modular::testing::TestHarnessPtr& test_harness() {
     return test_harness_launcher_.test_harness();
   }

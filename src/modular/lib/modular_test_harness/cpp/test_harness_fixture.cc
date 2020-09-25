@@ -9,6 +9,13 @@ namespace modular_testing {
 TestHarnessFixture::TestHarnessFixture()
     : test_harness_launcher_(real_services()->Connect<fuchsia::sys::Launcher>()) {}
 
+void TestHarnessFixture::TearDown() {
+  test_harness_launcher_.StopTestHarness();
+  RunLoopUntil([&]() { return !test_harness_launcher_.is_test_harness_running(); });
+
+  sys::testing::TestWithEnvironment::TearDown();
+}
+
 void AddModToStory(const fuchsia::modular::testing::TestHarnessPtr& test_harness,
                    std::string story_name, std::string mod_name, fuchsia::modular::Intent intent) {
   fuchsia::modular::AddMod add_mod;

@@ -68,6 +68,13 @@ class TestFixtureForTestingCleanup : public modular_testing::TestHarnessFixture 
     on_running();
   };
 
+  void TearDown() override {
+    TestHarnessFixture::TearDown();
+
+    // The test harness launcher should be stopped in |TestHarnessFixture::TearDown|.
+    EXPECT_TRUE(!test_harness_launcher()->is_test_harness_running());
+  }
+
   virtual ~TestFixtureForTestingCleanup() = default;
 
  private:
