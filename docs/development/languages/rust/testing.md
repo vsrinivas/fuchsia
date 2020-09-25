@@ -21,7 +21,7 @@ following snippet into the bottom of whatever test you want to write:
 ```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/src/main.rs" region_tag="test_mod" adjust_indentation="auto" %}
 ```
-©
+
 This will cause a new mod named `tests` to be created, and this mod will only be
 included when building unit tests. Any functions annotated with `#[test]` will
 be run as a test, and if the function successfully returns then the test passes.
@@ -154,7 +154,7 @@ then the library name will be `hello_world_rust_lib_test`.
 ```
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" indented_block="^fuchsia_component\(\"hello-world-rust-tests\"\) {" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" indented_block="^fuchsia_test_package\(\"hello-world-rust-tests\"\) {" %}
 ```
 
 To run the tests run:
