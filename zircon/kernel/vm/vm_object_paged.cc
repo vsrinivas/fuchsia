@@ -190,14 +190,13 @@ VmObjectPaged::VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_
   AddToGlobalList();
 }
 
-void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset) {
+void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObjectPaged> parent,
+                                                   uint64_t offset) {
   DEBUG_ASSERT(parent_ == nullptr);
   DEBUG_ASSERT(original_parent_user_id_ == 0);
 
-  if (parent->is_paged()) {
-    AssertHeld(VmObjectPaged::AsVmObjectPaged(parent)->lock_);
-    page_list_.InitializeSkew(VmObjectPaged::AsVmObjectPaged(parent)->page_list_.GetSkew(), offset);
-  }
+  AssertHeld(parent->lock_);
+  page_list_.InitializeSkew(parent->page_list_.GetSkew(), offset);
 
   AssertHeld(parent->lock_ref());
   original_parent_user_id_ = parent->user_id_locked();
@@ -986,7 +985,7 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
     uint64_t user_id_to_skip = page_attribution_user_id_;
     while (cur->parent_ != nullptr) {
       DEBUG_ASSERT(cur->parent_->is_hidden());
-      auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      auto parent = cur->parent_.get();
       AssertHeld(parent->lock_);
 
       if (parent->page_attribution_user_id_ == page_attribution_user_id_) {
@@ -1295,7 +1294,7 @@ void VmObjectPaged::IncrementHierarchyGenerationCountLocked() {
   AssertHeld(vmo->lock_);
   while (vmo->parent_) {
     DEBUG_ASSERT(vmo->hierarchy_generation_count_ == kGenerationCountInitial);
-    vmo = VmObjectPaged::AsVmObjectPaged(vmo->parent_);
+    vmo = vmo->parent_.get();
     DEBUG_ASSERT(vmo);
   }
 
@@ -1318,7 +1317,7 @@ uint32_t VmObjectPaged::GetHierarchyGenerationCountLocked() const {
   AssertHeld(vmo->lock_);
   while (vmo->parent_) {
     DEBUG_ASSERT(vmo->hierarchy_generation_count_ == kGenerationCountInitial);
-    vmo = VmObjectPaged::AsVmObjectPaged(vmo->parent_);
+    vmo = vmo->parent_.get();
     DEBUG_ASSERT(vmo);
   }
   DEBUG_ASSERT(vmo->hierarchy_generation_count_ != kGenerationCountUnset);
@@ -1436,9 +1435,8 @@ uint64_t VmObjectPaged::CountAttributedAncestorPagesLocked(uint64_t offset, uint
   while (cur_offset < cur->parent_limit_) {
     // For cur->parent_limit_ to be non-zero, it must have a parent.
     DEBUG_ASSERT(cur->parent_);
-    DEBUG_ASSERT(cur->parent_->is_paged());
 
-    const auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+    const auto parent = cur->parent_.get();
     AssertHeld(parent->lock_);
     uint64_t parent_offset;
     bool overflowed = add_overflow(cur->parent_offset_, cur_offset, &parent_offset);
@@ -1663,7 +1661,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
   VmObjectPaged* cur = this;
   do {
     AssertHeld(cur->lock_);
-    VmObjectPaged* next = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+    VmObjectPaged* next = cur->parent_.get();
     // We can't make COW clones of physical vmos, so this can only happen if we
     // somehow don't find |page_owner| in the ancestor chain.
     DEBUG_ASSERT(next);
@@ -1791,28 +1789,24 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
 
   // Need to make sure the page is duplicated as far as our parent. Then we can pretend
   // that we have forked it into us by setting the marker.
-  VmObjectPaged* typed_parent = AsVmObjectPaged(parent_);
-  AssertHeld(typed_parent->lock_);
-  DEBUG_ASSERT(typed_parent);
-
+  AssertHeld(parent_->lock_);
   if (page_owner != parent_.get()) {
-    AssertHeld(AsVmObjectPaged(parent_)->lock_);
     // Do not pass free_list here as this wants a free_list to allocate from, where as our free_list
     // is for placing on old objects.
-    page = AsVmObjectPaged(parent_)->CloneCowPageLocked(offset + parent_offset_, nullptr,
-                                                        page_owner, page, owner_offset);
+    page = parent_->CloneCowPageLocked(offset + parent_offset_, nullptr, page_owner, page,
+                                       owner_offset);
     if (page == nullptr) {
       return ZX_ERR_NO_MEMORY;
     }
   }
 
-  bool left = this == &(typed_parent->left_child_locked());
+  bool left = this == &(parent_->left_child_locked());
   // Page is in our parent. Check if its uni accessible, if so we can free it.
-  if (typed_parent->IsUniAccessibleLocked(page, offset + parent_offset_)) {
+  if (parent_->IsUniAccessibleLocked(page, offset + parent_offset_)) {
     // Make sure we didn't already merge the page in this direction.
     DEBUG_ASSERT(!(left && page->object.cow_left_split));
     DEBUG_ASSERT(!(!left && page->object.cow_right_split));
-    vm_page* removed = typed_parent->page_list_.RemovePage(offset + parent_offset_).ReleasePage();
+    vm_page* removed = parent_->page_list_.RemovePage(offset + parent_offset_).ReleasePage();
     DEBUG_ASSERT(removed == page);
     pmm_page_queues()->Remove(removed);
     DEBUG_ASSERT(!list_in_list(&removed->queue_node));
@@ -1841,10 +1835,8 @@ VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset,
   AssertHeld(cur->lock_);
   uint64_t cur_offset = offset;
   while (cur_offset < cur->parent_limit_) {
+    VmObjectPaged* parent = cur->parent_.get();
     // If there's no parent, then parent_limit_ is 0 and we'll never enter the loop
-    DEBUG_ASSERT(cur->parent_);
-    VmObjectPaged* parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
-    // If parent is null it means it wasn't actually paged, which shouldn't happen.
     DEBUG_ASSERT(parent);
     AssertHeld(parent->lock_ref());
 
@@ -2803,7 +2795,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
     uint64_t cur_start = start;
     uint64_t cur_end = end;
     while (cur->parent_ && cur_start < cur_end) {
-      auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      auto parent = cur->parent_.get();
       AssertHeld(parent->lock_);
       parent->partial_cow_release_ = true;
       cur_start = ktl::max(CheckedAdd(cur_start, cur->parent_offset_), parent->parent_start_limit_);
@@ -2815,11 +2807,11 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
 
   // Free any pages that either aren't visible, or were already split into the other child. For
   // pages that haven't been split into the other child, we need to ensure they're univisible.
-  VmObjectPaged* parent = VmObjectPaged::AsVmObjectPaged(parent_);
-  AssertHeld(parent->lock_);
-  parent->page_list_.RemovePages(
-      [skip_split_bits, sibling_visible, page_remover, left = this == &parent->left_child_locked()](
-          VmPageOrMarker* page_or_mark, uint64_t offset) {
+  AssertHeld(parent_->lock_);
+  parent_->page_list_.RemovePages(
+      [skip_split_bits, sibling_visible, page_remover,
+       left = this == &parent_->left_child_locked()](VmPageOrMarker* page_or_mark,
+                                                     uint64_t offset) {
         if (page_or_mark->IsMarker()) {
           // If this marker is in a range still visible to the sibling then we just leave it, no
           // split bits or anything to be updated. If the sibling cannot see it, then we can clear
@@ -2906,7 +2898,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
       DEBUG_ASSERT(cur_start < cur_end);
 
       // Work out what the overlap with our sibling is
-      auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      auto parent = cur->parent_.get();
       AssertHeld(parent->lock_);
       bool left = cur == &parent->left_child_locked();
       auto& other = left ? parent->right_child_locked() : parent->left_child_locked();
@@ -3666,7 +3658,7 @@ fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {
   auto vm_object = this;
   AssertHeld(vm_object->lock_);
   while (vm_object->parent_) {
-    vm_object = VmObjectPaged::AsVmObjectPaged(vm_object->parent_);
+    vm_object = vm_object->parent_.get();
     if (!vm_object) {
       return nullptr;
     }
@@ -3690,14 +3682,13 @@ bool VmObjectPaged::IsCowClonableLocked() const {
   }
 
   // vmos descended from paged/physical vmos can't be eager cloned.
-  auto parent = parent_;
+  auto parent = parent_.get();
   while (parent) {
-    auto p = VmObjectPaged::AsVmObjectPaged(parent);
-    if (!p || p->page_source_) {
+    if (parent->page_source_) {
       return false;
     }
-    AssertHeld(p->lock_);
-    parent = p->parent_;
+    AssertHeld(parent->lock_);
+    parent = parent->parent_.get();
   }
   return true;
 }
@@ -3710,8 +3701,7 @@ VmObjectPaged* VmObjectPaged::PagedParentOfSliceLocked(uint64_t* offset) {
     AssertHeld(cur->lock_);
     off += cur->parent_offset_;
     DEBUG_ASSERT(cur->parent_);
-    DEBUG_ASSERT(cur->parent_->is_paged());
-    cur = static_cast<VmObjectPaged*>(cur->parent_.get());
+    cur = cur->parent_.get();
   }
   *offset = off;
   return cur;
@@ -3819,7 +3809,7 @@ bool VmObjectPaged::DebugValidatePageSplitsLocked() const {
 
       // Find our next node by walking up until we see we have come from a left path, then go right.
       do {
-        VmObjectPaged* next = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+        VmObjectPaged* next = cur->parent_.get();
         AssertHeld(next->lock_);
         off += next->parent_offset_;
         if (next == this) {

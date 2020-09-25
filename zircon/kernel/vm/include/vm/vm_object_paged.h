@@ -230,7 +230,8 @@ class VmObjectPaged final : public VmObject {
   //
   // This function should be called at most once, even if the parent changes
   // after initialization.
-  void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset) TA_REQ(lock_);
+  void InitializeOriginalParentLocked(fbl::RefPtr<VmObjectPaged> parent, uint64_t offset)
+      TA_REQ(lock_);
 
   static zx_status_t CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                   fbl::RefPtr<VmObjectPaged>* vmo);
@@ -522,7 +523,7 @@ class VmObjectPaged final : public VmObject {
   bool partial_cow_release_ TA_GUARDED(lock_) = false;
 
   // parent pointer (may be null)
-  fbl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
+  fbl::RefPtr<VmObjectPaged> parent_ TA_GUARDED(lock_);
   // Record the user_id_ of the original parent, in case we make
   // a bidirectional clone and end up changing parent_.
   uint64_t original_parent_user_id_ TA_GUARDED(lock_) = 0;
