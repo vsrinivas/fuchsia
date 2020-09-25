@@ -20,7 +20,6 @@ group("tests") {
   deps = [
     ":dart_target_tests",
     ":dart_unittests",
-    "bin/terminal_settings_agent:tests",
     "session_shells/ermine/session:tests",
   ]
 }
