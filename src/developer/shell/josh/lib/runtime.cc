@@ -42,7 +42,7 @@ Context::Context(const Runtime* rt) : ctx_(JS_NewContext(rt->Get())) {
 
 #if __has_feature(address_sanitizer)
   // ASan tends to exceed the max stack size of 256K.
-  JS_SetMaxStackSize(ctx_, 1024 * 1024);
+  JS_SetMaxStackSize_New(rt->Get(), 1024 * 1024);
 #endif  // __has_feature(address_sanitizer)
 }
 
