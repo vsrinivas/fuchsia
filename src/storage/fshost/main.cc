@@ -25,6 +25,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <thread>
 
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
@@ -130,6 +131,21 @@ int RamctlWatcher(void* arg) {
     return -1;
   }
   fdio_watch_directory(dirfd.get(), &MiscDeviceAdded, ZX_TIME_INFINITE, arg);
+  return 0;
+}
+
+int BlockWatcher(std::unique_ptr<devmgr::FsManager> fs_manager) {
+  // Check relevant boot arguments
+  devmgr::BlockWatcherOptions options = {};
+  options.netboot = fs_manager->boot_args()->netboot();
+  options.check_filesystems = fs_manager->boot_args()->check_filesystems();
+  options.wait_for_data = fs_manager->boot_args()->wait_for_data();
+
+  if (options.netboot) {
+    printf("fshost: disabling automount\n");
+  }
+
+  BlockDeviceWatcher(std::move(fs_manager), options);
   return 0;
 }
 
@@ -287,25 +303,13 @@ int main(int argc, char** argv) {
     thrd_detach(t);
   }
 
-  // Start the block watcher or sleep forever
   if (!disable_block_watcher) {
-    // Check relevant boot arguments
-    devmgr::BlockWatcherOptions options = {};
-    options.netboot = fs_manager->boot_args()->netboot();
-    options.check_filesystems = fs_manager->boot_args()->check_filesystems();
-    options.wait_for_data = fs_manager->boot_args()->wait_for_data();
-
-    if (options.netboot) {
-      printf("fshost: disabling automount\n");
-    }
-
-    BlockDeviceWatcher(std::move(fs_manager), options);
-  } else {
-    // Keep the process alive so that this component doesn't appear to have
-    // terminated and so that it keeps serving services started on other async
-    // loops/threads
-    zx::nanosleep(zx::time::infinite());
+    std::thread t(&devmgr::BlockWatcher, std::move(fs_manager));
+    t.detach();
   }
+
+  zx::nanosleep(zx::time::infinite());
+
   printf("fshost: terminating (block device filesystems finished?)\n");
   return 0;
 }
