@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.settings.policy") {
+  sdk_category = "partner"
+
+  sources = [
+    "error.fidl",
+    "volume_policy.fidl",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.media" ]
+}

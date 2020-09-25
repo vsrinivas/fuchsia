@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings.policy;
+
+/// Common error code used across policies.
+enum Error {
+    /// Generic internal failure.
+    FAILED = 1;
+
+    /// The specified policy ID is not known.
+    ///
+    /// This may happen if another client removed a policy between a Get call
+    /// and a RemovePolicy call.
+    UNKNOWN_POLICY = 2;
+
+    /// The specified policy contradicts an existing policy.
+    ///
+    /// This may happen if another client added a policy between a Get call
+    /// and an AddPolicy call.
+    INVALID_POLICY = 3;
+};

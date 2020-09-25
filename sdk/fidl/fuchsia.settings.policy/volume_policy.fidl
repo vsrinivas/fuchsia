@@ -1,0 +1,132 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings.policy;
+
+using fuchsia.media;
+
+using PolicyId = uint32;
+
+/// Provides access to enumerating and modifying policies for the
+/// fuchsia.settings.Audio API.
+[Discoverable]
+protocol VolumePolicyController {
+    /// Gets a list of volume policy properties, including possible transforms
+    /// and active policies for the property.
+    GetProperties() -> (vector<Property>:MAX properties);
+
+    /// Adds a policy for the given target.
+    ///
+    /// Returns a policy_id for the added policy, which can be used to remove the
+    /// policy with RemovePolicy.
+    ///
+    /// If the policy being added contradicts an existing policy, the add
+    /// call will return an error. An example would be specifying a max volume
+    /// for a stream that is lower than an existing min volume.
+    ///
+    /// If the transform specified in the PolicyParameters is not enumerated in
+    /// the available_transforms of the policy property, the connection will be
+    /// closed.
+    ///
+    /// Adding a policy will immediately adjust the audio setting values if they
+    /// don't yet conform to the policy, such as reducing the volume if it's
+    /// greater than a specified maximum volume.
+    AddPolicy(Target target, PolicyParameters parameters) -> (PolicyId policy_id) error Error;
+
+    /// Removes a policy with the given policy id.
+    RemovePolicy(PolicyId policy_id) -> () error Error;
+};
+
+/// A controllable property of the fuchsia.settings.Audio API that can have
+/// transforms applied to it.
+table Property {
+    /// Unique aspect of settings that this property controls.
+    ///
+    /// Only one property may control any given target.
+    1: Target target;
+
+    /// List of available transform types for this property.
+    2: vector<Transform>:MAX available_transforms;
+
+    /// List of active policies for this property.
+    3: vector<Policy>:MAX active_policies;
+};
+
+/// Specifies what aspect of the settings a property controls.
+union Target {
+    /// An audio stream that can have policies applied to it.
+    1: fuchsia.media.AudioRenderUsage stream;
+};
+
+/// Possible transforms for a policy target.
+///
+/// A transform is an operation that is applied to a policy property when the
+/// fuchsia.settings.Audio API is used. Multiple transforms of the same time can
+/// be active for a single property.
+enum Transform : uint8 {
+    /// Limits the maximum value of an audio stream to a certain level.
+    MAX = 1;
+
+    /// Limits the minimum value of an audio stream to a certain level.
+    MIN = 2;
+
+    /// Locks the mute state of an audio stream. Any changes to the mute state
+    /// in Set calls to fuchsia.settings.Audio will be ignored, but the call
+    /// itself will not rejected.
+    MUTE = 3;
+
+    /// Disables modifying a given audio stream entirely, rejecting all Set
+    /// calls to fuchsia.settings.Audio by closing the connection.
+    DISABLE = 4;
+};
+
+/// Definition for a policy that is applied to the fuchsia.settings.Audio API.
+table Policy {
+    /// Unique identifier for this policy.
+    ///
+    /// Returned from AddPolicy and also used by RemovePolicy.
+    1: PolicyId policy_id;
+
+    /// Parameters for this policy.
+    2: PolicyParameters parameters;
+};
+
+/// Specifies the type of policy transform and its arguments.
+///
+/// The chosen union field implies the type of transform that the arguments
+/// apply to.
+union PolicyParameters {
+    /// This parameter should be included for the MIN transform and specifies
+    /// the volume level to clamp the audio stream to.
+    1: Volume min;
+
+    /// This parameter should be included for the MAX transform and specifies
+    /// the volume level to clamp the audio stream to.
+    2: Volume max;
+
+    /// This parameter should be included for the MUTE transform and specifies
+    /// the state to lock the mute status of an audio stream to.
+    3: Mute mute;
+
+    /// This parameter should be included for the DISABLE transform and causes
+    /// all Set calls to fuchsia.settings.Audio to be rejected by closing the
+    /// connection.
+    4: Disable disable;
+};
+
+table Volume {
+    /// A volume between 0.0 and 1.0 inclusive.
+    1: float32 volume;
+};
+
+table Mute {
+    /// Locks the mute state of the stream to always muted if true, or never
+    /// muted if false.
+    1: bool mute;
+};
+
+/// Argument to be included for a DISABLE transform. Currently empty but may be
+/// allow arguments in the future.
+table Disable {
+};
