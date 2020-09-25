@@ -106,6 +106,8 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   auto on_bus_error =
       fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
+  req->response[0] = AmlSdmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+
   if (rxd_err) {
     if (req->probe_tuning_cmd) {
       AML_SDMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
@@ -924,12 +926,11 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     pending_txn_ = true;
   }
 
-// zxlogf(INFO, "%s: cmd%d arg 0x%08x", __func__, req->cmd_idx, req->arg);  
-// Wait for the bus to become idle before issuing the next request. This could be necessary if the
+  // Janky way to determine if this is SDIO or eMMC
+  const bool is_test_sdio = max_freq_ == 50'000'000;
+
+  // Wait for the bus to become idle before issuing the next request. This could be necessary if the
   // card is driving CMD low after a voltage switch.
-  if (max_freq_ == 50'000'000) {  // Janky way to determine if this is SDIO or eMMC
-  zxlogf(INFO, "%s: cmd%d arg 0x%08x", __func__, req->cmd_idx, req->arg);  
-  }
   WaitForBus();
 
   zx_status_t status = ZX_OK;
@@ -985,6 +986,11 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   fbl::AutoLock lock(&mtx_);
   pending_txn_ = false;
   txn_finished_.Signal();
+
+  if (is_test_sdio) {
+    zxlogf(INFO, "%s: cmd%d arg 0x%08x resp 0x%08x", __func__, req->cmd_idx, req->arg,
+           req->response[0]);
+  }
 
   return res;
 }
