@@ -55,7 +55,7 @@ TEST(Tas5782Test, GoodSetDai) {
   format.channels_to_use_list = channels;
   format.channels_to_use_count = countof(channels);
   format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-  format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+  format.frame_format = FRAME_FORMAT_I2S;
   format.frame_rate = 48000;
   format.bits_per_channel = 32;
   format.bits_per_sample = 32;
@@ -75,20 +75,20 @@ TEST(Tas5782Test, BadSetDai) {
   dai_format format = {};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
 
-  // Almost good format (wrong justify_format).
+  // Almost good format (wrong frame_format).
   uint32_t channels[] = {0, 1};
   format.number_of_channels = 2;
   format.channels_to_use_list = channels;
   format.channels_to_use_count = countof(channels);
   format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-  format.justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;  // This must fail, only I2S supported.
+  format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail, only I2S supported.
   format.frame_rate = 48000;
   format.bits_per_channel = 32;
   format.bits_per_sample = 32;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
 
   // Almost good format (wrong channels).
-  format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;  // Restore I2S justify format.
+  format.frame_format = FRAME_FORMAT_I2S;  // Restore I2S frame format.
   format.number_of_channels = 1;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
 
@@ -119,8 +119,8 @@ TEST(Tas5782Test, GetDai) {
         EXPECT_EQ(formats_list[0].number_of_channels_list[0], 2);
         EXPECT_EQ(formats_list[0].sample_formats_count, 1);
         EXPECT_EQ(formats_list[0].sample_formats_list[0], SAMPLE_FORMAT_PCM_SIGNED);
-        EXPECT_EQ(formats_list[0].justify_formats_count, 1);
-        EXPECT_EQ(formats_list[0].justify_formats_list[0], JUSTIFY_FORMAT_JUSTIFY_I2S);
+        EXPECT_EQ(formats_list[0].frame_formats_count, 1);
+        EXPECT_EQ(formats_list[0].frame_formats_list[0], FRAME_FORMAT_I2S);
         EXPECT_EQ(formats_list[0].frame_rates_count, 1);
         EXPECT_EQ(formats_list[0].frame_rates_list[0], 48000);
         EXPECT_EQ(formats_list[0].bits_per_channel_count, 1);

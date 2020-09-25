@@ -40,7 +40,7 @@ struct TestCodec : public SimpleCodecServer {
       DaiSupportedFormats format;
       format.number_of_channels.push_back(2);
       format.sample_formats.push_back(SAMPLE_FORMAT_PCM_SIGNED);
-      format.justify_formats.push_back(JUSTIFY_FORMAT_JUSTIFY_I2S);
+      format.frame_formats.push_back(FRAME_FORMAT_I2S);
       format.frame_rates.push_back(48'000);
       format.frame_rates.push_back(96'000);
       format.bits_per_channel.push_back(16);
@@ -54,7 +54,7 @@ struct TestCodec : public SimpleCodecServer {
       DaiSupportedFormats format;
       format.number_of_channels.push_back(2);
       format.sample_formats.push_back(SAMPLE_FORMAT_PCM_SIGNED);
-      format.justify_formats.push_back(JUSTIFY_FORMAT_JUSTIFY_LEFT);
+      format.frame_formats.push_back(FRAME_FORMAT_STEREO_LEFT);
       format.frame_rates.push_back(24'000);
       format.bits_per_channel.push_back(32);
       format.bits_per_sample.push_back(32);
@@ -218,7 +218,7 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
   DaiFormat format = {
       .number_of_channels = 2,
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
-      .justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S,
+      .frame_format = FRAME_FORMAT_I2S,
       .frame_rate = 48'000,
       .bits_per_channel = 32,
       .bits_per_sample = 0,  // Bad.
@@ -238,7 +238,7 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
   format = {
       .number_of_channels = 2,
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
-      .justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT,
+      .frame_format = FRAME_FORMAT_STEREO_LEFT,
       .frame_rate = 24'000,
       .bits_per_channel = 32,
       .bits_per_sample = 32,

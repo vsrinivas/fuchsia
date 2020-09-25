@@ -136,9 +136,9 @@ zx::status<std::vector<DaiSupportedFormats>> SimpleCodecClient::GetDaiFormats() 
             std::vector<sample_format_t> sample_formats(
                 formats_list[i].sample_formats_list,
                 formats_list[i].sample_formats_list + formats_list[i].sample_formats_count);
-            std::vector<justify_format_t> justify_formats(
-                formats_list[i].justify_formats_list,
-                formats_list[i].justify_formats_list + formats_list[i].justify_formats_count);
+            std::vector<frame_format_t> frame_formats(
+                formats_list[i].frame_formats_list,
+                formats_list[i].frame_formats_list + formats_list[i].frame_formats_count);
             std::vector<uint32_t> frame_rates(
                 formats_list[i].frame_rates_list,
                 formats_list[i].frame_rates_list + formats_list[i].frame_rates_count);
@@ -150,7 +150,7 @@ zx::status<std::vector<DaiSupportedFormats>> SimpleCodecClient::GetDaiFormats() 
                 formats_list[i].bits_per_sample_list + formats_list[i].bits_per_sample_count);
             DaiSupportedFormats formats = {.number_of_channels = number_of_channels,
                                            .sample_formats = sample_formats,
-                                           .justify_formats = justify_formats,
+                                           .frame_formats = frame_formats,
                                            .frame_rates = frame_rates,
                                            .bits_per_channel = bits_per_channel,
                                            .bits_per_sample = bits_per_sample};
@@ -181,7 +181,7 @@ zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   }
   f.channels_to_use_list = channels_to_use.get();
   f.sample_format = format.sample_format;
-  f.justify_format = format.justify_format;
+  f.frame_format = format.frame_format;
   f.frame_rate = format.frame_rate;
   f.bits_per_channel = format.bits_per_channel;
   f.bits_per_sample = format.bits_per_sample;

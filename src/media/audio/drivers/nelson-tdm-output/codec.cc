@@ -7,7 +7,7 @@
 // TODO(fxbug.dev/44249): Abstract Audio drivers controllers-codecs communications
 
 namespace {
-static bool IsFormatSupported(sample_format_t sample_format, justify_format_t justify_format,
+static bool IsFormatSupported(sample_format_t sample_format, frame_format_t frame_format,
                               uint32_t frame_rate, uint8_t bits_per_sample,
                               uint8_t bits_per_channel, const dai_supported_formats_t* formats) {
   size_t i = 0;
@@ -19,12 +19,11 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
     return false;
   }
 
-  for (i = 0;
-       i < formats->justify_formats_count && formats->justify_formats_list[i] != justify_format;
+  for (i = 0; i < formats->frame_formats_count && formats->frame_formats_list[i] != frame_format;
        ++i) {
   }
-  if (i == formats->justify_formats_count) {
-    zxlogf(ERROR, "%s did not find wanted justify format", __FILE__);
+  if (i == formats->frame_formats_count) {
+    zxlogf(ERROR, "%s did not find wanted frame format", __FILE__);
     return false;
   }
 
@@ -130,7 +129,7 @@ zx_status_t Codec::CheckExpectedDaiFormat() {
         if (out->status == ZX_OK) {
           size_t i = 0;
           for (; i < formats_count; ++i) {
-            if (IsFormatSupported(kWantedSampleFormat, kWantedJustifyFormat, kWantedFrameRate,
+            if (IsFormatSupported(kWantedSampleFormat, kWantedFrameFormat, kWantedFrameRate,
                                   kWantedBitsPerSample, kWantedBitsPerChannel, &formats_list[i])) {
               break;
             }

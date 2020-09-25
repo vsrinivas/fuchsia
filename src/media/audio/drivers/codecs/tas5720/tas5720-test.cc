@@ -22,7 +22,7 @@ audio::DaiFormat GetDefaultDaiFormat() {
       .number_of_channels = 2,
       .channels_to_use = std::vector<uint32_t>{0},  // Use one channel in this mono codec.
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
-      .justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT,
+      .frame_format = FRAME_FORMAT_STEREO_LEFT,
       .frame_rate = 24'000,
       .bits_per_channel = 32,
       .bits_per_sample = 16,
@@ -223,9 +223,9 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
       ASSERT_EQ(formats.value()[0].number_of_channels[0], 2);
       ASSERT_EQ(formats.value()[0].sample_formats.size(), 1);
       ASSERT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
-      ASSERT_EQ(formats.value()[0].justify_formats.size(), 2);
-      ASSERT_EQ(formats.value()[0].justify_formats[0], JUSTIFY_FORMAT_JUSTIFY_LEFT);
-      ASSERT_EQ(formats.value()[0].justify_formats[1], JUSTIFY_FORMAT_JUSTIFY_I2S);
+      ASSERT_EQ(formats.value()[0].frame_formats.size(), 2);
+      ASSERT_EQ(formats.value()[0].frame_formats[0], FRAME_FORMAT_STEREO_LEFT);
+      ASSERT_EQ(formats.value()[0].frame_formats[1], FRAME_FORMAT_I2S);
       ASSERT_EQ(formats.value()[0].frame_rates.size(), 2);
       ASSERT_EQ(formats.value()[0].frame_rates[0], 48000);
       ASSERT_EQ(formats.value()[0].frame_rates[1], 96000);

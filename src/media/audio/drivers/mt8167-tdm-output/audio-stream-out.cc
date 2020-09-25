@@ -139,7 +139,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   format.channels_to_use_list = channels;
   format.channels_to_use_count = countof(channels);
   format.sample_format = wanted_sample_format;
-  format.justify_format = wanted_justify_format;
+  format.frame_format = wanted_frame_format;
   format.frame_rate = wanted_frame_rate;
   format.bits_per_sample = wanted_bits_per_sample;
   format.bits_per_channel = wanted_bits_per_channel;

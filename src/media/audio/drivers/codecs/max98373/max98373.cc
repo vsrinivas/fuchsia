@@ -34,7 +34,7 @@ constexpr uint8_t kRegResetReset               = 0x01;
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const uint32_t supported_n_channels[] = {2};
 static const sample_format_t supported_sample_formats[] = {SAMPLE_FORMAT_PCM_SIGNED};
-static const justify_format_t supported_justify_formats[] = {JUSTIFY_FORMAT_JUSTIFY_I2S};
+static const frame_format_t supported_frame_formats[] = {FRAME_FORMAT_I2S};
 static const uint32_t supported_rates[] = {48000};
 static const uint8_t supported_bits_per_channel[] = {32};
 static const uint8_t supported_bits_per_sample[] = {32};
@@ -43,8 +43,8 @@ static const dai_supported_formats_t kSupportedDaiFormats = {
     .number_of_channels_count = countof(supported_n_channels),
     .sample_formats_list = supported_sample_formats,
     .sample_formats_count = countof(supported_sample_formats),
-    .justify_formats_list = supported_justify_formats,
-    .justify_formats_count = countof(supported_justify_formats),
+    .frame_formats_list = supported_frame_formats,
+    .frame_formats_count = countof(supported_frame_formats),
     .frame_rates_list = supported_rates,
     .frame_rates_count = countof(supported_rates),
     .bits_per_channel_list = supported_bits_per_channel,
@@ -222,7 +222,7 @@ void Max98373::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_forma
 
   // Only I2S.
   if (format->sample_format != SAMPLE_FORMAT_PCM_SIGNED ||
-      format->justify_format != JUSTIFY_FORMAT_JUSTIFY_I2S) {
+      format->frame_format != FRAME_FORMAT_I2S) {
     zxlogf(ERROR, "%s DAI format format not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;

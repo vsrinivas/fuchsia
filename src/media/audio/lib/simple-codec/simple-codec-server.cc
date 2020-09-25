@@ -76,8 +76,8 @@ void SimpleCodecServer::CodecGetDaiFormats(codec_get_dai_formats_callback callba
     formats2[i].number_of_channels_count = formats[i].number_of_channels.size();
     formats2[i].sample_formats_list = &formats[i].sample_formats[0];
     formats2[i].sample_formats_count = formats[i].sample_formats.size();
-    formats2[i].justify_formats_list = &formats[i].justify_formats[0];
-    formats2[i].justify_formats_count = formats[i].justify_formats.size();
+    formats2[i].frame_formats_list = &formats[i].frame_formats[0];
+    formats2[i].frame_formats_count = formats[i].frame_formats.size();
     formats2[i].frame_rates_list = &formats[i].frame_rates[0];
     formats2[i].frame_rates_count = formats[i].frame_rates.size();
     formats2[i].bits_per_channel_list = &formats[i].bits_per_channel[0];
@@ -96,7 +96,7 @@ void SimpleCodecServer::CodecSetDaiFormat(const dai_format_t* format,
     format2.channels_to_use.push_back(format->channels_to_use_list[i]);
   }
   format2.sample_format = format->sample_format;
-  format2.justify_format = format->justify_format;
+  format2.frame_format = format->frame_format;
   format2.frame_rate = format->frame_rate;
   format2.bits_per_channel = format->bits_per_channel;
   format2.bits_per_sample = format->bits_per_sample;

@@ -7,7 +7,7 @@
 namespace audio {
 namespace mt8167 {
 
-static bool IsFormatSupported(sample_format_t sample_format, justify_format_t justify_format,
+static bool IsFormatSupported(sample_format_t sample_format, frame_format_t frame_format,
                               uint32_t frame_rate, uint8_t bits_per_sample,
                               uint8_t bits_per_channel, const dai_supported_formats_t* formats) {
   size_t i = 0;
@@ -18,12 +18,11 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
     zxlogf(ERROR, "%s did not find wanted sample format", __FILE__);
     return false;
   }
-  for (i = 0;
-       i < formats->justify_formats_count && formats->justify_formats_list[i] != justify_format;
+  for (i = 0; i < formats->frame_formats_count && formats->frame_formats_list[i] != frame_format;
        ++i) {
   }
-  if (i == formats->justify_formats_count) {
-    zxlogf(ERROR, "%s did not find wanted justify format", __FILE__);
+  if (i == formats->frame_formats_count) {
+    zxlogf(ERROR, "%s did not find wanted frame format", __FILE__);
     return false;
   }
   for (i = 0; i < formats->frame_rates_count && formats->frame_rates_list[i] != frame_rate; ++i) {
@@ -104,7 +103,7 @@ zx_status_t Codec::CheckExpectedDaiFormat() {
         if (out->status == ZX_OK) {
           size_t i = 0;
           for (; i < formats_count; ++i) {
-            if (IsFormatSupported(wanted_sample_format, wanted_justify_format, wanted_frame_rate,
+            if (IsFormatSupported(wanted_sample_format, wanted_frame_format, wanted_frame_rate,
                                   wanted_bits_per_sample, wanted_bits_per_channel,
                                   &formats_list[i])) {
               break;

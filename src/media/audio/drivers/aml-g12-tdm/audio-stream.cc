@@ -172,13 +172,13 @@ void AmlG12TdmStream::InitDaiFormats() {
     }
     switch (metadata_.tdm.type) {
       case metadata::TdmType::I2s:
-        dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+        dai_formats_[i].frame_format = FRAME_FORMAT_I2S;
         break;
       case metadata::TdmType::StereoLeftJustified:
-        dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;
+        dai_formats_[i].frame_format = FRAME_FORMAT_STEREO_LEFT;
         break;
       case metadata::TdmType::Tdm1:
-        dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_TDM1;
+        dai_formats_[i].frame_format = FRAME_FORMAT_TDM1;
         break;
     }
   }

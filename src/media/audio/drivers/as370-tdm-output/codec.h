@@ -15,7 +15,7 @@ namespace audio {
 namespace as370 {
 
 constexpr sample_format_t kWantedSampleFormat = SAMPLE_FORMAT_PCM_SIGNED;
-constexpr justify_format_t kWantedJustifyFormat = JUSTIFY_FORMAT_JUSTIFY_I2S;
+constexpr frame_format_t kWantedFrameFormat = FRAME_FORMAT_I2S;
 constexpr uint32_t kWantedFrameRate = 48000;
 constexpr uint8_t kWantedBitsPerSample = 32;
 constexpr uint8_t kWantedBitsPerChannel = 32;

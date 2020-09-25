@@ -15,7 +15,7 @@ namespace audio {
 namespace mt8167 {
 
 static constexpr sample_format_t wanted_sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-static constexpr justify_format_t wanted_justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+static constexpr frame_format_t wanted_frame_format = FRAME_FORMAT_I2S;
 static constexpr uint32_t wanted_frame_rate = 48000;
 static constexpr uint8_t wanted_bits_per_sample = 32;
 static constexpr uint8_t wanted_bits_per_channel = 32;

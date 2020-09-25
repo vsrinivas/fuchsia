@@ -39,7 +39,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.number_of_channels = 2;
     format.channels_to_use = {0, 1};
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
     format.bits_per_channel = 32;
     format.bits_per_sample = 32;
@@ -58,7 +58,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.number_of_channels = 2;
     format.channels_to_use = {0, 1};
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
     format.bits_per_channel = 32;
     mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
@@ -77,7 +77,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.number_of_channels = 4;
     format.channels_to_use = {2, 3};
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_TDM1;
+    format.frame_format = FRAME_FORMAT_TDM1;
     format.frame_rate = 48000;
     format.bits_per_channel = 16;
     format.bits_per_sample = 16;
@@ -121,7 +121,7 @@ TEST(Tas58xxTest, BadSetDai) {
     format.number_of_channels = 2;
     format.channels_to_use = {0, 1};
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;  // This must fail.
+    format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail.
     format.frame_rate = 48000;
     format.bits_per_channel = 32;
     format.bits_per_sample = 32;
@@ -139,7 +139,7 @@ TEST(Tas58xxTest, BadSetDai) {
     format.number_of_channels = 1;
     format.channels_to_use = {0};
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
     format.bits_per_channel = 32;
     format.bits_per_sample = 32;
@@ -157,7 +157,7 @@ TEST(Tas58xxTest, BadSetDai) {
     format.number_of_channels = 2;
     format.channels_to_use = {0, 1};
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 1234;
     format.bits_per_channel = 32;
     format.bits_per_sample = 32;
@@ -191,9 +191,9 @@ TEST(Tas58xxTest, GetDai) {
       EXPECT_EQ(formats.value()[0].number_of_channels[1], 4);
       EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
       EXPECT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
-      EXPECT_EQ(formats.value()[0].justify_formats.size(), 2);
-      EXPECT_EQ(formats.value()[0].justify_formats[0], JUSTIFY_FORMAT_JUSTIFY_I2S);
-      EXPECT_EQ(formats.value()[0].justify_formats[1], JUSTIFY_FORMAT_JUSTIFY_TDM1);
+      EXPECT_EQ(formats.value()[0].frame_formats.size(), 2);
+      EXPECT_EQ(formats.value()[0].frame_formats[0], FRAME_FORMAT_I2S);
+      EXPECT_EQ(formats.value()[0].frame_formats[1], FRAME_FORMAT_TDM1);
       EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
       EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
       EXPECT_EQ(formats.value()[0].bits_per_channel.size(), 2);

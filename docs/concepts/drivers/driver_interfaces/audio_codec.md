@@ -110,8 +110,7 @@ To find out what formats are supported by a given codec, the controller uses the
     vector with one element `<1>`, if it supports either one or two input
     channels, it would report a vector with two elements `<1,2>`.
 2.  A vector of sample formats. DAI sample formats, e.g. `PCM_SIGNED`.
-3.  A vector of justify formats. Justification options, for example
-    `JUSTIFY_LEFT` and `JUSTIFY_RIGHT`.
+3.  A vector of frame formats, for example `STEREO_LEFT` and `STEREO_RIGHT`.
 4.  A vector of rates. Frame rates, for example 44100, 48000, and 96000.
 5.  A number of bits per channel. Number of bits in each channel in the DAI,
     e.g. 32 bits per channel.
@@ -156,7 +155,7 @@ function. This functions takes a parameter that specifies:
     electrical outputs that is configured with one channel in `SetDaiFormat` is
     expected to replicate the samples in this mono input on all its outputs.
 3.  A sample format.
-4.  A justify format.
+4.  A frame format.
 5.  A frame rate.
 6.  A number of bits per channel.
 7.  A number of bits per sample.

@@ -73,7 +73,7 @@ zx_status_t NelsonAudioStreamOut::InitCodec() {
       .channels_to_use_list = channels,
       .channels_to_use_count = countof(channels),
       .sample_format = kWantedSampleFormat,
-      .justify_format = kWantedJustifyFormat,
+      .frame_format = kWantedFrameFormat,
       .frame_rate = kWantedFrameRate,
       .bits_per_channel = kWantedBitsPerChannel,
       .bits_per_sample = kWantedBitsPerSample,

@@ -19,14 +19,14 @@ namespace {
 
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
 static const std::vector<sample_format_t> kSupportedSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<justify_format_t> kSupportedJustifyFormats = {JUSTIFY_FORMAT_JUSTIFY_I2S};
+static const std::vector<frame_format_t> kSupportedFrameFormats = {FRAME_FORMAT_I2S};
 static const std::vector<uint32_t> kSupportedRates = {48'000, 96'000};
 static const std::vector<uint8_t> kSupportedBitsPerChannel = {32};
 static const std::vector<uint8_t> kSupportedBitsPerSample = {16};
 static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .number_of_channels = kSupportedNumberOfChannels,
     .sample_formats = kSupportedSampleFormats,
-    .justify_formats = kSupportedJustifyFormats,
+    .frame_formats = kSupportedFrameFormats,
     .frame_rates = kSupportedRates,
     .bits_per_channel = kSupportedBitsPerChannel,
     .bits_per_sample = kSupportedBitsPerSample,

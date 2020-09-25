@@ -45,15 +45,15 @@ constexpr uint8_t kRegClearFaultBitsAnalog     = 0x80;
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
 static const std::vector<sample_format_t> kSupportedDaiSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<justify_format_t> kSupportedDaiJustifyFormats = {
-    JUSTIFY_FORMAT_JUSTIFY_I2S, JUSTIFY_FORMAT_JUSTIFY_TDM1};
+static const std::vector<frame_format_t> kSupportedDaiFrameFormats = {FRAME_FORMAT_I2S,
+                                                                      FRAME_FORMAT_TDM1};
 static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
 static const std::vector<uint8_t> kSupportedDaiBitsPerChannel = {16, 32};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {16, 32};
 static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
     .number_of_channels = kSupportedDaiNumberOfChannels,
     .sample_formats = kSupportedDaiSampleFormats,
-    .justify_formats = kSupportedDaiJustifyFormats,
+    .frame_formats = kSupportedDaiFrameFormats,
     .frame_rates = kSupportedDaiRates,
     .bits_per_channel = kSupportedDaiBitsPerChannel,
     .bits_per_sample = kSupportedDaiBitsPerSample,
@@ -214,7 +214,7 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
 
   uint8_t reg_value =
       (format.bits_per_sample == 32 ? kRegSapCtrl1Bits32bits : kRegSapCtrl1Bits16bits) |
-      (format.justify_format == JUSTIFY_FORMAT_JUSTIFY_I2S ? 0x00 : kRegSapCtrl1BitsTdmSmallFs);
+      (format.frame_format == FRAME_FORMAT_I2S ? 0x00 : kRegSapCtrl1BitsTdmSmallFs);
 
   fbl::AutoLock lock(&lock_);
   auto status = WriteReg(kRegSapCtrl1, reg_value);

@@ -14,7 +14,7 @@ static constexpr size_t kMaxDaiFormats = 8;
 static constexpr size_t kMaxChannelsToUse = 8;
 static constexpr size_t kMaxChannels = 8;
 static constexpr size_t kMaxSampleFormats = 8;
-static constexpr size_t kMaxJustifyFormats = 8;
+static constexpr size_t kMaxFrameFormats = 8;
 static constexpr size_t kMaxRates = 8;
 static constexpr size_t kMaxBitsPerChannel = 8;
 static constexpr size_t kMaxBitsPerSample = 8;
@@ -120,7 +120,7 @@ struct CodecDaiFormatsProxyResponse {
   dai_supported_formats_t formats[kMaxDaiFormats];
   uint32_t number_of_channels[kMaxChannels];
   sample_format_t formats_list[kMaxSampleFormats];
-  justify_format_t justify_formats[kMaxJustifyFormats];
+  frame_format_t frame_formats[kMaxFrameFormats];
   uint32_t frame_rates_list[kMaxRates];
   uint8_t bits_per_channel[kMaxBitsPerChannel];
   uint8_t bits_per_sample_list[kMaxBitsPerSample];

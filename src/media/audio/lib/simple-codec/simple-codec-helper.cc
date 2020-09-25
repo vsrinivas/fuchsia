@@ -20,7 +20,7 @@ bool IsDaiFormatSupported(const DaiFormat& format,
 
 bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& supported) {
   const sample_format_t sample_format = format.sample_format;
-  const justify_format_t justify_format = format.justify_format;
+  const frame_format_t frame_format = format.frame_format;
   const uint32_t frame_rate = format.frame_rate;
   const uint8_t bits_per_sample = format.bits_per_sample;
   const uint8_t bits_per_channel = format.bits_per_channel;
@@ -42,12 +42,11 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
     return false;
   }
 
-  for (i = 0;
-       i < supported.justify_formats.size() && supported.justify_formats[i] != justify_format;
+  for (i = 0; i < supported.frame_formats.size() && supported.frame_formats[i] != frame_format;
        ++i) {
   }
-  if (i == supported.justify_formats.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted justify format");
+  if (i == supported.frame_formats.size()) {
+    zxlogf(DEBUG, "SimpleCodec did not find wanted frame format");
     return false;
   }
 
