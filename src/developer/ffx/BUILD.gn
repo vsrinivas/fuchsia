@@ -78,7 +78,11 @@ if (is_host) {
 
     # TODO(fxbug.dev/60683): split additional dimensions such as multi-device
     # mac + device, etc.
-    environments = [ nuc_env ]
+    #
+    # TODO(fxbug.dev/60740): re-enable once deadlock is resolved on fuchsia-x64-{debug,release}.
+    environments = [
+      # nuc_env
+    ]
   }
 }
 
