@@ -31,10 +31,15 @@ type fakeTester struct {
 	testErr   error
 	runTest   func(testsharder.Test, io.Writer, io.Writer)
 	funcCalls []string
+	outDirs   map[string]bool
 }
 
-func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
 	t.funcCalls = append(t.funcCalls, testFunc)
+	if t.outDirs == nil {
+		t.outDirs = make(map[string]bool)
+	}
+	t.outDirs[outDir] = true
 	if t.runTest != nil {
 		t.runTest(test, stdout, stderr)
 	}
@@ -359,7 +364,7 @@ func TestRunTest(t *testing.T) {
 			if c.runs == 0 {
 				c.runs = 1
 			}
-			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf)
+			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf, "out-dir")
 
 			if err != c.expectedErr {
 				t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
@@ -380,6 +385,10 @@ func TestRunTest(t *testing.T) {
 				}
 				if testCount != expectedTries {
 					t.Errorf("ran test %d times, expected: %d", testCount, expectedTries)
+				}
+				// Each try should have a unique outDir
+				if len(tester.outDirs) != expectedTries {
+					t.Errorf("got %d unique outDirs, expected %d", len(tester.outDirs), expectedTries)
 				}
 			}
 			expectedOutput := ""

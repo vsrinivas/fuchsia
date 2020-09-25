@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,8 +38,7 @@ func createTestOutputs(producer *tap.Producer, outDir string) (*testOutputs, err
 // Record writes the test result to initialized outputs.
 func (o *testOutputs) record(result testrunner.TestResult) error {
 	// Sponge doesn't seem to like the path if we just put Name in there.
-	nameForPath := strings.ReplaceAll(result.Name, ":", "")
-	nameForPath = strings.ReplaceAll(nameForPath, "#", string(filepath.Separator))
+	nameForPath := url.PathEscape(strings.ReplaceAll(result.Name, ":", ""))
 	outputRelPath := filepath.Join(nameForPath, strconv.Itoa(result.RunIndex), runtests.TestOutputFilename)
 	// Strip any leading //.
 	outputRelPath = strings.TrimLeft(outputRelPath, "//")

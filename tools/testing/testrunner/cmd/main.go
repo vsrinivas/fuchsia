@@ -12,9 +12,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +39,7 @@ const (
 	sshKeyEnvVar       = "FUCHSIA_SSH_KEY"
 	serialSocketEnvVar = "FUCHSIA_SERIAL_SOCKET"
 	// A directory that will be automatically archived on completion of a task.
-	testOutdirEnvVar = "FUCHSIA_TEST_OUTDIR"
+	testOutDirEnvVar = "FUCHSIA_TEST_OUTDIR"
 )
 
 // Command-line flags
@@ -99,19 +102,19 @@ func main() {
 
 	// Configure a test outputs object, responsible for producing TAP output,
 	// recording data sinks, and archiving other test outputs.
-	testOutdir := filepath.Join(os.Getenv(testOutdirEnvVar), outDir)
-	if testOutdir == "" {
+	testOutDir := filepath.Join(os.Getenv(testOutDirEnvVar), outDir)
+	if testOutDir == "" {
 		var err error
-		testOutdir, err = ioutil.TempDir("", "testrunner")
+		testOutDir, err = ioutil.TempDir("", "testrunner")
 		if err != nil {
 			logger.Fatalf(ctx, "failed to create a test output directory")
 		}
 	}
-	logger.Debugf(ctx, "test output directory: %s", testOutdir)
+	logger.Debugf(ctx, "test output directory: %s", testOutDir)
 
 	tapProducer := tap.NewProducer(os.Stdout)
 	tapProducer.Plan(len(tests))
-	outputs, err := createTestOutputs(tapProducer, testOutdir)
+	outputs, err := createTestOutputs(tapProducer, testOutDir)
 	if err != nil {
 		logger.Fatalf(ctx, "failed to create test results object: %v", err)
 	}
@@ -127,7 +130,7 @@ func main() {
 	defer cleanUp()
 
 	serialSocketPath := os.Getenv(serialSocketEnvVar)
-	if err := execute(ctx, tests, outputs, nodename, sshKeyFile, serialSocketPath); err != nil {
+	if err := execute(ctx, tests, outputs, nodename, sshKeyFile, serialSocketPath, testOutDir); err != nil {
 		logger.Fatalf(ctx, err.Error())
 	}
 }
@@ -181,14 +184,14 @@ func loadTests(path string) ([]testsharder.Test, error) {
 }
 
 type tester interface {
-	Test(context.Context, testsharder.Test, io.Writer, io.Writer) (runtests.DataSinkReference, error)
+	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (runtests.DataSinkReference, error)
 	Close() error
 	CopySinks(context.Context, []runtests.DataSinkReference) error
 	RunSnapshot(context.Context, string) error
 }
 
 // TODO: write tests for this function. Tests were deleted in fxrev.dev/407968 as part of a refactoring.
-func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile, serialSocketPath string) error {
+func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile, serialSocketPath, outDir string) error {
 	var sinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
 
@@ -233,7 +236,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
 
-		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr)
+		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir)
 		if err != nil {
 			return err
 		}
@@ -273,10 +276,11 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
-func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer) ([]*testrunner.TestResult, error) {
+func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string) ([]*testrunner.TestResult, error) {
 	var results []*testrunner.TestResult
 	for i := 0; i < test.Runs; i++ {
-		result, err := runTestOnce(ctx, test, t, i, collectiveStdout, collectiveStderr)
+		outDirForI := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
+		result, err := runTestOnce(ctx, test, t, i, collectiveStdout, collectiveStderr, outDirForI)
 		if err != nil {
 			return results, err
 		}
@@ -292,7 +296,7 @@ func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outp
 	return results, nil
 }
 
-func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex int, collectiveStdout, collectiveStderr io.Writer) (*testrunner.TestResult, error) {
+func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex int, collectiveStdout, collectiveStderr io.Writer, outDir string) (*testrunner.TestResult, error) {
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
 	stdout := new(bytes.Buffer)
@@ -314,7 +318,7 @@ func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex 
 
 	result := runtests.TestSuccess
 	startTime := time.Now()
-	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
+	dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
 	if err != nil {
 		result = runtests.TestFailure
 		logger.Errorf(ctx, err.Error())

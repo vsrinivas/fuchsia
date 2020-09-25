@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -100,22 +101,33 @@ func TestSubprocessTester(t *testing.T) {
 			wantCmd: []string{"/fail"},
 		},
 	}
+	baseOutDir, err := ioutil.TempDir("", "TestSubprocessTester")
+	if err != nil {
+		t.Fatal("failed to create baseOutDir:", err)
+	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			runner := &fakeCmdRunner{
 				runErrs: c.runErrs,
 			}
-			tester := subprocessTester{
-				r: runner,
+			newRunner = func(dir string, env []string) cmdRunner {
+				return runner
 			}
+			tester := subprocessTester{}
 			defer func() {
 				if err := tester.Close(); err != nil {
 					t.Errorf("Close returned error: %v", err)
 				}
 			}()
-			_, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard)
+			outDir := filepath.Join(baseOutDir, c.test.Path)
+			_, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
 			if gotErr := (err != nil); gotErr != c.wantErr {
 				t.Errorf("tester.Test got error: %v, want error: %t", err, c.wantErr)
+			}
+			if err == nil {
+				if _, statErr := os.Stat(outDir); statErr != nil {
+					t.Error("tester.Test did not create a readable outDir:", statErr)
+				}
 			}
 			if diff := cmp.Diff(c.wantCmd, runner.lastCmd); diff != "" {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
@@ -222,7 +234,7 @@ func TestSSHTester(t *testing.T) {
 				Runs:         1,
 				RunAlgorithm: testsharder.StopOnSuccess,
 			}
-			_, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard)
+			_, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
 			if err == nil {
 				if c.wantErr {
 					t.Errorf("tester.Test got nil error, want non-nil error")
@@ -305,7 +317,7 @@ func TestSerialTester(t *testing.T) {
 	t.Run("test passes", func(t *testing.T) {
 		errs := make(chan error)
 		go func() {
-			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard)
+			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
 			errs <- err
 		}()
 
@@ -333,7 +345,7 @@ func TestSerialTester(t *testing.T) {
 	t.Run("test fails", func(t *testing.T) {
 		errs := make(chan error)
 		go func() {
-			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard)
+			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
 			errs <- err
 		}()
 		// The write to the socket will block until we read from serial.

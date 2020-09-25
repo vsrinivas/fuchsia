@@ -60,6 +60,11 @@ type cmdRunner interface {
 }
 
 // For testability
+var newRunner = func(dir string, env []string) cmdRunner {
+	return &runner.SubprocessRunner{Dir: dir, Env: env}
+}
+
+// For testability
 type sshClient interface {
 	Close()
 	Reconnect(ctx context.Context) error
@@ -76,7 +81,8 @@ type dataSinkCopier interface {
 
 // subprocessTester executes tests in local subprocesses.
 type subprocessTester struct {
-	r              cmdRunner
+	env            []string
+	dir            string
 	perTestTimeout time.Duration
 }
 
@@ -84,24 +90,28 @@ type subprocessTester struct {
 // locally with a given working directory and environment.
 func newSubprocessTester(dir string, env []string, perTestTimeout time.Duration) *subprocessTester {
 	return &subprocessTester{
-		r: &runner.SubprocessRunner{
-			Dir: dir,
-			Env: env,
-		},
+		dir:            dir,
+		env:            env,
 		perTestTimeout: perTestTimeout,
 	}
 }
 
-func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
 	if test.Path == "" {
 		return nil, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
+	// Some tests read testOutDirEnvVar so ensure they get their own output dir.
+	if err := os.MkdirAll(outDir, 0770); err != nil {
+		return nil, err
+	}
+	r := newRunner(t.dir,
+		append(t.env, fmt.Sprintf("%s=%s", testOutDirEnvVar, outDir)))
 	if t.perTestTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout)
 		defer cancel()
 	}
-	err := t.r.Run(ctx, []string{test.Path}, stdout, stderr)
+	err := r.Run(ctx, []string{test.Path}, stdout, stderr)
 	if err == context.DeadlineExceeded {
 		return nil, &timeoutError{t.perTestTimeout}
 	}
@@ -205,7 +215,7 @@ func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 }
 
 // Test runs a test over SSH.
-func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	if err != nil {
 		return nil, err
@@ -305,7 +315,7 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 	}, nil
 }
 
-func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer) (runtests.DataSinkReference, error) {
+func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
 	if err != nil {
 		return nil, err

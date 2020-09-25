@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -77,7 +78,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	}
 	defer o.Close()
 
-	outputFileA := filepath.Join("fuchsia-pkg/foo/test_a", "0", "stdout-and-stderr.txt")
+	outputFileA := filepath.Join(url.PathEscape("fuchsia-pkg//foo#test_a"), "0", "stdout-and-stderr.txt")
 	outputFileB := filepath.Join("test_b", "0", "stdout-and-stderr.txt")
 	expectedSummary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{{
