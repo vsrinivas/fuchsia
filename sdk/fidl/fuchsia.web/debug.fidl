@@ -7,29 +7,27 @@ library fuchsia.web;
 /// The debug service which allows to enable the DevTools service on Contexts.
 [Discoverable]
 protocol Debug {
-    /// Enables the DevTools service on every subsequent Context creation and
-    /// and delivers subsequent DevTools events to the supplied `listener`.
-    /// The callback indicates when the WebEngine is in a debuggable state.
-    /// Events will be sent to every `listener` registered with this method.
+    /// Enables the DevTools service on every subsequent [`Context`] creation and delivers
+    /// subsequent DevTools events to the supplied `listener`. The callback indicates when the
+    /// WebEngine is in a debuggable state. Events will be sent to every `listener` registered with
+    /// this method.
     EnableDevTools(DevToolsListener listener) -> ();
 };
 
 /// Interface used to observe DevTools service availability events.
 protocol DevToolsListener {
-    /// Called when the DevTools service is available on a new Context.
+    /// Called when the DevTools service is available on a new [`Context`].
     ///
-    /// `listener`: Channel over which DevTools events for the new Context will
-    ///             be delivered. This channel will disconnect when the Context
-    ///             is detroyed.
+    /// - `listener`: Channel over which DevTools events for the new [`Context`] will
+    ///   be delivered. This channel will disconnect when the [`Context`] is destroyed.
     OnContextDevToolsAvailable(request<DevToolsPerContextListener> listener);
 };
 
-/// Interface supplied by the debugging component to observe the DevTools
-/// service opening event.
+/// Interface supplied by the debugging component to observe the DevTools service opening event.
 protocol DevToolsPerContextListener {
-    /// Called when the DevTools service starts accepting TCP connections on
-    /// `port`. `port` will remain open until the Context is destroyed.
+    /// Called when the DevTools service starts accepting TCP connections on `port`. `port` will
+    /// remain open until the [`Context`] is destroyed.
     ///
-    /// `port`: The port used by the service.
+    /// - `port`: The port used by the service.
     OnHttpPortOpen(uint16 port);
 };

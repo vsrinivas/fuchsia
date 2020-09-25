@@ -9,7 +9,7 @@ using fuchsia.mem;
 using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
-// TODO(fxbug.dev/29927): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
+// TODO(fxbug.dev/29927): Consider using [`fuchsia.logger/LogLevelFilter`] if possible.
 enum ConsoleLogLevel : int32 {
     /// No logging.
     NONE = 100;
@@ -54,14 +54,14 @@ bits InputTypes : uint64 {
     ALL = 0x8000000000000000;
 };
 
-/// Controls whether ConfigureInputTypes() should allow or deny processing of
-/// the specified [`fuchsia.web.InputTypes`].
+/// Controls whether [`Frame.ConfigureInputTypes()`] should allow or deny processing of the
+/// specified [`InputTypes`].
 enum AllowInputState : int32 {
     ALLOW = 1;
     DENY = 2;
 };
 
-/// Represents the return status of a [`fuchsia.web.Frame`] method.
+/// Represents the return status of a [`Frame`] method.
 enum FrameError : int32 {
     /// An internal error occured.
     INTERNAL_ERROR = 1;
@@ -72,7 +72,7 @@ enum FrameError : int32 {
     /// The Frame's URL does not match any of the origins provided by the caller.
     INVALID_ORIGIN = 3;
 
-    /// The required `data` property is missing from a [`fuchsia.web.WebMessage`].
+    /// The required `data` property is missing from a [`WebMessage`].
     NO_DATA_IN_MESSAGE = 4;
 };
 
@@ -91,8 +91,7 @@ enum PermissionType : uint16 {
     PERSISTENT_STORAGE = 4;
 };
 
-/// Describes a web permission. In the future, it may be extended with
-/// type-specific fields.
+/// Describes a web permission. In the future, it may be extended with type-specific fields.
 table PermissionDescriptor {
     1: PermissionType type;
 };
@@ -108,16 +107,17 @@ enum PermissionState : uint8 {
 
 protocol Frame {
     /// Creates a new view using the specified `view_token`. Caller should pass the other end of
-    /// the token to [`fuchsia.ui.gfx.ViewHolderArgs/token`] to attach the new view to a view tree.
+    /// the token to [`fuchsia.ui.gfx/ViewHolderArgs`] to attach the new view to a view tree.
     ///
     /// - `view_token`: Token for the new view.
     CreateView(fuchsia.ui.views.ViewToken view_token);
 
     /// Creates a new view using the specified `view_token`. Caller should pass the other end of
-    /// the token to [`fuchsia.ui.gfx.ViewHolderArgs/token`] to attach the new view to a view tree.
+    /// the token to [`fuchsia.ui.gfx/ViewHolderArgs`] to attach the new view to a view tree.
     /// `view_ref` can be cloned before passing it to this method, which will allow clients to
     /// track the view.
-    /// `view_ref_control` must not have the ZX_RIGHT_DUPLICATE set, or view creation will fail
+    ///
+    /// `view_ref_control` must not have the `ZX_RIGHT_DUPLICATE` set, or view creation will fail
     /// and `view_token` will be closed.
     [Transitional]
     CreateViewWithViewRef(fuchsia.ui.views.ViewToken view_token,
@@ -125,28 +125,30 @@ protocol Frame {
                           fuchsia.ui.views.ViewRef view_ref);
 
     /// Enables headless rendering of the Frame.
+    ///
     /// This is used when content depends on layout and/or animation events firing normally.
     /// May only be used on a Context created with the `HEADLESS` feature flag.
     EnableHeadlessRendering();
 
     /// Stops headless rendering of the Frame.
+    ///
     /// May only be used on a Context created with the `HEADLESS` feature flag.
     DisableHeadlessRendering();
 
-    /// Returns a [`fuchsia.media.sessions2.Player`] interface through which media (i.e.
+    /// Returns a [`fuchsia.media.sessions2/Player`] interface through which media (i.e.
     /// video/audio) playback in the frame may be observed, and/or controlled. Only one
-    /// [`fuchsia.media.sessions2.Player`] may be active at a time, for each [`fuchsia.web.Frame`].
+    /// [`fuchsia.media.sessions2/Player`] may be active at a time, for each [`Frame`].
     GetMediaPlayer(request<fuchsia.media.sessions2.Player> player);
 
-    /// Returns an interface through which the [`fuchsia.web.Frame`] may be navigated to a desired
-    /// URL, reloaded, etc.
+    /// Returns an interface through which the [`Frame`] may be navigated to a desired URL,
+    /// reloaded, etc.
     ///
-    /// - `controller`: An asynchronous interface request for the [`fuchsia.web.Frame`]'s
-    /// [`fuchsia.web.NavigationController`].
+    /// - `controller`: An asynchronous interface request for the [`Frame`]'s
+    ///   [`NavigationController`].
     GetNavigationController(request<NavigationController> controller);
 
-    /// Executes a UTF-8 encoded `script` in the [`fuchsia.web.Frame`] if the
-    /// [`fuchsia.web.Frame`]'s URL has an origin which matches entries in `origins`.
+    /// Executes a UTF-8 encoded `script` in the [`Frame`] if the [`Frame`]'s URL has an origin
+    /// which matches entries in `origins`.
     ///
     /// At least one `origins` entry must be specified. If a wildcard `"*"` is specified in
     /// `origins`, then the script will be evaluated unconditionally.
@@ -159,23 +161,23 @@ protocol Frame {
     ///
     /// If an error occured, the FrameError will be set to one of these values:
     /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
-    /// - `INVALID_ORIGIN`: The [`fuchsia.web.Frame`]'s current URL does not match any of the
-    ///    values in `origins` or `origins` is an empty vector.
+    /// - `INVALID_ORIGIN`: The [`Frame`]'s current URL does not match any of the values in
+    ///   `origins` or `origins` is an empty vector.
     ExecuteJavaScript(
         vector<Url>:MAX origins,
         fuchsia.mem.Buffer script)
         -> (fuchsia.mem.Buffer result) error FrameError;
 
-    /// Variant of [`fuchsia.web.Frame/ExecuteJavaScript`] which executes the supplied script
-    /// without returning a result.
+    /// Variant of [`Frame.ExecuteJavaScript`] which executes the supplied script without returning
+    /// a result.
     ExecuteJavaScriptNoResult(
         vector<Url>:MAX origins,
         fuchsia.mem.Buffer script)
         -> () error FrameError;
 
-    /// Executes a UTF-8 encoded `script` for every subsequent page load where the
-    /// [`fuchsia.web.Frame`]'s URL has an origin reflected in `origins`. The script is executed
-    /// early, prior to the execution of the document's scripts.
+    /// Executes a UTF-8 encoded `script` for every subsequent page load where the [`Frame`]'s URL
+    /// has an origin reflected in `origins`. The script is executed early, prior to the execution
+    /// of the document's scripts.
     ///
     /// Scripts are identified by a client-managed identifier `id`. Any script previously injected
     /// using the same `id` will be replaced.
@@ -187,7 +189,7 @@ protocol Frame {
     /// At least one `origins` entry must be specified. If a wildcard `"*"` is specified in
     /// `origins`, then the script will be evaluated unconditionally.
     ///
-    /// If an error occured, the [`fuchsia.web.FrameError`] will be set to one of these values:
+    /// If an error occured, the [`FrameError`] will be set to one of these values:
     /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
     /// - `INVALID_ORIGIN`: `origins` is an empty vector.
     AddBeforeLoadJavaScript(
@@ -205,10 +207,10 @@ protocol Frame {
     /// `target_origin` restricts message delivery to the specified origin. If `target_origin` is
     /// `"*"`, then the message will be sent to the document regardless of its origin.
     /// See the
-    /// [https://html.spec.whatwg.org/multipage/web-messaging.html#posting-messages](HTML spec)
+    /// [HTML spec](https://html.spec.whatwg.org/multipage/web-messaging.html#posting-messages)
     /// section 9.4.3 for more details on how the target origin policy is applied.
     ///
-    /// If an error occured, the [`fuchsia.web.FrameError`] will be set to one of these values:
+    /// If an error occured, the [`FrameError`] will be set to one of these values:
     /// - `INTERNAL_ERROR`: The WebEngine failed to create a message pipe.
     /// - `BUFFER_NOT_UTF8`: The script in `message`'s `data` property is not UTF-8 encoded.
     /// - `INVALID_ORIGIN`: `origins` is an empty vector.
@@ -221,26 +223,28 @@ protocol Frame {
     /// - `listener`: The observer to use. Unregisters any existing listener is null.
     SetNavigationEventListener(NavigationEventListener? listener);
 
-    /// If set to a value other than [`fuchsia.web.ConsoleLogLevel/NONE`], allows web content to
-    /// log messages to the system logger using the console APIs (`debug()`, `log()`, `info()`,
-    /// `warn()` and `error()`).
-    /// The default value is [`fuchsia.web.ConsoleLogLevel/NONE`].
+    /// If set to a value other than [`ConsoleLogLevel.NONE`], allows web content to log messages
+    /// to the system logger using the console APIs (`debug()`, `log()`, `info()`, `warn()` and
+    /// `error()`).
+    /// The default value is [`ConsoleLogLevel.NONE`].
     ///
-    /// As the system log may be persisted, it is recommended that
-    /// [`fuchsia.web.ConsoleLogLevel/NONE`] be used in Incognito and other private browsing modes.
+    /// As the system log may be persisted, it is recommended that [`ConsoleLogLevel.NONE`] be used
+    /// in Incognito and other private browsing modes.
     ///
     /// When logged to the system logger:
-    /// - `debug()`, `log()` and `info()` logs are logged with
-    ///   [`fuchsia.logger.LogLevelFilter/INFO`] severity level.
-    /// - `warn()` logs are logged with [`fuchsia.logger.LogLevelFilter/WARNING`] severity level.
-    /// - `error()` logs are logged with [`fuchsia.logger.LogLevelFilter/ERROR`] severity level.
+    /// - `debug()`, `log()` and `info()` logs are logged with `INFO` severity level in
+    ///   [`fuchsia.logger/LogLevelFilter`].
+    /// - `warn()` logs are logged with `WARN` severity level in [`fuchsia.logger/LogLevelFilter`].
+    /// - `error()` logs are logged with `ERROR` severity level in
+    ///   [`fuchsia.logger/LogLevelFilter`].
     SetJavaScriptLogLevel(ConsoleLogLevel level);
 
+    /// Deprecated. Use [`Frame.ConfigureInputTypes`] instead.
     [Transitional, Deprecated]
     SetEnableInput(bool enable_input);
 
     /// Enables or disables the processing of the specified `types` of user inputs.
-    /// `enable` specifies whether to enable or disable the specified `types`.
+    /// `allow` specifies whether to enable or disable the specified `types`.
     /// All input types are enabled by default.
     ConfigureInputTypes(InputTypes types, AllowInputState allow);
 
@@ -250,20 +254,19 @@ protocol Frame {
     /// - `listener`: The listener to use. Unregisters any existing listener if null.
     SetPopupFrameCreationListener(PopupFrameCreationListener? listener);
 
-    /// Supplies a set of [`fuchsia.web.UrlRequestRewriteRule`] to apply on every subsequent URL
-    /// request.
+    /// Supplies a set of [`UrlRequestRewriteRule`] to apply on every subsequent URL request.
     /// - `rules` are cumulative and applied in order.
-    /// - `rules` will be validated before being applied. If `rules` are invalid, the
-    ///   [`fuchsia.web.Frame`] will be closed with `ERR_INVALID_ARGS`.
-    /// - [`fuchsia.web.Frame/SetUrlRequestRewriteRules`] must not be called again until its
-    ///   acknowledgement callback has been processed. If this happens, the [`fuchsia.web.Frame`]
-    ///   will be closed with `ERR_BAD_STATE`.
+    /// - `rules` will be validated before being applied. If `rules` are invalid, the [`Frame`]
+    ///   will be closed with `ERR_INVALID_ARGS`.
+    /// - [`Frame.SetUrlRequestRewriteRules`] must not be called again until its acknowledgement
+    ///   callback has been processed. If this happens, the [`Frame`] will be closed with
+    ///   `ERR_BAD_STATE`.
     SetUrlRequestRewriteRules(vector<UrlRequestRewriteRule>:MAX_RULE_COUNT rules) -> ();
 
-    /// Sets `session_id` to pass to the [`fuchsia.media.AudioConsumer`] when playing audio. The
+    /// Sets `session_id` to pass to the [`fuchsia.media/AudioConsumer`] when playing audio. The
     /// specified value is not applied retroactively to audio streams that were started before this
     /// message is processed. If the caller needs to ensure the value is applied to all streams it
-    /// should call this method before [`fuchsia.web.Frame/GetNavigationController`].
+    /// should call this method before [`Frame.GetNavigationController`].
     SetMediaSessionId(uint64 session_id);
 
     /// Overrides the dimensions reported to web content. The devicePixelRatio reported to
@@ -280,11 +283,13 @@ protocol Frame {
 
     /// Sets whether to block all HTMLMediaElements in the frame from fetching and loading media
     /// resources.
+    ///
     /// May be used, for example, to prevent loading media in frames that are not visible.
     ///
     /// While media loading is blocked, elements with `autoplay` set to `true` will not start
     /// playback. The promises returned by calls to `play()` will remain unresolved until loading is
     /// unblocked by a call to this method.
+    ///
     /// When media loading is unblocked, elements will begin fetching, resource, loading, and
     /// playing as appropriate.
     ///
@@ -302,12 +307,10 @@ resource table WebMessage {
     /// The message payload, encoded as an UTF-8 string. This is a required property.
     1: fuchsia.mem.Buffer data;
 
-    /// Optional list of objects transferred into the [`fuchsia.web.MessagePort`] from the FIDL
-    /// client.
+    /// Optional list of objects transferred into the [`MessagePort`] from the FIDL client.
     2: vector<IncomingTransferable>:MAX incoming_transfer;
 
-    /// Optional list of objects transferred out of the [`fuchsia.web.MessagePort`] to the FIDL
-    /// client.
+    /// Optional list of objects transferred out of the [`MessagePort`] to the FIDL client.
     3: vector<OutgoingTransferable>:MAX outgoing_transfer;
 };
 
@@ -323,11 +326,11 @@ flexible resource union IncomingTransferable {
 /// the peered MessagePort in the Frame's script context. The port is destroyed when either end of
 /// the MessagePort channel is torn down.
 protocol MessagePort {
-    /// Sends a [`fuchsia.web.WebMessage`] to the peer. These are processed in order, one at a
+    /// Sends a [`WebMessage`] to the peer. These are processed in order, one at a
     /// time. It is not necessary for the caller to wait for the completion callback before calling
-    /// [`fuchsia.web.MessagePort/PostMessage`] again.
+    /// [`MessagePort.PostMessage`] again.
     ///
-    /// If an error occured, the [`fuchsia.web.FrameError`] will be set to one of these value:
+    /// If an error occured, the [`FrameError`] will be set to one of these value:
     /// - `BUFFER_NOT_UTF8`: The script in `message`'s `data` property is not UTF-8 encoded.
     /// - `NO_DATA_IN_MESSAGE`: The `data` property is missing in `message`.
     PostMessage(WebMessage message) -> () error FrameError;
@@ -349,8 +352,8 @@ resource table PopupFrameCreationInfo {
 };
 
 protocol PopupFrameCreationListener {
-    /// Called when a [`fuchsia.web.Frame`] has created a new popup `frame`. Information about the
-    /// popup frame, and how it was created, is provided via `info`. Additional popup frames are
-    /// delivered after the the acknowledgement callback is invoked.
+    /// Called when a [`Frame`] has created a new popup `frame`. Information about the popup frame,
+    /// and how it was created, is provided via `info`. Additional popup frames are delivered after
+    /// the acknowledgement callback is invoked.
     OnPopupFrameCreated(Frame frame, PopupFrameCreationInfo info) -> ();
 };

@@ -51,7 +51,7 @@ flexible union UrlRequestRewrite {
 /// Adds `headers` to the URL request. If a header is already present in the original URL request,
 /// it will be overwritten.
 /// - `headers` must be set.
-/// - Each [`fuchsia.net.http.Header`] in `headers` must have a valid HTTP header name and value,
+/// - Each [`fuchsia.net.http/Header`] in `headers` must have a valid HTTP header name and value,
 ///   per [RFC 7230 section  3.2](https://tools.ietf.org/html/rfc7230#section-3.2).
 table UrlRequestRewriteAddHeaders {
     1: vector<fuchsia.net.http.Header>:MAX_HEADERS_COUNT headers;
