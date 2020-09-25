@@ -40,6 +40,7 @@ if (is_host) {
       "src/environment.rs",
       "src/file_backed_config.rs",
       "src/lib.rs",
+      "src/logging.rs",
       "src/mapping/config.rs",
       "src/mapping/data.rs",
       "src/mapping/env_var.rs",
