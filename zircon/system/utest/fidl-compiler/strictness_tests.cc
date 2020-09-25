@@ -26,16 +26,6 @@ void invalid_strictness(const std::string& type, const std::string& definition) 
   ASSERT_SUBSTR(errors[0]->msg.c_str(), type.c_str());
 }
 
-void redundant_strictness(const std::string& strictness, const std::string& definition) {
-  // TODO(fxbug.dev/7847): Prepending a redundant "strict" qualifier is currently
-  // allowed for bits, enums and unions to more easily transition those FIDL
-  // types to be flexible by default. This test should be updated and re-enabled
-  // when that's done.
-  //
-  // The original code for this is at
-  // <https://fuchsia.git.corp.google.com/fuchsia/+/d66c40c674e1a37fc674c016e76cebd7c8edcd2d/zircon/system/utest/fidl-compiler/strictness_tests.cc#31>.
-}
-
 TEST(StrictnessTests, bad_duplicate_modifier) {
   TestLibrary library(R"FIDL(
 library example;
@@ -85,7 +75,11 @@ TEST(StrictnessTests, bits_strictness) {
       R"FIDL(
 library example;
 
-bits StrictFoo {
+bits DefaultStrictFoo {
+    BAR = 0x1;
+};
+
+strict bits StrictFoo {
     BAR = 0x1;
 };
 
@@ -97,6 +91,7 @@ flexible bits FlexibleFoo {
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupBits("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupBits("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+  EXPECT_EQ(library.LookupBits("DefaultStrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
 TEST(StrictnessTests, enum_strictness) {
@@ -104,7 +99,11 @@ TEST(StrictnessTests, enum_strictness) {
       R"FIDL(
 library example;
 
-enum StrictFoo {
+enum DefaultStrictFoo {
+    BAR = 1;
+};
+
+strict enum StrictFoo {
     BAR = 1;
 };
 
@@ -116,22 +115,33 @@ flexible enum FlexibleFoo {
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupEnum("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupEnum("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+  EXPECT_EQ(library.LookupEnum("DefaultStrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
-TEST(StrictnessTests, strict_enum_redundant) {
-  redundant_strictness("strict", R"FIDL(
-strict enum Foo {
+TEST(StrictnessTests, flexible_enum_redundant) {
+  // TODO(fxbug.dev/7847): Once flexible is the default, we should test that
+  // the keyword causes an error because it is redundant.
+  TestLibrary library(R"FIDL(
+library example;
+
+flexible enum Foo {
   BAR = 1;
 };
 )FIDL");
+  ASSERT_TRUE(library.Compile());
 }
 
-TEST(StrictnessTests, strict_bits_redundant) {
-  redundant_strictness("strict", R"FIDL(
-strict bits Foo {
+TEST(StrictnessTests, flexible_bits_redundant) {
+  // TODO(fxbug.dev/7847): Once flexible is the default, we should test that
+  // the keyword causes an error because it is redundant.
+  TestLibrary library(R"FIDL(
+library example;
+
+flexible bits Foo {
   BAR = 0x1;
 };
 )FIDL");
+  ASSERT_TRUE(library.Compile());
 }
 
 TEST(StrictnessTests, invalid_strictness_struct) {
