@@ -11,6 +11,7 @@ use crate::{
     proxies::{observer::*, player::*},
     Result, SessionId, CHANNEL_BUFFER_SIZE,
 };
+use async_helpers::stream::StreamMap;
 use fidl::{
     encoding::Decodable,
     endpoints::{ClientEnd, ServerEnd},
@@ -33,7 +34,6 @@ use std::{
     marker::Unpin,
     ops::RangeFrom,
 };
-use streammap::StreamMap;
 
 const LOG_TAG: &str = "discovery";
 
@@ -78,8 +78,8 @@ impl Discovery {
             player_stream,
             catch_up_events: HashMap::new(),
             watcher_ids: 0..,
-            watchers: StreamMap::new(),
-            players: StreamMap::new(),
+            watchers: StreamMap::empty(),
+            players: StreamMap::empty(),
             interrupt_paused_players: HashSet::new(),
             interrupter: Interrupter::new(usage_reporter_proxy),
             interrupted_removal_sink,
@@ -165,12 +165,10 @@ impl Discovery {
         let observer = Observer::new(session_info_stream, status_request_stream);
         let task = future::join(partitioner, observer).map(drop).boxed();
 
-        self.players
-            .with_elem(session_id, move |player: &mut Player| {
-                player.serve_controls(control_request_stream);
-                player.add_proxy_task(task);
-            })
-            .await;
+        if let Some(player) = self.players.inner().get_mut(&session_id) {
+            player.serve_controls(control_request_stream);
+            player.add_proxy_task(task);
+        }
     }
 
     /// Connects a sink to the stream of `PlayerProxyEvents` for the set of
@@ -184,7 +182,7 @@ impl Discovery {
         let event_forward = session_info_stream.map(Ok).forward(sink).boxed();
 
         let id = self.watcher_ids.next().expect("Taking next element from infinite sequence");
-        self.watchers.insert(id, stream::once(event_forward)).await;
+        self.watchers.insert(id, stream::once(event_forward));
     }
 
     /// Connects a client to the set of all sessions.
@@ -219,9 +217,9 @@ impl Discovery {
             self.interrupt_paused_players.remove(id);
         } else {
             let mut usage = None;
-            self.players
-                .with_elem(*id, |player| usage = player.usage_to_pause_on_interruption())
-                .await;
+            if let Some(player) = self.players.inner().get_mut(id) {
+                usage = player.usage_to_pause_on_interruption();
+            }
 
             if let Some(usage) = usage {
                 if let Err(e) = self.interrupter.watch_usage(usage).await {
@@ -260,31 +258,22 @@ impl Discovery {
         // drop from the StreamMap when disconnected on their own.
         match stage {
             InterruptionStage::Begin => {
-                self.players
-                    .for_each_stream(|id, player| {
-                        if player.usage_to_pause_on_interruption() != Some(usage)
-                            || !player.is_active()
-                        {
-                            return;
-                        }
-
+                for (id, player) in self.players.inner().iter() {
+                    if player.usage_to_pause_on_interruption() == Some(usage) && player.is_active()
+                    {
                         let _ = player.pause();
-                        interrupted.insert(id);
-                    })
-                    .await
+                        interrupted.insert(*id);
+                    }
+                }
             }
             InterruptionStage::End => {
-                self.players
-                    .for_each_stream(|id, player| {
-                        if !interrupted.remove(&id)
-                            || player.usage_to_pause_on_interruption() != Some(usage)
-                        {
-                            return;
-                        }
-
+                for (id, player) in self.players.inner().iter() {
+                    if interrupted.remove(&id)
+                        && player.usage_to_pause_on_interruption() == Some(usage)
+                    {
                         let _ = player.play();
-                    })
-                    .await
+                    }
+                }
             }
         }
 
@@ -316,11 +305,9 @@ impl Discovery {
 
         let observer = Observer::new(session_info_stream, status_request_stream);
 
-        self.players
-            .with_elem(session_id, move |player: &mut Player| {
-                player.add_proxy_task(observer.map(drop).boxed());
-            })
-            .await;
+        if let Some(player) = self.players.inner().get_mut(&session_id) {
+            player.add_proxy_task(observer.map(drop).boxed());
+        }
     }
 
     pub async fn serve(
@@ -368,14 +355,17 @@ impl Discovery {
                     self.interrupt_paused_players.remove(&removal);
                 }
                 // Drive dispatch of events to watcher clients.
-                 _ = self.watchers.select_next_some() => {}
+                _ = self.watchers.next().fuse() => {
+                },
                 // A new player has been published to `fuchsia.media.sessions2.Publisher`.
                 new_player = self.player_stream.select_next_some() => {
-                    self.players.insert(new_player.id(), new_player).await;
+                    self.players.insert(new_player.id(), new_player);
                 }
                 // A player answered a hanging get for its status.
-                player_update = self.players.select_next_some() => {
-                    self.handle_player_update(player_update).await;
+                player_update = self.players.next().fuse() => {
+                    if let Some(player_update) = player_update {
+                        self.handle_player_update(player_update).await;
+                    }
                 }
             }
         }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::Result;
+use async_helpers::stream::StreamMap;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_media::*;
 use fuchsia_syslog::fx_log_warn;
@@ -11,7 +12,6 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use streammap::StreamMap;
 
 const LOG_TAG: &str = "interrupter";
 
@@ -23,18 +23,18 @@ pub struct Interrupter {
 
 impl Interrupter {
     pub fn new(usage_reporter: UsageReporterProxy) -> Self {
-        Self { usage_reporter, usage_watcher_requests: StreamMap::new() }
+        Self { usage_reporter, usage_watcher_requests: StreamMap::empty() }
     }
 
     pub async fn watch_usage(&mut self, usage: AudioRenderUsage) -> Result<()> {
-        if self.usage_watcher_requests.contains_key(usage).await {
+        if self.usage_watcher_requests.contains_key(&usage) {
             return Ok(());
         }
 
         let (usage_watcher, usage_watcher_requests) = create_request_stream()?;
         self.usage_reporter.watch(&mut Usage::RenderUsage(usage), usage_watcher)?;
 
-        self.usage_watcher_requests.insert(usage, usage_watcher_requests).await;
+        self.usage_watcher_requests.insert(usage, usage_watcher_requests);
         Ok(())
     }
 }
