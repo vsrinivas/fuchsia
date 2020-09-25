@@ -42,10 +42,10 @@ The functionality provided by the codecs is divided into:
 
 The controller is responsible for configuring and controlling the codecs. Codecs
 advertize capabilities and a controller determines how they are used as
-described below. Note that the codec drivers are expected to perform their own
-initialization and shutdown, just like any other driver. The controller can
-control the codec's state, such as through the reset function, but is not
-required to get codecs to an initialized state.
+described below. The controller can control the codec's state, such as through the
+reset function. A reset is required to get codecs to an initialized state.
+Note that the codec drivers are expected to perform their own shutdown, just like
+any other driver.
 
 Codecs are composite devices that provide the codec protocol to controllers. It
 is expected that only one controller uses a codec's protocol, and one controller

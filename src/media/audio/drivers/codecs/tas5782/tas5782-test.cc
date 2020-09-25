@@ -4,6 +4,7 @@
 
 #include "tas5782.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
 
@@ -204,7 +205,10 @@ TEST(Tas5782Test, Init) {
   mock_gpio0.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   mock_gpio1.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Set to mute and then to unmute..
 
-  Tas5782 device(nullptr, std::move(i2c), gpio0, gpio1);
+  Tas5782 device(fake_ddk::kFakeParent, std::move(i2c), gpio0, gpio1);
+  device.Bind();
+  // Delay to test we don't do other init I2C writes in another thread.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
   device.ResetAndInitialize();
   mock_i2c.VerifyAndClear();
   mock_gpio0.VerifyAndClear();

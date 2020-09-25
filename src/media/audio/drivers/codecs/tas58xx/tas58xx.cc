@@ -121,21 +121,12 @@ zx_status_t Tas58xx::ResetAndInitialize() {
 }
 
 zx_status_t Tas58xx::Bind() {
-  auto thunk = [](void* arg) -> int {
-    return reinterpret_cast<Tas58xx*>(arg)->ResetAndInitialize();
-  };
-  int rc = thrd_create_with_name(&thread_, thunk, this, "Tas58xx-thread");
-  if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx},
   };
   return DdkAdd(ddk::DeviceAddArgs("tas58xx").set_props(props));
 }
-
-void Tas58xx::Shutdown() { thrd_join(thread_, NULL); }
 
 zx_status_t Tas58xx::Create(zx_device_t* parent) {
   composite_protocol_t composite;

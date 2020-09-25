@@ -87,13 +87,6 @@ zx_status_t Tas5782::ResetAndInitialize() {
 }
 
 zx_status_t Tas5782::Bind() {
-  auto thunk = [](void* arg) -> int {
-    return reinterpret_cast<Tas5782*>(arg)->ResetAndInitialize();
-  };
-  int rc = thrd_create_with_name(&thread_, thunk, this, "Tas5782-thread");
-  if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782},

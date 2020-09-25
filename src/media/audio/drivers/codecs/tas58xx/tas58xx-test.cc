@@ -4,6 +4,7 @@
 
 #include "tas58xx.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
 
@@ -16,7 +17,8 @@ namespace audio {
 static constexpr uint32_t kCodecTimeoutSecs = 1;
 
 struct Tas58xxTestDevice : public Tas58xx {
-  explicit Tas58xxTestDevice(const ddk::I2cChannel& i2c) : Tas58xx(nullptr, i2c, false) {
+  explicit Tas58xxTestDevice(const ddk::I2cChannel& i2c)
+      : Tas58xx(fake_ddk::kFakeParent, i2c, false) {
     initialized_ = true;
   }
   zx_status_t CodecSetDaiFormat(dai_format_t* format) {
@@ -228,6 +230,9 @@ TEST(Tas58xxTest, Reset) {
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
   Tas58xxTestDevice device(std::move(i2c));
+  device.Bind();
+  // Delay to test we don't do other init I2C writes in another thread.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
   device.ResetAndInitialize();
   mock_i2c.VerifyAndClear();
 }

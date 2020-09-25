@@ -68,10 +68,6 @@ int Max98373::Thread() {
   if (status != ZX_OK) {
     return thrd_error;
   }
-  status = SoftwareResetAndInitialize();
-  if (status != ZX_OK) {
-    return thrd_error;
-  }
   return thrd_success;
 }
 

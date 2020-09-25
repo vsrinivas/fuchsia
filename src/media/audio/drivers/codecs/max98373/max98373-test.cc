@@ -4,6 +4,7 @@
 
 #include "max98373.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
 
@@ -14,7 +15,7 @@ namespace audio {
 
 struct Max98373Test : public Max98373 {
   explicit Max98373Test(const ddk::I2cChannel& i2c, const ddk::GpioProtocolClient& codec_reset)
-      : Max98373(nullptr, i2c, codec_reset) {
+      : Max98373(fake_ddk::kFakeParent, i2c, codec_reset) {
     initialized_ = true;
   }
   zx_status_t SoftwareResetAndInitialize() { return Max98373::SoftwareResetAndInitialize(); }
@@ -63,6 +64,9 @@ TEST(Max98373Test, SotfwareResetAndInitialize) {
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
   Max98373Test device(std::move(i2c), std::move(unused_gpio));
+  device.Bind();
+  // Delay to test we don't do other init I2C writes in another thread.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
   EXPECT_OK(device.SoftwareResetAndInitialize());
   mock_i2c.VerifyAndClear();
 }

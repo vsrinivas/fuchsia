@@ -186,12 +186,6 @@ zx::status<DriverIds> Tas27xx::Initialize() {
   // Clean up and shutdown in event of error
   auto on_error = fbl::MakeAutoCall([this]() { Shutdown(); });
 
-  status = Reset();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "tas27xx: Could not reset %d\n", status);
-    return zx::error(status);
-  }
-
   status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "tas27xx: Could not get codec interrupt %d\n", status);

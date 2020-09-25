@@ -80,11 +80,10 @@ class Tas58xx : public DeviceType,  // Not final for unit tests.
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value) TA_REQ(lock_);
-  void Shutdown();
+  void Shutdown() {}
 
   ddk::I2cChannel i2c_;
   float current_gain_ = 0;
-  thrd_t thread_;
   fbl::Mutex lock_;
   const bool btl_mode_;
 };
