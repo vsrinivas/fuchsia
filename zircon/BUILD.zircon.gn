@@ -44,7 +44,6 @@ build_api_module("api") {
     ":binaries",
     ":generated_sources",
     ":tests",
-    ":tool_paths",
     ":zbi_tests",
   ]
 }
@@ -179,60 +178,6 @@ build_api_module("tests") {
   testonly = true
   data_keys = [ "tests" ]
   deps = default_deps
-}
-
-# Tools provided by the build or as prebuilts, to be used outside the build.
-#
-# Type: list(scope)
-#
-#   * name
-#     - Required: Name of a host tool.
-#     - Type: string
-#
-#   * label
-#     - Required: GN label associated with the tool.
-#     - Type: label_with_toolchain
-#
-#   * path
-#     - Required: Path to the tool's executable for the build host.
-#     - Type: path relative to $root_build_dir
-#
-#   * cpu, os
-#     - Required: $current_cpu and $current_os values, respectively, for
-#       which this tool is intended.
-#     - Type: string
-#
-build_api_module("tool_paths") {
-  testonly = true
-  deps = [
-    ":tool_paths.metadata",
-    "$zx/public/gn/toolchain:llvm-tools",
-  ]
-  data_keys = [ "tool_paths" ]
-}
-
-group("tool_paths.metadata") {
-  visibility = [ ":tool_paths" ]
-  _eponymous_3p_tools = [
-    "gn",
-    "ninja",
-  ]
-  metadata = {
-    tool_paths = []
-    foreach(tool, _eponymous_3p_tools) {
-      tool_paths += [
-        {
-          cpu = host_cpu
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = tool
-          os = host_os
-          path = rebase_path(
-                  "$prebuilt_dir/third_party/$tool/$host_platform/$tool",
-                  root_build_dir)
-        },
-      ]
-    }
-  }
 }
 
 # This tells the infra recipes how to run ZBI tests, defined with zbi_test(),
