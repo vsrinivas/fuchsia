@@ -159,8 +159,9 @@ fi
 readonly CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
 readonly CML_FMT_CMD="${HOST_OUT_DIR}/cmc format --cml --in-place"
 readonly DART_CMD="${PREBUILT_DART_DIR}/bin/dartfmt -w"
-readonly FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
-readonly FIDL_CMD="${FIDL_BIN} -i"
+readonly FIDL_FORMAT_TARGET="$( fx get-build-artifacts --expect-one --no-build --name fidl-format tools )"
+readonly FIDL_FORMAT_BIN="${FUCHSIA_BUILD_DIR}/${FIDL_FORMAT_TARGET}"
+readonly FIDL_CMD="${FIDL_FORMAT_BIN} -i"
 readonly GN_CMD="${PREBUILT_GN} format"
 readonly GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
 readonly JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
@@ -179,9 +180,9 @@ readonly FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards
 # generate one.
 for file in "${FILES[@]}"; do
   if [[ ${file} =~ .*\.fidl ]]; then
-    if [[ ! -x "${FIDL_BIN}" ]]; then
+    if [[ ! -x "${FIDL_FORMAT_BIN}" ]]; then
        printf "fidl-format not found: attempting to build it\n"
-       fx-command-run build system/fidl:tools
+       fx-command-run build "${FIDL_FORMAT_TARGET}"
        break
      fi
   fi

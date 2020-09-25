@@ -169,7 +169,8 @@ declare RUN_CLANG_TIDY="${PREBUILT_CLANG_DIR}/share/clang/run-clang-tidy.py"
 
 # Suppress the "name-repeats-*" checks for now. These produce a high number of
 # linter warnings, many of which are questionable. The algorithm will be refined.
-declare FIDL_LINT="${ZIRCON_TOOLS_DIR}"/fidl-lint
+declare FIDL_LINT_TARGET="$( fx get-build-artifacts --expect-one --no-build --name fidl-lint tools )"
+declare FIDL_LINT="${FUCHSIA_BUILD_DIR}/${FIDL_LINT_TARGET}"
 
 declare CLANG_TIDY_CMD=(
   "${RUN_CLANG_TIDY}"
@@ -258,10 +259,10 @@ ensure_fidl_lint() {
         if fidl_lint_is_outdated; then
           # echo directly to /dev/tty in case stdout and/or stderr are redirected
           fx-warn "fidl-lint is out of date or missing..." >/dev/tty
-          echo -n "OK to run 'fx build zircon/tools' to rebuild it? [Y/n] " >/dev/tty
+          echo -n "OK to run 'fx build host_x64/fidl-lint' to rebuild it? [Y/n] " >/dev/tty
           read
           if [[ $REPLY == "" || $REPLY =~ Y|y ]]; then
-            fx-command-run build zircon/tools >/dev/tty 2>&1 || return $?
+            fx-command-run build "${FIDL_LINT_TARGET}" >/dev/tty 2>&1 || return $?
           fi
         fi
         break
