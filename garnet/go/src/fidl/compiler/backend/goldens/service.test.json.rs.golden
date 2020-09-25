@@ -64,16 +64,17 @@ pub struct FirstProtocolProxy {
 
 impl fidl::endpoints::Proxy for FirstProtocolProxy {
     type Service = FirstProtocolMarker;
+
     fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
-}
 
-impl ::std::ops::Deref for FirstProtocolProxy {
-    type Target = fidl::client::Client;
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.client
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
     }
 }
 
@@ -83,14 +84,8 @@ impl FirstProtocolProxy {
         let service_name = <FirstProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-
-    /// Attempt to convert the Proxy back into a channel.
-    ///
-    /// This will only succeed if there are no active clones of this Proxy
-    /// and no currently-alive EventStream or response futures that came from
-    /// this Proxy.
     pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        self.client.into_channel().map_err(|client| Self { client })
+        fidl::endpoints::Proxy::into_channel(self)
     }
 
     /// Get a Stream of events from the remote end of the FirstProtocol protocol
@@ -407,16 +402,17 @@ pub struct SecondProtocolProxy {
 
 impl fidl::endpoints::Proxy for SecondProtocolProxy {
     type Service = SecondProtocolMarker;
+
     fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
-}
 
-impl ::std::ops::Deref for SecondProtocolProxy {
-    type Target = fidl::client::Client;
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.client
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
     }
 }
 
@@ -426,14 +422,8 @@ impl SecondProtocolProxy {
         let service_name = <SecondProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-
-    /// Attempt to convert the Proxy back into a channel.
-    ///
-    /// This will only succeed if there are no active clones of this Proxy
-    /// and no currently-alive EventStream or response futures that came from
-    /// this Proxy.
     pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        self.client.into_channel().map_err(|client| Self { client })
+        fidl::endpoints::Proxy::into_channel(self)
     }
 
     /// Get a Stream of events from the remote end of the SecondProtocol protocol

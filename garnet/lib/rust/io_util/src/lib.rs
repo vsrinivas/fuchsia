@@ -253,7 +253,7 @@ fn check_path(path: &Path) -> Result<&str, Error> {
 mod tests {
     use {
         super::*,
-        fidl::endpoints::ServerEnd,
+        fidl::endpoints::{Proxy, ServerEnd},
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync,
         futures::future,
@@ -391,10 +391,8 @@ mod tests {
             open_directory_in_namespace(tempfile.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
                 .expect("could not send open request");
 
-        let channel = dir.into_channel().expect("Could not convert to channel").into_zx_channel();
-        let signals = fasync::OnSignals::new(&channel, zx::Signals::CHANNEL_PEER_CLOSED);
         // We should see a PEER_CLOSED because we tried to open a file as a directory
-        signals.await.expect("Error waiting for peer closed");
+        dir.on_closed().await.expect("Error waiting for peer closed");
     }
 
     #[fasync::run_singlethreaded(test)]

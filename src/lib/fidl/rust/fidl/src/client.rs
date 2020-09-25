@@ -23,7 +23,7 @@ use {
     },
     parking_lot::Mutex,
     slab::Slab,
-    std::{collections::VecDeque, marker::Unpin, mem, ops::Deref, pin::Pin, sync::Arc},
+    std::{collections::VecDeque, marker::Unpin, mem, pin::Pin, sync::Arc},
 };
 
 #[cfg(target_os = "fuchsia")]
@@ -142,6 +142,11 @@ impl Client {
                 service_name,
             }),
         }
+    }
+
+    /// Get a reference to the client's underlying channel.
+    pub fn as_channel(&self) -> &AsyncChannel {
+        &self.inner.channel
     }
 
     /// Attempt to convert the `Client` back into a channel.
@@ -420,14 +425,6 @@ struct ClientInner {
 
     /// The `ServiceMarker::DEBUG_NAME` for the service this client connects to.
     service_name: &'static str,
-}
-
-impl Deref for Client {
-    type Target = AsyncChannel;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner.channel
-    }
 }
 
 impl ClientInner {

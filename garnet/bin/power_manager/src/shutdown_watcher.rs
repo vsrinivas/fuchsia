@@ -9,6 +9,7 @@ use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::types::Seconds;
 use anyhow::Error;
 use async_trait::async_trait;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_hardware_power_statecontrol as fpower;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
@@ -154,9 +155,9 @@ impl ShutdownWatcher {
         fuchsia_trace::duration!(
             "power_manager",
             "ShutdownWatcher::add_reboot_watcher",
-            "watcher" => watcher.as_handle_ref().raw_handle()
+            "watcher" => watcher.as_channel().raw_handle()
         );
-        self.inspect.add_reboot_watcher(watcher.as_handle_ref().raw_handle().into());
+        self.inspect.add_reboot_watcher(watcher.as_channel().raw_handle().into());
         self.reboot_watchers.borrow_mut().push(watcher);
     }
 
@@ -297,7 +298,7 @@ mod tests {
                 ShutdownWatcher: {
                     reboot_watchers: {
                         "0": {
-                            proxy: watcher_proxy.as_handle_ref().raw_handle() as u64
+                            proxy: watcher_proxy.as_channel().raw_handle() as u64
                         }
                     }
                 }

@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Error},
+    fidl::endpoints::Proxy,
     fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -74,10 +75,7 @@ async fn verify_ambient_vmex_denied() -> Result<(), Error> {
     let child_name = "policy_denied";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
 
-    let chan = exposed_dir.into_channel().unwrap();
-    fasync::OnSignals::new(&chan, zx::Signals::CHANNEL_PEER_CLOSED)
-        .await
-        .expect("failed to wait for exposed_dir PEER_CLOSED");
+    exposed_dir.on_closed().await.expect("failed to wait for exposed_dir PEER_CLOSED");
 
     Ok(())
 }

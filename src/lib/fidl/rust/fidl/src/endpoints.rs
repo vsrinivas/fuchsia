@@ -61,6 +61,33 @@ pub trait Proxy: Sized + Send + Sync {
 
     /// Create a proxy over the given channel.
     fn from_channel(inner: AsyncChannel) -> Self;
+
+    /// Attempt to convert the proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this proxy
+    /// and no currently-alive `EventStream` or response futures that came from
+    /// this proxy.
+    fn into_channel(self) -> Result<AsyncChannel, Self>;
+
+    /// Get a reference to the proxy's underlying channel.
+    ///
+    /// This should only be used for non-effectful operations. Reading or
+    /// writing to the channel is unsafe because the proxy assumes it has
+    /// exclusive control over these operations.
+    fn as_channel(&self) -> &AsyncChannel;
+
+    /// Returns true if the proxy has received the `PEER_CLOSED` signal.
+    #[cfg(target_os = "fuchsia")]
+    fn is_closed(&self) -> bool {
+        self.as_channel().is_closed()
+    }
+
+    /// Returns a future that completes when the proxy receives the
+    /// `PEER_CLOSED` signal.
+    #[cfg(target_os = "fuchsia")]
+    fn on_closed<'a>(&'a self) -> fasync::OnSignals<'a> {
+        fasync::OnSignals::new(self.as_channel(), zx::Signals::CHANNEL_PEER_CLOSED)
+    }
 }
 
 /// A stream of requests coming into a FIDL server over a channel.
@@ -115,7 +142,7 @@ pub trait UnifiedServiceRequest: Sized + Send + Sync {
 
     /// Dispatches a connection attempt to this FIDL Unified Service's member protocol
     /// identified by `name`, producing an instance of this trait.
-    fn dispatch(name: &str, channel: fasync::Channel) -> Self;
+    fn dispatch(name: &str, channel: AsyncChannel) -> Self;
 
     /// Returns an array of the service members' names.
     fn member_names() -> &'static [&'static str];
@@ -139,7 +166,7 @@ pub trait UnifiedServiceProxy: Sized {
 pub trait MemberOpener {
     /// Opens a member protocol of a FIDL Unified Service by name, serving that protocol
     /// on the given channel.
-    fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), Error>;
+    fn open_member(&self, member: &str, server_end: Channel) -> Result<(), Error>;
 }
 
 /// Utility that spawns a new task to handle requests of a particular type, requiring a

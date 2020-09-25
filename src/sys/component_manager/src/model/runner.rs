@@ -194,11 +194,7 @@ impl Runner for RemoteRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        fidl::endpoints,
-        fuchsia_async::OnSignals,
-        fuchsia_zircon::{AsHandleRef, Signals},
-    };
+    use fidl::endpoints::{self, Proxy};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_null_runner() {
@@ -220,8 +216,6 @@ mod tests {
         let proxy = client.into_proxy().expect("failed converting to proxy");
         proxy.stop().expect("failed to send message to null runner");
 
-        OnSignals::new(&proxy.as_handle_ref(), Signals::CHANNEL_PEER_CLOSED)
-            .await
-            .expect("failed waiting for channel to close");
+        proxy.on_closed().await.expect("failed waiting for channel to close");
     }
 }

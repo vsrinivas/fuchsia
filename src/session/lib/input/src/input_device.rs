@@ -8,6 +8,7 @@ use {
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
     fdio,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt},
@@ -218,8 +219,12 @@ pub fn get_device_from_dir_entry_path(
     }
 
     let (input_device, server) = fidl::endpoints::create_proxy::<InputDeviceMarker>()?;
-    fdio::service_connect_at(dir_proxy.as_ref(), input_device_path.unwrap(), server.into_channel())
-        .expect("Failed to connect to InputDevice.");
+    fdio::service_connect_at(
+        dir_proxy.as_channel().as_ref(),
+        input_device_path.unwrap(),
+        server.into_channel(),
+    )
+    .expect("Failed to connect to InputDevice.");
     Ok(input_device)
 }
 

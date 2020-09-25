@@ -4,7 +4,7 @@
 use {
     crate::events::types::InspectData,
     anyhow::{format_err, Error},
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::{DiscoverableService, Proxy},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo},
@@ -144,7 +144,11 @@ impl InspectDataCollector {
     ) -> Result<Option<S::Proxy>, Error> {
         if entry.name.ends_with(S::SERVICE_NAME) {
             let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
-            fdio::service_connect_at(dir_proxy.as_ref(), &entry.name, server.into_channel())?;
+            fdio::service_connect_at(
+                dir_proxy.as_channel().as_ref(),
+                &entry.name,
+                server.into_channel(),
+            )?;
             return Ok(Some(proxy));
         }
         Ok(None)

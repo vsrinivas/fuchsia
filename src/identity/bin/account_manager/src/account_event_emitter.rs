@@ -7,6 +7,7 @@
 //! presence and states during their lifetime.
 
 use account_common::LocalAccountId;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_identity_account::{
     AccountListenerOptions, AccountListenerProxy, InitialAccountState,
 };

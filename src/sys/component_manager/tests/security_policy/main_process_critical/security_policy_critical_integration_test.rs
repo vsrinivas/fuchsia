@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Error},
+    fidl::endpoints::Proxy,
     fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
@@ -33,11 +34,10 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
     exit_controller.exit(1)?;
 
     // The child will now exit. Observe this by seeing the exit_controller handle be closed.
-    let exit_controller_channel =
-        exit_controller.into_channel().expect("failed to turn exit_controller into channel");
-    let on_signal_fut =
-        fasync::OnSignals::new(&exit_controller_channel, zx::Signals::CHANNEL_PEER_CLOSED);
-    on_signal_fut.await.context("failed to wait for exposed dir handle to become readable")?;
+    exit_controller
+        .on_closed()
+        .await
+        .context("failed to wait for exposed dir handle to become readable")?;
 
     // component_manager should still be running. Observe this by not seeing component_manager exit
     // within COMPONENT_MANAGER_DEATH_TIMEOUT seconds.
@@ -72,11 +72,10 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
     exit_controller.exit(0)?;
 
     // The child will now exit. Observe this by seeing the exit_controller handle be closed.
-    let exit_controller_channel =
-        exit_controller.into_channel().expect("failed to turn exit_controller into channel");
-    let on_signal_fut =
-        fasync::OnSignals::new(&exit_controller_channel, zx::Signals::CHANNEL_PEER_CLOSED);
-    on_signal_fut.await.context("failed to wait for exposed dir handle to become readable")?;
+    exit_controller
+        .on_closed()
+        .await
+        .context("failed to wait for exposed dir handle to become readable")?;
 
     // component_manager should still be running. The critical marking will not kill
     // component_manager's job in this case because the critical component exited with a 0 return
@@ -113,11 +112,10 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
     exit_controller.exit(1)?;
 
     // The child will now exit. Observe this by seeing the exit_controller handle be closed.
-    let exit_controller_channel =
-        exit_controller.into_channel().expect("failed to turn exit_controller into channel");
-    let on_signal_fut =
-        fasync::OnSignals::new(&exit_controller_channel, zx::Signals::CHANNEL_PEER_CLOSED);
-    on_signal_fut.await.context("failed to wait for exposed dir handle to become readable")?;
+    exit_controller
+        .on_closed()
+        .await
+        .context("failed to wait for exposed dir handle to become readable")?;
 
     // component_manager should be killed too as a result of the critical marking.
     let exit_status = test.component_manager_app.wait().await?;
@@ -140,10 +138,7 @@ async fn verify_main_process_critical_denied() -> Result<(), Error> {
     let child_name = "policy_denied";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
 
-    let chan = exposed_dir.into_channel().unwrap();
-    fasync::OnSignals::new(&chan, zx::Signals::CHANNEL_PEER_CLOSED)
-        .await
-        .expect("failed to wait for exposed_dir PEER_CLOSED");
+    exposed_dir.on_closed().await.expect("failed to wait for exposed_dir PEER_CLOSED");
 
     Ok(())
 }

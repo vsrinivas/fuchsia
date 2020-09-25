@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl::endpoints::Proxy,
     fidl_fuchsia_bluetooth_control as fctrl,
     fidl_fuchsia_bluetooth_sys::{self as sys, PairingKeypress, PairingMethod},
     fuchsia_bluetooth::{

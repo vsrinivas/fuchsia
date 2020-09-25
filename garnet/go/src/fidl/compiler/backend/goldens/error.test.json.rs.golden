@@ -93,16 +93,17 @@ pub struct ExampleProxy {
 
 impl fidl::endpoints::Proxy for ExampleProxy {
     type Service = ExampleMarker;
+
     fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
-}
 
-impl ::std::ops::Deref for ExampleProxy {
-    type Target = fidl::client::Client;
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.client
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
     }
 }
 
@@ -112,14 +113,8 @@ impl ExampleProxy {
         let service_name = <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-
-    /// Attempt to convert the Proxy back into a channel.
-    ///
-    /// This will only succeed if there are no active clones of this Proxy
-    /// and no currently-alive EventStream or response futures that came from
-    /// this Proxy.
     pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        self.client.into_channel().map_err(|client| Self { client })
+        fidl::endpoints::Proxy::into_channel(self)
     }
 
     /// Get a Stream of events from the remote end of the Example protocol

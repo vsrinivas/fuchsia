@@ -11,7 +11,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
     clonable_error::ClonableError,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
@@ -621,7 +621,7 @@ impl Controllable for ElfComponent {
             } else {
                 async move {
                     let _ = fasync::OnSignals::new(
-                       &lifecycle_chan.as_handle_ref(),
+                       lifecycle_chan.as_channel(),
                        zx::Signals::CHANNEL_PEER_CLOSED,
                     )
                     .await
@@ -1035,9 +1035,7 @@ mod tests {
         controller.stop().expect("Stop request failed");
         // Wait for the process to exit so the test doesn't pagefault due to an invalid stdout
         // handle.
-        fasync::OnSignals::new(&controller.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
-            .await
-            .expect("failed waiting for channel to close");
+        controller.on_closed().await.expect("failed waiting for channel to close");
         Ok(())
     }
 

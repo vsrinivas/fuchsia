@@ -10,6 +10,7 @@ use crate::types::Seconds;
 use crate::utils::get_current_timestamp;
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_device_manager as fdevicemgr;
 use fidl_fuchsia_hardware_power_statecontrol as fpowerstatecontrol;
 use fidl_fuchsia_io as fio;
@@ -18,7 +19,7 @@ use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::{self as inspect, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::TryStreamExt;
@@ -393,8 +394,7 @@ fn enable_proxy_close_handler(
     handler: impl FnOnce() + 'static,
 ) {
     fasync::Task::local(async move {
-        let _ =
-            fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
+        let _ = proxy.on_closed().await;
         handler();
     })
     .detach();
@@ -785,7 +785,10 @@ mod tests {
             .unwrap();
 
         // Connect to the fake driver
-        let proxy = connect_proxy::<fio::DirectoryMarker>(&"/dev/class/fake".to_string()).unwrap();
+        let proxy = connect_proxy::<fio::DirectoryMarker>(&"/dev/class/fake".to_string())
+            .unwrap()
+            .into_channel()
+            .unwrap();
 
         // Verify the fake directory received the Open request, and capture the server end that is
         // meant to be bound to the driver

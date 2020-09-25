@@ -5,6 +5,7 @@
 use {
     crate::LOG_VERBOSITY,
     anyhow::Error,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_power as hpower, fidl_fuchsia_power as fpower,
     fidl_fuchsia_power_ext::CloneExt,
     fuchsia_async as fasync,

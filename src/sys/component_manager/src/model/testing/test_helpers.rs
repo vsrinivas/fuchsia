@@ -21,7 +21,7 @@ use {
         startup::Arguments,
     },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
-    fidl::endpoints::{self, ServerEnd},
+    fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
@@ -59,7 +59,7 @@ impl ComponentInfo {
             let controller =
                 runtime.controller.as_ref().expect("controller is unexpectedly missing");
             let basic_info = controller
-                .as_handle_ref()
+                .as_channel()
                 .basic_info()
                 .expect("error getting basic info about controller channel");
             // should be the koid of the other side of the channel

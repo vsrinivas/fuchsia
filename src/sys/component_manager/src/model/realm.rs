@@ -26,8 +26,7 @@ use {
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, AsHandleRef},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::TryFutureExt,
     futures::{
         future::{join_all, AbortHandle, Abortable, BoxFuture, Either, FutureExt},
@@ -1015,7 +1014,7 @@ impl Runtime {
             let watcher = Abortable::new(
                 async move {
                     if let Ok(_) = fasync::OnSignals::new(
-                        &controller_clone.as_handle_ref(),
+                        controller_clone.as_channel(),
                         zx::Signals::CHANNEL_PEER_CLOSED,
                     )
                     .await
@@ -1034,13 +1033,7 @@ impl Runtime {
 
     pub async fn wait_on_channel_close(&mut self) {
         if let Some(controller) = &self.controller {
-            let controller_ref = controller.as_ref();
-            fasync::OnSignals::new(
-                &controller_ref.as_handle_ref(),
-                zx::Signals::CHANNEL_PEER_CLOSED,
-            )
-            .await
-            .expect("failed waiting for channel to close");
+            controller.on_closed().await.expect("failed waiting for channel to close");
             self.controller = None;
         }
     }
@@ -1118,9 +1111,7 @@ async fn do_runner_stop<'a>(
     }
 
     let channel_close = Box::pin(async move {
-        fasync::OnSignals::new(&controller.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
-            .await
-            .expect("failed waiting for channel to close");
+        controller.on_closed().await.expect("failed waiting for channel to close");
     });
     // Wait for either the timer to fire or the channel to close
     match futures::future::select(stop_timer, channel_close).await {
@@ -1137,12 +1128,7 @@ async fn do_runner_kill<'a>(
         Ok(()) => {
             // Wait for the controller to close the channel
             let channel_close = Box::pin(async move {
-                fasync::OnSignals::new(
-                    &controller.as_handle_ref(),
-                    zx::Signals::CHANNEL_PEER_CLOSED,
-                )
-                .await
-                .expect("error waiting for channel to close");
+                controller.on_closed().await.expect("error waiting for channel to close");
             });
 
             // If the control channel closes first, report the component to be
@@ -1451,9 +1437,7 @@ pub mod tests {
         // rendezvous between the controller's execution context and the test.
         // Without this the message map state may be inconsistent.
         let mut check_msgs = Box::pin(async {
-            fasync::OnSignals::new(&client_proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
-                .await
-                .expect("failed waiting for channel to close");
+            client_proxy.on_closed().await.expect("failed waiting for channel to close");
 
             let msg_map = requests.lock().await;
             let msg_list =
@@ -1626,9 +1610,7 @@ pub mod tests {
         // rendezvous between the controller's execution context and the test.
         // Without this the message map state may be inconsistent.
         let mut check_msgs = Box::pin(async {
-            fasync::OnSignals::new(&client_proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
-                .await
-                .expect("failed waiting for channel to close");
+            client_proxy.on_closed().await.expect("failed waiting for channel to close");
 
             let msg_map = requests.lock().await;
             let msg_list =
@@ -1687,9 +1669,7 @@ pub mod tests {
         realm.stop_instance(false).await.expect("failed to stop instance");
 
         // The directory should have received a PEER_CLOSED signal.
-        fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
-            .await
-            .expect("failed waiting for channel to close");
+        proxy.on_closed().await.expect("failed waiting for channel to close");
     }
 
     #[fasync::run_singlethreaded(test)]

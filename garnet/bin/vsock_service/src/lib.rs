@@ -14,7 +14,7 @@ pub use self::service::Vsock;
 mod tests {
     use {
         super::*,
-        fidl::endpoints,
+        fidl::endpoints::{self, Proxy},
         fidl_fuchsia_hardware_vsock::{
             CallbacksProxy, DeviceMarker, DeviceRequest, DeviceRequestStream,
         },
@@ -22,8 +22,7 @@ mod tests {
             AcceptorMarker, AcceptorRequest, ConnectionMarker, ConnectionProxy,
             ConnectionTransport, ConnectorMarker, ConnectorProxy,
         },
-        fuchsia_async as fasync,
-        fuchsia_zircon::{self as zx, AsHandleRef},
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel, future, FutureExt, StreamExt, TryFutureExt},
     };
     struct MockDriver {
@@ -192,10 +191,7 @@ mod tests {
         driver.callbacks.transport_reset(7).await?;
 
         // Connection should be closed
-        assert!(client_end_request
-            .as_handle_ref()
-            .wait(zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE_PAST)?
-            .contains(zx::Signals::CHANNEL_PEER_CLOSED));
+        client_end_request.on_closed().await?;
 
         // Listener should still be active and receive a connection
         driver.callbacks.request(&mut *addr::Vsock::new(9000, 80, 4))?;

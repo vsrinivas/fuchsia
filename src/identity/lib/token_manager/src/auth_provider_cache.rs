@@ -4,6 +4,7 @@
 
 use crate::error::{ResultExt, TokenManagerError};
 use crate::AuthProviderSupplier;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_auth::Status;
 use fidl_fuchsia_identity_external::{OauthOpenIdConnectProxy, OauthProxy};
 use parking_lot::Mutex;

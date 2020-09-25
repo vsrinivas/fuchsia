@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::{self, DiscoverableService, ServerEnd},
+    fidl::endpoints::{self, DiscoverableService, Proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fidl_test_componentmanager_stresstests as fstresstests,
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_zircon as zx,
     futures::prelude::*,
     futures::stream,
     uuid::Uuid,
@@ -35,9 +34,7 @@ async fn launch_and_stress_test() {
                 fstresstests::LifecycleEvent::OnConnected {} => {}
             }
             lifecycle.stop().unwrap();
-            let chan = lifecycle.into_channel().unwrap();
-            let on_signal_fut = fasync::OnSignals::new(&chan, zx::Signals::CHANNEL_PEER_CLOSED);
-            on_signal_fut.await.unwrap();
+            lifecycle.on_closed().await.unwrap();
         })
         .await;
 }

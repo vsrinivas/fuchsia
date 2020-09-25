@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl::{
-        client::Client,
-        endpoints::{DiscoverableService, Proxy, ServiceMarker},
-    },
+    fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker},
     fuchsia_component::client::connect_to_service_at_path,
     parking_lot::RwLock,
-    std::{ops::Deref, sync::Arc},
+    std::sync::Arc,
 };
 
 const SVC_DIR: &str = "/svc";
@@ -30,7 +27,7 @@ pub trait Connect {
 pub struct ServiceReconnector<S>
 where
     S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone + Deref<Target = Client>,
+    <S as ServiceMarker>::Proxy: Clone,
 {
     inner: Arc<ServiceReconnectorInner<S>>,
 }
@@ -38,7 +35,7 @@ where
 impl<S> ServiceReconnector<S>
 where
     S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone + Deref<Target = Client>,
+    <S as ServiceMarker>::Proxy: Clone,
 {
     /// Return a FIDL service connector at the default service directory in the
     /// application's root namespace.
@@ -65,7 +62,7 @@ where
 impl<S> Connect for ServiceReconnector<S>
 where
     S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone + Deref<Target = Client>,
+    <S as ServiceMarker>::Proxy: Clone,
 {
     type Proxy = S::Proxy;
 
@@ -77,7 +74,7 @@ where
 struct ServiceReconnectorInner<S>
 where
     S: ServiceMarker,
-    <S as ServiceMarker>::Proxy: Clone + Deref<Target = Client>,
+    <S as ServiceMarker>::Proxy: Clone,
 {
     proxy: RwLock<Option<<S as ServiceMarker>::Proxy>>,
     service_path: String,
@@ -86,7 +83,7 @@ where
 impl<S> Connect for ServiceReconnectorInner<S>
 where
     S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone + Deref<Target = Client>,
+    <S as ServiceMarker>::Proxy: Clone,
 {
     type Proxy = S::Proxy;
 

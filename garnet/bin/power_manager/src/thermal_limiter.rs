@@ -9,6 +9,7 @@ use crate::node::Node;
 use crate::types::ThermalLoad;
 use anyhow::Error;
 use async_trait::async_trait;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_thermal as fthermal;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
@@ -154,7 +155,7 @@ impl ClientEntry {
         trip_points: Vec<TripPoint>,
         inspect_node: inspect::Node,
     ) -> Self {
-        inspect_node.record_uint("proxy", proxy.as_handle_ref().raw_handle().into());
+        inspect_node.record_uint("proxy", proxy.as_channel().raw_handle().into());
         inspect_node.record_uint("actor_type", actor_type as u64);
         for (i, trip_point) in trip_points.iter().enumerate() {
             let node = inspect_node.create_child(format!("trip_point_{:03}", i));
@@ -304,7 +305,7 @@ impl ThermalLimiter {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalLimiter::handle_new_client",
-            "proxy" => proxy.as_handle_ref().raw_handle(),
+            "proxy" => proxy.as_channel().raw_handle(),
             "actor_type" => actor_type_str.as_str(),
             "trip_points" => trip_points_str.as_str()
         );
@@ -397,7 +398,7 @@ impl ThermalLimiter {
                 "power_manager",
                 "ThermalLimiter::set_thermal_state",
                 "state" => state,
-                "proxy" => proxy.as_handle_ref().raw_handle()
+                "proxy" => proxy.as_channel().raw_handle()
             );
             let result = proxy.set_thermal_state(state).await;
             log_if_err!(result, "Failed to send thermal state to actor");
