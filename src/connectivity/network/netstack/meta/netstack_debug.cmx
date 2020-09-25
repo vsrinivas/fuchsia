@@ -8,9 +8,6 @@
         "binary": "bin/grand_unified_binary"
     },
     "sandbox": {
-        "features": [
-            "isolated-cache-storage"
-        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",

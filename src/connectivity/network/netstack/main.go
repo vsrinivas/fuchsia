@@ -358,11 +358,21 @@ func Main() {
 	// cat iquery.json | \
 	// jq '.[] | select(.path | contains("/pprof/")) | .contents.root.pprof.goroutine[4:]' | \
 	// xargs echo | base64 --decode > goroutine
-	pprofCache := filepath.Join("", "cache", "pprof")
 	func() {
-		if err := os.MkdirAll(pprofCache, os.ModePerm); err != nil {
+		isolatedCache := filepath.Join("", "cache")
+		if _, err := os.Stat(isolatedCache); err != nil {
+			if os.IsNotExist(err) {
+				// Emit a warning rather than an error to avoid tripping severity in
+				// tests (netstack_debug intentionally exercises this path).
+				_ = syslog.Warnf("isolated-cache-storage is not available; snapshots will not include pprof data: %s", err)
+				return
+			}
+			_ = syslog.Fatalf("%s", err)
+		}
+		pprofCache := filepath.Join(isolatedCache, "pprof")
+		if err := os.Mkdir(pprofCache, os.ModePerm); err != nil && !os.IsExist(err) {
 			if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrNoSpace {
-				_ = syslog.Errorf("pprof directory setup error; snapshots will not include pprof data: %s", err)
+				_ = syslog.Errorf("isolated-cache-storage is full; snapshots will not include pprof data: %s", err)
 				return
 			}
 			_ = syslog.Fatalf("%s", err)
