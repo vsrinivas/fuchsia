@@ -29,4 +29,7 @@ TEST(ProgramTest, ProgramValue) {
   EXPECT_EQ("value-for-str", program_value(program, "key-for-str").value());
   EXPECT_EQ(ZX_ERR_WRONG_TYPE, program_value(program, "key-for-strvec").error_value());
   EXPECT_EQ(ZX_ERR_NOT_FOUND, program_value(program, "key-unkown").error_value());
+
+  fdata::Dictionary empty_program;
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, program_value(empty_program, "").error_value());
 }

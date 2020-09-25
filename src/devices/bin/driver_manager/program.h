@@ -10,15 +10,17 @@
 
 inline zx::status<std::string> program_value(const llcpp::fuchsia::data::Dictionary& program,
                                              std::string_view key) {
-  for (auto& entry : program.entries()) {
-    if (!std::equal(key.begin(), key.end(), entry.key.begin())) {
-      continue;
+  if (program.has_entries()) {
+    for (auto& entry : program.entries()) {
+      if (!std::equal(key.begin(), key.end(), entry.key.begin())) {
+        continue;
+      }
+      if (!entry.value.is_str()) {
+        return zx::error(ZX_ERR_WRONG_TYPE);
+      }
+      auto& value = entry.value.str();
+      return zx::ok(std::string{value.data(), value.size()});
     }
-    if (!entry.value.is_str()) {
-      return zx::error(ZX_ERR_WRONG_TYPE);
-    }
-    auto& value = entry.value.str();
-    return zx::ok(std::string{value.data(), value.size()});
   }
   return zx::error(ZX_ERR_NOT_FOUND);
 }
