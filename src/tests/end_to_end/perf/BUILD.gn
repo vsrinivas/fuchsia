@@ -47,7 +47,8 @@ foreach(target_name, test_list) {
 }
 
 flutter_test_list = [
-  "button_flutter_benchmarks_test",
+  # fxbug.dev/60742
+  # "button_flutter_benchmarks_test",
 
   # fxbug.dev/56644
   # "clockface_flutter_benchmarks_test",
