@@ -5,7 +5,7 @@
 use {
     anyhow::format_err,
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
-    fidl_fuchsia_bluetooth_control::{self as control, PairingOptions},
+    fidl_fuchsia_bluetooth_control::PairingOptions,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_sys::{self as sys, LeSecurityMode},
     fuchsia_bluetooth::{
@@ -117,20 +117,10 @@ impl HostDevice {
     pub fn restore_bonds(
         &self,
         bonds: Vec<BondingData>,
-    ) -> impl Future<Output = types::Result<()>> {
-        let mut bonds: Vec<_> = bonds.into_iter().map(control::BondingData::from).collect();
-        self.host.add_bonded_devices(&mut bonds.iter_mut()).map(|r| {
-            match r {
-                Err(fidl_error) => Err(Error::from(fidl_error)),
-                // TODO(fxbug.dev/44616) - remove when fbt::status is no longer used
-                Ok(fbt::Status { error: Some(error) }) => Err(format_err!(
-                    "Host Error: {}",
-                    error.description.unwrap_or("Unknown Host Error".to_string())
-                )
-                .into()),
-                Ok(_) => Ok(()),
-            }
-        })
+    ) -> impl Future<Output = types::Result<Vec<sys::BondingData>>> {
+        self.host
+            .restore_bonds(&mut bonds.into_iter().map(sys::BondingData::from))
+            .map_err(|e| e.into())
     }
 
     pub fn set_connectable(&self, value: bool) -> impl Future<Output = types::Result<()>> {
@@ -146,8 +136,7 @@ impl HostDevice {
     }
 
     pub fn set_local_data(&self, data: HostData) -> types::Result<()> {
-        let mut data = data.into();
-        self.host.set_local_data(&mut data).map_err(|e| e.into())
+        self.host.set_local_data(data.into()).map_err(|e| e.into())
     }
 
     pub fn enable_privacy(&self, enable: bool) -> types::Result<()> {

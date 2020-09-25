@@ -47,7 +47,7 @@ protocol Host {
     WatchState() -> (sys.HostInfo info);
 
     /// Assigns local data to this host.
-    SetLocalData(fuchsia.bluetooth.control.HostData host_data);
+    SetLocalData(sys.HostData host_data);
 
     /// Monitors updates for connectable peers known to the system. Replies only when
     /// peers have been added, modified, or removed since the most recent call to WatchPeers().
@@ -121,15 +121,17 @@ protocol Host {
     ///                     disconnected.
     Disconnect(bt.PeerId id) -> () error sys.Error;
 
-    /// Initiates pairing to the peer with the supplied `id` and `options`. Returns an error
-    /// variant of fuchsia.bluetooth.Status if no connected peer with `id` is found or the pairing
-    /// procedure fails. If already paired, this will do nothing unless the pairing is over LE and
-    /// the PairingOptions.le_security_level is more secure than the current security level.
+    /// Initiates pairing to the peer with the supplied `id` and `options`. Returns an error if no
+    /// connected peer with `id` is found or the pairing procedure fails.
+    ///
+    /// If `options` specifies a higher security level than the current pairing, this method
+    /// attempts to raise the security level. Otherwise this method has no effect and returns
+    /// success.
     ///
     /// NOTE: This is intended to satisfy test scenarios that require pairing procedures to be
     /// initiated without relying on service access. In normal operation, Bluetooth security is
     /// enforced during service access.
-    Pair(fuchsia.bluetooth.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> () error sys.Error;
+    Pair(bt.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> () error sys.Error;
 
     /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected.
     /// `device_id` will no longer refer to any peer, even if a device with the same address is
@@ -163,10 +165,17 @@ protocol Host {
     /// assigned.
     SetPairingDelegate(sys.InputCapability input, sys.OutputCapability output, sys.PairingDelegate delegate);
 
-    /// Adds existing bonded devices to the host. The host will be configured to automatically connect
-    /// to these devices when they are in range and connectable. Future connections will be encrypted
-    /// using the provided bonding data.
-    AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
+    /// Restores existing bonded devices to the host. An authenticated session will be established
+    /// for future connections using the provided bonding data.
+    ///
+    /// If bonding data for the LE transport is available, then the host will automatically
+    /// establish a connection when the peer is in range and connectable.
+    ///
+    /// If any of the entries in `bonds` could not be restored, then they will be returned in
+    /// `errors`. This can happen for entries that are malformed and for peers that are already
+    /// known to the bt-host. An empty `errors` list indicates that all bonds were successfully
+    /// restored.
+    RestoreBonds(vector<sys.BondingData> bonds) -> (vector<sys.BondingData> errors);
 
     // ===== Events =====
 

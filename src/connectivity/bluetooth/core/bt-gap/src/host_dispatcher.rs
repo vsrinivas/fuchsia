@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{anyhow, format_err, Context as _, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
@@ -1103,11 +1103,24 @@ async fn try_restore_bonds(
         None => return Ok(()),
     };
     let fut = host_device.read().restore_bonds(data);
-    let res = fut.await;
-    res.map_err(|e| {
-        error!("failed to restore bonding data for host: {:?}", e);
-        e
-    })
+    let result = fut.await;
+    match result {
+        Err(e) => {
+            error!("failed to restore bonding data for host: {:?}", e);
+            Err(e)
+        }
+        Ok(errors) => {
+            if errors.is_empty() {
+                Ok(())
+            } else {
+                let msg =
+                    errors.into_iter().fold("".to_string(), |acc, b| format!("{}, {:?}", acc, b));
+                let msg = format!("failed to restore bonding data: {}", msg);
+                error!("{}", msg);
+                Err(anyhow!(msg).into())
+            }
+        }
+    }
 }
 
 fn generate_irk() -> Result<sys::Key, zx::Status> {
