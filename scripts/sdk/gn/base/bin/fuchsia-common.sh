@@ -331,7 +331,7 @@ function check-fuchsia-ssh-config {
   # This script checks for the private key file being referenced in the sshconfig and
   # the matching version tag. If they are not present, the sshconfig file is regenerated.
   # The ssh configuration should not be modified.
-  local SSHCONFIG_TAG="Fuchsia SDK config version 4 tag"
+  local SSHCONFIG_TAG="Fuchsia SDK config version 5 tag"
 
   if [[ ! -d "${HOME}" ]]; then
     fx-error "\$HOME must be set to use these commands."
@@ -411,7 +411,17 @@ ServerAliveCountMax 10
 # Try to keep the master connection open to speed reconnecting.
 ControlMaster auto
 ControlPersist yes
-ControlPath=~/.ssh/fuchsia--%r@%h:%p
+
+# When expanded, the ControlPath below cannot have more than 90 characters
+# (total of 108 minus 18 used by a random suffix added by ssh).
+# '%C' expands to 40 chars and there are 9 fixed chars, so '~' can expand to
+# up to 41 chars, which is a reasonable limit for a user's home in most
+# situations. If '~' expands to more than 41 chars, the ssh connection
+# will fail with an error like:
+#     unix_listener: path "..." too long for Unix domain socket
+# A possible solution is to use /tmp instead of ~, but it has
+# its own security concerns.
+ControlPath=~/.ssh/fx-%C
 
 # Connect with user, use the identity specified.
 User fuchsia
