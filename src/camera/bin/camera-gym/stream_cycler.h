@@ -24,7 +24,8 @@ class StreamCycler {
  public:
   ~StreamCycler();
   static fit::result<std::unique_ptr<StreamCycler>, zx_status_t> Create(
-      fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator);
+      fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
+      bool manual_mode);
   using AddCollectionHandler = fit::function<uint32_t(fuchsia::sysmem::BufferCollectionTokenHandle,
                                                       fuchsia::sysmem::ImageFormat_2, std::string)>;
   using RemoveCollectionHandler = fit::function<void(uint32_t)>;
@@ -38,7 +39,7 @@ class StreamCycler {
                    MuteStateHandler on_mute_changed);
 
  private:
-  StreamCycler();
+  explicit StreamCycler(bool manual_mode = false);
 
   // Notification to camera-gym that the camera device is present.
   void WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEvent> events);
@@ -74,6 +75,8 @@ class StreamCycler {
   fuchsia::sysmem::AllocatorPtr allocator_;
   fuchsia::camera3::DevicePtr device_;
   std::vector<fuchsia::camera3::Configuration> configurations_;
+
+  bool manual_mode_;
 
   // Only set by WatchCurrentConfigurationCallback().
   // Only used by ConnectToAllStreams() and NextConfigIndex().

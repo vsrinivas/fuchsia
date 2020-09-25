@@ -39,6 +39,7 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_prod",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -134,6 +135,10 @@ package("${name}") {
     {
       path = "${name}.cmx"
       dest = "${name}.cmx"
+    },
+    {
+      path = "${name}-manual.cmx"
+      dest = "${name}-manual.cmx"
     },
   ]
 }

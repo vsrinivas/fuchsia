@@ -32,7 +32,8 @@ static void SetAbortOnError(fidl::InterfacePtr<T>& p, std::string message) {
   });
 }
 
-StreamCycler::StreamCycler() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+StreamCycler::StreamCycler(bool manual_mode)
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), manual_mode_(manual_mode) {
   SetAbortOnError(watcher_, "fuchsia.camera3.DeviceWatcher disconnected.");
   SetAbortOnError(allocator_, "fuchsia.sysmem.Allocator disconnected.");
   SetAbortOnError(device_, "fuchsia.camera3.Device disconnected.");
@@ -44,8 +45,9 @@ StreamCycler::~StreamCycler() {
 }
 
 fit::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
-    fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator) {
-  auto cycler = std::unique_ptr<StreamCycler>(new StreamCycler);
+    fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
+    bool manual_mode) {
+  auto cycler = std::unique_ptr<StreamCycler>(new StreamCycler(manual_mode));
 
   zx_status_t status = cycler->watcher_.Bind(std::move(watcher), cycler->loop_.dispatcher());
   if (status != ZX_OK) {
@@ -139,10 +141,10 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
 
 void StreamCycler::ConnectToAllStreams() {
   // Connect all streams.
-  // TODO(fxbug.dev/42241) - In order to work around fxbug.dev/42241, all camera3 clients must connect to
-  // their respective streams in sequence and without possibility of overlap. Since the camera
-  // connection sequence requires a series of asynchronous steps, we must daisy-chain from one
-  // complete stream connection to the next. This is why the original simple loop does not work
+  // TODO(fxbug.dev/42241) - In order to work around fxbug.dev/42241, all camera3 clients must
+  // connect to their respective streams in sequence and without possibility of overlap. Since the
+  // camera connection sequence requires a series of asynchronous steps, we must daisy-chain from
+  // one complete stream connection to the next. This is why the original simple loop does not work
   // reliably at this time. This means that the following single ConnectToStream() will kick off all
   // the connections for all streams.
   uint32_t stream_index = 0;

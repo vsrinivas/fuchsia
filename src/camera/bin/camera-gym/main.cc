@@ -22,8 +22,14 @@
 #include "src/camera/bin/camera-gym/buffer_collage.h"
 #include "src/camera/bin/camera-gym/lifecycle_impl.h"
 #include "src/camera/bin/camera-gym/stream_cycler.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, char* argv[]) {
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  // Default must match existing behavior as started from UI.
+  bool manual_mode = command_line.HasOption("manual");
+
   syslog::SetLogSettings({.min_log_level = CAMERA_MIN_LOG_LEVEL}, {"camera-gym"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -74,7 +80,8 @@ int main(int argc, char* argv[]) {
   }
 
   // Create the cycler and attach it to the collage.
-  auto cycler_result = camera::StreamCycler::Create(std::move(watcher), std::move(allocator));
+  auto cycler_result =
+      camera::StreamCycler::Create(std::move(watcher), std::move(allocator), manual_mode);
   if (cycler_result.is_error()) {
     FX_PLOGS(ERROR, cycler_result.error()) << "Failed to create StreamCycler.";
     return EXIT_FAILURE;
@@ -125,6 +132,13 @@ int main(int argc, char* argv[]) {
 
   cycler->SetHandlers(std::move(add_collection_handler), std::move(remove_collection_handler),
                       std::move(show_buffer_handler), std::move(mute_handler));
+
+  if (manual_mode) {
+    FX_LOGS(INFO) << "Running in manual mode.";
+    FX_LOGS(INFO) << "This is a placeholder. Dropping through to automatic mode for now.";
+  } else {
+    FX_LOGS(INFO) << "Running in automatic mode.";
+  }
 
   // Publish the view service.
   context->outgoing()->AddPublicService(collage->GetHandler());
