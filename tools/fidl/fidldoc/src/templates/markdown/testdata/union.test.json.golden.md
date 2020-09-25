@@ -57,7 +57,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Pizza.toppings">
             <td><code>toppings</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -73,7 +73,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Pasta.sauce">
             <td><code>sauce</code></td>
             <td>
                 <code>string[16]</code>
@@ -89,7 +89,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="NullableUnionStruct.the_union">
             <td><code>the_union</code></td>
             <td>
                 <code><a class='link' href='#Union'>Union</a>?</code>
@@ -114,7 +114,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableXUnion.x1">
             <td><code>x1</code></td>
             <td>
                 <code><a class='link' href='#OlderSimpleUnion'>OlderSimpleUnion</a>?</code>
@@ -137,13 +137,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="PizzaOrPasta.pizza">
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="PizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -156,25 +156,25 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExplicitPizzaOrPasta.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitPizzaOrPasta.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitPizzaOrPasta.pizza">
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitPizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -187,13 +187,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexiblePizzaOrPasta.pizza">
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="FlexiblePizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -206,13 +206,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictPizzaOrPasta.pizza">
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictPizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -225,19 +225,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Union.Primitive">
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="Union.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="Union.VectorStringAlsoNeedsConstructor">
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -250,19 +250,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Primitive">
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="FlexibleUnion.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="FlexibleUnion.VectorStringAlsoNeedsConstructor">
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -275,19 +275,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Primitive">
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictUnion.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictUnion.VectorStringAlsoNeedsConstructor">
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -300,7 +300,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FieldCollision.field_collision_tag">
             <td><code>field_collision_tag</code></td>
             <td>
                 <code>int32</code>
@@ -313,19 +313,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExplicitUnion.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitUnion.Primitive">
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitUnion.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
@@ -338,13 +338,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ReverseOrdinalUnion.second">
             <td><code>second</code></td>
             <td>
                 <code>uint32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ReverseOrdinalUnion.first">
             <td><code>first</code></td>
             <td>
                 <code>uint32</code>
@@ -357,13 +357,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="FlexibleFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -376,13 +376,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -395,19 +395,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExplicitFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitFoo.">
             <td><code></code></td>
             <td>
                 <code></code>
@@ -420,19 +420,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExplicitStrictFoo.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitStrictFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitStrictFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -445,13 +445,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="OlderSimpleUnion.i">
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="OlderSimpleUnion.f">
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
@@ -464,19 +464,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="NewerSimpleUnion.i">
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="NewerSimpleUnion.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="NewerSimpleUnion.v">
             <td><code>v</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -489,19 +489,19 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictSimpleXUnion.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictSimpleXUnion.f">
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictSimpleXUnion.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -514,7 +514,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="XUnionContainingEmptyStruct.empty">
             <td><code>empty</code></td>
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>
@@ -527,7 +527,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictBoundedXUnion.v">
             <td><code>v</code></td>
             <td>
                 <code>vector&lt;uint8&gt;[10]</code>
@@ -540,25 +540,25 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExplicitXUnion.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitXUnion.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitXUnion.i">
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ExplicitXUnion.f">
             <td><code>f</code></td>
             <td>
                 <code>float32</code>

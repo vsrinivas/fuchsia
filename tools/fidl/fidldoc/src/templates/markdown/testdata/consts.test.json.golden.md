@@ -17,11 +17,11 @@ Type: <code>int32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="EnumType.VALUE">
             <td><code>VALUE</code></td>
             <td><code>1</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="EnumType.true">
             <td><code>true</code></td>
             <td><code>2</code></td>
             <td></td>
@@ -43,11 +43,11 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.VALUE">
             <td>VALUE</td>
             <td>1</td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="BitsType.true">
             <td>true</td>
             <td>2</td>
             <td></td>

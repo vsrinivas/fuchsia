@@ -43,7 +43,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Example_foo_Response.y">
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
@@ -66,13 +66,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#Example_foo_Response'>Example_foo_Response</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="Example_foo_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>

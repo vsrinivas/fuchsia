@@ -11,7 +11,7 @@ Type: <code>{{type}}</code>
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
     {{~ #each members ~}}
-        <tr>
+        <tr id="{{rpn ../name}}.{{~ name ~}}">
             <td><code>{{~ name ~}}</code></td>
             <td><code>{{~ value.literal.value ~}}</code></td>
             <td>{{~> doc ~}}</td>

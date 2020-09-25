@@ -13,7 +13,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Baz.g">
             <td><code>g</code></td>
             <td>
                 <code><a class='link' href='../middle/'>middle</a>/<a class='link' href='../middle/#Bar'>Bar</a></code>

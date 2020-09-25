@@ -49,7 +49,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.Field">
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -75,12 +75,12 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyEnum.FOO">
             <td><code>FOO</code></td>
             <td><code>1</code></td>
             <td><p>enum Member comment 1.</p>
 </td>
-        </tr><tr>
+        </tr><tr id="MyEnum.BAR">
             <td><code>BAR</code></td>
             <td><code>2</code></td>
             <td></td>
@@ -101,7 +101,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
-    <tr>
+    <tr id="Table.Field">
             <td>1</td>
             <td><code>Field</code></td>
             <td>
@@ -123,7 +123,7 @@ Type: <code>uint32</code>
 <p>union comment #3</p>
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Union.Field">
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -147,13 +147,13 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyBits.MY_FIRST_BIT">
             <td>MY_FIRST_BIT</td>
             <td>1</td>
             <td><p>bits member comment #1</p>
 <p>bits member comment #3</p>
 </td>
-        </tr><tr>
+        </tr><tr id="MyBits.MY_OTHER_BIT">
             <td>MY_OTHER_BIT</td>
             <td>2</td>
             <td></td>

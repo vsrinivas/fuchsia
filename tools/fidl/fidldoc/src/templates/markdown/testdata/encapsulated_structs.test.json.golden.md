@@ -13,14 +13,14 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Int8Int32.a">
             <td><code>a</code></td>
             <td>
                 <code>int8</code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="Int8Int32.b">
             <td><code>b</code></td>
             <td>
                 <code>int32</code>
@@ -36,14 +36,14 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Int16Int8.a">
             <td><code>a</code></td>
             <td>
                 <code>int16</code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="Int16Int8.b">
             <td><code>b</code></td>
             <td>
                 <code>int8</code>
@@ -59,7 +59,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ArrayInt16Int8.arr">
             <td><code>arr</code></td>
             <td>
                 <code>[3]</code>
@@ -75,21 +75,21 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructPaddingTestStruct.trailing">
             <td><code>trailing</code></td>
             <td>
                 <code><a class='link' href='#Int16Int8'>Int16Int8</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="StructPaddingTestStruct.inner">
             <td><code>inner</code></td>
             <td>
                 <code><a class='link' href='#Int8Int32'>Int8Int32</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="StructPaddingTestStruct.array">
             <td><code>array</code></td>
             <td>
                 <code><a class='link' href='#ArrayInt16Int8'>ArrayInt16Int8</a></code>
@@ -105,14 +105,14 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="NonInlineStructTestStruct.element">
             <td><code>element</code></td>
             <td>
                 <code><a class='link' href='#Int16Int8'>Int16Int8</a>?</code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="NonInlineStructTestStruct.h">
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;handle&gt;</code>
@@ -128,14 +128,14 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="TopLevelStruct.a">
             <td><code>a</code></td>
             <td>
                 <code><a class='link' href='#StructPaddingTestStruct'>StructPaddingTestStruct</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="TopLevelStruct.b">
             <td><code>b</code></td>
             <td>
                 <code><a class='link' href='#NonInlineStructTestStruct'>NonInlineStructTestStruct</a></code>

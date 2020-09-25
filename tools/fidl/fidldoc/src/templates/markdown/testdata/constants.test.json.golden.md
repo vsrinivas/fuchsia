@@ -13,35 +13,35 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.int64_with_default">
             <td><code>int64_with_default</code></td>
             <td>
                 <code>int64</code>
             </td>
             <td></td>
             <td>7</td>
-        </tr><tr>
+        </tr><tr id="Struct.string_with_default">
             <td><code>string_with_default</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
             <td>stuff</td>
-        </tr><tr>
+        </tr><tr id="Struct.bool_with_default">
             <td><code>bool_with_default</code></td>
             <td>
                 <code>bool</code>
             </td>
             <td></td>
             <td>true</td>
-        </tr><tr>
+        </tr><tr id="Struct.enum_with_default">
             <td><code>enum_with_default</code></td>
             <td>
                 <code><a class='link' href='#Enum'>Enum</a></code>
             </td>
             <td></td>
             <td><a class='link' href='#Enum.E'>Enum.E</a></td>
-        </tr><tr>
+        </tr><tr id="Struct.bits_with_default">
             <td><code>bits_with_default</code></td>
             <td>
                 <code><a class='link' href='#Bits'>Bits</a></code>
@@ -63,7 +63,7 @@ Type: <code>int32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="EnumType.VALUE">
             <td><code>VALUE</code></td>
             <td><code>1</code></td>
             <td></td>
@@ -77,7 +77,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Enum.E">
             <td><code>E</code></td>
             <td><code>170</code></td>
             <td></td>
@@ -99,15 +99,15 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.VALUE">
             <td>VALUE</td>
             <td>1</td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="BitsType.SECOND_VALUE">
             <td>SECOND_VALUE</td>
             <td>128</td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="BitsType.THIRD_VALUE">
             <td>THIRD_VALUE</td>
             <td>2</td>
             <td></td>
@@ -121,7 +121,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Bits.B">
             <td>B</td>
             <td>8</td>
             <td></td>

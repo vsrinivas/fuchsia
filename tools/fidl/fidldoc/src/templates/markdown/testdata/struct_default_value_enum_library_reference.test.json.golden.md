@@ -13,7 +13,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Foo.field">
             <td><code>field</code></td>
             <td>
                 <code><a class='link' href='../dependent/'>dependent</a>/<a class='link' href='../dependent/#MyEnum'>MyEnum</a></code>

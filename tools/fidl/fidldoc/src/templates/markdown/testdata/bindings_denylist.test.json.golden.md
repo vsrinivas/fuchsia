@@ -48,7 +48,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="OnlyDart.A">
             <td><code>A</code></td>
             <td><code>1</code></td>
             <td></td>
@@ -78,7 +78,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="OnlyLlcpp.x">
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>
@@ -98,7 +98,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="OnlySyzkaller.A">
             <td>A</td>
             <td>1</td>
             <td></td>

@@ -17,11 +17,11 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictEnum.FOO">
             <td><code>FOO</code></td>
             <td><code>1</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="MyStrictEnum.BAR">
             <td><code>BAR</code></td>
             <td><code>2</code></td>
             <td></td>
@@ -35,11 +35,11 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnum.FOO">
             <td><code>FOO</code></td>
             <td><code>1</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="MyFlexibleEnum.BAR">
             <td><code>BAR</code></td>
             <td><code>2</code></td>
             <td></td>
@@ -53,15 +53,15 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnumWithCustomUnknown.FOO">
             <td><code>FOO</code></td>
             <td><code>1</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="MyFlexibleEnumWithCustomUnknown.BAR">
             <td><code>BAR</code></td>
             <td><code>2</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN">
             <td><code>CUSTOM_UNKNOWN</code></td>
             <td><code>3</code></td>
             <td></td>

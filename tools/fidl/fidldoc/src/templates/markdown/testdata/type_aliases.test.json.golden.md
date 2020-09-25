@@ -13,70 +13,70 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleOfUseOfAliases.field_of_u32">
             <td><code>field_of_u32</code></td>
             <td>
                 <code><a class='link' href='#u32'>u32</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_at_most_five_of_string">
             <td><code>field_of_vec_at_most_five_of_string</code></td>
             <td>
                 <code><a class='link' href='#vec_at_most_five'>vec_at_most_five</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_at_most_five_of_uint32">
             <td><code>field_of_vec_at_most_five_of_uint32</code></td>
             <td>
                 <code><a class='link' href='#vec_at_most_five'>vec_at_most_five</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_of_strings">
             <td><code>field_of_vec_of_strings</code></td>
             <td>
                 <code><a class='link' href='#vec_of_strings'>vec_of_strings</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_of_strings_at_most_nine">
             <td><code>field_of_vec_of_strings_at_most_nine</code></td>
             <td>
                 <code><a class='link' href='#vec_of_strings'>vec_of_strings</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_of_strings_at_most_5">
             <td><code>field_of_vec_of_strings_at_most_5</code></td>
             <td>
                 <code><a class='link' href='#vec_of_strings_at_most_5'>vec_of_strings_at_most_5</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_at_most_5_of_reference_me">
             <td><code>field_of_vec_at_most_5_of_reference_me</code></td>
             <td>
                 <code><a class='link' href='#vec_at_most_5'>vec_at_most_5</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_channel">
             <td><code>field_of_channel</code></td>
             <td>
                 <code><a class='link' href='#channel'>channel</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_client_end">
             <td><code>field_of_client_end</code></td>
             <td>
                 <code><a class='link' href='#client_end'>client_end</a></code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_nullable_client_end">
             <td><code>field_of_nullable_client_end</code></td>
             <td>
                 <code><a class='link' href='#client_end'>client_end</a></code>
@@ -98,11 +98,11 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
             <td><code>NONE</code></td>
             <td><code>0</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="obj_type.CHANNEL">
             <td><code>CHANNEL</code></td>
             <td><code>4</code></td>
             <td></td>

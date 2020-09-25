@@ -361,21 +361,21 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.a">
             <td><code>a</code></td>
             <td>
                 <code>int64</code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.b">
             <td><code>b</code></td>
             <td>
                 <code>int64</code>
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr>
+        </tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.c">
             <td><code>c</code></td>
             <td>
                 <code>int64</code>
@@ -415,11 +415,11 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
             <td><code>NONE</code></td>
             <td><code>0</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="obj_type.SOCKET">
             <td><code>SOCKET</code></td>
             <td><code>14</code></td>
             <td></td>
@@ -433,11 +433,11 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ErrorEnun.ERR_FOO">
             <td><code>ERR_FOO</code></td>
             <td><code>1</code></td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="ErrorEnun.ERR_BAR">
             <td><code>ERR_BAR</code></td>
             <td><code>2</code></td>
             <td></td>
@@ -454,13 +454,13 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.response">
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ResponseAsStruct_Response'>WithErrorSyntax_ResponseAsStruct_Response</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -473,13 +473,13 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.response">
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsPrimitive_Response'>WithErrorSyntax_ErrorAsPrimitive_Response</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -492,13 +492,13 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.response">
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsEnum_Response'>WithErrorSyntax_ErrorAsEnum_Response</a></code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.err">
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#ErrorEnun'>ErrorEnun</a></code>

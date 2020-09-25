@@ -74,13 +74,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="FlexibleFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -93,13 +93,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="StrictFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>

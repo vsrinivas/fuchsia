@@ -48,7 +48,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableString.val">
             <td><code>val</code></td>
             <td>
                 <code>string?</code>
@@ -64,7 +64,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableVector.val">
             <td><code>val</code></td>
             <td>
                 <code>vector&lt;int32&gt;?</code>
@@ -80,7 +80,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableHandle.val">
             <td><code>val</code></td>
             <td>
                 <code>handle&lt;vmo&gt;?</code>
@@ -96,7 +96,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableProtocol.val">
             <td><code>val</code></td>
             <td>
                 <code><a class='link' href='#SimpleProtocol'>SimpleProtocol</a>?</code>
@@ -112,7 +112,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableRequest.val">
             <td><code>val</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#SimpleProtocol'>SimpleProtocol</a>&gt;?</code>
@@ -128,7 +128,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Int32Wrapper.val">
             <td><code>val</code></td>
             <td>
                 <code>int32</code>
@@ -144,7 +144,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableStruct.val">
             <td><code>val</code></td>
             <td>
                 <code><a class='link' href='#Int32Wrapper'>Int32Wrapper</a>?</code>
@@ -160,7 +160,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableUnion.val">
             <td><code>val</code></td>
             <td>
                 <code><a class='link' href='#SimpleUnion'>SimpleUnion</a>?</code>
@@ -183,13 +183,13 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="SimpleUnion.a">
             <td><code>a</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td></td>
-        </tr><tr>
+        </tr><tr id="SimpleUnion.b">
             <td><code>b</code></td>
             <td>
                 <code>float32</code>
