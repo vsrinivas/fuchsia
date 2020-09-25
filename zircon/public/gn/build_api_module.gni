@@ -37,6 +37,8 @@
 #     is omitted then $data_keys is required.
 #     Type: See generated_file().
 #
+#   rebase (optional)
+#
 template("build_api_module") {
   if (current_toolchain == default_toolchain) {
     generated_file(target_name) {
@@ -50,6 +52,7 @@ template("build_api_module") {
                                "testonly",
                                "visibility",
                                "walk_keys",
+                               "rebase",
                              ])
       output_conversion = "json"
       metadata = {
