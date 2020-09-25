@@ -1,0 +1,14 @@
+{
+    program: {
+        binary: "bin/llcpp_test",
+    },
+    use: [
+        { runner: "gtest_runner" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

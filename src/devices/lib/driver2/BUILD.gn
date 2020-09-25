@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("driver2") {
+  public_deps = [ ":lib" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":driver2-tests" ]
+}
+
+source_set("lib") {
+  sources = [ "record.h" ]
+}
+
+source_set("llcpp") {
+  sources = [
+    "start_args.cc",
+    "start_args.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//zircon/public/lib/zxc",
+  ]
+}
+
+executable("llcpp_test") {
+  testonly = true
+  sources = [ "start_args_test.cc" ]
+
+  deps = [
+    ":llcpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_component("driver2-llcpp-test") {
+  manifest = "meta/llcpp_test.cml"
+
+  deps = [ ":llcpp_test" ]
+}
+
+fuchsia_test_package("driver2-tests") {
+  test_components = [ ":driver2-llcpp-test" ]
+}
