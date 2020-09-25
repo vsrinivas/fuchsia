@@ -1,0 +1,24 @@
+{
+    select: {
+        intl_property_provider_disconnected: "INSPECT:a11y_manager.cmx:root/a11y_manager_app:intl_property_provider_disconnected",
+    },
+    act: {
+        // The accessibility manager should be able to connect to its property provider to determine the appropriate locale to use for localization.
+	// If it can't connect, we should surface a warning.
+        property_provider_disconnected: {
+            type: "Warning",
+            trigger: "intl_property_provider_disconnected",
+            print: "A11Y: A11y manager failed to connect to property provider, and has resorted to default locale.",
+        },
+    },
+    test: {
+        test_property_provider_disconnected: {
+            yes: [
+                "property_provider_disconnected",
+            ],
+	    values: {
+	        "intl_property_provider_disconnected": true,
+	    },
+        },
+    },
+}

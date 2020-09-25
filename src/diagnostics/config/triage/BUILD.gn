@@ -8,6 +8,7 @@ import("//src/diagnostics/triage/build/triage_config_test.gni")
 # are used to implement the `fx triage` command. Files that are not listed
 # in this variable will be ignored.
 triage_files = [
+  "a11y.triage",
   "cpu.triage",
   "crashes.triage",
   "disk.triage",
