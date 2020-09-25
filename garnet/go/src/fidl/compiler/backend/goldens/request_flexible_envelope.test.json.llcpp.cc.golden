@@ -360,7 +360,7 @@ bool Protocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::llcpp::fidl::test::json::FlexibleFoo f) {
   RequestStrictResponseFlexibleOwnedResponse _response{f};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result
@@ -368,14 +368,14 @@ Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::FlexibleFoo f) {
   RequestStrictResponseFlexibleUnownedResponse _response(_buffer.data(),
                                                          _buffer.capacity(), f);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::llcpp::fidl::test::json::StrictFoo f) {
   RequestFlexibleResponseStrictOwnedResponse _response{f};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result
@@ -383,7 +383,7 @@ Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::StrictFoo f) {
   RequestFlexibleResponseStrictUnownedResponse _response(_buffer.data(),
                                                          _buffer.capacity(), f);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void Protocol::RequestStrictResponseFlexibleRequest::_InitHeader(

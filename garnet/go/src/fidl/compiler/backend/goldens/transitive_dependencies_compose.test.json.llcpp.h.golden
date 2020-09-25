@@ -189,7 +189,7 @@ class Top final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -197,7 +197,7 @@ class Top final {
     GetFooResponse& Message() {
       return *reinterpret_cast<GetFooResponse*>(message_.bytes());
     }
-    ::fidl::internal::FidlMessage message_;
+    ::fidl::FidlMessage message_;
   };
 
   class GetFooOwnedResponse final {
@@ -209,9 +209,7 @@ class Top final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() {
-      return message_.GetFidlMessage();
-    }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -236,7 +234,7 @@ class Top final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -244,7 +242,7 @@ class Top final {
     GetFooRequest& Message() {
       return *reinterpret_cast<GetFooRequest*>(message_.bytes());
     }
-    ::fidl::internal::FidlMessage message_;
+    ::fidl::FidlMessage message_;
   };
 
   class GetFooOwnedRequest final {
@@ -256,9 +254,7 @@ class Top final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() {
-      return message_.GetFidlMessage();
-    }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

@@ -18,18 +18,15 @@ namespace fs {
 
 namespace internal {
 
-zx_status_t FidlTransaction::Reply(fidl::Message msg) {
+zx_status_t FidlTransaction::Reply(fidl::FidlMessage* message) {
   ZX_ASSERT(transaction_id_ != 0);
-  ZX_ASSERT(msg.bytes().actual() >= sizeof(fidl_message_header_t));
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes().data());
+  ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
   hdr->txid = transaction_id_;
   transaction_id_ = 0;
   if (auto binding = binding_.lock()) {
-    zx_status_t status = binding->channel().write(0, msg.bytes().data(), msg.bytes().actual(),
-                                                  msg.handles().data(), msg.handles().actual());
-    // Release ownership on handles, which have been consumed by channel write.
-    msg.ClearHandlesUnsafe();
-    return status;
+    message->Write(binding->channel().get());
+    return message->status();
   }
   return ZX_ERR_CANCELED;
 }

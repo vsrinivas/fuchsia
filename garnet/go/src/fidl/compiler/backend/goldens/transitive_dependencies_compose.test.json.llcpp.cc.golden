@@ -153,13 +153,13 @@ bool Top::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
     ::llcpp::bottom::Foo foo) {
   GetFooOwnedResponse _response{foo};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::bottom::Foo foo) {
   GetFooUnownedResponse _response(_buffer.data(), _buffer.capacity(), foo);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void Top::GetFooRequest::_InitHeader(zx_txid_t _txid) {

@@ -106,7 +106,7 @@ class TestTransaction : public fidl::Transaction {
     return nullptr;
   }
 
-  zx_status_t Reply(fidl::Message message) override {
+  zx_status_t Reply(fidl::FidlMessage* message) override {
     EXPECT_TRUE(false);
     return ZX_OK;
   }

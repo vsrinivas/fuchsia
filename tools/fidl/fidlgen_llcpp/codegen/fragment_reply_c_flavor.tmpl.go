@@ -14,7 +14,7 @@ Reply({{ template "Params" .Response }})
   {{ .Name }}OwnedResponse _response{
   {{- template "PassthroughMessageParams" .Response -}}
   };
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 {{- end }}
 

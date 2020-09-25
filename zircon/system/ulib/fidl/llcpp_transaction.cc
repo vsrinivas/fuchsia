@@ -58,7 +58,7 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-fidl::Result CompleterBase::SendReply(const ::fidl::internal::FidlMessage& message) {
+fidl::Result CompleterBase::SendReply(::fidl::FidlMessage* message) {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
   if (unlikely(!needs_to_reply_)) {
@@ -68,13 +68,11 @@ fidl::Result CompleterBase::SendReply(const ::fidl::internal::FidlMessage& messa
   // At this point we are either replying or calling InternalError, so no need for
   // further replies.
   needs_to_reply_ = false;
-  if (!message.ok()) {
-    transaction_->InternalError({::fidl::UnbindInfo::kEncodeError, message.status()});
-    return fidl::Result(message.status(), message.error());
+  if (!message->ok()) {
+    transaction_->InternalError({::fidl::UnbindInfo::kEncodeError, message->status()});
+    return fidl::Result(message->status(), message->error());
   }
-  auto status = transaction_->Reply(
-      Message(BytePart(message.bytes(), message.byte_capacity(), message.byte_actual()),
-              HandlePart(message.handles(), message.handle_capacity(), message.handle_actual())));
+  auto status = transaction_->Reply(message);
   if (status != ZX_OK) {
     transaction_->InternalError({UnbindInfo::kChannelError, status});
     return fidl::Result(status, ::fidl::kErrorWriteFailed);

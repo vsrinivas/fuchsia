@@ -476,7 +476,7 @@ bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedResponse _response{xu};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
@@ -485,14 +485,14 @@ bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse _response(
       _buffer.data(), _buffer.capacity(), xu);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedResponse _response{xu};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
@@ -501,7 +501,7 @@ bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse _response(
       _buffer.data(), _buffer.capacity(), xu);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest::

@@ -5,6 +5,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/message.h>
 
 #include <utility>
 
@@ -29,7 +30,8 @@ TEST(FidlTransaction, Reply) {
   zx_txid_t txid = 1;
   fs::internal::FidlTransaction txn(txid, binding);
   uint8_t msg_bytes[sizeof(fidl_message_header_t)] = {};
-  txn.Reply(fidl::Message(fidl::BytePart::WrapFull(msg_bytes), fidl::HandlePart()));
+  fidl::FidlMessage message(msg_bytes, sizeof(msg_bytes), sizeof(msg_bytes), nullptr, 0, 0);
+  txn.Reply(&message);
 
   uint8_t received_msg_bytes[sizeof(fidl_message_header_t)] = {};
   uint32_t actual;

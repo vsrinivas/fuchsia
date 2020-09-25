@@ -4,6 +4,7 @@
 
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/assert.h>
 
 namespace fidl {
@@ -31,7 +32,7 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
   return success ? unbind_info_ : UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
 }
 
-zx_status_t AsyncTransaction::Reply(fidl::Message msg) {
+zx_status_t AsyncTransaction::Reply(fidl::FidlMessage* message) {
   ZX_ASSERT(txid_ != 0);
   auto txid = txid_;
   txid_ = 0;
@@ -44,14 +45,11 @@ zx_status_t AsyncTransaction::Reply(fidl::Message msg) {
     return ZX_ERR_CANCELED;
 
   // The encoding process should ensure that the message is valid.
-  ZX_ASSERT(msg.bytes().actual() >= sizeof(fidl_message_header_t));
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes().data());
+  ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
   hdr->txid = txid;
-  auto status = binding->channel()->write(0, msg.bytes().data(), msg.bytes().actual(),
-                                          msg.handles().data(), msg.handles().actual());
-  // Release ownership on handles, which have been consumed by channel write.
-  msg.ClearHandlesUnsafe();
-  return status;
+  message->Write(binding->channel()->get());
+  return message->status();
 }
 
 void AsyncTransaction::EnableNextDispatch() {

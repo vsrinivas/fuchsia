@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_FIDL_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_FIDL_H_
 
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -122,19 +123,13 @@ class DdkTransaction : public fidl::Transaction {
   }
 
  protected:
-  zx_status_t Reply(fidl::Message msg) final {
-    if (!closed_) {
-      const fidl_msg_t fidl_msg{
-          .bytes = msg.bytes().data(),
-          .handles = msg.handles().data(),
-          .num_bytes = static_cast<uint32_t>(msg.bytes().size()),
-          .num_handles = static_cast<uint32_t>(msg.handles().size()),
-      };
-
-      status_ = connection_.Txn()->reply(connection_.Txn(), &fidl_msg);
+  zx_status_t Reply(fidl::FidlMessage* message) final {
+    if (closed_) {
+      return ZX_ERR_CANCELED;
     }
-    msg.ClearHandlesUnsafe();
-    return closed_ ? ZX_ERR_CANCELED : status_;
+    status_ = connection_.Txn()->reply(connection_.Txn(), message->message());
+    message->ReleaseHandles();
+    return status_;
   }
 
   void Close(zx_status_t epitaph) final {

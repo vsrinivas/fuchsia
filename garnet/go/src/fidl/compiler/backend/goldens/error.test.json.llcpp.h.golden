@@ -327,7 +327,7 @@ class Example final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -335,7 +335,7 @@ class Example final {
     fooResponse& Message() {
       return *reinterpret_cast<fooResponse*>(message_.bytes());
     }
-    ::fidl::internal::FidlMessage message_;
+    ::fidl::FidlMessage message_;
   };
 
   class fooOwnedResponse final {
@@ -348,9 +348,7 @@ class Example final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() {
-      return message_.GetFidlMessage();
-    }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -373,7 +371,7 @@ class Example final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -381,7 +379,7 @@ class Example final {
     fooRequest& Message() {
       return *reinterpret_cast<fooRequest*>(message_.bytes());
     }
-    ::fidl::internal::FidlMessage message_;
+    ::fidl::FidlMessage message_;
   };
 
   class fooOwnedRequest final {
@@ -395,9 +393,7 @@ class Example final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::internal::FidlMessage& GetFidlMessage() {
-      return message_.GetFidlMessage();
-    }
+    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

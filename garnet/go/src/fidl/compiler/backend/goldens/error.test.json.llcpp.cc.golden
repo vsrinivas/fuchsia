@@ -185,7 +185,7 @@ bool Example::Dispatch(Interface* impl, fidl_msg_t* msg,
 ::fidl::Result Example::Interface::fooCompleterBase::Reply(
     ::llcpp::fidl::test::json::Example_foo_Result result) {
   fooOwnedResponse _response{result};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
   ::fidl::aligned<Example_foo_Response> response;
@@ -203,7 +203,7 @@ bool Example::Dispatch(Interface* impl, fidl_msg_t* msg,
     ::fidl::BytePart _buffer,
     ::llcpp::fidl::test::json::Example_foo_Result result) {
   fooUnownedResponse _response(_buffer.data(), _buffer.capacity(), result);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(
     ::fidl::BytePart _buffer, int64_t y) {

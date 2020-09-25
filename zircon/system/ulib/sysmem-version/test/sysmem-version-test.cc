@@ -60,8 +60,8 @@ class LinearSnap {
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    fidl::internal::FidlMessage message(linear_data_, kMaxDataSize, 0, handles,
-                                        ZX_CHANNEL_MAX_MSG_HANDLES, 0);
+    fidl::FidlMessage message(linear_data_, kMaxDataSize, 0, handles, ZX_CHANNEL_MAX_MSG_HANDLES,
+                              0);
 
     message.LinearizeAndEncode(FidlType::Type, &aligned);
     if (!message.ok()) {
@@ -79,11 +79,9 @@ class LinearSnap {
     snap_handles_count_ = message.handle_actual();
 
     // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
-    const char* error = nullptr;
-    zx_status_t status = fidl_decode(FidlType::Type, message.bytes(), message.byte_actual(),
-                                     message.handles(), message.handle_actual(), &error);
-    ZX_ASSERT(status == ZX_OK);
-    ZX_ASSERT(error == nullptr);
+    message.Decode(FidlType::Type);
+    ZX_ASSERT(message.ok());
+    ZX_ASSERT(message.error() == nullptr);
 
     // At this point, the handles are in linear_data_ and value_'s message() is stored directly in
     // linear_data_.

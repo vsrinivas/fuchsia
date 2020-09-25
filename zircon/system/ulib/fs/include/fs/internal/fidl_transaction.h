@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_INTERNAL_FIDL_TRANSACTION_H_
+#define FS_INTERNAL_FIDL_TRANSACTION_H_
 
 #include <lib/fdio/limits.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -42,7 +44,7 @@ class FidlTransaction final : public ::fidl::Transaction {
     return *this;
   }
 
-  zx_status_t Reply(fidl::Message msg) final;
+  zx_status_t Reply(fidl::FidlMessage* message) final;
 
   void Close(zx_status_t epitaph) final;
 
@@ -70,3 +72,5 @@ class FidlTransaction final : public ::fidl::Transaction {
 }  // namespace internal
 
 }  // namespace fs
+
+#endif  // FS_INTERNAL_FIDL_TRANSACTION_H_

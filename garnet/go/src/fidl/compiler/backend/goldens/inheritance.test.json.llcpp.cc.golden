@@ -163,13 +163,13 @@ bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 ::fidl::Result super::Interface::fooCompleterBase::Reply(int64_t y) {
   fooOwnedResponse _response{y};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result super::Interface::fooCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t y) {
   fooUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void super::fooRequest::_InitHeader(zx_txid_t _txid) {
@@ -331,13 +331,13 @@ bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 
 ::fidl::Result sub::Interface::fooCompleterBase::Reply(int64_t y) {
   fooOwnedResponse _response{y};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
                                                        int64_t y) {
   fooUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void sub::fooRequest::_InitHeader(zx_txid_t _txid) {

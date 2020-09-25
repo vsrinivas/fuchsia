@@ -24,9 +24,7 @@
 
 namespace fidl {
 
-namespace internal {
 class FidlMessage;
-}
 
 // An abstract transaction, encapsulating the logic of sending reply messages.
 // The transaction type is polymorphic, to cater to a variety of transports and usage patterns.
@@ -53,7 +51,9 @@ class FidlMessage;
 //         DriverRpcTransaction& operator=(DriverRpcTransaction&& other) noexcept;
 //
 //     protected:
-//         zx_status_t Reply(fidl::Message msg) final { /* Send to another driver etc. */ }
+//         zx_status_t Reply(fidl::internal::Message* message) final {
+//           /* Send to another driver etc. */
+//         }
 //         void Close(zx_status_t epitaph) final { /* Send epitaph and close down transport. */ }
 //
 //         std::unique_ptr<Transaction> TakeOwnership() final {
@@ -89,7 +89,9 @@ class Transaction {
   // Called at most once for a two-way FIDL method, to reply to a two-way call.
   // Never called in case of a one-way call.
   // Implementation must fill in the correct transaction ID.
-  virtual zx_status_t Reply(fidl::Message message) = 0;
+  // |Reply| usually consumes the handles (in which case |ReleaseHandles()| has been called).
+  // If not, the destructor of |FidlMessage| will close them.
+  virtual zx_status_t Reply(fidl::FidlMessage* message) = 0;
 
   // Should send an epitaph and then close the underlying transport e.g. channel.
   virtual void Close(zx_status_t epitaph) = 0;
@@ -147,7 +149,7 @@ class CompleterBase {
 
   ~CompleterBase();
 
-  fidl::Result SendReply(const ::fidl::internal::FidlMessage& message);
+  fidl::Result SendReply(::fidl::FidlMessage* message);
 
   // Invokes transaction_.InternalError().
   void InternalError(UnbindInfo error);

@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_HOST_FIDL_TXN_H_
 
 #include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -25,22 +26,12 @@ class DevmgrFidlTxn : public fidl::Transaction {
           This provides Devmgr with the correct status value.\n");
   }
 
-  zx_status_t Reply(fidl::Message message) override {
+  zx_status_t Reply(fidl::FidlMessage* message) override {
     ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
-    const fidl_msg_t msg{
-        .bytes = message.bytes().data(),
-        .handles = message.handles().data(),
-        .num_bytes = static_cast<uint32_t>(message.bytes().size()),
-        .num_handles = static_cast<uint32_t>(message.handles().size()),
-    };
-
-    auto hdr = static_cast<fidl_message_header_t*>(msg.bytes);
+    auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
     hdr->txid = txid_;
-    status_ = channel_->write(0, msg.bytes, msg.num_bytes, msg.handles, msg.num_handles);
-
-    // We have now transferred ownership of the message's handles over the channel.
-    message.ClearHandlesUnsafe();
-    return status_;
+    message->Write(channel_->get());
+    return message->status();
   }
 
   void Close(zx_status_t close_status) override {

@@ -341,13 +341,13 @@ bool Transitional::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
   RequestOwnedResponse _response{y};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t y) {
   RequestUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
@@ -822,25 +822,25 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     int64_t result) {
   MethodBOwnedResponse _response{result};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t result) {
   MethodBUnownedResponse _response(_buffer.data(), _buffer.capacity(), result);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
   MutateSocketOwnedResponse _response{b};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::socket b) {
   MutateSocketUnownedResponse _response(_buffer.data(), _buffer.capacity(), b);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void ChannelProtocol::MethodARequest::_InitHeader(zx_txid_t _txid) {
@@ -1634,13 +1634,13 @@ bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg,
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestEmptyResponseCompleterBase::Reply() {
   NoRequestEmptyResponseOwnedResponse _response{};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
   NoRequestWithResponseOwnedResponse _response{ret};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
@@ -1648,19 +1648,19 @@ bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg,
                                               ::fidl::StringView ret) {
   NoRequestWithResponseUnownedResponse _response(_buffer.data(),
                                                  _buffer.capacity(), ret);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestEmptyResponseCompleterBase::Reply() {
   WithRequestEmptyResponseOwnedResponse _response{};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
   WithRequestWithResponseOwnedResponse _response{ret};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
@@ -1668,7 +1668,7 @@ bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg,
                                                 ::fidl::StringView ret) {
   WithRequestWithResponseUnownedResponse _response(_buffer.data(),
                                                    _buffer.capacity(), ret);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
@@ -2187,7 +2187,7 @@ bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg,
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
   ResponseAsStructOwnedResponse _response{result};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
@@ -2212,7 +2212,7 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
   ResponseAsStructUnownedResponse _response(_buffer.data(), _buffer.capacity(),
                                             result);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
@@ -2230,7 +2230,7 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
   ErrorAsPrimitiveOwnedResponse _response{result};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
@@ -2251,7 +2251,7 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
   ErrorAsPrimitiveUnownedResponse _response(_buffer.data(), _buffer.capacity(),
                                             result);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
@@ -2266,7 +2266,7 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
   ErrorAsEnumOwnedResponse _response{result};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
@@ -2286,7 +2286,7 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
   ErrorAsEnumUnownedResponse _response(_buffer.data(), _buffer.capacity(),
                                        result);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(

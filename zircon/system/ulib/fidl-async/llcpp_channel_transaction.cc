@@ -5,6 +5,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
 #include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/assert.h>
 
 namespace fidl {
@@ -15,17 +16,14 @@ void ChannelTransaction::Dispatch(fidl_msg_t msg) {
   binding_->dispatch_fn_(binding_->interface_, &msg, this);
 }
 
-zx_status_t ChannelTransaction::Reply(fidl::Message msg) {
+zx_status_t ChannelTransaction::Reply(fidl::FidlMessage* message) {
   ZX_ASSERT(txid_ != 0);
-  ZX_ASSERT(msg.bytes().actual() >= sizeof(fidl_message_header_t));
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes().data());
+  ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
   hdr->txid = txid_;
   txid_ = 0;
-  auto status = binding_->channel()->write(0, msg.bytes().data(), msg.bytes().actual(),
-                                           msg.handles().data(), msg.handles().actual());
-  // release ownership on handles, which have been consumed by channel write.
-  msg.ClearHandlesUnsafe();
-  return status;
+  message->Write(binding_->channel()->get());
+  return message->status();
 }
 
 void ChannelTransaction::Close(zx_status_t epitaph) {

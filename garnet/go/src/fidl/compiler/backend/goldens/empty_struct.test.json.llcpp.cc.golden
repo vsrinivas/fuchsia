@@ -344,14 +344,14 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
 ::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::json::Empty e) {
   SendAndReceiveOwnedResponse _response{e};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Empty e) {
   SendAndReceiveUnownedResponse _response(_buffer.data(), _buffer.capacity(),
                                           e);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void EmptyProtocol::SendRequest::_InitHeader(zx_txid_t _txid) {

@@ -184,13 +184,13 @@ bool SimpleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 ::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
   AddOwnedResponse _response{sum};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(
     ::fidl::BytePart _buffer, int32_t sum) {
   AddUnownedResponse _response(_buffer.data(), _buffer.capacity(), sum);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void SimpleProtocol::AddRequest::_InitHeader(zx_txid_t _txid) {

@@ -368,26 +368,26 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::zx::channel c) {
   GetChildOwnedResponse _response{c};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel c) {
   GetChildUnownedResponse _response(_buffer.data(), _buffer.capacity(), c);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::zx::channel r) {
   GetChildRequestOwnedResponse _response{r};
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel r) {
   GetChildRequestUnownedResponse _response(_buffer.data(), _buffer.capacity(),
                                            r);
-  return CompleterBase::SendReply(_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetFidlMessage());
 }
 
 void Parent::GetChildRequest::_InitHeader(zx_txid_t _txid) {

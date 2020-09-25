@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_ASYNC_CPP_ASYNC_TRANSACTION_H_
-#define LIB_FIDL_ASYNC_CPP_ASYNC_TRANSACTION_H_
+#ifndef LIB_FIDL_LLCPP_ASYNC_TRANSACTION_H_
+#define LIB_FIDL_LLCPP_ASYNC_TRANSACTION_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/transaction.h>
@@ -47,7 +47,7 @@ class AsyncTransaction final : public Transaction {
 
   virtual ~AsyncTransaction() { ZX_ASSERT(!owned_binding_); }
 
-  zx_status_t Reply(fidl::Message msg) final;
+  zx_status_t Reply(fidl::FidlMessage* message) final;
 
   void EnableNextDispatch() final;
 
@@ -62,8 +62,7 @@ class AsyncTransaction final : public Transaction {
  private:
   friend fidl::internal::AsyncServerBinding;
 
-  std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding,
-                                     fidl_msg_t* msg);
+  std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t* msg);
 
   void MoveImpl(AsyncTransaction&& other) noexcept {
     txid_ = other.txid_;
@@ -93,4 +92,4 @@ class AsyncTransaction final : public Transaction {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_ASYNC_CPP_ASYNC_TRANSACTION_H_
+#endif  // LIB_FIDL_LLCPP_ASYNC_TRANSACTION_H_
