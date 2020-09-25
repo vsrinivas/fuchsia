@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,58 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 )
+
+type mockReadAtCloser struct {
+	contents string
+	isClosed bool
+}
+
+func newMockReadAtCloser(contents string) *mockReadAtCloser {
+	return &mockReadAtCloser{
+		contents: contents,
+		isClosed: false,
+	}
+}
+
+func (m *mockReadAtCloser) ReadAt(_ []byte, _ int64) (int, error) {
+	return len(m.contents), nil
+}
+
+func (m *mockReadAtCloser) Close() error {
+	m.isClosed = true
+	return nil
+}
+
+func TestOverrideImage(t *testing.T) {
+	imgMap := map[string]bootserver.Image{}
+	reader := newMockReadAtCloser("contents")
+	bootloaderImg := bootserver.Image{
+		Name:   "bootloader",
+		Reader: reader,
+	}
+	imgMap = overrideImage(context.Background(), imgMap, bootloaderImg)
+	if img := imgMap["bootloader"]; img.Reader != bootloaderImg.Reader {
+		t.Errorf("expected %v, got %v", bootloaderImg, img)
+	}
+	if reader.isClosed {
+		t.Errorf("reader was closed")
+	}
+	reader2 := newMockReadAtCloser("some other contents")
+	bootloaderOverrideImg := bootserver.Image{
+		Name:   "bootloader",
+		Reader: reader2,
+	}
+	imgMap = overrideImage(context.Background(), imgMap, bootloaderOverrideImg)
+	if img := imgMap["bootloader"]; img.Reader != bootloaderOverrideImg.Reader {
+		t.Errorf("expected %v, got %v", bootloaderOverrideImg, img)
+	}
+	if !reader.isClosed {
+		t.Errorf("failed to close old image reader")
+	}
+	if reader2.isClosed {
+		t.Errorf("new image reader is closed")
+	}
+}
 
 func TestPopulateReaders(t *testing.T) {
 	bootloaderImage := bootserver.Image{

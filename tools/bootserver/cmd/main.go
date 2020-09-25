@@ -160,29 +160,50 @@ func getFirmwareArgs(args []string) []firmwareArg {
 	return fwArgs
 }
 
+func overrideImage(ctx context.Context, imgMap map[string]bootserver.Image, img bootserver.Image) map[string]bootserver.Image {
+	if existing, ok := imgMap[img.Name]; ok {
+		if existing.Reader != nil {
+			if closer, ok := existing.Reader.(io.Closer); ok {
+				if err := closer.Close(); err != nil {
+					logger.Warningf(ctx, "failed to close image %s: %v", existing.Name, err)
+				}
+			}
+		}
+	}
+	imgMap[img.Name] = img
+	return imgMap
+}
+
 func getImages(ctx context.Context) ([]bootserver.Image, func() error, error) {
+	imgMap := make(map[string]bootserver.Image)
 	// If an image manifest is provided, we use that.
 	if imageManifest != "" {
-		return bootserver.GetImages(ctx, imageManifest, mode)
+		imgs, closeFunc, err := bootserver.GetImages(ctx, imageManifest, mode)
+		if err != nil {
+			return imgs, closeFunc, err
+		}
+		for _, img := range imgs {
+			imgMap[img.Name] = img
+		}
 	}
-	// Otherwise, build an image list from the cmd line args.
-	var imgs []bootserver.Image
+	// If cmdline args are provided, append them to the image list, overriding any
+	// images from the manifest.
 	if bootKernel != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "zbi_netboot",
 			Path: bootKernel,
 			Args: []string{"--boot"},
 		})
 	}
 	if bootloader != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "blk_efi",
 			Path: bootloader,
 			Args: []string{"--bootloader"},
 		})
 	}
 	for _, fw := range firmware {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			// Trailing delimiter is OK for untyped images.
 			Name: "img_firmware_" + fw.fwType,
 			Path: fw.value,
@@ -190,53 +211,57 @@ func getImages(ctx context.Context) ([]bootserver.Image, func() error, error) {
 		})
 	}
 	if fvm != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "blk_storage-sparse",
 			Path: fvm,
 			Args: []string{"--fvm"},
 		})
 	}
 	if zircona != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "zbi_zircon-a",
 			Path: zircona,
 			Args: []string{"--zircona"},
 		})
 	}
 	if zirconb != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "zbi_zircon-b",
 			Path: zirconb,
 			Args: []string{"--zirconb"},
 		})
 	}
 	if zirconr != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "zbi_zircon-r",
 			Path: zirconr,
 			Args: []string{"--zirconr"},
 		})
 	}
 	if vbmetaa != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "vbmeta_zircon-a",
 			Path: vbmetaa,
 			Args: []string{"--vbmetaa"},
 		})
 	}
 	if vbmetab != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "vbmeta_zircon-b",
 			Path: vbmetab,
 			Args: []string{"--vbmetab"},
 		})
 	}
 	if vbmetar != "" {
-		imgs = append(imgs, bootserver.Image{
+		imgMap = overrideImage(ctx, imgMap, bootserver.Image{
 			Name: "vbmeta_zircon-r",
 			Path: vbmetar,
 			Args: []string{"--vbmetar"},
 		})
+	}
+	imgs := []bootserver.Image{}
+	for _, img := range imgMap {
+		imgs = append(imgs, img)
 	}
 	closeFunc, err := populateReaders(imgs)
 	return imgs, closeFunc, err
@@ -260,6 +285,9 @@ func populateReaders(imgs []bootserver.Image) (func() error, error) {
 		return nil
 	}
 	for i := range imgs {
+		if imgs[i].Reader != nil {
+			continue
+		}
 		r, err := os.Open(imgs[i].Path)
 		if err != nil {
 			// Close already opened readers.
