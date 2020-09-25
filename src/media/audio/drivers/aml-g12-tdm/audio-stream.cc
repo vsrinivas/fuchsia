@@ -119,12 +119,12 @@ zx_status_t AmlG12TdmStream::InitHW() {
     uint32_t frame_sync_clks = 0;
     switch (metadata_.tdm.type) {
       case metadata::TdmType::I2s:
-      case metadata::TdmType::LeftJustified:
+      case metadata::TdmType::StereoLeftJustified:
         // For I2S and Stereo Left Justified we have a 50% duty cycle, hence the frame sync clocks
         // is set to the size of one slot.
         frame_sync_clks = metadata_.tdm.bits_per_slot;
         break;
-      case metadata::TdmType::Pcm:
+      case metadata::TdmType::Tdm1:
         frame_sync_clks = 1;
         break;
     }
@@ -173,10 +173,10 @@ void AmlG12TdmStream::InitDaiFormats() {
       case metadata::TdmType::I2s:
         dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
         break;
-      case metadata::TdmType::LeftJustified:
+      case metadata::TdmType::StereoLeftJustified:
         dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;
         break;
-      case metadata::TdmType::Pcm:
+      case metadata::TdmType::Tdm1:
         dai_formats_[i].justify_format = JUSTIFY_FORMAT_JUSTIFY_TDM1;
         break;
     }
@@ -208,7 +208,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (metadata_.tdm.type == metadata::TdmType::I2s ||
-      metadata_.tdm.type == metadata::TdmType::LeftJustified) {
+      metadata_.tdm.type == metadata::TdmType::StereoLeftJustified) {
     metadata_.dai_number_of_channels = 2;
   }
   if (metadata_.tdm.bits_per_sample == 0) {
@@ -472,11 +472,11 @@ zx_status_t AmlG12TdmStream::Init() {
     case metadata::TdmType::I2s:
       tdm_type = "i2s";
       break;
-    case metadata::TdmType::LeftJustified:
+    case metadata::TdmType::StereoLeftJustified:
       tdm_type = "ljt";
       break;
-    case metadata::TdmType::Pcm:
-      tdm_type = "pcm";
+    case metadata::TdmType::Tdm1:
+      tdm_type = "tdm1";
       break;
   }
   snprintf(device_name_, sizeof(device_name_), "%s-audio-%s-%s", prod_name_, tdm_type, in_out);

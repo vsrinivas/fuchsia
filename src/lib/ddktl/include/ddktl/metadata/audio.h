@@ -20,8 +20,8 @@ enum class Codec : uint32_t {
 
 enum class TdmType : uint32_t {
   I2s,
-  LeftJustified,
-  Pcm,
+  StereoLeftJustified,
+  Tdm1,
 };
 
 enum class SampleFormat : uint32_t {

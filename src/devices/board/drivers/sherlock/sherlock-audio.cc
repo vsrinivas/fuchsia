@@ -405,7 +405,7 @@ zx_status_t Sherlock::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.tdm.type = metadata::TdmType::Tdm1;
     metadata.tdm.sclk_on_raising = true;
     metadata.tdm.bits_per_sample = 16;
     metadata.tdm.bits_per_slot = 16;
@@ -512,7 +512,7 @@ zx_status_t Sherlock::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.tdm.type = metadata::TdmType::Tdm1;
     metadata.tdm.sclk_on_raising = true;
     metadata.tdm.bits_per_sample = 16;
     metadata.tdm.bits_per_slot = 16;

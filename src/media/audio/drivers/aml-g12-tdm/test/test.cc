@@ -219,7 +219,7 @@ struct AmlG12PcmOutTest : public AmlG12I2sOutTest {
     metadata_.number_of_channels = 1;
     metadata_.dai_number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
-    metadata_.tdm.type = metadata::TdmType::Pcm;
+    metadata_.tdm.type = metadata::TdmType::Tdm1;
     metadata_.tdm.bits_per_slot = 16;
     metadata_.tdm.number_of_codecs = 0;
     metadata_.tdm.sclk_on_raising = true;
@@ -271,7 +271,7 @@ struct AmlG12LjtOutTest : public AmlG12I2sOutTest {
       : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
     metadata_.number_of_channels = 2;
     metadata_.lanes_enable_mask[0] = 3;
-    metadata_.tdm.type = metadata::TdmType::LeftJustified;
+    metadata_.tdm.type = metadata::TdmType::StereoLeftJustified;
     metadata_.tdm.bits_per_sample = 16;
     metadata_.tdm.bits_per_slot = 16;
   }
@@ -323,7 +323,7 @@ struct AmlG12Tdm1OutTest : public AmlG12I2sOutTest {
     metadata_.number_of_channels = 4;
     metadata_.dai_number_of_channels = 4;
     metadata_.lanes_enable_mask[0] = 0xf;
-    metadata_.tdm.type = metadata::TdmType::Pcm;
+    metadata_.tdm.type = metadata::TdmType::Tdm1;
     metadata_.tdm.bits_per_slot = 16;
   }
 };
@@ -736,7 +736,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
       metadata_.number_of_channels = 1;
       metadata_.dai_number_of_channels = 1;
       metadata_.lanes_enable_mask[0] = 1;  // 1 channel.
-      metadata_.tdm.type = metadata::TdmType::Pcm;
+      metadata_.tdm.type = metadata::TdmType::Tdm1;
       metadata_.tdm.bits_per_slot = 16;
       metadata_.tdm.sclk_on_raising = true;
       aml_audio_ = std::make_unique<AmlTdmOutDeviceMuteTest>(region);
@@ -837,7 +837,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
       metadata_.number_of_channels = 4;
       metadata_.lanes_enable_mask[0] = 3;  // L + R tweeters.
       metadata_.lanes_enable_mask[1] = 3;  // Woofer in lane 1.
-      metadata_.tdm.type = metadata::TdmType::Pcm;
+      metadata_.tdm.type = metadata::TdmType::Tdm1;
       metadata_.tdm.bits_per_slot = 16;
       aml_audio_ = std::make_unique<AmlTdmOutDeviceMuteTest>(region);
     }
@@ -956,7 +956,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
       metadata_.number_of_channels = 4;
       metadata_.dai_number_of_channels = 4;
       metadata_.lanes_enable_mask[0] = 0xf;  // All 4 speakers in lane 0.
-      metadata_.tdm.type = metadata::TdmType::Pcm;
+      metadata_.tdm.type = metadata::TdmType::Tdm1;
       metadata_.tdm.bits_per_slot = 16;
       aml_audio_ = std::make_unique<AmlTdmOutDeviceMuteTest>(region);
     }
@@ -1130,7 +1130,7 @@ struct AmlG12PcmInTest : public AmlG12I2sInTest {
     metadata_.number_of_channels = 1;
     metadata_.dai_number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
-    metadata_.tdm.type = metadata::TdmType::Pcm;
+    metadata_.tdm.type = metadata::TdmType::Tdm1;
     metadata_.tdm.bits_per_slot = 16;
     metadata_.tdm.sclk_on_raising = true;
   }
