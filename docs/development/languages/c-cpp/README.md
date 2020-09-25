@@ -4,7 +4,6 @@
 - [Naming conventions](naming.md)
 - [C++ style guide](cpp-style.md)
 - [Library restrictions](library_restrictions.md)
-- [Testing FAQ](testing_faq.md)
 - [Logging](logging.md)
 - [Perftest micro-benchmark library](/zircon/system/ulib/perftest/README.md)
 - [Lint](lint.md)

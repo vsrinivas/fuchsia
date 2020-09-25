@@ -16,8 +16,6 @@ toc:
   path: /docs/development/languages/c-cpp/libc.md
 - title: "Library restrictions"
   path: /docs/development/languages/c-cpp/library_restrictions.md
-- title: "Testing FAQ"
-  path: /docs/development/languages/c-cpp/testing_faq.md
 - title: "Logging"
   path: /docs/development/languages/c-cpp/logging.md
 - title: "Perftest micro-benchmark library"
