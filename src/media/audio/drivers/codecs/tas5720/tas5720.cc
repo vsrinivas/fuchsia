@@ -149,10 +149,9 @@ zx_status_t Tas5720::Reinitialize() {
   if (status != ZX_OK) {
     return status;
   }
-  status = SetGain(-7.1f);  // Conservative default gain.
-  if (status != ZX_OK) {
-    return status;
-  }
+  constexpr float kDefaultGainDb = -30.f;
+  GainState gain_state = {.gain_db = kDefaultGainDb, .muted = true};
+  SetGainState(std::move(gain_state));
   return ZX_OK;
 }
 
@@ -266,7 +265,7 @@ void Tas5720::SetGainState(GainState gain_state) {
   }
   status = SetMuted(gain_state.muted);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tas5720: Could not set mute state%d\n", status);
+    zxlogf(ERROR, "tas5720: Could not set mute state %d\n", status);
   }
   if (gain_state.agc_enable) {
     zxlogf(ERROR, "tas5720: AGC enable not supported\n");

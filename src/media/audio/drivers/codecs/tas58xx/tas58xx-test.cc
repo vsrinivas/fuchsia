@@ -309,7 +309,8 @@ TEST(Tas58xxTest, Reset) {
         .ExpectWriteStop({0x03, 0x03})   // Play,
         .ExpectWriteStop({0x00, 0x00})   // Page 0.
         .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+        .ExpectWriteStop({0x78, 0x80})   // Clear analog fault.
+        .ExpectWriteStop({0x4c, 0x6c});  // digital vol -30dB.
     std::thread t([&]() { ASSERT_OK(client.Reset()); });
     t.join();
   }
@@ -346,7 +347,8 @@ TEST(Tas58xxTest, Bridged) {
         .ExpectWriteStop({0x03, 0x03})   // Play,
         .ExpectWriteStop({0x00, 0x00})   // Page 0.
         .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+        .ExpectWriteStop({0x78, 0x80})   // Clear analog fault.
+        .ExpectWriteStop({0x4c, 0x6c});  // digital vol -30dB.
     std::thread t([&]() { ASSERT_OK(client.Reset()); });
     t.join();
   }

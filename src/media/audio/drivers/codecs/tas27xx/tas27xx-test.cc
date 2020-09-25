@@ -130,7 +130,9 @@ TEST(Tas27xxTest, CodecReset) {
       .ExpectReadStop({0x00})          // INT_LTCH2.
       .ExpectWriteStop({0x20, 0xf8})   // INT_MASK0.
       .ExpectWriteStop({0x21, 0xff})   // INT_MASK1.
-      .ExpectWriteStop({0x30, 0x01});  // INT_CFG.
+      .ExpectWriteStop({0x30, 0x01})   // INT_CFG.
+      .ExpectWriteStop({0x05, 0x3c})   // -30dB.
+      .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
 
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));

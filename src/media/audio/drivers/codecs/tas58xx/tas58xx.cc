@@ -79,52 +79,57 @@ Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
 }
 
 zx_status_t Tas58xx::Reset() {
-  fbl::AutoLock lock(&lock_);
-  // From the reference manual:
-  // "9.5.3.1 Startup Procedures
-  // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
-  // 2. Bring up power supplies (it does not matter if PVDD or DVDD comes up first).
-  // 3. Once power supplies are stable, bring up PDN to High and wait 5ms at least, then start
-  // SCLK, LRCLK.
-  // 4. Once I2S clocks are stable, set the device into HiZ state and enable DSP via the I2C
-  // control port.
-  // 5. Wait 5ms at least. Then initialize the DSP Coefficient, then set the device to Play state.
-  // 6. The device is now in normal operation."
-  // Steps 4+ are execute below.
+  {  // Limit scope of lock, SetGainState will grab it again below.
+    fbl::AutoLock lock(&lock_);
+    // From the reference manual:
+    // "9.5.3.1 Startup Procedures
+    // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
+    // 2. Bring up power supplies (it does not matter if PVDD or DVDD comes up first).
+    // 3. Once power supplies are stable, bring up PDN to High and wait 5ms at least, then start
+    // SCLK, LRCLK.
+    // 4. Once I2S clocks are stable, set the device into HiZ state and enable DSP via the I2C
+    // control port.
+    // 5. Wait 5ms at least. Then initialize the DSP Coefficient, then set the device to Play state.
+    // 6. The device is now in normal operation."
+    // Steps 4+ are execute below.
 
-  constexpr uint8_t kDefaultsStart[][2] = {
-      {kRegSelectPage, 0x00},
-      {kRegSelectbook, 0x00},
-      {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
-      {kRegReset, kRegResetRegsAndModulesCtrl},
-  };
-  for (auto& i : kDefaultsStart) {
-    auto status = WriteReg(i[0], i[1]);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
-      return status;
+    constexpr uint8_t kDefaultsStart[][2] = {
+        {kRegSelectPage, 0x00},
+        {kRegSelectbook, 0x00},
+        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
+        {kRegReset, kRegResetRegsAndModulesCtrl},
+    };
+    for (auto& i : kDefaultsStart) {
+      auto status = WriteReg(i[0], i[1]);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
+        return status;
+      }
+    }
+
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+
+    const uint8_t kDefaultsEnd[][2] = {
+        {kRegSelectPage, 0x00},
+        {kRegSelectbook, 0x00},
+        {kRegDeviceCtrl1,
+         static_cast<uint8_t>((metadata_.bridged ? kRegDeviceCtrl1BitsPbtlMode : 0) |
+                              kRegDeviceCtrl1Bits1SpwMode)},
+
+        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
+        {kRegSelectPage, 0x00},
+        {kRegSelectbook, 0x00},
+        {kRegClearFault, kRegClearFaultBitsAnalog}};
+    for (auto& i : kDefaultsEnd) {
+      auto status = WriteReg(i[0], i[1]);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
+        return status;
+      }
     }
   }
-
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-
-  const uint8_t kDefaultsEnd[][2] = {
-      {kRegSelectPage, 0x00},
-      {kRegSelectbook, 0x00},
-      {kRegDeviceCtrl1, static_cast<uint8_t>((metadata_.bridged ? kRegDeviceCtrl1BitsPbtlMode : 0) |
-                                             kRegDeviceCtrl1Bits1SpwMode)},
-
-      {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
-      {kRegSelectPage, 0x00},
-      {kRegSelectbook, 0x00},
-      {kRegClearFault, kRegClearFaultBitsAnalog}};
-  for (auto& i : kDefaultsEnd) {
-    auto status = WriteReg(i[0], i[1]);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
-      return status;
-    }
-  }
+  constexpr float kDefaultGainDb = -30.f;
+  SetGainState({.gain_db = kDefaultGainDb, .muted = true});
   initialized_ = true;
   return ZX_OK;
 }

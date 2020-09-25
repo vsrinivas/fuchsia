@@ -52,9 +52,12 @@ class Tas5720Test : public zxtest::Test {
         .ExpectWriteStop({0x11, 0xfc})  // clippers disabled.
         .ExpectWrite({0x01})
         .ExpectReadStop({0xfe})
-        .ExpectWriteStop({0x01, 0xff})   // exit shutdown (part of start).
-        .ExpectWriteStop({0x06, 0x51})   // Default gain.
-        .ExpectWriteStop({0x04, 0xcf});  // Default gain.
+        .ExpectWriteStop({0x01, 0xff})  // exit shutdown (part of start).
+        .ExpectWriteStop({0x06, 0x51})  // Default gain.
+        .ExpectWriteStop({0x04, 0xa1})  // Default gain.
+        .ExpectWrite({0x03})
+        .ExpectReadStop({0x00})
+        .ExpectWriteStop({0x03, 0x10});  // Muted.
   }
   mock_i2c::MockI2c mock_i2c_;
 };
@@ -149,9 +152,12 @@ TEST_F(Tas5720Test, CodecReset) {
       .ExpectWriteStop({0x11, 0xfc})  // clippers disabled.
       .ExpectWrite({0x01})
       .ExpectReadStop({0xfe})
-      .ExpectWriteStop({0x01, 0xff})   // exit shutdown (part of start).
-      .ExpectWriteStop({0x06, 0x51})   // Default gain.
-      .ExpectWriteStop({0x04, 0xcf});  // Default gain.
+      .ExpectWriteStop({0x01, 0xff})  // exit shutdown (part of start).
+      .ExpectWriteStop({0x06, 0x51})  // Default gain.
+      .ExpectWriteStop({0x04, 0xa1})  // Default gain.
+      .ExpectWrite({0x03})
+      .ExpectReadStop({0x00})
+      .ExpectWriteStop({0x03, 0x10});  // Muted.
 
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -401,9 +407,12 @@ TEST(Tas5720Test, InstanceCount) {
       .ExpectWriteStop({0x11, 0xfc})  // clippers disabled.
       .ExpectWrite({0x01})
       .ExpectReadStop({0xfe})
-      .ExpectWriteStop({0x01, 0xff})   // exit shutdown (part of start).
-      .ExpectWriteStop({0x06, 0x51})   // Default gain.
-      .ExpectWriteStop({0x04, 0xcf});  // Default gain.
+      .ExpectWriteStop({0x01, 0xff})  // exit shutdown (part of start).
+      .ExpectWriteStop({0x06, 0x51})  // Default gain.
+      .ExpectWriteStop({0x04, 0xa1})  // Default gain.
+      .ExpectWrite({0x03})
+      .ExpectReadStop({0x00})
+      .ExpectWriteStop({0x03, 0x10});  // Muted.
 
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);

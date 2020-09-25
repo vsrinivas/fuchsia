@@ -285,7 +285,9 @@ zx_status_t Tas27xx::Reinitialize() {
   if (status != ZX_OK) {
     return status;
   }
-
+  constexpr float kDefaultGainDb = -30.f;
+  GainState gain_state = {.gain_db = kDefaultGainDb, .muted = true};
+  SetGainState(std::move(gain_state));
   return ZX_OK;
 }
 
