@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_selftest") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+    "src/test/asserts.rs",
+    "src/test/mod.rs",
+  ]
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:async-std",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:termion",
+  ]
+}

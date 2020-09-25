@@ -295,14 +295,15 @@ impl Daemon {
             }
             DaemonRequest::Quit { responder } => {
                 log::info!("Received quit request.");
-                responder.send(true).context("error sending response")?;
-
-                task::sleep(std::time::Duration::from_millis(10)).await;
 
                 match std::fs::remove_file(get_socket().await) {
                     Ok(()) => {}
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
+
+                responder.send(true).context("error sending response")?;
+
+                task::sleep(std::time::Duration::from_millis(20)).await;
 
                 std::process::exit(0);
             }
