@@ -24,7 +24,7 @@ namespace internal {
 // an intrusive container node so that ClientBase can track it. The user (or generated code) passes
 // a pointer to the ResponseContext to the ClientBase, implicitly transferring ownership. Ownership
 // is only returned to the caller once either OnReply() or OnError() is invoked.
-// TODO(fxb/50664): fbl::WAVLTree must be made available in the SDK, otherwise it needs to be
+// TODO(fxbug.dev/50664): fbl::WAVLTree must be made available in the SDK, otherwise it needs to be
 // replaced here with some tree that is available there.
 // NOTE: ResponseContext uses list_node_t in order to safely iterate over outstanding transactions
 // on ClientBase destruction while invoking OnError() which can destroy the ResponseContext.

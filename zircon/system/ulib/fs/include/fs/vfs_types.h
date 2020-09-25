@@ -99,7 +99,7 @@ constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value
 // protocols must be less than 64. When the need arises as to support more than 64
 // protocols, we should change the implementation in |VnodeProtocolSet| accordingly.
 enum class VnodeProtocol : uint32_t {
-  // TODO(fxb/39776): change this back to 0 when the referenced compiler bug is resolved.
+  // TODO(fxbug.dev/39776): change this back to 0 when the referenced compiler bug is resolved.
   // Setting |kConnector| to 1 appears to workaround the issue.
   kConnector = 1,
   kFile,
@@ -189,7 +189,7 @@ inline constexpr VnodeProtocolSet operator|(VnodeProtocol lhs, VnodeProtocol rhs
 
 // Options specified during opening and cloning.
 struct VnodeConnectionOptions {
-  // TODO(fxb/38160): Harmonize flags and rights to express both fuchsia.io v1 and v2 semantics.
+  // TODO(fxbug.dev/38160): Harmonize flags and rights to express both fuchsia.io v1 and v2 semantics.
   // For now, these map to the corresponding items in io.fidl. Refer to that file for
   // documentation.
   union Flags {
@@ -295,7 +295,7 @@ struct VnodeConnectionOptions {
 
   // Some flags (e.g. POSIX) only affect the interpretation of rights at the time of
   // Open/Clone, and should have no effects thereafter. Hence we filter them here.
-  // TODO(fxb/33336): Some of these flag groups should be defined in io.fidl and use that as the
+  // TODO(fxbug.dev/33336): Some of these flag groups should be defined in io.fidl and use that as the
   // source of truth.
   static VnodeConnectionOptions FilterForNewConnection(VnodeConnectionOptions options);
 #endif  // __Fuchsia__

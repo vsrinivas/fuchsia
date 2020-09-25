@@ -37,7 +37,7 @@ typedef bool FidlStrictness;
 static const bool kFidlStrictness_Flexible = false;
 static const bool kFidlStrictness_Strict = true;
 
-// TODO(fxb/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in zircon/fidl.h.
+// TODO(fxbug.dev/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in zircon/fidl.h.
 // clang-format off
 #ifdef __cplusplus
 constexpr
@@ -184,7 +184,7 @@ struct FidlXUnionField {
   const fidl_type_t* type;
 };
 
-// TODO(fxb/42793): Consider starting enum values for FidlTypeTag from 1, not 0.
+// TODO(fxbug.dev/42793): Consider starting enum values for FidlTypeTag from 1, not 0.
 typedef uint8_t FidlTypeTag;
 static const uint8_t kFidlTypePrimitive = 0;
 static const uint8_t kFidlTypeEnum = 1;
@@ -198,7 +198,7 @@ static const uint8_t kFidlTypeVector = 8;
 static const uint8_t kFidlTypeTable = 9;
 static const uint8_t kFidlTypeXUnion = 10;
 
-// TODO(fxb/42793): Consider starting enum values for FidlCodedPrimitive from 1, not 0.
+// TODO(fxbug.dev/42793): Consider starting enum values for FidlCodedPrimitive from 1, not 0.
 typedef uint8_t FidlCodedPrimitiveSubtype;
 static const uint8_t kFidlCodedPrimitiveSubtype_Bool = 0;
 static const uint8_t kFidlCodedPrimitiveSubtype_Int8 = 1;

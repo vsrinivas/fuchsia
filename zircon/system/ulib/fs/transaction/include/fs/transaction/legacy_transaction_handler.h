@@ -9,7 +9,7 @@
 
 namespace fs {
 
-// TODO(fxb/49392): remove this class.
+// TODO(fxbug.dev/49392): remove this class.
 class LegacyTransactionHandler : public DeviceTransactionHandler {
  public:
   // Acquire the block size of the mounted filesystem.

@@ -18,7 +18,7 @@
 namespace fs {
 namespace internal {
 
-// TODO(fxb/47947): This interface needs tidying up. For now, add a class here which stops the
+// TODO(fxbug.dev/47947): This interface needs tidying up. For now, add a class here which stops the
 // proliferation of BorrowedBuffer classes, which don't fully support the BlockBuffer interface.
 class BorrowedBuffer : public storage::BlockBuffer {
  public:

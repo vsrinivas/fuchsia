@@ -57,7 +57,7 @@ struct arch_thread {
   // in an exception.
   // The regs are saved on the stack and then a pointer is stored here.
   // Nullptr if not suspended or not stopped in an exception.
-  // TODO(fxb/30521): Also nullptr for synthetic exceptions that don't provide
+  // TODO(fxbug.dev/30521): Also nullptr for synthetic exceptions that don't provide
   // them yet.
   struct iframe_t* suspended_general_regs;
 

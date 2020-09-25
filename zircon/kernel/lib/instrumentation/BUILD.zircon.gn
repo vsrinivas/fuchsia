@@ -24,13 +24,13 @@ zx_library("instrumentation") {
     ]
     public_deps += [
       # <lib/instrumentation/asan/asan-init-x64.cc> has #include <lib/counters.h>
-      # TODO(fxb/51163): Move this to deps when possible.
+      # TODO(fxbug.dev/51163): Move this to deps when possible.
       "$zx/kernel/lib/counters",
 
       # <lib/instrumentation/vmo.h> has #include <ktl/array.h>.
       "$zx/kernel/lib/ktl:headers",
 
-      # TODO(fxb/51163): Move this to deps when possible.
+      # TODO(fxbug.dev/51163): Move this to deps when possible.
       # <lib/instrumentation/asan/asan-init.cc> has #include <vm/vm_aspace.h>.
       "$zx/kernel/vm:headers",
     ]

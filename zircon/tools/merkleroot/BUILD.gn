@@ -6,7 +6,7 @@
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
 # build.                                 #
-# See fxb/36139.                         #
+# See fxbug.dev/36139.                   #
 ##########################################
 
 import("//build/sdk/sdk_host_tool.gni")
@@ -18,7 +18,7 @@ executable("merkleroot") {
     "//zircon/system/ulib/digest",
   ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

@@ -122,7 +122,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/libc",
     ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "$zx_build_config:Wno-conversion" ]
   }
 

@@ -23,6 +23,6 @@ source_set("scudo") {
 
   # This library is linked into libc, which is used by libfuzzer.
   # Don't instrument it to avoid getting noise in code coverage.
-  # TODO(25073): Once a cleaner solution is found, remove this.
+  # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
   configs += [ "$zx_build_config:no_fuzzer" ]
 }

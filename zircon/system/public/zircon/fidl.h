@@ -54,7 +54,7 @@ __BEGIN_CDECLS
 #define FIDL_ALLOC_ABSENT ((uintptr_t)0)
 
 // Out of line allocations are all 8 byte aligned.
-// TODO(fxb/42792): Remove either this FIDL_ALIGN macro or the FidlAlign function in
+// TODO(fxbug.dev/42792): Remove either this FIDL_ALIGN macro or the FidlAlign function in
 // fidl/internal.h.
 #define FIDL_ALIGNMENT ((size_t)8)
 #define FIDL_ALIGN(a) (((a) + 7u) & ~7u)

@@ -335,7 +335,7 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   // Temporarily hardcode the generation of request/response struct members to use the old
-  // wire format, in order to maintain compatibility during the transition for fxb/7704.
+  // wire format, in order to maintain compatibility during the transition for fxbug.dev/7704.
   // This block of code is copied from JsonWriter::GenerateArray (with the difference
   // noted below), and will be removed once backends are updated to use anonymous structs.
   GenerateObjectPunctuation(Position::kSubsequent);
@@ -600,7 +600,7 @@ void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& o
     prefix.push_back('_');
   }
 
-  // NOTE: while the transition for fxb/7024 is ongoing, we need to treat request/responses
+  // NOTE: while the transition for fxbug.dev/7024 is ongoing, we need to treat request/responses
   // specially as before, but this will be removed once the transition is complete
   const auto& v1 = is_request_or_response ? WireFormat::kV1NoEe : WireFormat::kV1Header;
   GenerateObjectMember(prefix + "type_shape_v1", TypeShape(object, v1));
@@ -608,7 +608,7 @@ void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& o
 
 void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member,
                                         bool is_request_or_response) {
-  // NOTE: while the transition for fxb/7024 is ongoing, we need to treat request/responses
+  // NOTE: while the transition for fxbug.dev/7024 is ongoing, we need to treat request/responses
   // specially as before, but this will be removed once the transition is complete
   const auto& v1 = is_request_or_response ? WireFormat::kV1NoEe : WireFormat::kV1Header;
   GenerateObjectMember("field_shape_v1", FieldShape(struct_member, v1));

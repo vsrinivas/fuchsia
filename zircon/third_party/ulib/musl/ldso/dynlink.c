@@ -2642,7 +2642,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   } req;
   // Memset to 0 first because ldmsg_clone_t has 4 bytes of padding, which the
   // FIDL wire format requires to be zero.
-  // TODO(fxb/42907): Make these cases less error-prone.
+  // TODO(fxbug.dev/42907): Make these cases less error-prone.
   memset(&req, 0, sizeof(req));
   req.hdr.ordinal = LDMSG_OP_CLONE;
   req.hdr.magic_number = kFidlWireFormatMagicNumberInitial;

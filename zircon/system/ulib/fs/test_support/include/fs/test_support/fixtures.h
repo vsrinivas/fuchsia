@@ -68,7 +68,7 @@ class FilesystemTest : public zxtest::Test {
   // - Parse the filesystem from |device_id|, assuming it is in |disk_format|.
   // - Populate |export_root_| with the outgoing directory of the filesystem server.
   // - Mount the data root directory at |mount_path| using the deprecated
-  //   |fuchsia.io/DirectoryAdmin| mounting utility. TODO(fxb/34530): This will be
+  //   |fuchsia.io/DirectoryAdmin| mounting utility. TODO(fxbug.dev/34530): This will be
   //   replaced by process-local mounting.
   // It does not register the filesystem with the |fuchsia.fshost/Registry|,
   // as registration is generally meant for production filesystem instances.

@@ -15,7 +15,7 @@ group("test") {
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
 # build.                                 #
-# See fxb/36139.                         #
+# See fxbug.dev/36139.                   #
 ##########################################
 
 assert(!defined(zx) || zx != "/",

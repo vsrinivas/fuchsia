@@ -33,7 +33,7 @@ namespace fidl {
 // file in order to ensure that the definitions of the tables will be in .rodata
 // or .data, not runtime initialized. This is necessary because there are
 // consumers of the data that run before main(), and the order of initialization
-// by ctor is not guaranteed (see fxb/39978).
+// by ctor is not guaranteed (see fxbug.dev/39978).
 
 class TablesGenerator {
  public:

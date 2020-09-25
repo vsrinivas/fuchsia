@@ -249,7 +249,7 @@ Result Walker<VisitorImpl>::WalkIterableInternal(const fidl_type_t* elem_type,
                                                  uint32_t stride, uint32_t end_offset,
                                                  OutOfLineDepth depth) {
   if (unlikely(!elem_type)) {
-    // TODO(fxb/55226) Remove this case - it is only for tests.
+    // TODO(fxbug.dev/55226) Remove this case - it is only for tests.
     return Result::kContinue;
   }
   if (elem_type->type_tag() == kFidlTypePrimitive &&

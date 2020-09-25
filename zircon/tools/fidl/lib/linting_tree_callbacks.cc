@@ -252,7 +252,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         line_prefix_view.remove_suffix(remaining_gap_view.size());
 
         if (match[kLineComment].matched) {
-          // TODO(fxb/FIDL-657): Remove FirstLineIsRegularComment() check
+          // TODO(fxbug.dev/FIDL-657): Remove FirstLineIsRegularComment() check
           // when no longer needed.
           // If there are multiple contiguous lines starting with the
           // doc comment marker ("///"), they will be merged (including

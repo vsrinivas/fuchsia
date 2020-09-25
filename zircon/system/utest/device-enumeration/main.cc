@@ -528,7 +528,7 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       // "class/cpu-ctrl/000",
       // "class/cpu-ctrl/001",
 
-      // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxb/58584 is
+      // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxbug.dev/58584 is
       // fixed.
       "dwc2/dwc2/usb-peripheral/function-000",
   };

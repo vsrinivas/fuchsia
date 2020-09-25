@@ -72,7 +72,7 @@ StringView unowned_str(const char* str, size_t len) {
 
 }  // namespace fidl
 
-// TODO(fxb/42059): Create additional helpers for copying LLCPP objects.
+// TODO(fxbug.dev/42059): Create additional helpers for copying LLCPP objects.
 
 namespace {
 
@@ -105,7 +105,7 @@ template <typename ElemType, typename ContainerType, typename Op>
 fidl::VectorView<ElemType> allocator_op(fidl::Allocator& allocator, ContainerType& container,
                                         Op op) {
   size_t size = std::size(container);
-  // TODO(fxb/42059): Support the equivalent of std::make_unique_for_overwrite.
+  // TODO(fxbug.dev/42059): Support the equivalent of std::make_unique_for_overwrite.
   auto ptr = allocator.make<std::remove_const_t<ElemType>[]>(size);
   iterate_do(ptr.get(), container, op);
   return fidl::VectorView(std::move(ptr), size);
@@ -147,7 +147,7 @@ VectorView<ElemType> copy_vec(fidl::Allocator& allocator, const T& container) {
   return allocator_op<ElemType>(allocator, container, op_copy<ElemType>);
 }
 
-// TODO(fxb/42059): Add support for heap_move and move.
+// TODO(fxbug.dev/42059): Add support for heap_move and move.
 
 // Construct a StringView from a container using a heap allocated array.
 //

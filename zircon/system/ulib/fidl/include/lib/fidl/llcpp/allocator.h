@@ -37,13 +37,13 @@ namespace fidl {
 // - Return a allocation_result with heap_allocate set to true. This will result in a
 // tracking_ptr being returned that will apply the delete/delete[] operator when the tracking_ptr
 // goes out of scope
-// TODO(fxb/42059) Support the equivalent of std::make_unique_for_overwrite. (see helpers.h).
+// TODO(fxbug.dev/42059) Support the equivalent of std::make_unique_for_overwrite. (see helpers.h).
 class Allocator {
  public:
   // make allocates an object of the specified type and initializes it with the given arguments.
   // It intended to behave identically to std::make_unique<T> but use the allocator rather than
   // the heap.
-  // TODO(fxb/42059) Consider making it possible to pack small objects tighter by having dedicated
+  // TODO(fxbug.dev/42059) Consider making it possible to pack small objects tighter by having dedicated
   // blocks. More complication always has more performance impact, though.
   template <typename T, typename = std::enable_if_t<!std::is_array<T>::value>, typename... Args>
   tracking_ptr<T> make(Args&&... args) {

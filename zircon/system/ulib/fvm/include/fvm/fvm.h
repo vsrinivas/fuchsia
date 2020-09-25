@@ -62,7 +62,7 @@ class FormatInfo {
   // the metatadata.
   size_t GetMaxAllocatableSlices() const {
     // The "-1" here allows for the unused 0 indexed slice.
-    // TODO(fxb/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
+    // TODO(fxbug.dev/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
     // allocation data itself is 1-indexed. This inconsistency should be fixed,
     return (metadata_allocated_size() - kAllocTableOffset) / sizeof(SliceEntry) - 1;
   }

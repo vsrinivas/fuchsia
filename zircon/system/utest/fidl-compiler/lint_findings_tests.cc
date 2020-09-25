@@ -1835,7 +1835,7 @@ using foo as ${TEST};
   }
 }
 
-// TODO(fxb/FIDL-656): Remove this check after issues are resolved with
+// TODO(fxbug.dev/FIDL-656): Remove this check after issues are resolved with
 // trailing comments in existing source and tools
 TEST(LintFindingsTests, no_trailing_comment) {
   LintTest test;
@@ -1994,7 +1994,7 @@ ${TEST1} TODO: Finish the TestStruct declaration
 struct TestStruct {
 
   ${TEST2}TODO: Replace the placeholder
-  string:64 placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxb/FIDL-0000): Add some more fields
+  string:64 placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxbug.dev/FIDL-0000): Add some more fields
 };
 )FIDL";
 

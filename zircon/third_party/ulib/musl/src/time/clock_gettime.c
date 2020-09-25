@@ -45,7 +45,7 @@ static int gettime_via_utc(struct timespec* ts) {
 
 int __clock_gettime(clockid_t clk, struct timespec* ts) {
   switch (clk) {
-    case CLOCK_BOOTTIME:  // see fxb/38552
+    case CLOCK_BOOTTIME:  // see fxbug.dev/38552
     case CLOCK_MONOTONIC:
     case CLOCK_MONOTONIC_RAW:
       return gettime_via_monotonic(ts);

@@ -35,10 +35,10 @@ KCOUNTER(channel_packet_depth_unbounded, "channel.depth.unbounded")
 KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create")
 KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 
-// Temporary hack to chase down bugs like fxb/47000 where upwards of 250MB of ipc
+// Temporary hack to chase down bugs like fxbug.dev/47000 where upwards of 250MB of ipc
 // memory is consumed. The bet is that even if each message is at max size there
 // should be one or two channels with thousands of messages. If so, this check adds
-// no overhead to the existing code. See fxb/47691.
+// no overhead to the existing code. See fxbug.dev/47691.
 // TODO(cpu): This limit can be lower but mojo's ChannelTest.PeerStressTest sends
 // about 3K small messages. Switching to size limit is more reasonable.
 constexpr size_t kMaxPendingMessageCount = 3500;

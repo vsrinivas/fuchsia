@@ -67,6 +67,6 @@ zx_library("zxtest") {
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }

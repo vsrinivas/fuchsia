@@ -53,7 +53,7 @@ class NoOpVfsGood : public NoOpVfs {
 };
 
 // A Vfs that first starts message dispatch on a connection before
-// placing it into a linked list. This behavior is racy (fxb/45912)
+// placing it into a linked list. This behavior is racy (fxbug.dev/45912)
 // so we test that it triggers a failed precondition check.
 class NoOpVfsBad : public NoOpVfs {
  public:

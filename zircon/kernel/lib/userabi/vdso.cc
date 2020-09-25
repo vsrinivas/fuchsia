@@ -282,7 +282,7 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   }
 #if ARCH_ARM64
   else if (arch_quirks_needs_arm_erratum_858921_mitigation()) {
-    // TODO(fxb/59609) : Make sure this happens after all of the processors in
+    // TODO(fxbug.dev/59609) : Make sure this happens after all of the processors in
     // the system have been started.  We don't know whether the quirk is needed
     // or not until all processors have had a chance to start and examine the
     // registers which describe the architecture and version of the core.

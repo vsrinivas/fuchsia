@@ -219,7 +219,7 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   ASSERT_OK(thread.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &observed));
 }
 
-#if defined(__x86_64__)  // fxb/46207
+#if defined(__x86_64__)  // fxbug.dev/46207
 #define MAYBE_BindVcpuTest DISABLED_BindVcpuTest
 #else
 #define MAYBE_BindVcpuTest BindVcpuTest
@@ -269,7 +269,7 @@ TEST_F(InterruptTest, UnableToBindVirtualInterruptToVcpu) {
   ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_NOT_SUPPORTED);
 }
 
-#if defined(__x86_64__)  // fxb/46207
+#if defined(__x86_64__)  // fxbug.dev/46207
 #define MAYBE_UnableToBindToVcpuAfterPort DISABLED_UnableToBindToVcpuAfterPort
 #else
 #define MAYBE_UnableToBindToVcpuAfterPort UnableToBindToVcpuAfterPort

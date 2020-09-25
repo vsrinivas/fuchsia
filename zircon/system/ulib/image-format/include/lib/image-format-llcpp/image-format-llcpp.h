@@ -11,7 +11,7 @@
 
 #include <optional>
 
-// TODO(fxb/53304): We can merge this file and image-format.h, since there's no need to have a
+// TODO(fxbug.dev/53304): We can merge this file and image-format.h, since there's no need to have a
 // separate lib for C vs. LLCPP overloads of these functions.
 namespace image_format {
 
@@ -26,7 +26,7 @@ fuchsia_sysmem_PixelFormat GetCPixelFormat(const llcpp::fuchsia::sysmem::PixelFo
 constexpr llcpp::fuchsia::sysmem::ImageFormatConstraints GetDefaultImageFormatConstraints() {
   llcpp::fuchsia::sysmem::ImageFormatConstraints constraints;
   // Should match values in constraints.fidl.
-  // TODO(fxb/35314): LLCPP should initialize to default values.
+  // TODO(fxbug.dev/35314): LLCPP should initialize to default values.
   constraints.max_coded_width_times_coded_height = 0xffffffff;
   constraints.layers = 1;
   constraints.coded_width_divisor = 1;
@@ -41,7 +41,7 @@ constexpr llcpp::fuchsia::sysmem::ImageFormatConstraints GetDefaultImageFormatCo
 
 constexpr llcpp::fuchsia::sysmem::BufferMemoryConstraints GetDefaultBufferMemoryConstraints() {
   // Should match values in constraints.fidl.
-  // TODO(fxb/35314): LLCPP should initialize to default values.
+  // TODO(fxbug.dev/35314): LLCPP should initialize to default values.
   return llcpp::fuchsia::sysmem::BufferMemoryConstraints{.min_size_bytes = 0,
                                                          .max_size_bytes = 0xffffffff,
                                                          .physically_contiguous_required = false,

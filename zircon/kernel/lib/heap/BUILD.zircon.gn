@@ -16,7 +16,7 @@ zx_library("heap") {
     "$zx/kernel/lib/console",
     "cmpctmalloc",
 
-    # TODO(fxb/51163): Remove headers when possible.
+    # TODO(fxbug.dev/51163): Remove headers when possible.
     "$zx/kernel/lib/instrumentation:headers",
   ]
 }

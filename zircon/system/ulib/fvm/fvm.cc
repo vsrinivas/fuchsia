@@ -51,7 +51,7 @@ constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metad
   // if the number of slices fit perfectly in the metadata, the allocated buffer won't be big
   // enough to address them all. This only happens when the rounded up block value happens to
   // match the disk size.
-  // TODO(fxb/59980): Fix underlying cause and remove workaround.
+  // TODO(fxbug.dev/59980): Fix underlying cause and remove workaround.
   if ((AllocationTable::kOffset + slice_count * sizeof(SliceEntry)) == metadata_allocated_size) {
     slice_count--;
   }

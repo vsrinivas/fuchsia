@@ -62,7 +62,7 @@ zx_library("vm") {
     "$zx/kernel/lib/crypto:headers",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
@@ -70,6 +70,6 @@ source_set("tests") {
   sources = [ "vm_unittest.cc" ]
   deps = [ "$zx/kernel/lib/unittest" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }

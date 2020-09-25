@@ -72,7 +72,7 @@ typedef struct zxio_node {
 // Apart from |close|, these functions extend the |zxio_node_t| with
 // implementations of operations beyond the ones relevant to |fuchsia.io/Node|.
 //
-// TODO(fxb/45659): We eventually would want to plumb extension support for all
+// TODO(fxbug.dev/45659): We eventually would want to plumb extension support for all
 // non-Node methods.
 typedef struct zxio_extension_ops {
   // A hook to close any resources held by the custom transport before the

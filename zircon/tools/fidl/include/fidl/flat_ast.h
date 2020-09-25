@@ -258,7 +258,7 @@ struct Struct;
 // Historically, StructMember was a nested class inside Struct named Struct::Member. However, this
 // was made a top-level class since it's not possible to forward-declare nested classes in C++. For
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
-// TODO(fxb/37535): Move this to a nested class inside Struct.
+// TODO(fxbug.dev/37535): Move this to a nested class inside Struct.
 struct StructMember : public Object {
   StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
@@ -306,7 +306,7 @@ struct Struct final : public TypeDecl {
 struct Table;
 
 // See the comment on the StructMember class for why this is a top-level class.
-// TODO(fxb/37535): Move this to a nested class inside Table::Member.
+// TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
 struct TableMemberUsed : public Object {
   TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                   std::unique_ptr<Constant> maybe_default_value,
@@ -326,7 +326,7 @@ struct TableMemberUsed : public Object {
 };
 
 // See the comment on the StructMember class for why this is a top-level class.
-// TODO(fxb/37535): Move this to a nested class inside Table.
+// TODO(fxbug.dev/37535): Move this to a nested class inside Table.
 struct TableMember : public Object {
   using Used = TableMemberUsed;
 
@@ -369,7 +369,7 @@ struct Table final : public TypeDecl {
 struct Union;
 
 // See the comment on the StructMember class for why this is a top-level class.
-// TODO(fxb/37535): Move this to a nested class inside Union.
+// TODO(fxbug.dev/37535): Move this to a nested class inside Union.
 struct UnionMemberUsed : public Object {
   UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                   std::unique_ptr<raw::AttributeList> attributes)
@@ -386,7 +386,7 @@ struct UnionMemberUsed : public Object {
 };
 
 // See the comment on the StructMember class for why this is a top-level class.
-// TODO(fxb/37535): Move this to a nested class inside Union.
+// TODO(fxbug.dev/37535): Move this to a nested class inside Union.
 struct UnionMember : public Object {
   using Used = UnionMemberUsed;
 

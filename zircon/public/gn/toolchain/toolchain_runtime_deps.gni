@@ -145,7 +145,7 @@ rustc_toolchain_spec = {
 #       - Type: path relative to `${toolchain_spec.lib_dir}`
 #
 template("toolchain_runtime_deps") {
-  # TODO(fxb/3367): remove this attribute.
+  # TODO(fxbug.dev/3367): remove this attribute.
   not_needed(invoker, [ "zx_publish" ])
 
   group(target_name) {

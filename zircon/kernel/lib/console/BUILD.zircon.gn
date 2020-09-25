@@ -16,6 +16,6 @@ zx_library("console") {
     "$zx/kernel/lib/special-sections:headers",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }

@@ -6,7 +6,7 @@
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
 # build.                                 #
-# See fxb/36548.                         #
+# See fxbug.dev/36548.                   #
 ##########################################
 
 assert(!defined(zx) || zx != "/",
@@ -70,7 +70,7 @@ trace_library("trace") {
   public_deps = [ "//zircon/system/ulib/trace-engine" ]
   deps = [ "//zircon/system/ulib/trace-engine" ]
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }
@@ -84,7 +84,7 @@ trace_library("trace-with-static-engine") {
   public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-static" ]
   deps = [ "//zircon/system/ulib/trace-engine:trace-engine-static" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -96,6 +96,6 @@ trace_library("trace-driver") {
   public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
   deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

@@ -354,7 +354,7 @@ bad:
 #endif
 
     // Spectre V1: If the syscall is going to return certain errors, flush the L1D$
-    // TODO(fxb/33667): Can this be folded together w/ MD_CLEAR below?
+    // TODO(fxbug.dev/33667): Can this be folded together w/ MD_CLEAR below?
     test    %rax, %rax
     jz      1f
     // Before calling a function, we must preserve any registers we need for SYSRET.

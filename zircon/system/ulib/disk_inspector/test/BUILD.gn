@@ -6,7 +6,7 @@
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
 # build.                                 #
-# See fxb/36139.                         #
+# See fxbug.dev/36139.                   #
 ##########################################
 
 assert(!defined(zx) || zx != "/",
@@ -52,7 +52,7 @@ test("disk_inspector_unit") {
   ]
   include_dirs = [ "//zircon/system/ulib/disk_inspector" ]
 
-  # TODO(fxb/50567): Fix the leaks and remove this.
+  # TODO(fxbug.dev/50567): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

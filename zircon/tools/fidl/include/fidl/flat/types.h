@@ -173,7 +173,7 @@ struct IdentifierType final : public Type {
   }
 };
 
-// TODO(fxb/43803) Add required and optional rights.
+// TODO(fxbug.dev/43803) Add required and optional rights.
 struct RequestHandleType final : public Type {
   RequestHandleType(const Name& name, const IdentifierType* protocol_type,
                     types::Nullability nullability)

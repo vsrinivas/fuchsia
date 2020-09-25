@@ -986,7 +986,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
       goto fail;
     }
     /* This is used in the shared code */
-    // TODO(fxb/56253): Add MMIO_PTR to cast.
+    // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
     hw->flash_address = (void*)adapter->flash_mmio.vaddr;
     adapter->osdep.flashbase = (uintptr_t)adapter->flash_mmio.vaddr;
   }

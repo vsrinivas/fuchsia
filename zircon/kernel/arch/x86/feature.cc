@@ -241,10 +241,10 @@ void x86_cpu_feature_init() {
   g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
                                       (x86_vendor == X86_VENDOR_INTEL) &&
                                       x86_intel_cpu_has_rsb_fallback(&cpuid, &msr);
-  // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
+  // TODO(fxbug.dev/33667, fxbug.dev/12150): Consider whether a process can opt-out of an IBPB on switch,
   // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
   // not to attack the next process).
-  // TODO(fxb/33667, fxb/12150): Should we have an individual knob for IBPB?
+  // TODO(fxbug.dev/33667, fxbug.dev/12150): Should we have an individual knob for IBPB?
   g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
   // Unconditionally enable Enhanced IBRS if it is supported, to comply with the architectural
   // specification - Enhanced IBRS processors may not be retpoline-safe.
@@ -899,7 +899,7 @@ static const x86_microarch_config_t goldmont_plus_config{
     .idle_states =
         {
             .states = {
-              // TODO(fxb/35457): Read C6 and deeper latency from IRTL registers
+              // TODO(fxbug.dev/35457): Read C6 and deeper latency from IRTL registers
               {.name = "C10", .mwait_hint = 0x60, .exit_latency = 10000, .flushes_tlb = true},
               {.name = "C9", .mwait_hint = 0x50, .exit_latency = 2000, .flushes_tlb = true},
               {.name = "C8", .mwait_hint = 0x40, .exit_latency = 1000, .flushes_tlb = true},

@@ -6,7 +6,7 @@
 
 // Coding tables for primitives are predefined and interned here.
 // This file must be a .c to guarantee that these types are stored directly in
-// .rodata, rather than requiring global ctors to have been run (fxb/39978).
+// .rodata, rather than requiring global ctors to have been run (fxbug.dev/39978).
 const struct FidlCodedPrimitive fidl_internal_kBoolTable = {
     .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Bool};
 const struct FidlCodedPrimitive fidl_internal_kInt8Table = {

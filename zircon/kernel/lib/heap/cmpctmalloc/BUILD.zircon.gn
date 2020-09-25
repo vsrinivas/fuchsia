@@ -17,7 +17,7 @@ zx_library("cmpctmalloc") {
   ]
   include_dirs = [ "include/lib" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 
   if (is_host) {
@@ -34,7 +34,7 @@ zx_library("cmpctmalloc") {
       "$zx/kernel/lib/heap/include",
     ]
   } else if (is_kernel) {
-    # TODO(fxb/51163): Remove headers when possible.
+    # TODO(fxbug.dev/51163): Remove headers when possible.
     deps += [ "$zx/kernel/lib/instrumentation:headers" ]
   }
 }

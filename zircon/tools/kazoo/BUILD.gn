@@ -63,7 +63,7 @@ if (defined(zx)) {
 
     public_deps = [ "$zx/third_party/rapidjson" ]
     configs += [
-      # TODO(fxb/58162): delete the below and fix compiler warnings
+      # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
       "//build/config:Wno-conversion",
     ]
   }

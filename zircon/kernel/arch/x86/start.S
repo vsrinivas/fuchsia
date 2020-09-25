@@ -163,7 +163,7 @@ FUNCTION_LABEL(_start)
     // The shadow map covers 512 GB of kernel address space which is the current virtual address
     // space of the kernel. This requires 64 GB of kernel virtual address space, which requires
     // 64 PDP entries.
-    // TODO(fxb/30033): Unmap the shadow's shadow, the region of shadow memory covering the
+    // TODO(fxbug.dev/30033): Unmap the shadow's shadow, the region of shadow memory covering the
     // shadow map. This should never be accessed.
     // Make the kasan Page Tables point to the zero page
     movl $NO_OF_PT_ENTRIES, %ecx

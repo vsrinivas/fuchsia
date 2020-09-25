@@ -6,4 +6,4 @@ of elements of the zircon build into the greater Fuchsia build.
 `zx_*` templates wrap existing target types and add a metadata generation step.
 The resulting metadata is used in the Fuchsia build.
 
-For more details, please visit http://fxb/3367.
+For more details, please visit http://fxbug.dev/3367.

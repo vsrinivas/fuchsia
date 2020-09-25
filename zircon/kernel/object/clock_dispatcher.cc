@@ -267,7 +267,7 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
           // was, and we are not updating the position at all, then we can just
           // go ahead and skip the update of the transformation equations (even
           // though we will record the time of this update as the last rate
-          // adjustment time).  See fxb/57593
+          // adjustment time).  See fxbug.dev/57593
           skip_update = true;
         }
         last_rate_adjust_update_ticks_ = now_ticks;

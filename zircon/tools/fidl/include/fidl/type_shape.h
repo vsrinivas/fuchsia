@@ -73,7 +73,7 @@ struct TypeShape {
   // For further details, see FTP-057: Default No Handles.
   bool is_resource;
 
-  // TODO(fxb/36337): These accessors are for backward compatibility with current code, and could be
+  // TODO(fxbug.dev/36337): These accessors are for backward compatibility with current code, and could be
   // removed in the future.
   uint32_t InlineSize() const { return inline_size; }
   uint32_t Alignment() const { return alignment; }
@@ -86,7 +86,7 @@ struct TypeShape {
 
 // |FieldShape| describes the offset and padding information for members that are contained within
 // an aggregate type (e.g. struct/union).
-// TODO(fxb/36337): We can update |FieldShape| to be a simple offset+padding struct, and remove the
+// TODO(fxbug.dev/36337): We can update |FieldShape| to be a simple offset+padding struct, and remove the
 // getter/setter methods since they're purely for backward-compatibility with existing code.
 struct FieldShape {
   explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);

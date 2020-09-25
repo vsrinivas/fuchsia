@@ -197,7 +197,7 @@ void Linter::NewFile(const raw::File& element) {
   }
 
   if (lint_style_ == LintStyle::IpcStyle && !library_is_platform_source_library_) {
-    // TODO(fxb/FIDL-547): Implement more specific test,
+    // TODO(fxbug.dev/FIDL-547): Implement more specific test,
     // comparing proposed library prefix to actual
     // source path.
     std::string replacement = "fuchsia, perhaps?";
@@ -585,7 +585,7 @@ Linter::Linter()
         }
       });
 
-  // TODO(fxb/FIDL-656): Remove this check after issues are resolved with
+  // TODO(fxbug.dev/FIDL-656): Remove this check after issues are resolved with
   // trailing comments in existing source and tools
   // clang-format off
   callbacks_.OnLineComment(

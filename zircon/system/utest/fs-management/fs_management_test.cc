@@ -679,7 +679,7 @@ using PartitionOverFvmWithRamdiskCase = PartitionOverFvmWithRamdiskFixture;
 // Reformat the partition using a number of slices and verify that there are as many slices as
 // originally pre-allocated.
 
-// FIXME(fxb/39457): re-enable when de-flaked
+// FIXME(fxbug.dev/39457): re-enable when de-flaked
 TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
   mkfs_options_t options = default_mkfs_options;
   size_t base_slices = 0;

@@ -79,18 +79,18 @@ void physmap_for_each_gap(fbl::Function<void(vaddr_t base, size_t size)> func,
 // physical address space, which may include device memory regions (think MMIO).  If the device
 // memory remains mapped, hardware based memory prefetching might attempt to read from device
 // memory.  That would be bad.  Ideally, we wouldn't map the device memory in the first place, but
-// that's easier said that done (fxb/47856).
+// that's easier said that done (fxbug.dev/47856).
 //
 // The second best thing is to unmap the non-arena memory.  There are two problems with that
 // approach.  One, on arm64 the physmap was mapped using 1GB pages.  However, the arm64 MMU Unmap
-// code does not yet know how to deal with (i.e. split) 1GB pages (fxb/47920).  Two, Unmap attempts
+// code does not yet know how to deal with (i.e. split) 1GB pages (fxbug.dev/47920).  Two, Unmap attempts
 // to free pages by returning them to the PMM.  However, the pages backing the phsymap's page tables
 // didn't come from the PMM.  They came from the bootalloc.
 //
 // So that leaves us with the third best approach: change the protection bits on the non-arena
 // regions to prevent caching.
 //
-// TODO(fxb/47856): Change the way the physmap is initially mapped.  Ideally, we would parse the
+// TODO(fxbug.dev/47856): Change the way the physmap is initially mapped.  Ideally, we would parse the
 // boot data (ZBI) early on and only map the parts of the physmap that coorespond to normal memory.
 // As it stands, we are still suseptible to problems arising from hardware prefetching device memory
 // from the physmap.

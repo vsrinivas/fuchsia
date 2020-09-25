@@ -38,7 +38,7 @@ source_set("phys") {
     deps += [ "$zx/kernel/lib/console" ]
   }
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }
 

@@ -51,7 +51,7 @@ zx_library("kazoo_lib") {
 
   public_deps = [ "$zx/third_party/rapidjson" ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
@@ -105,7 +105,7 @@ zx_test("kazoo-unittests") {
     "writer_test.cc",
   ]
 
-  # TODO(fxb/58162): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]
 }
 

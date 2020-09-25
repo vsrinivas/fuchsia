@@ -43,7 +43,7 @@ struct arch_thread {
   // in an exception. See the description of X86_GENERAL_REGS_* for usage.
   // The regs are saved on the stack and then a pointer is stored here.
   // Nullptr if not suspended or not stopped in an exception.
-  // TODO(fxb/30521): Also nullptr for synthetic exceptions that don't provide
+  // TODO(fxbug.dev/30521): Also nullptr for synthetic exceptions that don't provide
   // them yet.
   union {
     void *gregs;

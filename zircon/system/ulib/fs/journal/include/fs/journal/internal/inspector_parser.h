@@ -22,7 +22,7 @@ JournalInfo GetJournalSuperblock(storage::BlockBuffer* buffer);
 // and not based on start_block defined in the journal superblock. It is also a hackish
 // way to access journal entry blocks for compatability with how disk-inspect is
 // currently parsing the journal.
-// TODO(fxb/42430): Change how this method works once journal parsing and disk-inspect
+// TODO(fxbug.dev/42430): Change how this method works once journal parsing and disk-inspect
 // frontend is reworked.
 std::array<uint8_t, kJournalBlockSize> GetBlockEntry(storage::BlockBuffer* buffer, uint64_t index);
 

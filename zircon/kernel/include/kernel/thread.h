@@ -1111,7 +1111,7 @@ struct Thread {
 #include <arch/current_thread.h>
 Thread* Thread::Current::Get() { return arch_get_current_thread(); }
 
-// TODO(johngro): Remove this when we have addressed fxb/33473.  Right now, this
+// TODO(johngro): Remove this when we have addressed fxbug.dev/33473.  Right now, this
 // is used in only one place (x86_bringup_aps in arch/x86/smp.cpp) outside of
 // thread.cpp.
 //

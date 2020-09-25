@@ -1602,11 +1602,11 @@ TEST_F(VmoClone2TestCase, ParentStartLimitRegression) {
   vmo_c.reset();
 }
 
-// This is a regression test for fxb/56137 and checks that if both children of a hidden parent are
+// This is a regression test for fxbug.dev/56137 and checks that if both children of a hidden parent are
 // dropped 'at the same time', then there are no races with their parallel destruction.
 TEST_F(VmoClone2TestCase, DropChildrenInParallel) {
   // Try some N times and hope that if there is a bug we get the right timing. Prior to fixing
-  // fxb/56137 this was enough iterations to reliably trigger.
+  // fxbug.dev/56137 this was enough iterations to reliably trigger.
   for (size_t i = 0; i < 10000; i++) {
     zx::vmo vmo;
 

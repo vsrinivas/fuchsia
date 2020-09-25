@@ -1,11 +1,12 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 ##########################################
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
 # build.                                 #
-# See fxb/36548.                         #
+# See fxbug.dev/36548.                   #
 ##########################################
 
 assert(!defined(zx) || zx != "/",
@@ -46,7 +47,7 @@ zx_library("inspector") {
   }
 
   configs += [
-    # TODO(fxb/58162): delete the below and fix compiler warnings
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
 }

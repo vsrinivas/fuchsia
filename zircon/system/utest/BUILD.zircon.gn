@@ -8,7 +8,7 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 # IMPORTANT NOTE!
 # No new library should be added to the following targets. If you think you need
 # to add one, reach out to pylaligand@ and shayba@ first.
-# See http://fxb/36548.
+# See http://fxbug.dev/36548.
 
 if (current_cpu != "") {
   group("utest") {

@@ -2064,7 +2064,7 @@ TEST(Pager, FailErrorCode) {
 }
 
 // Test that writing to a forked zero pager marker does not cause a kernel panic. This is a
-// regression test for fxb/53181. Note that although writing to page backed vmo is not strictly
+// regression test for fxbug.dev/53181. Note that although writing to page backed vmo is not strictly
 // supported and has no guaranteed semantics it is still currently allowed.
 TEST(Pager, WritingZeroFork) {
   zx::pager pager;

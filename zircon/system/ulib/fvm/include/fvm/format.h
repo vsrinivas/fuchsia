@@ -167,7 +167,7 @@ struct Header {
   // Physical slices are 1-indexed (0 means "none"). Therefore:
   //   1 <= |maximum valid pslice| <= pslice_count
   //
-  // IMPORTANT NOTE: Due to fxb/59980, this value is one less than the number of entries worth of
+  // IMPORTANT NOTE: Due to fxbug.dev/59980, this value is one less than the number of entries worth of
   // space in the allocation table because there is an unused 0 entry. Always compute with
   // UsableSlicesCountOrZero() in fvm.cc to account for some edge conditions. See also
   // allocation_table_size below.
@@ -186,7 +186,7 @@ struct Header {
   //
   // Currently this is fixed to be the size required to hold exactly kMaxVPartitions and various
   // code assumes this constant.
-  // TODO(fxb/40192): Use this value so the partition table can have different sizes.
+  // TODO(fxbug.dev/40192): Use this value so the partition table can have different sizes.
   uint64_t vpartition_table_size;
 
   // Size in bytes reserved for the allocation table. Must be a multiple of kBlockSize. This
@@ -434,7 +434,7 @@ inline size_t Header::GetAllocationTableUsedByteSize() const {
 
 inline size_t Header::GetAllocationTableAllocatedEntryCount() const {
   // The "-1" here allows for the unused 0 indexed slice.
-  // TODO(fxb/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
+  // TODO(fxbug.dev/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
   // allocation data itself is 1-indexed. This inconsistency should be fixed,
   return GetAllocationTableAllocatedByteSize() / sizeof(SliceEntry) - 1;
 }
@@ -442,7 +442,7 @@ inline size_t Header::GetAllocationTableAllocatedEntryCount() const {
 inline size_t Header::GetAllocationTableAllocatedByteSize() const { return allocation_table_size; }
 
 inline size_t Header::GetSliceEntryOffset(size_t pslice) const {
-  // TODO(fxb/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
+  // TODO(fxbug.dev/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
   // allocation data itself is 1-indexed. This inconsistency should be fixed,
   return GetAllocationTableOffset() + pslice * sizeof(SliceEntry);
 }

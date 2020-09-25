@@ -60,7 +60,7 @@ class Journal final : public fit::executor {
     // transaction that deallocated the block is made it to the device yet. If the transaction has
     // not made it to the device, then it would be possible for a data write to get there first and
     // if there were to be a power-loss event, the file system would see new data with old
-    // metadata. See fxb/37958 for more details.
+    // metadata. See fxbug.dev/37958 for more details.
     bool sequence_data_writes = true;
   };
 
