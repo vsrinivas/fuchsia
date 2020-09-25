@@ -32,9 +32,9 @@ static const pbus_mmio_t i2c_mmios[] = {
 };
 
 static const uint32_t luis_i2c_clock_delays[] = {
-  0,    // Ignore I2C AO
-  104,  // Set I2C 2 (touch) to 400 kHz
-  0,    // Ignore I2C 3
+    0,    // Ignore I2C AO
+    104,  // Set I2C 2 (touch) to 400 kHz
+    0,    // Ignore I2C 3
 };
 
 static const pbus_irq_t i2c_irqs[] = {
@@ -52,7 +52,7 @@ static const pbus_irq_t i2c_irqs[] = {
     },
 };
 
-static const i2c_channel_t luis_i2c_channels[] = {
+static const i2c_channel_t luis_ernie_i2c_channels[] = {
     // Backlight I2C
     {
         .bus_id = SHERLOCK_I2C_3,
@@ -69,7 +69,7 @@ static const i2c_channel_t luis_i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
-    // Codec
+    // Codec 0
     {
         .bus_id = SHERLOCK_I2C_A0_0,
         .address = 0x4c,
@@ -129,6 +129,14 @@ static const i2c_channel_t luis_i2c_channels[] = {
     {
         .bus_id = SHERLOCK_I2C_A0_0,
         .address = 0x69,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // Codec 1
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x2d,
         .vid = 0,
         .pid = 0,
         .did = 0,
@@ -202,11 +210,11 @@ static const pbus_metadata_t sherlock_i2c_metadata[] = {
     },
 };
 
-static const pbus_metadata_t luis_i2c_metadata[] = {
+static const pbus_metadata_t luis_ernie_i2c_metadata[] = {
     {
         .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = &luis_i2c_channels,
-        .data_size = sizeof(luis_i2c_channels),
+        .data_buffer = &luis_ernie_i2c_channels,
+        .data_size = sizeof(luis_ernie_i2c_channels),
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
@@ -245,8 +253,8 @@ zx_status_t Sherlock::I2cInit() {
     dev.metadata_list = sherlock_i2c_metadata;
     dev.metadata_count = countof(sherlock_i2c_metadata);
   } else {
-    dev.metadata_list = luis_i2c_metadata;
-    dev.metadata_count = countof(luis_i2c_metadata);
+    dev.metadata_list = luis_ernie_i2c_metadata;
+    dev.metadata_count = countof(luis_ernie_i2c_metadata);
   };
 
   zx_status_t status = pbus_.DeviceAdd(&dev);

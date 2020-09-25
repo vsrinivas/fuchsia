@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -12,6 +14,7 @@
 #include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
+#include <ti/ti-audio.h>
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
@@ -52,11 +55,15 @@ zx_status_t Sherlock::AudioInit() {
   }
 
   bool is_sherlock = board_info.pid == PDEV_PID_SHERLOCK;
+  bool is_ernie = board_info.pid != PDEV_PID_SHERLOCK && (board_info.board_revision & (1 << 4));
   if (is_sherlock && board_info.board_revision < BOARD_REV_EVT1) {
     // For audio we don't support boards revision lower than EVT.
     zxlogf(WARNING, "%s: Board revision unsupported, skipping audio initialization.", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
+
+  const char* product_name = is_sherlock ? "sherlock" : (is_ernie ? "ernie" : "luis");
+  constexpr size_t device_name_max_length = 32;
 
   constexpr zx_bind_inst_t root_match[] = {
       BI_MATCH(),
@@ -85,6 +92,16 @@ zx_status_t Sherlock::AudioInit() {
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4c),
   };
+  constexpr zx_bind_inst_t ernie_woofer_codec_i2c_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
+      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4c),
+  };
+  constexpr zx_bind_inst_t ernie_tweeter_codec_i2c_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
+      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x2d),
+  };
   constexpr zx_bind_inst_t codec_woofer_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
@@ -108,11 +125,25 @@ zx_status_t Sherlock::AudioInit() {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
   };
+  constexpr zx_bind_inst_t ernie_codec_woofer_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
+      BI_MATCH_IF(EQ, BIND_CODEC_INSTANCE, 1),
+  };
+  constexpr zx_bind_inst_t ernie_codec_tweeter_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
+      BI_MATCH_IF(EQ, BIND_CODEC_INSTANCE, 2),
+  };
 
   const device_fragment_part_t enable_gpio_fragment[] = {
       {countof(root_match), root_match},
       {countof(enable_gpio_match), enable_gpio_match},
   };
+
+  // I2C matches to be used by the codec fragments below.
   const device_fragment_part_t woofer_i2c_fragment[] = {
       {countof(root_match), root_match},
       {countof(woofer_i2c_match), woofer_i2c_match},
@@ -129,6 +160,16 @@ zx_status_t Sherlock::AudioInit() {
       {countof(root_match), root_match},
       {countof(luis_codec_i2c_match), luis_codec_i2c_match},
   };
+  const device_fragment_part_t ernie_woofer_codec_i2c_fragment[] = {
+      {countof(root_match), root_match},
+      {countof(ernie_woofer_codec_i2c_match), ernie_woofer_codec_i2c_match},
+  };
+  const device_fragment_part_t ernie_tweeter_codec_i2c_fragment[] = {
+      {countof(root_match), root_match},
+      {countof(ernie_tweeter_codec_i2c_match), ernie_tweeter_codec_i2c_match},
+  };
+
+  // Fragment to be used by the controller, pointing to the codecs.
   const device_fragment_part_t codec_woofer_fragment[] = {
       {countof(root_match), root_match},
       {countof(codec_woofer_match), codec_woofer_match},
@@ -145,6 +186,16 @@ zx_status_t Sherlock::AudioInit() {
       {countof(root_match), root_match},
       {countof(luis_codec_match), luis_codec_match},
   };
+  const device_fragment_part_t ernie_codec_woofer_fragment[] = {
+      {countof(root_match), root_match},
+      {countof(ernie_codec_woofer_match), ernie_codec_woofer_match},
+  };
+  const device_fragment_part_t ernie_codec_tweeter_fragment[] = {
+      {countof(root_match), root_match},
+      {countof(ernie_codec_tweeter_match), ernie_codec_tweeter_match},
+  };
+
+  // Fragments to be used by the codecs.
   const device_fragment_t woofer_fragments[] = {
       {countof(woofer_i2c_fragment), woofer_i2c_fragment},
   };
@@ -156,6 +207,12 @@ zx_status_t Sherlock::AudioInit() {
   };
   const device_fragment_t luis_codec_fragments[] = {
       {countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
+  };
+  const device_fragment_t ernie_woofer_fragments[] = {
+      {countof(ernie_woofer_codec_i2c_fragment), ernie_woofer_codec_i2c_fragment},
+  };
+  const device_fragment_t ernie_tweeter_fragments[] = {
+      {countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
   };
 #ifdef ENABLE_BT
   static const device_fragment_t tdm_pcm_fragments[] = {};
@@ -169,6 +226,11 @@ zx_status_t Sherlock::AudioInit() {
   const device_fragment_t luis_tdm_i2s_fragments[] = {
       {countof(enable_gpio_fragment), enable_gpio_fragment},
       {countof(luis_codec_fragment), luis_codec_fragment},
+  };
+  const device_fragment_t ernie_tdm_i2s_fragments[] = {
+      {countof(enable_gpio_fragment), enable_gpio_fragment},
+      {countof(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
+      {countof(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
   };
 
   status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
@@ -274,7 +336,7 @@ zx_status_t Sherlock::AudioInit() {
       zxlogf(ERROR, "%s DdkAddComposite right tweeter failed %d", __FILE__, status);
       return status;
     }
-  } else {  // Luis.
+  } else {  // Luis/Ernie.
     // From the TAS5805m codec reference manual:
     // "9.5.3.1 Startup Procedures
     // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
@@ -292,23 +354,64 @@ zx_status_t Sherlock::AudioInit() {
     // I2S clocks are configured by the controller and the rest of the initialization is done
     // in the codec itself.
 
-    zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-                                {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
+    if (is_ernie) {
+      zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
+                                  {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx},
+                                  {BIND_CODEC_INSTANCE, 0, 1}};
+      metadata::ti::TasConfig metadata = {};
+      metadata.instance_count = 1;
 
-    composite_device_desc_t comp_desc = {};
-    comp_desc.props = props;
-    comp_desc.props_count = countof(props);
-    comp_desc.coresident_device_index = UINT32_MAX;
-    comp_desc.fragments = luis_codec_fragments;
-    comp_desc.fragments_count = countof(luis_codec_fragments);
-    status = DdkAddComposite("audio-tas58xx", &comp_desc);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
-      return status;
+      const device_metadata_t codec_metadata[] = {
+          {
+              .type = DEVICE_METADATA_PRIVATE,
+              .data = &metadata,
+              .length = sizeof(metadata),
+          },
+      };
+
+      composite_device_desc_t comp_desc = {};
+      comp_desc.props = props;
+      comp_desc.props_count = countof(props);
+      comp_desc.coresident_device_index = UINT32_MAX;
+      comp_desc.fragments = ernie_woofer_fragments;
+      comp_desc.fragments_count = countof(ernie_woofer_fragments);
+      comp_desc.metadata_list = codec_metadata;
+      comp_desc.metadata_count = countof(codec_metadata);
+      status = DdkAddComposite("audio-tas58xx-woofer", &comp_desc);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s DdkAddComposite woofer failed %d", __FILE__, status);
+        return status;
+      }
+
+      metadata.instance_count = 2;
+      props[2].value = 2;
+      comp_desc.fragments = ernie_tweeter_fragments;
+      comp_desc.fragments_count = countof(ernie_tweeter_fragments);
+      status = DdkAddComposite("audio-tas58xx-tweeter", &comp_desc);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s DdkAddComposite left tweeter failed %d", __FILE__, status);
+        return status;
+      }
+    } else {
+      zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
+                                  {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
+      composite_device_desc_t comp_desc = {};
+      comp_desc.props = props;
+      comp_desc.props_count = countof(props);
+      comp_desc.coresident_device_index = UINT32_MAX;
+      comp_desc.fragments = luis_codec_fragments;
+      comp_desc.fragments_count = countof(luis_codec_fragments);
+      status = DdkAddComposite("audio-tas58xx", &comp_desc);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
+        return status;
+      }
     }
   }
   metadata::AmlConfig metadata = {};
   snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+  strncpy(metadata.product_name, product_name, sizeof(metadata.product_name));
+
   metadata.is_input = false;
   // Compatible clocks with other TDM drivers.
   metadata.mClockDivFactor = 10;
@@ -316,9 +419,8 @@ zx_status_t Sherlock::AudioInit() {
   metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
   metadata.bus = metadata::AmlBus::TDM_C;
   metadata.version = metadata::AmlVersion::kS905D2G;  // Also works with T931G.
-  metadata.tdm.type = metadata::TdmType::I2s;
   if (is_sherlock) {
-    snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    metadata.tdm.type = metadata::TdmType::I2s;
     metadata.tdm.number_of_codecs = 3;
     metadata.tdm.codecs[0] = metadata::Codec::Tas5720;
     metadata.tdm.codecs[1] = metadata::Codec::Tas5720;
@@ -338,8 +440,21 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs_channels_mask[1] = (1 << 1);  // L tweeter.
     metadata.codecs_channels_mask[2] = (1 << 0);  // R tweeter.
     metadata.mix_mask = (1 << 1);                 // Mix lane 1's L + R for woofer.
-  } else {                                        // Luis
-    snprintf(metadata.product_name, sizeof(metadata.product_name), "luis");
+  } else if (is_ernie) {
+    metadata.tdm.type = metadata::TdmType::Tdm1;
+    metadata.tdm.number_of_codecs = 2;
+    metadata.tdm.codecs[0] = metadata::Codec::Tas58xx;
+    metadata.tdm.codecs[1] = metadata::Codec::Tas58xx;
+    metadata.tdm.bits_per_sample = 16;
+    metadata.tdm.bits_per_slot = 16;
+    metadata.number_of_channels = 4;
+    metadata.dai_number_of_channels = 4;
+    metadata.swaps = 0x10;
+    metadata.lanes_enable_mask[0] = 0xf;
+    metadata.codecs_channels_mask[0] = (1 << 0) | (1 << 1);  // First 2 channels in a shared TDM.
+    metadata.codecs_channels_mask[1] = (1 << 2) | (1 << 3);  // Second 2 channels in a shared TDM.
+  } else {                                                   // Luis
+    metadata.tdm.type = metadata::TdmType::I2s;
     metadata.tdm.number_of_codecs = 1;
     metadata.tdm.codecs[0] = metadata::Codec::Tas58xx;
     metadata.number_of_channels = 2;
@@ -356,11 +471,9 @@ zx_status_t Sherlock::AudioInit() {
   };
 
   pbus_dev_t tdm_dev = {};
-  if (is_sherlock) {
-    tdm_dev.name = "sherlock-i2s-audio-out";
-  } else {
-    tdm_dev.name = "luis-i2s-audio-out";
-  }
+  char name[device_name_max_length];
+  snprintf(name, sizeof(name), "%s-i2s-audio-out", product_name);
+  tdm_dev.name = name;
   tdm_dev.vid = PDEV_VID_AMLOGIC;
   tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
   tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
@@ -374,8 +487,13 @@ zx_status_t Sherlock::AudioInit() {
     status = pbus_.CompositeDeviceAdd(&tdm_dev, sherlock_tdm_i2s_fragments,
                                       countof(sherlock_tdm_i2s_fragments), UINT32_MAX);
   } else {
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, luis_tdm_i2s_fragments,
-                                      countof(luis_tdm_i2s_fragments), UINT32_MAX);
+    if (is_ernie) {
+      status = pbus_.CompositeDeviceAdd(&tdm_dev, ernie_tdm_i2s_fragments,
+                                        countof(ernie_tdm_i2s_fragments), UINT32_MAX);
+    } else {
+      status = pbus_.CompositeDeviceAdd(&tdm_dev, luis_tdm_i2s_fragments,
+                                        countof(luis_tdm_i2s_fragments), UINT32_MAX);
+    }
   }
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -393,11 +511,8 @@ zx_status_t Sherlock::AudioInit() {
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
-    if (is_sherlock) {
-      snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
-    } else {
-      snprintf(metadata.product_name, sizeof(metadata.product_name), "luis");
-    }
+    strncpy(metadata.product_name, product_name, sizeof(metadata.product_name));
+
     metadata.is_input = false;
     // Compatible clocks with other TDM drivers.
     metadata.mClockDivFactor = 10;
@@ -421,11 +536,9 @@ zx_status_t Sherlock::AudioInit() {
     };
 
     pbus_dev_t tdm_dev = {};
-    if (is_sherlock) {
-      tdm_dev.name = "sherlock-pcm-audio-out";
-    } else {
-      tdm_dev.name = "luis-pcm-audio-out";
-    }
+    char tdm_name[device_name_max_length];
+    snprintf(tdm_name, sizeof(tdm_name), "%s-pcm-audio-out", product_name);
+    tdm_dev.name = tdm_name;
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
@@ -469,11 +582,9 @@ zx_status_t Sherlock::AudioInit() {
       },
   };
   pbus_dev_t pdm_dev = {};
-  if (is_sherlock) {
-    pdm_dev.name = "sherlock-pdm-audio-in";
-  } else {
-    pdm_dev.name = "luis-pdm-audio-in";
-  }
+  char pdm_name[device_name_max_length];
+  snprintf(pdm_name, sizeof(pdm_name), "%s-pdm-audio-in", product_name);
+  pdm_dev.name = pdm_name;
   pdm_dev.vid = PDEV_VID_AMLOGIC;
   pdm_dev.pid = PDEV_PID_AMLOGIC_T931;
   pdm_dev.did = PDEV_DID_SHERLOCK_PDM;
@@ -500,11 +611,8 @@ zx_status_t Sherlock::AudioInit() {
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
-    if (is_sherlock) {
-      snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
-    } else {
-      snprintf(metadata.product_name, sizeof(metadata.product_name), "luis");
-    }
+    strncpy(metadata.product_name, product_name, sizeof(metadata.product_name));
+
     metadata.is_input = true;
     // Compatible clocks with other TDM drivers.
     metadata.mClockDivFactor = 10;
@@ -528,11 +636,9 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
     pbus_dev_t tdm_dev = {};
-    if (is_sherlock) {
-      tdm_dev.name = "sherlock-pcm-audio-in";
-    } else {
-      tdm_dev.name = "luis-pcm-audio-in";
-    }
+    char name[device_name_max_length];
+    snprintf(name, sizeof(name), "%s-pcm-audio-in", product_name);
+    tdm_dev.name = name;
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;

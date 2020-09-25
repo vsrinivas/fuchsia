@@ -99,6 +99,7 @@ template("sherlock_driver") {
       "//src/devices/lib/focaltech",
       "//src/devices/lib/mmio",
       "//src/devices/lib/thermal",
+      "//src/devices/lib/ti",
       "//src/devices/usb/lib/usb",
       "//src/graphics/display/lib/device-protocol-display",
       "//src/lib/ddk",
