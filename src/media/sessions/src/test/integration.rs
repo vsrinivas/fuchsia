@@ -4,19 +4,17 @@
 
 use crate::{Result, SessionId};
 use anyhow::Context as _;
-use fdio;
 use fidl::encoding::Decodable;
-use fidl::endpoints::DiscoverableService;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
-use fidl_fuchsia_inspect::*;
+use fidl_fuchsia_diagnostics::*;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
-use fidl_fuchsia_sys::ComponentControllerEvent;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
 use fuchsia_component::server::*;
 use fuchsia_inspect as inspect;
+use fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector};
 use futures::{
     self,
     channel::mpsc,
@@ -24,12 +22,13 @@ use futures::{
     sink::SinkExt,
     stream::{StreamExt, TryStreamExt},
 };
-use glob::glob;
 use matches::assert_matches;
 use std::collections::HashMap;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
 const MEDIASESSION_CMX: &str = "mediasession.cmx";
+const ARCHIVIST_URL: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
 
 fn init_logger() {
     static LOGGER: std::sync::Once = std::sync::Once::new();
@@ -44,9 +43,12 @@ struct TestService {
     app: comp::client::App,
     // This needs to stay alive to keep the service running.
     #[allow(unused)]
+    archivist: comp::client::App,
+    #[allow(unused)]
     env: NestedEnvironment,
     publisher: PublisherProxy,
     discovery: DiscoveryProxy,
+    archive: ArchiveAccessorProxy,
     observer_discovery: ObserverDiscoveryProxy,
     new_usage_watchers: mpsc::Receiver<(AudioRenderUsage, UsageWatcherProxy)>,
     usage_watchers: HashMap<AudioRenderUsage, UsageWatcherProxy>,
@@ -90,6 +92,13 @@ impl TestService {
         )
         .context("Launching mediasession")?;
 
+        let archivist = comp::client::launch(
+            env.launcher(),
+            String::from(ARCHIVIST_URL),
+            /*arguments=*/ None,
+        )
+        .context("Launching archivist")?;
+
         let publisher = mediasession
             .connect_to_service::<PublisherMarker>()
             .context("Connecting to Publisher")?;
@@ -100,11 +109,17 @@ impl TestService {
             .connect_to_service::<ObserverDiscoveryMarker>()
             .context("Connecting to ObserverDiscovery")?;
 
+        let archive = archivist
+            .connect_to_service::<ArchiveAccessorMarker>()
+            .context("Connecting to archivist")?;
+
         Ok(Self {
             app: mediasession,
+            archivist,
             env,
             publisher,
             discovery,
+            archive,
             observer_discovery,
             new_usage_watchers,
             usage_watchers: HashMap::new(),
@@ -167,44 +182,17 @@ impl TestService {
         }
     }
 
-    async fn read_inspect(&mut self) -> inspect::NodeHierarchy {
-        let mut component_stream = self.app.controller().take_event_stream();
-        match component_stream
-            .next()
+    async fn inspect_tree(&mut self) -> inspect::NodeHierarchy {
+        ArchiveReader::new()
+            .with_archive(self.archive.clone())
+            .add_selector(ComponentSelector::new(vec![MEDIASESSION_CMX.to_string()]))
+            .get()
             .await
-            .expect("component event stream ended before termination event")
-            .expect("event stream returned error")
-        {
-            ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                panic!(
-                    "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                    return_code, termination_reason
-                );
-            }
-            ComponentControllerEvent::OnDirectoryReady {} => {
-                let pattern = format!(
-                    "/hub/r/*/*/c/{}/*/out/diagnostics/{}",
-                    MEDIASESSION_CMX,
-                    TreeMarker::SERVICE_NAME
-                );
-                let path = glob(&pattern)
-                    .expect("glob")
-                    .next()
-                    .expect("failed to get pattern match")
-                    .expect("failed to parse glob");
-                let (tree, server_end) =
-                    fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
-                fdio::service_connect(
-                    &path.to_string_lossy().to_string(),
-                    server_end.into_channel(),
-                )
-                .expect("failed to connect to service");
-
-                inspect::reader::read_from_tree(&tree)
-                    .await
-                    .expect("failed to get inspect hierarchy")
-            }
-        }
+            .expect("Got batch")
+            .into_iter()
+            .next()
+            .and_then(|result| result.payload)
+            .expect("Got payload")
     }
 }
 
@@ -1064,21 +1052,21 @@ async fn active_session_falls_back_when_session_removed() -> Result<()> {
     Ok(())
 }
 
-#[ignore = "TODO(fxbug.dev/60352): deflake and re-enable"]
 #[fasync::run_singlethreaded(test)]
 async fn inspect_tree_correct() -> Result<()> {
     init_logger();
     let mut service = TestService::new()?;
     let player1 = TestPlayer::new(&service).await?;
     let player2 = TestPlayer::new(&service).await?;
+    let ids = vec![format!("{}", player1.id), format!("{}", player2.id)];
 
-    let hierarchy = service.read_inspect().await;
+    let hierarchy = service.inspect_tree().await;
     assert_eq!(hierarchy.children.len(), 1);
     let players = &hierarchy.children[0];
     assert_eq!(players.name, "players");
     assert_eq!(players.children.len(), 2);
-    assert_eq!(players.children[0].name, format!("{}", player2.id));
-    assert_eq!(players.children[1].name, format!("{}", player1.id));
+    assert!(ids.contains(&players.children[0].name));
+    assert!(ids.contains(&players.children[1].name));
 
     Ok(())
 }
