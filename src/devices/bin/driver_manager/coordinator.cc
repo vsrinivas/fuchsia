@@ -432,6 +432,20 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
     strings.emplace_back(entry.data(), entry.size());
   }
 
+  // Make the clock backstop boot arg available to drivers that
+  // deal with time (RTC).
+  // TODO(60668): Remove once UTC time is removed from the kernel.
+  auto backstop_env = boot_args()->GetString("clock.backstop");
+  if (!backstop_env.ok()) {
+    return backstop_env.status();
+  }
+
+  auto backstop_env_value = std::move(backstop_env.value().value);
+  if (!backstop_env_value.is_null()) {
+    strings.push_back(std::string("clock.backstop=") +
+                      std::string(backstop_env_value.data(), backstop_env_value.size()));
+  }
+
   for (auto& entry : strings) {
     env.push_back(entry.data());
   }
