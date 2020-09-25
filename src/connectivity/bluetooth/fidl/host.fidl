@@ -179,8 +179,8 @@ protocol Host {
 
     // ===== Events =====
 
-    /// Notifies when bonding data for a device has been updated.
-    -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);
+    /// Notifies when bonding data for a peer has been updated.
+    -> OnNewBondingData(fuchsia.bluetooth.sys.BondingData data);
 
     // TODO(fxbug.dev/787): Introduce a "OnBondRemoved()" event to notify when existing
     // keys become stale.
