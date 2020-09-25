@@ -343,7 +343,11 @@ __BEGIN_CDECLS
 
 // FocalTech
 #define PDEV_VID_FOCALTECH           0x20
-#define PDEV_DID_FOCALTECH_FT8201     0x1
+#define PDEV_DID_FOCALTECH_FT8201     0x01
+
+// Sensirion
+#define PDEV_VID_SENSIRION           0x21
+#define PDEV_DID_SENSIRION_SHTV3      0x01
 // clang-format on
 
 __END_CDECLS

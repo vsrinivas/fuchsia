@@ -1,0 +1,59 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("common") {
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/zxc",
+  ]
+}
+
+driver_module("shtv3") {
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  sources = [ "shtv3.cc" ]
+  deps = [ ":common" ]
+}
+
+test("shtv3-test") {
+  output_name = "shtv3-test"
+  sources = [
+    "shtv3-test.cc",
+    "shtv3.cc",
+  ]
+  deps = [
+    ":common",
+    "//src/devices/i2c/testing/fake-i2c",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("shtv3-test-package") {
+  package_name = "shtv3-test"
+  deps = [ ":shtv3-test" ]
+
+  tests = [
+    {
+      name = "shtv3-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":shtv3-test-package" ]
+}

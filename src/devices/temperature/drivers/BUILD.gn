@@ -5,5 +5,8 @@
 group("tests") {
   testonly = true
 
-  deps = [ "tmp112:tests" ]
+  deps = [
+    "shtv3:tests",
+    "tmp112:tests",
+  ]
 }
