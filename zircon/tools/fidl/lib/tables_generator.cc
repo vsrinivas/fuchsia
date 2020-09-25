@@ -183,6 +183,8 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
   Emit(&tables_file_, NameTable(bits_type.coded_name));
   Emit(&tables_file_, " = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_");
   Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
+  Emit(&tables_file_, ", .strictness=");
+  Emit(&tables_file_, bits_type.strictness);
   Emit(&tables_file_, ", .mask=");
   Emit(&tables_file_, bits_type.mask);
   Emit(&tables_file_, ", .name=\"");

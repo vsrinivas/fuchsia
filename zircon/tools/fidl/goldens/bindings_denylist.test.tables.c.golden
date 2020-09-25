@@ -18,7 +18,7 @@ extern const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonempt
 const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponse"};
 
 
-const struct FidlCodedBits test_name_OnlySyzkallerTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=1ul, .name="test.name/OnlySyzkaller"};
+const struct FidlCodedBits test_name_OnlySyzkallerTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="test.name/OnlySyzkaller"};
 
 const struct FidlCodedTable test_name_OnlyRustTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .name="test.name/OnlyRust"};
 

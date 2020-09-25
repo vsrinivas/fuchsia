@@ -19,22 +19,25 @@
 
 namespace fidl {
 
+// |TablesGenerator| generates metadata about FIDL types useful for encoding or
+// decoding. The definition of these metadata structures is located in
+// //zircon/system/ulib/fidl/include/lib/fidl/internal.h
+//
 // Methods or functions named "Emit..." are the actual interface to
 // the tables output.
-
+//
 // Methods named "Generate..." directly generate tables output via the
 // "Emit" routines.
-
+//
 // Methods named "Produce..." indirectly generate tables output by calling
 // the Generate methods, and should not call the "Emit" functions
 // directly.
-
+//
 // Note that this file is specifically emitted as a C file rather than a C++
 // file in order to ensure that the definitions of the tables will be in .rodata
 // or .data, not runtime initialized. This is necessary because there are
 // consumers of the data that run before main(), and the order of initialization
 // by ctor is not guaranteed (see fxbug.dev/39978).
-
 class TablesGenerator {
  public:
   explicit TablesGenerator(const flat::Library* library) : library_(library) {}

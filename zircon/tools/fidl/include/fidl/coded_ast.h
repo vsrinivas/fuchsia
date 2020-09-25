@@ -172,15 +172,17 @@ struct EnumType : public Type {
 
 struct BitsType : public Type {
   BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size, uint64_t mask,
-           std::string qname)
+           std::string qname, types::Strictness strictness)
       : Type(Kind::kBits, std::move(name), size, true, false),
         subtype(subtype),
         mask(mask),
-        qname(std::move(qname)) {}
+        qname(std::move(qname)),
+        strictness(strictness) {}
 
   const types::PrimitiveSubtype subtype;
   const uint64_t mask;
   const std::string qname;
+  types::Strictness strictness;
 };
 
 struct HandleType : public Type {

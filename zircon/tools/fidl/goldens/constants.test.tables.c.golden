@@ -35,9 +35,9 @@ static bool EnumValidatorFor_values_Enum(uint64_t v) {
 
 const struct FidlCodedEnum values_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_values_Enum, .name="values/Enum"};
 
-const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=131ul, .name="values/BitsType"};
+const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=131ul, .name="values/BitsType"};
 
-const struct FidlCodedBits values_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=8ul, .name="values/Bits"};
+const struct FidlCodedBits values_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=8ul, .name="values/Bits"};
 
 static const struct FidlStructElement Fields13values_Struct[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}},

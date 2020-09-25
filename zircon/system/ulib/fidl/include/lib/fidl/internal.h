@@ -96,7 +96,7 @@ struct FidlStructPadding {
   struct FidlStructElementHeader header;
 
   uint32_t offset;
-  // Masks with 0xff on bytes with padding and 0x00 otherwsie.
+  // Masks with 0xff on bytes with padding and 0x00 otherwise.
   // They are used by VisitInternalPadding to zero (encoding) and validate (decoding)
   // padding bytes.
   union {
@@ -303,6 +303,7 @@ struct FidlCodedEnum FIDL_INTERNAL_INHERIT_TYPE_T {
 struct FidlCodedBits FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
   const FidlCodedPrimitiveSubtype underlying_type;
+  const FidlStrictness strictness;
   const uint64_t mask;
   const char* name;  // may be nullptr if omitted at compile time
 
