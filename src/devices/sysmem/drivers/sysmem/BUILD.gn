@@ -39,7 +39,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zx",
@@ -50,15 +49,16 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 
   deps = [
-    "//zircon/public/lib/region-alloc",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]
@@ -115,7 +115,6 @@ test("sysmem-unittest-executable") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -126,6 +125,7 @@ test("sysmem-unittest-executable") {
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]

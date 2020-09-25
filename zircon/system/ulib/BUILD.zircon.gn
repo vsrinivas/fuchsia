@@ -18,13 +18,6 @@ group("ulib") {
   deps = [
     "c",
     "c:crt1",
-    "elf-psabi",
-    "elfload",
-    "explicit-memory",
-    "ldmsg",
-    "ram-crashlog",
-    "region-alloc",
-    "runtime",
     "syscalls-headers",
     "vdso-code-header",
     "zircon",

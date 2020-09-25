@@ -11,11 +11,11 @@ test("dlfcn") {
     "//sdk/lib/fdio",
     "//src/lib/loader_service",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/elfload",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/elfload",
   ]
 
   data_deps = [ ":test-dso-no-note" ]

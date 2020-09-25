@@ -26,12 +26,12 @@ test("launchpad") {
   sources = [ "launchpad.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/elfload",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/runtime",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/elfload",
     "//zircon/system/ulib/launchpad",
+    "//zircon/system/ulib/runtime",
   ]
 }
 

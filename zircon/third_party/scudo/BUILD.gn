@@ -12,8 +12,8 @@ source_set("scudo") {
   include_dirs = [ "src/include" ]
 
   deps = [
-    "//zircon/public/lib/runtime",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/runtime",
+    "//zircon/system/ulib/sync",
   ]
   libs = [ "zircon" ]
 }

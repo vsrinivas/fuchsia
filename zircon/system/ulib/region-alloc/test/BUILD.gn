@@ -30,8 +30,8 @@ test("region-alloc") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/region-alloc",
   ]
 }
 

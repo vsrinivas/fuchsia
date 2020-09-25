@@ -17,7 +17,7 @@ import("//build/fuzzing/fuzzer.gni")
 fuzzer("elfload-fuzzer") {
   sources = [ "elfload-fuzzer.cc" ]
   deps = [
-    "//zircon/public/lib/elfload",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/elfload",
   ]
 }

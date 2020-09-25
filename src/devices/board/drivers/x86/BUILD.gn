@@ -136,7 +136,6 @@ driver_module("platform-bus-x86") {
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
@@ -144,6 +143,7 @@ driver_module("platform-bus-x86") {
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/lazy_init",
+    "//zircon/system/ulib/region-alloc",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }
@@ -181,9 +181,9 @@ test("x86-battery-test") {
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/region-alloc",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }

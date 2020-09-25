@@ -38,9 +38,9 @@ zx_library("zircon-crypto") {
   ]
   deps = [
     "//third_party/boringssl",
-    "//zircon/public/lib/explicit-memory",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/explicit-memory",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
@@ -69,9 +69,9 @@ zx_library("zircon-crypto-static") {
   ]
   deps = [
     "//third_party/boringssl",
-    "//zircon/public/lib/explicit-memory",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/explicit-memory",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

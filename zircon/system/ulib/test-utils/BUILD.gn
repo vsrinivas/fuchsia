@@ -23,11 +23,11 @@ zx_library("test-utils") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/elfload",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/runtime",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/backtrace-request",
+    "//zircon/system/ulib/elfload",
+    "//zircon/system/ulib/runtime",
   ]
 }

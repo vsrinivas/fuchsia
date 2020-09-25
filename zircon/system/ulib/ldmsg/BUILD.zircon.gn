@@ -2,14 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("ldmsg") {
   sdk = "static"
   sdk_headers = [ "ldmsg/ldmsg.h" ]
+  sdk_migrated = true
   sources = [ "ldmsg.c" ]
   deps = [ "$zx/system/ulib/zircon" ]
 
-  if (toolchain.base_environment == "user") {
+  if (zx == "/" && toolchain.base_environment == "user") {
     # This library is used by libc, so suppress the circularity.
+    # This is only needed in the Zircon build.
     configs -= [ "$zx_build_config:user" ]
   }
 

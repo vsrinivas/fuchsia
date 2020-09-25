@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(54180) Keep in sync with BUILD.gn
+
 import("$zx/vdso/vdso.gni")
 
 zx_library("c") {

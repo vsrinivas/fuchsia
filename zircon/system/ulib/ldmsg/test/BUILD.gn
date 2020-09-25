@@ -16,5 +16,5 @@ import("//build/fuzzing/fuzzer.gni")
 
 fuzzer("ldmsg-fuzzer") {
   sources = [ "ldmsg-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/ldmsg" ]
+  deps = [ "//zircon/system/ulib/ldmsg" ]
 }

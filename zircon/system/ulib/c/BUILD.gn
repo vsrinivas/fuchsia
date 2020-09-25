@@ -1,0 +1,16 @@
+# copyright 2020 the fuchsia authors. all rights reserved.
+# use of this source code is governed by a bsd-style license that can be
+# found in the license file.
+
+# todo(54180) keep in sync with build.zircon.gn
+
+group("headers") {
+  public_configs = [
+    ":headers.config",
+    "$zx/third_party/ulib/musl:headers",
+  ]
+}
+
+config("headers.config") {
+  include_dirs = [ "include" ]
+}

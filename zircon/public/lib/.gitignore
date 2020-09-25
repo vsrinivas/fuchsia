@@ -30,7 +30,6 @@ counters/
 ddk-platform-defs/
 devicetree/
 elfload/
-elf-psabi/
 explicit-memory/
 host/
 kcmdline/

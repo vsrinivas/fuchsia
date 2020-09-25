@@ -42,11 +42,11 @@ driver_module("intel-i915") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/region-alloc",
   ]
 }
 
@@ -85,7 +85,6 @@ test("intel-i915-test") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -94,6 +93,7 @@ test("intel-i915-test") {
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/region-alloc",
   ]
 }
 

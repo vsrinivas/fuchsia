@@ -31,11 +31,11 @@ zx_library("launchpad") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/elf-psabi",
-    "//zircon/public/lib/elfload",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/ldmsg",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/elf-psabi",
+    "//zircon/system/ulib/elfload",
+    "//zircon/system/ulib/ldmsg",
   ]
   visibility = [
     # Do not add anymore targets to this list.

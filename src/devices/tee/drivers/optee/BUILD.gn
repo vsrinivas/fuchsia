@@ -27,9 +27,9 @@ source_set("optee_lib") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 

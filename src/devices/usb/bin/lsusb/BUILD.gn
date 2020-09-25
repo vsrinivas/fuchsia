@@ -21,8 +21,8 @@ test("bin") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/runtime",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/runtime",
   ]
 }
 

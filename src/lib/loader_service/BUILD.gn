@@ -53,7 +53,7 @@ executable("loader_service_test") {
 
   deps = [
     ":loader_service_test_fixture",
-    "//zircon/public/lib/ldmsg",
+    "//zircon/system/ulib/ldmsg",
   ]
 }
 

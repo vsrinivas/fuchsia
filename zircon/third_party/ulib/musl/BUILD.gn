@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("headers") {
+  visibility = [
+    "$zx/system/ulib/c:*",
+    "./*",
+  ]
+  cflags = [
+    "-idirafter",
+    rebase_path("include", root_build_dir),
+  ]
+  asmflags = cflags
+}
+
 # We share just this internal header with fdio so it can implement
 # getifaddrs re-using this address manipulation code.
 source_set("getifaddrs-internal") {

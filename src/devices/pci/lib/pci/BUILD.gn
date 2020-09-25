@@ -28,7 +28,7 @@ zx_library("pci") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.pciroot",
-    "//zircon/public/lib/region-alloc",
+    "//zircon/system/ulib/region-alloc",
   ]
 
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -46,8 +46,8 @@ test("pci-roothost") {
     "//src/devices/testing/fake-msi",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/region-alloc",
   ]
 }
 

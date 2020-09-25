@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_library("ram-crashlog") {
   sdk = "source"
   sdk_headers = [ "ram-crashlog/ram-crashlog.h" ]
+  sdk_migrated = true
   sources = [ "ram-crashlog.cc" ]
   deps = [ "$zx/third_party/ulib/cksum" ]
   host = true

@@ -23,10 +23,10 @@ source_set("threads") {
   deps = [
     ":thread-functions",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/runtime",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",
+    "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-exceptions",
   ]
 }
@@ -38,5 +38,5 @@ source_set("thread-functions") {
   visibility = [ ":*" ]
   sources = [ "thread-functions/thread-functions.cc" ]
   configs += [ "//build/config:no_sanitizers" ]
-  deps = [ "//zircon/public/lib/runtime" ]
+  deps = [ "//zircon/system/ulib/runtime" ]
 }

@@ -23,9 +23,9 @@ test("stdio-test") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/elfload",
-    "//zircon/public/lib/runtime",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/elfload",
+    "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-utils",
   ]
 }

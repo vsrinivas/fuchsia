@@ -29,8 +29,8 @@ test("ram-crashlog") {
   sources = [ "ram-crashlog-tests.cc" ]
 
   deps = [
-    "//zircon/public/lib/ram-crashlog",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ram-crashlog",
     "//zircon/third_party/ulib/cksum",
   ]
 }
