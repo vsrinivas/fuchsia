@@ -13,6 +13,8 @@
 #include "platform_buffer.h"
 
 namespace magma_sysmem {
+class PlatformBufferConstraints;
+
 class PlatformBufferDescription {
  public:
   virtual ~PlatformBufferDescription() = default;
@@ -25,6 +27,8 @@ class PlatformBufferDescription {
   virtual bool GetPlanes(uint64_t width, uint64_t height,
                          magma_image_plane_t* planes_out) const = 0;
   virtual bool GetColorSpace(uint32_t* color_space_out) = 0;
+  virtual bool GetFormatIndex(PlatformBufferConstraints* constraints,
+                              magma_bool_t* format_valid_out, uint32_t format_valid_count) = 0;
 };
 
 class PlatformBufferConstraints {

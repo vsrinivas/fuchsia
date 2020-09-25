@@ -118,6 +118,14 @@ magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_conne
                                                               uint32_t* buffer_handle_out,
                                                               uint32_t* vmo_offset_out);
 
+// Determines which constraint format indices match the buffer description. |format_valid_count| is
+// the number of entries in |*format_valid_out|.
+magma_status_t magma_get_description_format_index(magma_sysmem_connection_t connection,
+                                                  magma_buffer_format_description_t description,
+                                                  magma_sysmem_buffer_constraints_t constraints,
+                                                  magma_bool_t* format_valid_out,
+                                                  uint32_t format_valid_count);
+
 #if defined(__cplusplus)
 }
 #endif

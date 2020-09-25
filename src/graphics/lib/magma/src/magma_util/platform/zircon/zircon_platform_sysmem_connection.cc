@@ -124,6 +124,9 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
     return true;
   }
 
+  bool GetFormatIndex(PlatformBufferConstraints* constraints, magma_bool_t* format_valid_out,
+                      uint32_t format_valid_count) override;
+
  private:
   uint32_t buffer_count_;
   llcpp::fuchsia::sysmem::SingleBufferSettings settings_;
@@ -265,7 +268,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     return MAGMA_STATUS_OK;
   }
 
-  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints() { return constraints_; }
+  const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints() { return constraints_; }
 
  private:
   llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints_ = {};
@@ -563,6 +566,66 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
 
   *buffer_description_out = std::move(description);
   return MAGMA_STATUS_OK;
+}
+
+bool ZirconPlatformBufferDescription::GetFormatIndex(PlatformBufferConstraints* constraints,
+                                                     magma_bool_t* format_valid_out,
+                                                     uint32_t format_valid_count) {
+  auto* zircon_constraints = static_cast<ZirconPlatformBufferConstraints*>(constraints);
+
+  const auto& llcpp_constraints = zircon_constraints->constraints();
+  if (format_valid_count < llcpp_constraints.image_format_constraints_count) {
+    return DRETF(false, "format_valid_count %d < image_format_constraints_count %d",
+                 format_valid_count, llcpp_constraints.image_format_constraints_count);
+  }
+  for (uint32_t i = 0; i < format_valid_count; i++) {
+    format_valid_out[i] = false;
+  }
+  if (!settings_.has_image_format_constraints) {
+    return true;
+  }
+  const auto& out = settings_.image_format_constraints;
+
+  for (uint32_t i = 0; i < llcpp_constraints.image_format_constraints_count; ++i) {
+    const auto& in = llcpp_constraints.image_format_constraints[i];
+    // These checks are sorted in order of how often they're expected to mismatch, from most likely
+    // to least likely. They aren't always equality comparisons, since sysmem may change some values
+    // in compatible ways on behalf of the other participants.
+    if (out.pixel_format.type != in.pixel_format.type)
+      continue;
+    if (out.pixel_format.has_format_modifier != in.pixel_format.has_format_modifier)
+      continue;
+    if (out.pixel_format.format_modifier.value != in.pixel_format.format_modifier.value)
+      continue;
+    if (out.min_bytes_per_row < in.min_bytes_per_row)
+      continue;
+    if (out.required_max_coded_width < in.required_max_coded_width)
+      continue;
+    if (out.required_max_coded_height < in.required_max_coded_height)
+      continue;
+    if (out.bytes_per_row_divisor % in.bytes_per_row_divisor != 0)
+      continue;
+    // Check if the out colorspaces are a subset of the in color spaces.
+    bool all_color_spaces_found = true;
+    for (uint32_t j = 0; j < out.color_spaces_count; j++) {
+      bool found_matching_color_space = false;
+      for (uint32_t k = 0; k < in.color_spaces_count; k++) {
+        if (out.color_space[j].type == in.color_space[k].type) {
+          found_matching_color_space = true;
+          break;
+        }
+      }
+      if (!found_matching_color_space) {
+        all_color_spaces_found = false;
+        break;
+      }
+    }
+    if (!all_color_spaces_found)
+      continue;
+    format_valid_out[i] = true;
+  }
+
+  return true;
 }
 
 }  // namespace magma_sysmem

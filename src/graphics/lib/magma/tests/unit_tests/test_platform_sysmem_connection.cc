@@ -5,6 +5,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
+#include <array>
+
 #include <gtest/gtest.h>
 
 #include "platform_handle.h"
@@ -290,6 +292,73 @@ class TestPlatformSysmemConnection {
     EXPECT_EQ(MAGMA_STATUS_INTERNAL_ERROR, status);
   }
 
+  static void TestGetFormatIndex() {
+    auto connection = CreateConnection();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints = get_standard_buffer_constraints();
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    // Create a set of basic 512x512 RGBA image constraints.
+    magma_image_format_constraints_t image_constraints{};
+    image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
+    image_constraints.has_format_modifier = false;
+    image_constraints.format_modifier = 0;
+    image_constraints.width = 512;
+    image_constraints.height = 512;
+    image_constraints.layers = 1;
+    image_constraints.bytes_per_row_divisor = 1;
+    image_constraints.min_bytes_per_row = 0;
+
+    magma_image_format_constraints_t nv12_image_constraints = image_constraints;
+    nv12_image_constraints.image_format = MAGMA_FORMAT_NV12;
+
+    EXPECT_EQ(MAGMA_STATUS_OK, constraints->SetImageFormatConstraints(0, &image_constraints).get());
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              constraints->SetImageFormatConstraints(1, &nv12_image_constraints).get());
+    EXPECT_EQ(MAGMA_STATUS_OK, constraints->SetImageFormatConstraints(2, &image_constraints).get());
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              constraints->SetImageFormatConstraints(3, &nv12_image_constraints).get());
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+
+    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
+
+    std::array<magma_bool_t, 32> format_valid;
+    for (uint32_t i = 0; i < format_valid.size(); ++i) {
+      format_valid[i] = i & 1;
+    }
+    constexpr uint32_t kShortArraySize = 1;
+    EXPECT_FALSE(
+        description->GetFormatIndex(constraints.get(), format_valid.data(), kShortArraySize));
+    for (uint32_t i = 0; i < format_valid.size(); ++i) {
+      // Values shouldn't be modified.
+      EXPECT_EQ(static_cast<bool>(i & 1), static_cast<bool>(format_valid[i])) << i;
+    }
+
+    EXPECT_TRUE(
+        description->GetFormatIndex(constraints.get(), format_valid.data(), format_valid.size()));
+    for (uint32_t i = 4; i < format_valid.size(); ++i) {
+      EXPECT_FALSE(format_valid[i]);
+    }
+
+    // RGBA format constraints are identical, so the results should be the same.
+    EXPECT_EQ(format_valid[0], format_valid[2]);
+    // NV12 format constraints are identical, so the results should be the same.
+    EXPECT_EQ(format_valid[1], format_valid[3]);
+    // Format must be one of either NV12 or RGBA.
+    EXPECT_NE(static_cast<bool>(format_valid[0]), static_cast<bool>(format_valid[1]));
+  }
+
  private:
   static std::unique_ptr<magma_sysmem::PlatformSysmemConnection> CreateConnection() {
     zx::channel client_end, server_end;
@@ -331,4 +400,8 @@ TEST(PlatformSysmemConnection, ProtectedBuffer) {
 
 TEST(PlatformSysmemConnection, ProtectedBufferBadConstraints) {
   TestPlatformSysmemConnection::TestProtectedBufferBadConstraints();
+}
+
+TEST(PlatformSysmemConnection, GetFormatIndex) {
+  TestPlatformSysmemConnection::TestGetFormatIndex();
 }
