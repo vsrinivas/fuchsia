@@ -6,6 +6,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 
+#include <lib/ktrace/string_ref.h>
 #include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <stdint.h>
@@ -26,6 +27,11 @@ struct percpu;
 // Ensure this define has a value when not defined globally by the build system.
 #ifndef SCHEDULER_TRACING_LEVEL
 #define SCHEDULER_TRACING_LEVEL 0
+#endif
+
+// Ensure this define has a value when not defined globally by the build system.
+#ifndef SCHEDULER_QUEUE_TRACING_ENABLED
+#define SCHEDULER_QUEUE_TRACING_ENABLED false
 #endif
 
 // Performance scale of a CPU relative to the highest performance CPU in the
@@ -364,6 +370,9 @@ class Scheduler {
     return thread->scheduler_state().discipline() == SchedDiscipline::Fair ? fair_run_queue_
                                                                            : deadline_run_queue_;
   }
+
+  // Emits queue event tracers for trace-based scheduler performance analysis.
+  inline void TraceThreadQueueEvent(StringRef* name, Thread* thread) TA_REQ(thread_lock);
 
   // The run queue of fair scheduled threads ready to run, but not currently running.
   TA_GUARDED(thread_lock)

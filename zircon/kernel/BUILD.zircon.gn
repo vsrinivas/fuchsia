@@ -268,7 +268,10 @@ if (current_toolchain == default_toolchain) {
 
   config("scheduler") {
     visibility = [ ":*" ]
-    defines = [ "SCHEDULER_TRACING_LEVEL=$scheduler_tracing_level" ]
+    defines = [
+      "SCHEDULER_TRACING_LEVEL=$scheduler_tracing_level",
+      "SCHEDULER_QUEUE_TRACING_ENABLED=$scheduler_queue_tracing_enabled",
+    ]
   }
 
   # This is the kernel proper, an ELF executable with full symbols.

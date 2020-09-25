@@ -36,6 +36,10 @@ declare_args() {
   # 3 = Adds detailed internal durations and probes.
   scheduler_tracing_level = 0
 
+  # Enables scheduler queue tracing for trace-based scheduler performance
+  # analysis.
+  scheduler_queue_tracing_enabled = false
+
   # Disable kernel PCI driver support. A counterpart of the the build
   # flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
   disable_kernel_pci = false
