@@ -356,6 +356,9 @@ impl SavedNetworksManager {
     }
 
     /// Update the specified saved network with the result of an attempted connect.  If the
+    /// specified network could have been connected to with a different security type and we
+    /// do not find the specified config, we will check the other possible security type. For
+    /// example if a WPA3 network is specified, we will check WPA2 if it isn't found. If the
     /// specified network is not saved, this function does not save it.
     pub async fn record_connect_result(
         &self,
@@ -364,7 +367,19 @@ impl SavedNetworksManager {
         connect_result: fidl_sme::ConnectResultCode,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
-        if let Some(networks) = saved_networks.get_mut(&id) {
+        let mut ids = vec![id.clone()];
+        // This alternate possible network identifier will be checked only if the specified id is
+        // not found, as it is pushed to the ned of the list.
+        if let Some(security_type) = lower_valid_security(&id.security_type) {
+            ids.push(NetworkIdentifier::new(id.ssid.clone(), security_type));
+        }
+        for id in ids.into_iter() {
+            let networks = match saved_networks.get_mut(&id) {
+                Some(networks) => networks,
+                None => {
+                    continue;
+                }
+            };
             for network in networks.iter_mut() {
                 if &network.credential == credential {
                     match connect_result {
@@ -372,19 +387,12 @@ impl SavedNetworksManager {
                             if !network.has_ever_connected {
                                 network.has_ever_connected = true;
                                 // Update persistent storage since a config has changed.
-                                self.stash
-                                    .lock()
-                                    .await
-                                    .write(
-                                        &id.into(),
-                                        &network_config_vec_to_persistent_data(&networks),
-                                    )
-                                    .await
-                                    .unwrap_or_else(|_| {
-                                        info!(
-                                        "Failed recording successful connect in persistent storage"
-                                    );
-                                    });
+                                let data = network_config_vec_to_persistent_data(&networks);
+                                if let Err(e) =
+                                    self.stash.lock().await.write(&id.into(), &data).await
+                                {
+                                    info!("Failed to record successful connect in stash: {}", e);
+                                }
                             }
                         }
                         fidl_sme::ConnectResultCode::CredentialRejected => {
@@ -402,7 +410,6 @@ impl SavedNetworksManager {
                 }
             }
         }
-
         // Will not reach here if we find the saved network with matching SSID and credential.
         info!(
             "Failed finding network ({},{:?}) to record result of connect attempt.",
@@ -427,6 +434,16 @@ impl SavedNetworksManager {
             .map(|cfgs| cfgs.clone())
             .flatten()
             .collect()
+    }
+}
+
+/// Returns a security type that could have been upgraded to the provided security type
+/// in an auto connect.
+fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
+    match security_type {
+        SecurityType::Wpa3 => Some(SecurityType::Wpa2),
+        SecurityType::Wpa2 => Some(SecurityType::Wpa),
+        _ => None,
     }
 }
 
@@ -503,6 +520,7 @@ mod tests {
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::{io::Write, mem, time::SystemTime},
         tempfile::TempDir,
+        test_case::test_case,
         wlan_common::assert_variant,
     };
 
@@ -738,6 +756,90 @@ mod tests {
         config.has_ever_connected = true;
         assert_eq!(vec![config], saved_networks.lookup(network_id).await);
         assert_eq!(1, saved_networks.known_network_count().await);
+    }
+
+    #[test_case(SecurityType::Wpa3, Some(SecurityType::Wpa2))]
+    #[test_case(SecurityType::Wpa2, Some(SecurityType::Wpa))]
+    #[test_case(SecurityType::Wpa, None)]
+    #[test_case(SecurityType::Wep, None)]
+    #[test_case(SecurityType::None, None)]
+    fn test_lower_security(
+        security_type: SecurityType,
+        expected_security_type: Option<SecurityType>,
+    ) {
+        assert_eq!(expected_security_type, lower_valid_security(&security_type))
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_connect_valid_security() {
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_network_id = NetworkIdentifier::new("foo", SecurityType::Wpa);
+        let credential = Credential::Password(b"some_password".to_vec());
+        let connected_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        // If we record a successful connection to a WPA2 network, we shouldn't mark a WPA3 network
+        let saved_unrecorded_id = NetworkIdentifier::new("foo", SecurityType::Wpa3);
+
+        saved_networks
+            .store(saved_network_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
+        saved_networks
+            .store(saved_unrecorded_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
+
+        saved_networks
+            .record_connect_result(connected_id, &credential, fidl_sme::ConnectResultCode::Success)
+            .await;
+
+        assert_variant!(saved_networks.lookup(saved_network_id).await.as_slice(), [config] => {
+            assert!(config.has_ever_connected);
+        });
+        assert_variant!(saved_networks.lookup(saved_unrecorded_id).await.as_slice(), [config] => {
+            assert!(!config.has_ever_connected);
+        });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_connect_updates_one() {
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let net_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let net_id_also_valid = NetworkIdentifier::new("foo", SecurityType::Wpa);
+        let credential = Credential::Password(b"some_password".to_vec());
+
+        // Save the networks and record a successful connection.
+        saved_networks
+            .store(net_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
+        saved_networks
+            .store(net_id_also_valid.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
+        saved_networks
+            .record_connect_result(
+                net_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+            )
+            .await;
+
+        assert_variant!(saved_networks.lookup(net_id).await.as_slice(), [config] => {
+            assert!(config.has_ever_connected);
+        });
+        // If the specified network identifier is found, record_conenct_result should not mark
+        // another config even if it could also have been used for the connect attempt.
+        assert_variant!(saved_networks.lookup(net_id_also_valid).await.as_slice(), [config] => {
+            assert!(!config.has_ever_connected);
+        });
     }
 
     #[fasync::run_singlethreaded(test)]
