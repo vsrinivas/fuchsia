@@ -58,19 +58,7 @@ of references.
 Given the following structure:
 
 ```fidl
-struct Cart {
-    vector<Item> items;
-};
-struct Item {
-    Product product;
-    uint32 quantity;
-};
-struct Product {
-    string sku;
-    string name;
-    string? description;
-    uint32 price;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-traversal-order" %}
 ```
 
 The depth-first traversal order for a `Cart` message is defined by the following
@@ -156,14 +144,7 @@ In the following example, the `Region` structure contains a vector of
 Each `Point` consists of an `x` and `y` value.
 
 ```fidl
-struct Region {
-    vector<Rect> rects;
-};
-struct Rect {
-    Point top_left;
-    Point bottom_right;
-};
-struct Point { uint32 x, y; };
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-inlined-objects" %}
 ```
 
 Examining the objects in traversal order means that we start with the
@@ -374,15 +355,9 @@ The following example illustrates:
   * A nullable structure (`Color`)
 
 ```fidl
-struct Circle {
-    bool filled;
-    Point center;    // Point will be stored in-line
-    float32 radius;
-    Color? color;    // Color will be stored out-of-line
-    bool dashed;
-};
-struct Point { float32 x, y; };
-struct Color { float32 r, g, b; };
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
+
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs" %}
 ```
 
 The `Color` content is padded to the 8 byte secondary object alignment boundary.
@@ -393,7 +368,7 @@ Going through the layout in detail:
 1. The first member, `bool filled`, occupies one byte, but requires three bytes
    of padding because of the next member, which has a 4-byte alignment
    requirement.
-2. The `Point center` member is an example of a non-nullable struct. As such,
+2. The `CirclePoint center` member is an example of a non-nullable struct. As such,
    its content (the `x` and `y` 32-bit floats) are inlined, and the entire thing
    consumes 8 bytes.
 3. `radius` is a 32-bit item, requiring 4 byte alignment. Since the next
@@ -466,11 +441,7 @@ Tables are denoted by their declared name (e.g., **Value**), and are not nullabl
 The following example shows how tables are laid out according to their fields.
 
 ```fidl
-table Value {
-    1: int16 command;
-    2: Circle data;
-    3: float64 offset;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-tables" %}
 ```
 
 ![drawing](images/tables.png)
@@ -493,11 +464,7 @@ unions are denoted by their declared name (e.g. `Value`) and nullability:
 The following example shows how unions are laid out according to their fields.
 
 ```fidl
-union Value {
-    1: int16 command;
-    2: Circle data;
-    3: float64 offset;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-unions" %}
 ```
 
 ![drawing](images/union.png)
@@ -542,12 +509,7 @@ There are three kinds of transactional messages:
 We'll use the following interface for the next few examples:
 
 ```fidl
-protocol Calculator {
-    Add(int32 a, int32 b) -> (int32 sum);
-    Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
-    Clear();
-    -> OnError(uint32 status_code);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="calculator" %}
 ```
 
 The **Add()** and **Divide()** methods illustrate both the method request

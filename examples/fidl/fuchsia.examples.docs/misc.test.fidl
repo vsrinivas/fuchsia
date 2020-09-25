@@ -82,4 +82,4 @@ struct MyRequest {
     string key;
     vector<uint32> options;
 };
-// [END]
+// [END example-struct]

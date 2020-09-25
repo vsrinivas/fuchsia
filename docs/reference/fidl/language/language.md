@@ -32,11 +32,7 @@ text to be emitted into the generated code (as a comment, escaped correctly
 for the target language).
 
 ```fidl
-// this is a comment
-/// and this one is too, but it also ends up in the generated code
-struct Foo { // plain comment
-    int32 f; // as is this one
-}; // and this is the last one!
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="comments" %}
 ```
 
 Note that documentation comments can also be provided via the
@@ -124,17 +120,7 @@ integers, floating point values, strings, and enumerations.
 The syntax is similar to C:
 
 ```fidl
-const bool ENABLED_FLAG = true;
-const int8 OFFSET = -33;
-const uint16 ANSWER = 42;
-const uint16 ANSWER_IN_BINARY = 0b101010;
-const uint32 POPULATION_USA_2018 = 330000000;
-const uint64 DIAMOND = 0x183c7effff7e3c18;
-const uint64 FUCHSIA = 4054509061583223046;
-const string USERNAME = "squeenze";
-const float32 MIN_TEMP = -273.15;
-const float64 CONVERSION_FACTOR = 1.41421358;
-const Beverage MY_DRINK = Beverage.WATER;
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="consts" %}
 ```
 
 These declarations introduce a name within their scope.
@@ -154,10 +140,7 @@ in the declaration.
 For example:
 
 ```fidl
-struct Color {
-     uint32 background_rgb = 0xFF77FF; // fuchsia is the default background
-     uint32 foreground_rgb; // there is no default foreground color
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="defaults" %}
 ```
 
 If the programmer does not supply a background color, the default
@@ -249,14 +232,7 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 #### Use
 
 ```fidl
-// A record which contains fields of a few primitive types.
-struct Sprite {
-    float32 x;
-    float32 y;
-    uint32 index;
-    uint32 color;
-    bool visible;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="primitives" %}
 ```
 
 ### Bits {#bits}
@@ -273,12 +249,7 @@ struct Sprite {
 #### Use
 
 ```fidl
-// Bit definitions for Info.features field
-bits InfoFeatures : uint32 {
-    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
-    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
-    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="bits" %}
 ```
 
 ### Enums {#enums}
@@ -298,22 +269,7 @@ an enum must be one of: **int8, uint8, int16, uint16, int32, uint32, int64,
 uint64**. If omitted, the underlying type is assumed to be **uint32**.
 
 ```fidl
-// An enum declared at library scope.
-enum Beverage : uint8 {
-    WATER = 0;
-    COFFEE = 1;
-    TEA = 2;
-    WHISKEY = 3;
-};
-
-// An enum declared at library scope.
-// Underlying type is assumed to be uint32.
-enum Vessel {
-    CUP = 0;
-    BOWL = 1;
-    TUREEN = 2;
-    JUG = 3;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enums" %}
 ```
 
 #### Use
@@ -321,11 +277,7 @@ enum Vessel {
 Enum types are denoted by their identifier, which may be qualified if needed.
 
 ```fidl
-// A record which contains two enum fields.
-struct Order {
-    Beverage beverage;
-    Vessel vessel;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enum-use" %}
 ```
 
 ### Arrays
@@ -343,14 +295,7 @@ integer constant expression which specifies the number of elements in
 the array.
 
 ```fidl
-// A record which contains some arrays.
-struct Record {
-    // array of exactly 16 floating point numbers
-    array<float32>:16 matrix;
-
-    // array of exactly 10 arrays of 4 strings each
-    array<array<string>:4>:10 form;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="arrays" %}
 ```
 
 ### Strings
@@ -372,14 +317,7 @@ Strings are denoted as follows:
     with maximum length of _N_ bytes
 
 ```fidl
-// A record which contains some strings.
-struct Record {
-    // title string, maximum of 40 bytes long
-    string:40 title;
-
-    // description string, may be null, no upper bound on size
-    string? description;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strings" %}
 ```
 
 > Strings should not be used to pass arbitrary binary data since bindings enforce
@@ -415,23 +353,7 @@ Vectors are denoted as follows:
 _T_ can be any FIDL type.
 
 ```fidl
-// A record which contains some vectors.
-struct Record {
-    // a vector of up to 10 integers
-    vector<int32>:10 params;
-
-    // a vector of bytes, no upper bound on size
-    bytes blob;
-
-    // a nullable vector of up to 24 strings
-    vector<string>:24? nullable_vector_of_strings;
-
-    // a vector of nullable strings, no upper bound on size
-    vector<string?> vector_of_nullable_strings;
-
-    // a vector of vectors of 16-element arrays of floating point numbers
-    vector<vector<array<float32>:16>> complex;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="vectors" %}
 ```
 
 ### Handles {#handles}
@@ -448,9 +370,9 @@ Handles are denoted:
     unspecified type
 *   **`handle?`** : nullable Zircon handle of
     unspecified type
-*   **`handle:H`** : non-nullable Zircon handle
+*   **`zx.handle:H`** : non-nullable Zircon handle
     of type _H_
-*   **`handle:H?`** : nullable Zircon handle of
+*   **`zx.handle:H?`** : nullable Zircon handle of
     type _H_
 
 _H_ can be any [object](/docs/reference/kernel_objects/objects.md) supported by
@@ -461,14 +383,7 @@ Structs, tables, and unions containing handles must be marked with the
 [`resource` modifier](#value-vs-resource).
 
 ```fidl
-// A record which contains some handles.
-resource struct Record {
-    // a handle of unspecified type
-    handle h;
-
-    // an optional channel
-    handle:CHANNEL? c;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="handles" %}
 ```
 
 ### Structs {#structs}
@@ -483,15 +398,7 @@ resource struct Record {
 #### Declaration
 
 ```fidl
-struct Point {
-    float32 x;
-    float32 y;
-};
-struct Color {
-    float32 r;
-    float32 g;
-    float32 b;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs" %}
 ```
 
 #### Use
@@ -502,13 +409,7 @@ Structs are denoted by their declared name (eg. **Circle**) and nullability:
 *   **`Circle?`** : nullable Circle
 
 ```fidl
-struct Circle {
-    bool filled;
-    Point center;    // Point will be stored in-line
-    float32 radius;
-    Color? color;    // Color will be stored out-of-line
-    bool dashed;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
 ```
 
 ### Tables {#tables}
@@ -584,20 +485,7 @@ Unions can also be declared as strict or flexible. If neither strict nor flexibl
 is specified, the union is considered to be strict.
 
 ```fidl
-strict union StrictEither {
-    1: Left left;
-    2: Right right;
-};
-
-union ImplicitlyStrictEither {
-    1: Left left;
-    2: Right right;
-}
-
-flexible union FlexibleEither {
-    1: Left left;
-    2: Right right;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="unions-use" %}
 ```
 
 Seralizing or deserializing a union from a value with an ordinal that is not
@@ -687,17 +575,7 @@ More details are discussed in [FTP-057: Default No Handles][ftp-057].
 #### Declaration
 
 ```fidl
-enum DivisionError : uint32 {
-    DivideByZero = 1;
-};
-
-protocol Calculator {
-    Add(int32 a, int32 b) -> (int32 sum);
-    Divide(int32 dividend, int32 divisor)
-        -> (int32 quotient, int32 remainder) error DivisionError;
-    Clear();
-    -> OnClear();
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="calculator" %}
 ```
 
 #### Use {#protocols-use}
@@ -713,18 +591,7 @@ optionality:
     (server endpoint of channel)
 
 ```fidl
-// A record which contains protocol-bound channels.
-resource struct Record {
-    // client endpoint of a channel bound to the Calculator protocol
-    Calculator c;
-
-    // server endpoint of a channel bound to the Science protocol
-    request<Science> s;
-
-    // optional client endpoint of a channel bound to the
-    // RealCalculator protocol
-    RealCalculator? r;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="endpoints" %}
 ```
 
 ### Protocol Composition {#protocol-composition}
@@ -746,31 +613,13 @@ Rather than have each protocol define their own color setting methods, a common
 protocol can be defined:
 
 ```fidl
-struct Color {
-    int16 r;
-    int16 g;
-    int16 b;
-}
-
-protocol SceneryController {
-    SetBackground(Color color);
-    SetForeground(Color color);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-base" %}
 ```
 
 It can then be shared by other protocols:
 
 ```fidl
-protocol Drawer {
-    compose SceneryController;
-    Circle(int x, int y, int radius);
-    Square(int x, int y, int diagonal);
-};
-
-protocol Writer {
-    compose SceneryController;
-    Text(int x, int y, string message);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-inherit" %}
 ```
 
 In the above, there are three protocols, `SceneryController`, `Drawer`, and `Writer`.
@@ -822,14 +671,7 @@ protocol, and perhaps other protocols.
 So, we define our `FontController` protocol:
 
 ```fidl
-protocol FontController {
-    SetPointSize(int points);
-    SetFontName(string fontname);
-    Italic(bool onoff);
-    Bold(bool onoff);
-    Underscore(bool onoff);
-    Strikethrough(bool onoff);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-multiple-1" %}
 ```
 
 and then invite `Writer` to include it, by using the `compose` keyword:
@@ -857,19 +699,13 @@ In this example, we have two protocols that are independently useful, a `Clock` 
 to get the current time and timezone:
 
 ```fidl
-protocol Clock {
-    Now() -> (Time time);
-    CurrentTimeZone() -> (string timezone);
-}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-clock" %}
 ```
 
 And an `Horologist` protocol that sets the time and timezone:
 
 ```fidl
-protocol Horologist {
-    SetTime(Time time);
-    SetCurrentTimeZone(string timezone);
-}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-horologist" %}
 ```
 
 We may not necessarily wish to expose the more privileged `Horologist` protocol to just
@@ -877,10 +713,7 @@ any client, but we do want to expose it to the system clock component.
 So, we create a protocol (`SystemClock`) which composes both:
 
 ```fidl
-protocol SystemClock {
-    compose Clock;
-    compose Horologist;
-}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-systemclock" %}
 ```
 
 ### Aliasing {#aliasing}
@@ -889,8 +722,7 @@ Type aliasing is supported.
 For example:
 
 ```fidl
-using StoryID = string:MAX_SIZE;
-using up_to_five = vector:5;
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing" %}
 ```
 
 In the above, the identifier `StoryID` is an alias for the declaration of a `string`
@@ -902,10 +734,7 @@ definitions can be used.
 Consider:
 
 ```fidl
-struct Message {
-    StoryID baseline;
-    up_to_five<StoryID> chapters;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing-usage" %}
 ```
 
 Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baseline`,
@@ -935,9 +764,7 @@ using bytes = vector<byte>;
 When you refer to a name without specific scope, e.g.:
 
 ```fidl
-struct SomeName {
-    byte here;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="builtin-aliases" %}
 ```
 
 we treat this as `builtin.byte` automatically (so long as there isn't a

@@ -6,7 +6,7 @@ The following FIDL attributes are supported:
 * [`[Discoverable]`](#discoverable)
 * [`[Doc]`](#doc)
 * [`[Internal]`](#internal)
-* [`[Layout]`](#layout)
+* [`[ForDeprecatedCBindings]`](#layout)
 * [`[MaxBytes]`](#maxbytes)
 * [`[MaxHandles]`](#maxhandles)
 * [`[Selector]`](#selector)
@@ -18,8 +18,7 @@ The following FIDL attributes are supported:
 An attribute precedes a FIDL element, for example:
 
 ```fidl
-[Layout = "Simple"]
-protocol MyProtocol {...
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="attribute-one" %}
 ```
 
 It's used to either modify the characteristics of the element, or provide
@@ -35,11 +34,11 @@ Attributes may include multiple values, and multiple attributes may be
 specified in the same element, for example:
 
 ```fidl
-[Layout = "Simple", Transport = "Channel"]
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="attribute-many" %}
 ```
 
 Illustrates both aspects:
-* there are two attributes, `Layout` and `Transport`, and
+* there are two attributes, `Discoverable` and `Transport`, and
 * the `Transport` attribute takes a value from the list enumerated below.
 
 ## `[Deprecated]` {#deprecated}
@@ -74,15 +73,13 @@ target, whereas both the three-slash and `[Doc]` variants do.
 That is:
 
 ```fidl
-/// Foo
-struct MyFooStruct { ...
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="doc-with-slashes" %}
 ```
 
 and
 
 ```fidl
-[Doc = "Foo"]
-struct MyFooStruct { ...
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="doc-with-attributes" %}
 ```
 
 have the same effect &mdash; one ("`///`") is syntactic sugar for the other.
@@ -101,33 +98,17 @@ the space before the "Foo" and the line-feed "`\n`".
 This marks internal libraries, such as library `zx`.
 It should be used only by Fuchsia developers.
 
-## `[Layout]` {#layout}
+## `[ForDeprecatedCBindings]` {#layout}
 
-**USAGE**: `[Layout = "`_layout_`"]`
+**USAGE**: `[ForDeprecatedCBindings]`
 
 **MEANING**:
-This attribute currently has one valid value, `Simple`, and is meaningful
-only on protocols.
-
-It's used to indicate that all arguments and returns must contain objects
-that are of a fixed size.
-The arguments and returns themselves, however, can be dynamically sized
-strings or vectors of primitives.
-
-To clarify with an example, the following is valid:
+This attribute is used to ensure that a protocol is compatible with the
+deprecated C bindings. There should be no new uses of this attribute.
 
 ```fidl
-[Layout = "Simple"]
-protocol MyProtocol {
-    DynamicCountOfFixedArguments(vector<uint8>:1024 inputs);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="layout-simple" %}
 ```
-
-Here, the argument is a dynamically sized `vector` of unsigned 8-bit
-integers called `inputs`, with a maximum bound of 1024 elements.
-
-The benefit of `[Layout = "Simple"]` is that the data can be directly
-mapped without having to be copied and assembled.
 
 ## `[MaxBytes]` {#maxbytes}
 
@@ -160,9 +141,7 @@ For example, if we wish to rename the `Investigate` method to `Experiment`
 in the `Science` interface, we can write:
 
 ```fidl
-interface Science {
-    [Selector="Investigate"] Experiment();
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="selector" %}
 ```
 
 It can also be used for `union` variants to keep ABI compatibility in the

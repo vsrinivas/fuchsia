@@ -19,7 +19,7 @@ struct Color {
 };
 // [END structs]
 
-// [START stucts-use]
+// [START structs-use]
 struct Circle {
     bool filled;
     CirclePoint center; // CirclePoint will be stored in-line
@@ -27,7 +27,7 @@ struct Circle {
     Color? color; // Color will be stored out-of-line
     bool dashed;
 };
-// [END stucts-use]
+// [END structs-use]
 
 // [START comments]
 // this is a comment

@@ -114,11 +114,7 @@ to the method as well as the output.
 The possible FIDL data types are very flexible:
 
 ```fidl
-struct MyRequest {
-    uint32 serial;
-    string key;
-    vector<uint32> options;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="example-struct" %}
 ```
 
 The above declares a structure called `MyRequest` with three members: an

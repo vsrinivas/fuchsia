@@ -153,7 +153,7 @@ target languages, primitive aliases are replaced by the underlying primitive
 type and therefore do not cause name collisions.
 
 ```fidl
-using vaddr = uint64;
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="primitive-alias" %}
 ```
 
 ### Constants
@@ -165,7 +165,7 @@ Constants that describe minimum and maximum bounds should use the prefix `MIN_`
 and `MAX_`, respectively.
 
 ```fidl
-const uint64 MAX_NAMES = 32;
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="constants" %}
 ```
 
 ### Protocols
@@ -358,13 +358,7 @@ reiterate the name of the documented entity, or its particular type of FIDL
 language element (e.g., `struct` or `protocol`).
 
 ```fidl
-/// A representation of violins displayed on the screen.
-struct Widget {
-    /// A monotonically increasing id, uniquely identifying the widget.
-    uint64 id;
-    /// Location of the top left corner of the widget.
-    Point location;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="good-docs" %}
 ```
 
 The following are examples of what you should not do:
@@ -385,34 +379,7 @@ phrase should end with a period.
 A full example:
 
 ```fidl
-
-/// An abstract representation of a [`fuchsia.io/Node`] whose layout is flat.
-protocol File {
-    compose Node;
-
-    /// Acquires a [`fuchsia.mem/Buffer`] representing this file, if
-    /// there is one, with the requested access rights.
-    ///
-    /// ## Rights
-    ///
-    /// This method requires the following rights:
-    ///
-    /// * [`fuchsia.io/OPEN_RIGHT_WRITABLE`] if `flags` includes
-    ///   [`fuchsia.io/VMO_FLAG_WRITE`].
-    /// * [`fuchsia.io/OPEN_RIGHT_READABLE`] if `flags` includes
-    ///   [`fuchsia.io/VMO_FLAG_READ`] or [`fuchsia.io/VMO_FLAG_EXEC`].
-    ///
-    /// + request `flags` a bit field composing any of
-    ///     `VMO_FLAG_READ`, `VMO_FLAG_WRITE`, or `VMO_FLAG_EXEC`.
-    /// - response `buffer` the requested `fuchsia.mem/Buffer`, or
-    ///     null if there was an error, or the buffer does not exist.
-    /// * error a zx_status value indicating success or failure.
-    /// * see [`fuchsia.mem/Buffer`]
-    /// [`fuchsia.mem/Buffer`]:
-    ///    https://fuchsia.googlesource.com/fuchsia/+/9853fad50ca70256f0e86201c0e20424f1c25ab5/zircon/system/fidl/fuchsia-io/io.fidl
-    GetBuffer(uint32 flags) ->
-        (fuchsia.mem.Buffer? buffer) error zx.status;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="good-docs-2" %}
 ```
 
 Types or values defined by some external source of truth should be commented
@@ -444,10 +411,7 @@ You can provide a library overview as a documentation comment on the
 `library` statement. The 'library' statement starts FIDL files. For example:
 
 ```fidl
-/// Overview of fuchsia.library.
-library fuchsia.library;
-
-...
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="library-overview" %}
 ```
 
 Library overviews should provide general documentation to define the library.
@@ -486,14 +450,7 @@ Non flow-through comments:
 Both style of comments can be combined:
 
 ```fidl
-/// A widget displaying violins on the screen.
-// TODO -- widgets should use UUIDs instead of sequential ids
-struct Widget {
-    /// A monotonically increasing id, uniquely identifying the widget.
-    uint64 id;
-    /// Location of the top left corner of the widget.
-    ...
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="comments-combined" %}
 ```
 
 ### Files {#files}

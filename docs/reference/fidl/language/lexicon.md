@@ -10,10 +10,7 @@ traihead][trailhead]
 of
 
 ```fidl
-union Command {
-    1: CreateResource create_resource;
-    2: ReleaseResource release_resource;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="command" %}
 ```
 
 are `create_resource` and `release_resource`. A value of `Command` will have a
