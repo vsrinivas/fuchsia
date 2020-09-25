@@ -81,4 +81,13 @@ message Static {
   // Whether to skip the ninja build if we're running in CQ and none of the
   // changed files affect the build.
   bool skip_if_unaffected = 16;
+
+  // The path within the checkout of a file containing historical test duration
+  // data specific to the current build config.
+  string test_durations_file = 26;
+
+  // If `test_durations_file` doesn't exist within the checkout, use this file
+  // instead. It's not specific to the current build config, but it can be
+  // assumed to always exist.
+  string default_test_durations_file = 27;
 }

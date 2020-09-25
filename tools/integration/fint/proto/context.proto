@@ -1,0 +1,39 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+package fint;
+
+option go_package = "proto";
+
+// Context contains all of the dynamic configuration values for building
+// Fuchsia. These values are context-dependent in that they vary based on git
+// history and local filesystem layout, so they can only be known at runtime and
+// cannot come from data checked into version control.
+message Context {
+  // An absolute path to the root of the Fuchsia checkout.
+  string checkout_dir = 1;
+
+  // An absolute path to the build output directory.
+  string build_dir = 2;
+
+  // An absolute path to a directory where build artifacts intended to be
+  // exposed to the caller should be written.
+  string artifact_dir = 3;
+
+  // Passed through to the goma_dir GN arg.
+  string goma_dir = 4;
+
+  message ChangedFile {
+    // Relative path to the file within the checkout.
+    string path = 1;
+  }
+
+  // Files changed in the commit being tested.
+  repeated ChangedFile changed_files = 5;
+
+  // Passed through to the sdk_id gn arg.
+  string sdk_id = 6;
+}
