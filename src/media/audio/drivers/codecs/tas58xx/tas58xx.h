@@ -18,6 +18,7 @@
 #include <ddktl/protocol/codec.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <ti/ti-audio.h>
 
 #include "ddktl/suspend-txn.h"
 
@@ -31,8 +32,7 @@ class Tas58xx : public DeviceType,  // Not final for unit tests.
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c, bool btl_mode)
-      : DeviceType(device), i2c_(i2c), btl_mode_(btl_mode) {}
+  explicit Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c);
 
   zx_status_t Bind();
 
@@ -85,7 +85,7 @@ class Tas58xx : public DeviceType,  // Not final for unit tests.
   ddk::I2cChannel i2c_;
   float current_gain_ = 0;
   fbl::Mutex lock_;
-  const bool btl_mode_;
+  metadata::ti::TasConfig metadata_ = {};
 };
 }  // namespace audio
 

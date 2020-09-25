@@ -17,8 +17,7 @@ namespace audio {
 static constexpr uint32_t kCodecTimeoutSecs = 1;
 
 struct Tas58xxTestDevice : public Tas58xx {
-  explicit Tas58xxTestDevice(const ddk::I2cChannel& i2c)
-      : Tas58xx(fake_ddk::kFakeParent, i2c, false) {
+  explicit Tas58xxTestDevice(const ddk::I2cChannel& i2c) : Tas58xx(fake_ddk::kFakeParent, i2c) {
     initialized_ = true;
   }
   zx_status_t CodecSetDaiFormat(dai_format_t* format) {
@@ -222,7 +221,7 @@ TEST(Tas58xxTest, Reset) {
       .ExpectWriteStop({0x01, 0x11})   // Reset.
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x02, 0x01})   // Normal modulation, mono, no PBTL.
+      .ExpectWriteStop({0x02, 0x01})   // Normal modulation, mono, no PBTL (Stereo BTL).
       .ExpectWriteStop({0x03, 0x03})   // Play,
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
@@ -239,6 +238,12 @@ TEST(Tas58xxTest, Reset) {
 
 TEST(Tas58xxTest, Pbtl) {
   mock_i2c::MockI2c mock_i2c;
+  fake_ddk::Bind ddk;
+
+  metadata::ti::TasConfig metadata = {};
+  metadata.bridged = true;
+
+  ddk.SetMetadata(&metadata, sizeof(metadata));
 
   // Reset with PBTL mode on.
   mock_i2c
@@ -248,14 +253,14 @@ TEST(Tas58xxTest, Pbtl) {
       .ExpectWriteStop({0x01, 0x11})   // Reset.
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono, PBTL.
+      .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono, PBTL (bridged mono).
       .ExpectWriteStop({0x03, 0x03})   // Play,
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
       .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xx device(nullptr, std::move(i2c), true);
+  Tas58xx device(fake_ddk::kFakeParent, std::move(i2c));
   device.ResetAndInitialize();
   mock_i2c.VerifyAndClear();
 }

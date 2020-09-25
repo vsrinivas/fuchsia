@@ -70,6 +70,15 @@ enum {
 
 namespace audio {
 
+Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c) : DeviceType(device), i2c_(i2c) {
+  size_t actual = 0;
+  auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
+                                    sizeof(metadata_), &actual);
+  if (status != ZX_OK) {
+    zxlogf(DEBUG, "%s device_get_metadata failed %d", __FILE__, status);
+  }
+}
+
 zx_status_t Tas58xx::ResetAndInitialize() {
   fbl::AutoLock lock(&lock_);
   // From the reference manual:
@@ -103,8 +112,9 @@ zx_status_t Tas58xx::ResetAndInitialize() {
   const uint8_t kDefaultsEnd[][2] = {
       {kRegSelectPage, 0x00},
       {kRegSelectbook, 0x00},
-      {kRegDeviceCtrl1, static_cast<uint8_t>((btl_mode_ ? kRegDeviceCtrl1BitsPbtlMode : 0) |
+      {kRegDeviceCtrl1, static_cast<uint8_t>((metadata_.bridged ? kRegDeviceCtrl1BitsPbtlMode : 0) |
                                              kRegDeviceCtrl1Bits1SpwMode)},
+
       {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
       {kRegSelectPage, 0x00},
       {kRegSelectbook, 0x00},
@@ -145,19 +155,8 @@ zx_status_t Tas58xx::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  actual = 0;
-  bool btl_mode = false;
-  status =
-      device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &btl_mode, sizeof(btl_mode), &actual);
-  if (status != ZX_OK) {
-    zxlogf(DEBUG, "%s device_get_metadata failed %d", __FILE__, status);
-  }
-  if (sizeof(btl_mode) != actual) {
-    btl_mode = false;
-  }
-
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<Tas58xx>(new (&ac) Tas58xx(parent, fragments[FRAGMENT_I2C], btl_mode));
+  auto dev = std::unique_ptr<Tas58xx>(new (&ac) Tas58xx(parent, fragments[FRAGMENT_I2C]));
   if (!ac.check()) {
     zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
