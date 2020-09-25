@@ -217,10 +217,10 @@ sdk_molecule("core_tools") {
     "//tools/symbol-index:symbol_index_sdk",
     "//zircon/tools/fidl:fidl-format_sdk",
     "//zircon/tools/fidl:fidlc_sdk",
-    "//zircon/public/tool/zbi:zbi_sdk",
     "//zircon/tools/fvm:fvm_sdk",
     "//zircon/tools/merkleroot:merkleroot_sdk",
     "//zircon/tools/minfs:minfs_sdk",
+    "//zircon/tools/zbi:zbi_sdk",
   ]
 
   toolchains = []

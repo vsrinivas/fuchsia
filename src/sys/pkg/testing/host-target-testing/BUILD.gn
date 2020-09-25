@@ -7,16 +7,15 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 if (is_host) {
-  zircon_tools_dir =
-      get_label_info("//zircon/public/tool($host_toolchain)", "root_out_dir")
+  zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
 
   host_test_data("test_tools") {
     sources = [
-      "${zircon_tools_dir}/zbi",
+      get_label_info(zbi_tool_target, "root_out_dir") + "/zbi",
       "//zircon/third_party/tools/android/avb/avbtool",
     ]
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-    deps = [ "//zircon/public/tool/zbi($host_toolchain)" ]
+    deps = [ zbi_tool_target ]
   }
 }
 

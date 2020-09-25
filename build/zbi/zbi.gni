@@ -97,7 +97,11 @@ template("zbi") {
   }
   json_output_file = "$output_file.json"
 
-  zbi_tool = "$zircon_tools_dir/zbi"
+  zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
+  zbi_tool = get_label_info(zbi_tool_target, "root_out_dir") + "/zbi"
+  if (host_os == "win") {
+    zbi_tool += ".exe"
+  }
 
   action(main_target) {
     forward_variables_from(invoker,
@@ -114,7 +118,7 @@ template("zbi") {
 
     deps = [
       ":$rsp_target",
-      "//zircon/public/tool/zbi($host_toolchain)",
+      zbi_tool_target,
     ]
 
     inputs = [

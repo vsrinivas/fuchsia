@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
 zx_host_tool("zbi") {
   sources = [ "zbi.cc" ]
   deps = [
@@ -13,6 +15,7 @@ zx_host_tool("zbi") {
     "$zx/third_party/ulib/zstd",
   ]
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
+  sdk_migrated = true
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "$zx_build_config:Wno-conversion" ]

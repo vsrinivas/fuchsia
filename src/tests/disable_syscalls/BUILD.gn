@@ -40,11 +40,14 @@ if (is_linux) {
   host_test_data("misc_tools") {
     visibility = [ ":*" ]
 
-    deps = [ "//zircon/tools/minfs" ]
+    deps = [
+      "//zircon/tools/minfs",
+      "//zircon/tools/zbi",
+    ]
 
     sources = [
       "$root_out_dir/minfs",
-      "$zircon_root_build_dir/tools/zbi",
+      "$root_out_dir/zbi",
     ]
     outputs = [ "$root_out_dir/test_data/tools/{{source_file_part}}" ]
   }

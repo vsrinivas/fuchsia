@@ -127,7 +127,7 @@ esac
 HOST_TOOLS_DIR="${ROOT_BUILD_DIR}/host_${HOST_ARCH}"
 LZ4="${HOST_TOOLS_DIR}/lz4"
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
-ZBI="${ZIRCON_BUILD_DIR}/tools/zbi"
+ZBI="${HOST_TOOLS_DIR}/zbi"
 
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then

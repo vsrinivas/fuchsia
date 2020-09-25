@@ -663,9 +663,9 @@ function fx-run-ninja {
 }
 
 function fx-zbi {
-  "${ZIRCON_TOOLS_DIR}/zbi" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
+  "${FUCHSIA_BUILD_DIR}/host_x64/zbi" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
 }
 
 function fx-zbi-default-compression {
-  "${ZIRCON_TOOLS_DIR}/zbi" "$@"
+  "${FUCHSIA_BUILD_DIR}/host_x64/zbi" "$@"
 }

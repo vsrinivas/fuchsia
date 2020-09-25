@@ -24,6 +24,7 @@ import("//build/info/info.gni")
 import("//build/package_metadata.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
+import("//build/unification/zx_host_tool.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//src/sys/component_index/component_index.gni")
@@ -672,10 +673,10 @@ if (!use_vboot && custom_signing_script == "") {
 fuchsia_zbi_json = "$target_out_dir/fuchsia.zbi.json"
 fuchsia_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
 
-zircon_tool_action("extract_bootfs") {
+zx_host_tool_action("extract_bootfs") {
   visibility = [ ":elf_sizes.json" ]
   testonly = true
-  tool = "zbi"
+  tool = "//zircon/tools/zbi"
   inputs = [ "$root_out_dir/fuchsia.zbi" ]
   outputs = [ fuchsia_zbi_json ]
   deps = [ ":fuchsia" ]

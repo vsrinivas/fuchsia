@@ -107,7 +107,7 @@ template("vbmeta") {
       if (!defined(deps)) {
         deps = []
       }
-      deps += [ "//zircon/public/tool/zbi($host_toolchain)" ]
+      deps += [ "//zircon/tools/zbi($host_toolchain)" ]
     }
   }
 

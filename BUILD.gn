@@ -709,6 +709,7 @@ build_api_module("tool_paths") {
     "//zircon/tools/merkleroot($host_toolchain)",
     "//zircon/tools/minfs($host_toolchain)",
     "//zircon/tools/xdc-server($host_toolchain)",
+    "//zircon/tools/zbi($host_toolchain)",
   ]
   if (host_os == "linux") {
     deps += [ "//zircon/tools/mtd-redundant-storage($host_toolchain)" ]

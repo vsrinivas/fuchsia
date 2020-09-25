@@ -216,8 +216,8 @@ TEST_fx-export-device-address() {
 # Ensure that fx-zbi uses FUCHSIA_ZBI_COMPRESSION
 TEST_fx-zbi() {
   export FUCHSIA_ZBI_COMPRESSION="zstd.max"
-  export ZIRCON_TOOLS_DIR="${BT_TEMP_DIR}/out/default.zircon/tools"
-  local zbi="${ZIRCON_TOOLS_DIR}/zbi"
+  export FUCHSIA_BUILD_DIR="${BT_TEMP_DIR}/out/default"
+  local zbi="${FUCHSIA_BUILD_DIR}/host_x64/zbi"
   btf::make_mock "${zbi}"
   BT_EXPECT fx-zbi
   source "${zbi}.mock_state"
@@ -228,8 +228,8 @@ TEST_fx-zbi() {
 # Ensure that fx-zbi-default-compression doesn't use FUCHSIA_ZBI_COMPRESSION.
 TEST_fx-zbi-default-compression() {
   export FUCHSIA_ZBI_COMPRESSION="zstd.max"
-  export ZIRCON_TOOLS_DIR="${BT_TEMP_DIR}/out/default.zircon/tools"
-  local zbi="${ZIRCON_TOOLS_DIR}/zbi"
+  export FUCHSIA_BUILD_DIR="${BT_TEMP_DIR}/out/default"
+  local zbi="${FUCHSIA_BUILD_DIR}/host_x64/zbi"
   btf::make_mock "${zbi}"
   BT_EXPECT fx-zbi-default-compression
   source "${zbi}.mock_state"

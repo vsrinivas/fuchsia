@@ -6,7 +6,10 @@ import("//build/compiled_action.gni")
 import("//build/sdk/sdk_atom.gni")
 
 template("zx_host_tool") {
-  if (is_host) {
+  # NOTE: |is_linux| is required because some //vendor/ targets depend on
+  # //zircon/tools/zbi(//build/toolchain:linux_x64), and that toolchain
+  # doesn't set `is_host` to true.
+  if (is_host || is_linux) {
     not_needed(invoker, [ "sdk_migrated" ])
     executable(target_name) {
       forward_variables_from(invoker,
