@@ -60,7 +60,7 @@ impl BuiltinRunner {
 impl Hook for BuiltinRunner {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::AboveRoot { capability },
+            source: CapabilitySource::Builtin { capability },
             capability_provider,
         }) = &event.result
         {
@@ -160,7 +160,7 @@ mod tests {
                 moniker,
                 url,
                 Ok(EventPayload::CapabilityRouted {
-                    source: CapabilitySource::AboveRoot {
+                    source: CapabilitySource::Builtin {
                         capability: InternalCapability::Runner("elf".into()),
                     },
                     capability_provider: provider_result.clone(),

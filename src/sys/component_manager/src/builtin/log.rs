@@ -138,7 +138,7 @@ mod tests {
         hooks.install(read_only_log.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::AboveRoot {
+        let source = CapabilitySource::Builtin {
             capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
                 READ_ONLY_LOG_CAPABILITY_NAME.clone(),
             )),
@@ -204,7 +204,7 @@ mod tests {
         hooks.install(write_only_log.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::AboveRoot {
+        let source = CapabilitySource::Builtin {
             capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
                 WRITE_ONLY_LOG_CAPABILITY_NAME.clone(),
             )),

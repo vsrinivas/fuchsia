@@ -35,7 +35,7 @@ use {
         boxed::Box,
         collections::{HashMap, HashSet},
         convert::TryFrom,
-        sync::{Arc, Mutex as SyncMutex},
+        sync::{Arc, Mutex as SyncMutex, Weak},
     },
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -383,6 +383,7 @@ impl Binder for FakeBinder {
         let root_component_url = "test:///root".to_string();
         Ok(Arc::new(Realm::new_root_realm(
             Environment::new_root(RunnerRegistry::default(), resolver),
+            Weak::new(),
             root_component_url,
         )))
     }

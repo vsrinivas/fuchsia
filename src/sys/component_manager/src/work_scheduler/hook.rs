@@ -91,7 +91,7 @@ impl Hook for WorkScheduler {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::AboveRoot { capability },
+                source: CapabilitySource::Builtin { capability },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;

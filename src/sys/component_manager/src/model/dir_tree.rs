@@ -157,7 +157,10 @@ mod tests {
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
-        std::{convert::TryFrom, sync::Arc},
+        std::{
+            convert::TryFrom,
+            sync::{Arc, Weak},
+        },
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
     };
 
@@ -191,8 +194,11 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let root_realm =
-            Arc::new(Realm::new_root_realm(Environment::empty(), "test://root".to_string()));
+        let root_realm = Arc::new(Realm::new_root_realm(
+            Environment::empty(),
+            Weak::new(),
+            "test://root".to_string(),
+        ));
         let tree = DirTree::build_from_uses(routing_factory, root_realm.as_weak(), decl.clone());
 
         // Convert the tree to a directory.
@@ -266,8 +272,11 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let root_realm =
-            Arc::new(Realm::new_root_realm(Environment::empty(), "test://root".to_string()));
+        let root_realm = Arc::new(Realm::new_root_realm(
+            Environment::empty(),
+            Weak::new(),
+            "test://root".to_string(),
+        ));
         let tree = DirTree::build_from_exposes(routing_factory, root_realm.as_weak(), decl.clone());
 
         // Convert the tree to a directory.

@@ -452,8 +452,11 @@ mod tests {
             .expect("subscribe succeeds");
         assert_eq!(1, registry.dispatchers_per_event_type(EventType::CapabilityRouted).await);
 
-        let realm =
-            Arc::new(Realm::new_root_realm(Environment::empty(), "test:///root".to_string()));
+        let realm = Arc::new(Realm::new_root_realm(
+            Environment::empty(),
+            Weak::new(),
+            "test:///root".to_string(),
+        ));
         let capability = ComponentCapability::Protocol(ProtocolDecl {
             name: "foo".into(),
             source_path: "/svc/foo".parse().unwrap(),

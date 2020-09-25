@@ -266,7 +266,7 @@ mod tests {
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::AboveRoot {
+                source: CapabilitySource::Builtin {
                     capability: InternalCapability::Protocol(
                         "/svc/fuchsia.sys2.MyAwesomeProtocol".try_into().unwrap(),
                     ),

@@ -68,6 +68,7 @@ pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_sec
 
 #[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
+    // TODO(60804): Make component manager's namespace injectable here.
     args: Option<Arguments>,
     runtime_config: Option<RuntimeConfig>,
     runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
@@ -237,6 +238,7 @@ impl BuiltinEnvironmentBuilder {
                 RunnerRegistry::new(runner_map),
                 self.resolvers,
             ),
+            namespace_capabilities: runtime_config.namespace_capabilities.clone(),
         };
         let model = Arc::new(Model::new(params));
 

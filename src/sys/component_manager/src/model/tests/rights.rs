@@ -500,3 +500,56 @@ async fn framework_directory_incompatible_rights() {
         .await;
     test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
 }
+
+///  component manager's namespace
+///   |
+///   a
+///    \
+///     b
+///
+/// a: offers directory /offer_from_cm_namespace/data/foo from realm as bar_data
+/// b: uses directory bar_data as /data/hippo, but the rights don't match
+#[fuchsia_async::run_singlethreaded(test)]
+async fn offer_from_component_manager_namespace_directory_incompatible_rights() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    rights: None,
+                    subdir: None,
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .build(),
+        ),
+    ];
+    let namespace_capabilities = vec![CapabilityDecl::Directory(
+        DirectoryDeclBuilder::new("foo_data")
+            .path("/offer_from_cm_namespace/data/foo")
+            .rights(*rights::WRITE_RIGHTS)
+            .build(),
+    )];
+    let test = RoutingTestBuilder::new("a", components)
+        .set_namespace_capabilities(namespace_capabilities)
+        .build()
+        .await;
+    let _ns_dir = ScopedNamespaceDir::new(&test, "/offer_from_cm_namespace");
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+}

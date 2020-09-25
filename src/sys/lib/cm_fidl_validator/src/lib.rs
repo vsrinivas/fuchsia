@@ -8,7 +8,7 @@ use {
     itertools::Itertools,
     std::{
         collections::{HashMap, HashSet},
-        error, fmt,
+        fmt,
         path::Path,
     },
     thiserror::Error,
@@ -207,7 +207,7 @@ impl fmt::Display for DeclField {
 }
 
 /// Represents a list of errors encountered durlng validation.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub struct ErrorList {
     errs: Vec<Error>,
 }
@@ -217,8 +217,6 @@ impl ErrorList {
         ErrorList { errs }
     }
 }
-
-impl error::Error for ErrorList {}
 
 impl fmt::Display for ErrorList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -240,25 +238,21 @@ impl fmt::Display for ErrorList {
 ///
 /// All checks are local to this ComponentDecl.
 pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
-    let ctx = ValidationContext {
-        decl,
-        all_children: HashMap::new(),
-        all_collections: HashSet::new(),
-        all_capability_ids: HashSet::new(),
-        all_storage_and_sources: HashMap::new(),
-        all_services: HashSet::new(),
-        all_protocols: HashSet::new(),
-        all_directories: HashSet::new(),
-        all_runners: HashSet::new(),
-        all_resolvers: HashSet::new(),
-        all_environment_names: HashSet::new(),
-        all_event_names: HashSet::new(),
-        all_event_streams: HashSet::new(),
-        strong_dependencies: DirectedGraph::new(),
-        target_ids: HashMap::new(),
-        errors: vec![],
-    };
-    ctx.validate().map_err(|errs| ErrorList::new(errs))
+    let ctx = ValidationContext::default();
+    ctx.validate(decl).map_err(|errs| ErrorList::new(errs))
+}
+
+/// Validates a list of CapabilityDecls independently.
+pub fn validate_capabilities(capabilities: &Vec<fsys::CapabilityDecl>) -> Result<(), ErrorList> {
+    let mut ctx = ValidationContext::default();
+    for capability in capabilities {
+        ctx.validate_capability_decl(capability);
+    }
+    if ctx.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ErrorList::new(ctx.errors))
+    }
 }
 
 /// Validates an independent ChildDecl. Performs the same validation on it as `validate`.
@@ -279,8 +273,8 @@ pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
     }
 }
 
+#[derive(Default)]
 struct ValidationContext<'a> {
-    decl: &'a fsys::ComponentDecl,
     all_children: HashMap<&'a str, &'a fsys::ChildDecl>,
     all_collections: HashSet<&'a str>,
     all_capability_ids: HashSet<&'a str>,
@@ -330,40 +324,40 @@ enum TargetId<'a> {
 type IdMap<'a> = HashMap<TargetId<'a>, HashMap<&'a str, AllowableIds>>;
 
 impl<'a> ValidationContext<'a> {
-    fn validate(mut self) -> Result<(), Vec<Error>> {
+    fn validate(mut self, decl: &'a fsys::ComponentDecl) -> Result<(), Vec<Error>> {
         // Collect all environment names first, so that references to them can be checked.
-        if let Some(envs) = &self.decl.environments {
+        if let Some(envs) = &decl.environments {
             self.collect_environment_names(&envs);
         }
 
         // Validate "children" and build the set of all children.
-        if let Some(children) = self.decl.children.as_ref() {
+        if let Some(children) = decl.children.as_ref() {
             for child in children {
                 self.validate_child_decl(&child);
             }
         }
 
         // Validate "collections" and build the set of all collections.
-        if let Some(collections) = self.decl.collections.as_ref() {
+        if let Some(collections) = decl.collections.as_ref() {
             for collection in collections {
                 self.validate_collection_decl(&collection);
             }
         }
 
         // Validate "capabilities" and build the set of all capabilities.
-        if let Some(capabilities) = self.decl.capabilities.as_ref() {
+        if let Some(capabilities) = decl.capabilities.as_ref() {
             for capability in capabilities {
                 self.validate_capability_decl(capability);
             }
         }
 
         // Validate "uses".
-        if let Some(uses) = self.decl.uses.as_ref() {
+        if let Some(uses) = decl.uses.as_ref() {
             self.validate_use_decls(uses);
         }
 
         // Validate "exposes".
-        if let Some(exposes) = self.decl.exposes.as_ref() {
+        if let Some(exposes) = decl.exposes.as_ref() {
             let mut target_ids = HashMap::new();
             for expose in exposes.iter() {
                 self.validate_expose_decl(&expose, &mut target_ids);
@@ -371,14 +365,14 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Validate "offers".
-        if let Some(offers) = self.decl.offers.as_ref() {
+        if let Some(offers) = decl.offers.as_ref() {
             for offer in offers.iter() {
                 self.validate_offers_decl(&offer);
             }
         }
 
         // Validate "environments" after all other declarations are processed.
-        if let Some(environment) = self.decl.environments.as_ref() {
+        if let Some(environment) = decl.environments.as_ref() {
             for environment in environment {
                 self.validate_environment_decl(&environment);
             }
@@ -2044,6 +2038,11 @@ mod tests {
         );
     }
 
+    fn validate_capabilities_test(input: Vec<CapabilityDecl>, expected_res: Result<(), ErrorList>) {
+        let res = validate_capabilities(&input);
+        assert_eq!(res, expected_res);
+    }
+
     fn check_test<F>(check_fn: F, input: &str, expected_res: Result<(), ErrorList>)
     where
         F: FnOnce(Option<&String>, &str, &str, &mut Vec<Error>) -> bool,
@@ -2136,6 +2135,24 @@ mod tests {
                 #[test]
                 fn $test_name() {
                     validate_test_any_result($input, $results);
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_validate_capabilities {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    validate_capabilities_test($input, $result);
                 }
             )+
         }
@@ -5248,6 +5265,43 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_capability("ExposeResolverDecl", "source", "a"),
+            ])),
+        },
+    }
+
+    test_validate_capabilities! {
+        test_validate_capabilities_individually_ok => {
+            input = vec![
+                CapabilityDecl::Protocol(ProtocolDecl {
+                    name: Some("foo_svc".into()),
+                    source_path: Some("/svc/foo".into()),
+                }),
+                CapabilityDecl::Directory(DirectoryDecl {
+                    name: Some("foo_dir".into()),
+                    source_path: Some("/foo".into()),
+                    rights: Some(fio2::Operations::Connect),
+                }),
+            ],
+            result = Ok(()),
+        },
+        test_validate_capabilities_individually_err => {
+            input = vec![
+                CapabilityDecl::Protocol(ProtocolDecl {
+                    name: None,
+                    source_path: None,
+                }),
+                CapabilityDecl::Directory(DirectoryDecl {
+                    name: None,
+                    source_path: None,
+                    rights: None,
+                }),
+            ],
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ProtocolDecl", "name"),
+                Error::missing_field("ProtocolDecl", "source_path"),
+                Error::missing_field("DirectoryDecl", "name"),
+                Error::missing_field("DirectoryDecl", "source_path"),
+                Error::missing_field("DirectoryDecl", "rights"),
             ])),
         },
     }

@@ -168,6 +168,10 @@ impl ModelError {
         ModelError::ManifestInvalid { url: url.into(), err: err.into().into() }
     }
 
+    pub fn model_not_available() -> ModelError {
+        ModelError::ModelNotAvailable
+    }
+
     pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
         ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
     }

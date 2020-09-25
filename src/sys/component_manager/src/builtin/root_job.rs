@@ -90,7 +90,7 @@ mod tests {
         hooks.install(root_job.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::AboveRoot {
+        let source = CapabilitySource::Builtin {
             capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
                 ROOT_JOB_CAPABILITY_NAME.clone(),
             )),

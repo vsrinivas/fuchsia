@@ -81,7 +81,7 @@ impl VmexService {
 impl Hook for VmexService {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::AboveRoot { capability },
+            source: CapabilitySource::Builtin { capability },
             capability_provider,
         }) = &event.result
         {
@@ -227,7 +227,7 @@ mod tests {
         hooks.install(vmex_service.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::AboveRoot {
+        let source = CapabilitySource::Builtin {
             capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
                 VMEX_CAPABILITY_NAME.clone(),
             )),

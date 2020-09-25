@@ -231,12 +231,16 @@ mod tests {
         fuchsia_async as fasync,
         maplit::hashmap,
         matches::assert_matches,
+        std::sync::Weak,
     };
 
     #[test]
     fn test_from_decl() {
-        let realm =
-            Arc::new(Realm::new_root_realm(Environment::empty(), "test:///root".to_string()));
+        let realm = Arc::new(Realm::new_root_realm(
+            Environment::empty(),
+            Weak::new(),
+            "test:///root".to_string(),
+        ));
         let environment = Environment::from_decl(
             &realm,
             &EnvironmentDeclBuilder::new()
@@ -304,6 +308,7 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
@@ -365,6 +370,7 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
@@ -430,6 +436,7 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
         }));
         // Add instance to collection.
         {
@@ -493,6 +500,7 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
         }));
 
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
@@ -542,6 +550,7 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::default(), registry),
+            namespace_capabilities: vec![],
         }));
         assert_matches!(
             model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await,

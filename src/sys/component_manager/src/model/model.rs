@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::capability::NamespaceCapabilities,
     crate::model::{
         actions::Action,
         binding::Binder,
         environment::Environment,
         error::ModelError,
         moniker::AbsoluteMoniker,
-        realm::{BindReason, Realm},
+        realm::{BindReason, ComponentManagerRealm, Realm},
     },
     std::sync::Arc,
 };
@@ -22,6 +23,8 @@ pub struct ModelParams {
     pub root_component_url: String,
     /// The environment provided to the root realm.
     pub root_environment: Environment,
+    /// The namespace capabilities offered by component manager
+    pub namespace_capabilities: NamespaceCapabilities,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -30,17 +33,20 @@ pub struct ModelParams {
 /// instances at runtime.
 pub struct Model {
     pub root_realm: Arc<Realm>,
+    _component_manager_realm: Arc<ComponentManagerRealm>,
 }
 
 impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
-        Model {
-            root_realm: Arc::new(Realm::new_root_realm(
-                params.root_environment,
-                params.root_component_url,
-            )),
-        }
+        let component_manager_realm =
+            Arc::new(ComponentManagerRealm::new(params.namespace_capabilities));
+        let root_realm = Arc::new(Realm::new_root_realm(
+            params.root_environment,
+            Arc::downgrade(&component_manager_realm),
+            params.root_component_url,
+        ));
+        Model { root_realm, _component_manager_realm: component_manager_realm }
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved

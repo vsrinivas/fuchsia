@@ -19,7 +19,7 @@ use {
             moniker::{
                 AbsoluteMoniker, ChildMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker,
             },
-            realm::{BindReason, Realm, WeakRealm},
+            realm::{BindReason, ComponentManagerRealm, ExtendedRealm, Realm, WeakRealm},
             rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
             storage,
             walk_state::WalkState,
@@ -28,11 +28,11 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        self, CapabilityNameOrPath, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferDirectorySource,
-        OfferEventDecl, OfferEventSource, OfferRunnerSource, OfferServiceSource,
-        OfferStorageSource, StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl,
-        UseStorageDecl,
+        self, CapabilityDecl, CapabilityNameOrPath, CapabilityPath, ComponentDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
+        OfferDirectorySource, OfferEventDecl, OfferEventSource, OfferRunnerSource,
+        OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl, UseDirectoryDecl,
+        UseEventDecl, UseStorageDecl,
     },
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -133,7 +133,7 @@ pub(super) async fn route_expose_capability<'a>(
         capability,
         cap_state,
         last_child_moniker: None,
-        realm: Some(target_realm.clone()),
+        realm: ExtendedRealm::Component(target_realm.clone()),
     };
     let source = walk_expose_chain(&mut pos).await?;
     let relative_path = pos.cap_state.make_relative_path(relative_path);
@@ -217,7 +217,9 @@ fn get_default_provider(
                 _ => None,
             }
         }
-        CapabilitySource::Framework { .. } | CapabilitySource::AboveRoot { .. } => {
+        CapabilitySource::Framework { .. }
+        | CapabilitySource::Builtin { .. }
+        | CapabilitySource::Namespace { .. } => {
             // There is no default provider for a framework or builtin capability
             None
         }
@@ -276,24 +278,27 @@ pub async fn open_capability_at_source(
                     RoutingError::capability_from_framework_not_found(&m, capability.id()).into()
                 );
             }
-            CapabilitySource::AboveRoot { capability } => {
-                match capability.name_or_path() {
-                    Some(CapabilityNameOrPath::Path(path)) => path.clone(),
-                    Some(CapabilityNameOrPath::Name(name)) => {
-                        // Capabilities backed by the namespace are served at
-                        // "/svc/{capability-name}".
-                        let path_str = format!("/svc/{}", name);
-                        path_str.parse().map_err(|_| ModelError::path_invalid(path_str))?
-                    }
-                    None => {
-                        return Err(ModelError::from(
-                            RoutingError::capability_from_component_manager_not_found(
-                                capability.id(),
-                            ),
-                        ));
-                    }
+            CapabilitySource::Builtin { capability } => match capability.name_or_path() {
+                // TODO(56604): Path-based namespace capabilities have a `Builtin` source instead
+                // of `Namespace`. This discrepancy will go away when we remove support for
+                // path-based capabilities.
+                Some(CapabilityNameOrPath::Path(path)) => path.clone(),
+                _ => {
+                    return Err(ModelError::from(
+                        RoutingError::capability_from_component_manager_not_found(capability.id()),
+                    ));
                 }
-            }
+            },
+            CapabilitySource::Namespace { capability } => match capability.source_path() {
+                Some(p) => p.clone(),
+                _ => {
+                    return Err(ModelError::from(
+                        RoutingError::capability_from_component_manager_not_found(
+                            capability.source_id(),
+                        ),
+                    ));
+                }
+            },
         };
         let namespace_path = namespace_path.to_path_buf().attach(relative_path);
         let namespace_path = namespace_path
@@ -367,11 +372,14 @@ async fn route_storage_capability<'a>(
     target_realm: &'a Arc<Realm>,
 ) -> Result<(Option<Arc<Realm>>, CapabilityPath, RelativeMoniker, CapabilityState), ModelError> {
     // Walk the offer chain to find the storage decl
-    let parent_realm = target_realm.try_get_parent()?.ok_or_else(|| {
-        ModelError::from(RoutingError::storage_source_is_not_component(
-            "component manager's namespace",
-        ))
-    })?;
+    let parent_realm = match target_realm.try_get_parent()? {
+        ExtendedRealm::Component(p) => p,
+        ExtendedRealm::AboveRoot(_) => {
+            return Err(ModelError::from(RoutingError::storage_source_is_not_component(
+                "component manager's namespace",
+            )));
+        }
+    };
 
     let capability = ComponentCapability::Use(UseDecl::Storage(use_decl.clone()));
     let cap_state = CapabilityState::new(&capability);
@@ -379,7 +387,7 @@ async fn route_storage_capability<'a>(
         capability,
         cap_state,
         last_child_moniker: target_realm.abs_moniker.path().last().map(|c| c.clone()),
-        realm: Some(parent_realm),
+        realm: ExtendedRealm::Component(parent_realm),
     };
 
     let source = walk_offer_chain(&mut pos).await?;
@@ -406,7 +414,12 @@ async fn route_storage_capability<'a>(
                     let realm_state = source_realm.lock_resolved_state().await?;
                     let decl = realm_state.decl();
                     let capability = ComponentCapability::Storage(storage_decl.clone());
-                    let capability = pos.finalize_directory(&capability, decl, None, None)?;
+                    let capability = pos.cap_state.finalize_directory_from_component(
+                        &capability,
+                        decl,
+                        None,
+                        None,
+                    )?;
                     capability.source_path().expect("directory has no source path?").clone()
                 };
             (source_path, Some(source_realm), pos.cap_state)
@@ -427,7 +440,7 @@ async fn route_storage_capability<'a>(
                     )
                     .into());
                 }
-                CapabilitySource::AboveRoot { capability } => {
+                CapabilitySource::Builtin { capability } => {
                     let source_path = match capability.name_or_path() {
                         Some(CapabilityNameOrPath::Path(path)) => path.clone(),
                         Some(CapabilityNameOrPath::Name(_)) => {
@@ -440,10 +453,13 @@ async fn route_storage_capability<'a>(
                             .into());
                         }
                         None => {
-                            panic!("Invalid capability source for storage");
+                            unreachable!("Invalid capability source for storage: {:?}", capability);
                         }
                     };
                     (source_path, None, cap_state)
+                }
+                CapabilitySource::Namespace { capability } => {
+                    unreachable!("Invalid capability source for storage: {:?}", capability);
                 }
             }
         }
@@ -462,7 +478,7 @@ async fn route_storage_capability<'a>(
                     capability,
                     cap_state: pos.cap_state.clone(),
                     last_child_moniker: None,
-                    realm: Some(child_realm),
+                    realm: ExtendedRealm::Component(child_realm),
                 }
             };
             let source = walk_expose_chain(&mut pos).await?;
@@ -472,12 +488,15 @@ async fn route_storage_capability<'a>(
                         capability.source_path().expect("directory has no source path?").clone();
                     (source_path, Some(realm.upgrade()?), pos.cap_state)
                 }
-                CapabilitySource::Framework { .. } | CapabilitySource::AboveRoot { .. } => {
+                CapabilitySource::Framework { .. } | CapabilitySource::Builtin { .. } => {
                     return Err(RoutingError::storage_directory_source_is_not_component(
                         "framework",
                         &source_realm.abs_moniker,
                     )
                     .into());
+                }
+                CapabilitySource::Namespace { capability } => {
+                    unreachable!("Invalid capability source for storage: {:?}", capability);
                 }
             }
         }
@@ -485,7 +504,8 @@ async fn route_storage_capability<'a>(
     Ok((dir_source_realm, dir_source_path, relative_moniker, cap_state))
 }
 
-/// Check if a used capability is a framework service, and if so return a framework `CapabilitySource`.
+/// Check if a used capability is from the framework, and if so return a framework
+/// `CapabilitySource`.
 async fn find_scoped_framework_capability_source<'a>(
     use_decl: &'a UseDecl,
     target_realm: &'a Arc<Realm>,
@@ -510,52 +530,37 @@ struct WalkPosition {
     last_child_moniker: Option<ChildMoniker>,
     /// The realm of the component we are currently looking at. `None` for component manager's
     /// realm.
-    realm: Option<Arc<Realm>>,
+    realm: ExtendedRealm,
 }
 
 impl WalkPosition {
     fn realm(&self) -> &Arc<Realm> {
-        &self.realm.as_ref().expect("no realm in WalkPosition")
+        match &self.realm {
+            ExtendedRealm::Component(r) => &r,
+            ExtendedRealm::AboveRoot(_) => {
+                panic!("no Realm in WalkPosition");
+            }
+        }
     }
 
     fn moniker(&self) -> &AbsoluteMoniker {
-        &self.realm.as_ref().expect("no moniker in WalkPosition").abs_moniker
+        match &self.realm {
+            ExtendedRealm::Component(r) => &r.abs_moniker,
+            ExtendedRealm::AboveRoot(_) => {
+                panic!("no moniker in WalkPosition");
+            }
+        }
     }
 
     fn abs_last_child_moniker(&self) -> AbsoluteMoniker {
         self.moniker().child(self.last_child_moniker.as_ref().expect("no child moniker").clone())
     }
 
-    fn at_componentmgr_realm(&self) -> bool {
-        self.realm.is_none()
-    }
-
-    /// Finalize the directory state according to `capability`. Returns a `ComponentCapability` for
-    /// the end of routing, or an error if rights did not match.
-    ///
-    /// REQUIRES: `capability` is a directory expose or offer from `self`.
-    fn finalize_directory(
-        &mut self,
-        capability: &ComponentCapability,
-        decl: &ComponentDecl,
-        dir_rights: Option<Rights>,
-        subdir_decl: Option<PathBuf>,
-    ) -> Result<ComponentCapability, ModelError> {
-        if let CapabilityState::Directory { rights_state, subdir } = &mut self.cap_state {
-            *rights_state = rights_state.advance(dir_rights)?;
-            CapabilityState::update_subdir(subdir, subdir_decl);
+    fn component_manager_realm(&self) -> Option<&Arc<ComponentManagerRealm>> {
+        match &self.realm {
+            ExtendedRealm::Component(_) => None,
+            ExtendedRealm::AboveRoot(r) => Some(r),
         }
-
-        let directory_decl = capability
-            .find_directory_source(decl)
-            .expect("directory offer references nonexistent section")
-            .clone();
-        let dir_rights = Some(Rights::from(directory_decl.rights));
-        let capability = ComponentCapability::Directory(directory_decl);
-        if let CapabilityState::Directory { rights_state, subdir: _subdir } = &mut self.cap_state {
-            *rights_state = rights_state.finalize(dir_rights)?;
-        }
-        Ok(capability)
     }
 }
 
@@ -627,6 +632,46 @@ impl CapabilityState {
         }
     }
 
+    /// Finalize the directory state according to `capability`. Returns a `ComponentCapability` for
+    /// the end of routing, or an error if rights did not match.
+    ///
+    /// REQUIRES: `capability` is a directory expose or offer from `self`.
+    fn finalize_directory_from_component(
+        &mut self,
+        capability: &ComponentCapability,
+        decl: &ComponentDecl,
+        dir_rights: Option<Rights>,
+        subdir_decl: Option<PathBuf>,
+    ) -> Result<ComponentCapability, ModelError> {
+        if let CapabilityState::Directory { rights_state, subdir } = self {
+            *rights_state = rights_state.advance(dir_rights)?;
+            CapabilityState::update_subdir(subdir, subdir_decl);
+        }
+
+        let directory_decl = capability
+            .find_directory_source(decl)
+            .expect("directory offer references nonexistent section")
+            .clone();
+        let dir_rights = Some(Rights::from(directory_decl.rights));
+        let capability = ComponentCapability::Directory(directory_decl);
+        if let CapabilityState::Directory { rights_state, subdir: _subdir } = self {
+            *rights_state = rights_state.finalize(dir_rights)?;
+        }
+        Ok(capability)
+    }
+
+    /// Finalize the directory state for a directory that component from the framework.
+    fn finalize_directory_from_framework(
+        &mut self,
+        subdir_decl: Option<PathBuf>,
+    ) -> Result<(), ModelError> {
+        if let CapabilityState::Directory { rights_state, subdir } = self {
+            *rights_state = rights_state.finalize(Some(Rights::from(*READ_RIGHTS)))?;
+            CapabilityState::update_subdir(subdir, subdir_decl);
+        }
+        Ok(())
+    }
+
     fn make_relative_path(&self, in_relative_path: String) -> PathBuf {
         match self {
             Self::Directory { subdir, .. } => subdir.clone().attach(in_relative_path),
@@ -649,7 +694,16 @@ async fn find_used_capability_source<'a>(
     if let Some(framework_capability) =
         find_scoped_framework_capability_source(use_decl, target_realm).await?
     {
-        let cap_state = CapabilityState::new(&capability);
+        let mut cap_state = CapabilityState::new(&capability);
+        match use_decl {
+            UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Event(_) => {}
+            UseDecl::Directory(_) => {
+                cap_state.finalize_directory_from_framework(None)?;
+            }
+            _ => {
+                unreachable!("Invalid framework capability: {:?}", use_decl);
+            }
+        }
         return Ok((framework_capability, cap_state));
     }
     if let Some((cap_source, cap_state)) =
@@ -689,7 +743,7 @@ async fn find_environment_capability_source<'a>(
                 }
                 Some((None, reg)) => {
                     // Root environment.
-                    let cap_source = CapabilitySource::AboveRoot {
+                    let cap_source = CapabilitySource::Builtin {
                         capability: InternalCapability::Runner(reg.source_name.clone()),
                     };
                     Ok(Some((cap_source, cap_state)))
@@ -734,14 +788,16 @@ async fn find_environment_component_capability_source<'a>(
         }
         cm_rust::RegistrationSource::Child(child_name) => {
             let partial = PartialMoniker::new(child_name.into(), None);
-            let realm = Some(env_realm_state.get_live_child_realm(&partial).ok_or_else(|| {
-                ModelError::from(RoutingError::environment_from_child_expose_not_found(
-                    &partial,
-                    &env_realm.abs_moniker,
-                    capability.type_name(),
-                    capability.source_id(),
-                ))
-            })?);
+            let realm = ExtendedRealm::Component(
+                env_realm_state.get_live_child_realm(&partial).ok_or_else(|| {
+                    ModelError::from(RoutingError::environment_from_child_expose_not_found(
+                        &partial,
+                        &env_realm.abs_moniker,
+                        capability.type_name(),
+                        capability.source_id(),
+                    ))
+                })?,
+            );
             let mut pos = WalkPosition { capability, cap_state, last_child_moniker: None, realm };
             let cap_source = walk_expose_chain(&mut pos).await?;
             Ok((cap_source, pos.cap_state))
@@ -824,7 +880,7 @@ pub async fn find_exposed_root_directory_capability(
                 capability,
                 cap_state,
                 last_child_moniker: None,
-                realm: Some(Arc::clone(root_realm)),
+                realm: ExtendedRealm::Component(Arc::clone(root_realm)),
             };
             let capability_source = walk_expose_chain(&mut wp).await?;
             match capability_source {
@@ -895,9 +951,34 @@ async fn walk_offer_chain<'a>(
     pos: &'a mut WalkPosition,
 ) -> Result<Option<CapabilitySource>, ModelError> {
     'offerloop: loop {
-        if pos.at_componentmgr_realm() {
-            // This is a built-in capability because the routing path was traced to the component
-            // manager's realm.
+        if let Some(cm_realm) = pos.component_manager_realm() {
+            // This is a built-in or namespace capability because the routing path was traced to
+            // the component manager's realm.
+            match pos.capability.find_namespace_source(&cm_realm.namespace_capabilities) {
+                Some(CapabilityDecl::Protocol(p)) => {
+                    let capability = ComponentCapability::Protocol(p.clone());
+                    return Ok(Some(CapabilitySource::Namespace { capability }));
+                }
+                Some(CapabilityDecl::Directory(d)) => {
+                    let dir_rights = Some(Rights::from(d.rights));
+                    let capability = ComponentCapability::Directory(d.clone());
+                    if let CapabilityState::Directory { rights_state, subdir: _subdir } =
+                        &mut pos.cap_state
+                    {
+                        *rights_state = rights_state.finalize(dir_rights)?;
+                    }
+                    return Ok(Some(CapabilitySource::Namespace { capability }));
+                }
+                Some(_) => {
+                    return Err(ModelError::unsupported(format!(
+                        "Namespace capability not supported: {:?}",
+                        pos.capability,
+                    )));
+                }
+                None => {}
+            }
+
+            // Not a namespace capability, fallback to builtin.
             let capability = match &pos.capability {
                 ComponentCapability::Use(use_decl) => {
                     InternalCapability::builtin_from_use_decl(use_decl).map_err(|_| {
@@ -925,8 +1006,9 @@ async fn walk_offer_chain<'a>(
                     pos.capability,
                 ))),
             }?;
-            return Ok(Some(CapabilitySource::AboveRoot { capability }));
+            return Ok(Some(CapabilitySource::Builtin { capability }));
         }
+
         let cur_realm = pos.realm().clone();
         let cur_realm_state = cur_realm.lock_resolved_state().await?;
         let decl = cur_realm_state.decl();
@@ -988,12 +1070,9 @@ async fn walk_offer_chain<'a>(
                 return Err(ModelError::unsupported("Service capability"));
             }
             OfferSource::Directory(OfferDirectorySource::Framework) => {
-                // Directories offered or exposed directly from the framework are limited to
+                // Directories coming from the framework are limited to
                 // read-only rights.
-                if let CapabilityState::Directory { rights_state, subdir } = &mut pos.cap_state {
-                    *rights_state = rights_state.finalize(Some(Rights::from(*READ_RIGHTS)))?;
-                    CapabilityState::update_subdir(subdir, subdir_decl);
-                }
+                pos.cap_state.finalize_directory_from_framework(subdir_decl)?;
                 let capability = InternalCapability::framework_from_offer_decl(offer)
                     .expect("not a framework offer declaration");
                 return Ok(Some(CapabilitySource::Framework {
@@ -1076,8 +1155,12 @@ async fn walk_offer_chain<'a>(
                         // and return a capability corresponding to the current component's
                         // Directory declaration.
                         let capability = ComponentCapability::Offer(offer.clone());
-                        let capability =
-                            pos.finalize_directory(&capability, decl, dir_rights, subdir_decl)?;
+                        let capability = pos.cap_state.finalize_directory_from_component(
+                            &capability,
+                            decl,
+                            dir_rights,
+                            subdir_decl,
+                        )?;
                         return Ok(Some(CapabilitySource::Component {
                             capability,
                             realm: cur_realm.as_weak(),
@@ -1118,14 +1201,15 @@ async fn walk_offer_chain<'a>(
                 // and begin walking the expose chain.
                 pos.capability = ComponentCapability::Offer(offer.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
-                pos.realm =
-                    Some(cur_realm_state.get_live_child_realm(&partial).ok_or_else(|| {
+                pos.realm = ExtendedRealm::Component(
+                    cur_realm_state.get_live_child_realm(&partial).ok_or_else(|| {
                         ModelError::from(RoutingError::offer_from_child_expose_not_found(
                             &partial,
                             pos.moniker(),
                             pos.capability.source_id(),
                         ))
-                    })?);
+                    })?,
+                );
                 return Ok(None);
             }
             OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
@@ -1135,13 +1219,15 @@ async fn walk_offer_chain<'a>(
                 }
                 pos.capability = ComponentCapability::Offer(offer.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
-                pos.realm = Some(cur_realm_state.get_live_child_realm(&partial).ok_or(
-                    ModelError::from(RoutingError::offer_from_child_instance_not_found(
-                        &partial,
-                        pos.moniker(),
-                        pos.capability.source_id(),
-                    )),
-                )?);
+                pos.realm = ExtendedRealm::Component(
+                    cur_realm_state.get_live_child_realm(&partial).ok_or(ModelError::from(
+                        RoutingError::offer_from_child_instance_not_found(
+                            &partial,
+                            pos.moniker(),
+                            pos.capability.source_id(),
+                        ),
+                    ))?,
+                );
                 return Ok(None);
             }
             OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
@@ -1274,8 +1360,12 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                         // and return a capability corresponding to the current component's
                         // Directory declaration.
                         let capability = ComponentCapability::Expose(expose.clone());
-                        let capability =
-                            pos.finalize_directory(&capability, decl, dir_rights, subdir_decl)?;
+                        let capability = pos.cap_state.finalize_directory_from_component(
+                            &capability,
+                            decl,
+                            dir_rights,
+                            subdir_decl,
+                        )?;
                         return Ok(CapabilitySource::Component {
                             capability,
                             realm: cur_realm.as_weak(),
@@ -1321,13 +1411,15 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 // The offered capability comes from a child, so follow the child.
                 pos.capability = ComponentCapability::Expose(expose.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
-                pos.realm = Some(cur_realm_state.get_live_child_realm(&partial).ok_or(
-                    ModelError::from(RoutingError::expose_from_child_instance_not_found(
-                        &partial,
-                        pos.moniker(),
-                        pos.capability.source_id(),
-                    )),
-                )?);
+                pos.realm = ExtendedRealm::Component(
+                    cur_realm_state.get_live_child_realm(&partial).ok_or(ModelError::from(
+                        RoutingError::expose_from_child_instance_not_found(
+                            &partial,
+                            pos.moniker(),
+                            pos.capability.source_id(),
+                        ),
+                    ))?,
+                );
                 continue;
             }
             CapabilityExposeSource::Directory(ExposeSource::Child(child_name)) => {
@@ -1338,13 +1430,15 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 // The offered capability comes from a child, so follow the child.
                 pos.capability = ComponentCapability::Expose(expose.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
-                pos.realm = Some(cur_realm_state.get_live_child_realm(&partial).ok_or(
-                    ModelError::from(RoutingError::expose_from_child_instance_not_found(
-                        &partial,
-                        pos.moniker(),
-                        pos.capability.source_id(),
-                    )),
-                )?);
+                pos.realm = ExtendedRealm::Component(
+                    cur_realm_state.get_live_child_realm(&partial).ok_or(ModelError::from(
+                        RoutingError::expose_from_child_instance_not_found(
+                            &partial,
+                            pos.moniker(),
+                            pos.capability.source_id(),
+                        ),
+                    ))?,
+                );
                 continue;
             }
             CapabilityExposeSource::Protocol(ExposeSource::Framework) => {

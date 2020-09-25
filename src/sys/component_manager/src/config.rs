@@ -7,8 +7,9 @@ use {
         model::moniker::{AbsoluteMoniker, MonikerError},
         startup,
     },
-    anyhow::{Context, Error},
-    fidl_fuchsia_component_internal as component_internal,
+    anyhow::{format_err, Context, Error},
+    cm_rust::FidlIntoNative,
+    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
     std::{convert::TryFrom, path::PathBuf, sync::Weak},
     thiserror::Error,
 };
@@ -51,6 +52,9 @@ pub struct RuntimeConfig {
     // The number of threads to use for running component_manager's executor.
     // Value defaults to 1.
     pub num_threads: usize,
+
+    /// The list of capabilities offered from component manager's namespace.
+    pub namespace_capabilities: Vec<cm_rust::CapabilityDecl>,
 }
 
 /// Runtime security policy.
@@ -83,18 +87,14 @@ impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
             list_children_batch_size: 1000,
-
             // security_policy must default to empty to ensure that it fails closed if no
             // configuration is present or it fails to load.
             security_policy: Default::default(),
-
             debug: false,
-
             use_builtin_process_launcher: false,
-
             maintain_utc_clock: false,
-
             num_threads: 1,
+            namespace_capabilities: vec![],
         }
     }
 }
@@ -109,9 +109,22 @@ impl RuntimeConfig {
                 .await
                 .context(format!("Failed to read config file {}", &args.config))?;
 
-        Self::try_from(&config)
+        Self::try_from(config)
             .map(|s| (s, PathBuf::from(&args.config)))
             .context(format!("Failed to apply config file {}", &args.config))
+    }
+
+    fn translate_namespace_capabilities(
+        capabilities: Option<Vec<fsys::CapabilityDecl>>,
+    ) -> Result<Vec<cm_rust::CapabilityDecl>, Error> {
+        let capabilities = capabilities.unwrap_or(vec![]);
+        if let Some(c) = capabilities.iter().find(|c| {
+            !matches!(c, fsys::CapabilityDecl::Protocol(_) | fsys::CapabilityDecl::Directory(_))
+        }) {
+            return Err(format_err!("Type unsupported for namespace capability: {:?}", c));
+        }
+        cm_fidl_validator::validate_capabilities(&capabilities)?;
+        Ok(Some(capabilities).fidl_into_native())
     }
 }
 
@@ -133,10 +146,10 @@ fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
     }
 }
 
-impl TryFrom<&component_internal::Config> for RuntimeConfig {
+impl TryFrom<component_internal::Config> for RuntimeConfig {
     type Error = Error;
 
-    fn try_from(config: &component_internal::Config) -> Result<Self, Error> {
+    fn try_from(config: component_internal::Config) -> Result<Self, Error> {
         let default = RuntimeConfig::default();
         let job_policy =
             if let Some(component_internal::SecurityPolicy { job_policy: Some(job_policy) }) =
@@ -157,6 +170,9 @@ impl TryFrom<&component_internal::Config> for RuntimeConfig {
         Ok(RuntimeConfig {
             list_children_batch_size,
             security_policy: SecurityPolicy { job_policy },
+            namespace_capabilities: Self::translate_namespace_capabilities(
+                config.namespace_capabilities,
+            )?,
             debug: config.debug.unwrap_or(default.debug),
             use_builtin_process_launcher: config
                 .use_builtin_process_launcher
@@ -226,7 +242,7 @@ mod tests {
         crate::model::moniker::ChildMoniker,
         fidl::encoding::encode_persistent,
         fidl::endpoints::ServerEnd,
-        fidl_fuchsia_io as fio, fuchsia_zircon as zx,
+        fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
         futures::future,
         matches::assert_matches,
         std::sync::Arc,
@@ -245,7 +261,7 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    assert_matches!(RuntimeConfig::try_from(&$input), Ok(v) if v == $expected);
+                    assert_matches!(RuntimeConfig::try_from($input), Ok(v) if v == $expected);
                 }
             )+
         };
@@ -264,11 +280,11 @@ mod tests {
                     ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
                 }),
             }),
-            namespace_capabilities: None,
             num_threads: None,
+            namespace_capabilities: None,
         };
 
-        assert_matches!(RuntimeConfig::try_from(&config), Err(_));
+        assert_matches!(RuntimeConfig::try_from(config), Err(_));
     }
 
     test_config_ok! {
@@ -276,10 +292,10 @@ mod tests {
             debug: None,
             list_children_batch_size: None,
             security_policy: None,
-            namespace_capabilities: None,
             maintain_utc_clock: None,
             use_builtin_process_launcher: None,
             num_threads: None,
+            namespace_capabilities: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
@@ -292,8 +308,8 @@ mod tests {
                     ambient_mark_vmo_exec: None,
                 }),
             }),
-            namespace_capabilities: None,
             num_threads: Some(10),
+            namespace_capabilities: None,
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
             maintain_utc_clock: false, use_builtin_process_launcher:true,
@@ -311,8 +327,18 @@ mod tests {
                         ambient_mark_vmo_exec: Some(vec!["/".to_string(), "/foo/bar".to_string()]),
                     }),
                 }),
-                namespace_capabilities: None,
                 num_threads: Some(24),
+                namespace_capabilities: Some(vec![
+                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                        name: Some("foo_svc".into()),
+                        source_path: Some("/svc/foo".into()),
+                    }),
+                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                        name: Some("bar_dir".into()),
+                        source_path: Some("/bar".into()),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
+                ]),
             },
             RuntimeConfig {
                 debug: true,
@@ -331,6 +357,17 @@ mod tests {
                     }
                 },
                 num_threads: 24,
+                namespace_capabilities: vec![
+                    cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+                        name: "foo_svc".into(),
+                        source_path: "/svc/foo".parse().unwrap(),
+                    }),
+                    cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
+                        name: "bar_dir".into(),
+                        source_path: "/bar".parse().unwrap(),
+                        rights: fio2::Operations::Connect,
+                    }),
+                ],
             }
         ),
     }

@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        capability::NamespaceCapabilities,
         channel,
         model::{
             actions::{Action, ActionSet, Notification},
@@ -149,8 +150,8 @@ pub struct Realm {
     pub component_url: String,
     /// The mode of startup (lazy or eager).
     pub startup: fsys::StartupMode,
-    /// The parent, a.k.a. containing realm. `None` for the root realm.
-    parent: Option<Weak<Realm>>,
+    /// The parent's realm. Either a (component's) realm or component manager's realm.
+    parent: WeakExtendedRealm,
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
     /// The hooks scoped to this realm.
@@ -165,16 +166,60 @@ pub struct Realm {
     actions: Mutex<ActionSet>,
 }
 
+/// A `Realm` or `ComponentManagerRealm`.
+#[derive(Debug)]
+pub enum ExtendedRealm {
+    Component(Arc<Realm>),
+    AboveRoot(Arc<ComponentManagerRealm>),
+}
+
+/// A `Realm` or `ComponentManagerRealm`, as a weak pointer.
+#[derive(Debug)]
+pub enum WeakExtendedRealm {
+    Component(WeakRealm),
+    AboveRoot(Weak<ComponentManagerRealm>),
+}
+
+impl WeakExtendedRealm {
+    /// Attempts to upgrade this `WeakRealm` into an `Arc<Realm>`, if the original realm has not
+    /// been destroyed.
+    pub fn upgrade(&self) -> Result<ExtendedRealm, ModelError> {
+        match self {
+            WeakExtendedRealm::Component(p) => Ok(ExtendedRealm::Component(p.upgrade()?)),
+            WeakExtendedRealm::AboveRoot(p) => {
+                Ok(ExtendedRealm::AboveRoot(p.upgrade().ok_or(ModelError::model_not_available())?))
+            }
+        }
+    }
+}
+
+/// The realm above the root, i.e. component manager's realm. This is stored with the root realm.
+#[derive(Debug)]
+pub struct ComponentManagerRealm {
+    /// The list of capabilities offered from component manager's namespace.
+    pub namespace_capabilities: NamespaceCapabilities,
+}
+
+impl ComponentManagerRealm {
+    pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
+        Self { namespace_capabilities }
+    }
+}
+
 impl Realm {
     /// Instantiates a new root realm.
-    pub fn new_root_realm(environment: Environment, component_url: String) -> Self {
+    pub fn new_root_realm(
+        environment: Environment,
+        component_manager_realm: Weak<ComponentManagerRealm>,
+        component_url: String,
+    ) -> Self {
         Self {
             environment,
             abs_moniker: AbsoluteMoniker::root(),
             component_url,
             // Started by main().
             startup: fsys::StartupMode::Lazy,
-            parent: None,
+            parent: WeakExtendedRealm::AboveRoot(component_manager_realm),
             state: Mutex::new(None),
             execution: Mutex::new(ExecutionState::new()),
             actions: Mutex::new(ActionSet::new()),
@@ -206,16 +251,9 @@ impl Realm {
         self.actions.lock().await
     }
 
-    /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error. Returns `None`
-    /// for the root component.
-    pub fn try_get_parent(&self) -> Result<Option<Arc<Realm>>, ModelError> {
-        self.parent
-            .as_ref()
-            .map(|p| {
-                p.upgrade()
-                    .ok_or(ModelError::instance_not_found(self.abs_moniker.parent().unwrap()))
-            })
-            .transpose()
+    /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
+    pub fn try_get_parent(&self) -> Result<ExtendedRealm, ModelError> {
+        self.parent.upgrade()
     }
 
     /// Locks and returns a lazily resolved and populated `RealmState`.
@@ -282,7 +320,7 @@ impl Realm {
                 return Ok(component);
             }
             Ok((true, component)) => {
-                if self.parent.is_none() {
+                if let WeakExtendedRealm::AboveRoot(_) = &self.parent {
                     let event = Event::new(self, Ok(EventPayload::Discovered));
                     self.hooks.dispatch(&event).await?;
                 }
@@ -636,8 +674,8 @@ impl Realm {
         let mut realms = Vec::new();
         let mut current = Arc::clone(self);
         realms.push(Arc::clone(&current));
-        while let Some(parent) = current.parent.as_ref().and_then(|w| w.upgrade()) {
-            realms.push(Arc::clone(&parent));
+        while let ExtendedRealm::Component(parent) = current.try_get_parent()? {
+            realms.push(parent.clone());
             current = parent;
         }
 
@@ -862,7 +900,7 @@ impl RealmState {
                 abs_moniker: realm.abs_moniker.child(child_moniker.clone()),
                 component_url: child.url.clone(),
                 startup: child.startup,
-                parent: Some(Arc::downgrade(realm)),
+                parent: WeakExtendedRealm::Component(WeakRealm::from(realm)),
                 state: Mutex::new(None),
                 execution: Mutex::new(ExecutionState::new()),
                 actions: Mutex::new(ActionSet::new()),

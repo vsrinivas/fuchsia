@@ -169,7 +169,7 @@ impl Hook for EventSourceFactory {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::AboveRoot { capability },
+                source: CapabilitySource::Builtin { capability },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;
@@ -271,6 +271,7 @@ mod tests {
                     RunnerRegistry::default(),
                     resolver_registry,
                 ),
+                namespace_capabilities: vec![],
             }))
         };
         let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
@@ -301,6 +302,7 @@ mod tests {
             Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
+                namespace_capabilities: vec![],
             }))
         };
         let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));

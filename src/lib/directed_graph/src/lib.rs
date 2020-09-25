@@ -5,6 +5,7 @@
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
+    default::Default,
     fmt::{Debug, Display},
     hash::Hash,
 };
@@ -35,6 +36,12 @@ impl<T: Hash + Copy + Ord + Debug + Display> DirectedGraph<T> {
     /// TODO: //src/devices/tools/banjo/srt/ast.rs can be migrated to use this feature.
     pub fn topological_sort(&self) -> Result<Vec<T>, Error<T>> {
         TarjanSCC::new(self).run()
+    }
+}
+
+impl<T: Hash + Copy + Ord + Debug + Display> Default for DirectedGraph<T> {
+    fn default() -> Self {
+        Self(HashMap::new())
     }
 }
 

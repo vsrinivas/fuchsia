@@ -221,7 +221,7 @@ fn maybe_create_capability_routed_payload(
                 ..fsys::FrameworkCapability::empty()
             })
         }
-        CapabilitySource::AboveRoot { .. } => {
+        CapabilitySource::Builtin { .. } | CapabilitySource::Namespace { .. } => {
             fsys::CapabilitySource::AboveRoot(fsys::AboveRootCapability {
                 ..fsys::AboveRootCapability::empty()
             })

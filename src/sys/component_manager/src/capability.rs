@@ -23,6 +23,9 @@ pub enum Error {
     InvalidBuiltinCapability {},
 }
 
+/// The list of declarations for capabilities from component manager's namespace.
+pub type NamespaceCapabilities = Vec<cm_rust::CapabilityDecl>;
+
 /// Describes the source of a capability, as determined by `find_capability_source`
 #[derive(Clone, Debug)]
 pub enum CapabilitySource {
@@ -32,9 +35,12 @@ pub enum CapabilitySource {
     /// This capability originates from "framework". It's implemented by component manager and is
     /// scoped to the realm of the source.
     Framework { capability: InternalCapability, scope_moniker: AbsoluteMoniker },
-    /// This capability originates from the containing realm of the root component. That means it's
-    /// built in to component manager or originates from component manager's namespace.
-    AboveRoot { capability: InternalCapability },
+    /// This capability originates from the containing realm of the root component, and is
+    /// built in to component manager.
+    Builtin { capability: InternalCapability },
+    /// This capability originates from the containing realm of the root component, and is
+    /// offered from component manager's namespace.
+    Namespace { capability: ComponentCapability },
 }
 
 impl CapabilitySource {
@@ -43,7 +49,8 @@ impl CapabilitySource {
         match self {
             CapabilitySource::Component { capability, .. } => capability.can_be_in_namespace(),
             CapabilitySource::Framework { capability, .. } => capability.can_be_in_namespace(),
-            CapabilitySource::AboveRoot { capability } => capability.can_be_in_namespace(),
+            CapabilitySource::Builtin { capability } => capability.can_be_in_namespace(),
+            CapabilitySource::Namespace { capability } => capability.can_be_in_namespace(),
         }
     }
 
@@ -51,7 +58,8 @@ impl CapabilitySource {
         match self {
             CapabilitySource::Component { capability, .. } => capability.source_name_or_path(),
             CapabilitySource::Framework { capability, .. } => capability.name_or_path(),
-            CapabilitySource::AboveRoot { capability } => capability.name_or_path(),
+            CapabilitySource::Builtin { capability } => capability.name_or_path(),
+            CapabilitySource::Namespace { capability } => capability.source_name_or_path(),
         }
     }
 
@@ -59,7 +67,8 @@ impl CapabilitySource {
         match self {
             CapabilitySource::Component { capability, .. } => capability.source_id(),
             CapabilitySource::Framework { capability, .. } => capability.id(),
-            CapabilitySource::AboveRoot { capability } => capability.id(),
+            CapabilitySource::Builtin { capability } => capability.id(),
+            CapabilitySource::Namespace { capability } => capability.source_id(),
         }
     }
 
@@ -71,8 +80,11 @@ impl CapabilitySource {
             CapabilitySource::Framework { capability, .. } => {
                 capability.name().map(|name| name.to_string())
             }
-            CapabilitySource::AboveRoot { capability } => {
+            CapabilitySource::Builtin { capability } => {
                 capability.name().map(|name| name.to_string())
+            }
+            CapabilitySource::Namespace { capability } => {
+                capability.source_name().map(|name| name.to_string())
             }
         }
     }
@@ -88,7 +100,8 @@ impl fmt::Display for CapabilitySource {
                     format!("{} '{}'", capability, realm.moniker)
                 }
                 CapabilitySource::Framework { capability, .. } => capability.to_string(),
-                CapabilitySource::AboveRoot { capability } => capability.to_string(),
+                CapabilitySource::Builtin { capability } => capability.to_string(),
+                CapabilitySource::Namespace { capability } => capability.to_string(),
             }
         )
     }
@@ -107,10 +120,9 @@ pub enum InternalCapability {
 }
 
 impl InternalCapability {
-    /// Returns whether the given InternalCapability can be available in a component's namespace.
+    /// Returns whetheh the given InternalCapability can be available in a component's namespace.
     pub fn can_be_in_namespace(&self) -> bool {
-        matches!(self, InternalCapability::Service(_) |
-                       InternalCapability::Protocol(_) |
+        matches!(self, InternalCapability::Protocol(_) |
                        InternalCapability::Directory(_))
     }
 
@@ -271,7 +283,7 @@ impl InternalCapability {
 
 impl fmt::Display for InternalCapability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} '{}' from framework", self.type_name(), self.id())
+        write!(f, "{} '{}' from component manager", self.type_name(), self.id())
     }
 }
 
@@ -677,6 +689,44 @@ impl ComponentCapability {
                 ),
                 _ => false,
             }
+        })
+    }
+
+    /// Given a list of namespace capabilities, returns the one that matches `self`, if any.
+    pub fn find_namespace_source<'a>(
+        &self,
+        namespace_capabilities: &'a Vec<CapabilityDecl>,
+    ) -> Option<&'a CapabilityDecl> {
+        namespace_capabilities.iter().find(|&capability| match (self, capability) {
+            (
+                ComponentCapability::Use(UseDecl::Protocol(child_use)),
+                CapabilityDecl::Protocol(p),
+            ) => match &child_use.source_path {
+                CapabilityNameOrPath::Name(n) => n == &p.name,
+                _ => false,
+            },
+            (
+                ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
+                CapabilityDecl::Protocol(p),
+            ) => match &child_offer.source_path {
+                CapabilityNameOrPath::Name(n) => n == &p.name,
+                _ => false,
+            },
+            (
+                ComponentCapability::Use(UseDecl::Directory(child_use)),
+                CapabilityDecl::Directory(d),
+            ) => match &child_use.source_path {
+                CapabilityNameOrPath::Name(n) => n == &d.name,
+                _ => false,
+            },
+            (
+                ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
+                CapabilityDecl::Directory(d),
+            ) => match &child_offer.source_path {
+                CapabilityNameOrPath::Name(n) => n == &d.name,
+                _ => false,
+            },
+            _ => false,
         })
     }
 

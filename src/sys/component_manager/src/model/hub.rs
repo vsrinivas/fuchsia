@@ -785,7 +785,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_path: CapabilityNameOrPath::try_from("hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *rights::READ_RIGHTS,
                         subdir: None,
                     }))
                     .build(),
@@ -838,7 +838,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_path: CapabilityNameOrPath::try_from("hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *rights::READ_RIGHTS,
                         subdir: Some("exec".into()),
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {

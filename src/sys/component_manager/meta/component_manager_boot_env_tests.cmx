@@ -12,7 +12,8 @@
             "/pkg/bin/component_manager_boot_env_test",
             "-Zunstable-options",
             "--exclude-should-panic",
-            "--force-run-in-process"
+            "--force-run-in-process",
+            "--test-threads=1"
         ],
         "binary": "bin/root_job_test_runner"
     },

@@ -1049,10 +1049,57 @@ async fn use_kitchen_sink() {
 ///   |
 ///   a
 ///
+/// a: uses directory /use_from_cm_namespace/data/foo as foo_data
+/// a: uses service /use_from_cm_namespace/svc/foo as foo_svc
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_component_manager_namespace() {
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .use_(UseDecl::Directory(UseDirectoryDecl {
+                source: UseSource::Parent,
+                source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                rights: *rights::READ_RIGHTS,
+                subdir: None,
+            }))
+            .use_(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Parent,
+                source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            }))
+            .build(),
+    )];
+    let namespace_capabilities = vec![
+        CapabilityDecl::Directory(
+            DirectoryDeclBuilder::new("foo_data").path("/use_from_cm_namespace/data/foo").build(),
+        ),
+        CapabilityDecl::Protocol(
+            ProtocolDeclBuilder::new("foo_svc").path("/use_from_cm_namespace/svc/foo").build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components)
+        .set_namespace_capabilities(namespace_capabilities)
+        .build()
+        .await;
+
+    let _ns_dir = ScopedNamespaceDir::new(&test, "/use_from_cm_namespace");
+    test.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    test.check_use(
+        vec![].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
+///  component manager's namespace
+///   |
+///   a
+///
 /// a: uses directory /use_from_cm_namespace/data/foo as /data/hippo
 /// a: uses service /use_from_cm_namespace/svc/foo as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_from_component_manager_namespace() {
+async fn use_from_component_manager_namespace_legacy_path_based() {
     let components = vec![(
         "a",
         ComponentDeclBuilder::new()
@@ -1073,10 +1120,84 @@ async fn use_from_component_manager_namespace() {
             .build(),
     )];
     let test = RoutingTest::new("a", components).await;
-    test.install_hippo_dir("/use_from_cm_namespace");
+    let _ns_dir = ScopedNamespaceDir::new(&test, "/use_from_cm_namespace");
     test.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec![].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
+///  component manager's namespace
+///   |
+///   a
+///    \
+///     b
+///
+/// a: offers directory /offer_from_cm_namespace/data/foo from realm as bar_data
+/// a: offers service /offer_from_cm_namespace/svc/foo from realm as bar_svc
+/// b: uses directory bar_data as /data/hippo
+/// b: uses service bar_svc as /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn offer_from_component_manager_namespace() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                    dependency_type: DependencyType::Strong,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let namespace_capabilities = vec![
+        CapabilityDecl::Directory(
+            DirectoryDeclBuilder::new("foo_data").path("/offer_from_cm_namespace/data/foo").build(),
+        ),
+        CapabilityDecl::Protocol(
+            ProtocolDeclBuilder::new("foo_svc").path("/offer_from_cm_namespace/svc/foo").build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components)
+        .set_namespace_capabilities(namespace_capabilities)
+        .build()
+        .await;
+    let _ns_dir = ScopedNamespaceDir::new(&test, "/offer_from_cm_namespace");
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    test.check_use(
+        vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
@@ -1093,7 +1214,7 @@ async fn use_from_component_manager_namespace() {
 /// b: uses directory /foo as /data/hippo
 /// b: uses service /echo/echo as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
-async fn offer_from_component_manager_namespace() {
+async fn offer_from_component_manager_namespace_legacy_path_based() {
     let components = vec![
         (
             "a",
@@ -1140,7 +1261,7 @@ async fn offer_from_component_manager_namespace() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.install_hippo_dir("/offer_from_cm_namespace");
+    let _ns_dir = ScopedNamespaceDir::new(&test, "/offer_from_cm_namespace");
     test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec!["b:0"].into(),

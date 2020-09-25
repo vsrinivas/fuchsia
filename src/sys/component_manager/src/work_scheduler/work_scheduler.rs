@@ -749,7 +749,7 @@ mod connect_tests {
         hooks.install(work_scheduler.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::AboveRoot {
+        let source = CapabilitySource::Builtin {
             capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
                 WORK_SCHEDULER_CONTROL_CAPABILITY_NAME.clone(),
             )),

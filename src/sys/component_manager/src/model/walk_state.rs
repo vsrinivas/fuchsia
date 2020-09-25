@@ -66,8 +66,8 @@ impl<T: WalkStateUnit + Debug + Clone> WalkState<T> {
     }
 
     /// Finalizes the state preventing future modification, this is called when the walker arrives
-    /// at a node with a source of Framework, Builtin or Self. The provided |state| should always
-    /// be the state at the CapabilitySource.
+    /// at a node with a source of Framework, Builtin, Namespace or Self. The provided |state|
+    /// should always be the state at the CapabilitySource.
     pub fn finalize(&self, state: Option<T>) -> Result<Self, ModelError> {
         if self.is_finished() {
             panic!("Attempted to finalized a finished walk state.");

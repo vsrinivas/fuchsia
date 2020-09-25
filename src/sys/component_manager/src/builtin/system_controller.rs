@@ -74,7 +74,7 @@ impl SystemController {
 impl Hook for SystemController {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::AboveRoot { capability },
+            source: CapabilitySource::Builtin { capability },
             capability_provider,
         }) = &event.result
         {
