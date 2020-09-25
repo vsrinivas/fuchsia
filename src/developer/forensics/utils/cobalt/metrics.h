@@ -40,21 +40,6 @@ enum class UploadAttemptState {
   kGarbageCollected = cobalt_registry::CrashUploadAttemptsMetricDimensionState::GarbageCollected,
 };
 
-enum class CrashpadFunctionError {
-  kUnknown = cobalt_registry::CrashpadErrorsMetricDimensionFunction::Unknown,
-  kInitializeDatabase = cobalt_registry::CrashpadErrorsMetricDimensionFunction::InitializeDatabase,
-  kPrepareNewCrashReport =
-      cobalt_registry::CrashpadErrorsMetricDimensionFunction::PrepareNewCrashReport,
-  kFinishedWritingCrashReport =
-      cobalt_registry::CrashpadErrorsMetricDimensionFunction::FinishedWritingCrashReport,
-  kGetReportForUploading =
-      cobalt_registry::CrashpadErrorsMetricDimensionFunction::GetReportForUploading,
-  kRecordUploadComplete =
-      cobalt_registry::CrashpadErrorsMetricDimensionFunction::RecordUploadComplete,
-  kSkipReportUpload = cobalt_registry::CrashpadErrorsMetricDimensionFunction::SkipReportUpload,
-  kLookUpCrashReport = cobalt_registry::CrashpadErrorsMetricDimensionFunction::LookUpCrashReport,
-};
-
 enum class TimedOutData {
   kUnknown = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::Unknown,
   kSystemLog = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::SystemLog,
@@ -153,10 +138,6 @@ inline constexpr uint32_t MetricIDForEventCode(const UploadAttemptState state) {
   return cobalt_registry::kCrashUploadAttemptsMetricId;
 }
 
-inline constexpr uint32_t MetricIDForEventCode(const CrashpadFunctionError function) {
-  return cobalt_registry::kCrashpadErrorsMetricId;
-}
-
 namespace internal {
 
 // Determines if all passed event code types correspond to the same metric ids.
@@ -228,10 +209,6 @@ inline constexpr EventType EventTypeForEventCode(const CrashState state) {
 
 inline constexpr EventType EventTypeForEventCode(const UploadAttemptState state) {
   return EventType::kCount;
-}
-
-inline constexpr EventType EventTypeForEventCode(const CrashpadFunctionError function) {
-  return EventType::kOccurrence;
 }
 
 }  // namespace cobalt
