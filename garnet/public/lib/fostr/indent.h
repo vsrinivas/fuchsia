@@ -68,7 +68,8 @@ inline std::ostream& operator<<(std::ostream& os, const IndentBy& value) {
 // the product of the indent level and the 'indent by' setting.
 // e.g. os << fostr::BeginLine << "appears after indentation";
 inline std::ostream& BeginLine(std::ostream& os) {
-  return os << std::setw(internal::IndentLevel::Value(os) * internal::IndentBy::Value(os))
+  return os << std::setw(static_cast<int>(internal::IndentLevel::Value(os) *
+                                          internal::IndentBy::Value(os)))
             << std::setfill(' ') << "" << std::setw(0);
 }
 
