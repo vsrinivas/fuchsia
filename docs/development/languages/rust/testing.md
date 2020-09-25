@@ -21,7 +21,7 @@ following snippet into the bottom of whatever test you want to write:
 ```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/src/main.rs" region_tag="test_mod" adjust_indentation="auto" %}
 ```
-
+©
 This will cause a new mod named `tests` to be created, and this mod will only be
 included when building unit tests. Any functions annotated with `#[test]` will
 be run as a test, and if the function successfully returns then the test passes.
@@ -114,15 +114,15 @@ is:
 }
 ```
 
-Note:
+Note: Consider the following:
 
-* The binary name is based on the `name = "hello_world_rust"` line on the
-  `rustc_binary` target.
-* The binary is inside a `test/` subdirectory.  This placement is implicit in the
-  `rustc_binary` build rule.
-* You may have noticed that the package manifests are somewhat formulaic.
-  In the future, we may find ourselves able to automatically generate the
-  package manifests instead of having to write them out by hand.
+    * The binary name is based on the `name = "hello_world_rust"` line on the
+    `rustc_binary` target.
+    * The binary is inside a `test/` subdirectory.  This placement is implicit in the
+    `rustc_binary` build rule.
+    * You may have noticed that the package manifests are somewhat formulaic.
+    In the future, we may find ourselves able to automatically generate the
+    package manifests instead of having to write them out by hand.
 
 In case of a manifest for a `rustc_library`, the manifest and the naming scheme
 are similar.  But pay attention to the subtle naming difference in the value
@@ -150,7 +150,11 @@ If you are building a library instead,
 then the library name will be `hello_world_rust_lib_test`.
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" indented_block="^test_package\(\"hello_world_rust_tests\"\) {" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" indented_block="^fuchsia_component\(\"hello-world-rust-tests-component\"\) {" %}
+```
+
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" indented_block="^fuchsia_component\(\"hello-world-rust-tests\"\) {" %}
 ```
 
 To run the tests run:
@@ -159,7 +163,7 @@ To run the tests run:
 fx test hello_world_rust_tests
 ```
 
-Note: that in order to use `fx test`, you can't override
+Note: In order to use `fx test`, you can't override
 `package_name="..."` in your `package`  or `test_package` declaration. This
 issue is tracked by fxbug.dev/3143.
 
