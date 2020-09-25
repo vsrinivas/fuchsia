@@ -470,7 +470,8 @@ protocol Directory {
     /// Opens a new object relative to this directory object.
     ///
     /// `path` may contain multiple segments, separated by "/" characters,
-    /// and should never be empty; i.e., "" is an invalid path.
+    /// and should never be empty; i.e., "" is an invalid path. Paths should not contain
+    /// a leading "/".
     ///
     /// `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     /// The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
