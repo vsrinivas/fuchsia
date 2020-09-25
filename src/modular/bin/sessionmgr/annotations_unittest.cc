@@ -124,3 +124,111 @@ TEST(AnnotationsTest, BytesToInspect) {
 
 }  // namespace
 }  // namespace modular::annotations
+
+namespace session::annotations {
+namespace {
+
+using Annotation = fuchsia::session::Annotation;
+using Value = fuchsia::session::Value;
+
+using ::testing::ByRef;
+using ::testing::UnorderedElementsAre;
+
+TEST(SessionAnnotationsTest, ToModularAnnotationText) {
+  static constexpr auto kTestAnnotationKey = "annotation_key";
+  static constexpr auto kTestAnnotationValue = "annotation_value";
+
+  auto annotation = Annotation{.key = kTestAnnotationKey,
+                               .value = fidl::MakeOptional(Value::WithText(kTestAnnotationValue))};
+
+  auto modular_annotation = fuchsia::modular::Annotation{
+      .key = kTestAnnotationKey,
+      .value =
+          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
+
+  EXPECT_THAT(ToModularAnnotation(annotation),
+              modular::annotations::AnnotationEq(ByRef(modular_annotation)));
+}
+
+TEST(SessionAnnotationsTest, ToModularAnnotationBuffer) {
+  static constexpr auto kTestAnnotationKey = "annotation_key";
+  static constexpr auto kTestAnnotationValue = "annotation_value";
+
+  fuchsia::mem::Buffer buffer{};
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto annotation = Annotation{.key = kTestAnnotationKey,
+                               .value = fidl::MakeOptional(Value::WithBuffer(std::move(buffer)))};
+
+  // Set the buffer again because it was moved into |annotation.value|.
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto modular_annotation = fuchsia::modular::Annotation{
+      .key = kTestAnnotationKey,
+      .value =
+          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+
+  EXPECT_THAT(ToModularAnnotation(annotation),
+              modular::annotations::AnnotationEq(ByRef(modular_annotation)));
+}
+
+TEST(SessionAnnotationsTest, ToModularAnnotationsEmptyTable) {
+  fuchsia::session::Annotations annotations;
+
+  auto modular_annotations = ToModularAnnotations(annotations);
+
+  EXPECT_TRUE(modular_annotations.empty());
+}
+
+TEST(SessionAnnotationsTest, ToModularAnnotationsEmptyCustomAnnotations) {
+  fuchsia::session::Annotations annotations;
+  annotations.set_custom_annotations({});
+
+  auto modular_annotations = ToModularAnnotations(annotations);
+
+  EXPECT_TRUE(modular_annotations.empty());
+}
+
+TEST(SessionAnnotationsTest, ToModularAnnotationsWithCustomAnnotations) {
+  static constexpr auto kTestTextAnnotationKey = "text_annotation_key";
+  static constexpr auto kTestTextAnnotationValue = "text_annotation_value";
+  static constexpr auto kTestBufferAnnotationKey = "buffer_annotation_key";
+  static constexpr auto kTestBufferAnnotationValue = "buffer_annotation_value";
+
+  fuchsia::mem::Buffer buffer{};
+  ASSERT_TRUE(fsl::VmoFromString(kTestBufferAnnotationValue, &buffer));
+
+  auto text_annotation =
+      Annotation{.key = kTestTextAnnotationKey,
+                 .value = fidl::MakeOptional(Value::WithText(kTestTextAnnotationValue))};
+  auto buffer_annotation =
+      Annotation{.key = kTestBufferAnnotationKey,
+                 .value = fidl::MakeOptional(Value::WithBuffer(std::move(buffer)))};
+
+  fuchsia::session::Annotations annotations;
+  annotations.mutable_custom_annotations()->push_back(std::move(text_annotation));
+  annotations.mutable_custom_annotations()->push_back(std::move(buffer_annotation));
+
+  auto modular_annotations = ToModularAnnotations(annotations);
+
+  auto expected_text_annotation = fuchsia::modular::Annotation{
+      .key = kTestTextAnnotationKey,
+      .value = fidl::MakeOptional(
+          fuchsia::modular::AnnotationValue::WithText(kTestTextAnnotationValue))};
+
+  // Set the buffer again because it was moved into |buffer_annotation.value|.
+  ASSERT_TRUE(fsl::VmoFromString(kTestBufferAnnotationValue, &buffer));
+
+  auto expected_buffer_annotation = fuchsia::modular::Annotation{
+      .key = kTestBufferAnnotationKey,
+      .value =
+          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+
+  EXPECT_THAT(
+      modular_annotations,
+      UnorderedElementsAre(modular::annotations::AnnotationEq(ByRef(expected_text_annotation)),
+                           modular::annotations::AnnotationEq(ByRef(expected_buffer_annotation))));
+}
+
+}  // namespace
+}  // namespace session::annotations

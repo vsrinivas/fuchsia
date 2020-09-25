@@ -185,7 +185,10 @@ source_set("annotations") {
     "annotations.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.session",
+  ]
 }
 
 hermetic_tests_package("sessionmgr_unittests") {

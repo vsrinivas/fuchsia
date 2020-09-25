@@ -6,6 +6,7 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/session/cpp/fidl.h>
 
 #include <vector>
 
@@ -25,5 +26,19 @@ std::vector<Annotation> Merge(std::vector<Annotation> a, std::vector<Annotation>
 // TODO(fxbug.dev/37645): Template this to return the proper properties
 std::string ToInspect(const fuchsia::modular::AnnotationValue& value);
 }  // namespace modular::annotations
+
+namespace session::annotations {
+
+// Returns the equivalent |fuchsia::modular::Annotation| for the |fuchsia::session::Annotation|.
+fuchsia::modular::Annotation ToModularAnnotation(const fuchsia::session::Annotation& annotation);
+
+// Returns the equivalent list of |fuchsia::modular::Annotation|s for the
+// |fuchsia::session::Annotations|.
+//
+// If |annotations| does not have |custom_annotations| set, returns an empty vector.
+std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
+    const fuchsia::session::Annotations& annotations);
+
+}  // namespace session::annotations
 
 #endif  // SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_

@@ -73,3 +73,36 @@ std::string ToInspect(const fuchsia::modular::AnnotationValue& value) {
 }
 
 }  // namespace modular::annotations
+
+namespace session::annotations {
+
+fuchsia::modular::Annotation ToModularAnnotation(const fuchsia::session::Annotation& annotation) {
+  std::unique_ptr<fuchsia::modular::AnnotationValue> value;
+  if (annotation.value->is_buffer()) {
+    fuchsia::mem::Buffer buffer;
+    annotation.value->buffer().Clone(&buffer);
+    value = std::make_unique<fuchsia::modular::AnnotationValue>(
+        fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)));
+  } else {
+    value = std::make_unique<fuchsia::modular::AnnotationValue>(
+        fuchsia::modular::AnnotationValue::WithText(std::string{annotation.value->text()}));
+  }
+
+  return fuchsia::modular::Annotation{.key = annotation.key, .value = std::move(value)};
+}
+
+std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
+    const fuchsia::session::Annotations& annotations) {
+  if (!annotations.has_custom_annotations()) {
+    return {};
+  }
+
+  std::vector<fuchsia::modular::Annotation> modular_annotations;
+  for (const auto& annotation : annotations.custom_annotations()) {
+    modular_annotations.push_back(ToModularAnnotation(annotation));
+  }
+
+  return modular_annotations;
+}
+
+}  // namespace session::annotations
