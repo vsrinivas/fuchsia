@@ -6,6 +6,7 @@
 
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/closure-queue/closure_queue.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 
@@ -23,9 +24,16 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
  public:
   static constexpr char kDefaultDeviceName[] = "Virtual_Audio_Device_(default)";
   static constexpr char kDefaultManufacturerName[] =
-      "Fuchsia Virtual Audio Group (default manufacturer name********)";
+      "Fuchsia Virtual Audio Group (*** default manufacturer name "
+      "********************************************************************************************"
+      "********************************************************************************************"
+      "***********)";
   static constexpr char kDefaultProductName[] =
-      "Virgil v1 (default unchanged product name*********************)";
+      "Virgil v1, a Virtual Volume Vessel (** default product name "
+      "********************************************************************************************"
+      "********************************************************************************************"
+      "**********)";
+
   static constexpr uint8_t kDefaultUniqueId[16] = {1, 2,  3,  4,  5,  6,  7,  8,
                                                    9, 10, 11, 12, 13, 14, 15, 0};
 
@@ -39,16 +47,20 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
       .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
   };
 
+  // Default clock domain is 0, the local system CLOCK_MONOTONIC domain
+  static constexpr int32_t kDefaultClockDomain = 0;
+  static constexpr int32_t kDefaultClockRateAdjustment = 0;
+
   // Default FIFO is 250 usec, at 48k stereo 16
   static constexpr uint32_t kDefaultFifoDepthBytes = 48;
   static constexpr zx_time_t kDefaultExternalDelayNsec = 0;
 
-  // At default rate 48k, this is 250 msec
+  // Default ring buffer size is at least 250msec (assuming default rate 48k)
   static constexpr uint32_t kDefaultMinBufferFrames = 12000;
-  // At default rate 48k, this is 10+ sec!
-  static constexpr uint32_t kDefaultMaxBufferFrames = 1 << 19;
+  static constexpr uint32_t kDefaultMaxBufferFrames = 1 << 19;  // (10+ sec, at default 48k!)
   static constexpr uint32_t kDefaultModuloBufferFrames = 1;
 
+  // By default, support a wide gain range with good precision.
   static constexpr audio::audio_proto::GetGainResp kDefaultGainState = {.cur_mute = false,
                                                                         .cur_agc = false,
                                                                         .cur_gain = -0.75f,
@@ -58,11 +70,10 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
                                                                         .max_gain = 24.0f,
                                                                         .gain_step = 0.25f};
 
+  // By default, device is hot-pluggable
   static constexpr bool kDefaultPlugged = true;
   static constexpr bool kDefaultHardwired = false;
   static constexpr bool kDefaultPlugCanNotify = true;
-
-  static constexpr int32_t kDefaultClockDomain = 0;
 
   static std::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
                                                         bool is_input);
@@ -95,7 +106,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
                       uint8_t min_chans, uint8_t max_chans, uint16_t rate_family_flags) override;
   void ClearFormatRanges() override;
 
-  void SetClockDomain(int32_t clock_domain) override;
+  void SetClockProperties(int32_t clock_domain, int32_t initial_rate_adjustment_ppm) override;
 
   void SetFifoDepth(uint32_t fifo_depth_bytes) override;
   void SetExternalDelay(zx_duration_t external_delay) override;
@@ -138,12 +149,16 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
 
   void ChangePlugState(zx_time_t plug_change_time, bool plugged) override;
 
- protected:
+  void AdjustClockRate(int32_t ppm_from_system_monotonic) override;
+
+ private:
   friend class VirtualAudioStream;
   friend class std::default_delete<VirtualAudioDeviceImpl>;
 
   VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner, bool is_input);
   virtual ~VirtualAudioDeviceImpl();
+
+  void WarnActiveStreamNotAffected(const char* func_name);
 
   VirtualAudioControlImpl const* owner_;
   fbl::RefPtr<VirtualAudioStream> stream_;
@@ -165,6 +180,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   uint8_t unique_id_[16];
 
   int32_t clock_domain_;
+  int32_t clock_rate_adjustment_;
 
   std::vector<audio_stream_format_range_t> supported_formats_;
 

@@ -5,6 +5,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/affine/transform.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 
@@ -30,6 +31,7 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
       __TA_EXCLUDES(wakeup_queue_lock_);
   void EnqueueNotificationOverride(uint32_t notifications_per_ring)
       __TA_EXCLUDES(wakeup_queue_lock_);
+  void EnqueueClockRateAdjustment(int32_t ppm_from_monotonic) __TA_EXCLUDES(wakeup_queue_lock_);
 
   static fbl::RefPtr<VirtualAudioStream> CreateStream(VirtualAudioDeviceImpl* owner,
                                                       zx_device_t* devnode, bool is_input);
@@ -45,6 +47,8 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
       : audio::SimpleAudioStream(dev_node, is_input), parent_(parent) {}
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override;
+  zx_status_t EstablishReferenceClock() __TA_REQUIRES(domain_token());
+  zx_status_t AdjustClockRate() __TA_REQUIRES(domain_token());
 
   zx_status_t ChangeFormat(const audio::audio_proto::StreamSetFmtReq& req)
       __TA_REQUIRES(domain_token()) override;
@@ -61,19 +65,28 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
   // RingBufferShutdown() is unneeded: no hardware shutdown tasks needed...
 
-  void ProcessRingNotification();
-  void ProcessAltRingNotification();
-
   enum class PlugType { Plug, Unplug };
-
   void HandlePlugChanges() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandlePlugChange(PlugType plug_change) __TA_REQUIRES(domain_token());
+  void HandleSetNotifications() __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleClockRateAdjustments() __TA_EXCLUDES(wakeup_queue_lock_);
 
   void HandleGainRequests() __TA_EXCLUDES(wakeup_queue_lock_);
   void HandleFormatRequests() __TA_EXCLUDES(wakeup_queue_lock_);
   void HandleBufferRequests() __TA_EXCLUDES(wakeup_queue_lock_);
   void HandlePositionRequests() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleSetNotifications() __TA_EXCLUDES(wakeup_queue_lock_);
+
+  void ProcessRingNotification();
+  void SetNotificationPeriods() __TA_REQUIRES(domain_token());
+  void PostForNotify() __TA_REQUIRES(domain_token());
+  void PostForNotifyAt(zx::time ref_notification_time) __TA_REQUIRES(domain_token());
+
+  void ProcessVaClientRingNotification();
+  void SetVaClientNotificationPeriods() __TA_REQUIRES(domain_token());
+  void PostForVaClientNotify() __TA_REQUIRES(domain_token());
+  void PostForVaClientNotifyAt(zx::time ref_notification_time) __TA_REQUIRES(domain_token());
+
+ private:
+  static zx::time MonoTimeFromRefTime(const zx::clock& clock, zx::time ref_time);
 
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_token());
@@ -84,25 +97,37 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   uint32_t min_buffer_frames_ __TA_GUARDED(domain_token());
   uint32_t modulo_buffer_frames_ __TA_GUARDED(domain_token());
 
+  zx::time ref_start_time_ __TA_GUARDED(domain_token());
+
+  // Members related to the driver's delivery of position notifications to AudioCore.
   async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::ProcessRingNotification>
       notify_timer_ __TA_GUARDED(domain_token()){this};
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::ProcessAltRingNotification>
-      alt_notify_timer_ __TA_GUARDED(domain_token()){this};
-
-  zx::time start_time_ __TA_GUARDED(domain_token());
-  zx::duration notification_period_ __TA_GUARDED(domain_token()) = zx::duration(0);
   uint32_t notifications_per_ring_ __TA_GUARDED(domain_token()) = 0;
-  zx::time target_notification_time_ __TA_GUARDED(domain_token()) = zx::time(0);
+  zx::duration ref_notification_period_ __TA_GUARDED(domain_token()) = zx::duration(0);
+  zx::time target_mono_notification_time_ __TA_GUARDED(domain_token()) = zx::time(0);
+  zx::time target_ref_notification_time_ __TA_GUARDED(domain_token()) = zx::time(0);
 
-  bool using_alt_notifications_ __TA_GUARDED(domain_token());
-  zx::duration alt_notification_period_ __TA_GUARDED(domain_token()) = zx::duration(0);
-  uint32_t alt_notifications_per_ring_ __TA_GUARDED(domain_token()) = 0;
-  zx::time target_alt_notification_time_ __TA_GUARDED(domain_token()) = zx::time(0);
+  // Members related to driver delivery of position notifications to a VirtualAudio client, with an
+  // alternate notifications-per-ring cadence. If a VirtualAudio client specifies the same cadence
+  // that AudioCore has requested, then we simply use the above members and deliver those same
+  // notifications to the VA client as well.
+  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::ProcessVaClientRingNotification>
+      va_client_notify_timer_ __TA_GUARDED(domain_token()){this};
+
+  std::optional<uint32_t> va_client_notifications_per_ring_ __TA_GUARDED(domain_token()) =
+      std::nullopt;
+  zx::duration va_client_ref_notification_period_ __TA_GUARDED(domain_token()) = zx::duration(0);
+  zx::time target_va_client_mono_notification_time_ __TA_GUARDED(domain_token()) = zx::time(0);
+  zx::time target_va_client_ref_notification_time_ __TA_GUARDED(domain_token()) = zx::time(0);
 
   uint32_t bytes_per_sec_ __TA_GUARDED(domain_token()) = 0;
   uint32_t frame_rate_ __TA_GUARDED(domain_token()) = 0;
   audio_sample_format_t sample_format_ __TA_GUARDED(domain_token()) = 0;
   uint32_t num_channels_ __TA_GUARDED(domain_token()) = 0;
+  affine::Transform ref_time_to_running_frame_ __TA_GUARDED(domain_token());
+
+  zx::clock reference_clock_ __TA_GUARDED(domain_token());
+  int32_t clock_rate_adjustment_ __TA_GUARDED(domain_token());
 
   VirtualAudioDeviceImpl* parent_ __TA_GUARDED(domain_token());
 
@@ -136,6 +161,10 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleSetNotifications>
       set_notifications_wakeup_{this};
   std::deque<uint32_t> notifs_queue_ __TA_GUARDED(wakeup_queue_lock_);
+
+  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleClockRateAdjustments>
+      set_clock_rate_wakeup_{this};
+  std::deque<uint32_t> clock_rate_queue_ __TA_GUARDED(wakeup_queue_lock_);
 };
 
 }  // namespace virtual_audio

@@ -6,6 +6,8 @@ library fuchsia.virtualaudio;
 
 using zx;
 
+const uint32 MAX_UI_STRING_SIZE = 256;
+
 // fuchsia.virtualaudio.Forwarder
 //
 
@@ -190,8 +192,11 @@ protocol Device {
     /// `->OnDefaultDeviceChanged()` event.
     ChangePlugState(zx.time plug_change_time, bool plugged);
 
-    // TODO(mpuryear): `TweakClockRate(uint64 numerator, uint64 denominator)` --
-    // emulating a device clock, advance position at given ratio of MONOTONIC.
+    /// Immediately change the virtual device's clock rate, as expressed in the
+    /// timing and content of position notifications the driver emits.
+    /// 'ppm_monotonic' cannot exceed [-1000,+1000]. Each rate change in rate is
+    /// standalone; i.e. successive rate changes are not cumulative.
+    AdjustClockRate(int32 ppm_from_monotonic);
 };
 
 /// This protocol is conceptually a base protocol to Device. It exposes the
@@ -207,25 +212,21 @@ protocol Configuration {
     /// called before calling `Add()`, or after `Remove()`.
     SetDeviceName(string device_name);
 
-    /// Set the virtual audio device's manufacturer name. This must be called
-    /// before calling `Add()`, or after `Remove()`. Once a device is activated,
-    /// this value is returned by the driver in response to an
-    /// `AUDIO_STREAM_CMD_GET_STRING` command of string ID
-    /// `AUDIO_STREAM_STR_ID_MANUFACTURER`. This information is exposed to
-    /// clients by the `fuchsia.media.AudioDeviceEnumerator` protocol: returned
-    /// in an `AudioDeviceInfo` struct by `GetDevices()` and the
-    /// `->OnDeviceAdded()` event.
-    SetManufacturer(string manufacturer_name);
+    /// Set the virtual audio device's manufacturer name. Must be called before
+    /// `Add()` or after `Remove()`. After device activation, the driver returns
+    /// this value in response to an `AUDIO_STREAM_CMD_GET_STRING` command of ID
+    /// `AUDIO_STREAM_STR_ID_MANUFACTURER`. This is exposed to clients via the
+    /// `fuchsia.media.AudioDeviceEnumerator` protocol, in an `AudioDeviceInfo`
+    /// struct returned from `GetDevices()` and the `->OnDeviceAdded()` event.
+    SetManufacturer(string:MAX_UI_STRING_SIZE manufacturer_name);
 
     /// Set the virtual audio device's product name. This must be called before
-    /// calling `Add()`, or after `Remove()`. Once the device is activated, this
-    /// value is returned by the driver in response to an
-    /// `AUDIO_STREAM_CMD_GET_STRING` command of string ID
-    /// `AUDIO_STREAM_STR_ID_PRODUCT`. This information is exposed to clients by
-    /// the `fuchsia.media.AudioDeviceEnumerator` protocol: returned in an
-    /// `AudioDeviceInfo` struct by `GetDevices()` and the `->OnDeviceAdded()`
-    /// event.
-    SetProduct(string product_name);
+    /// `Add()` or after `Remove()`. After device activation, the driver returns
+    /// this value in response to an `AUDIO_STREAM_CMD_GET_STRING` command of ID
+    /// `AUDIO_STREAM_STR_ID_PRODUCT`. This name is exposed to clients via the
+    /// `fuchsia.media.AudioDeviceEnumerator` protocol, in an `AudioDeviceInfo`
+    /// struct returned from `GetDevices()` and the `->OnDeviceAdded()` event.
+    SetProduct(string:MAX_UI_STRING_SIZE product_name);
 
     /// Set the virtual audio device's unique ID, a 16-character string. This
     /// must be called before calling `Add()`, or after `Remove()`. Once the
@@ -251,15 +252,26 @@ protocol Configuration {
     /// before calling `Add()`, or after `Remove()`.
     ClearFormatRanges();
 
-    /// Set the virtual audio device's clock domain, an int32 provided by the
-    /// clock tree, with special values 0 for the MONOTONIC clock domain and
-    /// -1 for EXTERNAL domains that are not controllable  locally. This method
-    /// must be called before calling `Add()`, or after `Remove()`. Once the
-    /// device is activated, this value is returned by the driver in response
-    /// to an `AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN` command. This is not exposed
-    /// to clients by public APIs but is used in AudioCore's clock recovery for
-    /// this device (or more accurately, for this domain).
+    [Transitional]
     SetClockDomain(int32 clock_domain);
+
+    /// Set properties for this virtual device's clock. These include the clock
+    /// domain and the initial rate difference (in ppm) between its clock and
+    /// the local monotonic clock. The clock domain is an int32 provided by the
+    /// clock tree to an audio driver; special values for CLOCK_DOMAIN_MONOTONIC
+    /// [0], and CLOCK_DOMAIN_EXTERNAL [-1] (not locally controllable) are
+    /// defined in fuchsia.hardware.audio/stream.fidl. Other than -1, any
+    /// negative value for clock_domain is invalid and will be ignored. A
+    /// non-zero value for 'initial_rate_adjustment_ppm' is only valid (and will
+    /// only be accepted) if the clock_domain is NOT equal to 0. This method
+    /// must be called before calling `Add()`, or after `Remove()`. Once the
+    /// device is activated, the clock_domain value is returned by the driver in
+    /// response to an `AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN` command, and the
+    /// clock rate is expressed in the timing, and values, of position
+    /// notifications. Neither clock domain nor position notifications are
+    /// directly exposed to clients by public APIs, but these are both used in
+    /// AudioCore's device (or more accurately, domain) clock recovery.
+    SetClockProperties(int32 clock_domain, int32 initial_rate_adjustment_ppm);
 
     /// Set the virtual audio device's fifo depth, in bytes. This must be called
     /// before calling `Add()`, or after `Remove()`. Once the device is

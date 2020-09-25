@@ -12,10 +12,9 @@
 
 namespace virtual_audio {
 
-// The VirtualAudioBus driver uses ZX_PROTOCOL_TEST_PARENT, which causes the /dev/test device to
-// call its Bind() at startup time. In response, the bus driver creates a VirtualAudioControlImpl,
-// then registers and publishes it at /dev/test/virtualaudio -- transferring ownership to the device
-// manager.
+// The VirtualAudioBus driver uses ZX_PROTOCOL_TEST_PARENT, causing the /dev/test device to call its
+// Bind() at startup time. In response, the bus driver creates a VirtualAudioControlImpl, registers
+// and publishes it at /dev/test/virtual_audio, and transfers ownership to the device manager.
 class VirtualAudioBus {
  public:
   // VirtualAudioBus is static-only and never actually instantiated.

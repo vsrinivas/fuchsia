@@ -16,7 +16,7 @@ namespace virtual_audio {
 class VirtualAudioStreamIn;
 class VirtualAudioStreamOut;
 
-// static
+// static methods
 std::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
     VirtualAudioControlImpl* owner, bool is_input) {
   return std::unique_ptr<VirtualAudioDeviceImpl>(new VirtualAudioDeviceImpl(owner, is_input));
@@ -39,7 +39,9 @@ void VirtualAudioDeviceImpl::Init() {
   mfr_name_ = kDefaultManufacturerName;
   prod_name_ = kDefaultProductName;
   memcpy(unique_id_, kDefaultUniqueId, sizeof(unique_id_));
+
   clock_domain_ = kDefaultClockDomain;
+  clock_rate_adjustment_ = kDefaultClockRateAdjustment;
 
   // By default, we support one basic format range (stereo 16-bit 48kHz)
   supported_formats_.clear();
@@ -62,6 +64,7 @@ void VirtualAudioDeviceImpl::Init() {
   plug_time_ = zx::clock::get_monotonic().get();
 
   override_notification_frequency_ = false;
+  notifications_per_ring_ = 0;
 }
 
 // Receive and cache a virtualaudio::Input binding, forwarded from the virtual_audio_service.
@@ -153,17 +156,29 @@ void VirtualAudioDeviceImpl::PostToDispatcher(fit::closure task_to_post) {
 //
 // virtualaudio::Configuration implementation
 //
-void VirtualAudioDeviceImpl::SetDeviceName(std::string device_name) { device_name_ = device_name; };
+void VirtualAudioDeviceImpl::SetDeviceName(std::string device_name) {
+  device_name_ = device_name;
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 void VirtualAudioDeviceImpl::SetManufacturer(std::string manufacturer_name) {
   mfr_name_ = manufacturer_name;
-};
 
-void VirtualAudioDeviceImpl::SetProduct(std::string product_name) { prod_name_ = product_name; };
+  WarnActiveStreamNotAffected(__func__);
+}
+
+void VirtualAudioDeviceImpl::SetProduct(std::string product_name) {
+  prod_name_ = product_name;
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 void VirtualAudioDeviceImpl::SetUniqueId(std::array<uint8_t, 16> unique_id) {
   memcpy(unique_id_, unique_id.data(), sizeof(unique_id_));
-};
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 // After creation or reset, one default format range is always available.
 void VirtualAudioDeviceImpl::AddFormatRange(uint32_t format_flags, uint32_t min_rate,
@@ -177,19 +192,41 @@ void VirtualAudioDeviceImpl::AddFormatRange(uint32_t format_flags, uint32_t min_
                                        .flags = rate_family_flags};
 
   supported_formats_.push_back(range);
-};
 
-void VirtualAudioDeviceImpl::ClearFormatRanges() { supported_formats_.clear(); }
+  WarnActiveStreamNotAffected(__func__);
+}
 
-void VirtualAudioDeviceImpl::SetClockDomain(int32_t clock_domain) { clock_domain_ = clock_domain; };
+void VirtualAudioDeviceImpl::ClearFormatRanges() {
+  supported_formats_.clear();
+  WarnActiveStreamNotAffected(__func__);
+}
+
+void VirtualAudioDeviceImpl::WarnActiveStreamNotAffected(const char* func_name) {
+  if (stream_ != nullptr) {
+    zxlogf(WARNING, "%s updates the static config, but has no effect on existing streams",
+           func_name);
+  }
+}
+
+void VirtualAudioDeviceImpl::SetClockProperties(int32_t clock_domain,
+                                                int32_t initial_rate_adjustment_ppm) {
+  clock_domain_ = clock_domain;
+  clock_rate_adjustment_ = initial_rate_adjustment_ppm;
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 void VirtualAudioDeviceImpl::SetFifoDepth(uint32_t fifo_depth_bytes) {
   fifo_depth_ = fifo_depth_bytes;
+
+  WarnActiveStreamNotAffected(__func__);
 }
 
 void VirtualAudioDeviceImpl::SetExternalDelay(zx_duration_t external_delay) {
   external_delay_nsec_ = external_delay;
-};
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 void VirtualAudioDeviceImpl::SetRingBufferRestrictions(uint32_t min_frames, uint32_t max_frames,
                                                        uint32_t modulo_frames) {
@@ -200,7 +237,9 @@ void VirtualAudioDeviceImpl::SetRingBufferRestrictions(uint32_t min_frames, uint
   min_buffer_frames_ = min_frames;
   max_buffer_frames_ = max_frames;
   modulo_buffer_frames_ = modulo_frames;
-};
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 void VirtualAudioDeviceImpl::SetGainProperties(float min_gain_db, float max_gain_db,
                                                float gain_step_db, float current_gain_db,
@@ -216,7 +255,9 @@ void VirtualAudioDeviceImpl::SetGainProperties(float min_gain_db, float max_gain
                      .min_gain = min_gain_db,
                      .max_gain = max_gain_db,
                      .gain_step = gain_step_db};
-};
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 void VirtualAudioDeviceImpl::SetPlugProperties(zx_time_t plug_change_time, bool plugged,
                                                bool hardwired, bool can_notify) {
@@ -225,9 +266,15 @@ void VirtualAudioDeviceImpl::SetPlugProperties(zx_time_t plug_change_time, bool 
   plugged_ = plugged;
   hardwired_ = hardwired;
   async_plug_notify_ = can_notify;
-};
 
-void VirtualAudioDeviceImpl::ResetConfiguration() { Init(); };
+  WarnActiveStreamNotAffected(__func__);
+}
+
+void VirtualAudioDeviceImpl::ResetConfiguration() {
+  Init();
+
+  WarnActiveStreamNotAffected(__func__);
+}
 
 //
 // virtualaudio::Device implementation
@@ -412,14 +459,15 @@ void VirtualAudioDeviceImpl::NotifyPosition(zx_time_t monotonic_time,
 
 // Change the plug state on-the-fly for this active virtual audio device.
 void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time, bool plugged) {
-  if (!owner_->enabled()) {
-    zxlogf(WARNING, "%s: Disabled, cannot change plug state", __func__);
-    return;
-  }
-
   // Update static config, and tell (if present) stream to dynamically change.
   plug_time_ = plug_change_time;
   plugged_ = plugged;
+
+  if (!owner_->enabled()) {
+    zxlogf(WARNING, "%s: Disabled, cannot change plug state; changing only the static config",
+           __func__);
+    return;
+  }
 
   if (stream_ == nullptr) {
     zxlogf(WARNING, "%s: %p has no stream; cannot change dynamic plug state", __func__, this);
@@ -427,6 +475,25 @@ void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time, bool pl
   }
 
   stream_->EnqueuePlugChange(plugged);
+}
+
+// Change the plug state on-the-fly for this active virtual audio device.
+void VirtualAudioDeviceImpl::AdjustClockRate(int32_t ppm_from_monotonic) {
+  // Update static config, and tell (if present) stream to dynamically change.
+  clock_rate_adjustment_ = ppm_from_monotonic;
+
+  if (!owner_->enabled()) {
+    zxlogf(WARNING, "%s: Disabled, cannot adjust clock rate; changing only the static config",
+           __func__);
+    return;
+  }
+
+  if (stream_ == nullptr) {
+    zxlogf(WARNING, "%s: %p has no stream; cannot change clock rate", __func__, this);
+    return;
+  }
+
+  stream_->EnqueueClockRateAdjustment(ppm_from_monotonic);
 }
 
 }  // namespace virtual_audio

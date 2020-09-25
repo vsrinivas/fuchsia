@@ -39,6 +39,7 @@ executable("virtual_audio_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",

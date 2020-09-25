@@ -36,6 +36,7 @@ driver_module("virtual_audio_driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/media/audio/lib/simple-audio-stream",
+    "//zircon/public/lib/affine",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-driver-proto",

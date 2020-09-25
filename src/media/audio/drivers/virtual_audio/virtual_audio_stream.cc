@@ -3,6 +3,7 @@
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 
+#include <lib/affine/transform.h>
 #include <lib/zx/clock.h>
 
 #include <cmath>
@@ -12,6 +13,7 @@
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream_in.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream_out.h"
+// #include "src/media/audio/lib/clock/utils.h"
 
 namespace virtual_audio {
 
@@ -24,6 +26,21 @@ fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(VirtualAudioDev
   } else {
     return audio::SimpleAudioStream::Create<VirtualAudioStreamOut>(owner, devnode);
   }
+}
+
+zx::time VirtualAudioStream::MonoTimeFromRefTime(const zx::clock& clock, zx::time ref_time) {
+  zx_clock_details_v1_t clock_details;
+  zx_status_t status = clock.get_details(&clock_details);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+
+  zx_time_t mono_time = affine::Transform::ApplyInverse(
+      clock_details.mono_to_synthetic.reference_offset,
+      clock_details.mono_to_synthetic.synthetic_offset,
+      affine::Ratio(clock_details.mono_to_synthetic.rate.synthetic_ticks,
+                    clock_details.mono_to_synthetic.rate.reference_ticks),
+      ref_time.get());
+
+  return zx::time{mono_time};
 }
 
 zx_status_t VirtualAudioStream::Init() {
@@ -48,7 +65,14 @@ zx_status_t VirtualAudioStream::Init() {
 
   fifo_depth_ = parent_->fifo_depth_;
   external_delay_nsec_ = parent_->external_delay_nsec_;
+
   clock_domain_ = parent_->clock_domain_;
+  clock_rate_adjustment_ = parent_->clock_rate_adjustment_;
+  zx_status_t status = EstablishReferenceClock();
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "EstablishReferenceClock failed: %d", status);
+    return status;
+  }
 
   max_buffer_frames_ = parent_->max_buffer_frames_;
   min_buffer_frames_ = parent_->min_buffer_frames_;
@@ -68,14 +92,41 @@ zx_status_t VirtualAudioStream::Init() {
   }
   SetInitialPlugState(plug_flags);
 
-  using_alt_notifications_ = parent_->override_notification_frequency_;
   if (parent_->override_notification_frequency_) {
-    alt_notifications_per_ring_ = parent_->notifications_per_ring_;
+    va_client_notifications_per_ring_ = parent_->notifications_per_ring_;
   }
 
-  return ZX_OK;
+  return status;
 }
 
+// We use this clock to emulate a real hardware time source. It is not exposed outside the driver.
+zx_status_t VirtualAudioStream::EstablishReferenceClock() {
+  zx_status_t status =
+      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
+                        nullptr, &reference_clock_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not create driver clock");
+  } else if (clock_rate_adjustment_ != 0) {
+    status = AdjustClockRate();
+  }
+  return status;
+}
+
+// Update the internal clock object that manages our variance from the local system timebase.
+zx_status_t VirtualAudioStream::AdjustClockRate() {
+  zx::clock::update_args args;
+  args.reset().set_rate_adjust(clock_rate_adjustment_);
+
+  zx_status_t status = reference_clock_.update(args);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not rate-adjust driver clock");
+    ZX_ASSERT(status == ZX_OK);
+  }
+
+  return status;
+}
+
+// "UPDATE" actions to enqueue
 void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
   {
     fbl::AutoLock lock(&wakeup_queue_lock_);
@@ -86,6 +137,25 @@ void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
   plug_change_wakeup_.Post(dispatcher());
 }
 
+void VirtualAudioStream::EnqueueNotificationOverride(uint32_t notifications_per_ring) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    notifs_queue_.push_back(notifications_per_ring);
+  }
+
+  set_notifications_wakeup_.Post(dispatcher());
+}
+
+void VirtualAudioStream::EnqueueClockRateAdjustment(int32_t ppm_from_monotonic) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    clock_rate_queue_.push_back(ppm_from_monotonic);
+  }
+
+  set_clock_rate_wakeup_.Post(dispatcher());
+}
+
+// "GET" actions to enqueue
 void VirtualAudioStream::EnqueueGainRequest(
     fuchsia::virtualaudio::Device::GetGainCallback gain_callback) {
   {
@@ -126,18 +196,10 @@ void VirtualAudioStream::EnqueuePositionRequest(
   position_request_wakeup_.Post(dispatcher());
 }
 
-void VirtualAudioStream::EnqueueNotificationOverride(uint32_t notifications_per_ring) {
-  {
-    fbl::AutoLock lock(&wakeup_queue_lock_);
-    notifs_queue_.push_back(notifications_per_ring);
-  }
-
-  set_notifications_wakeup_.Post(dispatcher());
-}
-
+// Handle "UPDATE" actions
+// This method handles tasks posted to plug_change_wakeup_
 void VirtualAudioStream::HandlePlugChanges() {
-  audio::ScopedToken t(
-      domain_token());  // This method handles posts to plug_change_wakeup_ sent to dispatcher().
+  audio::ScopedToken t(domain_token());
   while (true) {
     PlugType plug_change;
 
@@ -148,25 +210,71 @@ void VirtualAudioStream::HandlePlugChanges() {
       break;
     }
 
-    HandlePlugChange(plug_change);
+    switch (plug_change) {
+      case PlugType::Plug:
+        SetPlugState(true);
+        break;
+      case PlugType::Unplug:
+        SetPlugState(false);
+        break;
+        // Intentionally omitting default, so new enums surface a logic error.
+    }
   }
 }
 
-void VirtualAudioStream::HandlePlugChange(PlugType plug_change) {
-  switch (plug_change) {
-    case PlugType::Plug:
-      SetPlugState(true);
+// This method receives tasks posted to set_notifications_wakeup_
+void VirtualAudioStream::HandleSetNotifications() {
+  audio::ScopedToken t(domain_token());
+
+  while (true) {
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !notifs_queue_.empty()) {
+      va_client_notifications_per_ring_ = notifs_queue_.front();
+      notifs_queue_.pop_front();
+
+      // If our client requested the same notification cadence that AudioCore did, then just use the
+      // "official" AudioCore notification timer and frequency instead of this alternate mechanism.
+      if (va_client_notifications_per_ring_.value() == notifications_per_ring_) {
+        va_client_notifications_per_ring_ = std::nullopt;
+      }
+      SetVaClientNotificationPeriods();
+    } else {
       break;
-    case PlugType::Unplug:
-      SetPlugState(false);
-      break;
-      // Intentionally omitting default, so new enums surface a logic error.
+    }
+  }
+
+  if (va_client_notifications_per_ring_.has_value() &&
+      (va_client_notifications_per_ring_.value() > 0)) {
+    auto status = reference_clock_.read(target_va_client_ref_notification_time_.get_address());
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    PostForVaClientNotifyAt(target_va_client_ref_notification_time_);
+  } else {
+    target_va_client_mono_notification_time_ = zx::time(0);
+    va_client_notify_timer_.Cancel();
   }
 }
 
+// This method receives tasks posted to set_clock_rate_wakeup_
+// Upon a rate adjustment, we cancel timers, adjust the clock, then re-set the timers
+void VirtualAudioStream::HandleClockRateAdjustments() {
+  audio::ScopedToken t(domain_token());
+  while (true) {
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !clock_rate_queue_.empty()) {
+      clock_rate_adjustment_ = clock_rate_queue_.front();
+      clock_rate_queue_.pop_front();
+    } else {
+      break;
+    }
+  }
+
+  if (AdjustClockRate() != ZX_OK) {
+    zxlogf(ERROR, "AdjustClockRate failed in %s; continuing with existing clock", __func__);
+  }
+}
+
+// Handle "GET" actions
+// This method handles tasks posted to gain_request_wakeup_
 void VirtualAudioStream::HandleGainRequests() {
-  audio::ScopedToken t(
-      domain_token());  // This method handles posts to gain_request_wakeup_ sent to dispatcher().
+  audio::ScopedToken t(domain_token());
   while (true) {
     bool current_mute, current_agc;
     float current_gain_db;
@@ -190,9 +298,9 @@ void VirtualAudioStream::HandleGainRequests() {
   }
 }
 
+// This method handles tasks posted to format_request_wakeup_
 void VirtualAudioStream::HandleFormatRequests() {
-  audio::ScopedToken t(
-      domain_token());  // This method handles posts to format_request_wakeup_ sent to dispatcher().
+  audio::ScopedToken t(domain_token());
   while (true) {
     uint32_t frames_per_second, sample_format, num_channels;
     zx_duration_t external_delay;
@@ -222,9 +330,9 @@ void VirtualAudioStream::HandleFormatRequests() {
   }
 }
 
+// This method handles tasks posted to buffer_request_wakeup_
 void VirtualAudioStream::HandleBufferRequests() {
-  audio::ScopedToken t(
-      domain_token());  // This method handles posts to buffer_request_wakeup_ sent to dispatcher().
+  audio::ScopedToken t(domain_token());
   while (true) {
     zx_status_t status;
     zx::vmo duplicate_ring_buffer_vmo;
@@ -262,16 +370,16 @@ void VirtualAudioStream::HandleBufferRequests() {
   }
 }
 
+// This method handles tasks posted to position_request_wakeup_
 void VirtualAudioStream::HandlePositionRequests() {
-  audio::ScopedToken t(domain_token());  // This method handles posts to position_request_wakeup_
-                                         // sent to dispatcher().
+  audio::ScopedToken t(domain_token());
   while (true) {
     zx::time start_time;
     uint32_t num_rb_frames, frame_size, frame_rate;
     fuchsia::virtualaudio::Device::GetPositionCallback position_callback;
 
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !position_queue_.empty()) {
-      start_time = start_time_;
+      start_time = ref_start_time_;
       num_rb_frames = num_ring_buffer_frames_;
       frame_size = frame_size_;
       frame_rate = frame_rate_;
@@ -287,55 +395,59 @@ void VirtualAudioStream::HandlePositionRequests() {
       return;
     }
 
-    zx::time now = zx::clock::get_monotonic();
-    zx::duration running_duration = now - start_time;
-    uint64_t frames = (running_duration * frame_rate) / zx::sec(1);
+    zx::time ref_now;
+    auto status = reference_clock_.read(ref_now.get_address());
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    auto mono_now = MonoTimeFromRefTime(reference_clock_, ref_now);
+
+    auto frames = ref_time_to_running_frame_.Apply(ref_now.get());
     uint32_t ring_buffer_position = (frames % num_rb_frames) * frame_size;
-    zx_time_t time_for_position = now.get();
 
     parent_->PostToDispatcher(
-        [position_callback = std::move(position_callback), time_for_position,
+        [position_callback = std::move(position_callback), time_for_position = mono_now.get(),
          ring_buffer_position]() { position_callback(time_for_position, ring_buffer_position); });
   }
 }
 
-void VirtualAudioStream::HandleSetNotifications() {
-  audio::ScopedToken t(domain_token());  // This method handles posts to set_notifications_wakeup_
-                                         // sent to dispatcher().
-  while (true) {
-    if (fbl::AutoLock lock(&wakeup_queue_lock_); !notifs_queue_.empty()) {
-      alt_notifications_per_ring_ = notifs_queue_.front();
-      notifs_queue_.pop_front();
+void VirtualAudioStream::PostForNotify() {
+  ZX_ASSERT(notifications_per_ring_);
+  ZX_ASSERT(target_mono_notification_time_.get() > 0);
 
-      // If alternate cadence is same as "official" cadence, use it instead.
-      if (alt_notifications_per_ring_ == notifications_per_ring_) {
-        using_alt_notifications_ = false;
-        continue;
-      }
-
-      using_alt_notifications_ = true;
-      if (alt_notifications_per_ring_ == 0) {
-        alt_notification_period_ = zx::duration(0);
-      } else {
-        alt_notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
-                                                (frame_rate_ * alt_notifications_per_ring_));
-      }
-    } else {
-      break;
-    }
-  }
-  if (using_alt_notifications_ && (alt_notification_period_.get() > 0)) {
-    target_alt_notification_time_ = zx::clock::get_monotonic();
-    alt_notify_timer_.PostForTime(dispatcher(), target_alt_notification_time_);
-  } else {
-    target_alt_notification_time_ = zx::time(0);
-    alt_notify_timer_.Cancel();
+  if (target_mono_notification_time_ > zx::clock::get_monotonic()) {
+    notify_timer_.PostForTime(dispatcher(), target_mono_notification_time_);
+  } else if (target_mono_notification_time_ > zx::time(0)) {
+    ProcessRingNotification();
   }
 }
 
-// Upon success, drivers should return a valid VMO with appropriate permissions (READ | MAP |
-// TRANSFER for inputs, WRITE as well for outputs) as well as reporting the total number of usable
-// frames in the ring.
+void VirtualAudioStream::PostForNotifyAt(zx::time ref_notification_time) {
+  target_ref_notification_time_ = ref_notification_time;
+  target_mono_notification_time_ =
+      MonoTimeFromRefTime(reference_clock_, target_ref_notification_time_);
+  PostForNotify();
+}
+
+void VirtualAudioStream::PostForVaClientNotify() {
+  ZX_ASSERT(va_client_notifications_per_ring_.has_value());
+  ZX_ASSERT(va_client_notifications_per_ring_.value() > 0);
+  ZX_ASSERT(target_va_client_mono_notification_time_.get() > 0);
+
+  if (target_va_client_mono_notification_time_ > zx::clock::get_monotonic()) {
+    va_client_notify_timer_.PostForTime(dispatcher(), target_va_client_mono_notification_time_);
+  } else if (target_va_client_mono_notification_time_ > zx::time(0)) {
+    ProcessVaClientRingNotification();
+  }
+}
+
+void VirtualAudioStream::PostForVaClientNotifyAt(zx::time va_client_ref_notification_time) {
+  target_va_client_ref_notification_time_ = va_client_ref_notification_time;
+  target_va_client_mono_notification_time_ =
+      MonoTimeFromRefTime(reference_clock_, target_va_client_ref_notification_time_);
+  PostForVaClientNotify();
+}
+
+// On success, driver should return a valid VMO with appropriate permissions (READ | MAP | TRANSFER
+// for input, plus WRITE for output) and report the total number of usable frames in the ring.
 //
 // Format must already be set: a ring buffer channel (over which this command arrived) is provided
 // as the return value from a successful SetFormat call.
@@ -376,21 +488,7 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   }
 
   notifications_per_ring_ = req.notifications_per_ring;
-
-  if (notifications_per_ring_ == 0) {
-    notification_period_ = zx::duration(0);
-  } else {
-    notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
-                                        (frame_rate_ * notifications_per_ring_));
-  }
-  if (using_alt_notifications_) {
-    if (alt_notifications_per_ring_ == 0) {
-      alt_notification_period_ = zx::duration(0);
-    } else {
-      alt_notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
-                                              (frame_rate_ * alt_notifications_per_ring_));
-    }
-  }
+  SetNotificationPeriods();
 
   *out_num_rb_frames = num_ring_buffer_frames_;
 
@@ -398,13 +496,35 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   status = ring_buffer_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &duplicate_vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for notification - %d", __func__, status);
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for VA client - %d", __func__, status);
     return status;
   }
   parent_->NotifyBufferCreated(std::move(duplicate_vmo), num_ring_buffer_frames_,
                                notifications_per_ring_);
 
   return ZX_OK;
+}
+
+void VirtualAudioStream::SetNotificationPeriods() {
+  if (notifications_per_ring_ > 0) {
+    ref_notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
+                                            (frame_rate_ * notifications_per_ring_));
+  } else {
+    ref_notification_period_ = zx::duration(0);
+  }
+
+  SetVaClientNotificationPeriods();
+}
+
+void VirtualAudioStream::SetVaClientNotificationPeriods() {
+  if (va_client_notifications_per_ring_.has_value() &&
+      va_client_notifications_per_ring_.value() > 0) {
+    va_client_ref_notification_period_ =
+        zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
+                     (frame_rate_ * va_client_notifications_per_ring_.value()));
+  } else {
+    va_client_ref_notification_period_ = zx::duration(0);
+  }
 }
 
 zx_status_t VirtualAudioStream::ChangeFormat(const audio::audio_proto::StreamSetFmtReq& req) {
@@ -446,99 +566,129 @@ zx_status_t VirtualAudioStream::SetGain(const audio::audio_proto::SetGainReq& re
   return ZX_OK;
 }
 
-// Drivers *must* report the time at which the first frame will be clocked out on the
-// CLOCK_MONOTONIC timeline, not including any external delay.
+// Drivers *must* report the time (on CLOCK_MONOTONIC timeline) at which the first frame will be
+// clocked out, not including any external delay.
 zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
+  auto status = reference_clock_.read(ref_start_time_.get_address());
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+
   // Incorporate delay caused by fifo_depth_
-  start_time_ =
-      zx::clock::get_monotonic() + zx::duration((zx::sec(1) * fifo_depth_) / bytes_per_sec_);
+  ref_start_time_ += zx::duration((zx::sec(1) * fifo_depth_) / bytes_per_sec_);
+
+  ref_time_to_running_frame_ =
+      affine::Transform(ref_start_time_.get(), 0, affine::Ratio(frame_rate_, ZX_SEC(1)));
+
+  auto mono_start_time = MonoTimeFromRefTime(reference_clock_, ref_start_time_);
+
+  parent_->NotifyStart(mono_start_time.get());
 
   // Set the timer here (if notifications are enabled).
-  if (notification_period_.get() > 0) {
-    notify_timer_.PostForTime(dispatcher(), start_time_);
-    target_notification_time_ = start_time_;
-  }
-  if (using_alt_notifications_ && alt_notification_period_.get() > 0) {
-    alt_notify_timer_.PostForTime(dispatcher(), start_time_);
-    target_alt_notification_time_ = start_time_;
+  if (ref_notification_period_.get() > 0) {
+    PostForNotifyAt(ref_start_time_);
   }
 
-  parent_->NotifyStart(start_time_.get());
-  *out_start_time = start_time_.get();
+  if (va_client_ref_notification_period_.get() > 0) {
+    PostForVaClientNotifyAt(ref_start_time_);
+  }
+
+  *out_start_time = mono_start_time.get();
 
   return ZX_OK;
 }
 
-// Timer handler for sending out position notifications: to AudioCore, to VAD clients that do not
-// override the notification frequency, and to VAD clients that set it to the same value that
-// AudioCore has selected.
+// Timer handler for sending position notifications: to AudioCore, to VAD clients that don't set the
+// notification frequency, and to VAD clients that set it to the same value that AudioCore selects.
+// This method handles tasks posted to notify_timer_
 void VirtualAudioStream::ProcessRingNotification() {
-  audio::ScopedToken t(
-      domain_token());  // This method handles posts to notify_timer_ sent to dispatcher().
-  ZX_DEBUG_ASSERT(notification_period_.get() > 0);
+  audio::ScopedToken t(domain_token());
+  ZX_ASSERT(ref_notification_period_.get() > 0);
+  ZX_ASSERT(notifications_per_ring_ > 0);
+  ZX_ASSERT(target_mono_notification_time_.get() > 0);
 
-  auto monotonic_time = target_notification_time_.get();
-  ZX_DEBUG_ASSERT(monotonic_time > 0);
+  zx::time ref_now;
+  auto status = reference_clock_.read(ref_now.get_address());
+  ZX_ASSERT(status == ZX_OK);
 
-  // TODO(fxbug.dev/13343): use a proper Timeline object here.
-  auto running_duration = target_notification_time_ - start_time_;
-  uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
-  uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
-
-  audio::audio_proto::RingBufPositionNotify resp = {};
-  resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
-  resp.monotonic_time = monotonic_time;
-  resp.ring_buffer_pos = ring_buffer_position;
-
-  NotifyPosition(resp);
-
-  if (!using_alt_notifications_) {
-    parent_->NotifyPosition(monotonic_time, ring_buffer_position);
+  // We should wake up close to target_ref_notification_time_
+  if (target_ref_notification_time_ > ref_now) {
+    PostForNotify();  // Too soon, re-post this for later
+    return;
   }
 
-  target_notification_time_ += notification_period_;
-  notify_timer_.PostForTime(dispatcher(), target_notification_time_);
+  auto running_frame_position =
+      ref_time_to_running_frame_.Apply(target_ref_notification_time_.get());
+  auto ring_buffer_position = (running_frame_position % num_ring_buffer_frames_) * frame_size_;
+  audio::audio_proto::RingBufPositionNotify resp = {};
+  resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
+  resp.monotonic_time = target_mono_notification_time_.get();
+  resp.ring_buffer_pos = ring_buffer_position;
+
+  status = NotifyPosition(resp);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  if (status != ZX_OK) {
+    notifications_per_ring_ = 0;
+    return;
+  }
+
+  // If virtual_audio client uses this notification cadence, notify them too
+  if (!va_client_notifications_per_ring_.has_value()) {
+    parent_->NotifyPosition(target_mono_notification_time_.get(), ring_buffer_position);
+  }
+
+  // Post the next position notification
+  PostForNotifyAt(target_ref_notification_time_ + ref_notification_period_);
 }
 
-// Handler for sending alternate position notifications: those going to VAD clients that specified a
-// different notification frequency. These are not sent to AudioCore.
-void VirtualAudioStream::ProcessAltRingNotification() {
-  audio::ScopedToken t(
-      domain_token());  // This method handles posts to alt_notify_timer_ sent to dispatcher().
-  ZX_DEBUG_ASSERT(using_alt_notifications_);
-  ZX_DEBUG_ASSERT(alt_notification_period_.get() > 0);
+// Handler for sending alternate position notifications: those going to VAD clients that specified
+// a different notification frequency. These are not sent to AudioCore.
+// This method receives tasks that have been posted to va_client_notify_timer_
+void VirtualAudioStream::ProcessVaClientRingNotification() {
+  audio::ScopedToken t(domain_token());
+  ZX_DEBUG_ASSERT(va_client_ref_notification_period_.get() > 0);
+  ZX_DEBUG_ASSERT(va_client_notifications_per_ring_.has_value());
+  ZX_DEBUG_ASSERT(va_client_notifications_per_ring_.value() > 0);
+  ZX_DEBUG_ASSERT(target_va_client_mono_notification_time_.get() > 0);
 
-  auto monotonic_time = target_alt_notification_time_.get();
-  ZX_DEBUG_ASSERT(monotonic_time > 0);
+  zx::time ref_now;
+  auto status = reference_clock_.read(ref_now.get_address());
+  ZX_ASSERT(status == ZX_OK);
 
-  // TODO(fxbug.dev/13343): use a proper Timeline object here.
-  auto running_duration = target_alt_notification_time_ - start_time_;
-  uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
-  uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
+  // We should wake up close to target_ref_notification_time_
+  if (target_va_client_ref_notification_time_ > ref_now) {
+    PostForVaClientNotify();  // Too soon, re-post this for later
+    return;
+  }
 
-  parent_->NotifyPosition(monotonic_time, ring_buffer_position);
+  auto running_frame_position =
+      ref_time_to_running_frame_.Apply(target_va_client_ref_notification_time_.get());
+  auto ring_buffer_position = (running_frame_position % num_ring_buffer_frames_) * frame_size_;
+  parent_->NotifyPosition(target_va_client_mono_notification_time_.get(), ring_buffer_position);
 
-  target_alt_notification_time_ += alt_notification_period_;
-  alt_notify_timer_.PostForTime(dispatcher(), target_alt_notification_time_);
+  // Post the next alt position notification
+  PostForVaClientNotifyAt(target_va_client_ref_notification_time_ +
+                          va_client_ref_notification_period_);
 }
 
 zx_status_t VirtualAudioStream::Stop() {
-  auto stop_time = zx::clock::get_monotonic();
+  zx::time ref_stop_time;
+  auto status = reference_clock_.read(ref_stop_time.get_address());
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  auto mono_stop_time = MonoTimeFromRefTime(reference_clock_, ref_stop_time);
 
   notify_timer_.Cancel();
-  alt_notify_timer_.Cancel();
+  va_client_notify_timer_.Cancel();
 
-  zx::duration running_duration = stop_time - start_time_;
-  uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
-  uint32_t ring_buf_position = (frames % num_ring_buffer_frames_) * frame_size_;
-  parent_->NotifyStop(stop_time.get(), ring_buf_position);
+  auto stop_frame = ref_time_to_running_frame_.Apply(ref_stop_time.get());
+  uint32_t ring_buf_position = (stop_frame % num_ring_buffer_frames_) * frame_size_;
+  parent_->NotifyStop(mono_stop_time.get(), ring_buf_position);
 
-  start_time_ = zx::time(0);
-  target_notification_time_ = zx::time(0);
-  target_alt_notification_time_ = zx::time(0);
-  notification_period_ = zx::duration(0);
-  alt_notification_period_ = zx::duration(0);
+  ref_start_time_ = zx::time(0);
+  target_mono_notification_time_ = zx::time(0);
+  target_va_client_mono_notification_time_ = zx::time(0);
+  ref_notification_period_ = zx::duration(0);
+  va_client_ref_notification_period_ = zx::duration(0);
 
+  ref_time_to_running_frame_ = affine::Transform(affine::Ratio(0, 1));
   return ZX_OK;
 }
 
