@@ -1,1 +1,29 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/migrated_targets.gni")
+
+lz4_lib = "$zx/third_party/lz4/lib"
+lz4_programs = "$zx/third_party/lz4/programs"
+
+zx_host_tool("lz4") {
+  sources = [
+    "$lz4_programs/bench.c",
+    "$lz4_programs/datagen.c",
+    "$lz4_programs/lz4cli.c",
+    "$lz4_programs/lz4io.c",
+  ]
+  sdk_migrated = true
+  deps = [ "$zx/third_party/ulib/lz4" ]
+
+  # The Zircon build, and zircon toolchains in the Fuchsia build
+  # Add warn-implicit-fallthrough as a default config.
+  if (zx == "/" || zircon_toolchain != false) {
+    configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+  }
+
+  defines = [ "XXH_NAMESPACE=LZ4_" ]
+  include_dirs = [ "$lz4_lib" ]
+  sdk_migrated = true
+}

@@ -145,7 +145,6 @@ declare_args() {
                      "//:legacy-$target_cpu",
                      "//:legacy_host_targets-$host_os-$host_cpu",
                      "//:legacy_unification-$target_cpu",
-                     "//tools:all-hosts",
                    ] + zircon_extra_deps
     forward_variables_from(zircon_extra_args, "*")
 

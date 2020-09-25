@@ -2,59 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/copied_files_dir.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
-
-# TODO(fxbug.dev/3156): This directory should probably merge with //tools after
-# build unification.
-
-# Build the host tools intended for developer use.
-_all_hosts_deps = []
-foreach(host, standard_build_hosts) {
-  # Install tools for each platform in "$root_build_dir/tools-$os-$cpu"
-  _tools_target = "tools-${host.os}-${host.cpu}"
-  copied_files_dir(_tools_target) {
-    testonly = true
-    data_keys = [ "tool_executables" ]
-    walk_keys = [ "action_barrier" ]
-    deps = [ ":$_tools_target.redirect" ]
-  }
-  _all_hosts_deps += [ ":$_tools_target" ]
-
-  environment_redirect("$_tools_target.redirect") {
-    visibility = [ ":*" ]
-    testonly = true
-    environment_label = "$zx/public/gn/toolchain:host"
-    cpu = host.cpu
-    os = host.os
-    direct = true
-
-    # This covers all the host tools intended to be used directly by
-    # developers.  Not listed here are tools whose only use is via GN rules
-    # in this build.
-    # TODO(60423): Remove these once //vendor/... targets point to the
-    # corresponding Fuchsia build host tool targets.
-    deps = [
-      "kazoo",
-      "lz4",
-      "zbi",
-    ]
-  }
-}
-
-group("all-hosts") {
-  testonly = true
-  deps = _all_hosts_deps
-}
-
-# Install the tools for the running host platform in the
-# "$root_build_dir/tools/" directory.
-copied_files_dir("tools") {
-  testonly = true
-  data_keys = [ "tool_executables" ]
-  deps = [ ":tools-${host_os}-${host_cpu}.redirect" ]
-}
-
-group("tests") {
-  testonly = true
+# TODO(60423) Remove this file once the //vendor/... targets listed
+# in the bug no longer point to the empty targets here.
+group("tools-linux-arm64") {
 }

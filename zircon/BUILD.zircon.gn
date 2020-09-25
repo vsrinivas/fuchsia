@@ -207,7 +207,6 @@ build_api_module("tool_paths") {
   deps = [
     ":tool_paths.metadata",
     "$zx/public/gn/toolchain:llvm-tools",
-    "tools:all-hosts",
   ]
   data_keys = [ "tool_paths" ]
 }
@@ -299,7 +298,7 @@ build_api_module("zbi_tests") {
 
 # This collects all the top-level targets that should contribute to the
 # "everything" target, which is the root of build_api_module() metadata walks.
-_everything_deps = [ "tools:all-hosts" ]
+_everything_deps = []
 
 # Just building this constitutes a useful test that the build system and
 # compiler configurations work as intended.  It may also entail building a
@@ -362,10 +361,7 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       data_keys = [ "legacy_targets" ]
       walk_keys = [ "legacy_barrier" ]
-      deps = [
-        ":all-ulib-$cpu",
-        "tools",
-      ]
+      deps = [ ":all-ulib-$cpu" ]
     }
 
     build_api_module("legacy_sysroot-$cpu") {
@@ -520,7 +516,6 @@ build_api_module("legacy_images") {
   deps = [
     ":boot-shim-arm64",
     ":zbi_tests",
-    "tools",
   ]
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
@@ -533,10 +528,7 @@ foreach(cpu, standard_fuchsia_cpus) {
   build_api_module("legacy_unification-$cpu") {
     testonly = true
     data_keys = [ "zx_manifest" ]
-    deps = [
-      ":legacy-$cpu",
-      "tools",
-    ]
+    deps = [ ":legacy-$cpu" ]
 
     if (cpu == "arm64") {
       deps += [ ":boot-shim-arm64" ]
