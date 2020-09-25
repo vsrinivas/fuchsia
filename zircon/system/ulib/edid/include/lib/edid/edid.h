@@ -29,7 +29,7 @@ static constexpr uint32_t kBlockSize = 128;
 //
 // See "Table 3.21 - Detailed Timing Definition - Part 1" (in Release
 // A, Revision 2 of the EDID spec, 2006).
-struct DetailedTimingDescriptor {
+struct __PACKED DetailedTimingDescriptor {
   uint32_t horizontal_addressable() const {
     return horizontal_addressable_low | (horizontal_addressable_high() << 8);
   }
@@ -96,7 +96,7 @@ struct DetailedTimingDescriptor {
 
 static_assert(sizeof(DetailedTimingDescriptor) == 18, "Size check for EdidTimingDesc");
 
-union Descriptor {
+union __PACKED Descriptor {
   DetailedTimingDescriptor timing;
   struct Monitor {
     uint16_t generic_tag;
@@ -112,7 +112,7 @@ union Descriptor {
 };
 static_assert(sizeof(Descriptor) == 18, "bad struct");
 
-struct StandardTimingDescriptor {
+struct __PACKED StandardTimingDescriptor {
   uint32_t horizontal_resolution() const { return (byte1 + 31) * 8; }
   uint32_t vertical_resolution(uint8_t edid_version, uint8_t edid_revision) const {
     if (aspect_ratio() == 0) {
@@ -145,7 +145,7 @@ struct StandardTimingDescriptor {
 //
 // See "Table 3.1 - EDID Structure Version 1, Revision 4" (in Release
 // A, Revision 2 of the EDID spec, 2006).
-struct BaseEdid {
+struct __PACKED BaseEdid {
   bool validate() const;
   // Not actually a tag, but the first byte will always be this
   static constexpr uint8_t kTag = 0x00;
@@ -178,7 +178,7 @@ static_assert(offsetof(BaseEdid, standard_timings) == 0x26, "Layout check");
 static_assert(offsetof(BaseEdid, detailed_descriptors) == 0x36, "Layout check");
 
 // Version 3 of the CEA EDID Timing Extension
-struct CeaEdidTimingExtension {
+struct __PACKED CeaEdidTimingExtension {
   static constexpr uint8_t kTag = 0x02;
   bool validate() const;
 
