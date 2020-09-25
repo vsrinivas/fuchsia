@@ -791,7 +791,7 @@ async fn get_dynamic_linker<'a>(
         .map_err(ProcessBuilderError::InvalidInterpHeader)?;
 
     // Retrieve the dynamic linker as a VMO from fuchsia.ldsvc.Loader
-    const LDSO_LOAD_TIMEOUT_SEC: i64 = 10;
+    const LDSO_LOAD_TIMEOUT_SEC: i64 = 30;
     let load_fut = ldsvc
         .load_object(interp_str)
         .map_err(ProcessBuilderError::LoadDynamicLinker)
