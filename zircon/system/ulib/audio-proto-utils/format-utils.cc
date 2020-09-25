@@ -50,7 +50,7 @@ uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format
     case AUDIO_SAMPLE_FORMAT_32BIT_FLOAT:
       return 4u * channels;
 
-    // See ZX-1003
+    // See fxbug.dev/30949
     // We currently don't really know how 20 bit audio should be packed.  For
     // now, treat it as an error.
     case AUDIO_SAMPLE_FORMAT_20BIT_PACKED:

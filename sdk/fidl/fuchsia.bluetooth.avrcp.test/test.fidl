@@ -16,7 +16,7 @@ protocol PeerManagerExt {
     /// WARNING: This test controller can cause breaking side-effects for other controller clients
     /// connected to this the same peer. Use with caution and avoid having additional primary
     /// controller clients interacting with the same remote peer while using the test controller.
-    /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
+    /// TODO (fxbug.dev/898): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
     /// switches.
     GetControllerForTarget(string peer_id, request<ControllerExt> client) -> () error zx.status;
 };

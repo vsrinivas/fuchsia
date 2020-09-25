@@ -41,7 +41,7 @@ TEST(UsbTests, usb_root_hubs_test) {
   DIR* d = open_usb_device_dir();
   if (d == NULL) {
     // TODO(ravoorir): At the moment we cannot restrict a test
-    // to only run on hardware(IN-497) and not the qemu instances.
+    // to only run on hardware(fxbug.dev/9362) and not the qemu instances.
     // We should fail here when running on hardware.
     printf("[SKIPPING] Root hub creation failed.\n");
     return;

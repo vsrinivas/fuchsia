@@ -346,7 +346,7 @@ case $ARCH in
         ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
-          # ZX-3373: Work around KVM bug on AMD Zen machines
+          # fxbug.dev/33174: Work around KVM bug on AMD Zen machines
           # where SMAP and CPL=3 MMIO accesses trigger a loop
           # in the Linux kernel.
           if [[ "$(uname -s)" == "Linux" ]]; then

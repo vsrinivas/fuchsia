@@ -1241,7 +1241,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
-                        "become a session-terminating error. For more info, see [SCN-1249].";
+                        "become a session-terminating error. For more info, see [fxbug.dev/24450].";
       // TODO(fxbug.dev/24450) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
@@ -1261,7 +1261,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
-                        "become a session-terminating error. For more info, see [SCN-1249].";
+                        "become a session-terminating error. For more info, see [fxbug.dev/24450].";
       // TODO(fxbug.dev/24450) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
@@ -1548,7 +1548,7 @@ ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(
   // TODO(fxbug.dev/23430)
   session->error_reporter()->ERROR()
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateImagePipeCompositor() is unimplemented "
-         "(SCN-179)";
+         "(fxbug.dev/23430)";
   return ResourcePtr();
 }
 

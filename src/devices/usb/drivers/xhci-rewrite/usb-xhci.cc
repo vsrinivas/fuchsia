@@ -293,7 +293,7 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
   uint8_t speed;
   if (hub_info) {
     speed = static_cast<uint8_t>(hub_info->speed);
-    // TODO (ZX-4579): USB 3.1 support. Section 6.2.2
+    // TODO (fxbug.dev/34355): USB 3.1 support. Section 6.2.2
     if (((speed == USB_SPEED_LOW) || (speed == USB_SPEED_FULL)) &&
         (hub_info->hub_speed == USB_SPEED_HIGH)) {
       slot_context->set_PARENT_HUB_SLOT_ID(hci.DeviceIdToSlotId(hub_info->hub_id))
@@ -1163,7 +1163,7 @@ void UsbXhci::ControlRequestDataPhase(UsbRequestState* state) {
         type = Control::Data;
         ControlData* data = reinterpret_cast<ControlData*>(current);
         // Control transfers always get interrupter 0 (we consider those to be low-priority)
-        // TODO (ZX-4288): Change bus snooping options based on input from higher-level drivers.
+        // TODO (fxbug.dev/34068): Change bus snooping options based on input from higher-level drivers.
         data->set_CHAIN(next != nullptr)
             .set_DIRECTION((state->context->request->request()->setup.bmRequestType & USB_DIR_IN) !=
                            0)
@@ -1329,7 +1329,7 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
         .set_Type(Control::ConfigureEndpointCommand)
         .ToTrb(&trb);
   }
-  // TODO (ZX-4363): Implement async support
+  // TODO (fxbug.dev/34140): Implement async support
   hw_mb();
   return SubmitCommand(trb, std::move(context))
       .then([=](fit::result<TRB*, zx_status_t>& result) {
@@ -1375,7 +1375,7 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
         .set_Type(Control::ConfigureEndpointCommand)
         .ToTrb(&trb);
   }
-  // TODO (ZX-4363): Implement async support
+  // TODO (fxbug.dev/34140): Implement async support
   hw_mb();
   return SubmitCommand(trb, std::move(context))
       .then([=](fit::result<TRB*, zx_status_t>& result) -> fit::result<TRB*, zx_status_t> {
@@ -1598,7 +1598,7 @@ TRBPromise UsbXhci::UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_addr
       .box();
 }
 
-// TODO (ZX-4864): Either decide what these reset methods should do,
+// TODO (fxbug.dev/34637): Either decide what these reset methods should do,
 // or get rid of them.
 zx_status_t UsbXhci::UsbHciResetDevice(uint32_t hub_address, uint32_t device_id) {
   return ZX_ERR_NOT_SUPPORTED;

@@ -223,7 +223,7 @@ class JobDispatcher final
   // The common |get_lock()| protects all members below.
   State state_ TA_GUARDED(get_lock());
   int64_t return_code_ TA_GUARDED(get_lock());
-  // TODO(cpu): The OOM kill system is incomplete, see ZX-2731 for details.
+  // TODO(cpu): The OOM kill system is incomplete, see fxbug.dev/32577 for details.
   bool kill_on_oom_ TA_GUARDED(get_lock());
 
   template <typename Ptr, typename Tag>

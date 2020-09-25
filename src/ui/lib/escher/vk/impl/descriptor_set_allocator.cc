@@ -74,7 +74,7 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device, DescriptorSetL
 
   if (immutable_sampler && has_sampled_image) {
     // TODO(fxbug.dev/7288): Leaving this log in for now, so we can detect when systems
-    // are OOMing due to ES-199. For most use cases, this log will trigger once.
+    // are OOMing due to fxbug.dev/7288. For most use cases, this log will trigger once.
     FX_LOGS(INFO) << "Allocating immutable descriptor set layout, sampler = "
                   << immutable_sampler->vk();
   }

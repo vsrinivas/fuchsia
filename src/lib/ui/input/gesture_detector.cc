@@ -13,7 +13,7 @@ namespace {
 
 GestureDetector::TapType ClassifyTap(const fuchsia::ui::input::PointerEvent& event,
                                      const Gesture& state) {
-  // TODO(MI4-2402): Allow custom mappings.
+  // TODO(fxbug.dev/18121): Allow custom mappings.
   switch (event.type) {
     case fuchsia::ui::input::PointerEventType::MOUSE:
       if (event.buttons == fuchsia::ui::input::kMouseTertiaryButton) {
@@ -140,7 +140,7 @@ void GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
     case fuchsia::ui::input::PointerEventPhase::MOVE: {
       auto it = devices_.find(event.device_id);
       if (it == devices_.end()) {
-        // TODO:(SCN-1439): This ignores the mouse move case, which happens
+        // TODO:(fxbug.dev/24628): This ignores the mouse move case, which happens
         // outside of a DOWN/UP pair.
         break;
       }

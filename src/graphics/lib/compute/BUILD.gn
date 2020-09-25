@@ -24,7 +24,7 @@ group("compute") {
 }
 
 # IMPORTANT: Most graphics compute tests cannot run on the CQ for now due to
-# a missing appropriate bot configuration (see SPN-42 for details). Thus tests
+# a missing appropriate bot configuration (see fxbug.dev/25516 for details). Thus tests
 # are spread over two targets.
 #
 #   tests: A group that lists all the tests to build by default, and which

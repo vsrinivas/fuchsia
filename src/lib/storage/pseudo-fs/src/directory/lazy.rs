@@ -269,7 +269,7 @@ impl<T> FusedStream for TerminatedStream<T> {
 /// object will be destroyed.
 ///
 /// Notice that currently there is no caching or sharing of entry objects.  Every new `open()`
-/// request will cause new entry object to be allocated and used.  See #ZX-3631 for the caching
+/// request will cause new entry object to be allocated and used.  See #fxbug.dev/33423 for the caching
 /// policy discussion.
 ///
 /// NOTE I have considered using an iterator as the interface for `get_entry_names`.  So that

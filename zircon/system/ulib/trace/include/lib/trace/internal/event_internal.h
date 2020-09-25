@@ -149,7 +149,7 @@ __BEGIN_CDECLS
   } while (0)
 
 #ifndef NTRACE
-// TODO(fmeawad): The generated code for this macro is too big (PT-87)
+// TODO(fmeawad): The generated code for this macro is too big (fxbug.dev/22950)
 #define TRACE_INTERNAL_DECLARE_DURATION_SCOPE(variable, args_variable, category_literal,         \
                                               name_literal, args...)                             \
   TRACE_INTERNAL_ALLOCATE_ARGS(args_variable, args);                                             \

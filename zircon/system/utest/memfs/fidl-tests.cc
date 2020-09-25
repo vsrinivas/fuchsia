@@ -64,7 +64,7 @@ TEST(FidlTests, TestFidlBasic) {
   }
   ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp"), ZX_OK);
 
-  // No way to clean up the namespace entry. See ZX-2013 for more details.
+  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
 }
 
 TEST(FidlTests, TestFidlOpenReadOnly) {
@@ -97,7 +97,7 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
   }
   memfs_uninstall_unsafe(fs, "/fidltmp-ro");
 
-  // No way to clean up the namespace entry. See ZX-2013 for more details.
+  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
 }
 
 void QueryInfo(const char* path, fio::FilesystemInfo* info) {
@@ -140,7 +140,7 @@ TEST(FidlTests, TestFidlQueryFilesystem) {
     ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp-basic"), ZX_OK);
   }
 
-  // No way to clean up the namespace entry. See ZX-2013 for more details.
+  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
 }
 
 }  // namespace

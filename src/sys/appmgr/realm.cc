@@ -959,7 +959,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   }
 
   // Note that |builder| is only used in the else block below. It is left here
-  // because we would like to use it everywhere once US-313 is fixed.
+  // because we would like to use it everywhere once fxbug.dev/28222 is fixed.
   NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(), fp.ToString());
   builder.AddPackage(std::move(pkg));
 

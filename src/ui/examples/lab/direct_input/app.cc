@@ -270,7 +270,7 @@ void App::CreateScene(float display_width, float display_height) {
 
     scenic::Layer layer(session);
     layer.SetRenderer(renderer);
-    layer.SetSize(display_width, display_height);  // Need screen size, SCN-248.
+    layer.SetSize(display_width, display_height);  // Need screen size, fxbug.dev/23494.
     layer_stack.AddLayer(layer);
 
     scenic::AmbientLight ambient_light(session);

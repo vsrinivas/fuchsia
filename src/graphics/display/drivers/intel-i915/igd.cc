@@ -351,7 +351,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
   // actual API (probably in ACPI) to do this.
   zx_handle_t vmo;
   uint32_t igd_opregion_pages_len_ = kIgdOpRegionLen + (igd_addr & PAGE_SIZE);
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_vmo_create_physical(get_root_resource(), igd_addr & ~(PAGE_SIZE - 1),
                                   igd_opregion_pages_len_, &vmo);
   if (status != ZX_OK) {

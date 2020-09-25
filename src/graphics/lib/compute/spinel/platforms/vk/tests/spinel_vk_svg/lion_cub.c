@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //
-// TODO(allanmac): (SPN-45)
+// TODO(allanmac): (fxbug.dev/25519)
 //
 // The hardcoded "lion cub" will be replaced with a minimalist SVG
 // parser and this file will be removed.

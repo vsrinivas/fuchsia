@@ -433,7 +433,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // for its BSS afterwards.
   //
   // Previously we requested 32MB but that caused issues. When the kernel
-  // becomes relocatable this won't be an problem. See ZX-2368.
+  // becomes relocatable this won't be an problem. See fxbug.dev/32223.
   kernel_zone_base = 0x100000;
   kernel_zone_size = 6 * 1024 * 1024;
 

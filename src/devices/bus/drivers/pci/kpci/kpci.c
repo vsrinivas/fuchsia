@@ -318,7 +318,7 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
   }
 
   // TODO: What is an 'nth' device in a world where a device may be added/removed via hotplug?
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = zx_pci_get_nth_device(get_root_resource(), index, &info, &handle);
   if (status != ZX_OK) {
     return status;

@@ -28,7 +28,7 @@ const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/provider_dest
 const char kCategoriesArg[] = "--categories=" CATEGORY_NAME;
 
 // Try this many times to exercise shutdown.
-// This has been more than enough to trigger PT-247 in practice.
+// This has been more than enough to trigger fxbug.dev/23108 in practice.
 constexpr size_t kNumIterations = 50;
 
 TEST(ProviderDestruction, StressTest) {

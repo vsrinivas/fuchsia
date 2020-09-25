@@ -349,7 +349,7 @@ TEST(DnsReadingTest, SimpleQuestion) {
 }
 
 // Tests parsing of an ill-formed message that prevously caused a crash.
-// NET-1962 - issue discovered by fuzzer.
+// fxbug.dev/21019 - issue discovered by fuzzer.
 TEST(DnsReadingTest, RegressionNET1962) {
   std::vector<uint8_t> buffer{
       0x50, 0xf1, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40, 0x02,

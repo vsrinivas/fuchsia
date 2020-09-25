@@ -127,7 +127,7 @@ void EthertapConfig::RandomLocalUnicast(const std::string& str_seed) {
   // as a temporary fix due to ethertap devfs entries being leaked
   // across test boundaries (which caused tests to fail).
   // TODO(brunodalbo) go back to only the string seed
-  //  once ZX-2956 is fixed.
+  //  once fxbug.dev/32792 is fixed.
   sseed.push_back(rd());
   sseed.push_back(rd());
   sseed.push_back(rd());

@@ -392,7 +392,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   constexpr uint16_t kSequencerData = 0x3c5;
   constexpr uint8_t kClockingModeIdx = 1;
   constexpr uint8_t kClockingModeScreenOff = (1 << 5);
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = zx_ioports_request(get_root_resource(), kSequencerIdx, 2);
   if (status != ZX_OK) {
     LOG_ERROR("Failed to map vga ports\n");
@@ -1981,7 +1981,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
   // TODO(fxbug.dev/43204): Implement the suspend hook based on suspendtxn
   if (txn.suspend_reason() == DEVICE_SUSPEND_REASON_MEXEC) {
     uint32_t format, width, height, stride;
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     if (zx_framebuffer_get_info(get_root_resource(), &format, &width, &height, &stride) != ZX_OK) {
       txn.Reply(ZX_OK, txn.requested_state());
       return;

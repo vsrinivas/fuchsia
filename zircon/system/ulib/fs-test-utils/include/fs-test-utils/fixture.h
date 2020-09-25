@@ -39,7 +39,7 @@ constexpr size_t kPathSize = PATH_MAX;
 
 constexpr size_t kFvmBlockSize = fvm::kBlockSize;
 
-// TODO(gevalentno): when ZX-2013 is resolved, make MemFs setup and teardown
+// TODO(gevalentno): when fxbug.dev/31875 is resolved, make MemFs setup and teardown
 // part of the test fixture and remove RunWithMemFs.
 // Workaround that provides a MemFs per process, since it cannot be unbinded
 // from the process namespace yet.

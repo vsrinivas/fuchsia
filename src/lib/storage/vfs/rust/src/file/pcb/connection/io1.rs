@@ -399,7 +399,7 @@ impl FileConnection {
         let len = self.buffer.len() as u64;
 
         if offset >= len {
-            // This should return Status::OUT_OF_RANGE but POSIX wants an OK. See ZX-3633.
+            // This should return Status::OUT_OF_RANGE but POSIX wants an OK. See fxbug.dev/33425.
             responder(Status::OK, &[])?;
             return Ok(0);
         }

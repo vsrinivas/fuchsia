@@ -149,7 +149,7 @@ void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback 
     // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
     // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
-    // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
+    // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
     FX_DCHECK(display_delegate_);
     display_delegate_->GetDisplayInfo(std::move(callback));
@@ -161,7 +161,7 @@ void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback 
     // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
     // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
-    // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
+    // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
     FX_DCHECK(screenshot_delegate_);
     screenshot_delegate_->TakeScreenshot(std::move(callback));
@@ -174,7 +174,7 @@ void Scenic::GetDisplayOwnershipEvent(
     // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
     // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
-    // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
+    // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
     FX_DCHECK(display_delegate_);
     display_delegate_->GetDisplayOwnershipEvent(std::move(callback));

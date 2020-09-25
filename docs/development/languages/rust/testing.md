@@ -161,7 +161,7 @@ fx test hello_world_rust_tests
 
 Note: that in order to use `fx test`, you can't override
 `package_name="..."` in your `package`  or `test_package` declaration. This
-issue is tracked by BLD-338.
+issue is tracked by fxbug.dev/3143.
 
 
 For information on packaging and running tests, see

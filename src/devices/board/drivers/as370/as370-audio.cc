@@ -199,7 +199,7 @@ zx_status_t As370::AudioInit() {
   }
 
   // coresident_device_index = 1 to share devhost with DHub.
-  // When autoproxying (ZX-3478) or its replacement is in place,
+  // When autoproxying (fxbug.dev/33274) or its replacement is in place,
   // we can have these drivers in different devhosts.
   constexpr uint32_t controller_coresident_device_index = 1;
   status =
@@ -212,7 +212,7 @@ zx_status_t As370::AudioInit() {
 
   // Input device.
   // coresident_device_index = 1 to share devhost with DHub.
-  // When autoproxying (ZX-3478) or its replacement is in place,
+  // When autoproxying (fxbug.dev/33274) or its replacement is in place,
   // we can have these drivers in different devhosts.
   constexpr uint32_t in_coresident_device_index = 1;
   status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments),

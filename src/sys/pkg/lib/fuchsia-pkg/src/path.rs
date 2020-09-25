@@ -12,7 +12,7 @@ use regex::Regex;
 pub const MAX_OBJECT_BYTES: usize = 255;
 pub const MAX_PACKAGE_NAME_BYTES: usize = 100;
 pub const MAX_PACKAGE_VARIANT_BYTES: usize = 100;
-// FIXME(PKG-757): '_' is not valid in package names, but many Fuchsia packages currently use that
+// FIXME(fxbug.dev/22679): '_' is not valid in package names, but many Fuchsia packages currently use that
 // character.
 pub const PACKAGE_NAME_REGEX: &str = r"^[-_0-9a-z\.]{1, 100}$";
 pub const PACKAGE_VARIANT_REGEX: &str = r"^[-0-9a-z\.]{1, 100}$";
@@ -280,7 +280,7 @@ mod check_package_name_tests {
             );
         }
 
-        // FIXME(PKG-757): '_' should be considered to be an invalid character.
+        // FIXME(fxbug.dev/22679): '_' should be considered to be an invalid character.
         #[test]
         fn test_reject_invalid_character(ref s in r"[-0-9a-z\.]{0, 48}[^-_0-9a-z\.][-0-9a-z\.]{0, 48}")
         {

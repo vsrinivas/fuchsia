@@ -236,7 +236,7 @@ template("fidl") {
                              ])
     }
 
-    # TODO(cramertj): remove pending TC-81.
+    # TODO(cramertj): remove pending fxbug.dev/26853.
     fidl_rust_library(target_name) {
       forward_variables_from(invoker, "*")
     }

@@ -264,7 +264,7 @@ resource struct ServiceList {
     Provider? provider;
 
     // A channel to the directory hosting the services in `names`.
-    // TODO(fxbug.dev/ZX-1358	31262): Support `host_directory` for CreateComponent and deprecate
+    // TODO(fxbug.dev/31262): Support `host_directory` for CreateComponent and deprecate
     // `provider`.
     zx.handle:CHANNEL? host_directory;
 };

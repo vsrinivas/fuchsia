@@ -62,7 +62,7 @@ class PcieUpstreamNode {
   fbl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 
  private:
-  PcieBusDriver& bus_drv_;  // TODO(johngro) : Eliminate this, see ZX-325
+  PcieBusDriver& bus_drv_;  // TODO(johngro) : Eliminate this, see fxbug.dev/30285
   const Type type_;
   const uint managed_bus_id_;  // The ID of the downstream bus which this node manages.
 

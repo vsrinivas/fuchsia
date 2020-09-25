@@ -111,7 +111,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   zx_paddr_t page_start = ZX_ROUNDDOWN(paddr, PAGE_SIZE);
   size_t page_offset = (paddr & (PAGE_SIZE - 1));
   size_t page_size = ZX_ROUNDUP(page_offset + size, PAGE_SIZE);
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_vmo_create_physical(get_root_resource(), page_start, page_size, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to create NHLT VMO (res %d)", status);

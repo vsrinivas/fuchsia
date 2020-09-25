@@ -62,6 +62,6 @@ enum OperatingBand {
 };
 
 /// Empty struct used in place of optional values.
-// TODO: FIDL-589
+// TODO: fxbug.dev/7913
 struct Empty {
 };

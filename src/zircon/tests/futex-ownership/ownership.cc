@@ -286,7 +286,7 @@ TEST(FutexOwnershipTestCase, Wait) {
   // to be checked and return BAD_STATE before the proposed owner handle is
   // validated.  Failure to do this in the proper order can lead to a race
   // which can cause a job policy exception to fire in mutex code which
-  // implements priority inheritance; see ZX-4607.
+  // implements priority inheritance; see fxbug.dev/34382.
   t2_res.store(ZX_ERR_INTERNAL);
   ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.8", [&]() -> int {
     zx_handle_t bad_handle = test_thread_handle & ~ZX_HANDLE_FIXED_BITS_MASK;

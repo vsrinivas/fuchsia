@@ -114,7 +114,7 @@ zx_library("c") {
             "zircon/types.h",
 
             # Note: Most of zircon/device is excluded from SDKs.
-            # TODO(FIDL-273,ZX-2503): remove this allowlist.
+            # TODO(fxbug.dev/7610,fxbug.dev/32355): remove this allowlist.
             "zircon/device/audio.h",
           ]
 

@@ -1008,10 +1008,10 @@ TEST_F(ClientTest, PsPollWithBeacon) {
   EXPECT_EQ(common::MacAddr(kClientAddress), frame.body()->ta);
 }
 
-// Add additional tests for (tracked in NET-801):
+// Add additional tests for (tracked in fxbug.dev/29020):
 // AP refuses Authentication/Association
 // Regression tests for:
-// - NET-898: PS-POLL after TIM indication.
+// - fxbug.dev/28988: PS-POLL after TIM indication.
 // Deauthenticate in any state issued by AP/SME.
 // Disassociation in any state issued by AP/SME.
 // Handle Action frames and setup Block-Ack session.

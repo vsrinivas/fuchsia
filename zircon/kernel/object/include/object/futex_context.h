@@ -95,7 +95,7 @@ class FutexContext {
   // we need to perform the current_value == *value_ptr check before attempting to validate the
   // thread handle, and this check needs to happen inside of the futex context lock.  To do
   // otherwise leaves the potential to hit a race condition where we end up appearing to violate
-  // the "bad handle" policy when actually we didn't.  See ZX-4607 for details.
+  // the "bad handle" policy when actually we didn't.  See fxbug.dev/34382 for details.
   zx_status_t FutexWait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
                         zx_handle_t new_futex_owner, const Deadline& deadline);
 

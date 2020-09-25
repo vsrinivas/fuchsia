@@ -140,7 +140,7 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
 void BaseView::PresentScene(zx_time_t presentation_time) {
   TRACE_DURATION("view", "BaseView::PresentScene");
   // TODO(fxbug.dev/24406): Remove this when BaseView::PresentScene() is deprecated,
-  // see SCN-1379.
+  // see fxbug.dev/24573.
   if (present_pending_)
     return;
 

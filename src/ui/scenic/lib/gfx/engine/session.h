@@ -151,7 +151,7 @@ class Session : public CommandDispatcher {
   // by a parent Node in the scene graph.
   size_t resource_count_ = 0;
   // A weak reference to the first View added to the ResourceMap. Cached while
-  // transitioning to a one-root-view-per-session model. See SCN-1249 for more
+  // transitioning to a one-root-view-per-session model. See fxbug.dev/24450 for more
   // details.
   fxl::WeakPtr<View> root_view_;
 

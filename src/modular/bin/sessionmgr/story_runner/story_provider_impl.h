@@ -175,7 +175,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
     // The executor on which asynchronous tasks are scheduled for this story.
     //
     // TODO(thatguy): Migrate all operations under |controller_impl| to use
-    // fit::promise and |executor|. MF-117
+    // fit::promise and |executor|. fxbug.dev/16062
     // TODO(thatguy): Once fit::scope is complete, share one executor for the
     // whole process and take advantage of fit::scope to auto-cancel tasks when
     // |this| dies.

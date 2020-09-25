@@ -113,7 +113,7 @@ class MsdArmAtom {
   }
 
   // TODO: Remove this when trace generated JSON can support 64bit ints
-  // without this hack. (PT-110)
+  // without this hack. (fxbug.dev/22971)
   uint64_t slot_id() { return slot_ * 2000; }
 
   virtual std::vector<std::string> DumpInformation();

@@ -110,7 +110,7 @@ enum Enum {
     TWO = 2;
 };
 
-// NOTE(mesch): Can't use struct, FIDL-130.
+// NOTE(mesch): Can't use struct, fxbug.dev/7467.
 union Union {
     1: int32 int32;
     2: string string;

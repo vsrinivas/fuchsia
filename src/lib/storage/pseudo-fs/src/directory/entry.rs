@@ -83,7 +83,7 @@ impl fmt::Debug for EntryInfo {
 /// like a case when a directory is empty and has no active connections.
 ///
 /// [`Send`] is necessary to be able to run the whole directory tree in a separate thread.  See
-/// #ZX-3593 for details on a `LocalDirectoryEntry` that would allow callbacks that do not need to
+/// #fxbug.dev/33385 for details on a `LocalDirectoryEntry` that would allow callbacks that do not need to
 /// be `Send`.
 pub trait DirectoryEntry: Future<Output = Void> + FusedFuture + Unpin + Send {
     /// Opens a connection to this item if the `path` is empty or a connection to an item inside

@@ -851,7 +851,7 @@ NO_ASAN void* cmpct_alloc(size_t size) {
     return NULL;
   }
 
-  // Large allocations are no longer allowed. See ZX-1318 for details.
+  // Large allocations are no longer allowed. See fxbug.dev/31229 for details.
   if (size > kHeapMaxAllocSize) {
     return NULL;
   }

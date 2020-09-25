@@ -178,7 +178,7 @@ static constexpr const char* deprecated_services[] = {
     // We should host the tracing.provider service ourselves instead of
     // routing the request to appmgr.
     "fuchsia.tracing.provider.Registry",
-    // TODO(fxbug.dev/22951): This entry is temporary, until PT-88 is resolved.
+    // TODO(fxbug.dev/22951): This entry is temporary, until fxbug.dev/22951 is resolved.
     "fuchsia.tracing.controller.Controller",
     // For amberctl and pkgctl over serial shell.
     "fuchsia.pkg.PackageResolver",

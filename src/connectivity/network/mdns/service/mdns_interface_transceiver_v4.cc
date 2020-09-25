@@ -58,7 +58,7 @@ int MdnsInterfaceTransceiverV4::SetOptionUnicastTtl() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_TTL, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
-      FX_LOGS(WARNING) << "NET-2177 IP_TTL not supported (ENOPROTOOPT), "
+      FX_LOGS(WARNING) << "fxbug.dev/21170 IP_TTL not supported (ENOPROTOOPT), "
                           "continuing anyway. May cause spurious IP traffic";
       result = 0;
     } else {

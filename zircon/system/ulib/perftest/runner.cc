@@ -534,7 +534,7 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "      Disable printing the name of each test before and after "
         "we run it.  That output tends to cause asynchronous background "
         "activity (e.g. in the network stack, if the output is sent "
-        "across the network) which skews the test results.  See PT-245.  "
+        "across the network) which skews the test results.  See fxbug.dev/23106.  "
         "This also disables printing the results, so it is only useful "
         "when used with '--out'.\n"
         "  --random-order\n"
@@ -544,13 +544,13 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "      Enable use of Fuchsia tracing: Enable registering as a "
         "TraceProvider.  This is off by default because the "
         "TraceProvider gets registered asynchronously on a background "
-        "thread (see TO-650), and that activity could introduce noise "
+        "thread (see fxbug.dev/22911), and that activity could introduce noise "
         "to the tests.\n"
         "  --startup-delay SECONDS\n"
         "      Delay in seconds to wait on startup, after registering "
         "a TraceProvider.  This allows working around a race condition "
         "where tracing misses initial events from newly-registered "
-        "TraceProviders (see TO-650).\n",
+        "TraceProviders (see fxbug.dev/22911).\n",
         argv[0], argv[0]);
     return 1;
   }

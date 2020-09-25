@@ -63,7 +63,7 @@ END_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm)
 // and run multiple tests.
 BEGIN_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
-// TODO(gevalentino): FLK-48 flaky.
+// TODO(gevalentino): fxbug.dev/8187 flaky.
 // RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
 // TODO(fxbug.dev/38168): flaky tests
 // RUN_FS_TEST_F(VerifyRamdiskAndFvmExist2)

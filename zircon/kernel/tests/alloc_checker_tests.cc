@@ -104,7 +104,7 @@ static bool alloc_checker_new_fails() {
 // When we're in "extreme debug mode" the heap will panic on allocation failure.
 #if LK_DEBUGLEVEL <= 2
   // malloc(size_t_max) should fail but currently does not (see
-  // ZX-1760), so use large_size instead, because malloc(large_size)
+  // fxbug.dev/31629), so use large_size instead, because malloc(large_size)
   // does fail.
   size_t size_t_max = ~(size_t)0;
   size_t large_size = size_t_max >> 1;

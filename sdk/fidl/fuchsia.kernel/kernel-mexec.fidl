@@ -10,6 +10,6 @@ using zx;
 [Discoverable, ForDeprecatedCBindings]
 protocol MexecBroker {
     /// Perform an mexec with the given kernel and bootdata.
-    /// See ZX-2069 for the thoughts on deprecating mexec.
+    /// See fxbug.dev/31931 for the thoughts on deprecating mexec.
     PerformMexec(zx.handle:VMO kernel, zx.handle:VMO bootdata);
 };

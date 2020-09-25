@@ -326,7 +326,7 @@ TEST(GfxConsoleTextbufTests, DeleteChars) {
   // Delete 2 characters to the right of the cursor, using the "DCH"
   // escape sequence.  Any characters beyond that, on the right, are
   // moved to the left by 2 characters.  This escape sequence is a
-  // reduced test from a fuzzer-discovered example (see ZX-2936).  This
+  // reduced test from a fuzzer-discovered example (see fxbug.dev/32773).  This
   // used to trigger an assertion failure.
   tc.PutString("\x1b[2P");
   tc.AssertLineContains(0, "1256");

@@ -238,7 +238,7 @@ class LogListenerTest : public UnitTestFixture {
   async::Executor executor_;
 };
 
-// DX-1602
+// fxbug.dev/6388
 TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
   logger->set_messages({
@@ -260,7 +260,7 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   ASSERT_TRUE(result.is_ok());
 
   // Then, we check that if the logger closes the connection (and triggers the error handler on the
-  // LogListener side), we don't crash (cf. DX-1602).
+  // LogListener side), we don't crash (cf. fxbug.dev/6388).
   logger->CloseConnection();
 }
 

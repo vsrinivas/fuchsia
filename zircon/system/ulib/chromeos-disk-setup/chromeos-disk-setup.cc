@@ -325,7 +325,7 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
                       (p = find_by_type_and_name(gpt, kStateLinuxGuid, "STATE")) != NULL)) {
     uint64_t min_state_sz_blks = howmany(MIN_SZ_STATE, blk_info->block_size);
 
-    // TODO (TO-607) consider if there is free space on either side of STATE
+    // TODO (fxbug.dev/27721) consider if there is free space on either side of STATE
 
     // The STATE partition is expected to be at the end of the GPT in cros,
     // and can be shrunk in order to make space for use cases such as this.

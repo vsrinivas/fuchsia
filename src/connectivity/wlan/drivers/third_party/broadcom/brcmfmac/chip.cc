@@ -1264,7 +1264,7 @@ static inline void brcmf_chip_cr4_set_passive(struct brcmf_chip_priv* chip) {
   brcmf_chip_disable_arm(chip, CHIPSET_ARM_CR4_CORE);
   BRCMF_DBG(TEMP, "2");
 
-  // WLAN-745
+  // fxbug.dev/29366
   if (chip->pub.chip != BRCM_CC_4359_CHIP_ID) {
     core = brcmf_chip_get_core(&chip->pub, CHIPSET_80211_CORE);
     BRCMF_DBG(TEMP, "resetcore, id %d, val %d, PHYCLOCKEN", CHIPSET_80211_CORE,

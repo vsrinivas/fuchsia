@@ -84,7 +84,7 @@ class PlatformBus : public PlatformBusType,
   // Returns the resource handle to be used for creating MMIO regions, IRQs, and SMC ranges.
   // Currently this just returns the root resource, but we may change this to a more
   // limited resource in the future.
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource GetResource() const { return zx::unowned_resource(get_root_resource()); }
 
   zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length);

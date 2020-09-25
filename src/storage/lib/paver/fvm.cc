@@ -368,8 +368,8 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     ERROR("Failed to get topological path\n");
     return status;
   }
-  // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
-  // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
+  // TODO(security): fxbug.dev/31073. We need to bind with channel in order to pass a key here.
+  // TODO(security): fxbug.dev/31733. The created volume must marked as needing key rotation.
 
   fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
   std::unique_ptr<zxcrypt::FdioVolume> volume;

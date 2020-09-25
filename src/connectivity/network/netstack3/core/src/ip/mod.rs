@@ -1369,7 +1369,7 @@ fn deliver_ipv4<D: EventDispatcher>(
     // - This implements a strict host model (in which we only accept packets
     //   which are addressed to the device over which they were received). This
     //   is the easiest to implement for the time being, but we should actually
-    //   put real thought into what our host model should be (NET-1011).
+    //   put real thought into what our host model should be (fxbug.dev/20852).
     let dst_ip = dst_ip.get();
 
     crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)

@@ -21,7 +21,7 @@ use std::sync::Arc;
 use crate::battery_manager::BatteryManager;
 use crate::LOG_VERBOSITY;
 
-// TODO (ZX-3385): binding the FIDL service via file descriptor is still
+// TODO (fxbug.dev/33183): binding the FIDL service via file descriptor is still
 // required for hardware FIDLs (implemented by ACPI battery driver).
 // Once componentization of drivers is complete and they are capable of
 // publishing their FIDL services, should be abl to remove POWER_DEVICE
@@ -45,7 +45,7 @@ fn get_power_source_proxy(file: &File) -> ioResult<hpower::SourceProxy> {
 // Note that this file (/dev/class/power) is a left over artifact of the
 // legacy power_manager implementation which was based on power IOCTLs.
 // The file is still required as it provides the descriptor with which
-// to bind the FIDL service, at least until ZX-3385 is complete, which
+// to bind the FIDL service, at least until fxbug.dev/33183 is complete, which
 // will componentize drivers and allow them to provide discoverable FIDL
 // services like everyone else.
 pub async fn get_power_info(file: &File) -> ioResult<hpower::SourceInfo> {
@@ -63,7 +63,7 @@ pub async fn get_power_info(file: &File) -> ioResult<hpower::SourceInfo> {
 // Note that this file (/dev/class/power) is a left over artifact of the
 // legacy power_manager implementation which was based on power IOCTLs.
 // The file is still required as it provides the descriptor with which
-// to bind the FIDL service, at least until ZX-3385 is complete, which
+// to bind the FIDL service, at least until fxbug.dev/33183 is complete, which
 // will componentize drivers and allow them to provide discoverable FIDL
 // services like everyone else.
 pub async fn get_battery_info(file: &File) -> ioResult<hpower::BatteryInfo> {

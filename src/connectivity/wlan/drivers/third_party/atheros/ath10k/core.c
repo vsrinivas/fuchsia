@@ -2121,7 +2121,7 @@ void ath10k_core_stop(struct ath10k* ar) {
 /* In order to know what hw capabilities should be advertised, we have to load the
  * firmware. Rather than tear it down immediately and re-load it when wlanmac's
  * start() is invoked, we just keep it running. Note that this behavior is subject
- * to change in the future (see WLAN-652).
+ * to change in the future (see fxbug.dev/29274).
  */
 static zx_status_t ath10k_core_probe_fw(struct ath10k* ar) {
   struct bmi_target_info target_info;

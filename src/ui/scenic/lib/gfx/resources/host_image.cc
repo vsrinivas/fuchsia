@@ -148,7 +148,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
   // image_conversion_function_).
   if (image_info.pixel_format != fuchsia::images::PixelFormat::NV12 &&
       image_info.stride != width_bytes) {
-    error_reporter->ERROR() << "Image::CreateFromMemory(): the stride must be minimal (SCN-141)";
+    error_reporter->ERROR() << "Image::CreateFromMemory(): the stride must be minimal (fxbug.dev/23396)";
     return nullptr;
   }
 

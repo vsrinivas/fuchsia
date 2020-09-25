@@ -3,7 +3,7 @@
   "pkg/trace/include/lib/trace/event_args.h": "62dab9adea24706725fd0fae4025ee0d",
   "pkg/trace/include/lib/trace/internal/event_args.h": "1385f4d2538affc85f864accd5eeb6e2",
   "pkg/trace/include/lib/trace/internal/event_common.h": "bea987efddcaa0a538473b10945805de",
-  "pkg/trace/include/lib/trace/internal/event_internal.h": "0e2d678d24994cf8478d3f761ce07233",
+  "pkg/trace/include/lib/trace/internal/event_internal.h": "f0742b4de05c27dbb7f727e0ecaeb250",
   "pkg/trace/include/lib/trace/internal/pairs_internal.h": "6c3585d6e1a5ef8b05ca434a3e9d872b",
   "pkg/trace/include/lib/trace/internal/string_traits.h": "f63c8473e05f26246c073ece62939490",
   "pkg/trace/include/lib/trace/observer.h": "91290946c9295086913984f2b6047a68"

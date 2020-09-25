@@ -576,7 +576,7 @@ TEST_F(MediaPlayerTests, ElementarySource) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  // TODO(dalesat): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -617,7 +617,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(fxbug.dev/7664): Do this safely once FIDL-329 is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -654,7 +654,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(fxbug.dev/7664): Do this safely once FIDL-329 is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -691,7 +691,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(fxbug.dev/7664): Do this safely once FIDL-329 is fixed.
+  // TODO(fxbug.dev/7664): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -1018,7 +1018,7 @@ TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
   EXPECT_TRUE(fake_sysmem_.expected());
 }
 
-// Regression test for US-544.
+// Regression test for fxbug.dev/28417.
 TEST_F(MediaPlayerTests, RegressionTestUS544) {
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
 
@@ -1119,7 +1119,7 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  // TODO(dalesat): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 

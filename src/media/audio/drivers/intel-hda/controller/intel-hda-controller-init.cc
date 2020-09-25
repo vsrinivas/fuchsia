@@ -517,7 +517,7 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
 }
 
 zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
-  // TODO(johngro): see ZX-940; remove this priority boost when we can, and
+  // TODO(johngro): see fxbug.dev/30888; remove this priority boost when we can, and
   // when there is a better way of handling real time requirements.
   //
   // Right now, the interrupt handler runs in the same execution domain as all

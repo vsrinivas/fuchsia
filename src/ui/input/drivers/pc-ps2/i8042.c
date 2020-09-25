@@ -681,11 +681,11 @@ static int i8042_irq_thread(void* arg) {
   // enable I/O port access
   // TODO
   zx_status_t status;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_ioports_request(get_root_resource(), I8042_COMMAND_REG, 1);
   if (status)
     return 0;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_ioports_request(get_root_resource(), I8042_DATA_REG, 1);
   if (status)
     return 0;
@@ -725,11 +725,11 @@ static int i8042_irq_thread(void* arg) {
 
 static zx_status_t i8042_setup(uint8_t* ctr) {
   // enable I/O port access
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = zx_ioports_request(get_root_resource(), I8042_COMMAND_REG, 1);
   if (status)
     return status;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_ioports_request(get_root_resource(), I8042_DATA_REG, 1);
   if (status)
     return status;
@@ -928,7 +928,7 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
   uint32_t interrupt =
       dev->type == fuchsia_hardware_input_BootProtocol_KBD ? ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status =
       zx_interrupt_create(get_root_resource(), interrupt, ZX_INTERRUPT_REMAP_IRQ, &dev->irq);
   if (status != ZX_OK) {

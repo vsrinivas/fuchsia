@@ -42,7 +42,7 @@ static inline uint32_t hiu_get_pll_offs(aml_pll_dev_t* pll_dev) {
 }
 
 zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   zx_status_t status;
 

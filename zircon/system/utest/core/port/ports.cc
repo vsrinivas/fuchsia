@@ -406,7 +406,7 @@ TEST(PortTest, ThreadEvents) {
 
   for (size_t ix = 0; ix != kNumPortWaiterThreads; ++ix) {
     // |count| is one so each thread is going to pick one packet each
-    // and exit. See bug ZX-648 for the case this is testing.
+    // and exit. See bug fxbug.dev/30605 for the case this is testing.
     EXPECT_OK(event.wait_async(port, (500u + ix), ZX_EVENT_SIGNALED, 0));
 
     port_waiters[ix] = std::thread(PortWaiter, &port, 1, &return_status[ix]);

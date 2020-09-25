@@ -96,7 +96,7 @@ zx_status_t QemuArm64::PciAdd() {
   zxlogf(DEBUG, "%s ecam { %#lx - %#lx }\n", name.data(), PCIE_ECAM_BASE_PHYS,
          PCIE_ECAM_BASE_PHYS + PCIE_ECAM_SIZE);
   zx::vmo ecam_vmo = {};
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()), PCIE_ECAM_BASE_PHYS,
                                     PCIE_ECAM_SIZE, &ecam_vmo);
   if (status != ZX_OK) {

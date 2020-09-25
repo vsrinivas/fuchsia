@@ -470,7 +470,7 @@ static void x86_resource_init_hook(unsigned int rl) {
     }
   }
 
-  // debug_uart.irq needs to be reserved here. See ZX-4155.
+  // debug_uart.irq needs to be reserved here. See fxbug.dev/33936.
 }
 
 LK_INIT_HOOK(x86_resource_init, x86_resource_init_hook, LK_INIT_LEVEL_HEAP)

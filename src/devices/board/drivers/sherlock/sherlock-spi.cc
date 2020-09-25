@@ -115,7 +115,7 @@ zx_status_t Sherlock::SpiInit() {
   // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the
   // dividers
   {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx::unowned_resource resource(get_root_resource());
     std::optional<ddk::MmioBuffer> buf;
     zx_status_t status = ddk::MmioBuffer::Create(T931_HIU_BASE, T931_HIU_LENGTH, *resource,

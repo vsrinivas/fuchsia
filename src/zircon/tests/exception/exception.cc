@@ -486,7 +486,7 @@ TEST(ExceptionTest, Trigger) {
 }
 
 static void test_child_exit_closing_excp_handle() {
-  // Test ZX-1544. Process termination closing the last handle of the exception
+  // Test fxbug.dev/31432. Process termination closing the last handle of the exception
   // channel should not cause a panic.
   zx::channel exception_channel;
   ASSERT_OK(zx::process::self()->create_exception_channel(0, &exception_channel));

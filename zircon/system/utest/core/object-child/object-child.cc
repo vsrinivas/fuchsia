@@ -10,7 +10,7 @@
 namespace {
 
 // zx_object_get_child(ZX_HANDLE_INVALID) should return
-// ZX_ERR_BAD_HANDLE. ZX-1702
+// ZX_ERR_BAD_HANDLE. fxbug.dev/31574
 TEST(ObjectChildTest, InvalidHandleReturnsBadHandle) {
   zx::unowned_process self = zx::process::self();
   zx_info_handle_basic_t info;

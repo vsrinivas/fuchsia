@@ -42,7 +42,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
       instance = nullptr;
     } else {
       // TODO(andrewkrieger): after optimizing jitterentropy parameters
-      // (see ZX-1022), replace JITTERENTROPY_MEM_SIZE by the optimal
+      // (see fxbug.dev/30967), replace JITTERENTROPY_MEM_SIZE by the optimal
       // size.
       static uint8_t mem[JITTERENTROPY_MEM_SIZE];
       static JitterentropyCollector collector(mem, sizeof(mem));

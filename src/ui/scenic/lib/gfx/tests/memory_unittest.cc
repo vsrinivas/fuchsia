@@ -173,7 +173,7 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyDeviceMemory) {
   // This test creates valid device memory (unlike the previous test), but
   // still duplicates it, handing Scenic a read-only handle.
   //
-  // TODO(fxbug.dev/13100): Fixing MA-492 would allow importation of read-only VMOs.
+  // TODO(fxbug.dev/13100): Fixing fxbug.dev/13100 would allow importation of read-only VMOs.
   zx::vmo read_only;
   zx_status_t status = device_vmo.duplicate(
       ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT, &read_only);

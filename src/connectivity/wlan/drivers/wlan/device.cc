@@ -40,7 +40,7 @@ namespace wlan {
 
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
-// Remedy for FLK-24 (DNO-389)
+// Remedy for fxbug.dev/8165 (fxbug.dev/33151)
 // See |DATA_FRAME_INTERVAL_NANOS|
 // in //src/connectivity/wlan/testing/hw-sim/src/minstrel.rs
 // Ensure at least one probe frame (generated every 16 data frames)
@@ -380,13 +380,13 @@ zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value, const vo
 
   switch (param) {
     case ETHERNET_SETPARAM_PROMISC:
-      // See NET-1808: In short, the bridge mode doesn't require WLAN
+      // See fxbug.dev/28881: In short, the bridge mode doesn't require WLAN
       // promiscuous mode enabled.
       //               So we give a warning and return OK here to continue the
       //               bridging.
       // TODO(fxbug.dev/29113): To implement the real promiscuous mode.
       if (value == 1) {  // Only warn when enabling.
-        warnf("WLAN promiscuous not supported yet. see NET-1930\n");
+        warnf("WLAN promiscuous not supported yet. see fxbug.dev/29113\n");
       }
       status = ZX_OK;
       break;

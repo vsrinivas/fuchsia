@@ -1235,7 +1235,7 @@ bool pi_test_cycle() {
   END_TEST;
 }
 
-// Exercise the specific failure tracked down during the investigation of ZX-4153
+// Exercise the specific failure tracked down during the investigation of fxbug.dev/33934
 //
 // There are a few different ways that this situation can be forced to happen.
 // See the bug writeup for details.
@@ -1257,7 +1257,7 @@ bool pi_test_zx4153() {
   //    20.  It cannot relax until the cycle is broken.
   // 5) Break the cycle by declaring Q1 to have no owner.  Do not wake T1.
   //
-  // If the bookkeeping error found in ZX-4153 was still around, the effect
+  // If the bookkeeping error found in fxbug.dev/33934 was still around, the effect
   // would be...
   //
   // 1) T1 no longer feels pressure from Q1.  T1's effective priority drops
@@ -1360,5 +1360,5 @@ UNITTEST("long chains", pi_test_chain<29>)
 UNITTEST("multiple waiters", pi_test_multi_waiter<29>)
 UNITTEST("multiple owned queues", pi_test_multi_owned_queues<29>)
 UNITTEST("cycles", pi_test_cycle<29>)
-UNITTEST("ZX-4153", pi_test_zx4153)
+UNITTEST("fxbug.dev/33934", pi_test_zx4153)
 UNITTEST_END_TESTCASE(pi_tests, "pi", "Priority inheritance tests for OwnedWaitQueues")

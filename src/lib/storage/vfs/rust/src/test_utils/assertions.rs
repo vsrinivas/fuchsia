@@ -26,7 +26,7 @@ pub mod reexport {
 //      So macros produce better error messages.
 //
 // As soon as the second item is fixed, we should start migrating to functions.  We may consider
-// still using "thin" macro wrappers to remove the repetition of `await`. Also, ZX-4256 is tracking
+// still using "thin" macro wrappers to remove the repetition of `await`. Also, fxbug.dev/34036 is tracking
 // compile time degradation due to repetition macros are introducing.
 
 // See comment at the top of the file for why this is a macro.

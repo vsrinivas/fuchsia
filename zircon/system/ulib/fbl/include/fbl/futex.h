@@ -13,7 +13,7 @@ namespace fbl {
 // and guarantees that we can properly get the address of the underlying storage
 // (which we cannot technically do with std::atomic)
 //
-// TODO(johngro) - come back and clean this up once TC-350 has been resolved.
+// TODO(johngro) - come back and clean this up once fxbug.dev/27097 has been resolved.
 
 enum memory_order : int {
   memory_order_relaxed = __ATOMIC_RELAXED,

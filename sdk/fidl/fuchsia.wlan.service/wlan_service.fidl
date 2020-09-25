@@ -22,7 +22,7 @@ struct Error {
 
 struct AP {
     bytes bssid;
-    string ssid; // TODO(NET-698, NET-1474): Make this as vector<uint8:32>
+    string ssid; // TODO(fxbug.dev/28699, fxbug.dev/28913): Make this as vector<uint8:32>
     int8 rssi_dbm;
     bool is_secure;
     bool is_compatible; // with respect to Fuchsia

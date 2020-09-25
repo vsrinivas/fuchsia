@@ -392,7 +392,7 @@ zx_status_t IommuManager::Init(bool force_hardware_iommu) {
   iommu_mgr = this;
 
   zx_iommu_desc_dummy_t dummy;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
   zx_status_t status =
       zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &dummy, sizeof(dummy), &dummy_iommu_);
@@ -418,7 +418,7 @@ zx_status_t IommuManager::Init(bool force_hardware_iommu) {
     return status;
   }
   for (auto& iommu : iommus_) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     status = iommu.CreateIommu(root_resource);
     if (status != ZX_OK) {
       zxlogf(ERROR, "acpi-bus: Failed to create iommu object: %d", status);

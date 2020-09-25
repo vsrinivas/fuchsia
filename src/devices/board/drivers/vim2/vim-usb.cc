@@ -56,7 +56,7 @@ zx_status_t Vim::UsbInit() {
   zx::bti bti;
 
   std::optional<ddk::MmioBuffer> usb_phy;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource resource(get_root_resource());
   status = ddk::MmioBuffer::Create(S912_USB_PHY_BASE, S912_USB_PHY_LENGTH, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &usb_phy);

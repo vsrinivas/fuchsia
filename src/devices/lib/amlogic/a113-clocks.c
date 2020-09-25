@@ -23,7 +23,7 @@ zx_status_t a113_clk_init(a113_clk_dev_t **device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   zx_status_t status;
 

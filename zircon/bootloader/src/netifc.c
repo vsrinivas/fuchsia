@@ -343,13 +343,13 @@ void netifc_poll(void) {
 
   if (eth_buffers_avail < num_eth_buffers) {
     // Only check for completion if we have operations in progress.
-    // Otherwise, the result of GetStatus is unreliable. See ZX-759.
+    // Otherwise, the result of GetStatus is unreliable. See fxbug.dev/30712.
     if ((r = snp->GetStatus(snp, &irq, &txdone))) {
       printf("no ops in progress \n");
       return;
     }
     if (txdone) {
-      // Check to make sure this is one of our buffers (see ZX-1516)
+      // Check to make sure this is one of our buffers (see fxbug.dev/31405)
       efi_physical_addr buf_paddr = (efi_physical_addr)txdone;
       if ((buf_paddr >= eth_buffers_base) &&
           (buf_paddr < (eth_buffers_base + (NUM_BUFFER_PAGES * PAGE_SIZE)))) {

@@ -267,7 +267,7 @@ class CommandBuffer : public Reffable {
   //
   // TODO(fxbug.dev/7291): This code-flow assumes that ShaderPrograms source from, at
   // most, a single sampler. This is a blocking bug for implementing, e.g.,
-  // ES-159.
+  // fxbug.dev/7250.
   void SetShaderProgram(ShaderProgram* program, const SamplerPtr& immutable_sampler = nullptr);
   void SetShaderProgram(const ShaderProgramPtr& program,
                         const SamplerPtr& immutable_sampler = nullptr) {

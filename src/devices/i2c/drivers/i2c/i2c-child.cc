@@ -104,7 +104,7 @@ zx_status_t I2cChild::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
   // This is only used by the Intel I2C driver.
   // TODO: Pass these interrupt numbers from intel-i2c.
   if (address_ == 0xa) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx_status_t status = 
         zx::interrupt::create(zx::resource(get_root_resource()), 0x1f, ZX_INTERRUPT_MODE_LEVEL_LOW, out_irq);
     if (status != ZX_OK) {
@@ -112,7 +112,7 @@ zx_status_t I2cChild::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
     }
     return ZX_OK;
   } else if (address_ == 0x49) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx_status_t status =
         zx::interrupt::create(zx::resource(get_root_resource()), 0x33, ZX_INTERRUPT_MODE_LEVEL_LOW, out_irq);
     if (status != ZX_OK) {
@@ -121,7 +121,7 @@ zx_status_t I2cChild::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
     return ZX_OK;
   } else if (address_ == 0x10) {
     // Acer12
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx_status_t status =
         zx::interrupt::create(zx::resource(get_root_resource()), 0x1f, ZX_INTERRUPT_MODE_LEVEL_LOW, out_irq);
     if (status != ZX_OK) {
@@ -129,7 +129,7 @@ zx_status_t I2cChild::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
     }
     return ZX_OK;
   } else if (address_ == 0x50) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx_status_t status =
         zx::interrupt::create(zx::resource(get_root_resource()), 0x18, ZX_INTERRUPT_MODE_EDGE_LOW, out_irq);
     if (status != ZX_OK) {
@@ -137,7 +137,7 @@ zx_status_t I2cChild::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
     }
     return ZX_OK;
   } else if (address_ == 0x15) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx_status_t status =
         zx::interrupt::create(zx::resource(get_root_resource()), 0x2b, ZX_INTERRUPT_MODE_EDGE_LOW, out_irq);
     if (status != ZX_OK) {

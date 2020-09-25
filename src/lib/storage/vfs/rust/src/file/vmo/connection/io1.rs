@@ -591,7 +591,7 @@ impl FileConnection {
             error: "handle_read_at" => (Status::INTERNAL, 0, vec![]);
             { vmo, size, .. } => {
                 if offset >= *size {
-                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK. See ZX-3633.
+                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK. See fxbug.dev/33425.
                     break (Status::OK, 0, vec![]);
                 }
 

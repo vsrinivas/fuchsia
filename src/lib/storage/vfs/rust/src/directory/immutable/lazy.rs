@@ -109,7 +109,7 @@ where
 ///
 /// `get_entry` is expected to return a reference to a [`DirectoryEntry`] instance backing an
 /// individual entry.  Notice that currently there is no caching or sharing of entry objects.
-/// Every new `Open()` request will cause new entry object to be allocated and used.  See #ZX-3631
+/// Every new `Open()` request will cause new entry object to be allocated and used.  See #fxbug.dev/33423
 /// for the caching policy discussion.
 ///
 /// NOTE There might be an alternative design, where `get_entry_names` returns a stream of entry

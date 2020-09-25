@@ -205,7 +205,7 @@ int UsbXhci::CompleterThread(void* arg) {
   auto interrupter = completer->interrupter;
   auto& interrupt = xhci->irq_handles[interrupter];
 
-  // TODO(johngro): See ZX-940.  Get rid of this.  For now we need thread
+  // TODO(johngro): See fxbug.dev/30888.  Get rid of this.  For now we need thread
   // priorities so that realtime transactions use the completer which ends
   // up getting realtime latency guarantees.
   if (completer->high_priority) {

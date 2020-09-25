@@ -243,7 +243,7 @@ impl StreamEndpoint {
         }
         self.transport = Some(Arc::new(RwLock::new(c)));
         self.stream_held = Arc::new(Mutex::new(false));
-        // TODO(jamuraa, NET-1674, NET-1675): Reporting and Recovery channels
+        // TODO(jamuraa, fxbug.dev/1009, fxbug.dev/1010): Reporting and Recovery channels
         self.set_state(StreamState::Open);
         Ok(false)
     }

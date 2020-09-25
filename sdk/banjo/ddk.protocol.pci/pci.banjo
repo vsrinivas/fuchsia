@@ -99,7 +99,7 @@ enum PciIrqMode : uint8 {
 };
 
 
-/// ZX-3927: Remove the zx_pcie types and implement them here
+/// fxbug.dev/33713: Remove the zx_pcie types and implement them here
 [Layout = "ddk-protocol"]
 protocol Pci {
     GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);

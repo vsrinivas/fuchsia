@@ -126,7 +126,7 @@ test_package("web_runner_tests") {
       name = "web_runner_integration_tests"
       manifest = rebase_path("meta/web_runner_integration_tests.cmx")
 
-      # FLK-148
+      # fxbug.dev/33778
       # environments = basic_envs
       # This does not seem to flake on NUCs.
       environments = [ nuc_env ]

@@ -28,7 +28,7 @@ namespace gfx {
 
 namespace {
 
-// HACK(SCN-1253): The FIDL requires a valid VMO (even in failure cases).
+// HACK(fxbug.dev/24454): The FIDL requires a valid VMO (even in failure cases).
 fuchsia::ui::scenic::ScreenshotData EmptyScreenshot() {
   fuchsia::ui::scenic::ScreenshotData screenshot;
   // TODO(fxbug.dev/24454): If we can't create an empty VMO, bail because otherwise the

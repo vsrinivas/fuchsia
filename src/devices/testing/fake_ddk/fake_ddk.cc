@@ -484,7 +484,7 @@ zx_status_t device_rebind(zx_device_t* device) {
   return fake_ddk::Bind::Instance()->DeviceRebind(device);
 }
 
-// Please do not use get_root_resource() in new code. See ZX-1467.
+// Please do not use get_root_resource() in new code. See fxbug.dev/31358.
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
 

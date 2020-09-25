@@ -279,7 +279,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   }
   currently_rendering_ = render_frame_result == kRenderSuccess;
 
-  // See SCN-1505 for details of measuring render time.
+  // See fxbug.dev/24688 for details of measuring render time.
   const zx::time frame_render_end_cpu_time = zx::time(async_now(dispatcher_));
   frame_timings->OnFrameCpuRendered(frame_render_end_cpu_time);
 

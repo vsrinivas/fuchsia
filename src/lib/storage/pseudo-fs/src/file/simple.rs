@@ -644,7 +644,7 @@ mod tests {
                     open_sender.send((flags, 0, server_end)).await.unwrap();
                     assert_no_event!(proxy);
                     // NOTE: logic added after `assert_no_event!` will not currently be run. this test
-                    // will need to be updated after ZX-3923 is completed.
+                    // will need to be updated after fxbug.dev/33709 is completed.
                 }
             },
             |run_until_stalled_assert| {
@@ -1185,7 +1185,7 @@ mod tests {
             |proxy| {
                 async move {
                     assert_seek!(proxy, 7, Start);
-                    // POSIX wants this to be a zero read. ZX-3633.
+                    // POSIX wants this to be a zero read. fxbug.dev/33425.
                     assert_read!(proxy, "");
                     assert_write!(proxy, " ext");
                     //      "Content ext"));

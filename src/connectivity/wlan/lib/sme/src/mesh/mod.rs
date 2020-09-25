@@ -187,7 +187,7 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         },
         rsne: None,
         mesh_id: config.mesh_id.clone(),
-        phy: fidl_common::Phy::Ht, // TODO(WLAN-908, WLAN-909): Use dynamic value
+        phy: fidl_common::Phy::Ht, // TODO(fxbug.dev/29528, fxbug.dev/29529): Use dynamic value
         cbw: fidl_common::Cbw::Cbw20,
     }
 }

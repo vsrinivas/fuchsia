@@ -247,7 +247,7 @@ void App::ConfigurePoseBuffer() {
   zx_time_t base_time = zx::clock::get_monotonic().get();
   // Normally the time interval is the period of time between each entry in the
   // pose buffer. In this example we only use one entry so the time interval is
-  // pretty meaningless. Set to 1 for simplicity (see ARGO-21).
+  // pretty meaningless. Set to 1 for simplicity (see fxbug.dev/327).
   zx_time_t time_interval = 1;
   uint32_t num_entries = 1;
 

@@ -65,7 +65,7 @@ void RunnerImpl::StartComponent(
       // intercept the error event and cleanup, but since this is temporary we
       // can live with this.
       //
-      // See: MAC-181
+      // See: fxbug.dev/12543
       auto bridge = new component::ServiceProviderBridge;
       auto service_list = fuchsia::sys::ServiceList::New();
       // This must list every service the vmm depends on. We don't provide

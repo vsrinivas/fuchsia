@@ -323,7 +323,7 @@ zx_status_t Device::AcpiGetPio(uint32_t index, zx::resource* out_pio) {
 
   const DevicePioResource& res = pio_resources_[index];
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   // TODO: figure out what to pass to name here
   return zx::resource::create(*zx::unowned_resource{get_root_resource()}, ZX_RSRC_KIND_IOPORT,
                               res.base_address, res.address_length, device_get_name(zxdev_), 0,
@@ -351,7 +351,7 @@ zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
 
   zx_handle_t vmo;
   size_t size{res.address_length};
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   st = zx_vmo_create_physical(get_root_resource(), res.base_address, size, &vmo);
   if (st != ZX_OK) {
     return st;
@@ -416,7 +416,7 @@ zx_status_t Device::AcpiMapInterrupt(int64_t which_irq, zx::interrupt* out_handl
   if (st != ZX_OK) {
     return st;
   }
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   return zx::interrupt::create(*zx::unowned_resource{get_root_resource()}, irq.pin,
                                ZX_INTERRUPT_REMAP_IRQ | mode, out_handle);
 }

@@ -385,9 +385,9 @@ impl SharedBuffer {
     /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
     /// semantics around the synchronization behavior of various syscalls. Once
     /// that happens, calling this method in Fuchsia programs may become
-    /// optional. This work is tracked in [ZX-2239].
+    /// optional. This work is tracked in [fxbug.dev/32098].
     ///
-    /// [ZX-2239]: #
+    /// [fxbug.dev/32098]: #
     // TODO(joshlf): Replace with link once issues are public.
     #[inline]
     pub fn acquire_writes(&self) {
@@ -411,9 +411,9 @@ impl SharedBuffer {
     /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
     /// semantics around the synchronization behavior of various syscalls. Once
     /// that happens, calling this method in Fuchsia programs may become
-    /// optional. This work is tracked in [ZX-2239].
+    /// optional. This work is tracked in [fxbug.dev/32098].
     ///
-    /// [ZX-2239]: #
+    /// [fxbug.dev/32098]: #
     // TODO(joshlf): Replace with link once issues are public.
     #[inline]
     pub fn release_writes(&mut self) {
@@ -616,9 +616,9 @@ impl<'a> SharedBufferSlice<'a> {
     /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
     /// semantics around the synchronization behavior of various syscalls. Once
     /// that happens, calling this method in Fuchsia programs may become
-    /// optional. This work is tracked in [ZX-2239].
+    /// optional. This work is tracked in [fxbug.dev/32098].
     ///
-    /// [ZX-2239]: #
+    /// [fxbug.dev/32098]: #
     // TODO(joshlf): Replace with link once issues are public.
     #[inline]
     pub fn acquire_writes(&self) {
@@ -784,9 +784,9 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
     /// semantics around the synchronization behavior of various syscalls. Once
     /// that happens, calling this method in Fuchsia programs may become
-    /// optional. This work is tracked in [ZX-2239].
+    /// optional. This work is tracked in [fxbug.dev/32098].
     ///
-    /// [ZX-2239]: #
+    /// [fxbug.dev/32098]: #
     // TODO(joshlf): Replace with link once issues are public.
     #[inline]
     pub fn acquire_writes(&self) {
@@ -810,9 +810,9 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
     /// semantics around the synchronization behavior of various syscalls. Once
     /// that happens, calling this method in Fuchsia programs may become
-    /// optional. This work is tracked in [ZX-2239].
+    /// optional. This work is tracked in [fxbug.dev/32098].
     ///
-    /// [ZX-2239]: #
+    /// [fxbug.dev/32098]: #
     // TODO(joshlf): Replace with link once issues are public.
     #[inline]
     pub fn release_writes(&mut self) {

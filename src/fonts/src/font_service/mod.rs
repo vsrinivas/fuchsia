@@ -422,13 +422,13 @@ where
         use fonts::ProviderRequest::*;
 
         match request {
-            // TODO(I18N-12): Remove when all clients have migrated to GetTypeface
+            // TODO(fxbug.dev/8903): Remove when all clients have migrated to GetTypeface
             GetFont { request, responder } => {
                 let request = request.into_typeface_request();
                 let mut response = self.match_request(request).await?.into_font_response();
                 Ok(responder.send(response.as_mut())?)
             }
-            // TODO(I18N-12): Remove when all clients have migrated to GetFontFamilyInfo
+            // TODO(fxbug.dev/8903): Remove when all clients have migrated to GetFontFamilyInfo
             GetFamilyInfo { family, responder } => {
                 let mut font_info =
                     self.get_family_info(fonts::FamilyName { name: family }).into_family_info();

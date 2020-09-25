@@ -12,7 +12,7 @@ FLUTTER_SHA256 = (
     "49dc899ea80ed0a89843e2dbb617adfb687d3673c07b72cab55d540e34c72a50"
 )
 
-# TODO(alainv|DX-314): Pull dependencies automatically from
+# TODO(alainv|fxbug.dev/5224): Pull dependencies automatically from
 #     //third_party/dart-pkg/git/flutter/packages/flutter:flutter.
 FLUTTER_DEPENDENCIES = {
     "collection": "1.14.11",

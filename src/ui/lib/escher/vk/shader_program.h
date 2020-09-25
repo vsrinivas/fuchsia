@@ -50,7 +50,7 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   //
   // TODO(fxbug.dev/7291): This code-flow assumes that ShaderPrograms source from, at
   // most, a single sampler. This is a blocking bug for implementing, e.g.,
-  // ES-159.
+  // fxbug.dev/7250.
   PipelineLayoutPtr ObtainPipelineLayout(impl::PipelineLayoutCache* pipeline_layout_cache,
                                          const SamplerPtr& immutable_sampler);
 

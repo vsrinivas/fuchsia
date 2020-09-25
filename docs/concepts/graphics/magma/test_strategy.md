@@ -68,7 +68,7 @@ Those command buffers as well as other resources are shared with the magma syste
     * Does not execute command buffers; rely on Vulkan CTS for command buffer coverage
 * msd_abi_conformance_tests
     * Validates a vendor's msd implementation
-    * Coverage goal 100%, currently ~50% (MA-451 for implementing vendor specifics)
+    * Coverage goal 100%, currently ~50% (fxbug.dev/13060 for implementing vendor specifics)
 * vendor specific
     * Shutdown
     * Hang/fault recovery

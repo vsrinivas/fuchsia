@@ -92,7 +92,7 @@ pub fn validate_and_split_path(path: &str) -> Result<(impl Iterator<Item = &str>
     let is_dir = path.ends_with('/');
 
     // Disallow empty components, ".", and ".."s.  Path is expected to be canonicalized.  See
-    // US-569 for discussion of empty components.
+    // fxbug.dev/28436 for discussion of empty components.
     {
         let mut check = path.split('/');
         // Allow trailing slash to indicate a directory.

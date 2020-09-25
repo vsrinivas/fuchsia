@@ -82,7 +82,7 @@ zx_status_t WaitForState(const zx::unowned_thread& thread, zx_thread_state_t sta
 // There are two channels, a and b. One thread waits on a[0]. The other thread sends a[0] through
 // channel b and sees that once it has been read out of b, the wait is canceled.
 //
-// See [ZX-103].
+// See [fxbug.dev/30064].
 TEST(HandleTransferTest, CancelsWait) {
   auto wait_on_channel = [](void* arg) -> int {
     zx::unowned_channel channel(*reinterpret_cast<zx_handle_t*>(arg));

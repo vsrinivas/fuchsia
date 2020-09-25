@@ -434,7 +434,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   zx::time base_time = zx::clock::get_monotonic();
   // Normally the time interval is the period of time between each entry in the
   // pose buffer. In this example we only use one entry so the time interval is
-  // pretty meaningless. Set to 1 for simplicity (see ARGO-21).
+  // pretty meaningless. Set to 1 for simplicity (see fxbug.dev/327).
   zx::duration time_interval(1);
   uint32_t num_entries = 1;
 
@@ -1187,7 +1187,7 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
     },
     Shape {
       .color = {0, 0, 255, 255},
-      // SCN-1276: The depth of the viewing volume is 1000.
+      // fxbug.dev/24474: The depth of the viewing volume is 1000.
       .size = {1000, background_height},
       .translation = {0, 0, -500},
       .rotation = &face_right

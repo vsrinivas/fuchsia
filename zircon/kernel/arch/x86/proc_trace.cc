@@ -24,7 +24,7 @@
 // Plus once a trace has been done with IPT_MODE_THREAD one cannot go back
 // to IPT_MODE_CPU: supporting this requires flushing trace state from all
 // threads which is a bit of work. For now it's easy enough to just require
-// the user to reboot. ZX-892
+// the user to reboot. fxbug.dev/30840
 #include "arch/x86/proc_trace.h"
 
 #include <err.h>
@@ -154,7 +154,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_REQ(IptLock::Get()) {
   // When changing modes make sure all PT MSRs are in the init state.
   // We don't want a value to appear in the xsave buffer and have xrstors
   // #gp because XCOMP_BV has the PT bit set that's not set in XSS.
-  // We still need to do this, even with ZX-892, when transitioning
+  // We still need to do this, even with fxbug.dev/30840, when transitioning
   // from IPT_MODE_CPU to IPT_MODE_THREAD.
   write_msr(IA32_RTIT_CTL, 0);
   write_msr(IA32_RTIT_STATUS, 0);
@@ -190,7 +190,7 @@ zx_status_t x86_ipt_alloc_trace(zx_insntrace_trace_mode_t mode, uint32_t num_tra
   if (ipt_trace_state)
     return ZX_ERR_BAD_STATE;
 
-  // ZX-892: We don't support changing the mode from IPT_MODE_THREAD to
+  // fxbug.dev/30840: We don't support changing the mode from IPT_MODE_THREAD to
   // IPT_MODE_CPU: We can't turn off XSS.PT until we're sure all threads
   // have no PT state, and that's too tricky to do right now. Instead,
   // require the developer to reboot.

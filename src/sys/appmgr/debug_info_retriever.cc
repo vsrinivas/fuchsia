@@ -25,7 +25,7 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
   zx_koid_t thread_ids_storage[kMaxThreads];
 
   if (thread_ids == nullptr || num == 0) {
-    return "ERROR (CF-812): Full thread dump disabled";
+    return "ERROR (fxbug.dev/4687): Full thread dump disabled";
     if (process->get_info(ZX_INFO_PROCESS_THREADS, &thread_ids_storage,
                           kMaxThreads * sizeof(zx_koid_t), &num, nullptr) != ZX_OK) {
       return "ERROR: failed to get threads for process";

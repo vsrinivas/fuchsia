@@ -190,7 +190,7 @@ class UmsTest : public zxtest::Test {
   }
 
   // Waits for the block device to be removed
-  // TODO (ZX-3385, ZX-3586) -- Use something better
+  // TODO (fxbug.dev/33183, fxbug.dev/33378) -- Use something better
   // than a busy loop.
   void WaitForRemove() {
     struct stat dirinfo;

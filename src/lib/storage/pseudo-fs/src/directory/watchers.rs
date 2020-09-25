@@ -418,7 +418,7 @@ impl WatcherConnection {
         // message is send.
         //
         // We are going to close the connection when we receive any message as this is currently an
-        // error.  When we fix ZX-2645 and wrap the watcher connection with FIDL, it would be up to
+        // error.  When we fix fxbug.dev/7903 and wrap the watcher connection with FIDL, it would be up to
         // the binding code to fail on any unexpected messages.  At that point we can switch to
         // fuchsia_async::OnSignals and only monitor for the close event.
         //

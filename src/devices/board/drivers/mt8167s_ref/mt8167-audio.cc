@@ -257,7 +257,7 @@ zx_status_t Mt8167::AudioInit() {
   gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO24_EINT24, MT8167_GPIO_GPIO_FN);
   gpio_impl_config_out(&gpio_impl_, MT8167_GPIO24_EINT24, 1);  // Set to "not reset".
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
   std::optional<ddk::MmioBuffer> pmic_mmio;
   auto status =

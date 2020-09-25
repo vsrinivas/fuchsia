@@ -102,7 +102,7 @@ zx_off_t Device::DdkGetSize() {
   return size;
 }
 
-// TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
+// TODO(aarongreen): See fxbug.dev/31081.  Currently, there's no good way to trigger
 // this on demand.
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
   LOG_ENTRY();

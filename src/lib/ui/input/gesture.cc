@@ -90,7 +90,7 @@ void Gesture::UpdateCentroid() {
   // It would be more efficient to do this incrementally at the possible cost of precision. Gestures
   // tend to be both short and with a small number of pointers, so neither the efficiency nor
   // precision is particularly important. However, edge cases like new pointers are easier to deal
-  // with if we always recalculate, especially with SCN-1404.
+  // with if we always recalculate, especially with fxbug.dev/24596.
   centroid_ = {0, 0};
   for (const auto& entry : pointers_) {
     centroid_ += entry.second.absolute;

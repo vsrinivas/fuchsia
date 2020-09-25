@@ -333,5 +333,5 @@ change that.
 *   **Gigaboot** is a UEFI bootloader in //zircon/bootloader that predates
     testability policy. At present there is not an infrastructure available
     to write integration tests for the UEFI code. Introducing that
-    infrastructure is tracked in ZX-4704. A testability exception is granted
-    until ZX-4704 is addressed.
+    infrastructure is tracked in fxbug.dev/34478. A testability exception is granted
+    until fxbug.dev/34478 is addressed.

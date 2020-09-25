@@ -19,7 +19,7 @@ use {
 pub struct FontPackageManager {
     // A `BTreeSet` is used to preserve alphabetical order for easier debugging.
     package_urls: BTreeSet<PkgUrl>,
-    // TODO(I18N-31): Add and populate Inspect node.
+    // TODO(fxbug.dev/8881): Add and populate Inspect node.
 }
 
 impl FontPackageManager {

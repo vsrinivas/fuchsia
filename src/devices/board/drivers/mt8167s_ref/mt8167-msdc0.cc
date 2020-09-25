@@ -118,7 +118,7 @@ zx_status_t Mt8167::Msdc0Init() {
   msdc0_dev.irq_count = countof(msdc0_irqs);
 
   // TODO(bradenkell): Have the clock driver do this once muxing is supported.
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
   std::optional<ddk::MmioBuffer> clk_mmio;
   zx_status_t status = ddk::MmioBuffer::Create(kClkBaseAligned, kClkSizeAligned, *root_resource,

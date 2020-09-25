@@ -24,7 +24,7 @@
 
 namespace scheduling {
 
-// TODOs can be found in the frame scheduler epic: SCN-1202. Any new bugs filed concerning the frame
+// TODOs can be found in the frame scheduler epic: fxbug.dev/24406. Any new bugs filed concerning the frame
 // scheduler should be added to it as well.
 class DefaultFrameScheduler final : public FrameScheduler {
  public:

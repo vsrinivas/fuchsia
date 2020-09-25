@@ -57,7 +57,7 @@ zx_status_t C18::SocInit() {
   zx_status_t status;
   mmio_buffer_t mmio;
   status = mmio_buffer_init_physical(&mmio, MT8183_MCUCFG_BASE, MT8183_MCUCFG_SIZE,
-                                     // Please do not use get_root_resource() in new code (ZX-1467).
+                                     // Please do not use get_root_resource() in new code (fxbug.dev/31358).
                                      get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d ", __PRETTY_FUNCTION__, status);

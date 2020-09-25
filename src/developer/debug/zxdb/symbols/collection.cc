@@ -59,7 +59,7 @@ Collection::SpecialType Collection::ComputeSpecialType() const {
 
   if (variant_part_) {
     // Having a variant part and no members currently means we consider it a
-    // Rust enum. This may need to be enhanced for DX-1685 (support Rust
+    // Rust enum. This may need to be enhanced for fxbug.dev/6466 (support Rust
     // generators).
     //
     // No other special types have variants.

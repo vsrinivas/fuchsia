@@ -181,11 +181,11 @@ if [[ -z "${FIX_OPTION}" ]]; then
 fi
 
 declare FIDL_LINT_CMD=( "${FIDL_LINT}" )
-# TODO(fxbug.dev/TC-559): add command and args for Dart linter
+# TODO(fxbug.dev/27283): add command and args for Dart linter
 declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"
-# TODO(fxbug.dev/TC-542): add command and args for Go linter
+# TODO(fxbug.dev/27269): add command and args for Go linter
 declare GO_LINT_CMD=() # "${PREBUILT_GO_DIR}/bin/go<cmd?> <options?>"
-# TODO(fxbug.dev/TC-543): add command and args for JSON linter
+# TODO(fxbug.dev/27270): add command and args for JSON linter
 declare JSON_LINT_CMD=() # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
 
 declare RUST_LINT_CMD=( "python" "${FUCHSIA_DIR}/tools/devshell/contrib/lib/rust/run-clippy.py" )

@@ -469,7 +469,7 @@ def get_elf_info(filename, match_notes=False):
     def get_build_id():
         build_id = None
         for note in gen_notes():
-            # Note that the last build_id note needs to be used due to TO-442.
+            # Note that the last build_id note needs to be used due to fxbug.dev/26967.
             possible_build_id = note.build_id_hex()
             if possible_build_id:
                 build_id = possible_build_id

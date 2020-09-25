@@ -224,7 +224,7 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   // bridges and device endpoints further downstream.
   //
   // TODO(cja) : support dynamic configuration of bridge windows.  Its going
-  // to be important when we need to support hot-plugging.  See ZX-321
+  // to be important when we need to support hot-plugging.  See fxbug.dev/30281
 
   zx_status_t status;
   std::unique_ptr<PciAllocation> alloc;

@@ -6,8 +6,8 @@ You are encouraged to add your own questions (and answers) here!
 
 ## Q: Do we have Sanitizer support?
 
-A: This is work in progress (SEC-27). ASAN is the closest to release (just
-requires symbolization, TC-21).
+A: This is work in progress (fxbug.dev/24758). ASAN is the closest to release (just
+requires symbolization, fxbug.dev/26795).
 
 ## Q: How do I run with ASAN?
 
@@ -15,7 +15,7 @@ A: TBD
 
 ## Q: Do we have Fuzzers enabled?
 
-A: No, sanitizer work takes precedence. Automated fuzz testing is SEC-44.
+A: No, sanitizer work takes precedence. Automated fuzz testing is fxbug.dev/24772.
 
 ## Q: Do we use gmock?
 

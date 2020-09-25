@@ -16,7 +16,7 @@ import (
 const baseTargetListFile = "base_packages.list"
 const traceManagerPackageName = "trace_manager"
 
-// PT-143: If tracing isn't in the base configuration then a lot of services
+// fxbug.dev/23004: If tracing isn't in the base configuration then a lot of services
 // will not have connected to trace-manager, resulting in potentially
 // confusing traces. Until a better solution is found, at least give the user
 // a heads-up to prevent wasting time wondering what the problem is.
@@ -26,7 +26,7 @@ const traceManagerPackageName = "trace_manager"
 func checkBuildConfiguration() {
 	if !traceManagerIsInBaseBuildTargets() {
 		fmt.Printf("WARNING: %s is not in the base package set.\n", traceManagerPackageName)
-		fmt.Printf("    Tracing will likely have missing data. PT-143\n")
+		fmt.Printf("    Tracing will likely have missing data. fxbug.dev/23004\n")
 		fmt.Printf("    To fix this, add --with-base=//garnet/packages/prod:tracing to \"fx set\"\n")
 	}
 }

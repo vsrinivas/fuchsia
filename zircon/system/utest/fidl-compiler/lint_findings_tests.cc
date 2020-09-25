@@ -1835,7 +1835,7 @@ using foo as ${TEST};
   }
 }
 
-// TODO(fxbug.dev/FIDL-656): Remove this check after issues are resolved with
+// TODO(fxbug.dev/7978): Remove this check after issues are resolved with
 // trailing comments in existing source and tools
 TEST(LintFindingsTests, no_trailing_comment) {
   LintTest test;

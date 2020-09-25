@@ -1487,14 +1487,14 @@ TEST(Pager, InvalidPagerSupplyPages) {
   ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, 0, aux_vmo.get(), 1),
             ZX_ERR_INVALID_ARGS);
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   if (&get_root_resource) {
     // unsupported aux vmo type
     zx::vmo physical_vmo;
     // We're not actually going to do anything with this vmo, and since the
     // kernel doesn't do any checks with the address if you're using the
     // root resource, just use addr 0.
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, ZX_PAGE_SIZE,
                                      physical_vmo.reset_and_get_address()),
               ZX_OK);
@@ -1553,10 +1553,10 @@ TEST(Pager, InvalidPagerSupplyPages) {
     zx::bti bti;
     zx::pmt pmt;
     if (i == kHasPinned) {
-      // Please do not use get_root_resource() in new code. See ZX-1467.
+      // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
       zx::unowned_resource root_res(get_root_resource());
       zx_iommu_desc_dummy_t desc;
-      // Please do not use get_root_resource() in new code. See ZX-1467.
+      // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
       ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                                 iommu.reset_and_get_address()),
                 ZX_OK);
@@ -2112,7 +2112,7 @@ TEST(Pager, WritingZeroFork) {
 // Test that if we resize a vmo while it is waiting on a page to fullfill the commit for a pin
 // request that neither the resize nor the pin cause a crash and fail gracefully.
 TEST(Pager, ResizeBlockedPin) {
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   if (!&get_root_resource) {
     printf("Root resource not available, skipping\n");
     return;

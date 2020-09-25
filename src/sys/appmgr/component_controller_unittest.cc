@@ -375,14 +375,14 @@ TEST_F(ComponentControllerTest, DetachController) {
     // component did not die.
     component_ptr->Detach();
     RunLoopUntilIdle();
-    EXPECT_FALSE(wait) << "Please please please report logs from this failure to FLK-168.";
+    EXPECT_FALSE(wait) << "Please please please report logs from this failure to fxbug.dev/8292.";
   }
 
   // make sure all messages are processed if Kill was called.
   RunLoopUntilIdle();
-  EXPECT_FALSE(wait) << "Please please please report logs from this failure to FLK-168.";
+  EXPECT_FALSE(wait) << "Please please please report logs from this failure to fxbug.dev/8292.";
   EXPECT_EQ(realm_.ComponentCount(), 1u)
-      << "Please please please report logs from this failure to FLK-168.";
+      << "Please please please report logs from this failure to fxbug.dev/8292.";
 }
 
 TEST_F(ComponentControllerTest, Hub) {

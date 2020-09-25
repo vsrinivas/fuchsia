@@ -5,7 +5,7 @@
 #ifndef SRC_UI_LIB_GLM_WORKAROUND_GLM_WORKAROUND_H_
 #define SRC_UI_LIB_GLM_WORKAROUND_GLM_WORKAROUND_H_
 
-// TODO(fxbug.dev/23891): Delete this file once ZX-377 is complete.
+// TODO(fxbug.dev/23891): Delete this file once fxbug.dev/30337 is complete.
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more

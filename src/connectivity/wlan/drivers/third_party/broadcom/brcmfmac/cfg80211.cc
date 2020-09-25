@@ -1975,7 +1975,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
       break;
     case WPA_CIPHER_TKIP:
       /* Note: Linux swaps the Tx and Rx MICs in client mode, but this doesn't work for us (see
-         NET-1679). It's unclear why this would be necessary. */
+         fxbug.dev/28642). It's unclear why this would be necessary. */
       key->algo = CRYPTO_ALGO_TKIP;
       val = TKIP_ENABLED;
       BRCMF_DBG(CONN, "WPA_CIPHER_TKIP");
@@ -3260,7 +3260,7 @@ void brcmf_if_deauth_req(net_device* ndev, const wlanif_deauth_req_t* req) {
     brcmf_notify_deauth(ndev, req->peer_sta_address);
   }  // else wait for disconnect to complete before sending response
 
-  // Workaround for NET-1574: allow time for disconnect to complete
+  // Workaround for fxbug.dev/28829: allow time for disconnect to complete
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
@@ -3560,7 +3560,7 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t
   band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_DSSS_CCK_40;
 
   // SM Power Save
-  // At present SMPS appears to never be enabled in firmware (see WLAN-1030)
+  // At present SMPS appears to never be enabled in firmware (see fxbug.dev/29648)
   band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DISABLED;
 
   // Rx STBC
@@ -3606,7 +3606,7 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
   band->vht_supported = true;
 
   // Set Max MPDU length to 11454
-  // TODO (WLAN-485): Value hardcoded from firmware behavior of the BCM4356 and BCM4359 chips.
+  // TODO (fxbug.dev/29107): Value hardcoded from firmware behavior of the BCM4356 and BCM4359 chips.
   band->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_MAX_MPDU_LEN_SHIFT);
 
   /* 80MHz is mandatory */
@@ -3621,7 +3621,7 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
   }
 
   // Tx STBC
-  // TODO (WLAN-485): Value is hardcoded for now
+  // TODO (fxbug.dev/29107): Value is hardcoded for now
   if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
     band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_TX_STBC;
   }
@@ -3919,7 +3919,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   // The "rxstreams_cap" iovar, when present, indicates the maximum number of Rx streams
   // possible, encoded as one bit per stream (i.e., a value of 0x3 indicates 2 streams/chains).
   if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
-    // TODO (WLAN-485): The BCM4359 firmware supports rxstreams_cap, but it returns 0x2
+    // TODO (fxbug.dev/29107): The BCM4359 firmware supports rxstreams_cap, but it returns 0x2
     // instead of 0x3, which is incorrect.
     rxchain = 0x3;
   } else {
@@ -3927,7 +3927,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
     // the number of rx chains.
     status = brcmf_fil_iovar_int_get(ifp, "rxstreams_cap", &rxchain, nullptr);
     if (status != ZX_OK) {
-      // TODO (WLAN-485): The rxstreams_cap iovar isn't yet supported in the BCM4356
+      // TODO (fxbug.dev/29107): The rxstreams_cap iovar isn't yet supported in the BCM4356
       // firmware. For now we use a hard-coded value (another option would be to parse the
       // nvram contents ourselves (looking for the value associated with the key "rxchain").
       BRCMF_DBG(INFO,

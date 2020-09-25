@@ -179,7 +179,7 @@ static void arm64_perfmon_init_once(uint level) {
       (ARM64_PMOVSCLR_EL0_C_MASK | ((1 << perfmon_num_programmable_counters) - 1));
 
   // Note: The IRQ handler is configured separately.
-  // If we don't have an IRQ (or a usable one - ZX-3302) then we can still
+  // If we don't have an IRQ (or a usable one - fxbug.dev/33106) then we can still
   // use tally mode and leave it to an external entity to periodically
   // collect the data.
 

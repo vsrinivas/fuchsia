@@ -78,17 +78,17 @@ Device::~Device() {
 
   // Make certain that all bus access (MMIO, PIO, Bus mastering) has been
   // disabled.  Also, explicitly disable legacy IRQs.
-  // TODO(cja/ZX-3147)): Only use the PCIe int disable if PCIe
+  // TODO(cja/fxbug.dev/32979)): Only use the PCIe int disable if PCIe
   ModifyCmd(PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN, PCIE_CFG_COMMAND_INT_DISABLE);
 
   caps_.list.clear();
   caps_.ext_list.clear();
-  // TODO(cja/ZX-3147): Remove this after porting is finished.
+  // TODO(cja/fxbug.dev/32979): Remove this after porting is finished.
   zxlogf(TRACE, "%s [%s] dtor finished", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
 
 zx_status_t Device::CreateProxy() {
-  // TODO(cja): Workaround due to ZX-3888
+  // TODO(cja): Workaround due to fxbug.dev/33674
   char proxy_arg[2] = ",";
   zx_device_prop_t device_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},

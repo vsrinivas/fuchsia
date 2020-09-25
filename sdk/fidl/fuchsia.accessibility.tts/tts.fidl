@@ -19,7 +19,7 @@ enum Error {
 };
 
 /// Parameters of a voice.
-/// TODO(MI4-2453): Add extra voice parameters such as speech rate and  pitch.
+/// TODO(fxbug.dev/16795): Add extra voice parameters such as speech rate and  pitch.
 table VoiceParameters {
     /// The current selected language.
     1: fuchsia.intl.LocaleId language;
@@ -38,7 +38,7 @@ table Utterance {
 /// An interface to produce speech output.
 /// Assistive technology use an Engine to start producing speech output and
 /// set configuration parameters that control the speech.
-/// TODO(MI4-2452): Implement pause, stop and resume.
+/// TODO(fxbug.dev/17829): Implement pause, stop and resume.
 [Discoverable]
 protocol Engine {
     /// Enqueues  an utterance to be spoken. Speech is not started until Speak

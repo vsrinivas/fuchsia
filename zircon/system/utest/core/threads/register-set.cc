@@ -38,7 +38,7 @@ void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
   //
   // Note that setting the direction flag (bit 10) helps test whether the
   // kernel correctly handles taking an interrupt when that flag is set
-  // (see ZX-998).
+  // (see fxbug.dev/30944).
   regs->rflags = (1 << 0) |   // CF: carry flag
                  (1 << 1) |   // Reserved, always 1
                  (1 << 2) |   // PF: parity flag

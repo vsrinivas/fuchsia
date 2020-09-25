@@ -764,7 +764,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
   END_TRACE_TEST;
 }
 
-// This test exercises DX-441 where a buffer becomes full and immediately
+// This test exercises fxbug.dev/22904 where a buffer becomes full and immediately
 // thereafter tracing is stopped. This causes the "please save buffer"
 // processing to run when tracing is not active.
 TEST(EngineTests, TestShutdownWhenFull) {

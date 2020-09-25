@@ -133,7 +133,7 @@ VK_TEST(BufferCache, RecycleMany) {
     // buffer, allocated later. Allocating buffers with the same ID will
     // crash the BufferCache (as the invariant that buffer IDs are unique)
     // must be held. When this case is hit, error out early of the test.
-    // Remove this early return when SCN-526 is resolved.
+    // Remove this early return when fxbug.dev/23753 is resolved.
     FX_LOGS(ERROR) << "Error allocating memory, aborting test!";
     return;
   }

@@ -153,7 +153,7 @@ TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
 
   // Running this test twice should work.
-  // DX-448: Providers didn't properly reset themselves after a previous
+  // fxbug.dev/22912: Providers didn't properly reset themselves after a previous
   // trace was prematurely aborted.
   RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
 }

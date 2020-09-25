@@ -2875,7 +2875,7 @@ static zx_status_t brcmf_sdio_bus_preinit(brcmf_bus* bus_if) {
     err = brcmf_iovar_data_set(sdiodev->drvr, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
   }
 
-  // No support for txglomming, requires SDIO scatter/gather support (see WLAN-882)
+  // No support for txglomming, requires SDIO scatter/gather support (see fxbug.dev/29502)
 
   if (err != ZX_OK) {
     goto done;
@@ -3607,7 +3607,7 @@ release:
 
 fail:
   BRCMF_DBG(TRACE, "failed: dev=%s, err=%d", device_get_name(sdiodev->drvr->zxdev), err);
-  BRCMF_ERR("Need to implement driver release logic (WLAN-888)");
+  BRCMF_ERR("Need to implement driver release logic (fxbug.dev/29508)");
   // TODO(fxbug.dev/29508)
   // device_release_driver(&sdiodev->func2->dev);
   // device_release_driver(dev);

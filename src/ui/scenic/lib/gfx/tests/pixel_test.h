@@ -38,7 +38,7 @@ struct TestSession {
   // effectively always set this way.
   template <typename Camera = scenic::Camera>
   Camera SetUpCamera(float offset = kDefaultCameraOffset) {
-    // SCN-1276: The near plane is hardcoded at -1000 and far at 0 in camera
+    // fxbug.dev/24474: The near plane is hardcoded at -1000 and far at 0 in camera
     // space.
     const std::array<float, 3> eye_position = {display_dimensions.width / 2.f,
                                                display_dimensions.height / 2.f, -offset};

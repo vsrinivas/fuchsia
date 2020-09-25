@@ -31,7 +31,7 @@ namespace {
 // See test-device.h; the following macros allow reusing tests for each of the supported versions.
 #define EACH_PARAM(OP, TestSuite, Test) OP(TestSuite, Test, Volume, AES256_XTS_SHA256)
 
-// ZX-1948: Dump extra information if encountering an unexpected error during volume creation.
+// fxbug.dev/31814: Dump extra information if encountering an unexpected error during volume creation.
 void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
                   const crypto::Secret& key, bool fvm, zx_status_t expected) {
   char err[128];

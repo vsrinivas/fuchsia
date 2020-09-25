@@ -536,7 +536,7 @@ zx_status_t PlatformBus::Init() {
   // Set up a dummy IOMMU protocol to use in the case where our board driver
   // does not set a real one.
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
   if (root_resource->is_valid()) {
     status =

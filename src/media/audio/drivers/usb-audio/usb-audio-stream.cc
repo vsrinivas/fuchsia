@@ -915,7 +915,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
   uint64_t complete_time = zx::clock::get_monotonic().get();
   Action when_finished = Action::NONE;
 
-  // TODO(johngro) : See ZX-940.  Eliminate this as soon as we have a more
+  // TODO(johngro) : See fxbug.dev/30888.  Eliminate this as soon as we have a more
   // official way of meeting real-time latency requirements.  Also, the fact
   // that this boosting gets done after the first transaction completes
   // degrades the quality of the startup time estimate (if the system is under

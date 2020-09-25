@@ -9,7 +9,7 @@
 
 #include "aml-clk-blocks.h"
 
-// TODO(braval): Use common bitfield header (ZX-2526) when available for
+// TODO(braval): Use common bitfield header (fxbug.dev/32378) when available for
 //               macros used below to avoid duplication.
 #define BIT(pos) (1U << (pos))
 #define MSR_CLK_SRC_MASK 0x7f

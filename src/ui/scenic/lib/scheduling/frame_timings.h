@@ -41,7 +41,7 @@ class FrameTimings {
   //
   // Note that there potentially can be multiple times a frame was updated before
   // it was finally rendered, and |update_done_time| tracks the last of those
-  // updates. See SCN-1482 for more details.
+  // updates. See fxbug.dev/24669 for more details.
   struct Timestamps {
     zx::time latch_point_time;
     zx::time update_done_time;

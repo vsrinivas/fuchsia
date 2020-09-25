@@ -251,7 +251,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
   // Users should only ask for unsigned-8, signed-16, signed-24in32 or float-32. If they ask for
   // anything else, change their preference to signed-16.
   //
-  // TODO(johngro) : clean this up as part of fixing MTWN-54
+  // TODO(johngro) : clean this up as part of fixing fxbug.dev/13341
   if ((pref_sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
       (((pref_sample_format & U8_FMT) != U8_FMT) && ((pref_sample_format & S16_FMT) != S16_FMT) &&
        ((pref_sample_format & S24_FMT) != S24_FMT) &&

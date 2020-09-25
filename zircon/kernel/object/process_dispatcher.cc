@@ -213,7 +213,7 @@ void ProcessDispatcher::Exit(int64_t retcode) {
 void ProcessDispatcher::Kill(int64_t retcode) {
   LTRACE_ENTRY_OBJ;
 
-  // ZX-880: Call RemoveChildProcess outside of |get_lock()|.
+  // fxbug.dev/30829: Call RemoveChildProcess outside of |get_lock()|.
   bool became_dead = false;
 
   {
@@ -340,7 +340,7 @@ zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool in
 void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
   LTRACE_ENTRY_OBJ;
 
-  // ZX-880: Call RemoveChildProcess outside of |get_lock()|.
+  // fxbug.dev/30829: Call RemoveChildProcess outside of |get_lock()|.
   bool became_dead = false;
 
   {
@@ -454,7 +454,7 @@ void ProcessDispatcher::FinishDeadTransition() {
   // locks in the opposite order. We want to keep lock acquisition order
   // consistent, and JobDispatcher::EnumerateChildren's order makes
   // sense. We don't need |get_lock()| when calling RemoveChildProcess
-  // here. ZX-880
+  // here. fxbug.dev/30829
   job_->RemoveChildProcess(this);
 
   // If we are critical to a job, we need to take action. Similar to the above

@@ -20,7 +20,7 @@ namespace fallback_rtc {
 zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
   uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
   int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 

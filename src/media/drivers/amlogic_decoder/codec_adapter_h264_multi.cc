@@ -27,7 +27,7 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
 //
 // TODO(fxbug.dev/13530): Set this to ~8k or so.  For now, we have to boost the
 // per-packet buffer size up to fit the largest AUs we expect to decode, until
-// MTWN-249 is fixed, in case avcC format is used.
+// fxbug.dev/13530 is fixed, in case avcC format is used.
 constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
 
 // For the moment we rely on this being < 1/3 of kStreamBufferSize.

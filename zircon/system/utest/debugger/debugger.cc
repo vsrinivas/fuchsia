@@ -307,7 +307,7 @@ bool WriteTextSegmentTest() {
 
   zx_handle_t self = zx_process_self();
 
-  // Exercise ZX-739
+  // Exercise fxbug.dev/30693
   // Pretend we're writing a s/w breakpoint to the start of this function.
 
   // write_text_segment_helper is suitably aligned, add 1 to ensure the

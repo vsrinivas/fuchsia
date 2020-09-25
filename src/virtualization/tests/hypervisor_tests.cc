@@ -448,7 +448,7 @@ TEST(Guest, guest_set_trap_with_bell) {
   EXPECT_EQ(packet.guest_bell.addr, TRAP_ADDR);
 }
 
-// Test for ZX-4206.
+// Test for fxbug.dev/33986.
 TEST(Guest, guest_set_trap_with_bell_drop) {
   // Build the port before test so test is destructed first.
   zx::port port;
@@ -470,7 +470,7 @@ TEST(Guest, guest_set_trap_with_bell_drop) {
   // port. This should work correctly.
 }
 
-// Test for ZX-4221.
+// Test for fxbug.dev/34001.
 TEST(Guest, guest_set_trap_with_bell_and_user) {
   zx::port port;
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);

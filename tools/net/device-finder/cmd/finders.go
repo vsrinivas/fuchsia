@@ -78,7 +78,7 @@ func listMDNSHandler(cmd *devFinderCmd, resp mDNSResponse, f chan<- *fuchsiaDevi
 	if a.Class != mdns.IN || a.Type != mdns.PTR || a.Domain != fuchsiaMDNSService {
 		return
 	}
-	// DX-1498: Some protection against malformed responses.
+	// fxbug.dev/6296: Some protection against malformed responses.
 	if len(a.Data) == 0 {
 		log.Print("Empty data in response. Ignoring...")
 		return

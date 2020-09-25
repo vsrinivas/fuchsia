@@ -139,7 +139,7 @@ zx_status_t IdentityPageAllocator::Allocate(void** result) {
 
   // Start by obtaining an unused physical page. This address will eventually
   // be the physical/virtual address of our identity mapped page.
-  // TODO: when ZX-978 is completed, we should allocate low memory directly
+  // TODO: when fxbug.dev/30925 is completed, we should allocate low memory directly
   //       from the pmm rather than using "alloc_pages_greater_than" which is
   //       somewhat of a hack.
   paddr_t pa;

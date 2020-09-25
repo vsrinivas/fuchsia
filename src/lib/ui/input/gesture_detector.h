@@ -32,7 +32,7 @@ class GestureDetector {
   // fingers, secondary mouse button, or stylus button/inverted touch), and so
   // on.
   //
-  // TODO(MI4-2403): time-based taps
+  // TODO(fxbug.dev/17287): time-based taps
   using TapType = int32_t;
 
   // Represents a single gesture interaction. This is a higher level event-based
@@ -44,7 +44,7 @@ class GestureDetector {
   // are defined as the addition of touch points and their subsequent removal
   // without appreciable movement from any of the pointers. Multidrags cover
   // all other cases.
-  // TODO(MI4-2403): This may need redefinition if time-based taps are
+  // TODO(fxbug.dev/17287): This may need redefinition if time-based taps are
   // supported at this level.
   //
   // In the interest of reducing input latency, a multi-pointer tap is
@@ -54,7 +54,7 @@ class GestureDetector {
   //
   // The |Interaction| is destroyed once the interaction ends, when all
   // pointers are removed.
-  // TODO(MI4-2403): This may happen after a timeout once time-based taps are
+  // TODO(fxbug.dev/17287): This may happen after a timeout once time-based taps are
   // supported.
   class Interaction {
    public:
@@ -71,7 +71,7 @@ class GestureDetector {
     // multidrag if any remaining pointer is moved past the drag threshold or
     // any new pointers are added.
     //
-    // TODO(MI4-2402/2403): This definition may change significantly in the face
+    // TODO(fxbug.dev/18121, fxbug.dev/17287): This definition may change significantly in the face
     // of pluggable tap classification.
     virtual void OnTapCommit();
 

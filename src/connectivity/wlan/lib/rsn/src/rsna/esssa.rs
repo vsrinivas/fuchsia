@@ -715,7 +715,7 @@ mod tests {
     // (1) the Supplicant derives the same PTK for the replayed message, and
     // (2) the Supplicant is reusing the nonce from its previous message,
     // (3) the Supplicant only reports a PTK if the 4-Way Handshake was completed successfully.
-    // Regression test for: WLAN-1095
+    // Regression test for: fxbug.dev/29713
     #[test]
     fn test_replayed_msg1_ptk_installation_same_anonces() {
         let mut supplicant = test_util::get_supplicant();

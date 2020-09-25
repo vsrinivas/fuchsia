@@ -26,7 +26,7 @@ int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
-      FX_LOGS(WARNING) << "NET-291 IPV6_MULTICAST_LOOP not supported "
+      FX_LOGS(WARNING) << "fxbug.dev/20688 IPV6_MULTICAST_LOOP not supported "
                           "(ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
@@ -44,7 +44,7 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENODEV) {
-      FX_LOGS(WARNING) << "NET-2180 IPV6_JOIN_GROUP returned ENODEV, mDNS will "
+      FX_LOGS(WARNING) << "fxbug.dev/21173 IPV6_JOIN_GROUP returned ENODEV, mDNS will "
                           "not communicate via IPV6";
     } else {
       FX_LOGS(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, " << strerror(errno);
@@ -60,7 +60,7 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF, &index, sizeof(index));
   if (result < 0) {
     if (errno == EOPNOTSUPP) {
-      FX_LOGS(WARNING) << "NET-1901 IPV6_MULTICAST_IF not supported "
+      FX_LOGS(WARNING) << "fxbug.dev/21013 IPV6_MULTICAST_IF not supported "
                           "(EOPNOTSUPP), continuing anyway";
       result = 0;
     } else {

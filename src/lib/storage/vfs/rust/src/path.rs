@@ -57,7 +57,7 @@ impl Path {
                 let is_dir = path.ends_with('/');
 
                 // Disallow empty components, ".", and ".."s.  Path is expected to be
-                // canonicalized.  See US-569 for discussion of empty components.
+                // canonicalized.  See fxbug.dev/28436 for discussion of empty components.
                 {
                     let mut check = path.split('/');
                     // Allow trailing slash to indicate a directory.

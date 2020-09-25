@@ -10,7 +10,7 @@
 # Generate an HTML report.
 #
 # This is all pretty hacky. Longer term efforts to make this more automatic and
-# less hacky tracked by IN-427.
+# less hacky tracked by fxbug.dev/9302.
 
 from __future__ import print_function
 import argparse

@@ -61,7 +61,7 @@ void ath10k_msg_bufs_init_stats(struct ath10k_msg_buf_state* state) {
   list_initialize(&state->bufs_in_use);
 }
 
-// The number of buffers to pre-allocate. This is primarily necessary because of ZX-1073:
+// The number of buffers to pre-allocate. This is primarily necessary because of fxbug.dev/31016:
 // if we don't allocate all needed MMIO at startup, we may not be able to allocate it later
 // since we need 32b addresses, and the io_buffer_t interface doesn't provide any way to
 // ask for it.
@@ -164,7 +164,7 @@ zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar, struct ath10k_msg_b
       status = ZX_ERR_NO_MEMORY;
       ath10k_warn(
           "attempt to allocate buffer, unable to get mmio with "
-          "32 bit phys addr (see ZX-1073)\n");
+          "32 bit phys addr (see fxbug.dev/31016)\n");
       goto err_free_iobuf;
     }
     msg_buf->vaddr = io_buffer_virt(&msg_buf->buf);

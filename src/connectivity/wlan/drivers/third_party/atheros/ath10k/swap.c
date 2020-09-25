@@ -133,7 +133,7 @@ static struct ath10k_swap_code_seg_info* ath10k_swap_code_seg_alloc(struct ath10
   paddr = io_buffer_phys(&seg_info->handles[0]);
   virt_addr = io_buffer_virt(&seg_info->handles[0]);
   if (paddr + swap_bin_len > 0x100000000ULL) {
-    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    ath10k_err("io buffer allocated with address above 32b range (see fxbug.dev/31016)\n");
     goto err_free_io_buf;
   }
 

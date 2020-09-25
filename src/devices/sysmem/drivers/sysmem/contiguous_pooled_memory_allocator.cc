@@ -157,7 +157,7 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
       // can't rely on local_contiguous_vmo being a physical VMO.
       if (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PAGED) {
         DRIVER_ERROR(
-            "Ignoring failure to set_cache_policy() on contig VMO - see ZX-4807 - status: %d",
+            "Ignoring failure to set_cache_policy() on contig VMO - see fxbug.dev/34580 - status: %d",
             status);
         status = ZX_OK;
         goto keepGoing;

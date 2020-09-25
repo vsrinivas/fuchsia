@@ -260,7 +260,7 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
   // This really should be using |video_stream_type.width()| and
   // video_stream_type.height(). See the comment in |View::OnSceneInvalidated|
   // for more information.
-  // TODO(dalesat): Change this once SCN-862 and SCN-141 are fixed.
+  // TODO(dalesat): Change this once fxbug.dev/24079 and fxbug.dev/23396 are fixed.
   image_format_ = fidl::To<fuchsia::sysmem::ImageFormat_2>(video_stream_type);
 
   FX_DCHECK(have_valid_image_format());
@@ -750,7 +750,7 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   //        video_rect.x + video_rect.width * 0.5f,
   //        video_rect.y + video_rect.height * 0.5f, kVideoElevation);
   //
-  // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
+  // TODO(dalesat): Remove this and update C++ parent views when fxbug.dev/24252 is
   // fixed.
   entity_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f, 0.0f);
 }

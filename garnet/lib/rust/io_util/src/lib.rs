@@ -225,7 +225,7 @@ pub fn clone_directory(dir: &DirectoryProxy, flags: u32) -> Result<DirectoryProx
 }
 
 /// canonicalize_path will remove a leading `/` if it exists, since it's always unnecessary and in
-/// some cases disallowed (US-569).
+/// some cases disallowed (fxbug.dev/28436).
 pub fn canonicalize_path(path: &str) -> &str {
     if path == "/" {
         return ".";

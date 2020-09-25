@@ -19,7 +19,7 @@ use {
     wlan_common::{appendable::Appendable, big_endian::BigEndianU16, bss::Protection, mac},
     wlan_hw_sim::*,
 };
-// Remedy for FLK-24 (DNO-389)
+// Remedy for fxbug.dev/8165 (fxbug.dev/33151)
 // Refer to |KMinstrelUpdateIntervalForHwSim| in //src/connectivity/wlan/drivers/wlan/device.cpp
 const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 
@@ -252,8 +252,8 @@ async fn rate_selection() {
         assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
     }
     info!(
-        "If the test fails due to QEMU slowness outside of the scope of WLAN (See FLK-24, \
-         DNO-389). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
+        "If the test fails due to QEMU slowness outside of the scope of WLAN (See fxbug.dev/8165, \
+         fxbug.dev/33151). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
     );
     assert_eq!(max_key_prev, MAX_SUCCESSFUL_IDX);
     helper.stop().await;

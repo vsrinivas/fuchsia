@@ -209,7 +209,7 @@ TEST_F(WebRunnerPixelTest, Static) {
   FX_CHECK(server.FindAndBindPort());
 
   // Chromium and the Fuchsia network package loader both send us requests. This
-  // may go away after MI4-1807; although the race seems to be in Modular, the
+  // may go away after fxbug.dev/17641; although the race seems to be in Modular, the
   // fix may remove the unnecessary net request in component framework.
   auto serve = server.ServeAsync([&server] {
     while (server.Accept()) {

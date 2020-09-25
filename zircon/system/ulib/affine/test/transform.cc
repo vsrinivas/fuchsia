@@ -313,7 +313,7 @@ TEST(TransformTestCase, Compose) {
         // b_offset side of the composed function.  In this case, that means
         // running the -12345 through the 17/7 ratio, which results in some
         // offset rounding error.  For now, however, this is the expected
-        // behavior of the current implementation.  If/when MTWN-6 is resolved,
+        // behavior of the current implementation.  If/when fxbug.dev/13293 is resolved,
         // this test vector will start to fail and will need to be updated.
         TestVector{
             {     0,     0, {  1, 1 } },

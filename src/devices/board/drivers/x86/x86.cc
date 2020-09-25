@@ -82,7 +82,7 @@ void X86::DdkRelease() {
 zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out) {
   pbus_protocol_t pbus;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   root_resource_handle = get_root_resource();
 
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);

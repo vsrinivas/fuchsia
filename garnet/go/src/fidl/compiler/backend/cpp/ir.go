@@ -638,7 +638,7 @@ var reservedWords = map[string]struct{}{
 	// TODO(ianloic) add: "Clone"
 	// There are Clone methods on a couple of protocols that are used
 	// across layers so this will be a breaking change.
-	// FIDL-461
+	// fxbug.dev/7785
 
 	// All names from errno definitions.
 	"EPERM":           {},

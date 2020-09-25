@@ -260,7 +260,7 @@ TEST(MyEnum, CodingTable) {
   ASSERT_EQ(0xffffffff, request_struct.elements[1].padding.mask_32);
 }
 
-// This ensures that the number collision tests compile. (See FIDL-448).
+// This ensures that the number collision tests compile. (See fxbug.dev/7772).
 // These tests ensure that the name mangling rules used in the generator avoid certain types
 // of collisions that appeared in earlier versions (e.g. number of elements would merge with
 // other content).

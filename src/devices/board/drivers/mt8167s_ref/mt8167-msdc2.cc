@@ -158,7 +158,7 @@ zx_status_t Mt8167::Msdc2Init() {
   msdc2_dev.irq_list = msdc2_irqs;
   msdc2_dev.irq_count = countof(msdc2_irqs);
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
   std::optional<ddk::MmioBuffer> iocfg_mmio;
   zx_status_t status = ddk::MmioBuffer::Create(kIocfgBaseAligned, kIocfgSizeAligned, *root_resource,

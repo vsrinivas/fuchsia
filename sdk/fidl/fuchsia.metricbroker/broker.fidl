@@ -36,7 +36,7 @@ struct InspectCollectionConfig {
 struct ProviderInfo {
     // Configuration data for connecting to the Cobalt service.
     // If empty, defaults are used from the calling program *somehow*.
-    // TODO(gevalentino): CF-676
+    // TODO(gevalentino): fxbug.dev/4556
     CobaltProjectConfig? cobalt_configuration;
 
     // Configuration data for reading inspect data and passing it along over Cobalt.

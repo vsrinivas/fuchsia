@@ -391,7 +391,7 @@ The typespace is a map from [`Type`](#type) names to a `TypeTemplate` for that `
 compilation, the typespace is initialized to include all of the built-in types (e.g. `"vector"`
 maps to `VectorTypeTemplate`), whereas user-defined types get added during the compilation process.
 This also ensures that a single type template instance exists per type and avoids name
-collisions/shadowing of types (e.g. FIDL-310).
+collisions/shadowing of types (e.g. fxbug.dev/7646).
 
 ### TypeTemplate {#typetemplate}
 

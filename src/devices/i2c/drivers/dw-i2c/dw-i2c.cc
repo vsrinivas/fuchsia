@@ -308,7 +308,7 @@ zx_status_t DwI2cBus::Transmit() {
   // queued up as soon as possible to avoid this. Possible race leading to failed
   // transaction, if the irq thread is deschedule in the midst for tx command queuing.
   // This is the mode used in as370 and currently this issue is not addressed.
-  // See bug ZX-4628 for details.
+  // See bug fxbug.dev/34403 for details.
   // If IC_EMPTYFIFO_HOLD_MASTER_EN = 1, then STOP and RESTART must be sent explicitly, which is
   // handled by this code.
   while ((tx_limit != 0) && (tx_op_idx_ < ops_count_)) {

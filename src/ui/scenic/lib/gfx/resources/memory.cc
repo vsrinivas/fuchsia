@@ -134,7 +134,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
       // Importing read-only host memory into the Vulkan driver should not work,
       // but it is not an error to try to do so. Returning a nullptr here should
       // not result in a closed session channel, as this flow should only happen
-      // when Scenic is attempting to optimize image importation. See SCN-1012
+      // when Scenic is attempting to optimize image importation. See fxbug.dev/24225
       // for other issues this this flow.
       FX_LOGS(INFO) << "Host memory VMO could not be imported to any valid Vulkan memory types.";
     }
@@ -160,7 +160,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
   memory_type_bits &= GetImageMemoryBits(vk_device);
   FX_CHECK(memory_type_bits != 0)
       << "This platform does not have a single memory pool that is valid for "
-         "both images and buffers. Please fix SCN-1368.";
+         "both images and buffers. Please fix fxbug.dev/24562.";
 #endif  // __x86_64__
 
   uint32_t memory_type_index =

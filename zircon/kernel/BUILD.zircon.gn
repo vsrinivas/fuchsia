@@ -165,7 +165,7 @@ if (current_toolchain == default_toolchain) {
       "-include",
       rebase_path("include/hidden.h", root_build_dir),
 
-      # We want `.debug_frame` for the kernel (ZX-62).  And we still want
+      # We want `.debug_frame` for the kernel (fxbug.dev/30023).  And we still want
       # asynchronous unwind tables.  Alas there's (currently) no way to
       # achieve this with our GCC.  At the moment we compile with
       # `-fno-omit-frame-pointer`, which is good because we link with

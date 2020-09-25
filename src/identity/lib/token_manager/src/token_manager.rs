@@ -167,7 +167,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
         _auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
         // TODO(jsankey): Currently auth_ui_context is neither supplied by Topaz nor allowed to
-        // override the auth UI context supplied at token manager construction (AUTH-110).
+        // override the auth UI context supplied at token manager construction (fxbug.dev/459).
         // Depending on the outcome of design discussions either pass it through or remove it
         // entirely.
         let auth_provider_type = &app_config.auth_provider_type;

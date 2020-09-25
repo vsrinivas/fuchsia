@@ -59,7 +59,7 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
 
     if (min_lead_time_ns == 0) {
       // Ignore the zero we get during warmup.
-      // TODO(dalesat): Remove check when MTWN-244 is fixed.
+      // TODO(dalesat): Remove check when fxbug.dev/13525 is fixed.
       return;
     }
 
@@ -189,7 +189,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
     // The packet has no PTS. We need to assign one. We prefer to use frame
     // units, so first make sure the PTS rate is set to frames.
-    // TODO(dalesat): Remove this code when MTWN-243 is fixed.
+    // TODO(dalesat): Remove this code when fxbug.dev/13524 is fixed.
     packet->SetPtsRate(pts_rate_);
 
     if (next_pts_to_assign_ == Packet::kNoPts || packet->discontinuity()) {

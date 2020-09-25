@@ -1687,7 +1687,7 @@ TEST(Threads, DebugRegistersValidation) {
 #endif
 }
 
-// This is a regression test for ZX-4390. Verify that upon entry to the kernel via fault on hardware
+// This is a regression test for fxbug.dev/34166. Verify that upon entry to the kernel via fault on hardware
 // that lacks SMAP, a subsequent usercopy does not panic.
 TEST(Threads, X86AcFlagUserCopy) {
 #if defined(__x86_64__)

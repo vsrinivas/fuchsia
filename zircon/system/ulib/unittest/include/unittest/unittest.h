@@ -293,7 +293,7 @@ int unittest_set_verbosity_level(int new_level);
 #define TEST_TIMEOUT_FACTOR_PERFORMANCE 100
 
 // Called by tests that for whatever reason want to disable their timeout.
-// An example is really long running tests (ZX-2107).
+// An example is really long running tests (fxbug.dev/31969).
 void unittest_cancel_timeout(void);
 
 #define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)

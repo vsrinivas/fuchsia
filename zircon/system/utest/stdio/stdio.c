@@ -130,7 +130,7 @@ static void* thread_func_do_some_printing(void* arg) {
 }
 
 // This is a crash regression test, multithreaded access to FILE* was racy and
-// could crash. If this test is "flaky", this has regressed. See ZX-4278.
+// could crash. If this test is "flaky", this has regressed. See fxbug.dev/34058.
 TEST(StdioTests, stdio_race_on_file_access) {
   zx_time_t start_time = zx_clock_get_monotonic();
   while (zx_clock_get_monotonic() - start_time < ZX_SEC(5)) {

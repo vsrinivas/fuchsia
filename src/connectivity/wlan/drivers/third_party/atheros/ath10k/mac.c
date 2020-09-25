@@ -3649,7 +3649,7 @@ static bool ath10k_tx_h_use_hwcrypto(struct ath10k* ar, struct ath10k_msg_buf* t
 /* HTT Tx uses Native Wifi tx mode which expects 802.11 frames without QoS
  * Control in the header. We would prefer that wlanmac allow us to specify
  * that we don't want this information in the header so that we don't have
- * to change frames on-the-fly (see WLAN-653).
+ * to change frames on-the-fly (see fxbug.dev/29275).
  */
 static void ath10k_tx_h_nwifi(struct ath10k_msg_buf* tx_buf) {
   void* pkt = ath10k_msg_buf_get_payload(tx_buf);
@@ -5728,7 +5728,7 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, const wlan_key_config_t* key_c
   //
   // However, we still warn it for the case of duplicate key index with same type.
   //
-  // See more context in WLAN-855 and WLAN-1004.
+  // See more context in fxbug.dev/29475 and fxbug.dev/29624.
   mtx_lock(&ar->data_lock);
   if (key_config->key_idx < peer->num_wlan_cfg &&  // not a new index
       peer->wlan_cfg[key_config->key_idx].key_idx == key_config->key_idx &&

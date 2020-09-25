@@ -63,7 +63,7 @@ class SmbiosState {
 };
 
 zx_status_t SmbiosState::LoadFromFirmware() {
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
 
   zx_paddr_t acpi_rsdp, smbios_ep;

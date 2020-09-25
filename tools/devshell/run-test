@@ -21,7 +21,7 @@
 ##   All later arguments are passed directly to `runtests`, see `fx run-test -h` for all flags.
 ##
 ## Known Bugs:
-## PKG-592: After run-test, performing a pave without executing 'fx build'
+## fxbug.dev/22526: After run-test, performing a pave without executing 'fx build'
 ## results in "appmgr not started after 20s", as this command only builds new
 ## packages, it avoids creating new paver artifacts, as such, a pave without a
 ## fresh build produces a system with inconsistent state.

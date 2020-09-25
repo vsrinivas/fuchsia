@@ -44,7 +44,7 @@ constexpr double kInt24In32ToFloat = 1.0 / kFloatToInt24In32;
 // a potential error of 2^-13, the worst-case error for interpolated values is
 // [pos_err * max_intersample_delta]. This means full-scale very high-frequency
 // signals are only guaranteed bit-for-bit accurate in the top 13 bits.
-// TODO(mpuryear): MTWN-86 Consider even more fractional position precision.
+// TODO(mpuryear): fxbug.dev/13372 Consider even more fractional position precision.
 constexpr uint32_t kPtsFractionalBits = 13;
 // Used in places where PTS must be an integral number of frames.
 constexpr uint32_t kPtsFractionalMask = (1 << kPtsFractionalBits) - 1;

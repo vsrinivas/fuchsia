@@ -797,7 +797,7 @@ void EthDev::DdkRelease() {
   if (Release()) {
     delete this;
   } else {
-    // TODO (ZX-3934): It is not presently safe to block here.
+    // TODO (fxbug.dev/33720): It is not presently safe to block here.
     // So we cannot satisfy the assumptions of the DDK.
     // If we block here, we will deadlock the entire system
     // due to the virtual bus's control channel being controlled via FIDL.

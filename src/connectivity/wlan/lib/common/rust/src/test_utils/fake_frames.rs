@@ -347,7 +347,7 @@ pub fn fake_wpa3_enterprise_192_bit_rsne() -> Vec<u8> {
         1, 0, 0x00, 0x0F, 0xAC, 12, // 1 AKM: EAP-SUITEB-SHA384 (HMAC-SHA-384)
         0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
         0x00, 0x00, // 0 PMKID
-        0x00, 0x0F, 0xAC, 12, // Group Management Cipher: BIP-GMAC-256 (BIP-GCMP-256)
+        0x00, 0x0F, 0xAC, 12, // Group Management Cipher: BIP-Gfxbug.dev/12616 (BIP-GCMP-256)
     ]
 }
 

@@ -1126,7 +1126,7 @@ void Client::ApplyConfig() {
           uint32_t stride = fb->stride_px();
           uint32_t size =
               fb->info().height * ZX_PIXEL_FORMAT_BYTES(fb->info().pixel_format) * stride;
-          // Please do not use get_root_resource() in new code. See ZX-1467.
+          // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
           zx_framebuffer_set_range(get_root_resource(), fb->vmo().get(), size,
                                    fb->info().pixel_format, fb->info().width, fb->info().height,
                                    stride);
@@ -1134,7 +1134,7 @@ void Client::ApplyConfig() {
           // If this display doesnt' have an image but it was the display which had the
           // kernel's framebuffer, make the kernel drop the reference. Note that this
           // executes when tearing down the virtcon client.
-          // Please do not use get_root_resource() in new code. See ZX-1467.
+          // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
           zx_framebuffer_set_range(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
           console_fb_display_id_ = -1;
         }

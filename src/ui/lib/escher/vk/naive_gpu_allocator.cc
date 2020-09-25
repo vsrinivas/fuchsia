@@ -27,7 +27,7 @@ GpuMemPtr NaiveGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
                                             vk::MemoryPropertyFlags flags) {
   TRACE_DURATION("gfx", "escher::NaiveGpuAllocator::AllocateMemory");
 
-  // TODO (SCN-730): need to manually overallocate and adjust offset to ensure
+  // TODO (fxbug.dev/23951): need to manually overallocate and adjust offset to ensure
   // alignment, based on the content of reqs.alignment?  Probably not, but
   // should verify.
   vk::DeviceMemory vk_mem;
@@ -42,7 +42,7 @@ GpuMemPtr NaiveGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
     needs_mapped_ptr = true;
   }
 
-  // TODO (SCN-1161): cache flags for efficiency? Or perhaps change signature of
+  // TODO (fxbug.dev/24367): cache flags for efficiency? Or perhaps change signature of
   // this method to directly take the memory-type index.
   memory_type_index = impl::GetMemoryTypeIndex(physical_device_, reqs.memoryTypeBits, flags);
 

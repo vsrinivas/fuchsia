@@ -115,7 +115,7 @@ struct Empty {
 };
 
 flexible union XUnionContainingEmptyStruct {
-    // This is a test to prevent regressions for FIDL-762. Note that we need FIDL-758 to be resolved
+    // This is a test to prevent regressions for fxbug.dev/8084. Note that we need fxbug.dev/8080 to be resolved
     // to ensure this actually works, since goldens aren't currently compiled.
     1: Empty empty;
 };

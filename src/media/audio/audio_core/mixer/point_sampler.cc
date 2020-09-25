@@ -33,7 +33,7 @@ class PointSamplerImpl : public PointSampler {
 };
 
 // TODO(fxbug.dev/13361): refactor to minimize code duplication, or even better eliminate NxN
-// implementations altogether, replaced by flexible rechannelization (MTWN-399).
+// implementations altogether, replaced by flexible rechannelization (fxbug.dev/13679).
 template <typename SrcSampleType>
 class NxNPointSamplerImpl : public PointSampler {
  public:

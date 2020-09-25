@@ -378,7 +378,7 @@ impl<'a, G: InnerValue<Context<D>>, D: StackDispatcher> LockedGuardContext<'a, G
         let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
         if device.admin_enabled() && device.phy_up() {
-            // TODO(rheacock, NET-2140): Handle core and driver state in two
+            // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in two
             // stages: add device to the core to get an id, then reach into the
             // driver to get updated info before triggering the core to allow
             // traffic on the interface.

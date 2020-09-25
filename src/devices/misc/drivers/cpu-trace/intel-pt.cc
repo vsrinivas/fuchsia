@@ -732,7 +732,7 @@ zx_status_t InsntraceDevice::IptInitialize(const fuchsia_insntrace::Allocation* 
   }
   per_trace_state_.reset(per_trace_state);
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   zx_insntrace_trace_config_t config{};
   config.mode = internal_mode;
@@ -768,7 +768,7 @@ zx_status_t InsntraceDevice::IptTerminate() {
       X86PtFreeBuffer1(per_trace);
   }
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
                                          MTRACE_INSNTRACE_FREE_TRACE, 0, nullptr, 0);
@@ -915,7 +915,7 @@ zx_status_t InsntraceDevice::IptStart() {
   if (mode_ != IPT_MODE_CPU)
     return ZX_ERR_BAD_STATE;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   zx_status_t status;
 
@@ -963,7 +963,7 @@ zx_status_t InsntraceDevice::IptStop() {
   if (!active_)
     return ZX_ERR_BAD_STATE;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
 
   zx_status_t status =

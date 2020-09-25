@@ -872,7 +872,7 @@ static zx_status_t ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_i
   src_ring->base_addr_owner_space = io_buffer_virt(&src_ring->iobuf);
   src_ring->base_addr_ce_space = io_buffer_phys(&src_ring->iobuf);
   if (src_ring->base_addr_ce_space + buf_sz > 0x100000000ULL) {
-    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    ath10k_err("io buffer allocated with address above 32b range (see fxbug.dev/31016)\n");
     io_buffer_release(&src_ring->iobuf);
     return ZX_ERR_NO_MEMORY;
   }
@@ -917,7 +917,7 @@ static zx_status_t ath10k_ce_alloc_dest_ring(struct ath10k* ar, unsigned int ce_
   dest_ring->base_addr_ce_space = io_buffer_phys(&dest_ring->iobuf);
 
   if (dest_ring->base_addr_ce_space + buf_sz > 0x100000000ULL) {
-    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    ath10k_err("io buffer allocated with address above 32b range (see fxbug.dev/31016)\n");
     io_buffer_release(&dest_ring->iobuf);
     return ZX_ERR_NO_MEMORY;
   }

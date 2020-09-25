@@ -104,7 +104,7 @@ struct FamilyInfo {
 
 /// Provider of digital font files and metadata.
 ///
-/// TODO(I18N-12): Remove deprecated methods and move to provider.fidl.
+/// TODO(fxbug.dev/8903): Remove deprecated methods and move to provider.fidl.
 [Discoverable]
 protocol Provider {
 

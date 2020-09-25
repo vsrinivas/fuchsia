@@ -418,7 +418,7 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
   htt->rx_ring.paddrs_ring = io_buffer_virt(&htt->rx_ring.io_buf);
   htt->rx_ring.base_paddr = io_buffer_phys(&htt->rx_ring.io_buf);
   if (htt->rx_ring.base_paddr + ring_size > 0x100000000ULL) {
-    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    ath10k_err("io buffer allocated with address above 32b range (see fxbug.dev/31016)\n");
     goto err_dma_idx;
   }
 
@@ -431,7 +431,7 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
   htt->rx_ring.alloc_idx.vaddr = io_buffer_virt(&htt->rx_ring.alloc_idx.io_buf);
   htt->rx_ring.alloc_idx.paddr = io_buffer_phys(&htt->rx_ring.alloc_idx.io_buf);
   if (htt->rx_ring.alloc_idx.paddr + idx_size > 0x100000000ULL) {
-    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    ath10k_err("io buffer allocated with address above 32b range (see fxbug.dev/31016)\n");
     goto err_dma_idx_map;
   }
 

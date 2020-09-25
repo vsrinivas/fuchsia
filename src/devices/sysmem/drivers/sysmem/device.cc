@@ -603,7 +603,7 @@ const zx::bti& Device::bti() { return bti_; }
 // specify a specific physical range.
 zx_status_t Device::CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) {
   zx::vmo result_vmo;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_resource(get_root_resource());
   zx_status_t status = zx::vmo::create_physical(*root_resource, base, size, &result_vmo);
   if (status != ZX_OK) {

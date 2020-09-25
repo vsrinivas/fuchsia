@@ -10,7 +10,7 @@ using zx;
 protocol PeerManager {
     /// Returns a controller client to a remote target (TG) service at the peer specified by
     /// `peer_id`.
-    /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
+    /// TODO (fxbug.dev/898): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
     /// switches.
     GetControllerForTarget(string peer_id, request<Controller> client) -> () error zx.status;
 

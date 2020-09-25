@@ -1681,7 +1681,7 @@ TEST(Table, EchoTableWithErrorSuccessCase) {
 
 TEST(Table, EchoTableWithErrorErrorCase) {
   ForAllServers(
-      // See: FIDL-644
+      // See: fxbug.dev/7966
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url, const std::string& proxy_url) {
         summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +

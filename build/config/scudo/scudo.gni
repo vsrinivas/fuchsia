@@ -4,7 +4,7 @@
 
 declare_args() {
   # TODO(davemoore): Remove this entire mechanism once standalone scudo is the
-  # default (DNO-442)
+  # default (fxbug.dev/6857)
   # Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
   # memory allocator.
   use_scudo = false
@@ -18,10 +18,10 @@ declare_args() {
     "abort_on_error=1",  # get stacktrace on error
     "QuarantineSizeKb=0",  # disables quarantine
     "ThreadLocalQuarantineSizeKb=0",  # disables quarantine
-    "DeallocationTypeMismatch=false",  # TODO(flowerhack) re-enable when US-495
+    "DeallocationTypeMismatch=false",  # TODO(flowerhack) re-enable when fxbug.dev/28378
                                        # is resolved
 
-    "DeleteSizeMismatch=false",  # TODO(flowerhack) re-enable when US-495
+    "DeleteSizeMismatch=false",  # TODO(flowerhack) re-enable when fxbug.dev/28378
                                  # is resolved
 
     "allocator_may_return_null=true",

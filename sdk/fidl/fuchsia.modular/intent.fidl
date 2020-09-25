@@ -12,7 +12,7 @@ resource struct Intent {
     /// The name of the action represented by this Intent.
     ///
     /// This is nullable for backwards compatibility.
-    // TODO(MI4-1100): Make action non-nullable.
+    // TODO(fxbug.dev/15983): Make action non-nullable.
     string:MAX? action;
 
     /// An explicit handler for the Intent. Specified as the component URL of the

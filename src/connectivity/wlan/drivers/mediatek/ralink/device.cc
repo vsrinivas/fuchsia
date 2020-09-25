@@ -307,7 +307,7 @@ zx_status_t Device::Bind() {
   ReadEepromField(&eemtp);
   if (eemtp.power_2g() < kEirpMaxPower) {
     warnf("has EIRP tx power limit\n");
-    warnf("TODO: limit tx power (bug NET-86)\n");
+    warnf("TODO: limit tx power (bug fxbug.dev/20569)\n");
   }
 
   // rfkill switch
@@ -4012,7 +4012,7 @@ zx_status_t Device::OnTxReportInterruptTimer() {
     std::lock_guard<std::mutex> guard(lock_);
     // MAC addr and tx vector instructed from upper layer was put in the queue, get them
     auto entry = RemoveTxStatsFifoEntry(packet_id);
-    // Sometimes ralink may use non-zero packet_id on its own. Do not proceed. (WLAN-964)
+    // Sometimes ralink may use non-zero packet_id on its own. Do not proceed. (fxbug.dev/29584)
     // A report is spurious if (1) We are not expecting any report. (2) the |packet_id| is not
     // among the ones we are expecting.
     // Note: If a spurious |packet_id| coincides with one that is expected, it will not be
@@ -4777,7 +4777,7 @@ zx_status_t Device::WlanmacConfigureBss(uint32_t options, const wlan_bss_config_
   }
 
   // Some APs balk at being asked to associate immediately after disassociation, so add a
-  // short quiesce period if we're reconnecting to one we just disconnected from (NET-1389).
+  // short quiesce period if we're reconnecting to one we just disconnected from (fxbug.dev/28757).
   if (!std::memcmp(config->bssid, last_disconnect_bssid_, ETH_MAC_SIZE)) {
     zx::time curr_time = zx::clock::get_monotonic();
     if (curr_time - last_disconnect_time_ < kDisconnectQuiescePeriod) {

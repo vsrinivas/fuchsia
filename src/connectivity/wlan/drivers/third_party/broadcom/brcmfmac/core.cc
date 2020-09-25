@@ -457,7 +457,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
   // TODO(cphoenix): Make sure devices are removed and memory is freed properly. This code
-  // is probably wrong. See WLAN-1057.
+  // is probably wrong. See fxbug.dev/29675.
   brcmf_free_net_device_vif(ndev);
   brcmf_free_net_device(ndev);
 }

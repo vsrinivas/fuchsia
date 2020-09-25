@@ -113,7 +113,7 @@ PerfmonDevice::PerfmonDevice(zx_device_t* parent, zx::bti bti, perfmon::PmuHwPro
 
 zx_status_t PerfmonDevice::GetHwProperties(mtrace_control_func_t* mtrace_control,
                                            PmuHwProperties* out_props) {
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   zx_status_t status = mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_GET_PROPERTIES,
                                       0, out_props, sizeof(*out_props));
@@ -438,7 +438,7 @@ zx_status_t PerfmonDevice::PmuStart() {
   // Note: If only misc counters are enabled then |global_ctrl| will be zero.
 #endif
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
 
   zx_status_t status =
@@ -491,7 +491,7 @@ void PerfmonDevice::PmuStop() {
     return;
   }
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_handle_t resource = get_root_resource();
   [[maybe_unused]] zx_status_t status =
       mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_STOP, 0, nullptr, 0);

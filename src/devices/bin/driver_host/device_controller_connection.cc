@@ -280,7 +280,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
         // devcoordinator sent us a request while we asked the
         // devcoordinator to remove us.  The coordinator then closes the
         // channel before we can reply, and the FIDL bindings convert
-        // the PEER_CLOSED on zx_channel_write() to a ZX_ERR_INTERNAL.  See ZX-4114.
+        // the PEER_CLOSED on zx_channel_write() to a ZX_ERR_INTERNAL.  See fxbug.dev/33897.
         __UNUSED auto r = conn.release();
         return;
       }

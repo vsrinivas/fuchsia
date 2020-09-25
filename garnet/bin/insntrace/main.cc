@@ -26,7 +26,7 @@
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-#ifdef __x86_64__  // for other arches we're just a stub, TO-128
+#ifdef __x86_64__  // for other arches we're just a stub, fxbug.dev/27444
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>

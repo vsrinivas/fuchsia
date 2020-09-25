@@ -18,7 +18,7 @@
 namespace {
 
 // Test that an invalid compound identifier fails parsing. Regression
-// test for FIDL-263.
+// test for fxbug.dev/7600.
 TEST(ParsingTests, bad_compound_identifier_test) {
   // The leading 0 in the library name causes parsing an Identifier
   // to fail, and then parsing a CompoundIdentifier to fail.

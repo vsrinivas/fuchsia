@@ -245,7 +245,7 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
 
   // Parse the journal, deciding which entries should be replayed.
   //
-  // NOTE(ZX-4737): This current implementation of replay is built against the specification of
+  // NOTE(fxbug.dev/34510): This current implementation of replay is built against the specification of
   // the journaling format, not against how the journaling writeback code happens to be
   // implemented. In the current implementation, "write to journal" and "write to final location"
   // are tightly coupled, so although we will replay a multi-entry journal, it is unlikely the

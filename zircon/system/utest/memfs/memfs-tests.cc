@@ -169,7 +169,7 @@ TEST(MemfsTests, TestMemfsInstall) {
   }
   memfs_uninstall_unsafe(fs, "/mytmp");
 
-  // No way to clean up the namespace entry. See ZX-2013 for more details.
+  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
 }
 
 TEST(MemfsTests, TestMemfsCloseDuringAccess) {
@@ -255,7 +255,7 @@ TEST(MemfsTests, TestMemfsOverflow) {
   // Issue writes to the file in an order that previously would have triggered
   // an overflow in the memfs write path.
   //
-  // Values provided mimic the bug reported by syzkaller (ZX-3791).
+  // Values provided mimic the bug reported by syzkaller (fxbug.dev/33581).
   uint8_t buf[4096];
   memset(buf, 'a', sizeof(buf));
   fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR));

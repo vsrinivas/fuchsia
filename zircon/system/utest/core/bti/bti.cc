@@ -23,11 +23,11 @@ TEST(Bti, Create) {
   zx::bti bti;
   zx::pmt pmt;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -38,11 +38,11 @@ TEST(Bti, NameSupport) {
   zx::iommu iommu;
   zx::bti bti;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -82,10 +82,10 @@ TEST(Bti, NameSupport) {
 void bti_pin_test_helper(bool contiguous_vmo) {
   zx::iommu iommu;
   zx::bti bti;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -120,10 +120,10 @@ TEST(Bti, PinContiguous) { bti_pin_test_helper(true); }
 TEST(Bti, PinContigFlag) {
   zx::iommu iommu;
   zx::bti bti;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -146,10 +146,10 @@ TEST(Bti, Resize) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -170,10 +170,10 @@ TEST(Bti, Clone) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -200,10 +200,10 @@ TEST(Bti, GetInfoTest) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -243,10 +243,10 @@ TEST(Bti, GetInfoTest) {
 TEST(Bti, NoDelayedUnpin) {
   zx::iommu iommu;
   zx::bti bti;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -324,7 +324,7 @@ TEST(Bti, DecommitRace) {
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
@@ -374,7 +374,7 @@ TEST(Bti, QuarantineDisallowsPin) {
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);

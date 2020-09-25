@@ -130,7 +130,7 @@ zx_status_t Vim::EnableWifi32K() {
     return status;
 
   mmio_buffer_t buffer;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = mmio_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {

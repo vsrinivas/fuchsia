@@ -286,7 +286,7 @@ __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
 // LibDriver Misc Interfaces
 
-// Please do not use get_root_resource() in new code. See ZX-1467.
+// Please do not use get_root_resource() in new code. See fxbug.dev/31358.
 __EXPORT zx_handle_t get_root_resource() {
   return internal::ContextForApi()->root_resource().get();
 }

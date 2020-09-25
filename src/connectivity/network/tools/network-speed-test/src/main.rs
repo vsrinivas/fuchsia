@@ -58,7 +58,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         .context("Failed to run fetch_and_discard_url")?;
     test_results.base_data_transfer = true;
 
-    // TODO (NET-1665): aggregate info from individual results (when we do multiple requests)
+    // TODO (fxbug.dev/29199): aggregate info from individual results (when we do multiple requests)
     test_results.overall_avg_goodput_mbps = ind_download.goodput_mbps;
     test_results.total_bytes = ind_download.bytes;
     test_results.total_nanos = ind_download.nanos;
@@ -100,8 +100,8 @@ fn create_request<T: Into<String>>(url_string: T) -> http::Request {
     }
 }
 
-// TODO (NET-1663): move to helper method
-// TODO (NET-1664): verify checksum on data received
+// TODO (fxbug.dev/29304): move to helper method
+// TODO (fxbug.dev/29192): verify checksum on data received
 async fn fetch_and_discard_url(
     loader_proxy: LoaderProxy,
     request: http::Request,

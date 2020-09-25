@@ -256,7 +256,7 @@ async fn maintain_utc<R, T, S, D>(
                 let utc_now = Utc::now().timestamp_nanos();
                 let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
                 info!(
-                    "CF-884:monotonic_before={}:utc={}:monotonic_after={}",
+                    "fxbug.dev/4753:monotonic_before={}:utc={}:monotonic_after={}",
                     monotonic_before, utc_now, monotonic_after,
                 );
                 notifs.0.lock().await.set_source(ftime::UtcSource::External, monotonic_before);

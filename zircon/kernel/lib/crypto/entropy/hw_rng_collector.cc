@@ -34,7 +34,7 @@ size_t HwRngCollector::DrawEntropy(uint8_t* buf, size_t len) {
   // Especially on systems that have RdRand but not RdSeed, avoid parallel
   // accesses. Per the Intel documentation, properly using RdRand to seed a
   // CPRNG requires careful access patterns, to avoid multiple RNG draws from
-  // the same physical seed (see ZX-983).
+  // the same physical seed (see fxbug.dev/30929).
   Guard<Mutex> guard(&lock_);
 
   return hw_rng_get_entropy(buf, len);

@@ -12,7 +12,7 @@
 // Initialize the crash service, this supersedes the standalone service with
 // the same name that lived in zircon/system/core/crashsvc/crashsvc.cpp
 // (/boot/bin/crashsvc) and ad-hoc microservice in devmgr that delegated to
-// svchost. See ZX-3199 for details.
+// svchost. See fxbug.dev/33008 for details.
 //
 // The job of this service is to handle exceptions that reached |root_job| and
 // delegate the crash analysis to one of two services:

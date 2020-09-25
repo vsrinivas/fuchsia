@@ -154,7 +154,7 @@ class Mixer {
   // Just as we address *rate* with rate_modulo and denominator, likewise for *position* Bookkeeping
   // uses src_pos_modulo to track initial and ongoing modulo of src subframes. This work is only
   // partially complete; the remaining work (e.g., setting src_pos_modulo's initial value to
-  // anything other than 0) is tracked with MTWN-128.
+  // anything other than 0) is tracked with fxbug.dev/13414.
   //
   // With *rate*, the effect of inaccuracy accumulates over time, causing measurable distortion that
   // cripples larger mix jobs. For *position*, a change in mix job size affects distortion frequency

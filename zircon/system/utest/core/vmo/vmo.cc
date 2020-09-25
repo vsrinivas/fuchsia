@@ -489,7 +489,7 @@ TEST(VmoTestCase, Info) {
     zx::bti bti;
     auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx::unowned_resource root_res(get_root_resource());
     zx_iommu_desc_dummy_t desc;
     EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),

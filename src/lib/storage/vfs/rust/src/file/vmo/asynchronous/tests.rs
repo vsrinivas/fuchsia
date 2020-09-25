@@ -84,7 +84,7 @@ fn read_only_read_no_status() {
             check_event_recv.await.unwrap();
             assert_no_event!(proxy);
             // NOTE: logic added after `assert_no_event!` will not currently be run. this test will
-            // need to be updated after ZX-3923 is completed.
+            // need to be updated after fxbug.dev/33709 is completed.
         }
     })
     .coordinator(|mut controller| {
@@ -554,7 +554,7 @@ fn seek_valid_after_size_before_capacity() {
         |proxy| {
             async move {
                 assert_seek!(proxy, 7, Start);
-                // POSIX wants this to be a zero read. ZX-3633.
+                // POSIX wants this to be a zero read. fxbug.dev/33425.
                 assert_read!(proxy, "");
                 assert_write!(proxy, " ext");
                 //      "Content ext"));

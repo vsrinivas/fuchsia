@@ -620,7 +620,7 @@ mod tests {
                     check_event_recv.await.unwrap();
                     assert_no_event!(proxy);
                     // NOTE: logic added after `assert_no_event!` will not currently be run. this test
-                    // will need to be updated after ZX-3923 is completed.
+                    // will need to be updated after fxbug.dev/33709 is completed.
                 }
             },
             |run_until_stalled_assert| {

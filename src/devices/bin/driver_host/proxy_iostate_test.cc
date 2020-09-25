@@ -41,7 +41,7 @@ TEST(ProxyIostateTestCase, Creation) {
   dev->vnode.reset();
 }
 
-// This test reproduces the bug from ZX-4060, in which we would double-free the
+// This test reproduces the bug from fxbug.dev/33844, in which we would double-free the
 // ProxyIostate due to a cancellation being queued after a channel close event
 // gets queued, but before the channel close is processed.  If the bug is
 // present, and we're running with ASAN, this will crash 100% of the time.

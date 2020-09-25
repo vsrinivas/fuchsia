@@ -28,7 +28,7 @@ namespace intel_hda {
 fbl::RefPtr<fzl::VmarManager> CreateDriverVmars() {
   // Create a compact VMAR to map all of our registers into.
   //
-  // TODO(johngro): See ZX-1822 for details.
+  // TODO(johngro): See fxbug.dev/31691 for details.
   //
   // Sizing right now is a bit of a guessing game.  A compact VMAR is not
   // going to perfectly tightly pack everything; it will still insert random

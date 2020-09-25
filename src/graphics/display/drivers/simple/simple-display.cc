@@ -198,7 +198,7 @@ SimpleDisplay::SimpleDisplay(zx_device_t* parent, ddk::MmioBuffer framebuffer_mm
 
 zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar) {
   uint32_t format, width, height, stride;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status =
       zx_framebuffer_get_info(get_root_resource(), &format, &width, &height, &stride);
   if (status != ZX_OK) {

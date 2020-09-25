@@ -73,7 +73,7 @@ zx_status_t C18::SpiInit() {
     std::optional<ddk::MmioBuffer> mmio2;
     auto status = ddk::MmioBuffer::Create(
         kTopCkGenRegBase, kTopCkGenRegSize,
-        // Please do not use get_root_resource() in new code (ZX-1467).
+        // Please do not use get_root_resource() in new code (fxbug.dev/31358).
         zx::resource(get_root_resource()), ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio2);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: MmioBuffer Create failed %d ", __PRETTY_FUNCTION__, status);

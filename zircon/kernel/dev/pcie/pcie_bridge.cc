@@ -248,7 +248,7 @@ zx_status_t PcieBridge::AllocateBridgeWindowsLocked() {
   // support re-allocating a bridge's MMIO/PIO windows.
   //
   // TODO(johngro) : support dynamic configuration of bridge windows.  Its
-  // going to be important when we need to support hot-plugging.  See ZX-322
+  // going to be important when we need to support hot-plugging.  See fxbug.dev/30282
   //
   if (io_base_ <= io_limit_) {
     uint64_t size = static_cast<uint64_t>(io_limit_) - io_base_ + 1;

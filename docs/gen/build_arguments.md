@@ -2536,7 +2536,7 @@ From //src/media/lib/ffmpeg/BUILD.gn:14
 
 ### use_scudo
 TODO(davemoore): Remove this entire mechanism once standalone scudo is the
-default (DNO-442)
+default (fxbug.dev/6857)
 Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
 memory allocator.
 

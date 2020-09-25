@@ -547,7 +547,7 @@ zx_protocol_device_t acpi_device_proto = [] {
 zx_status_t pci_init(zx_device_t* sysdev, zx_device_t* platform_bus, ACPI_HANDLE object,
                      ACPI_DEVICE_INFO* info) {
   // Report current resources to kernel PCI driver
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = pci_report_current_resources(get_root_resource());
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!");
@@ -562,7 +562,7 @@ zx_status_t pci_init(zx_device_t* sysdev, zx_device_t* platform_bus, ACPI_HANDLE
     return AE_ERROR;
   }
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_pci_init(get_root_resource(), arg, arg_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: error %d in zx_pci_init", status);

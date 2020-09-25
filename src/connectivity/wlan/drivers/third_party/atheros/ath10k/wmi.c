@@ -4380,7 +4380,7 @@ static zx_status_t ath10k_wmi_alloc_host_mem(struct ath10k* ar, uint32_t req_id,
 
   chunk->paddr = io_buffer_phys(&chunk->handle);
   if (chunk->paddr + pool_size > 0x100000000ULL) {
-    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    ath10k_err("io buffer allocated with address above 32b range (see fxbug.dev/31016)\n");
     io_buffer_release(&chunk->handle);
     return ZX_ERR_NO_MEMORY;
   }
@@ -4659,7 +4659,7 @@ skip_mem_alloc:
 void ath10k_wmi_event_service_ready(struct ath10k* ar, struct ath10k_msg_buf* buf) {
   thrd_t wmi_rdy_thrd;
   ar->svc_rdy_buf = buf;
-  // TODO: Optimize thread handling (WLAN-580)
+  // TODO: Optimize thread handling (fxbug.dev/29202)
   thrd_create_with_name(&wmi_rdy_thrd, ath10k_wmi_event_service_ready_work, ar, "ath10k-wmi-ready");
   thrd_detach(wmi_rdy_thrd);
 }

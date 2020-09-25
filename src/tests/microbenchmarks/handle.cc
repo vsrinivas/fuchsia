@@ -29,7 +29,7 @@ void DoHandleValid(std::atomic<bool>* stop, zx::event* event) {
 //
 // Should not be invoked with more threads than there are cpus otherwise there
 // is a chance with the current scheduler that the main test thread does not get
-// to run (or gets to run very sporadically) and makes the test hang (ZX-1566).
+// to run (or gets to run very sporadically) and makes the test hang (fxbug.dev/31453).
 bool HandleValid(perftest::RepeatState* state, uint32_t num_threads) {
   // Object so we have a handle to test validity of.
   zx::event event;

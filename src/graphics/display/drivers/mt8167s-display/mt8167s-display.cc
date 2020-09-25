@@ -131,7 +131,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
     DISP_ERROR("Could not pin bit\n");
     return status;
   }
-  // Make sure paddr is allocated in the lower 4GB. (ZX-1073)
+  // Make sure paddr is allocated in the lower 4GB. (fxbug.dev/31016)
   ZX_ASSERT((paddr + size) <= UINT32_MAX);
   import_info->paddr = paddr;
   import_info->pitch = minimum_row_bytes;
@@ -167,14 +167,14 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
       switch (display_configs[0]->layer_list[j]->type) {
         case LAYER_TYPE_PRIMARY: {
           const primary_layer_t& layer = display_configs[0]->layer_list[j]->cfg.primary;
-          // TODO(payamm) Add support for 90 and 270 degree rotation (ZX-3252)
+          // TODO(payamm) Add support for 90 and 270 degree rotation (fxbug.dev/33059)
           if (layer.transform_mode != FRAME_TRANSFORM_IDENTITY &&
               layer.transform_mode != FRAME_TRANSFORM_REFLECT_X &&
               layer.transform_mode != FRAME_TRANSFORM_REFLECT_Y &&
               layer.transform_mode != FRAME_TRANSFORM_ROT_180) {
             layer_cfg_results[0][j] |= CLIENT_TRANSFORM;
           }
-          // TODO(payamm) Add support for scaling (ZX-3228) :
+          // TODO(payamm) Add support for scaling (fxbug.dev/33035) :
           if (layer.src_frame.width != layer.dest_frame.width ||
               layer.src_frame.height != layer.dest_frame.height) {
             layer_cfg_results[0][j] |= CLIENT_FRAME_SCALE;
