@@ -38,8 +38,8 @@ class Tas58xx : public SimpleCodecServer {
   zx::status<DriverIds> Initialize() override;
   zx_status_t Reset() override;
   Info GetInfo() override;
-  zx_status_t Stop() override { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t Start() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Stop() override;
+  zx_status_t Start() override;
   bool IsBridgeable() override;
   void SetBridgedMode(bool enable_bridged_mode) override;
   std::vector<DaiSupportedFormats> GetDaiFormats() override;
@@ -58,6 +58,7 @@ class Tas58xx : public SimpleCodecServer {
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value) TA_REQ(lock_);
+  zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value) TA_REQ(lock_);
 
   ddk::I2cChannel i2c_;
   GainState gain_state_ = {};

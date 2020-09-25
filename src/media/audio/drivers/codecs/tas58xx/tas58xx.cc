@@ -78,6 +78,16 @@ Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
   }
 }
 
+zx_status_t Tas58xx::Stop() {
+  fbl::AutoLock lock(&lock_);
+  return UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
+}
+
+zx_status_t Tas58xx::Start() {
+  fbl::AutoLock lock(&lock_);
+  return UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsPlay);
+}
+
 zx_status_t Tas58xx::Reset() {
   {  // Limit scope of lock, SetGainState will grab it again below.
     fbl::AutoLock lock(&lock_);
@@ -254,6 +264,7 @@ void Tas58xx::SetGainState(GainState gain_state) {
     gain_state.agc_enable = false;
   }
   gain_state_ = gain_state;
+  static_cast<void>(UpdateReg(kRegDeviceCtrl2, 0x08, gain_state.muted ? 0x08 : 0x00));
 }
 
 GainState Tas58xx::GetGainState() { return gain_state_; }
@@ -286,6 +297,15 @@ zx_status_t Tas58xx::ReadReg(uint8_t reg, uint8_t* value) {
   printf("Read register 0x%02X, value %02X\n", reg, *value);
 #endif
   return status;
+}
+
+zx_status_t Tas58xx::UpdateReg(uint8_t reg, uint8_t mask, uint8_t value) {
+  uint8_t old_value = 0;
+  auto status = ReadReg(reg, &old_value);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return WriteReg(reg, (old_value & ~mask) | (value & mask));
 }
 
 zx_status_t tas58xx_bind(void* ctx, zx_device_t* parent) { return Tas58xx::Create(parent); }

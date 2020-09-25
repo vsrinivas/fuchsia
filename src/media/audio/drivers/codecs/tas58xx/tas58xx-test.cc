@@ -287,6 +287,45 @@ TEST(Tas58xxTest, CheckState) {
   mock_i2c.VerifyAndClear();
 }
 
+TEST(Tas58xxTest, SetGain) {
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  {
+    mock_i2c
+        .ExpectWriteStop({0x4c, 0x48})  // digital vol -12dB.
+        .ExpectWrite({0x03})
+        .ExpectReadStop({0x00})
+        .ExpectWriteStop({0x03, 0x00});  // Muted = false.
+    std::thread t([&]() {
+      GainState gain({.gain_db = -12.f, .muted = false, .agc_enable = false});
+      client.SetGainState(gain);
+    });
+    t.join();
+  }
+
+  {
+    mock_i2c
+        .ExpectWriteStop({0x4c, 0x60})  // digital vol -24dB.
+        .ExpectWrite({0x03})
+        .ExpectReadStop({0x00})
+        .ExpectWriteStop({0x03, 0x08});  // Muted = true.
+    std::thread t([&]() {
+      GainState gain({.gain_db = -24.f, .muted = true, .agc_enable = false});
+      client.SetGainState(gain);
+    });
+    t.join();
+  }
+
+  mock_i2c.VerifyAndClear();
+}
+
 TEST(Tas58xxTest, Reset) {
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
@@ -299,18 +338,21 @@ TEST(Tas58xxTest, Reset) {
 
   {
     mock_i2c
-        .ExpectWriteStop({0x00, 0x00})   // Page 0.
-        .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
-        .ExpectWriteStop({0x01, 0x11})   // Reset.
-        .ExpectWriteStop({0x00, 0x00})   // Page 0.
-        .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x02, 0x01})   // Normal modulation, mono, no PBTL (Stereo BTL).
-        .ExpectWriteStop({0x03, 0x03})   // Play,
-        .ExpectWriteStop({0x00, 0x00})   // Page 0.
-        .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x78, 0x80})   // Clear analog fault.
-        .ExpectWriteStop({0x4c, 0x6c});  // digital vol -30dB.
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x03, 0x02})  // HiZ, Enables DSP.
+        .ExpectWriteStop({0x01, 0x11})  // Reset.
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x02, 0x01})  // Normal modulation, mono, no PBTL (Stereo BTL).
+        .ExpectWriteStop({0x03, 0x03})  // Play,
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x78, 0x80})  // Clear analog fault.
+        .ExpectWriteStop({0x4c, 0x6c})  // digital vol -30dB.
+        .ExpectWrite({0x03})
+        .ExpectReadStop({0x00})
+        .ExpectWriteStop({0x03, 0x08});  // Muted = true.
     std::thread t([&]() { ASSERT_OK(client.Reset()); });
     t.join();
   }
@@ -337,19 +379,54 @@ TEST(Tas58xxTest, Bridged) {
   {
     // Reset with PBTL mode on.
     mock_i2c
-        .ExpectWriteStop({0x00, 0x00})   // Page 0.
-        .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
-        .ExpectWriteStop({0x01, 0x11})   // Reset.
-        .ExpectWriteStop({0x00, 0x00})   // Page 0.
-        .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono, PBTL (bridged mono).
-        .ExpectWriteStop({0x03, 0x03})   // Play,
-        .ExpectWriteStop({0x00, 0x00})   // Page 0.
-        .ExpectWriteStop({0x7f, 0x00})   // book 0.
-        .ExpectWriteStop({0x78, 0x80})   // Clear analog fault.
-        .ExpectWriteStop({0x4c, 0x6c});  // digital vol -30dB.
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x03, 0x02})  // HiZ, Enables DSP.
+        .ExpectWriteStop({0x01, 0x11})  // Reset.
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x02, 0x05})  // Normal modulation, mono, PBTL (bridged mono).
+        .ExpectWriteStop({0x03, 0x03})  // Play,
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x78, 0x80})  // Clear analog fault.
+        .ExpectWriteStop({0x4c, 0x6c})  // digital vol -30dB.
+        .ExpectWrite({0x03})
+        .ExpectReadStop({0x00})
+        .ExpectWriteStop({0x03, 0x08});  // Muted = true.
     std::thread t([&]() { ASSERT_OK(client.Reset()); });
+    t.join();
+  }
+
+  mock_i2c.VerifyAndClear();
+}
+
+TEST(Tas58xxTest, StopStart) {
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  fake_ddk::Bind ddk;
+
+  metadata::ti::TasConfig metadata = {};
+  metadata.bridged = true;
+  ddk.SetMetadata(&metadata, sizeof(metadata));
+
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  {
+    // Reset with PBTL mode on.
+    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+        {0x03, 0x02});  // Stop, go to HiZ.
+    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+        {0x03, 0x03});  // Start, go back to play mode.
+    std::thread t([&]() {
+      ASSERT_OK(client.Stop());
+      ASSERT_OK(client.Start());
+    });
     t.join();
   }
 

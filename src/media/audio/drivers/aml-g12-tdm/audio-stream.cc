@@ -518,8 +518,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
     for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
       // Put codecs in safe state for rate change
       auto status = codecs_[i].Stop();
-      // We allow codecs that do not support Stop.
-      if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
+      if (status != ZX_OK) {
         zxlogf(ERROR, "%s failed to stop the codec", __FILE__);
         return status;
       }
@@ -544,8 +543,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
 
       // Restart codec
       status = codecs_[i].Start();
-      // We allow codecs that do not support Start.
-      if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
+      if (status != ZX_OK) {
         zxlogf(ERROR, "%s failed to restart the codec", __FILE__);
         return status;
       }
