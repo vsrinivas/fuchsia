@@ -53,7 +53,6 @@ class Vcpu {
   const zx_gpaddr_t boot_ptr_;
 
   std::future<zx_status_t> future_;
-  std::shared_mutex mutex_;
   zx::vcpu vcpu_;
 };
 

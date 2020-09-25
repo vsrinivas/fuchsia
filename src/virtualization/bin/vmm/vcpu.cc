@@ -139,7 +139,6 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
 
   // Create the VCPU.
   {
-    std::lock_guard<std::shared_mutex> lock(mutex_);
     zx_status_t status = zx::vcpu::create(guest_->object(), 0, entry_, &vcpu_);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to create VCPU " << id_ << " " << status;
@@ -149,7 +148,6 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
   }
 
   // Set the initial VCPU state.
-  std::shared_lock<std::shared_mutex> lock(mutex_);
   {
     zx_vcpu_state_t vcpu_state = {};
 #if __aarch64__
@@ -192,7 +190,6 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
-  std::shared_lock<std::shared_mutex> lock(mutex_);
   return vcpu_.interrupt(vector);
 }
 
