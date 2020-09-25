@@ -15,7 +15,7 @@ void main() {
   final providers = Providers()..provideValue(CurrentLocale(null));
 
   runApp(ProviderNode(providers: providers, child: LocalizedMod()));
-  // TODO(FL-157): Receive i18n settings from the View interface.
+  // TODO(fxbug.dev/8745): Receive i18n settings from the View interface.
 }
 
 /// The main application widget for Localized Mod.

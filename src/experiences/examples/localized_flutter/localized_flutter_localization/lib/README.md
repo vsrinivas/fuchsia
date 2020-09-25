@@ -43,4 +43,4 @@ lib/localized_mod_strings.dart lib/localization/intl_*.arb
 These are checked into the repo _only as a temporary workaround_.
 
 In the future, there should be a GN build rule that will generate these code
-files at build time, so as to not pollute the source tree (FL-162).
+files at build time, so as to not pollute the source tree (fxbug.dev/8750).
