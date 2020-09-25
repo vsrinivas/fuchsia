@@ -640,7 +640,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -648,14 +648,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -864,7 +864,7 @@ From //build/images/args.gni:49
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -879,14 +879,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/dc4b91682cbba8351014ab73c343517d2f4fdf91/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -2297,12 +2297,12 @@ custom kernel for development purposes.
 From //src/virtualization/packages/termina_guest/BUILD.gn:12
 
 ### test_durations_file
-A file in integration containing historical test duration data for this
-build configuration. This file is used by infra to efficiently schedule
-tests. "default.json" is a dummy file that contains no real duration data,
-and causes infra to schedule tests as if each one has the same duration.
+A file in containing historical test duration data for this build
+configuration, used used by testsharder to evenly split tests across
+shards. It should be set for any builds where testsharder will be run
+afterwards.
 
-**Current value (from the default):** `"//integration/infra/test_durations/default.json"`
+**Current value (from the default):** `""`
 
 From //BUILD.gn:45
 
