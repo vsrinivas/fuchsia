@@ -47,20 +47,24 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
   EXPECT_EQ(tv_len, sizeof(original_tv));
   const struct timeval tv = {
       .tv_sec = 0,
-      .tv_usec = 1 << 18,  // ~262ms
+      .tv_usec = 1 << 13,  // ~8ms
   };
   EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
 #endif
 
-  // buf size should be neither too small in which case too many writes operation is required
-  // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
-  // array.
   ssize_t cnt = 0;
-  {
+  // Clocks sometimes jump in infrastructure, which can cause the timeout set above to expire
+  // prematurely. Fortunately such jumps are rarely seen in quick succession - if we repeatedly
+  // reach the blocking condition we can be reasonably sure that the intended amount of time truly
+  // did elapse. Care is taken to reset the counter if data is written, as we are looking for a
+  // streak of blocking condition observances.
+  for (int i = 0; i < 1 << 5; i++) {
     char buf[sndbuf_opt + rcvbuf_opt];
     ssize_t size;
     while ((size = write(fd, buf, sizeof(buf))) > 0) {
       cnt += size;
+
+      i = 0;
     }
     EXPECT_EQ(size, -1);
     EXPECT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
