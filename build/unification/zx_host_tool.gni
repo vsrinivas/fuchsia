@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
 
 template("zx_host_tool") {
@@ -11,68 +10,40 @@ template("zx_host_tool") {
   # //zircon/tools/zbi(//build/toolchain:linux_x64), and that toolchain
   # doesn't set `is_host` to true.
   if (is_host || is_linux) {
-    tool_name = target_name
-
-    # NOTE: The executable needs to be built, but it also needs to be copied
-    # into $root_build_dir/host-tools/ to be picked up by various shell scripts
-    # outside of the build itself.
-
-    # The target used to build the executable itself.
-    executable_target = "_executable.$tool_name"
-
-    # The target used to install it to $root_build_dir/host-tools/
-    install_target = "_install.$tool_name"
-
-    group(tool_name) {
-      public_deps = [
-        ":$executable_target",
-        ":$install_target",
-      ]
-    }
-
-    # Compute the output path of the executable target.
-    _output_name = tool_name
-    if (defined(invoker.output_name)) {
-      _output_name = invoker.output_name
-    }
-    if (defined(invoker.output_extension)) {
-      _output_extension = invoker.output_extension
-    } else {
-      _output_extension = ""
-      if (current_os == "win") {
-        _output_extension = "exe"
-      }
-    }
-    _output_dir = root_out_dir
-    if (defined(invoker.output_dir)) {
-      _output_dir = invoker.output_dir
-    }
-    if (_output_extension != "") {
-      _output_name += _output_extension
-    }
-    _output_file = "$_output_dir/$_output_name"
-
     not_needed(invoker, [ "sdk_migrated" ])
-    executable(executable_target) {
-      output_name = tool_name
+    executable(target_name) {
       forward_variables_from(invoker,
                              "*",
                              [
                                "sdk_migrated",
                                "target_name",
-                               "testonly",
-                               "visibility",
                              ])
-      forward_variables_from(invoker, [ "testonly" ])
     }
 
-    install_host_tools(install_target) {
-      deps = [ ":$executable_target" ]
-      outputs = [ _output_name ]
+    output_dir = root_out_dir
+    if (defined(invoker.output_dir)) {
+      output_dir = invoker.output_dir
+    }
+    output_name = target_name
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    }
+    output_extension = ""
+    if (current_os == "win") {
+      output_extension = "exe"
+    }
+    if (defined(invoker.output_extension)) {
+      output_extension = invoker.output_extension
     }
 
+    output_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+
+    tool_name = target_name
     file_base = "tools/$tool_name"
-    tool_src = _output_file
+    tool_src = output_file
 
     # TODO(fxbug.dev/42999): remove extra atom
     if (current_cpu == host_cpu) {
@@ -97,7 +68,7 @@ template("zx_host_tool") {
             dest = file_base
           },
         ]
-        non_sdk_deps = [ ":${executable_target}" ]
+        non_sdk_deps = [ ":${tool_name}" ]
       }
     }
 
@@ -126,7 +97,7 @@ template("zx_host_tool") {
           dest = file_base
         },
       ]
-      non_sdk_deps = [ ":${executable_target}" ]
+      non_sdk_deps = [ ":${tool_name}" ]
     }
   } else {
     # Not on host, don't compile anything.
