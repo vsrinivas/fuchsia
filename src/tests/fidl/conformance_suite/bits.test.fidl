@@ -24,12 +24,12 @@ strict bits StrictBitsUint64 : uint64 {
     B = 0x2;
 };
 
-bits FlexibleBits : uint32 {
+flexible bits FlexibleBits : uint32 {
     A = 0x1;
     B = 0x2;
 };
 
-bits FlexibleBitsUint64 : uint64 {
+flexible bits FlexibleBitsUint64 : uint64 {
     A = 0x1;
     B = 0x2;
 };
