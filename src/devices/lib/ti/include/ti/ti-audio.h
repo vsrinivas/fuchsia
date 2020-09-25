@@ -11,6 +11,7 @@ namespace metadata::ti {
 
 struct TasConfig {
   bool bridged;
+  uint8_t instance_count;
 };
 
 }  // namespace metadata::ti

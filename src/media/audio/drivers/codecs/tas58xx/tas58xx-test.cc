@@ -6,7 +6,12 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
+#include <lib/simple-codec/simple-codec-client.h>
+#include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
+
+#include <string>
+#include <thread>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
@@ -14,254 +19,315 @@
 
 namespace audio {
 
-static constexpr uint32_t kCodecTimeoutSecs = 1;
-
-struct Tas58xxTestDevice : public Tas58xx {
-  explicit Tas58xxTestDevice(const ddk::I2cChannel& i2c) : Tas58xx(fake_ddk::kFakeParent, i2c) {
-    initialized_ = true;
-  }
-  zx_status_t CodecSetDaiFormat(dai_format_t* format) {
-    struct AsyncOut {
-      sync_completion_t completion;
-      zx_status_t status;
-    } out;
-    Tas58xx::CodecSetDaiFormat(
-        format,
-        [](void* ctx, zx_status_t s) {
-          AsyncOut* out = reinterpret_cast<AsyncOut*>(ctx);
-          out->status = s;
-          sync_completion_signal(&out->completion);
-        },
-        &out);
-    auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
-    if (status != ZX_OK) {
-      return status;
-    }
-    return out.status;
-  }
+struct Tas58xxCodec : public Tas58xx {
+  explicit Tas58xxCodec(const ddk::I2cChannel& i2c) : Tas58xx(fake_ddk::kFakeParent, i2c) {}
+  codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 };
 
 TEST(Tas58xxTest, GoodSetDai) {
   mock_i2c::MockI2c mock_i2c;
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xxTestDevice device(std::move(i2c));
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
-  uint32_t channels[] = {0, 1};
-  dai_format_t format = {};
-  format.number_of_channels = 2;
-  format.channels_to_use_list = channels;
-  format.channels_to_use_count = countof(channels);
-  format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-  format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
-  format.frame_rate = 48000;
-  format.bits_per_channel = 32;
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  format.bits_per_sample = 32;
-  mock_i2c.ExpectWriteStop({0x33, 0x03});  // 32 bits.
-  EXPECT_OK(device.CodecSetDaiFormat(&format));
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use = {0, 1};
+    format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_rate = 48000;
+    format.bits_per_channel = 32;
+    format.bits_per_sample = 32;
+    mock_i2c.ExpectWriteStop({0x33, 0x03});  // 32 bits.
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
 
-  mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
-  format.bits_per_sample = 16;
-  EXPECT_OK(device.CodecSetDaiFormat(&format));
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use = {0, 1};
+    format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_rate = 48000;
+    format.bits_per_channel = 32;
+    mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
+    format.bits_per_sample = 16;
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
 
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, BadSetDai) {
   mock_i2c::MockI2c mock_i2c;
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xxTestDevice device(std::move(i2c));
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
-  // No format at all.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.CodecSetDaiFormat(nullptr));
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
   // Blank format.
-  dai_format format = {};
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
+  {
+    audio::DaiFormat format = {};
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
 
-  // Almost good format (wrong justify_format).
-  uint32_t channels[] = {0, 1};
-  format.number_of_channels = 2;
-  format.channels_to_use_list = channels;
-  format.channels_to_use_count = countof(channels);
-  format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-  format.justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;  // This must fail, only I2S supported.
-  format.frame_rate = 48000;
-  format.bits_per_channel = 32;
-  format.bits_per_sample = 32;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
+  // Almost good format (wrong frame_format).
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use = {0, 1};
+    format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_LEFT;  // This must fail.
+    format.frame_rate = 48000;
+    format.bits_per_channel = 32;
+    format.bits_per_sample = 32;
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
 
-  // Almost good format (wrong channels).
-  format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;  // Restore I2S justify format.
-  format.channels_to_use_count = 1;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
+  //   Almost good format (wrong channels).
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 1;
+    format.channels_to_use = {0};
+    format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_rate = 48000;
+    format.bits_per_channel = 32;
+    format.bits_per_sample = 32;
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
 
   // Almost good format (wrong rate).
-  format.channels_to_use_count = 2;  // Restore channel count;
-  format.frame_rate = 1234;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use = {0, 1};
+    format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+    format.frame_rate = 1234;
+    format.bits_per_channel = 32;
+    format.bits_per_sample = 32;
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
 
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, GetDai) {
   mock_i2c::MockI2c mock_i2c;
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xxTestDevice device(std::move(i2c));
-  struct AsyncOut {
-    sync_completion_t completion;
-    zx_status_t status;
-  } out;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
-  device.CodecGetDaiFormats(
-      [](void* ctx, zx_status_t status, const dai_supported_formats_t* formats_list,
-         size_t formats_count) {
-        AsyncOut* out = reinterpret_cast<AsyncOut*>(ctx);
-        EXPECT_EQ(formats_count, 1);
-        EXPECT_EQ(formats_list[0].number_of_channels_count, 1);
-        EXPECT_EQ(formats_list[0].number_of_channels_list[0], 2);
-        EXPECT_EQ(formats_list[0].sample_formats_count, 1);
-        EXPECT_EQ(formats_list[0].sample_formats_list[0], SAMPLE_FORMAT_PCM_SIGNED);
-        EXPECT_EQ(formats_list[0].justify_formats_count, 1);
-        EXPECT_EQ(formats_list[0].justify_formats_list[0], JUSTIFY_FORMAT_JUSTIFY_I2S);
-        EXPECT_EQ(formats_list[0].frame_rates_count, 1);
-        EXPECT_EQ(formats_list[0].frame_rates_list[0], 48000);
-        EXPECT_EQ(formats_list[0].bits_per_channel_count, 2);
-        EXPECT_EQ(formats_list[0].bits_per_channel_list[0], 16);
-        EXPECT_EQ(formats_list[0].bits_per_channel_list[1], 32);
-        EXPECT_EQ(formats_list[0].bits_per_sample_count, 2);
-        EXPECT_EQ(formats_list[0].bits_per_sample_list[0], 16);
-        EXPECT_EQ(formats_list[0].bits_per_sample_list[1], 32);
-        out->status = status;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  EXPECT_OK(out.status);
-  EXPECT_OK(sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get()));
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  {
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      EXPECT_EQ(formats.value().size(), 1);
+      EXPECT_EQ(formats.value()[0].number_of_channels.size(), 1);
+      EXPECT_EQ(formats.value()[0].number_of_channels[0], 2);
+      EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
+      EXPECT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
+      EXPECT_EQ(formats.value()[0].justify_formats.size(), 1);
+      EXPECT_EQ(formats.value()[0].justify_formats[0], JUSTIFY_FORMAT_JUSTIFY_I2S);
+      EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
+      EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
+      EXPECT_EQ(formats.value()[0].bits_per_channel.size(), 2);
+      EXPECT_EQ(formats.value()[0].bits_per_channel[0], 16);
+      EXPECT_EQ(formats.value()[0].bits_per_channel[1], 32);
+      EXPECT_EQ(formats.value()[0].bits_per_sample.size(), 2);
+      EXPECT_EQ(formats.value()[0].bits_per_sample[0], 16);
+      EXPECT_EQ(formats.value()[0].bits_per_sample[1], 32);
+    });
+    t.join();
+  }
+
+  mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, GetInfo5805) {
   mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
-  // Get Info.
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xxTestDevice device(std::move(i2c));
+  {
+    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+    std::thread t([&]() {
+      auto info = client.GetInfo();
+      EXPECT_EQ(info.value().unique_id.compare(""), 0);
+      EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
+      EXPECT_EQ(info.value().product_name.compare("TAS5805m"), 0);
+    });
+    t.join();
+  }
 
-  device.CodecGetInfo(
-      [](void* ctx, const info_t* info) {
-        EXPECT_EQ(strcmp(info->unique_id, ""), 0);
-        EXPECT_EQ(strcmp(info->manufacturer, "Texas Instruments"), 0);
-        EXPECT_EQ(strcmp(info->product_name, "TAS5805m"), 0);
-      },
-      nullptr);
+  mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, GetInfo5825) {
   mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
-  // Get Info.
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xxTestDevice device(std::move(i2c));
+  {
+    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+    std::thread t([&]() {
+      auto info = client.GetInfo();
+      EXPECT_EQ(info.value().unique_id.compare(""), 0);
+      EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
+      EXPECT_EQ(info.value().product_name.compare("TAS5825m"), 0);
+    });
+    t.join();
+  }
 
-  device.CodecGetInfo(
-      [](void* ctx, const info_t* info) {
-        EXPECT_EQ(strcmp(info->unique_id, ""), 0);
-        EXPECT_EQ(strcmp(info->manufacturer, "Texas Instruments"), 0);
-        EXPECT_EQ(strcmp(info->product_name, "TAS5825m"), 0);
-      },
-      nullptr);
+  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, BridgedMode) {
-  ddk::I2cChannel unused_i2c;
-  Tas58xxTestDevice device(std::move(unused_i2c));
+TEST(Tas58xxTest, CheckState) {
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
-  device.CodecIsBridgeable(
-      [](void* ctx, bool supports_bridged_mode) { EXPECT_EQ(supports_bridged_mode, false); },
-      nullptr);
-}
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-TEST(Tas58xxTest, GetGainFormat) {
-  ddk::I2cChannel unused_i2c;
-  Tas58xxTestDevice device(std::move(unused_i2c));
+  {
+    std::thread t([&]() {
+      auto info = client.IsBridgeable();
+      EXPECT_EQ(info.value(), false);
 
-  device.CodecGetGainFormat(
-      [](void* ctx, const gain_format_t* format) {
-        EXPECT_EQ(format->type, GAIN_TYPE_DECIBELS);
-        EXPECT_EQ(format->min_gain, -103.0);
-        EXPECT_EQ(format->max_gain, 24.0);
-        EXPECT_EQ(format->gain_step, 0.5);
-      },
-      nullptr);
-}
+      auto format = client.GetGainFormat();
+      EXPECT_EQ(format.value().min_gain_db, -103.0);
+      EXPECT_EQ(format.value().max_gain_db, 24.0);
+      EXPECT_EQ(format.value().gain_step_db, 0.5);
 
-TEST(Tas58xxTest, GetPlugState) {
-  ddk::I2cChannel unused_i2c;
-  Tas58xxTestDevice device(std::move(unused_i2c));
+      auto state = client.GetPlugState();
+      EXPECT_EQ(state.value().hardwired, true);
+      EXPECT_EQ(state.value().plugged, true);
+    });
+    t.join();
+  }
 
-  device.CodecGetPlugState(
-      [](void* ctx, const plug_state_t* state) {
-        EXPECT_EQ(state->hardwired, true);
-        EXPECT_EQ(state->plugged, true);
-      },
-      nullptr);
+  mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, Reset) {
   mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
-  mock_i2c
-      .ExpectWriteStop({0x00, 0x00})   // Page 0.
-      .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
-      .ExpectWriteStop({0x01, 0x11})   // Reset.
-      .ExpectWriteStop({0x00, 0x00})   // Page 0.
-      .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x02, 0x01})   // Normal modulation, mono, no PBTL (Stereo BTL).
-      .ExpectWriteStop({0x03, 0x03})   // Play,
-      .ExpectWriteStop({0x00, 0x00})   // Page 0.
-      .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xxTestDevice device(std::move(i2c));
-  device.Bind();
-  // Delay to test we don't do other init I2C writes in another thread.
-  zx::nanosleep(zx::deadline_after(zx::msec(100)));
-  device.ResetAndInitialize();
+  {
+    mock_i2c
+        .ExpectWriteStop({0x00, 0x00})   // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})   // book 0.
+        .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
+        .ExpectWriteStop({0x01, 0x11})   // Reset.
+        .ExpectWriteStop({0x00, 0x00})   // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})   // book 0.
+        .ExpectWriteStop({0x02, 0x01})   // Normal modulation, mono, no PBTL (Stereo BTL).
+        .ExpectWriteStop({0x03, 0x03})   // Play,
+        .ExpectWriteStop({0x00, 0x00})   // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})   // book 0.
+        .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+    std::thread t([&]() { ASSERT_OK(client.Reset()); });
+    t.join();
+  }
+
   mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, Pbtl) {
+TEST(Tas58xxTest, Bridged) {
   mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
   fake_ddk::Bind ddk;
 
   metadata::ti::TasConfig metadata = {};
   metadata.bridged = true;
-
   ddk.SetMetadata(&metadata, sizeof(metadata));
 
-  // Reset with PBTL mode on.
-  mock_i2c
-      .ExpectWriteStop({0x00, 0x00})   // Page 0.
-      .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
-      .ExpectWriteStop({0x01, 0x11})   // Reset.
-      .ExpectWriteStop({0x00, 0x00})   // Page 0.
-      .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono, PBTL (bridged mono).
-      .ExpectWriteStop({0x03, 0x03})   // Play,
-      .ExpectWriteStop({0x00, 0x00})   // Page 0.
-      .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas58xx device(fake_ddk::kFakeParent, std::move(i2c));
-  device.ResetAndInitialize();
+  {
+    // Reset with PBTL mode on.
+    mock_i2c
+        .ExpectWriteStop({0x00, 0x00})   // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})   // book 0.
+        .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
+        .ExpectWriteStop({0x01, 0x11})   // Reset.
+        .ExpectWriteStop({0x00, 0x00})   // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})   // book 0.
+        .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono, PBTL (bridged mono).
+        .ExpectWriteStop({0x03, 0x03})   // Play,
+        .ExpectWriteStop({0x00, 0x00})   // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})   // book 0.
+        .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+    std::thread t([&]() { ASSERT_OK(client.Reset()); });
+    t.join();
+  }
+
   mock_i2c.VerifyAndClear();
 }
 
