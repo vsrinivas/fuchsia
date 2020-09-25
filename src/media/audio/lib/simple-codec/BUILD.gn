@@ -9,11 +9,13 @@ zx_library("simple-codec") {
   sdk = "source"
   sdk_headers = [
     "lib/simple-codec/simple-codec-client.h",
+    "lib/simple-codec/simple-codec-helper.h",
     "lib/simple-codec/simple-codec-server.h",
     "lib/simple-codec/simple-codec-types.h",
   ]
   sources = [
     "simple-codec-client.cc",
+    "simple-codec-helper.cc",
     "simple-codec-server.cc",
   ]
   public_deps = [

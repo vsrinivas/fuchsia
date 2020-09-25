@@ -7,6 +7,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
+#include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
 #include <thread>
@@ -245,7 +246,7 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     format.frame_rate = 48'000;
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
-      ASSERT_TRUE(client.IsDaiFormatSupported(format, formats.value()));
+      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
       ASSERT_OK(client.SetDaiFormat(std::move(format)));
     });
     t.join();
@@ -259,7 +260,7 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     format.frame_rate = 96'000;
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
-      ASSERT_TRUE(client.IsDaiFormatSupported(format, formats.value()));
+      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
       ASSERT_OK(client.SetDaiFormat(std::move(format)));
     });
     t.join();
@@ -272,7 +273,7 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     format.frame_rate = 192'000;
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
-      ASSERT_FALSE(client.IsDaiFormatSupported(format, formats.value()));
+      ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
       ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
     });
     t.join();

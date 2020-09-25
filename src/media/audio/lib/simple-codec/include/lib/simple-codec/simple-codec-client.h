@@ -28,9 +28,6 @@ class SimpleCodecClient {
   zx_status_t SetProtocol(ddk::CodecProtocolClient proto_client);
   // Configures the timeout the the codec protocol equivalent methods below.
   void SetTimeout(int64_t nsecs);
-  // Checks if a format is part of the provided supported formats.
-  bool IsDaiFormatSupported(const DaiFormat& format,
-                            const std::vector<DaiSupportedFormats>& supported);
 
   // Sync C++ methods to communicate with codecs, for descriptions see
   // //docs/concepts/drivers/driver_interfaces/audio_codec.md and
@@ -65,8 +62,6 @@ class SimpleCodecClient {
     sync_completion_t completion;
     zx_status_t status;
   };
-
-  bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& supported);
 
   int64_t timeout_nsecs_ = kDefaultTimeoutNsecs;
 };

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "audio-stream.h"
 
+#include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 #include <string.h>
@@ -356,7 +357,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
       return supported_formats.error_value();
     }
 
-    if (!codecs_[i].IsDaiFormatSupported(dai_formats_[i], supported_formats.value())) {
+    if (!IsDaiFormatSupported(dai_formats_[i], supported_formats.value())) {
       zxlogf(ERROR, "%s codec does not support DAI format\n", __FILE__);
       return ZX_ERR_NOT_SUPPORTED;
     }

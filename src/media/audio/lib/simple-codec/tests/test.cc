@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/simple-codec/simple-codec-client.h>
+#include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
@@ -222,10 +223,16 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
       .bits_per_channel = 32,
       .bits_per_sample = 0,  // Bad.
   };
-  ASSERT_FALSE(client.IsDaiFormatSupported(format, formats.value()));
+  ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
   ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
   format.bits_per_sample = 32;  // Good, matches first supported format list.
-  ASSERT_TRUE(client.IsDaiFormatSupported(format, formats.value()));
+  ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+  format.number_of_channels = 42;  // Bad, no match.
+  ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
+  format.number_of_channels = 2;  // Good.
+  ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+  format.bits_per_channel = 16;  // Bad, bit per sample fo not fit.
+  ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
   // Good, matches second supported format list.
   format = {
@@ -236,7 +243,7 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
       .bits_per_channel = 32,
       .bits_per_sample = 32,
   };
-  ASSERT_TRUE(client.IsDaiFormatSupported(format, formats.value()));
+  ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
 }
 
