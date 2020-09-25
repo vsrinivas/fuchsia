@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 
 #include <lib/fdio/directory.h>
