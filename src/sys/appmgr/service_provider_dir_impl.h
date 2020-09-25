@@ -98,7 +98,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   bool has_builtin_logsink_ = false;
 
-  // TODO(CP-25): Remove has_services_allowlist_ when empty services is
+  // TODO(fxbug.dev/3924): Remove has_services_allowlist_ when empty services is
   // equivalent to no services.
   bool has_services_allowlist_ = false;
   std::unordered_set<std::string> services_allowlist_;

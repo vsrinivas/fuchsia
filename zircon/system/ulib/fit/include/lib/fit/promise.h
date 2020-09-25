@@ -1410,7 +1410,7 @@ class context {
   // Converts this context to a derived context type.
   template <typename Context, typename = std::enable_if_t<std::is_base_of<context, Context>::value>>
   Context& as() & {
-    // TODO(CP-163): We should perform a run-time type check here rather
+    // TODO(fxbug.dev/4060): We should perform a run-time type check here rather
     // than blindly casting.  That's why this method exists.
     return static_cast<Context&>(*this);
   }

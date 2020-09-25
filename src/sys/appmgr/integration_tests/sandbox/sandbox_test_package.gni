@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 # A test that exercises component functionality.
-# See CP-42 for more context.
+# See fxbug.dev/3941 for more context.
 #
 #
 # Additional parameters

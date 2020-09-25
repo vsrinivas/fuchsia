@@ -12,7 +12,7 @@ union Value {
     4: string str;
     5: Vector vec;
     6: Object obj;
-    // TODO(CP-154): Consider adding blobs.
+    // TODO(fxbug.dev/4051): Consider adding blobs.
 };
 
 /// A vector is a sequence of values.

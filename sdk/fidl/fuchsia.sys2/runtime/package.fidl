@@ -16,6 +16,6 @@ resource table Package {
     /// The package's content directory.
     2: fuchsia.io.Directory package_dir;
 
-    // TODO(CP-154): Add more metadata for the package such as its
+    // TODO(fxbug.dev/4051): Add more metadata for the package such as its
     // code signing information.
 };

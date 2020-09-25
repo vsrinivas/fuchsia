@@ -32,7 +32,7 @@ resource table Component {
     /// require the package's directory connection to have OPEN_RIGHT_EXECUTABLE
     /// rights in order to run the resolved component.
     ///
-    // TODO(CP-154): It might be better to return a package loader interface
+    // TODO(fxbug.dev/4051): It might be better to return a package loader interface
     // here instead of immediately providing the package's content.
     // That would allow for finer grained pipelining of component installation
     // and launching of the component's runner.  Moreover, sometimes we only

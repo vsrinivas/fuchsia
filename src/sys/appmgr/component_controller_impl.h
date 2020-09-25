@@ -33,7 +33,7 @@ namespace component {
 // and sending error events to clients before closing the channel.
 // If there is no error, the wrapped request and callback may be Extract()ed
 // and bound to a concrete interface.
-// TODO(CP-84): Solve the general problem this solves.
+// TODO(fxbug.dev/3981): Solve the general problem this solves.
 class ComponentRequestWrapper {
  public:
   explicit ComponentRequestWrapper(

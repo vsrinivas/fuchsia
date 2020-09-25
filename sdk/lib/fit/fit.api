@@ -10,7 +10,7 @@
   "pkg/fit/include/lib/fit/in_place_internal.h": "a01bbea21f21abecc6d0bb57192057b9",
   "pkg/fit/include/lib/fit/nullable.h": "5b5b14272a7d75c8fa3fb00c3fd528bb",
   "pkg/fit/include/lib/fit/optional.h": "7b39d627a28c81bf40804186539406c8",
-  "pkg/fit/include/lib/fit/promise.h": "5672c60ffa8835ddb7baecbc4b348593",
+  "pkg/fit/include/lib/fit/promise.h": "da913773aa9c5dee0b5305fddbdc456c",
   "pkg/fit/include/lib/fit/promise_internal.h": "7179102deb96c00a658f3fc4d8e89452",
   "pkg/fit/include/lib/fit/result.h": "a173d13373456250346b14703a8e84a3",
   "pkg/fit/include/lib/fit/scheduler.h": "cdcb86c6ca01162d73e027665881c856",

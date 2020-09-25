@@ -133,7 +133,7 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
   if (loader_service) {
     PushHandle(PA_LDSVC_LOADER, loader_service.release(), &actions);
   } else {
-    // TODO(CP-62): Processes that don't have their own package use the appmgr's
+    // TODO(fxbug.dev/3960): Processes that don't have their own package use the appmgr's
     // dynamic library loader, which doesn't make much sense. We need to find an
     // appropriate loader service for each executable.
     flags |= FDIO_SPAWN_DEFAULT_LDSVC;

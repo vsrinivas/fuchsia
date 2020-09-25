@@ -129,7 +129,7 @@ TEST_F(ChrealmTest, ConnectToService) {
   // List services under /hub -- expect same as /svc.
   {
     // TODO(geb): Explicitly check for testing.chrealm.TestService once
-    // CP-23 is fixed. Currently this trivially passes because readdir
+    // fxbug.dev/3922 is fixed. Currently this trivially passes because readdir
     // only finds the built-in services.
     std::string svc_contents;
     std::string hub_contents;
