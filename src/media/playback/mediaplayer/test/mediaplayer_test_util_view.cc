@@ -387,9 +387,9 @@ void MediaPlayerTestUtilView::HandleStatusChanged(
   // Process status received from the player.
   if (status.timeline_function) {
     timeline_function_ = fidl::To<media::TimelineFunction>(*status.timeline_function);
-    state_ = status.end_of_stream
-                 ? State::kEnded
-                 : (timeline_function_.subject_delta() == 0) ? State::kPaused : State::kPlaying;
+    state_ = status.end_of_stream                        ? State::kEnded
+             : (timeline_function_.subject_delta() == 0) ? State::kPaused
+                                                         : State::kPlaying;
   } else {
     state_ = State::kPaused;
   }

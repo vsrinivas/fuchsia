@@ -29,7 +29,7 @@ class JobNode;
 //
 // TODO(fxbug.dev/53986): This is a temporary signal that we don't want userspace using (yet?). Either
 // expose this signal to userspace in "zircon/types.h", or remove this signal.
-#define ZX_JOB_NO_CHILDREN  __ZX_OBJECT_SIGNAL_6
+#define ZX_JOB_NO_CHILDREN __ZX_OBJECT_SIGNAL_6
 
 // Assume the typical set-policy call has 8 items or less.
 constexpr size_t kPolicyBasicInlineCount = 8;
@@ -233,7 +233,8 @@ class JobDispatcher final
   using RawJobList = SizedDoublyLinkedList<JobDispatcher*, RawListTag>;
   using JobList = fbl::TaggedSinglyLinkedList<fbl::RefPtr<JobDispatcher>, ListTag>;
 
-  using RawProcessList = SizedDoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::RawJobListTag>;
+  using RawProcessList =
+      SizedDoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::RawJobListTag>;
   using ProcessList =
       fbl::TaggedSinglyLinkedList<fbl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTag>;
 

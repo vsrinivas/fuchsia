@@ -40,7 +40,8 @@ void TestBind(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBind)
 
-// TODO(aarongreen): When fxbug.dev/31073 is resolved, add tests that check zxcrypt_rekey and zxcrypt_shred.
+// TODO(aarongreen): When fxbug.dev/31073 is resolved, add tests that check zxcrypt_rekey and
+// zxcrypt_shred.
 
 // Device::DdkGetSize tests
 void TestDdkGetSize(Volume::Version version, bool fvm) {

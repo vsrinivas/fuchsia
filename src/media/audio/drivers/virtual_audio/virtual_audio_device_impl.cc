@@ -97,8 +97,8 @@ bool VirtualAudioDeviceImpl::CreateStream(zx_device_t* devnode) {
 // Remove our child stream by calling its DdkUnbind. This may already have occurred; check for null.
 //
 // TODO(mpuryear): This may not safely unwind in all cases: it makes some threading assumptions that
-// cannot necessarily be enforced. But until fxbug.dev/33258 is addressed, the current VAD code appears to
-// be safe -- all RemoveStream callers are on the devhost primary thread:
+// cannot necessarily be enforced. But until fxbug.dev/33258 is addressed, the current VAD code
+// appears to be safe -- all RemoveStream callers are on the devhost primary thread:
 //   ~VirtualAudioDeviceImpl from DevHost removing parent,
 //   ~VirtualAudioDeviceImpl from Input|Output FIDL channel disconnecting
 //   fuchsia.virtualaudio.Control.Disable

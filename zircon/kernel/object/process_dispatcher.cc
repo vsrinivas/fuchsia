@@ -738,13 +738,8 @@ zx_status_t ProcessDispatcher::GetHandleInfo(fbl::Array<zx_info_handle_extended_
       size_t index = 0;
       ForEachHandleLocked([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
         auto& entry = (*handles)[index++];
-        entry = {disp->get_type(),
-                 handle,
-                 rights,
-                 0u,
-                 disp->get_koid(),
-                 disp->get_related_koid(),
-                 0u};
+        entry = {disp->get_type(),         handle, rights, 0u, disp->get_koid(),
+                 disp->get_related_koid(), 0u};
         return ZX_OK;
       });
     }

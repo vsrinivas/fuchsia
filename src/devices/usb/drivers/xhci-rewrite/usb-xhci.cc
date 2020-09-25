@@ -1163,7 +1163,8 @@ void UsbXhci::ControlRequestDataPhase(UsbRequestState* state) {
         type = Control::Data;
         ControlData* data = reinterpret_cast<ControlData*>(current);
         // Control transfers always get interrupter 0 (we consider those to be low-priority)
-        // TODO (fxbug.dev/34068): Change bus snooping options based on input from higher-level drivers.
+        // TODO (fxbug.dev/34068): Change bus snooping options based on input from higher-level
+        // drivers.
         data->set_CHAIN(next != nullptr)
             .set_DIRECTION((state->context->request->request()->setup.bmRequestType & USB_DIR_IN) !=
                            0)

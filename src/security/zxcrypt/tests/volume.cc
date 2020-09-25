@@ -31,7 +31,8 @@ namespace {
 // See test-device.h; the following macros allow reusing tests for each of the supported versions.
 #define EACH_PARAM(OP, TestSuite, Test) OP(TestSuite, Test, Volume, AES256_XTS_SHA256)
 
-// fxbug.dev/31814: Dump extra information if encountering an unexpected error during volume creation.
+// fxbug.dev/31814: Dump extra information if encountering an unexpected error during volume
+// creation.
 void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
                   const crypto::Secret& key, bool fvm, zx_status_t expected) {
   char err[128];
@@ -313,13 +314,11 @@ class TestVolume : public zxcrypt::Volume {
   uint64_t last_extend_slice_count_ = 0;
 };
 
-
 TEST(VolumeTest, TestFvmUsageNewImage) {
   // Verify that when we start out with a single FVM slice, we'll attempt to
   // allocate a second one for the inner volume when we call Init().
   class TestVolumeNewImage : public TestVolume {
-    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
-                                      SliceRegion ranges[MAX_SLICE_REGIONS],
+    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start, SliceRegion ranges[MAX_SLICE_REGIONS],
                                       uint64_t* slice_count) override {
       if (vslice_start == 0) {
         if (extend_calls_ > 0) {
@@ -369,8 +368,7 @@ TEST(VolumeTest, TestFvmUsageAlreadyAllocated) {
   // Verify that when we start out with two FVM slices allocated, we don't
   // attempt to allocate any more when calling Init().
   class TestVolumeAllocatedImage : public TestVolume {
-    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
-                                      SliceRegion ranges[MAX_SLICE_REGIONS],
+    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start, SliceRegion ranges[MAX_SLICE_REGIONS],
                                       uint64_t* slice_count) override {
       ranges[0].allocated = true;
       ranges[0].count = 2;

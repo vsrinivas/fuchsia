@@ -60,13 +60,13 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
       escher::SamplerPtr sampler;
 
       if (escher::image_utils::IsYuvFormat(escher_image->format())) {
-        // TODO(fxbug.dev/7288, fxbug.dev/7289): Reusing samplers is just good policy, but it is a necessity for
-        // immutable samplers, because allocating duplicate samplers will result in creation of
-        // duplicate pipelines, descriptor set allocators.
-        // NOTE: the previous comment said that until fxbug.dev/7288, fxbug.dev/7289 are fixed "Escher will keep
-        // these samplers around forever."  Not quite sure what this means... is it because the
-        // pipelines hang on to the sampler?  If so, that's bad, but generation tons of redundant
-        // pipelines is worse (both for FPS and OOMing).
+        // TODO(fxbug.dev/7288, fxbug.dev/7289): Reusing samplers is just good policy, but it is a
+        // necessity for immutable samplers, because allocating duplicate samplers will result in
+        // creation of duplicate pipelines, descriptor set allocators. NOTE: the previous comment
+        // said that until fxbug.dev/7288, fxbug.dev/7289 are fixed "Escher will keep these samplers
+        // around forever."  Not quite sure what this means... is it because the pipelines hang on
+        // to the sampler?  If so, that's bad, but generation tons of redundant pipelines is worse
+        // (both for FPS and OOMing).
         sampler = resource_context().escher_sampler_cache->ObtainYuvSampler(escher_image->format(),
                                                                             vk::Filter::eLinear);
         FX_DCHECK(sampler->is_immutable());

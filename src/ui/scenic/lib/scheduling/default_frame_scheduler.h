@@ -24,8 +24,8 @@
 
 namespace scheduling {
 
-// TODOs can be found in the frame scheduler epic: fxbug.dev/24406. Any new bugs filed concerning the frame
-// scheduler should be added to it as well.
+// TODOs can be found in the frame scheduler epic: fxbug.dev/24406. Any new bugs filed concerning
+// the frame scheduler should be added to it as well.
 class DefaultFrameScheduler final : public FrameScheduler {
  public:
   explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,

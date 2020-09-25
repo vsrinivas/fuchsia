@@ -18,10 +18,12 @@ declare_args() {
     "abort_on_error=1",  # get stacktrace on error
     "QuarantineSizeKb=0",  # disables quarantine
     "ThreadLocalQuarantineSizeKb=0",  # disables quarantine
-    "DeallocationTypeMismatch=false",  # TODO(flowerhack) re-enable when fxbug.dev/28378
+    "DeallocationTypeMismatch=false",  # TODO(flowerhack) re-enable when
+                                       # fxbug.dev/28378
                                        # is resolved
 
-    "DeleteSizeMismatch=false",  # TODO(flowerhack) re-enable when fxbug.dev/28378
+    "DeleteSizeMismatch=false",  # TODO(flowerhack) re-enable when
+                                 # fxbug.dev/28378
                                  # is resolved
 
     "allocator_may_return_null=true",

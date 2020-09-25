@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef CRYPTO_DIGEST_H_
+#define CRYPTO_DIGEST_H_
 
 #include <stddef.h>
-
 #include <zircon/types.h>
 
 // |crypto::digest| is a cryptographic message digest algorithm.
@@ -27,3 +27,5 @@ zx_status_t GetDigestLen(Algorithm digest, size_t* out);
 
 }  // namespace digest
 }  // namespace crypto
+
+#endif  // CRYPTO_DIGEST_H_

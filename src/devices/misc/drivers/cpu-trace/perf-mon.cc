@@ -432,8 +432,8 @@ zx_status_t PerfmonDevice::PmuStart() {
   // Step 1: Get the configuration data into the kernel for use by START.
 
 #ifdef __x86_64__
-  zxlogf(DEBUG, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx", __func__,
-         per_trace->config.global_ctrl, per_trace->config.fixed_ctrl);
+  zxlogf(DEBUG, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx", __func__, per_trace->config.global_ctrl,
+         per_trace->config.fixed_ctrl);
 
   // Note: If only misc counters are enabled then |global_ctrl| will be zero.
 #endif

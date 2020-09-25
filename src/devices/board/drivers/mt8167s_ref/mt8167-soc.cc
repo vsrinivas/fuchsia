@@ -57,10 +57,10 @@ namespace board_mt8167 {
 zx_status_t Mt8167::SocInit() {
   zx_status_t status;
   mmio_buffer_t mmio;
-  status =
-      mmio_buffer_init_physical(&mmio, MT8167_SOC_BASE, MT8167_SOC_SIZE,
-                                // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-                                get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+  status = mmio_buffer_init_physical(
+      &mmio, MT8167_SOC_BASE, MT8167_SOC_SIZE,
+      // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+      get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d ", __FUNCTION__, status);
     return status;

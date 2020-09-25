@@ -9,9 +9,9 @@ using fuchsia.intl;
 /// Error codes for TTS operations.
 enum Error {
     /// The underlying TTS engine does not support this operation.
-    NOT_IMPLEMENTED= 1;
+    NOT_IMPLEMENTED = 1;
     /// The value is out of range for a particular TTS parameter.
-    OUT_OF_RANGE= 2;
+    OUT_OF_RANGE = 2;
     /// The operation is impossible to be completed.
     BAD_STATE = 3;
     /// This operation can not be completed because the TTS service is in use.
@@ -43,7 +43,7 @@ table Utterance {
 protocol Engine {
     /// Enqueues  an utterance to be spoken. Speech is not started until Speak
     /// is called.
-    Enqueue(Utterance utterance) ->() error Error;
+    Enqueue(Utterance utterance) -> () error Error;
 
     /// Speaks all enqueued utterances. The method returns the value when they
     /// are all finished playing.

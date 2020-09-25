@@ -280,9 +280,7 @@ int UsbXhci::StartThread() {
   return 0;
 }
 
-zx_status_t UsbXhci::FinishBind() {
-  return DdkAdd("xhci");
-}
+zx_status_t UsbXhci::FinishBind() { return DdkAdd("xhci"); }
 
 void UsbXhci::DdkInit(ddk::InitTxn txn) {
   // Configure and fetch a deadline profile for the high priority USB completer

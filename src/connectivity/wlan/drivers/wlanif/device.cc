@@ -1046,7 +1046,8 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
 
   switch (param) {
     case ETHERNET_SETPARAM_PROMISC:
-      // See fxbug.dev/28881: In short, the bridge mode doesn't require WLAN promiscuous mode enabled.
+      // See fxbug.dev/28881: In short, the bridge mode doesn't require WLAN promiscuous mode
+      // enabled.
       //               So we give a warning and return OK here to continue the bridging.
       // TODO(fxbug.dev/29113): To implement the real promiscuous mode.
       if (value == 1) {  // Only warn when enabling.

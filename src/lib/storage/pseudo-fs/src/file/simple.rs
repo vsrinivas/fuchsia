@@ -667,7 +667,10 @@ mod tests {
                 open_sender.send((flags, 0, server_end)).await.unwrap();
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(s, ZX_OK);
-                    assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))));
+                    assert_eq!(
+                        info,
+                        Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None })))
+                    );
                 });
             },
         );
@@ -851,7 +854,10 @@ mod tests {
                 open_sender.send((flags, 0, server_end)).await.unwrap();
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(s, ZX_OK);
-                    assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))));
+                    assert_eq!(
+                        info,
+                        Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None })))
+                    );
                 });
 
                 assert_read!(proxy, "Have value");

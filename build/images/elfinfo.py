@@ -54,6 +54,7 @@ SHF_ALLOC = 2
 
 IS_PYTHON3 = sys.version_info[0] >= 3
 
+
 class elf_note(namedtuple('elf_note', [
         'name',
         'type',
@@ -230,9 +231,7 @@ def gen_elf():
 
     for elfclass, is64 in [(ELFCLASS32, False), (ELFCLASS64, True)]:
         for elf_bo, struct_bo in [(ELFDATA2LSB, '<'), (ELFDATA2MSB, '>')]:
-            yield (
-                (elfclass, elf_bo),
-                elf(*gen_accessors(is64, struct_bo)))
+            yield ((elfclass, elf_bo), elf(*gen_accessors(is64, struct_bo)))
 
 
 # e.g. ELF[file[EI_CLASS], file[EI_DATA]].Ehdr.read(file).e_phnum
@@ -242,7 +241,9 @@ ELF = dict(gen_elf())
 def get_elf_accessor(file):
     # If it looks like an ELF file, whip out the decoder ring.
     if file[:len(ELFMAG)] == ELFMAG:
-        return ELF.get((ord(file[EI_CLASS:EI_CLASS+1]), ord(file[EI_DATA:EI_DATA+1])), None)
+        return ELF.get(
+            (ord(file[EI_CLASS:EI_CLASS + 1]), ord(file[EI_DATA:EI_DATA + 1])),
+            None)
     return None
 
 
@@ -306,19 +307,21 @@ def makedirs(dirs):
 
 
 elf_sizes = namedtuple(
-    'elf_sizes', [
-        'file',                     # st_size
-        'memory',                   # lowest p_vaddr to highest p_memsz
-        'rel',                      # DT_RELSZ (+ DT_PLTRELSZ if matching)
-        'rela',                     # DT_RELASZ (+ DT_PLTRELSZ if matching)
-        'relr',                     # DT_RELRSZ
-        'relcount',                 # DT_RELCOUNT + DT_RELACOUNT
-        'relro',                    # PT_GNU_RELRO p_memsz
-        'code',                     # executable segment p_filesz
-        'rodata',                   # read-only data segment p_filesz
-        'data',                     # writable segment p_filesz
-        'bss',                      # writable segment p_memsz past p_filesz
+    'elf_sizes',
+    [
+        'file',  # st_size
+        'memory',  # lowest p_vaddr to highest p_memsz
+        'rel',  # DT_RELSZ (+ DT_PLTRELSZ if matching)
+        'rela',  # DT_RELASZ (+ DT_PLTRELSZ if matching)
+        'relr',  # DT_RELRSZ
+        'relcount',  # DT_RELCOUNT + DT_RELACOUNT
+        'relro',  # PT_GNU_RELRO p_memsz
+        'code',  # executable segment p_filesz
+        'rodata',  # read-only data segment p_filesz
+        'data',  # writable segment p_filesz
+        'bss',  # writable segment p_memsz past p_filesz
     ])
+
 
 # elf_info objects are only created by `get_elf_info` or the `copy` or
 # `rename` methods.
@@ -326,14 +329,14 @@ class elf_info(namedtuple(
         'elf_info',
     [
         'filename',
-        'sizes',                # elf_sizes
-        'cpu',                  # cpu tuple
-        'notes',                # list of (ident, desc): selected notes
-        'build_id',             # string: lowercase hex
-        'stripped',             # bool: Has no symbols or .debug_* sections
-        'interp',               # string or None: PT_INTERP (without \0)
-        'soname',               # string or None: DT_SONAME
-        'needed',               # list of strings: DT_NEEDED
+        'sizes',  # elf_sizes
+        'cpu',  # cpu tuple
+        'notes',  # list of (ident, desc): selected notes
+        'build_id',  # string: lowercase hex
+        'stripped',  # bool: Has no symbols or .debug_* sections
+        'interp',  # string or None: PT_INTERP (without \0)
+        'soname',  # string or None: DT_SONAME
+        'needed',  # list of strings: DT_NEEDED
     ])):
 
     def rename(self, filename):
@@ -430,9 +433,9 @@ def get_elf_info(filename, match_notes=False):
                     pos += round_up_to(nhdr.n_namesz)
                     # PT_DESC is not always string-ish, just copy the bytes.
                     if IS_PYTHON3:
-                      desc = file[pos:pos + nhdr.n_descsz]
+                        desc = file[pos:pos + nhdr.n_descsz]
                     else:
-                      desc = [ord(b) for b in file[pos:pos + nhdr.n_descsz]]
+                        desc = [ord(b) for b in file[pos:pos + nhdr.n_descsz]]
                     pos += round_up_to(nhdr.n_descsz)
                     yield elf_note(name, nhdr.n_type, desc)
 
@@ -520,18 +523,16 @@ def get_elf_info(filename, match_notes=False):
                 if dt.d_tag == tag)
 
         if dyn is None:
-          return None, set()
+            return None, set()
 
         # DT_STRTAB points to the string table's vaddr (.dynstr).
         strtab_vaddr = dyn_get(dyn, DT_STRTAB)
 
         # Find the PT_LOAD containing the vaddr to compute the file offset.
         [strtab_offset] = [
-            strtab_vaddr - phdr.p_vaddr + phdr.p_offset
-            for phdr in phdrs
-                if (
-                    phdr.p_type == PT_LOAD and phdr.p_vaddr <= strtab_vaddr and
-                    strtab_vaddr - phdr.p_vaddr < phdr.p_filesz)
+            strtab_vaddr - phdr.p_vaddr + phdr.p_offset for phdr in phdrs if (
+                phdr.p_type == PT_LOAD and phdr.p_vaddr <= strtab_vaddr and
+                strtab_vaddr - phdr.p_vaddr < phdr.p_filesz)
         ]
 
         soname = None
@@ -550,20 +551,20 @@ def get_elf_info(filename, match_notes=False):
         segments = [phdr for phdr in phdrs if phdr.p_type == PT_LOAD]
         first = segments[0]
         last = segments[-1]
-        start = first.p_vaddr &- first.p_align
-        last = (last.p_vaddr + last.p_memsz + last.p_align - 1) &- last.p_align
+        start = first.p_vaddr & -first.p_align
+        last = (last.p_vaddr + last.p_memsz + last.p_align - 1) & -last.p_align
         return last - start
 
     def get_relro_size():
-        return sum(phdr.p_memsz for phdr in phdrs
-                   if phdr.p_type == PT_GNU_RELRO)
+        return sum(
+            phdr.p_memsz for phdr in phdrs if phdr.p_type == PT_GNU_RELRO)
 
     def get_segment_size(phdr, file, mem):
-        start = phdr.p_vaddr &- phdr.p_align
+        start = phdr.p_vaddr & -phdr.p_align
         file_end = phdr.p_vaddr + phdr.p_filesz
         mem_end = phdr.p_vaddr + phdr.p_memsz
-        file_end = (file_end + phdr.p_align - 1) &- phdr.p_align
-        mem_end = (mem_end + phdr.p_align - 1) &- phdr.p_align
+        file_end = (file_end + phdr.p_align - 1) & -phdr.p_align
+        mem_end = (mem_end + phdr.p_align - 1) & -phdr.p_align
         if file and mem:
             return mem_end - start
         if file:
@@ -571,32 +572,39 @@ def get_elf_info(filename, match_notes=False):
         return mem_end - file_end
 
     def gen_executable_segments():
-        return (phdr for phdr in phdrs
-                if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_X) != 0)
+        return (
+            phdr for phdr in phdrs
+            if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_X) != 0)
 
     def gen_writable_segments():
-        return (phdr for phdr in phdrs
-                if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_W) != 0)
+        return (
+            phdr for phdr in phdrs
+            if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_W) != 0)
 
     def gen_rodata_segments():
-        return (phdr for phdr in phdrs
-                if phdr.p_type == PT_LOAD and phdr.p_flags == PF_R)
+        return (
+            phdr for phdr in phdrs
+            if phdr.p_type == PT_LOAD and phdr.p_flags == PF_R)
 
     def get_code_size():
-        return sum(get_segment_size(phdr, file=True, mem=False)
-                   for phdr in gen_executable_segments())
+        return sum(
+            get_segment_size(phdr, file=True, mem=False)
+            for phdr in gen_executable_segments())
 
     def get_rodata_size():
-        return sum(get_segment_size(phdr, file=True, mem=False)
-                   for phdr in gen_rodata_segments())
+        return sum(
+            get_segment_size(phdr, file=True, mem=False)
+            for phdr in gen_rodata_segments())
 
     def get_data_size():
-        return sum(get_segment_size(phdr, file=True, mem=False)
-                   for phdr in gen_writable_segments())
+        return sum(
+            get_segment_size(phdr, file=True, mem=False)
+            for phdr in gen_writable_segments())
 
     def get_bss_size():
-        return sum(get_segment_size(phdr, file=False, mem=True)
-                   for phdr in gen_writable_segments())
+        return sum(
+            get_segment_size(phdr, file=False, mem=True)
+            for phdr in gen_writable_segments())
 
     def get_relsz(dyn, tag, sizetag):
         if dyn is None:
@@ -613,7 +621,8 @@ def get_elf_info(filename, match_notes=False):
     def get_relcount(dyn):
         if dyn is None:
             return 0
-        return (dyn_get(dyn, DT_RELCOUNT) or 0) + (dyn_get(dyn, DT_RELACOUNT) or 0)
+        return (dyn_get(dyn, DT_RELCOUNT) or
+                0) + (dyn_get(dyn, DT_RELACOUNT) or 0)
 
     def get_cpu():
         return ELF_MACHINE_TO_CPU.get(ehdr.e_machine)
@@ -661,7 +670,7 @@ def get_elf_info(filename, match_notes=False):
                     while start < limit:
                         # TODO(48946): Remove this single-element slice hack
                         # once Python2 is no longer used in-tree.
-                        byte = ord(file[start:start+1])
+                        byte = ord(file[start:start + 1])
                         start += 1
                         value |= (byte & 0x7f) << bits
                         if (byte & 0x80) == 0:
@@ -712,19 +721,20 @@ def get_elf_info(filename, match_notes=False):
             dyn = get_dynamic()
             info = elf_info(
                 filename,
-                elf_sizes(file=filesize,
-                          memory=get_memory_size(),
-                          code=get_code_size(),
-                          rodata=get_rodata_size(),
-                          relro=get_relro_size(),
-                          data=get_data_size(),
-                          bss=get_bss_size(),
-                          rel=get_relsz(dyn, DT_REL, DT_RELSZ),
-                          rela=get_relsz(dyn, DT_RELA, DT_RELASZ),
-                          relr=get_relsz(dyn, DT_RELR, DT_RELRSZ),
-                          relcount=get_relcount(dyn)),
-                get_cpu(), get_matching_notes(), get_build_id(),
-                get_stripped(), get_interp(), *get_soname_and_needed(dyn))
+                elf_sizes(
+                    file=filesize,
+                    memory=get_memory_size(),
+                    code=get_code_size(),
+                    rodata=get_rodata_size(),
+                    relro=get_relro_size(),
+                    data=get_data_size(),
+                    bss=get_bss_size(),
+                    rel=get_relsz(dyn, DT_REL, DT_RELSZ),
+                    rela=get_relsz(dyn, DT_RELA, DT_RELASZ),
+                    relr=get_relsz(dyn, DT_RELR, DT_RELRSZ),
+                    relcount=get_relcount(dyn)), get_cpu(),
+                get_matching_notes(), get_build_id(), get_stripped(),
+                get_interp(), *get_soname_and_needed(dyn))
             info.elf = elf
             info.get_sources = lazy_get_sources
             return info
@@ -738,10 +748,12 @@ __all__ = ['cpu', 'elf_info', 'elf_note', 'get_elf_accessor', 'get_elf_info']
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--strip', action='store_true',
-                        help='Strip each file into FILE.ei-strip')
-    parser.add_argument('--build-id', action='store_true',
-                        help='Print each build ID')
+    parser.add_argument(
+        '--strip',
+        action='store_true',
+        help='Strip each file into FILE.ei-strip')
+    parser.add_argument(
+        '--build-id', action='store_true', help='Print each build ID')
     parser.add_argument('--bootfs-dir', help='bootfs content', metavar='DIR')
     parser.add_argument('--zbi', help='Read zbi.json', metavar='FILE')
     parser.add_argument('--blobs', help='Read blobs.json', metavar='FILE')
@@ -771,6 +783,7 @@ def main():
     if args.sizes:
         if args.blobs:
             blob_map = {blob['source_path']: blob for blob in blobs}
+
         def json_size(info):
             sizes = info.sizes._asdict()
             sizes['path'] = info.filename
@@ -778,43 +791,53 @@ def main():
             if args.zbi and info.filename in bootfs_map:
                 item = bootfs_map[info.filename]
                 assert info.sizes.file == item['length'], (
-                    "%r != %r in %r vs %r" % (info.sizes.file, blob['length'],
-                                              info, blob))
+                    "%r != %r in %r vs %r" %
+                    (info.sizes.file, blob['length'], info, blob))
                 sizes['zbi'] = item['size']
             if args.blobs and info.filename in blob_map:
                 blob = blob_map[info.filename]
                 assert info.sizes.file == blob['bytes'], (
-                    "%r != %r in %r vs %r" % (info.sizes.file, blob['bytes'],
-                                              info, blob))
+                    "%r != %r in %r vs %r" %
+                    (info.sizes.file, blob['bytes'], info, blob))
                 sizes['blob'] = blob['size']
             return sizes
+
         # Sort for stable output.
-        sizes = sorted([json_size(info)
-                        for info in (get_elf_info(file) for file in files)
-                        if info],
-                       key=lambda info: info['path'])
+        sizes = sorted(
+            [
+                json_size(info)
+                for info in (get_elf_info(file) for file in files)
+                if info
+            ],
+            key=lambda info: info['path'])
         totals = {}
         for file in sizes:
             for key, val in file.items():
                 if isinstance(val, int):
                     totals[key] = totals.get(key, 0) + val
         with open(args.sizes, 'w') as outf:
-            json.dump({'files': sizes, 'totals': totals},
-                      outf, sort_keys=True, indent=1)
+            json.dump(
+                {
+                    'files': sizes,
+                    'totals': totals
+                },
+                outf,
+                sort_keys=True,
+                indent=1)
     else:
         for file in files:
-          info = get_elf_info(file)
+            info = get_elf_info(file)
 
-          if args.strip:
-              stripped_filename = info.filename + '.ei-strip'
-              info.strip(stripped_filename)
-              print(stripped_filename)
-          elif args.build_id:
-              print(info.build_id)
-          else:
-              print(info)
-              for source in info.get_sources():
-                  print('\t' + source)
+            if args.strip:
+                stripped_filename = info.filename + '.ei-strip'
+                info.strip(stripped_filename)
+                print(stripped_filename)
+            elif args.build_id:
+                print(info.build_id)
+            else:
+                print(info)
+                for source in info.get_sources():
+                    print('\t' + source)
 
     return 0
 
