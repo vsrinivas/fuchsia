@@ -146,7 +146,7 @@ class Image:
         file_size: total size of the image, in bytes
         partitions: list of |Partition| objects to write to disk.
   """
-  CGPT_BIN = os.path.join(paths.PREBUILT_DIR, 'third_party/tools/cgpt',
+  CGPT_BIN = os.path.join(paths.PREBUILT_DIR, 'tools/cgpt',
                           paths.PREBUILT_PLATFORM, 'cgpt')
   SECTOR_SIZE = 512
   GPT_SECTORS = 2048
