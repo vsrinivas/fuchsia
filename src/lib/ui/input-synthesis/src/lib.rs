@@ -432,47 +432,14 @@ fn swipe(
     duration: Duration,
     consumer: &mut dyn ServerConsumer,
 ) -> Result<(), Error> {
-    let input_device = register_touchscreen(consumer, width, height)?;
-
-    let mut delta_x = x1 as f64 - x0 as f64;
-    let mut delta_y = y1 as f64 - y0 as f64;
-
-    let swipe_event_delay = if move_event_count > 1 {
-        // We have move_event_count + 2 events:
-        //   DOWN
-        //   MOVE x move_event_count
-        //   UP
-        // so we need (move_event_count + 1) delays.
-        delta_x /= move_event_count as f64;
-        delta_y /= move_event_count as f64;
-        duration / (move_event_count + 1) as u32
-    } else {
-        duration
-    };
-
-    repeat_with_delay(
-        move_event_count + 2,
-        swipe_event_delay,
-        |i| {
-            let time = nanos_from_epoch()?;
-            let mut report = match i {
-                // DOWN
-                0 => tap(Some((x0, y0)), time),
-                // MOVE
-                i if i <= move_event_count => tap(
-                    Some((
-                        (x0 as f64 + (i as f64 * delta_x).round()) as u32,
-                        (y0 as f64 + (i as f64 * delta_y).round()) as u32,
-                    )),
-                    time,
-                ),
-                // UP
-                _ => tap(None, time),
-            };
-
-            input_device.dispatch_report(&mut report).map_err(Into::into)
-        },
-        |_| Ok(()),
+    multi_finger_swipe(
+        vec![(x0, y0)],
+        vec![(x1, y1)],
+        width,
+        height,
+        move_event_count,
+        duration,
+        consumer,
     )
 }
 
