@@ -60,6 +60,10 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode) ([]Image, 
 		args := getImageArgs(buildImg, bootMode)
 		reader, err := os.Open(buildImg.Path)
 		if err != nil {
+			if os.IsNotExist(err) {
+				// Not all images exist so skip if it doesn't.
+				continue
+			}
 			// Close already opened readers.
 			closeImages(imgs)
 			return nil, closeFunc, err

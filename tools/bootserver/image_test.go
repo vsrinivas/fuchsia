@@ -45,6 +45,11 @@ func TestGetImages(t *testing.T) {
     "name": "netboot",
     "path": "netboot.zbi",
     "type": "zbi"
+  },
+  {
+    "name": "non-existent",
+    "path": "non-existent.zbi",
+    "type": "zbi"
   }
 ]`
 
@@ -106,6 +111,10 @@ func TestGetImages(t *testing.T) {
 		imgs, closeFunc, err := GetImages(context.Background(), imgManifest, test.bootMode)
 		if err != nil {
 			t.Fatalf("Test%s: failed to get images: %v", test.name, err)
+		}
+		// The images returned should be all existing images.
+		if len(imgs) != 3 {
+			t.Errorf("Test%s: got %d images, expected 3", test.name, len(imgs))
 		}
 		for _, img := range imgs {
 			expectedImg := allImages[img.Name]
