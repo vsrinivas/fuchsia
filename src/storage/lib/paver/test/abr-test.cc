@@ -51,7 +51,7 @@ TEST(SherlockAbrTests, CreateFails) {
 
   zx::channel svc_root, remote;
   ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
-  fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release());
+  ASSERT_OK(fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release()));
 
   ASSERT_NOT_OK(
       paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
@@ -70,7 +70,7 @@ TEST(LuisAbrTests, CreateFails) {
 
   zx::channel svc_root, remote;
   ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
-  fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release());
+  ASSERT_OK(fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release()));
 
   ASSERT_NOT_OK(
       paver::LuisAbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
@@ -89,7 +89,7 @@ TEST(X64AbrTests, CreateFails) {
 
   zx::channel svc_root, remote;
   ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
-  fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release());
+  ASSERT_OK(fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release()));
 
   ASSERT_NOT_OK(
       paver::X64AbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));

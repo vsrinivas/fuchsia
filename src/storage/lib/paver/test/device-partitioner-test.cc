@@ -24,6 +24,7 @@
 #include <zircon/types.h>
 
 #include <array>
+#include <iostream>
 #include <memory>
 #include <string_view>
 #include <utility>
@@ -359,7 +360,12 @@ class GptDevicePartitionerTests : public zxtest::Test {
     if (status != ZX_OK) {
       return zx::channel();
     }
-    fdio_service_connect_at(fshost_root.get(), "svc", remote.release());
+    status = fdio_service_connect_at(fshost_root.get(), "svc", remote.release());
+    if (status != ZX_OK) {
+      std::cout << "Failed to connect to fshost svc dir: " << zx_status_get_string(status)
+                << std::endl;
+      return zx::channel();
+    }
     return local;
   }
 

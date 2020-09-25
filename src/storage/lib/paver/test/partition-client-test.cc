@@ -12,13 +12,14 @@
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
 #include <zxtest/zxtest.h>
 
-#include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/test/test-utils.h"
+#include "src/storage/lib/paver/utils.h"
 
 namespace {
 
@@ -409,7 +410,12 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
     if (status != ZX_OK) {
       return zx::channel();
     }
-    fdio_service_connect_at(fshost_root.get(), "svc", remote.release());
+    status = fdio_service_connect_at(fshost_root.get(), "svc", remote.release());
+    if (status != ZX_OK) {
+      std::cout << "Failed to connect to fshost svc dir: " << zx_status_get_string(status)
+                << std::endl;
+      return zx::channel();
+    }
     return local;
   }
 
