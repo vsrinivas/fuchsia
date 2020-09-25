@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+
+# Declares a host-side python test.
+#
+# Parameters
+#
+#   * main_source
+#      - Required: The .py file that will be interpreted.
+#      - Type: path
+#
+#   * sources
+#     - Optional: Other files that are used in the test.
+#     - Type: list(path)
+#
+#   * deps
+#   * visibility
+#     - Optional: Usual GN meanings.
+
+template("python_host_test") {
+  assert(defined(invoker.main_source), "main_source is required")
+  _target_dir = get_label_info(target_name, "dir")
+  _out_dir = "${root_out_dir}/test_data/${_target_dir}"
+
+  _host_test_data_target = "${target_name}_test_data"
+  host_test_data(_host_test_data_target) {
+    testonly = true
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                           ])
+    sources = [ invoker.main_source ]
+    if (defined(invoker.sources)) {
+      sources += invoker.sources
+    }
+    outputs = [ "${_out_dir}/{{source_file_part}}" ]
+  }
+
+  host_test(target_name) {
+    binary_path = python_exe_path
+    args = [ rebase_path("${_out_dir}/${invoker.main_source}", root_build_dir) ]
+    deps = [
+      ":${_host_test_data_target}",
+      "//build/python:interpreter",
+    ]
+  }
+}

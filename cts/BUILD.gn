@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 group("cts") {
-  deps = [ "//cts/tests/hello_world:tests" ]
+  deps = [
+    "//cts/build:tests",
+    "//cts/tests/hello_world:tests",
+  ]
   testonly = true
 }

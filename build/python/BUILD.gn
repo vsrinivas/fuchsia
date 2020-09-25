@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python.gni")
+import("//build/testing/host_test_data.gni")
+
+# Make the host python prebuilt available in the out dir so it
+# can be used in python_host_test without making multiple copies.
+host_test_data("lib") {
+  sources = [ "//prebuilt/third_party/python3/${host_platform}/lib" ]
+  outputs = [ "${python_out_dir}/lib" ]
+  visibility = [ ":*" ]
+}
+
+host_test_data("exe") {
+  sources = [ "//prebuilt/third_party/python3/${host_platform}/bin/python${python_version}" ]
+  outputs = [ python_exe_path ]
+  visibility = [ ":*" ]
+}
+
+group("interpreter") {
+  testonly = true
+  deps = [
+    ":exe",
+    ":lib",
+  ]
+}

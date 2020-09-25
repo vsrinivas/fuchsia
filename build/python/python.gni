@@ -1,0 +1,8 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Variables shared between BUILD.gn and python_host_test.gni.
+python_version = "3.8"
+python_out_dir = "${root_out_dir}/python${python_version}"
+python_exe_path = "${python_out_dir}/bin/python${python_version}"
