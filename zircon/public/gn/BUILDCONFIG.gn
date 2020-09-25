@@ -182,6 +182,7 @@ template("shared_library") {
                              "*",
                              [
                                "metadata",
+                               "sdk_migrated",
                                "target_type",
                                "testonly",
                                "visibility",
@@ -223,27 +224,30 @@ template("shared_library") {
 
         link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
-        # For build_api_module("binaries") in $zx/BUILD.gn.
-        binaries += [
-          {
-            type = "shared_library"
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            environment = toolchain.environment
-            cpu = current_cpu
-            os = current_os
-            debug = rebase_path(link_output_file, root_build_dir)
-            if (toolchain.link_output_suffix != "") {
-              dist = rebase_path(output_file, root_build_dir)
-            }
-            if (current_os != "mac" && current_os != "win") {
-              elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
-                                         root_build_dir)
-            }
-            if (toolchain.breakpad_syms) {
-              breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
-            }
-          },
-        ]
+        if (!defined(invoker.sdk_migrated) || !invoker.sdk_migrated) {
+          # For build_api_module("binaries") in $zx/BUILD.gn.
+          binaries += [
+            {
+              type = "shared_library"
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              environment = toolchain.environment
+              cpu = current_cpu
+              os = current_os
+              debug = rebase_path(link_output_file, root_build_dir)
+              if (toolchain.link_output_suffix != "") {
+                dist = rebase_path(output_file, root_build_dir)
+              }
+              if (current_os != "mac" && current_os != "win") {
+                elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
+                                           root_build_dir)
+              }
+              if (toolchain.breakpad_syms) {
+                breakpad =
+                    rebase_path("${output_file_base}.sym", root_build_dir)
+              }
+            },
+          ]
+        }
 
         # Each shared_library() that's not on the allowlist gets a poison
         # pill to flag it if it appears in the dependency graph from a
@@ -1376,6 +1380,7 @@ template("_basic_executable") {
                            "*",
                            [
                              "metadata",
+                             "sdk_migrated",
                              "testonly",
                              "variant_suffix_metadata",
                              "variant_suffix_outputs",
@@ -1419,26 +1424,28 @@ template("_basic_executable") {
       link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
       # For build_api_module("binaries") in $zx/BUILD.gn.
-      binaries += [
-        {
-          type = "executable"
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          environment = toolchain.environment
-          cpu = current_cpu
-          os = current_os
-          debug = rebase_path(link_output_file, root_build_dir)
-          if (toolchain.link_output_suffix != "") {
-            dist = rebase_path(output_file, root_build_dir)
-          }
-          if (current_os != "mac" && current_os != "win") {
-            elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
-                                       root_build_dir)
-          }
-          if (toolchain.breakpad_syms) {
-            breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
-          }
-        },
-      ]
+      if (!defined(invoker.sdk_migrated) || !invoker.sdk_migrated) {
+        binaries += [
+          {
+            type = "executable"
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            environment = toolchain.environment
+            cpu = current_cpu
+            os = current_os
+            debug = rebase_path(link_output_file, root_build_dir)
+            if (toolchain.link_output_suffix != "") {
+              dist = rebase_path(output_file, root_build_dir)
+            }
+            if (current_os != "mac" && current_os != "win") {
+              elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
+                                         root_build_dir)
+            }
+            if (toolchain.breakpad_syms) {
+              breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
+            }
+          },
+        ]
+      }
     }
 
     if (!is_host && !is_kernel) {
@@ -1642,7 +1649,6 @@ template("host_tool") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "sdk_migrated",
                              "target_type",
                              "testonly",
                              "visibility",
@@ -1757,6 +1763,7 @@ template("_loadable_module") {
                            [
                              "match",
                              "metadata",
+                             "sdk_migrated",
                              "target_type",
                              "testonly",
                              "visibility",
@@ -1798,27 +1805,29 @@ template("_loadable_module") {
 
       link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
-      # For build_api_module("binaries") in $zx/BUILD.gn.
-      binaries += [
-        {
-          type = "loadable_module"
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          environment = toolchain.environment
-          cpu = current_cpu
-          os = current_os
-          debug = rebase_path(link_output_file, root_build_dir)
-          if (toolchain.link_output_suffix != "") {
-            dist = rebase_path(output_file, root_build_dir)
-          }
-          if (current_os != "mac" && current_os != "win") {
-            elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
-                                       root_build_dir)
-          }
-          if (toolchain.breakpad_syms) {
-            breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
-          }
-        },
-      ]
+      if (!defined(invoker.sdk_migrated) || !invoker.sdk_migrated) {
+        # For build_api_module("binaries") in $zx/BUILD.gn.
+        binaries += [
+          {
+            type = "loadable_module"
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            environment = toolchain.environment
+            cpu = current_cpu
+            os = current_os
+            debug = rebase_path(link_output_file, root_build_dir)
+            if (toolchain.link_output_suffix != "") {
+              dist = rebase_path(output_file, root_build_dir)
+            }
+            if (current_os != "mac" && current_os != "win") {
+              elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
+                                         root_build_dir)
+            }
+            if (toolchain.breakpad_syms) {
+              breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
+            }
+          },
+        ]
+      }
     }
 
     if (defined(invoker.install_path)) {

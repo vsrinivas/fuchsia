@@ -41,6 +41,7 @@ template("hwreg_asm_header") {
                                "visibility",
                              ])
       deps += [ "$zx/system/ulib/hwreg" ]
+      sdk_migrated = true
     }
   } else {
     not_needed(invoker, "*")

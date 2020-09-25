@@ -5,8 +5,9 @@
 template("zx_test") {
   executable(target_name) {
     testonly = true
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [ "sdk_migrated" ])
   }
+  not_needed(invoker, [ "sdk_migrated" ])
 }
 
 set_defaults("zx_test") {

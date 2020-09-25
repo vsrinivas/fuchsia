@@ -76,6 +76,7 @@ group("tests") {
 zx_test("kazoo-unittests") {
   configs += [ ":kazoo_config" ]
   output_name = "kazoo-test"
+  sdk_migrated = true
 
   deps = [
     ":generate_test_files",
