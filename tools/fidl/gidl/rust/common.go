@@ -97,6 +97,9 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("%s::from_bits(%v).unwrap()", declName(decl), primitive)
 		case *gidlmixer.EnumDecl:
 			primitive := visit(value, &decl.Underlying)
+			if decl.IsFlexible() {
+				return fmt.Sprintf("%s::from_primitive_flexible(%v)", declName(decl), primitive)
+			}
 			return fmt.Sprintf("%s::from_primitive(%v).unwrap()", declName(decl), primitive)
 		}
 	case string:

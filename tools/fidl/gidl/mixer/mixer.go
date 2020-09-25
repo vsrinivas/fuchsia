@@ -379,6 +379,10 @@ func (decl *EnumDecl) Name() string {
 	return string(decl.enumDecl.Name)
 }
 
+func (decl *EnumDecl) IsFlexible() bool {
+	return decl.enumDecl.IsFlexible()
+}
+
 func (decl *EnumDecl) conforms(value interface{}, ctx context) error {
 	// TODO(fxbug.dev/7847): Require a valid enum member when strict
 	return decl.Underlying.conforms(value, ctx)

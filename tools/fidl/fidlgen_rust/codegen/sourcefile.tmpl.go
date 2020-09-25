@@ -27,10 +27,11 @@ use {
 	fuchsia_zircon_status as zx_status,
 	fidl::{
 		fidl_bits,
-		fidl_enum,
 		fidl_empty_struct,
-		fidl_struct,
+		fidl_flexible_enum,
+		fidl_strict_enum,
 		fidl_struct_copy,
+		fidl_struct,
 		fidl_table,
 		fidl_xunion,
 	},

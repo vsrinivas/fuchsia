@@ -16,8 +16,8 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
-        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion,
+        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
+        fidl_struct_copy, fidl_table, fidl_xunion,
     },
     fuchsia_zircon_status as zx_status,
 };
@@ -28,8 +28,7 @@ pub enum ObjType {
     None = 0,
     Vmo = 3,
 }
-
-fidl_enum! {
+fidl_strict_enum! {
     name: ObjType,
     prim_ty: u32,
     members: [

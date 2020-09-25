@@ -16,8 +16,8 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
-        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion,
+        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
+        fidl_struct_copy, fidl_table, fidl_xunion,
     },
     fuchsia_zircon_status as zx_status,
 };
@@ -28,8 +28,7 @@ pub enum MyStrictEnum {
     Foo = 1,
     Bar = 2,
 }
-
-fidl_enum! {
+fidl_strict_enum! {
     name: MyStrictEnum,
     prim_ty: u32,
     members: [
@@ -39,30 +38,44 @@ fidl_enum! {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(u32)]
+#[non_exhaustive]
 pub enum MyFlexibleEnum {
-    Foo = 1,
-    Bar = 2,
+    Foo,
+    Bar,
+    #[deprecated = "Use MyFlexibleEnum::unknown() to construct, MyFlexibleEnumUnknown!() to exhaustively match"]
+    __Unknown(u32),
 }
-
-fidl_enum! {
+/// Pattern that matches an unknown MyFlexibleEnum member.
+#[macro_export]
+macro_rules! MyFlexibleEnumUnknown {
+	() => { _ };
+}
+fidl_flexible_enum! {
     name: MyFlexibleEnum,
     prim_ty: u32,
     members: [
         Foo { value: 1, },
         Bar { value: 2, },
     ],
+    unknown_member: __Unknown,
+    default_unknown_value: 0xffffffff,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(u32)]
+#[non_exhaustive]
 pub enum MyFlexibleEnumWithCustomUnknown {
-    Foo = 1,
-    Bar = 2,
-    CustomUnknown = 3,
+    Foo,
+    Bar,
+    CustomUnknown,
+    #[deprecated = "Use MyFlexibleEnumWithCustomUnknown::unknown() to construct, MyFlexibleEnumWithCustomUnknownUnknown!() to exhaustively match"]
+    __Unknown(u32),
 }
-
-fidl_enum! {
+/// Pattern that matches an unknown MyFlexibleEnumWithCustomUnknown member.
+#[macro_export]
+macro_rules! MyFlexibleEnumWithCustomUnknownUnknown {
+	() => { _ };
+}
+fidl_flexible_enum! {
     name: MyFlexibleEnumWithCustomUnknown,
     prim_ty: u32,
     members: [
@@ -70,4 +83,7 @@ fidl_enum! {
         Bar { value: 2, },
         CustomUnknown { value: 3, },
     ],
+    custom_unknown_member: CustomUnknown,
+    unknown_member: __Unknown,
+    default_unknown_value: 0x3,
 }

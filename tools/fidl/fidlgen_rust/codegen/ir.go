@@ -45,14 +45,14 @@ type Const struct {
 }
 
 type Enum struct {
-	types.Attributes
+	types.Enum
 	Name    string
 	Type    string
 	Members []EnumMember
 }
 
 type EnumMember struct {
-	types.Attributes
+	types.EnumMember
 	Name  string
 	Value string
 }
@@ -689,14 +689,14 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	e := Enum{
-		val.Attributes,
-		c.compileCamelCompoundIdentifier(val.Name),
-		compilePrimitiveSubtype(val.Type),
-		[]EnumMember{},
+		Enum:    val,
+		Name:    c.compileCamelCompoundIdentifier(val.Name),
+		Type:    compilePrimitiveSubtype(val.Type),
+		Members: []EnumMember{},
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
-			Attributes: v.Attributes,
+			EnumMember: v,
 			Name:       compileCamelIdentifier(v.Name),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
