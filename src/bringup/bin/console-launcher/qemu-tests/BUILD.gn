@@ -19,14 +19,14 @@ if (is_linux) {
     deps = [ "//src/testing/qemu" ]
   }
 
-  host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
+  host_test_data("bringup_zbi") {
+    sources = [ "$root_build_dir/bringup.zbi" ]
   }
 
   go_test("console_qemu_test") {
     gopackages =
         [ "go.fuchsia.dev/fuchsia/src/bringup/bin/console-launcher/qemu-tests" ]
     deps = [ ":lib" ]
-    non_go_deps = [ ":main_zbi" ]
+    non_go_deps = [ ":bringup_zbi" ]
   }
 }
