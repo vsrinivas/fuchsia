@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#pragma once
+
+#include <__config>
+
+// The kernel is compiled with -D_LIBCPP_STD_VER=20 to enable new C++20-based
+// library APIs in ktl.  But the compiler is still using C++17 mode, so some
+// things the libc++ sources will try to do won't work.  This works around
+// the first such case to come up, in the <new> header.  This header stands
+// in for libc++'s <new> and wraps it to change the value of an internal
+// macro that prevents it from trying to use C++20 language features.
+
+#pragma push_macro("_LIBCPP_CONSTEXPR_AFTER_CXX17")
+
+#undef _LIBCPP_CONSTEXPR_AFTER_CXX17
+#define _LIBCPP_CONSTEXPR_AFTER_CXX17 // empty
+
+#include_next <new>
+
+#pragma pop_macro("_LIBCPP_CONSTEXPR_AFTER_CXX17")
