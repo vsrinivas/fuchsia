@@ -30,7 +30,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.number_of_channels.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted number of channels");
+    zxlogf(ERROR, "SimpleCodec did not find number of channels %u", format.number_of_channels);
     return false;
   }
 
@@ -38,7 +38,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.sample_formats.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted sample format");
+    zxlogf(ERROR, "SimpleCodec did not find sample format %d", static_cast<int>(sample_format));
     return false;
   }
 
@@ -46,14 +46,14 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.frame_formats.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted frame format");
+    zxlogf(ERROR, "SimpleCodec did not find frame format %d", static_cast<int>(frame_format));
     return false;
   }
 
   for (i = 0; i < supported.frame_rates.size() && supported.frame_rates[i] != frame_rate; ++i) {
   }
   if (i == supported.frame_rates.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted sample rate");
+    zxlogf(ERROR, "SimpleCodec did not find sample rate %u", frame_rate);
     return false;
   }
 
@@ -62,7 +62,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.bits_per_sample.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted bits per sample");
+    zxlogf(ERROR, "SimpleCodec did not find bits per sample %u", bits_per_sample);
     return false;
   }
 
@@ -71,12 +71,12 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.bits_per_channel.size()) {
-    zxlogf(DEBUG, "SimpleCodec did not find wanted bits per channel");
+    zxlogf(ERROR, "SimpleCodec did not find wanted bits per channel %u", bits_per_channel);
     return false;
   }
 
   if (bits_per_sample > bits_per_channel) {
-    zxlogf(DEBUG, "SimpleCodec found bits per sample (%u) too big for the bits per channel (%u)",
+    zxlogf(ERROR, "SimpleCodec found bits per sample (%u) too big for the bits per channel (%u)",
            bits_per_sample, bits_per_channel);
     return false;
   }
