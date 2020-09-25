@@ -65,6 +65,7 @@ dart_library("client") {
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/pedantic",
+    "//third_party/dart-pkg/pub/quiver",
     "//third_party/dart-pkg/pub/retry",
     "//third_party/dart-pkg/pub/webdriver",
   ]

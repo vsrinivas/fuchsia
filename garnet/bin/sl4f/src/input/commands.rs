@@ -24,6 +24,10 @@ impl Facade for InputFacade {
                 let result = self.swipe(args).await?;
                 Ok(to_value(result)?)
             }
+            InputMethod::MultiFingerSwipe => {
+                let result = self.multi_finger_swipe(args).await?;
+                Ok(to_value(result)?)
+            }
         }
     }
 }

@@ -17,7 +17,7 @@ void main(List<String> args) {
     sl4f = MockSl4f();
   });
 
-  group('without constructor default rotation', () {
+  group('without constructor-default rotation', () {
     Input input;
     setUp(() {
       input = Input(sl4f);
@@ -92,6 +92,39 @@ void main(List<String> args) {
         'tap_event_count': 10,
         'duration': 100,
       })).called(1);
+    });
+
+    test('input multi-finger-swipe no-rotation', () async {
+      await input.multiFingerSwipe([Point(0, 0), Point(10, 10), Point(20, 20)],
+          [Point(500, 500), Point(750, 750), Point(1000, 1000)]);
+      verify(sl4f.request('input_facade.multiFingerSwipe', {
+        'fingers': [
+          {'x0': 0, 'y0': 0, 'x1': 500, 'y1': 500},
+          {'x0': 10, 'y0': 10, 'x1': 750, 'y1': 750},
+          {'x0': 20, 'y0': 20, 'x1': 1000, 'y1': 1000}
+        ],
+        'duration': duration.inMilliseconds,
+      }));
+    });
+
+    test('input multi-finger-swipe rotated-90', () async {
+      await input.multiFingerSwipe([
+        Point(0, 0),
+        Point(125, 125),
+        Point(250, 250)
+      ], [
+        Point(250, 250),
+        Point(375, 375),
+        Point(500, 500)
+      ], screenRotation: Rotation.degrees90);
+      verify(sl4f.request('input_facade.multiFingerSwipe', {
+        'fingers': [
+          {'x0': 1000, 'y0': 0, 'x1': 750, 'y1': 250},
+          {'x0': 875, 'y0': 125, 'x1': 625, 'y1': 375},
+          {'x0': 750, 'y0': 250, 'x1': 500, 'y1': 500}
+        ],
+        'duration': duration.inMilliseconds,
+      }));
     });
   });
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:math';
+import 'package:quiver/iterables.dart' show zip;
 
 import 'sl4f_client.dart';
 import 'ssh.dart';
@@ -112,6 +113,37 @@ class Input {
       'y0': tfrom.y,
       'x1': tto.x,
       'y1': tto.y,
+      'duration': duration.inMilliseconds,
+    });
+    return result == 'Success';
+  }
+
+  /// Swipes fingers from coordinates ([from[finger].x], [from[finger].y]) to
+  /// ([to[finger].x], [to[finger].y]).
+  ///
+  /// Coordinates must be in the range of [0, 1000], are scaled to the screen
+  /// size on the device, and they are rotated to compensate for the clockwise
+  /// [screenRotation]. How long the swipe lasts can be controlled with
+  /// [duration].
+  ///
+  /// The swipe will include a DOWN event, one MOVE event every 17 milliseconds,
+  /// and an UP event. If [duration] is less than 17 milliseconds, no MOVE events
+  /// will be generated.
+  Future<bool> multiFingerSwipe(List<Point<int>> from, List<Point<int>> to,
+      {Duration duration = const Duration(milliseconds: 300),
+      Rotation screenRotation}) async {
+    final tfrom = from.map((fingerFrom) => _rotate(fingerFrom, screenRotation));
+    final tto = to.map((fingerTo) => _rotate(fingerTo, screenRotation));
+    final fingers = zip([tfrom, tto])
+        .map((fingerPos) => {
+              'x0': fingerPos[0].x,
+              'y0': fingerPos[0].y,
+              'x1': fingerPos[1].x,
+              'y1': fingerPos[1].y
+            })
+        .toList();
+    final result = await _sl4f.request('input_facade.multiFingerSwipe', {
+      'fingers': fingers,
       'duration': duration.inMilliseconds,
     });
     return result == 'Success';
