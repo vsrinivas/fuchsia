@@ -184,6 +184,14 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
  public:
   SimTest();
   ~SimTest();
+
+  // In some cases (like error injection that affects the initialization) we want to work with
+  // an uninitialized device. This method will allocate, but not initialize the device. To complete
+  // initialization, the Init() function can be called after PreInit().
+  zx_status_t PreInit();
+
+  // Allocate device (if it hasn't already been allocated) and initialize it. This function doesn't
+  // require PreInit() to be called first.
   zx_status_t Init();
 
   std::shared_ptr<simulation::Environment> env_;
@@ -204,7 +212,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   std::unique_ptr<simulation::FakeDevMgr> dev_mgr_;
 
   // brcmfmac's concept of a device
-  brcmfmac::SimDevice* device_;
+  brcmfmac::SimDevice* device_ = nullptr;
 
   // Keep track of the ifaces we created during test by iface id.
   std::set<uint16_t> iface_id_set_;

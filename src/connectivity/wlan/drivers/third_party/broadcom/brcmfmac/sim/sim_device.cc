@@ -52,17 +52,20 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
   }
 
   std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_sim_register(device->brcmf_pub_.get(), &bus, device->fake_dev_mgr_,
-                                   device->sim_environ_.get())) != ZX_OK) {
+  if ((status = brcmf_sim_alloc(device->brcmf_pub_.get(), &bus, device->fake_dev_mgr_,
+                                device->sim_environ_.get())) != ZX_OK) {
     dev_mgr->DeviceAsyncRemove(device->phy_device_);
     // Ownership of the device has been transferred to dev_mgr
     device.release();
     return status;
   }
   device->brcmf_bus_ = std::move(bus);
-
   *device_out = device.release();
   return ZX_OK;
+}
+
+zx_status_t SimDevice::Init() {
+  return brcmf_sim_register(brcmf_pub_.get());
 }
 
 zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {

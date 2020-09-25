@@ -37,6 +37,9 @@ class SimDevice : public Device {
   SimDevice(const SimDevice& device) = delete;
   SimDevice& operator=(const SimDevice& other) = delete;
 
+  // Run the simulator bus initialization
+  zx_status_t Init();
+
   // Trampolines for DDK functions, for platforms that support them.
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;

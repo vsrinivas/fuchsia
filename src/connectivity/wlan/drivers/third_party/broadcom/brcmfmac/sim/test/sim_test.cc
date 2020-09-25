@@ -389,8 +389,29 @@ SimTest::~SimTest() {
   // Don't have to erase the iface ids here.
 }
 
-zx_status_t SimTest::Init() {
+zx_status_t SimTest::PreInit() {
+  // Allocate memory for a simulated device and register with dev_mgr
   return brcmfmac::SimDevice::Create(dev_mgr_->GetRootDevice(), dev_mgr_.get(), env_, &device_);
+}
+
+zx_status_t SimTest::Init() {
+  zx_status_t status;
+
+  // Allocate device and register with dev_mgr
+  if (device_ == nullptr) {
+    status = PreInit();
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Initialize device
+  status = device_->Init();
+  if (status != ZX_OK) {
+    // Ownership of the device has been transferred to the dev_mgr, so we don't need to dealloc it
+    device_ = nullptr;
+  }
+  return status;
 }
 
 zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim_ifc,

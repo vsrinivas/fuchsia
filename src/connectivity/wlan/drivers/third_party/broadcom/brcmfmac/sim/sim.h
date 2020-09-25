@@ -30,10 +30,13 @@ struct brcmf_simdev {
   brcmf_pub* drvr;
 };
 
-// Perform simulator-specific intiialization
-zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
-                               ::wlan::simulation::FakeDevMgr* dev_mgr,
-                               ::wlan::simulation::Environment* env);
+// Allocate device and bus structures
+zx_status_t brcmf_sim_alloc(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
+                            ::wlan::simulation::FakeDevMgr* dev_mgr,
+                            ::wlan::simulation::Environment* env);
+
+// Perform initialization on the appropriate bus structures
+zx_status_t brcmf_sim_register(brcmf_pub* drvr);
 
 // Pass an event to the driver from the simulated firmware
 void brcmf_sim_rx_event(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer);
