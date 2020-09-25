@@ -166,6 +166,7 @@ template("component_manager") {
   if (is_test) {
     sources += [
       "src/model/tests/mod.rs",
+      "src/model/tests/rights.rs",
       "src/model/tests/routing.rs",
       "src/model/tests/storage.rs",
       "src/work_scheduler/routing_tests.rs",

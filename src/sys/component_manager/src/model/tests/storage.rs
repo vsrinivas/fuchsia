@@ -9,7 +9,7 @@ use {
         testing::{routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::*,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys,
     std::convert::TryInto,
 };
 
@@ -165,7 +165,7 @@ async fn storage_and_dir_from_parent_legacy_path_based() {
 /// a: offers cache storage to b from "mystorage"
 /// b: uses cache storage as /storage
 #[fuchsia_async::run_singlethreaded(test)]
-async fn storage_and_dir_from_parent_invalid_rights() {
+async fn storage_and_dir_from_parent_rights_invalid() {
     let components = vec![
         (
             "a",
@@ -281,7 +281,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                     source_path: "data".try_into().unwrap(),
                     target_path: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -344,7 +344,7 @@ async fn storage_from_parent_dir_from_grandparent_legacy_path_based() {
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -550,7 +550,7 @@ async fn storage_from_parent_dir_from_sibling() {
                     source: ExposeSource::Self_,
                     target_path: "minfs".try_into().unwrap(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                 }))
                 .build(),
@@ -610,7 +610,7 @@ async fn storage_from_parent_dir_from_sibling_legacy_path_based() {
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                 }))
                 .build(),
@@ -663,7 +663,7 @@ async fn use_in_collection_from_parent() {
                     source_path: "data".try_into().unwrap(),
                     target_path: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -967,7 +967,7 @@ async fn storage_multiple_types() {
                     source: ExposeSource::Self_,
                     target_path: "minfs".try_into().unwrap(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                 }))
                 .build(),
@@ -1125,7 +1125,7 @@ async fn directories_are_not_storage() {
                     source_path: "data".try_into().unwrap(),
                     target_path: "data".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1237,7 +1237,7 @@ async fn dir_offered_from_nonexecutable() {
                     source_path: "data".try_into().unwrap(),
                     target_path: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))

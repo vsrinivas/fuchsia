@@ -315,7 +315,6 @@ pub async fn route_and_open_storage_capability<'a>(
     server_chan: &mut zx::Channel,
     bind_reason: &BindReason,
 ) -> Result<(), ModelError> {
-    // TODO: Actually use `CapabilityState` to apply rights.
     let (dir_source_realm, dir_source_path, relative_moniker, _) =
         route_storage_capability(use_decl, target_realm).await?;
     let storage_dir_proxy = storage::open_isolated_storage(
@@ -578,17 +577,33 @@ enum CapabilityState {
 impl CapabilityState {
     fn new(cap: &ComponentCapability) -> Self {
         match cap {
-            ComponentCapability::Use(UseDecl::Directory(UseDirectoryDecl { subdir, .. }))
-            | ComponentCapability::Expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+            ComponentCapability::Use(UseDecl::Directory(UseDirectoryDecl {
                 subdir,
+                rights,
+                ..
+            })) => CapabilityState::Directory {
+                rights_state: WalkState::at(Rights::from(*rights)),
+                subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
+            },
+            ComponentCapability::Expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                subdir,
+                rights,
                 ..
             }))
             | ComponentCapability::Offer(OfferDecl::Directory(OfferDirectoryDecl {
-                subdir, ..
-            })) => CapabilityState::Directory {
-                rights_state: WalkState::new(),
-                subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
-            },
+                subdir,
+                rights,
+                ..
+            })) => {
+                let rights_state = match rights {
+                    Some(rights) => WalkState::at(Rights::from(*rights)),
+                    None => WalkState::new(),
+                };
+                CapabilityState::Directory {
+                    rights_state,
+                    subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
+                }
+            }
             ComponentCapability::Use(UseDecl::Event(UseEventDecl { filter, .. }))
             | ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl { filter, .. })) => {
                 CapabilityState::Event {
@@ -1392,7 +1407,7 @@ pub(super) fn report_routing_failure(
         _ => format!("{}", err),
     };
     error!(
-        "Failed to route {} `{}` from component `{}`: {}",
+        "Failed to route {} `{}` with target component `{}`: {}",
         cap.type_name(),
         cap.source_id(),
         target_moniker,

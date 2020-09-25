@@ -101,6 +101,9 @@ pub async fn open_isolated_storage(
     open_mode: u32,
     bind_reason: &BindReason,
 ) -> Result<DirectoryProxy, ModelError> {
+    // TODO: The `use` declaration for storage implicitly carries these rights. While this is
+    // correct, it would be more consistent to get the rights from `CapabilityState` and pass them
+    // here.
     const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     let (dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");

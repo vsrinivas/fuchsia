@@ -179,7 +179,7 @@ pub struct RoutingTest {
     _echo_service: Arc<EchoService>,
     pub mock_runner: Arc<MockRunner>,
     _test_dir: TempDir,
-    test_dir_proxy: DirectoryProxy,
+    pub test_dir_proxy: DirectoryProxy,
     root_component_name: String,
 }
 
@@ -205,7 +205,7 @@ impl RoutingTest {
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .expect("failed to open temp directory");
-        capability_util::create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hippo")
+        capability_util::create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hello")
             .await
             .expect("could not create test file");
 
@@ -674,7 +674,7 @@ pub mod capability_util {
     };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
-    /// should contain the string "hippo".
+    /// should contain the string "hello".
     pub async fn read_data_from_namespace(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
@@ -688,7 +688,7 @@ pub mod capability_util {
         let res = io_util::read_file(&file_proxy).await;
         match expected_res {
             ExpectedResult::Ok => assert_eq!(
-                "hippo",
+                "hello",
                 res.expect(&format!("failed to read file {}", path.to_string()))
             ),
             ExpectedResult::Err => {
@@ -933,7 +933,7 @@ pub mod capability_util {
     }
 
     /// Attempts to read ${path}/hippo in `abs_moniker`'s exposed directory. The file should
-    /// contain the string "hippo".
+    /// contain the string "hello".
     pub async fn read_data_from_exposed_dir<'a>(
         path: CapabilityPath,
         file: &Path,
@@ -949,7 +949,7 @@ pub mod capability_util {
                 let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
                     .expect("failed to open file");
                 let res = io_util::read_file(&file_proxy).await;
-                assert_eq!("hippo", res.expect("failed to read file"));
+                assert_eq!("hello", res.expect("failed to read file"));
             }
             ExpectedResult::Err => {
                 io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)

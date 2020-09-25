@@ -1803,7 +1803,7 @@ async fn use_directory_with_subdir_from_grandparent() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.create_static_file(Path::new("foo/s1/s2/s3/s4/inner"), "hippo")
+    test.create_static_file(Path::new("foo/s1/s2/s3/s4/inner"), "hello")
         .await
         .expect("failed to create file");
     test.check_use(
@@ -1872,7 +1872,7 @@ async fn use_directory_with_subdir_from_sibling() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hippo")
+    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hello")
         .await
         .expect("failed to create file");
     test.check_use(
@@ -1943,7 +1943,7 @@ async fn expose_directory_with_subdir() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hippo")
+    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hello")
         .await
         .expect("failed to create file");
     test.check_use_exposed_dir(

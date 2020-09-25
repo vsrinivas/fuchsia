@@ -11,7 +11,10 @@
             directory: "/svc/fuchsia.io.Directory",
             from: "self",
             as: "/memfs",
-            rights: [ "rw*" ],
+            rights: [
+                "admin",
+                "rw*",
+            ],
         },
     ],
 }

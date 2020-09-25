@@ -8,42 +8,42 @@ use {
     fidl_fuchsia_io2::{self as fio2},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    std::cmp::Ordering,
-    std::collections::HashSet,
     std::convert::From,
     thiserror::Error,
 };
 
-/// List of all available fio2::Operation rights.
-const ALL_RIGHTS: [fio2::Operations; 10] = [
-    fio2::Operations::Connect,
-    fio2::Operations::ReadBytes,
-    fio2::Operations::GetAttributes,
-    fio2::Operations::Traverse,
-    fio2::Operations::Enumerate,
-    fio2::Operations::WriteBytes,
-    fio2::Operations::UpdateAttributes,
-    fio2::Operations::ModifyDirectory,
-    fio2::Operations::Execute,
-    fio2::Operations::Admin,
-];
-
-// TODO(benwright) - const initialization of bitflag types with or are not supported. Change when
-// supported.
 lazy_static! {
-    /// All the fio2 rights required to represent fio::OPEN_RIGHT_READABLE.
+    // TODO: const initialization of bitflag types with bitwise-or is not supported in FIDL. Change
+    // when supported.
+    /// All rights corresponding to r*.
     pub static ref READ_RIGHTS: fio2::Operations =
+        fio2::Operations::Connect
+        | fio2::Operations::Enumerate
+        | fio2::Operations::Traverse
+        | fio2::Operations::ReadBytes
+        | fio2::Operations::GetAttributes;
+    /// All rights corresponding to w*.
+    pub static ref WRITE_RIGHTS: fio2::Operations =
+        fio2::Operations::Connect
+        | fio2::Operations::Enumerate
+        | fio2::Operations::Traverse
+        | fio2::Operations::WriteBytes
+        | fio2::Operations::ModifyDirectory
+        | fio2::Operations::UpdateAttributes;
+
+    /// All the fio2 rights required to represent fio::OPEN_RIGHT_READABLE.
+    static ref LEGACY_READABLE_RIGHTS: fio2::Operations =
         fio2::Operations::ReadBytes
         | fio2::Operations::GetAttributes
         | fio2::Operations::Traverse
         | fio2::Operations::Enumerate;
     /// All the fio2 rights required to represent fio::OPEN_RIGHT_WRITABLE.
-    pub static ref WRITE_RIGHTS: fio2::Operations =
+    static ref LEGACY_WRITABLE_RIGHTS: fio2::Operations =
         fio2::Operations::WriteBytes
         | fio2::Operations::UpdateAttributes
         | fio2::Operations::ModifyDirectory;
     /// All the fio2 rights required to represent fio::OPEN_RIGHT_EXECUTABLE.
-    pub static ref EXECUTE_RIGHTS: fio2::Operations = fio2::Operations::Execute;
+    static ref LEGACY_EXECUTABLE_RIGHTS: fio2::Operations = fio2::Operations::Execute;
 }
 
 /// Opaque rights type to define new traits like PartialOrd on.
@@ -51,24 +51,17 @@ lazy_static! {
 pub struct Rights(fio2::Operations);
 
 impl Rights {
-    /// Converts fuchsia.io2 directory rights to fuchsio.io compatible rights. This will be removed
+    /// Converts fuchsia.io2 directory rights to fuchsia.io compatible rights. This will be removed
     /// once fuchsia.io2 is supported by component manager.
     pub fn into_legacy(&self) -> u32 {
         let mut flags: u32 = 0;
         let rights = self.0;
-        if rights.intersects(
-            fio2::Operations::ReadBytes
-                | fio2::Operations::GetAttributes
-                | fio2::Operations::Traverse
-                | fio2::Operations::Enumerate,
-        ) {
+        // The `intersects` below is intentional. The translation from io2 to io rights is lossy
+        // in the sense that a single io2 right may require an io right with coarser permissions.
+        if rights.intersects(*LEGACY_READABLE_RIGHTS) {
             flags |= fio::OPEN_RIGHT_READABLE;
         }
-        if rights.intersects(
-            fio2::Operations::WriteBytes
-                | fio2::Operations::UpdateAttributes
-                | fio2::Operations::ModifyDirectory,
-        ) {
+        if rights.intersects(*LEGACY_WRITABLE_RIGHTS) {
             flags |= fio::OPEN_RIGHT_WRITABLE;
         }
         if rights.contains(fio2::Operations::Execute) {
@@ -77,40 +70,15 @@ impl Rights {
         if rights.contains(fio2::Operations::Admin) {
             flags |= fio::OPEN_RIGHT_ADMIN;
         }
-        // TODO(benwright) - Since there is no direct translation for connect in CV1 we must
-        // explicitly define it here as both flags.
+        // Since there is no direct translation for connect in CV1 we must explicitly define it
+        // here as both flags.
+        //
+        // TODO(60673): Is this correct? ReadBytes | Connect seems like it should translate to
+        // READABLE | WRITABLE, not empty rights.
         if flags == 0 && rights.contains(fio2::Operations::Connect) {
             flags |= fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
         }
         flags
-    }
-}
-
-/// Returns equal if and only if the operations are idential. Less than is returned if self is a
-/// strict subset of other. Greater is returned if self is a superset of other. If the two types
-/// contain different values None is returned as their is no possible ordering.
-impl PartialOrd for Rights {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.0 == other.0 {
-            return Some(Ordering::Equal);
-        }
-        let mut lhs = HashSet::new();
-        let mut rhs = HashSet::new();
-        for right in ALL_RIGHTS.iter() {
-            if self.0.contains(*right) {
-                lhs.insert(right);
-            }
-            if other.0.contains(*right) {
-                rhs.insert(right);
-            }
-        }
-        if lhs.is_subset(&rhs) {
-            return Some(Ordering::Less);
-        }
-        if lhs.is_superset(&rhs) {
-            return Some(Ordering::Greater);
-        }
-        None
     }
 }
 
@@ -140,13 +108,15 @@ impl RightsError {
 impl WalkStateUnit for Rights {
     type Error = RightsError;
 
-    /// Ensures the next walk state of rights satisfies a monotonic decreasing sequence.
-    /// See Rights PartialOrd trait for information on how order is determined between elements.
+    /// Ensures the next walk state of rights satisfies a monotonic increasing sequence. Used to
+    /// verify the expectation that no right requested from a use, offer, or expose is missing as
+    /// capability routing walks from the capability's consumer to its provider.
     fn validate_next(&self, next_rights: &Rights) -> Result<(), Self::Error> {
-        if *self > *next_rights {
-            return Err(RightsError::Invalid);
+        if next_rights.0.contains(self.0) {
+            Ok(())
+        } else {
+            Err(RightsError::Invalid)
         }
-        Ok(())
     }
 
     fn finalize_error() -> Self::Error {
@@ -157,33 +127,80 @@ impl WalkStateUnit for Rights {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
     #[test]
-    fn operation_ordering() {
-        assert_eq!(Rights::from(*READ_RIGHTS), Rights::from(*READ_RIGHTS));
-        assert_eq!(Rights::from(*READ_RIGHTS).partial_cmp(&Rights::from(*WRITE_RIGHTS)), None);
-        assert_eq!(
-            Rights::from(fio2::Operations::WriteBytes).partial_cmp(&Rights::from(*WRITE_RIGHTS)),
-            Some(Ordering::Less)
+    fn validate_next() {
+        assert_matches!(
+            Rights::from(fio2::Operations::empty())
+                .validate_next(&Rights::from(*LEGACY_READABLE_RIGHTS)),
+            Ok(())
         );
-        assert_eq!(
-            Rights::from(*WRITE_RIGHTS).partial_cmp(&Rights::from(fio2::Operations::WriteBytes)),
-            Some(Ordering::Greater)
+        assert_matches!(
+            Rights::from(fio2::Operations::ReadBytes | fio2::Operations::GetAttributes)
+                .validate_next(&Rights::from(*LEGACY_READABLE_RIGHTS)),
+            Ok(())
+        );
+        assert_matches!(
+            Rights::from(Rights::from(*LEGACY_READABLE_RIGHTS)).validate_next(&Rights::from(
+                fio2::Operations::ReadBytes | fio2::Operations::GetAttributes
+            )),
+            Err(RightsError::Invalid)
+        );
+        assert_matches!(
+            Rights::from(fio2::Operations::WriteBytes).validate_next(&Rights::from(
+                fio2::Operations::ReadBytes | fio2::Operations::GetAttributes
+            )),
+            Err(RightsError::Invalid)
         );
     }
 
     #[test]
     fn into_legacy() {
-        assert_eq!(Rights::from(*READ_RIGHTS).into_legacy(), fio::OPEN_RIGHT_READABLE);
-        assert_eq!(Rights::from(*WRITE_RIGHTS).into_legacy(), fio::OPEN_RIGHT_WRITABLE);
-        assert_eq!(Rights::from(*EXECUTE_RIGHTS).into_legacy(), fio::OPEN_RIGHT_EXECUTABLE);
+        assert_eq!(Rights::from(*LEGACY_READABLE_RIGHTS).into_legacy(), fio::OPEN_RIGHT_READABLE);
+        assert_eq!(Rights::from(*LEGACY_WRITABLE_RIGHTS).into_legacy(), fio::OPEN_RIGHT_WRITABLE);
         assert_eq!(
-            Rights::from(*READ_RIGHTS | *WRITE_RIGHTS).into_legacy(),
+            Rights::from(*LEGACY_EXECUTABLE_RIGHTS).into_legacy(),
+            fio::OPEN_RIGHT_EXECUTABLE
+        );
+        assert_eq!(
+            Rights::from(*LEGACY_READABLE_RIGHTS | *LEGACY_WRITABLE_RIGHTS).into_legacy(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
-            Rights::from(*READ_RIGHTS | *WRITE_RIGHTS | *EXECUTE_RIGHTS).into_legacy(),
+            Rights::from(
+                *LEGACY_READABLE_RIGHTS | *LEGACY_WRITABLE_RIGHTS | *LEGACY_EXECUTABLE_RIGHTS
+            )
+            .into_legacy(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::ReadBytes).into_legacy(),
+            fio::OPEN_RIGHT_READABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::GetAttributes).into_legacy(),
+            fio::OPEN_RIGHT_READABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::Traverse).into_legacy(),
+            fio::OPEN_RIGHT_READABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::Enumerate).into_legacy(),
+            fio::OPEN_RIGHT_READABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::WriteBytes).into_legacy(),
+            fio::OPEN_RIGHT_WRITABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::UpdateAttributes).into_legacy(),
+            fio::OPEN_RIGHT_WRITABLE
+        );
+        assert_eq!(
+            Rights::from(fio2::Operations::ModifyDirectory).into_legacy(),
+            fio::OPEN_RIGHT_WRITABLE
         );
     }
 }
