@@ -369,11 +369,13 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
       // Gauss
       gates_ = axg_clk_gates;
       gate_count_ = countof(axg_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
       break;
     }
     case PDEV_DID_AMLOGIC_GXL_CLK: {
       gates_ = gxl_clk_gates;
       gate_count_ = countof(gxl_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
       break;
     }
     case PDEV_DID_AMLOGIC_G12A_CLK: {
@@ -385,6 +387,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
 
       gates_ = g12a_clk_gates;
       gate_count_ = countof(g12a_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
 
       InitHiu();
 
@@ -406,6 +409,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
 
       gates_ = g12b_clk_gates;
       gate_count_ = countof(g12b_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
 
       InitHiu();
 
@@ -422,6 +426,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
       // Nelson
       gates_ = sm1_clk_gates;
       gate_count_ = countof(sm1_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
 
       muxes_ = sm1_muxes;
       mux_count_ = countof(sm1_muxes);
@@ -519,6 +524,20 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
 
   fbl::AutoLock al(&lock_);
 
+  uint32_t enable_count = meson_gate_enable_count_[clk];
+
+  // For the sake of catching bugs, disabling a clock that has never
+  // been enabled is a bug.
+  ZX_ASSERT_MSG((enable == true || enable_count > 0), "Cannot disable already disabled clock. clk = %u", clk);
+
+  // Update the refcounts.
+  if (enable) {
+    meson_gate_enable_count_[clk]++;
+  } else {
+    ZX_ASSERT(enable_count > 0);
+    meson_gate_enable_count_[clk]--;
+  }
+
   uint32_t mask = gate->mask ? gate->mask : (1 << gate->bit);
   ddk::MmioBuffer* mmio;
   switch (gate->register_set) {
@@ -531,9 +550,13 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
     default:
       ZX_ASSERT(false);
   }
-  if (enable) {
+  if (enable && meson_gate_enable_count_[clk] == 1) {
+    // Transition from 0 refs to 1.
     mmio->SetBits32(mask, gate->reg);
-  } else {
+  }
+
+  if (enable == false && meson_gate_enable_count_[clk] == 0) {
+    // Transition from 1 ref to 0.
     mmio->ClearBits32(mask, gate->reg);
   }
 

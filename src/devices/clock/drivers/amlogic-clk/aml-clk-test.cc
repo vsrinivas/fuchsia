@@ -444,4 +444,84 @@ TEST(ClkTestAml, TestCpuClkG12b) {
   EXPECT_EQ(rate, kLittleClockTestFreq);
 }
 
+TEST(ClkTestAml, DisableRefZero) {
+  // Attempts to disable a clock that has never been enabled.
+  // Confirm that this is fatal.
+  auto actual = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+  auto expected = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(actual.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+
+  // Initialization sets a bunch of registers that we don't care about, so we
+  // can reset the array to a clean slate.
+  memset(actual.get(), 0, S905D2_HIU_LENGTH);
+  memset(expected.get(), 0, S905D2_HIU_LENGTH);
+
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
+
+  constexpr uint16_t kTestClock = 0;
+  const uint32_t clk_id = aml_clk_common::AmlClkId(kTestClock, aml_clk_common::aml_clk_type::kMesonGate);
+
+  ASSERT_DEATH(([&clk]() {
+    clk.ClockImplDisable(clk_id);
+  }), "Failed to crash when trying to disable already disabled clock.");
+}
+
+TEST(ClkTestAml, EnableDisableRefCount) {
+  zx_status_t st;
+  auto actual = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(actual.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+
+  // Initialization sets a bunch of registers that we don't care about, so we
+  // can reset the array to a clean slate.
+  memset(actual.get(), 0, S905D2_HIU_LENGTH);
+
+  constexpr uint16_t kTestClock = 0;
+  constexpr uint32_t kTestClockId = aml_clk_common::AmlClkId(kTestClock, aml_clk_common::aml_clk_type::kMesonGate);
+  constexpr uint32_t reg = g12a_clk_gates[kTestClock].reg;
+  constexpr uint32_t bit = (1u << g12a_clk_gates[kTestClock].bit);
+  uint32_t* reg_ptr = reinterpret_cast<uint32_t*>(&actual.get()[reg]);
+
+  // Enable the test clock and verify that the register was written.
+  st = clk.ClockImplEnable(kTestClockId);
+  EXPECT_OK(st);
+  EXPECT_EQ((*reg_ptr), bit);
+
+  // Zero out the register and enable the clock again. Since the driver
+  // should already think the clock is enabled, this should be a no-op.
+  *reg_ptr = 0;
+  st = clk.ClockImplEnable(kTestClockId);
+  EXPECT_OK(st);
+  EXPECT_EQ((*reg_ptr), 0);  // Make sure the driver didn't touch the register.
+
+  // This time we fill the registers with Fs and try disabling the clock. Since
+  // it's been enabled twice, the first disable should only drop a ref rather than
+  // actually disabling clock hardware.
+  *reg_ptr = 0xffffffff;
+  st = clk.ClockImplDisable(kTestClockId);
+  EXPECT_OK(st);
+  EXPECT_EQ((*reg_ptr), 0xffffffff);  // Make sure the driver didn't touch the register.
+
+  // The second call to disable should actually disable the clock hardware.
+  *reg_ptr = 0xffffffff;
+  st = clk.ClockImplDisable(kTestClockId);
+  EXPECT_OK(st);
+  EXPECT_EQ((*reg_ptr), (0xffffffff & (~bit)));  // Make sure the driver actually disabled the hardware.
+}
+
 }  // namespace amlogic_clock

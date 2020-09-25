@@ -103,6 +103,7 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   fbl::Mutex lock_;
   const meson_clk_gate_t* gates_ = nullptr;
   size_t gate_count_ = 0;
+  std::vector<uint32_t> meson_gate_enable_count_;
 
   // Clock muxes.
   const meson_clk_mux_t* muxes_ = nullptr;
