@@ -14,5 +14,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0004_units_of_bytes.md
 - title: "RFC-0005: Blobfs Snapshots"
   path: /docs/contribute/governance/rfcs/0005_blobfs_snapshots.md
+- title: "RFC-0006: Addendum of the RFC Process for Zircon"
+  path: /docs/contribute/governance/rfcs/0006_addendum_to_rfc_process_for_zircon.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
