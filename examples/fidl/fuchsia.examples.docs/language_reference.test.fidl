@@ -1,0 +1,287 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.docs;
+
+using zx;
+
+// [START structs]
+struct CirclePoint {
+    float32 x;
+    float32 y;
+};
+
+struct Color {
+    float32 r;
+    float32 g;
+    float32 b;
+};
+// [END structs]
+
+// [START stucts-use]
+struct Circle {
+    bool filled;
+    CirclePoint center; // CirclePoint will be stored in-line
+    float32 radius;
+    Color? color; // Color will be stored out-of-line
+    bool dashed;
+};
+// [END stucts-use]
+
+// [START comments]
+// this is a comment
+/// and this one is too, but it also ends up in the generated code
+struct MyStruct { // plain comment
+    int32 f; // as is this one
+}; // and this is the last one!
+// [END comments]
+
+// [START consts]
+const bool ENABLED_FLAG = true;
+const int8 OFFSET = -33;
+const uint16 ANSWER = 42;
+const uint16 ANSWER_IN_BINARY = 0b101010;
+const uint32 POPULATION_USA_2018 = 330000000;
+const uint64 DIAMOND = 0x183c7effff7e3c18;
+const uint64 FUCHSIA = 4054509061583223046;
+const string USERNAME = "squeenze";
+const float32 MIN_TEMP = -273.15;
+const float64 CONVERSION_FACTOR = 1.41421358;
+const Beverage MY_DRINK = Beverage.WATER;
+// [END consts]
+
+// [START defaults]
+struct Scene {
+    uint32 background_rgb = 0xFF77FF; // fuchsia is the default background
+    uint32 foreground_rgb; // there is no default foreground color
+};
+// [END defaults]
+
+// [START primitives]
+// A record which contains fields of a few primitive types.
+struct Sprite {
+    float32 x;
+    float32 y;
+    uint32 index;
+    uint32 color;
+    bool visible;
+};
+// [END primitives]
+
+// [START bits]
+bits InfoFeatures : uint32 {
+    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
+    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
+};
+// [END bits]
+
+// [START enums]
+// An enum declared at library scope.
+enum Beverage : uint8 {
+    WATER = 0;
+    COFFEE = 1;
+    TEA = 2;
+    WHISKEY = 3;
+};
+
+// An enum declared at library scope.
+// Underlying type is assumed to be uint32.
+enum Vessel {
+    CUP = 0;
+    BOWL = 1;
+    TUREEN = 2;
+    JUG = 3;
+};
+// [END enums]
+
+// [START enum-use]
+// A record which contains two enum fields.
+struct Order {
+    Beverage beverage;
+    Vessel vessel;
+};
+// [END enum-use]
+
+// [START arrays]
+// A record which contains some arrays.
+struct Arrays {
+    // array of exactly 16 floating point numbers
+    array<float32>:16 matrix;
+
+    // array of exactly 10 arrays of 4 strings each
+    array<array<string>:4>:10 form;
+};
+// [END arrays]
+
+// [START strings]
+// A record which contains some strings.
+struct Document {
+    // title string, maximum of 40 bytes long
+    string:40 title;
+
+    // description string, may be null, no upper bound on size
+    string? description;
+};
+// [END strings]
+
+// [START vectors]
+// A record which contains some vectors.
+struct Vectors {
+    // a vector of up to 10 integers
+    vector<int32>:10 params;
+
+    // a vector of bytes, no upper bound on size
+    bytes blob;
+
+    // a nullable vector of up to 24 strings
+    vector<string>:24? nullable_vector_of_strings;
+
+    // a vector of nullable strings, no upper bound on size
+    vector<string?> vector_of_nullable_strings;
+
+    // a vector of vectors of 16-element arrays of floating point numbers
+    vector<vector<array<float32>:16>> complex;
+};
+// [END vectors]
+
+// [START handles]
+// A record which contains some handles.
+resource struct Handles {
+    // a handle of unspecified type
+    handle h;
+
+    // an optional channel
+    zx.handle:CHANNEL? c;
+};
+// [END handles]
+
+// [START tables]
+table Profile {
+    1: vector<string> locales;
+    2: vector<string> calendars;
+    3: vector<string> time_zones;
+};
+// [END tables]
+
+struct Left {};
+struct Right {};
+// [START unions-use]
+strict union StrictEither {
+    1: Left left;
+    2: Right right;
+};
+
+union ImplicitlyStrictEither {
+    1: Left left;
+    2: Right right;
+};
+
+flexible union FlexibleEither {
+    1: Left left;
+    2: Right right;
+};
+// [END unions-use]
+
+protocol RealCalculator {};
+// [START endpoints]
+// A record which contains protocol-bound channels.
+resource struct Record {
+    // client endpoint of a channel bound to the Calculator protocol
+    Calculator c;
+
+    // server endpoint of a channel bound to the Science protocol
+    request<Science> s;
+
+    // optional client endpoint of a channel bound to the
+    // RealCalculator protocol
+    RealCalculator? r;
+};
+// [END endpoints]
+
+// [START composition-base]
+protocol SceneryController {
+    SetBackground(Color color);
+    SetForeground(Color color);
+};
+// [END composition-base]
+
+// [START composition-inherit]
+protocol Drawer {
+    compose SceneryController;
+    Circle(int32 x, int32 y, int32 radius);
+    Square(int32 x, int32 y, int32 diagonal);
+};
+
+protocol Writer {
+    compose SceneryController;
+    Text(int32 x, int32 y, string message);
+};
+// [END composition-inherit]
+
+// [START composition-multiple-1]
+protocol FontController {
+    SetPointSize(int32 points);
+    SetFontName(string fontname);
+    Italic(bool onoff);
+    Bold(bool onoff);
+    Underscore(bool onoff);
+    Strikethrough(bool onoff);
+};
+// [END composition-multiple-1]
+
+struct Time {};
+// [START layering-clock]
+protocol Clock {
+    Now() -> (Time time);
+    CurrentTimeZone() -> (string timezone);
+};
+// [END layering-clock]
+
+// [START layering-horologist]
+protocol Horologist {
+    SetTime(Time time);
+    SetCurrentTimeZone(string timezone);
+};
+// [END layering-horologist]
+
+// [START layering-systemclock]
+protocol SystemClock {
+    compose Clock;
+    compose Horologist;
+};
+// [END layering-systemclock]
+
+// [START aliasing]
+using StoryID = string:MAX;
+using up_to_five = vector:5;
+// [END aliasing]
+
+// [START aliasing-usage]
+struct Message {
+    StoryID baseline;
+    up_to_five<StoryID> chapters;
+};
+// [END aliasing-usage]
+
+// [START builtin-aliases]
+struct RawBytes {
+    byte head;
+    bytes rest;
+};
+// [END builtin-aliases]
+
+// [START calculator]
+enum DivisionError : uint32 {
+    DIVIDE_BY_ZERO = 1;
+};
+
+protocol Calculator {
+    Add(int32 a, int32 b) -> (int32 sum);
+    Divide(int32 dividend, int32 divisor) ->
+        (int32 quotient, int32 remainder) error DivisionError;
+    Clear();
+    -> OnError(uint32 status_code);
+};
+// [END calculator]

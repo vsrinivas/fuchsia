@@ -61,6 +61,9 @@ group("test") {
   testonly = true
   deps = [
     ":examples-integration-test",
+
+    # Ensure FIDL snippets used in documentation builds
+    "//examples/fidl/fuchsia.examples.docs",
     "//examples/fidl/go:all",
     "//examples/fidl/hlcpp:all",
     "//examples/fidl/llcpp:all",

@@ -1,0 +1,71 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START library-overview]
+/// Library containing example FIDL used throughout the Fuchsia documentation.
+library fuchsia.examples.docs;
+// [END library-overview]
+
+using fuchsia.mem;
+using zx;
+
+// [START primitive-alias]
+using vaddr = uint64;
+// [END primitive-alias]
+
+// [START constants]
+const uint64 MAX_NAMES = 32;
+// [END constants]
+
+// [START good-docs]
+/// A representation of violins displayed on the screen.
+struct Widget {
+    /// A monotonically increasing id, uniquely identifying the widget.
+    uint64 id;
+    /// Location of the top left corner of the widget.
+    Point location;
+};
+// [END good-docs]
+
+protocol Node {};
+// [START good-docs-2]
+/// An abstract representation of a [`fuchsia.io/Node`] whose layout is flat.
+protocol File {
+    compose Node;
+
+    /// Acquires a [`fuchsia.mem/Buffer`] representing this file, if
+    /// there is one, with the requested access rights.
+    ///
+    /// ## Rights
+    ///
+    /// This method requires the following rights:
+    ///
+    /// * [`fuchsia.io/OPEN_RIGHT_WRITABLE`] if `flags` includes
+    ///   [`fuchsia.io/VMO_FLAG_WRITE`].
+    /// * [`fuchsia.io/OPEN_RIGHT_READABLE`] if `flags` includes
+    ///   [`fuchsia.io/VMO_FLAG_READ`] or [`fuchsia.io/VMO_FLAG_EXEC`].
+    ///
+    /// + request `flags` a bit field composing any of
+    ///     `VMO_FLAG_READ`, `VMO_FLAG_WRITE`, or `VMO_FLAG_EXEC`.
+    /// - response `buffer` the requested `fuchsia.mem/Buffer`, or
+    ///     null if there was an error, or the buffer does not exist.
+    /// * error a zx_status value indicating success or failure.
+    /// * see [`fuchsia.mem/Buffer`]
+    /// [`fuchsia.mem/Buffer`]:
+    ///    https://fuchsia.googlesource.com/fuchsia/+/9853fad50ca70256f0e86201c0e20424f1c25ab5/zircon/system/fidl/fuchsia-io/io.fidl
+    GetBuffer(uint32 flags) ->
+        (fuchsia.mem.Buffer? buffer) error zx.status;
+};
+// [END good-docs-2]
+
+// [START comments-combined]
+/// A widget displaying violins on the screen.
+// TODO -- widgets should use UUIDs instead of sequential ids
+struct ViolinWidget {
+    /// A monotonically increasing id, uniquely identifying the widget.
+    uint64 id;
+    /// Location of the top left corner of the widget.
+    Point location;
+};
+// [END comments-combined]

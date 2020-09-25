@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Import the fidl GN template.
+import("//build/fidl/fidl.gni")
+
+# Define a target for our FIDL library by passing it the FIDL source files
+# that make up the library.
+fidl("fuchsia.examples.docs") {
+  sources = [
+    "api_rubric.test.fidl",
+    "attributes.test.fidl",
+    "language_reference.test.fidl",
+    "misc.test.fidl",
+    "style.test.fidl",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//zircon/vdso/zx",
+  ]
+}

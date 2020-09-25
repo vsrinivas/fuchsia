@@ -1,0 +1,292 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.docs;
+
+using zx;
+
+// [START ordinals]
+protocol A {
+    [ Selector = "C" ]
+    B(string s, bool b);
+};
+// [END ordinals]
+
+// [START semantics]
+struct Ipv4Address {
+    array<uint8>:4 octets;
+};
+// [END semantics]
+
+struct SuccessValue {};
+// [START errors]
+// Only erroneous statuses are listed
+enum MyErrorCode {
+    MISSING_FOO = 1;  // avoid using 0
+    NO_BAR = 2;
+};
+
+protocol Frobinator {
+    Frobinate() -> (SuccessValue value) error MyErrorCode;
+};
+// [END errors]
+
+// [START optional-error]
+enum MyStatusCode {
+    OK = 0;               // The success value should be 0,
+    MISSING_FOO = 1;      // with erroneous status next.
+    NO_BAR = 2;
+};
+
+protocol Frobinator2 {
+    Frobinate() -> (SuccessValue? value, MyStatusCode err);
+};
+// [END optional-error]
+
+// [START constants]
+const int32 MAX_BATCH_SIZE = 128;
+
+protocol Sender {
+    Emit(vector<uint8>:MAX_BATCH_SIZE batch);
+};
+// [END constants]
+
+// [START bits-hex]
+bits InfoFeaturesHex : uint32 {
+    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
+    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
+};
+// [END bits-hex]
+
+// [START bits-binary]
+bits InfoFeaturesBits : uint32 {
+    WLAN =     0b00000001;  // If present, this device represents WLAN hardware
+    SYNTH =    0b00000010;  // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0b00000100;  // If present, this device receives all messages it sends
+};
+// [END bits-binary]
+
+// [START pipelining-1]
+// GOOD:
+protocol GoodFoo {
+    GetBar(string name, request<Bar> bar);
+};
+
+// BAD:
+protocol BadFoo {
+    GetBar(string name) -> (Bar bar);
+};
+// [END pipelining-1]
+
+struct CodecParams {};
+protocol Codec {};
+// [START pipelining-2]
+protocol CodecProvider {
+    TryToCreateCodec(CodecParams params, request<Codec> codec) -> (bool succeed);
+};
+// [END pipelining-2]
+
+// [START pipelining-3]
+protocol Codec2 {
+    -> OnReady();
+};
+
+protocol CodecProvider2 {
+    TryToCreateCodec(CodecParams params, request<Codec2> codec);
+};
+// [END pipelining-3]
+
+struct Args {};
+// [START hanging-gets]
+protocol FooProvider {
+    WatchFoo(Args args) -> (Foo foo);
+};
+// [END hanging-gets]
+
+// [START throttle-push]
+protocol Listener {
+    OnBar(Args args) -> ();
+};
+// [END throttle-push]
+
+// [START events-1]
+protocol DeathWish {
+    -> OnFatalError(zx.status error_code);
+};
+// [END events-1]
+
+// [START events-2]
+protocol NetworkScanner {
+    ScanForNetworks();
+    -> OnNetworkDiscovered(string network);
+    -> OnScanFinished();
+};
+// [END events-2]
+
+struct InputEvent {};
+// [START ack-1]
+protocol View1 {
+    -> OnInputEvent(InputEvent event);
+    NotifyInputEventHandled();
+};
+// [END ack-1]
+
+struct FocusChangedEvent {};
+// [START ack-2]
+protocol View2 {
+    -> OnInputEvent(InputEvent event, uint64 seq);
+    -> OnFocusChangedEvent(FocusChangedEvent event, uint64 seq);
+    NotifyEventsHandled(uint64 last_seq);
+};
+// [END ack-2]
+
+struct Image {};
+// [START feed-forward]
+protocol Canvas {
+    Flush() -> (zx.status code);
+    Clear();
+    UploadImage(uint32 image_id, Image image);
+    PaintImage(uint32 image_id, float32 x, float32 y);
+    DiscardImage(uint32 image_id);
+    PaintSmileyFace(float32 x, float32 y);
+    PaintMoustache(float32 x, float32 y);
+};
+// [END feed-forward]
+
+struct MyStatus {};
+// [START command-union]
+struct PokeCmd { int32 x; int32 y; };
+
+struct ProdCmd { string:64 message; };
+
+union MyCommand {
+    1: PokeCmd poke;
+    2: ProdCmd prod;
+};
+
+protocol HighVolumeSink {
+  Enqueue(vector<MyCommand> commands);
+  Commit() -> (MyStatus result);
+};
+// [END command-union]
+
+// [START paginate-write-1]
+protocol Foo1 {
+    AddBars(vector<Bar> bars);
+    UseTheBars() -> (Args args);
+};
+// [END paginate-write-1]
+
+// [START paginate-write-2]
+protocol BarTransaction {
+    Add(vector<Bar> bars);
+    Commit() -> (Args args);
+};
+
+protocol Foo2 {
+    StartBarTransaction(request<BarTransaction> transaction);
+};
+// [END paginate-write-2]
+
+// [START paginate-read-1]
+protocol EventBasedGetter {
+    GetBars();
+    -> OnBars(vector<Bar> bars);
+    -> OnBarsDone();
+};
+// [END paginate-read-1]
+
+// [START paginate-read-2]
+protocol BarIterator {
+    GetNext() -> (vector<Bar> bars);
+};
+
+protocol ChannelBasedGetter {
+    GetBars(request<BarIterator> iterator);
+};
+// [END paginate-read-2]
+
+struct Entry {};
+// [START paginate-read-3]
+struct Token {
+    array<uint8>:16 opaque;
+};
+
+protocol TokenBasedGetter {
+    // If token is null, fetch the first N entries. If token is not null, return
+    // the N items starting at token. Returns as many entries as it can in
+    // results and populates next_token if more entries are available.
+    GetEntries(Token? token) -> (vector<Entry> entries, Token? next_token);
+};
+// [END paginate-read-3]
+
+// [START eventpair]
+protocol Exporter {
+    ExportThing(uint32 client_assigned_id, zx.handle:EVENTPAIR export_token);
+};
+
+protocol Importer {
+    ImportThing(uint32 some_other_client_assigned_id, zx.handle:EVENTPAIR import_token);
+};
+// [END eventpair]
+
+// [START empty]
+protocol FooController {};
+// [END empty]
+
+struct ColorCorrection {};
+// [START settings]
+table Settings {
+    1: bool magnification_enabled;
+    2: float32 magnification_zoom_factor;
+    3: bool screen_reader_enabled;
+    4: bool color_inversion_enabled;
+    5: ColorCorrection color_correction;
+    6: array<float32>:9 color_adjustment_matrix;
+};
+// [END settings]
+
+// [START settings-partial]
+protocol TheManagerOfSomeSorts {
+    /// Description how the update modifies the behavior.
+    ///
+    /// Only fields present in the settings value will be changed.
+    Update(Settings settings) -> (Args args);
+};
+// [END settings-partial]
+
+// [START settings-replace]
+protocol TheManagerOfOtherSorts {
+    /// Description how the override modifies the behavior.
+    ///
+    /// This replaces the setting.
+    Replace(Settings settings) -> (Args args);
+};
+// [END settings-replace]
+
+// [START service-hub-1]
+// BAD
+[Discoverable]
+protocol ServiceHub {
+    GetFoo(request<Foo> foo);
+    GetBar(request<Bar> bar);
+    GetBaz(request<Baz> baz);
+    GetQux(request<Qux> qux);
+};
+// [END service-hub-1]
+
+// [START service-hub-2]
+[Discoverable]
+protocol Foo {};
+
+[Discoverable]
+protocol Bar {};
+
+[Discoverable]
+protocol Baz {};
+
+[Discoverable]
+protocol Qux {};
+// [END service-hub-2]

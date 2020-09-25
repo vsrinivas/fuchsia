@@ -1,0 +1,85 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.docs;
+
+// [START wire-format-traversal-order]
+struct Cart {
+    vector<Item> items;
+};
+
+struct Item {
+    Product product;
+    uint32 quantity;
+};
+
+struct Product {
+    string sku;
+    string name;
+    string? description;
+    uint32 price;
+};
+// [END wire-format-traversal-order]
+
+// [START wire-format-inlined-objects]
+struct Region {
+    vector<Rect> rects;
+};
+
+struct Rect {
+    Point top_left;
+    Point bottom_right;
+};
+
+struct Point {
+    uint32 x;
+    uint32 y;
+};
+// [END wire-format-inlined-objects]
+
+// [START wire-format-tables]
+table Value {
+    1: int16 command;
+    2: Circle data;
+    3: float64 offset;
+};
+// [END wire-format-tables]
+
+// [START wire-format-unions]
+union UnionValue {
+    1: int16 command;
+    2: Circle data;
+    3: float64 offset;
+};
+// [END wire-format-unions]
+
+struct CreateResource {};
+struct ReleaseResource {};
+// [START command]
+union Command {
+    1: CreateResource create_resource;
+    2: ReleaseResource release_resource;
+};
+// [END command]
+
+// [START mode]
+bits Mode {
+    Read = 1;
+    Write = 2;
+};
+// [END mode]
+
+// [START hasher]
+protocol Hasher {
+    Hash(string value) -> (array<uint8>:10 result);
+};
+// [END hasher]
+
+// [START example-struct]
+struct MyRequest {
+    uint32 serial;
+    string key;
+    vector<uint32> options;
+};
+// [END]

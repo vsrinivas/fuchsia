@@ -1,0 +1,41 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.docs;
+
+// [START attribute-one]
+[MaxBytes = "64"]
+struct MyType {
+// [END attribute-one]
+};
+
+// [START attribute-many]
+[Discoverable, Transport = "Channel"]
+// [END attribute-many]
+protocol MyProtocol {};
+
+// [START doc-with-slashes]
+/// Foo
+struct WithThreeSlashes {
+// [END doc-with-slashes]
+};
+
+// [START doc-with-attributes]
+[Doc = "Foo"]
+struct WithAttribute {
+// [END doc-with-attributes]
+};
+
+// [START layout-simple]
+[ForDeprecatedCBindings]
+protocol SimpleProtocol {
+    DynamicCountOfFixedArguments(vector<uint8>:1024 inputs);
+};
+// [END layout-simple]
+
+// [START selector]
+protocol Science {
+    [Selector = "Investigate"] Experiment();
+};
+// [END selector]
