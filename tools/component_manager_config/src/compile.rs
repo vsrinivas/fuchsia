@@ -27,6 +27,7 @@ struct Config {
     namespace_capabilities: Option<Vec<cml::Capability>>,
     use_builtin_process_launcher: Option<bool>,
     maintain_utc_clock: Option<bool>,
+    num_threads: Option<u32>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -66,6 +67,7 @@ impl TryFrom<Config> for component_internal::Config {
                 .as_ref()
                 .map(|c| cml::translate::translate_capabilities(c))
                 .transpose()?,
+            num_threads: config.num_threads,
         })
     }
 }
@@ -131,6 +133,7 @@ impl Config {
         extend_if_unset!(self, another, list_children_batch_size);
         extend_if_unset!(self, another, security_policy);
         extend_if_unset!(self, another, namespace_capabilities);
+        extend_if_unset!(self, another, num_threads);
         Ok(self)
     }
 
@@ -244,6 +247,7 @@ mod tests {
                     rights: [ "connect" ],
                 },
             ],
+            num_threads: 321,
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -270,6 +274,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                     }),
                 ]),
+                num_threads: Some(321),
             }
         );
     }

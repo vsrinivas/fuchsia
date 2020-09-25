@@ -47,6 +47,10 @@ pub struct RuntimeConfig {
     /// an instance of `fuchsia.time.Maintenance`. This flag should only be used with the top-level
     /// component_manager.
     pub maintain_utc_clock: bool,
+
+    // The number of threads to use for running component_manager's executor.
+    // Value defaults to 1.
+    pub num_threads: usize,
 }
 
 /// Runtime security policy.
@@ -89,6 +93,8 @@ impl Default for RuntimeConfig {
             use_builtin_process_launcher: false,
 
             maintain_utc_clock: false,
+
+            num_threads: 1,
         }
     }
 }
@@ -120,6 +126,13 @@ fn parse_absolute_monikers_from_strings(
     result.context(format!("Moniker parsing error for {:?}", strs))
 }
 
+fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
+    match value {
+        Some(value) => value as usize,
+        None => default,
+    }
+}
+
 impl TryFrom<&component_internal::Config> for RuntimeConfig {
     type Error = Error;
 
@@ -138,19 +151,18 @@ impl TryFrom<&component_internal::Config> for RuntimeConfig {
                 JobPolicyAllowlists::default()
             };
 
-        let list_children_batch_size = if let Some(value) = config.list_children_batch_size {
-            usize::try_from(value)?
-        } else {
-            default.list_children_batch_size
-        };
+        let list_children_batch_size =
+            as_usize_or_default(config.list_children_batch_size, default.list_children_batch_size);
+        let num_threads = as_usize_or_default(config.num_threads, default.num_threads);
         Ok(RuntimeConfig {
-            list_children_batch_size: list_children_batch_size,
+            list_children_batch_size,
             security_policy: SecurityPolicy { job_policy },
             debug: config.debug.unwrap_or(default.debug),
             use_builtin_process_launcher: config
                 .use_builtin_process_launcher
                 .unwrap_or(default.use_builtin_process_launcher),
             maintain_utc_clock: config.maintain_utc_clock.unwrap_or(default.maintain_utc_clock),
+            num_threads,
         })
     }
 }
@@ -253,6 +265,7 @@ mod tests {
                 }),
             }),
             namespace_capabilities: None,
+            num_threads: None,
         };
 
         assert_matches!(RuntimeConfig::try_from(&config), Err(_));
@@ -266,6 +279,7 @@ mod tests {
             namespace_capabilities: None,
             maintain_utc_clock: None,
             use_builtin_process_launcher: None,
+            num_threads: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
@@ -279,9 +293,11 @@ mod tests {
                 }),
             }),
             namespace_capabilities: None,
+            num_threads: Some(10),
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
             maintain_utc_clock: false, use_builtin_process_launcher:true,
+            num_threads: 10,
             ..Default::default() }),
         all_fields_some => (
             component_internal::Config {
@@ -296,6 +312,7 @@ mod tests {
                     }),
                 }),
                 namespace_capabilities: None,
+                num_threads: Some(24),
             },
             RuntimeConfig {
                 debug: true,
@@ -313,6 +330,7 @@ mod tests {
                         ],
                     }
                 },
+                num_threads: 24,
             }
         ),
     }
@@ -365,6 +383,7 @@ mod tests {
             namespace_capabilities: None,
             maintain_utc_clock: None,
             use_builtin_process_launcher: None,
+            num_threads: None,
         };
         install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 

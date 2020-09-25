@@ -44,6 +44,10 @@ table Config {
     /// an instance of `fuchsia.time.Maintenance`. This flag should only be used with the top-level
     /// component_manager.
     6: bool maintain_utc_clock;
+
+    /// The number of threads to use for running component_manager's executor.
+    /// Value defaults to 1.
+    7: uint32 num_threads;
 };
 
 /// Runtime security policy.
