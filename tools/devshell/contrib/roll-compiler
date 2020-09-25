@@ -96,7 +96,7 @@ before commands are run for any package.
         package_tags = {
             package["pin"]["package"]: PackageTag(package) for package in packages
         }
-        tag_set = set(t for t in package_tags)
+        tag_set = set(t for t in package_tags.values())
         if len(tag_set) != 1:
             sys.stderr.write(
                 f"Not all packages have matching {args.tag} tags at version {args.version}:\n")
