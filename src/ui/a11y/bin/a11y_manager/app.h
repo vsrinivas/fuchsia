@@ -98,6 +98,8 @@ class App {
 
   a11y::ScreenReader* screen_reader() { return screen_reader_.get(); }
 
+  static constexpr char kIntlPropertyProviderDisconnectedInspectName[] = "intl_property_provider_disconnected";
+
  private:
   // If gesture manager/handler/arena ever get idempotent operations, we can remove this.
 
@@ -188,6 +190,11 @@ class App {
 
   // Inspect node to which to publish debug info.
   inspect::Node inspect_node_;
+
+  // Inspect property indicating whether a locale was found.
+  // If false, the a11y manager could not connect to the PropertyProvider, and
+  // defaulted to the locale "en-US".
+  inspect::BoolProperty inspect_property_intl_property_provider_disconnected_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

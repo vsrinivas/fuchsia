@@ -21,7 +21,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       tts_manager_(tts_manager),
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
-      inspect_node_(std::move(inspect_node)) {
+      inspect_node_(std::move(inspect_node)),
+      inspect_property_intl_property_provider_disconnected_(inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
   FX_DCHECK(context);
   FX_DCHECK(view_manager);
   FX_DCHECK(tts_manager);
@@ -77,6 +78,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
     FX_LOGS(ERROR) << "Error from fuchsia::intl::PropertyProvider" << zx_status_get_string(status);
     if (status == ZX_ERR_PEER_CLOSED) {
       FX_LOGS(ERROR) << "Using the default locale: en-US";
+      inspect_property_intl_property_provider_disconnected_.Set(true);
       fuchsia::intl::Profile default_profile;
       this->i18n_profile_ = std::move(default_profile);
       this->i18n_profile_->mutable_locales()->push_back({.id = "en-US"});
