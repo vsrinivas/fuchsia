@@ -44,6 +44,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.bits_per_channel = 32;
     format.bits_per_sample = 32;
     mock_i2c.ExpectWriteStop({0x33, 0x03});  // 32 bits.
+    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
       ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
@@ -61,7 +62,27 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.frame_rate = 48000;
     format.bits_per_channel = 32;
     mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
+    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
     format.bits_per_sample = 16;
+    std::thread t([&]() {
+      auto formats = client.GetDaiFormats();
+      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+      ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    });
+    t.join();
+  }
+
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 4;
+    format.channels_to_use = {2, 3};
+    format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    format.justify_format = JUSTIFY_FORMAT_JUSTIFY_TDM1;
+    format.frame_rate = 48000;
+    format.bits_per_channel = 16;
+    format.bits_per_sample = 16;
+    mock_i2c.ExpectWriteStop({0x33, 0x14});  // TDM/DSP, I2S_LRCLK_PULSE < 8 SCLK, 16 bits.
+    mock_i2c.ExpectWriteStop({0x34, 0x20});  // Data start sclk at 32 bits.
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
       ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
@@ -165,12 +186,14 @@ TEST(Tas58xxTest, GetDai) {
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
       EXPECT_EQ(formats.value().size(), 1);
-      EXPECT_EQ(formats.value()[0].number_of_channels.size(), 1);
+      EXPECT_EQ(formats.value()[0].number_of_channels.size(), 2);
       EXPECT_EQ(formats.value()[0].number_of_channels[0], 2);
+      EXPECT_EQ(formats.value()[0].number_of_channels[1], 4);
       EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
       EXPECT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
-      EXPECT_EQ(formats.value()[0].justify_formats.size(), 1);
+      EXPECT_EQ(formats.value()[0].justify_formats.size(), 2);
       EXPECT_EQ(formats.value()[0].justify_formats[0], JUSTIFY_FORMAT_JUSTIFY_I2S);
+      EXPECT_EQ(formats.value()[0].justify_formats[1], JUSTIFY_FORMAT_JUSTIFY_TDM1);
       EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
       EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
       EXPECT_EQ(formats.value()[0].bits_per_channel.size(), 2);

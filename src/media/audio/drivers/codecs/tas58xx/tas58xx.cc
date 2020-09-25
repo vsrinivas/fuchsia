@@ -25,6 +25,7 @@ constexpr uint8_t kRegReset       = 0x01;
 constexpr uint8_t kRegDeviceCtrl1 = 0x02;
 constexpr uint8_t kRegDeviceCtrl2 = 0x03;
 constexpr uint8_t kRegSapCtrl1    = 0x33;
+constexpr uint8_t kRegSapCtrl2    = 0x34;
 constexpr uint8_t kRegDigitalVol  = 0x4c;
 constexpr uint8_t kRegClearFault  = 0x78;
 constexpr uint8_t kRegSelectbook  = 0x7f;
@@ -34,6 +35,7 @@ constexpr uint8_t kRegDeviceCtrl1BitsPbtlMode  = 0x04;
 constexpr uint8_t kRegDeviceCtrl1Bits1SpwMode  = 0x01;
 constexpr uint8_t kRegSapCtrl1Bits16bits       = 0x00;
 constexpr uint8_t kRegSapCtrl1Bits32bits       = 0x03;
+constexpr uint8_t kRegSapCtrl1BitsTdmSmallFs   = 0x14;
 constexpr uint8_t kRegDeviceCtrl2BitsHiZ       = 0x02;
 constexpr uint8_t kRegDeviceCtrl2BitsPlay      = 0x03;
 constexpr uint8_t kRegDieId                    = 0x67;
@@ -41,19 +43,20 @@ constexpr uint8_t kRegClearFaultBitsAnalog     = 0x80;
 // clang-format on
 
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
-static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
-static const std::vector<sample_format_t> kSupportedSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<justify_format_t> kSupportedJustifyFormats = {JUSTIFY_FORMAT_JUSTIFY_I2S};
-static const std::vector<uint32_t> kSupportedRates = {48'000};
-static const std::vector<uint8_t> kSupportedBitsPerChannel = {16, 32};
-static const std::vector<uint8_t> kSupportedBitsPerSample = {16, 32};
-static const audio::DaiSupportedFormats kSupportedDaiFormats = {
-    .number_of_channels = kSupportedNumberOfChannels,
-    .sample_formats = kSupportedSampleFormats,
-    .justify_formats = kSupportedJustifyFormats,
-    .frame_rates = kSupportedRates,
-    .bits_per_channel = kSupportedBitsPerChannel,
-    .bits_per_sample = kSupportedBitsPerSample,
+static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
+static const std::vector<sample_format_t> kSupportedDaiSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
+static const std::vector<justify_format_t> kSupportedDaiJustifyFormats = {
+    JUSTIFY_FORMAT_JUSTIFY_I2S, JUSTIFY_FORMAT_JUSTIFY_TDM1};
+static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
+static const std::vector<uint8_t> kSupportedDaiBitsPerChannel = {16, 32};
+static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {16, 32};
+static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
+    .number_of_channels = kSupportedDaiNumberOfChannels,
+    .sample_formats = kSupportedDaiSampleFormats,
+    .justify_formats = kSupportedDaiJustifyFormats,
+    .frame_rates = kSupportedDaiRates,
+    .bits_per_channel = kSupportedDaiBitsPerChannel,
+    .bits_per_sample = kSupportedDaiBitsPerSample,
 };
 
 enum {
@@ -186,20 +189,41 @@ void Tas58xx::SetBridgedMode(bool enable_bridged_mode) {
 
 std::vector<DaiSupportedFormats> Tas58xx::GetDaiFormats() {
   std::vector<DaiSupportedFormats> formats;
-  formats.push_back(kSupportedDaiFormats);
+  formats.push_back(kSupportedDaiDaiFormats);
   return formats;
 }
 
 zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
-  if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
+  if (!IsDaiFormatSupported(format, kSupportedDaiDaiFormats)) {
     zxlogf(ERROR, "%s unsupported format\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
+  if (format.number_of_channels == 2 &&
+      (format.channels_to_use[0] != 0 || format.channels_to_use[1] != 1)) {
+    zxlogf(ERROR, "%s DAI format channels to use not supported %u/%u/%u", __FILE__,
+           format.number_of_channels, format.channels_to_use[0], format.channels_to_use[1]);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (format.number_of_channels == 4 &&
+      ((format.channels_to_use[0] != 0 || format.channels_to_use[1] != 1) &&
+       (format.channels_to_use[0] != 2 || format.channels_to_use[1] != 3))) {
+    zxlogf(ERROR, "%s DAI format channels to use not supported %u/%u/%u", __FILE__,
+           format.number_of_channels, format.channels_to_use[0], format.channels_to_use[1]);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   uint8_t reg_value =
-      format.bits_per_sample == 32 ? kRegSapCtrl1Bits32bits : kRegSapCtrl1Bits16bits;
+      (format.bits_per_sample == 32 ? kRegSapCtrl1Bits32bits : kRegSapCtrl1Bits16bits) |
+      (format.justify_format == JUSTIFY_FORMAT_JUSTIFY_I2S ? 0x00 : kRegSapCtrl1BitsTdmSmallFs);
 
   fbl::AutoLock lock(&lock_);
-  return WriteReg(kRegSapCtrl1, reg_value);
+  auto status = WriteReg(kRegSapCtrl1, reg_value);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return WriteReg(kRegSapCtrl2, (format.number_of_channels == 4 && format.channels_to_use[0] == 2)
+                                    ? 2 * format.bits_per_channel
+                                    : 0x00);
 }
 
 GainFormat Tas58xx::GetGainFormat() {
