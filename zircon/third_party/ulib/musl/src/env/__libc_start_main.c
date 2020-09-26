@@ -85,8 +85,11 @@ static void start_main(const struct start_params* p) {
     zx_handle_t h = p->handles[n];
 
     switch (PA_HND_TYPE(p->handle_info[n])) {
-      case PA_NS_DIR:
-        if (strcmp(names[arg], "/svc") == 0) {
+      case PA_NS_DIR: {
+        // Avoid strcmp, because it may be instrumented, and we haven't
+        // initialized the sanitizer runtime yet.
+        const char* name = names[arg];
+        if (name[0] == '/' && name[1] == 's' && name[2] == 'v' && name[3] == 'c' && name[4] == 0) {
           // TODO(phosek): We should ideally duplicate the handle since
           // higher layers might consume it and we want to have a guarantee
           // that it stays alive, but that's typically possible since
@@ -98,6 +101,7 @@ static void start_main(const struct start_params* p) {
           __zircon_namespace_svc = h;
         }
         continue;
+      }
     }
   }
 
