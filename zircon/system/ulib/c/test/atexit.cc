@@ -12,6 +12,11 @@
 // implicit __cxa_atexit calls.
 extern "C" void* __dso_handle;
 
+// libcxxabi does not declare `__cxa_atexit` in cxxabi.h.
+// There is no header (standard or otherwise) that declares
+// `extern "C" __cxa_atexit`, so we just declare it here.
+extern "C" int __cxa_atexit(void (*)(void*), void*, void*);
+
 namespace {
 
 // The libc implementation supports some number before it does any
@@ -29,8 +34,7 @@ int kData;
 // internally.
 TEST(AtExit, LeakCheck) {
   for (int i = 0; i < kManyAtexit; ++i) {
-    EXPECT_EQ(
-        0, abi::__cxa_atexit([](void* ptr) { ZX_ASSERT(ptr == &kData); }, &kData, &__dso_handle));
+    EXPECT_EQ(0, __cxa_atexit([](void* ptr) { ZX_ASSERT(ptr == &kData); }, &kData, &__dso_handle));
   }
 }
 
