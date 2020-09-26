@@ -19,16 +19,24 @@ import("//cts/build/cts_vars.gni")
 # }
 # ```
 template("cts_source_set") {
-  if (defined(invoker.deps)) {
-    cts_element("unused") {
+  if (defined(invoker.deps) && invoker.deps != []) {
+    cts_element("${target_name}_verify_deps") {
       deps = invoker.deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
 
   source_set(target_name) {
     forward_variables_from(invoker, "*")
+    if (defined(deps) && deps != []) {
+      deps += [ ":${target_name}_verify_deps" ]
+    }
   }
 
   # Creates a file to enable other CTS targets to depend on this test package.
-  write_file("${root_gen_dir}/cts/${target_name}.${cts_extension}", "true")
+  target_build_dir = get_label_info(":$target_name", "dir")
+  target_build_dir = string_replace(target_build_dir, "//", "/")
+  write_file(
+      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
+      true)
 }

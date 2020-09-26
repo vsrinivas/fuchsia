@@ -2,9 +2,4 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-allowed_cts_deps = [
-  "//sdk",
-  "//zircon/public/lib/zxtest",
-]
-
 cts_extension = "this_is_cts"

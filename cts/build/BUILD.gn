@@ -1,7 +1,6 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 import("//build/python/python_host_test.gni")
 
 python_host_test("gather_package_deps_test") {
@@ -9,7 +8,15 @@ python_host_test("gather_package_deps_test") {
   sources = [ "gather_package_deps.py" ]
 }
 
+python_host_test("verify_cts_deps_test") {
+  main_source = "verify_cts_deps_test.py"
+  sources = [ "verify_cts_deps.py" ]
+}
+
 group("tests") {
   testonly = true
-  public_deps = [ ":gather_package_deps_test($host_toolchain)" ]
+  public_deps = [
+    ":gather_package_deps_test($host_toolchain)",
+    ":verify_cts_deps_test($host_toolchain)",
+  ]
 }

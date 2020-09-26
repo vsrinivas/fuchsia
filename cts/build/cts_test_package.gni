@@ -18,21 +18,35 @@ import("//src/sys/build/components.gni")
 # ```
 template("cts_test_package") {
   # Ensure that deps and test_components are CTS targets.
+  invoker_deps = []
   if (defined(invoker.deps)) {
-    cts_element("unused") {
-      deps = invoker.deps
-    }
+    invoker_deps += invoker.deps
   }
   if (defined(invoker.test_components)) {
-    cts_element("unused") {
-      deps = invoker.test_components
+    invoker_deps += invoker.test_components
+  }
+  if (invoker_deps != []) {
+    cts_element("${target_name}_verify_deps") {
+      deps = invoker_deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
 
   fuchsia_test_package(target_name) {
     forward_variables_from(invoker, "*")
+    if (invoker_deps != []) {
+      if (defined(deps)) {
+        deps += [ ":${target_name}_verify_deps" ]
+      } else {
+        deps = [ ":${target_name}_verify_deps" ]
+      }
+    }
   }
 
   # Creates a file to enable other CTS targets to depend on this test package.
-  write_file("${root_gen_dir}/cts/${target_name}.${cts_extension}", "true")
+  target_build_dir = get_label_info(":$target_name", "dir")
+  target_build_dir = string_replace(target_build_dir, "//", "/")
+  write_file(
+      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
+      true)
 }

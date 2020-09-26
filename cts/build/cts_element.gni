@@ -9,34 +9,30 @@ import("//cts/build/cts_vars.gni")
 # directly, but through the other CTS templates.
 template("cts_element") {
   assert(defined(invoker.deps))
+  assert(defined(invoker.invoker_label))
 
-  # This template is used for code-reuse, not to create a target, so the
-  # target_name isn't needed.
-  not_needed([ "target_name" ])
-
-  deps = []
+  fully_qualified_deps = []
   foreach(dep, invoker.deps) {
-    allowed = false
-    foreach(adep, allowed_cts_deps) {
-      if (!allowed && dep == adep) {
-        deps += [ dep ]
-        allowed = true
-      }
-    }
+    fully_qualified_deps += [ get_label_info(dep, "label_no_toolchain") ]
+  }
 
-    if (!allowed) {
-      label_name = get_label_info(dep, "name")
-      is_cts = rebase_path("${root_gen_dir}/cts/${label_name}.${cts_extension}")
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+    testonly = true
 
-      # CTS targets can depend on other CTS targets, but not on targets outside
-      # of CTS. To check a target's type, CTS creates a file for each cts_*
-      # invocation and is checked for here.
-      #
-      # If the file is not found, the dependency is not in allowed_cts_deps, it
-      # is not a CTS target, and it cannot be used in CTS.
-      if (read_file(is_cts, "value")) {  # Read above for context.
-        deps += [ dep ]
-      }
-    }
+    script = "//cts/build/verify_cts_deps.py"
+
+    # GN requires an action to output a file. This file is written, but not used.
+    outputs = [ "${target_gen_dir}/${target_name}_DEPFILE" ]
+
+    args = [
+             "--root_build_dir",
+             rebase_path(root_build_dir),
+             "--output",
+             rebase_path(outputs[0]),
+             "--invoker_label",
+             invoker_label,
+             "--deps",
+           ] + fully_qualified_deps
   }
 }
