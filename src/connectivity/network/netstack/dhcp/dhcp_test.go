@@ -44,7 +44,9 @@ var (
 	defaultServerCfg   = Config{
 		ServerAddress: serverAddr,
 		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
+		Router: []tcpip.Address{
+			"\xc0\xa8\x03\xF0",
+		},
 		DNS: []tcpip.Address{
 			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
 		},
@@ -1277,7 +1279,7 @@ func TestTwoServers(t *testing.T) {
 	if _, err := NewServer(ctx, c1, []tcpip.Address{"\xc0\xa8\x03\x02"}, Config{
 		ServerAddress: "\xc0\xa8\x03\x01",
 		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
+		Router:        []tcpip.Address{"\xc0\xa8\x03\xF0"},
 		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
 		LeaseLength:   Seconds(30 * 60),
 	}); err != nil {
@@ -1286,7 +1288,7 @@ func TestTwoServers(t *testing.T) {
 	if _, err := NewServer(ctx, c2, []tcpip.Address{"\xc0\xa8\x04\x02"}, Config{
 		ServerAddress: "\xc0\xa8\x04\x01",
 		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
+		Router:        []tcpip.Address{"\xc0\xa8\x03\xF0"},
 		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
 		LeaseLength:   Seconds(30 * 60),
 	}); err != nil {

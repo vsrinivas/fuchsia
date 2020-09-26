@@ -39,7 +39,7 @@ func (s Seconds) Duration() time.Duration {
 type Config struct {
 	ServerAddress tcpip.Address     // address of the server
 	SubnetMask    tcpip.AddressMask // client address subnet mask
-	Gateway       tcpip.Address     // client default gateway
+	Router        []tcpip.Address   // client router addresses
 	DNS           []tcpip.Address   // client DNS server addresses
 	LeaseLength   Seconds           // length of the address lease
 	RenewTime     Seconds           // time until client enters RENEWING state
@@ -64,14 +64,15 @@ func (cfg *Config) decode(opts []option) error {
 			cfg.SubnetMask = tcpip.AddressMask(b)
 		case optDHCPServer:
 			cfg.ServerAddress = tcpip.Address(b)
-		case optDefaultGateway:
-			cfg.Gateway = tcpip.Address(b)
+		case optRouter:
+			for len(b) != 0 {
+				cfg.Router = append(cfg.Router, tcpip.Address(b[:4]))
+				b = b[4:]
+			}
 		case optDomainNameServer:
-			for ; len(b) > 0; b = b[4:] {
-				if len(b) < 4 {
-					return fmt.Errorf("DNS bad length: %d", len(b))
-				}
+			for len(b) != 0 {
 				cfg.DNS = append(cfg.DNS, tcpip.Address(b[:4]))
+				b = b[4:]
 			}
 		}
 	}
@@ -85,8 +86,12 @@ func (cfg Config) encode() (opts []option) {
 	if cfg.SubnetMask != "" {
 		opts = append(opts, option{optSubnetMask, []byte(cfg.SubnetMask)})
 	}
-	if cfg.Gateway != "" {
-		opts = append(opts, option{optDefaultGateway, []byte(cfg.Gateway)})
+	if len(cfg.Router) > 0 {
+		router := make([]byte, 0, 4*len(cfg.Router))
+		for _, addr := range cfg.Router {
+			router = append(router, addr...)
+		}
+		opts = append(opts, option{optRouter, router})
 	}
 	if len(cfg.DNS) > 0 {
 		dns := make([]byte, 0, 4*len(cfg.DNS))
@@ -263,8 +268,17 @@ func (opt option) String() string {
 type optionCode byte
 
 const (
-	optSubnetMask       optionCode = 1
-	optDefaultGateway   optionCode = 3
+	optSubnetMask optionCode = 1
+	// RFC 2132 section 3.5:
+	//   3.5. Router Option
+	//
+	//   The router option specifies a list of IP addresses for routers on the
+	//   client's subnet.  Routers SHOULD be listed in order of preference.
+	//
+	//   The code for the router option is 3.  The minimum length for the
+	//   router option is 4 octets, and the length MUST always be a multiple
+	//   of 4.
+	optRouter           optionCode = 3
 	optDomainNameServer optionCode = 6
 	optDomainName       optionCode = 15
 	optReqIPAddr        optionCode = 50
@@ -280,13 +294,16 @@ const (
 
 func (code optionCode) lenValid(l int) bool {
 	switch code {
-	case optSubnetMask, optDefaultGateway,
-		optReqIPAddr, optLeaseTime, optDHCPServer,
-		optRenewalTime, optRebindingTime:
+	case optSubnetMask,
+		optReqIPAddr,
+		optLeaseTime,
+		optDHCPServer,
+		optRenewalTime,
+		optRebindingTime:
 		return l == 4
 	case optDHCPMsgType:
 		return l == 1
-	case optDomainNameServer:
+	case optRouter, optDomainNameServer:
 		return l%4 == 0
 	case optMessage, optDomainName, optClientID:
 		return l >= 1

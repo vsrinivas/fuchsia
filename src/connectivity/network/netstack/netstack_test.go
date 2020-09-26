@@ -1155,10 +1155,19 @@ func TestDHCPAcquired(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverAddress := []byte(testV4Address)
-	serverAddress[len(serverAddress)-1]++
-	gatewayAddress := serverAddress
-	gatewayAddress[len(gatewayAddress)-1]++
+	addressBytes := []byte(testV4Address)
+	nextAddress := func() tcpip.Address {
+		addressBytes[len(addressBytes)-1]++
+		return tcpip.Address(addressBytes)
+	}
+
+	serverAddress := nextAddress()
+	router1Address := nextAddress()
+	router2Address := nextAddress()
+	multicastAddress := net.IPv4(0xe8, 0x2b, 0xd3, 0xea)
+	if !multicastAddress.IsMulticast() {
+		t.Fatalf("%s is not a multicast address", multicastAddress)
+	}
 
 	defaultMask := net.IP(testV4Address).DefaultMask()
 	prefixLen, _ := defaultMask.Size()
@@ -1186,11 +1195,20 @@ func TestDHCPAcquired(t *testing.T) {
 				PrefixLen: prefixLen,
 			},
 			config: dhcp.Config{
-				ServerAddress: tcpip.Address(serverAddress),
-				Gateway:       tcpip.Address(serverAddress),
-				SubnetMask:    tcpip.AddressMask(defaultMask),
-				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
-				LeaseLength:   dhcp.Seconds(60),
+				ServerAddress: serverAddress,
+				Router: []tcpip.Address{
+					router1Address,
+					router2Address,
+					header.IPv4Any,
+					header.IPv4Broadcast,
+					tcpip.Address(multicastAddress),
+				},
+				SubnetMask: tcpip.AddressMask(defaultMask),
+				DNS: []tcpip.Address{
+					router1Address,
+					router2Address,
+				},
+				LeaseLength: dhcp.Seconds(60),
 			},
 			expectedRouteTable: []routes.ExtendedRoute{
 				{
@@ -1214,10 +1232,21 @@ func TestDHCPAcquired(t *testing.T) {
 					Dynamic:               true,
 					Enabled:               false,
 				},
+				{
+					Route: tcpip.Route{
+						Destination: destination2,
+						Gateway:     util.Parse("192.168.42.19"),
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
 			},
 		},
 		{
-			name:    "no gateway",
+			name:    "no routers",
 			oldAddr: tcpip.AddressWithPrefix{},
 			newAddr: tcpip.AddressWithPrefix{
 				Address:   testV4Address,

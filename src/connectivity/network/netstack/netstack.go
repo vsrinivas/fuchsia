@@ -652,14 +652,20 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				rs := []tcpip.Route{
 					addressWithPrefixRoute(ifs.nicid, newAddr),
 				}
-				if len(config.Gateway) != 0 {
-					// Add a default route only if a gateway has been set.
-					rs = append(rs, defaultV4Route(ifs.nicid, config.Gateway))
+				// Add a default route through each router.
+				for _, router := range config.Router {
+					// Reject non-unicast addresses to avoid an explosion of traffic in
+					// case of misconfiguration.
+					if ip := net.IP(router); !ip.IsLinkLocalUnicast() && !ip.IsGlobalUnicast() {
+						syslog.Warnf("NIC %s: DHCP specified non-unicast router %s, skipping", name, ip)
+						continue
+					}
+					rs = append(rs, defaultV4Route(ifs.nicid, router))
 				}
 				syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
 
 				if err := ifs.ns.AddRoutes(rs, metricNotSet, true /* dynamic */); err != nil {
-					syslog.Infof("error adding routes for DHCP address/gateway: %s", err)
+					syslog.Infof("error adding routes for DHCP: %s", err)
 				}
 			}
 		}

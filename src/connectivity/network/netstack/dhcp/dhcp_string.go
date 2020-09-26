@@ -72,7 +72,7 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[optSubnetMask-1]
-	_ = x[optDefaultGateway-3]
+	_ = x[optRouter-3]
 	_ = x[optDomainNameServer-6]
 	_ = x[optDomainName-15]
 	_ = x[optReqIPAddr-50]
@@ -88,7 +88,7 @@ func _() {
 
 const (
 	_optionCode_name_0 = "optSubnetMask"
-	_optionCode_name_1 = "optDefaultGateway"
+	_optionCode_name_1 = "optRouter"
 	_optionCode_name_2 = "optDomainNameServer"
 	_optionCode_name_3 = "optDomainName"
 	_optionCode_name_4 = "optReqIPAddroptLeaseTime"
