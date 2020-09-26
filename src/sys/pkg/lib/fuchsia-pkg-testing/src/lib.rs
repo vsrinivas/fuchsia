@@ -16,6 +16,9 @@ pub mod serve;
 mod inspect;
 pub use crate::inspect::get_inspect_hierarchy;
 
+mod fake_pkg_local_mirror;
+pub use crate::fake_pkg_local_mirror::FakePkgLocalMirror;
+
 mod system_image;
 pub use crate::system_image::SystemImageBuilder;
 

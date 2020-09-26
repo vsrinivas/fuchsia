@@ -270,36 +270,29 @@ impl Repository {
     /// `OPEN_RIGHT_WRITABLE`.
     ///
     /// The layout looks like:
-    /// ./fuchsia_pkg
-    ///     FORMAT_VERSION
-    ///     blobs/
-    ///         00/00000000000000000000000000000000000000000000000000000000000000
-    ///         ...
-    ///         ff/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-    ///     repository_metadata/
-    ///         ${url.host()}/
-    ///             root.json
-    ///             ...
-    pub async fn copy_local_repository_to_dir(&self, dst: &DirectoryProxy, url: RepoUrl) {
+    ///   ./FORMAT_VERSION
+    ///   ./blobs/
+    ///       00/00000000000000000000000000000000000000000000000000000000000000
+    ///       ...
+    ///       ff/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    ///   ./repository_metadata/
+    ///       ${url.host()}/
+    ///           root.json
+    ///           ...
+    pub async fn copy_local_repository_to_dir(&self, dst: &DirectoryProxy, url: &RepoUrl) {
         let src =
             directory::open_in_namespace(self.dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
                 .unwrap();
 
-        let fuchsia_pkg =
-            open_directory(dst, "fuchsia_pkg", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-                .await
-                .unwrap();
-        let version =
-            open_file(&fuchsia_pkg, "FORMAT_VERSION", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-                .await
-                .unwrap();
+        let version = open_file(&dst, "FORMAT_VERSION", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
+            .await
+            .unwrap();
         write(&version, "loose").await.unwrap();
 
         // Copy the blobs. Blobs are named after their hashes and (in the target layout) partitioned
         // into subdirectories named after the first two hex characters of their hashes.
-        let blobs = open_directory(&fuchsia_pkg, "blobs", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-            .await
-            .unwrap();
+        let blobs =
+            open_directory(&dst, "blobs", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE).await.unwrap();
         let src_blobs =
             open_directory(&src, "repository/blobs", OPEN_RIGHT_READABLE).await.unwrap();
         let mut blob_sub_dirs = HashMap::new();
@@ -325,13 +318,10 @@ impl Repository {
 
         // Copy the metadata.
         let src_metadata = open_directory(&src, "repository", OPEN_RIGHT_READABLE).await.unwrap();
-        let repository_metadata = open_directory(
-            &fuchsia_pkg,
-            "repository_metadata",
-            OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
-        )
-        .await
-        .unwrap();
+        let repository_metadata =
+            open_directory(&dst, "repository_metadata", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
+                .await
+                .unwrap();
         let hostname_dir = open_directory(
             &repository_metadata,
             url.host(),
@@ -445,39 +435,20 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn local_mirror_dir() {
-        let repodir = tempfile::tempdir().unwrap();
-
-        // Populate repodir with a freshly created repository.
-        AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
-            .arg("newrepo")
-            .arg("-repo=/repo")
-            .add_dir_to_namespace(
-                "/repo".to_owned(),
-                File::open(repodir.path()).context("open /repo").unwrap(),
-            )
-            .unwrap()
-            .output(&launcher().unwrap())
-            .unwrap()
-            .await
-            .unwrap()
-            .ok()
-            .unwrap();
-
-        // Build a repo from the template.
-        let repo = RepositoryBuilder::from_template_dir(repodir.path())
+        let repo = RepositoryBuilder::new()
             .add_package(PackageBuilder::new("test").build().await.unwrap())
             .build()
             .await
             .unwrap();
-
         let local_repodir = tempfile::tempdir().unwrap();
+
         repo.copy_local_repository_to_dir(
             &directory::open_in_namespace(
                 local_repodir.path().to_str().unwrap(),
                 OPEN_RIGHT_WRITABLE,
             )
             .unwrap(),
-            "fuchsia-pkg://repo.example.org".parse().unwrap(),
+            &"fuchsia-pkg://repo.example.org".parse().unwrap(),
         )
         .await;
 
@@ -490,18 +461,14 @@ mod tests {
             &"fuchsia-pkg://fuchsia.com".parse::<RepoUrl>().unwrap()
         );
 
-        assert_eq!(
-            fs::read(local_repodir.path().join("fuchsia_pkg/FORMAT_VERSION")).unwrap(),
-            b"loose"
-        );
+        assert_eq!(fs::read(local_repodir.path().join("FORMAT_VERSION")).unwrap(), b"loose");
         assert!(local_repodir
             .path()
-            .join("fuchsia_pkg/repository_metadata/repo.example.org/1.root.json")
+            .join("repository_metadata/repo.example.org/1.root.json")
             .exists());
         assert!(local_repodir
             .path()
-            .join("fuchsia_pkg/blobs/e5/599ccbeeaae753738c54ec0dbe032cad2086727267ce68542451fbd20ef545")
-            .exists()
-        );
+            .join("blobs/e5/599ccbeeaae753738c54ec0dbe032cad2086727267ce68542451fbd20ef545")
+            .exists());
     }
 }

@@ -513,6 +513,12 @@ impl RepositoryUrl {
     }
 }
 
+impl From<RepoUrl> for RepositoryUrl {
+    fn from(url: RepoUrl) -> Self {
+        Self { url }
+    }
+}
+
 impl TryFrom<&fidl::RepositoryUrl> for RepositoryUrl {
     type Error = RepositoryUrlParseError;
 

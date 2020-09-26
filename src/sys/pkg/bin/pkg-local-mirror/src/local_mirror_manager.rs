@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Context as _, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fdio, DirectoryProxy, FileMarker},
+    fidl_fuchsia_io::{
+        DirectoryProxy, FileMarker, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+    },
     fidl_fuchsia_pkg::{GetBlobError, GetMetadataError},
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryUrl},
     fuchsia_syslog::fx_log_info,
@@ -52,8 +54,8 @@ impl LocalMirrorManager {
         let () = self
             .metadata_dir
             .open(
-                fdio::OPEN_RIGHT_READABLE | fdio::OPEN_FLAG_DESCRIBE,
-                fdio::MODE_TYPE_FILE,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                MODE_TYPE_FILE,
                 &path,
                 ServerEnd::new(metadata.into_channel()),
             )
@@ -78,8 +80,8 @@ impl LocalMirrorManager {
         let () = self
             .blobs_dir
             .open(
-                fdio::OPEN_RIGHT_READABLE | fdio::OPEN_FLAG_DESCRIBE,
-                fdio::MODE_TYPE_FILE,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                MODE_TYPE_FILE,
                 &path,
                 ServerEnd::new(blob.into_channel()),
             )

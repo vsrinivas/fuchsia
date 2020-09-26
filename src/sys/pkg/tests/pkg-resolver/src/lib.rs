@@ -561,12 +561,12 @@ impl<P: PkgFs> TestEnv<P> {
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
-            repo.copy_local_repository_to_dir(&proxy, url).await;
+            repo.copy_local_repository_to_dir(&proxy, &url).await;
 
             Some(AppBuilder::new(
                 "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cmx"
                     .to_owned(),
-            ).add_dir_to_namespace("/usb/0".to_owned(), std::fs::File::open(local_mirror_dir.path()).unwrap()).unwrap())
+            ).add_dir_to_namespace("/usb/0/fuchsia_pkg".to_owned(), std::fs::File::open(local_mirror_dir.path()).unwrap()).unwrap())
         } else {
             None
         };
