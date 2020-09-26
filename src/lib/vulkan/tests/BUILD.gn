@@ -19,7 +19,7 @@ test_package("image-pipe-swapchain-tests") {
     {
       name = "test_image_pipe_swapchain"
       dest = "image-pipe-swapchain-tests"
-      environments = magma_libvulkan_hardware_envs
+      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
     },
   ]
   public_deps =

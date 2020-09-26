@@ -29,6 +29,12 @@ uint64_t ZirconIdFromHandle(uint32_t handle) {
   return info.koid;
 }
 
+VkPhysicalDeviceType GetVkPhysicalDeviceType(VkPhysicalDevice device) {
+  VkPhysicalDeviceProperties properties;
+  vkGetPhysicalDeviceProperties(device, &properties);
+  return properties.deviceType;
+}
+
 // FakeImagePipe runs async loop on its own thread to allow the test
 // to use blocking Vulkan calls while present callbacks are processed.
 class FakeImagePipe : public fuchsia::images::testing::ImagePipe2_TestBase {
@@ -173,6 +179,7 @@ class TestSwapchain {
       fprintf(stderr, "vkEnumeratePhysicalDevices failed: %d\n", result);
       return;
     }
+    vk_physical_device_ = physical_devices[0];
 
     VkPhysicalDeviceProtectedMemoryFeatures protected_memory_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
@@ -181,7 +188,7 @@ class TestSwapchain {
     };
     if (protected_memory_) {
       VkPhysicalDeviceProperties properties;
-      vkGetPhysicalDeviceProperties(physical_devices[0], &properties);
+      vkGetPhysicalDeviceProperties(vk_physical_device_, &properties);
       if (properties.apiVersion < VK_MAKE_VERSION(1, 1, 0)) {
         protected_memory_is_supported_ = false;
         fprintf(stderr, "Vulkan 1.1 is not supported by device\n");
@@ -198,7 +205,7 @@ class TestSwapchain {
       VkPhysicalDeviceFeatures2 physical_device_features = {
           .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
           .pNext = &protected_memory_features};
-      get_physical_device_features_2_(physical_devices[0], &physical_device_features);
+      get_physical_device_features_2_(vk_physical_device_, &physical_device_features);
       protected_memory_is_supported_ = protected_memory_features.protectedMemory;
       if (!protected_memory_is_supported_) {
         fprintf(stderr, "Protected memory is not supported\n");
@@ -244,7 +251,7 @@ class TestSwapchain {
         .ppEnabledExtensionNames = device_ext.data(),
         .pEnabledFeatures = nullptr};
 
-    result = vkCreateDevice(physical_devices[0], &device_create_info, nullptr, &vk_device_);
+    result = vkCreateDevice(vk_physical_device_, &device_create_info, nullptr, &vk_device_);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "vkCreateDevice failed: %d\n", result);
       return;
@@ -359,6 +366,7 @@ class TestSwapchain {
   }
 
   VkInstance vk_instance_;
+  VkPhysicalDevice vk_physical_device_;
   VkDevice vk_device_;
   VkDebugUtilsMessengerEXT messenger_cb_ = nullptr;
   PFN_vkCreateSwapchainKHR create_swapchain_khr_;
@@ -423,6 +431,11 @@ TEST_P(SwapchainTest, CreateTwice) {
 TEST_P(SwapchainTest, CreateForStorage) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
+
+  // TODO(60853): STORAGE usage is currently not supported by FEMU Vulkan ICD.
+  if (GetVkPhysicalDeviceType(test.vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+    GTEST_SKIP();
+  }
   if (protected_memory && !test.protected_memory_is_supported_) {
     GTEST_SKIP();
   }
@@ -434,6 +447,11 @@ TEST_P(SwapchainTest, CreateForStorage) {
 TEST_P(SwapchainTest, CreateForRgbaStorage) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
+
+  // TODO(60853): STORAGE usage is currently not supported by FEMU Vulkan ICD.
+  if (GetVkPhysicalDeviceType(test.vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+    GTEST_SKIP();
+  }
   if (protected_memory && !test.protected_memory_is_supported_) {
     GTEST_SKIP();
   }
@@ -665,6 +683,13 @@ TEST_P(SwapchainFidlTest, ForceQuit) {
 TEST_P(SwapchainFidlTest, AvoidSemaphoreHang) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
+
+  // TODO(58325): The emulator will block of a command queue with a pending fence is submitted. So
+  // this test, which depends on a delayed GPU execution, will deadlock.
+  if (GetVkPhysicalDeviceType(test.vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+    GTEST_SKIP();
+  }
+
   if (protected_memory && !test.protected_memory_is_supported_) {
     GTEST_SKIP();
   }
