@@ -2,18 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/integrity_reporter.h"
+#include "src/developer/forensics/feedback_data/metadata.h"
 
+#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/errors.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
 // TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/rapidjson.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
 namespace forensics {
 namespace feedback_data {
 namespace {
+
+using namespace rapidjson;
 
 std::string ToString(const enum AttachmentValue::State state) {
   switch (state) {
@@ -77,29 +82,28 @@ Attachments AllAttachments(const AttachmentKeys& allowlist,
 }
 
 void AddAttachments(const AttachmentKeys& attachment_allowlist,
-                    const ::fit::result<Attachments>& attachments_result,
-                    rapidjson::Document* integrity_report) {
+                    const ::fit::result<Attachments>& attachments_result, Document* metadata_json) {
   if (attachment_allowlist.empty()) {
     return;
   }
 
-  rapidjson::Document::AllocatorType& allocator = integrity_report->GetAllocator();
+  auto& allocator = metadata_json->GetAllocator();
+  auto MakeValue = [&allocator](const std::string& v) { return Value(v, allocator); };
 
   for (const auto& [name, v] : AllAttachments(attachment_allowlist, attachments_result)) {
-    rapidjson::Value attachment(rapidjson::kObjectType);
-    attachment.AddMember("state", rapidjson::Value(ToString(v.State()), allocator), allocator);
+    Value file(kObjectType);
+    file.AddMember("state", MakeValue(ToString(v.State())), allocator);
     if (v.HasError()) {
-      attachment.AddMember("reason", rapidjson::Value(ToReason(v.Error()), allocator), allocator);
+      file.AddMember("error", MakeValue(ToReason(v.Error())), allocator);
     }
 
-    integrity_report->AddMember(rapidjson::Value(name, allocator), attachment, allocator);
+    (*metadata_json)["files"].AddMember(MakeValue(name), file, allocator);
   }
 }
 
 void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
                         const ::fit::result<Annotations>& annotations_result,
-                        const bool missing_non_platform_annotations,
-                        rapidjson::Document* integrity_report) {
+                        const bool missing_non_platform_annotations, Document* metadata_json) {
   const Annotations all_annotations = AllAnnotations(annotation_allowlist, annotations_result);
 
   bool has_non_platform = all_annotations.size() > annotation_allowlist.size();
@@ -107,10 +111,11 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
     return;
   }
 
-  rapidjson::Document::AllocatorType& allocator = integrity_report->GetAllocator();
+  auto& allocator = metadata_json->GetAllocator();
+  auto MakeValue = [&allocator](const std::string& v) { return Value(v, allocator); };
 
-  rapidjson::Value present(rapidjson::kArrayType);
-  rapidjson::Value missing(rapidjson::kObjectType);
+  Value present(kArrayType);
+  Value missing(kObjectType);
 
   size_t num_present_platform = 0u;
   size_t num_missing_platform = 0u;
@@ -119,12 +124,12 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
       continue;
     }
 
-    rapidjson::Value key(k, allocator);
+    Value key(MakeValue(k));
     if (v.HasValue()) {
       present.PushBack(key, allocator);
       ++num_present_platform;
     } else {
-      missing.AddMember(key, rapidjson::Value(ToReason(v.Error()), allocator), allocator);
+      missing.AddMember(key, MakeValue(ToReason(v.Error())), allocator);
       ++num_missing_platform;
     }
   }
@@ -138,7 +143,7 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
     }
   }
 
-  rapidjson::Value state;
+  Value state;
   if (num_present_platform == annotation_allowlist.size() && !missing_non_platform_annotations) {
     state = "complete";
   } else if (num_missing_platform == annotation_allowlist.size() && !has_non_platform &&
@@ -148,45 +153,55 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
     state = "partial";
   }
 
-  rapidjson::Value annotations_json(rapidjson::kObjectType);
+  Value annotations_json(kObjectType);
   annotations_json.AddMember("state", state, allocator);
   annotations_json.AddMember("missing annotations", missing, allocator);
   annotations_json.AddMember("present annotations", present, allocator);
 
-  integrity_report->AddMember("annotations.json", annotations_json, allocator);
+  (*metadata_json)["files"].AddMember("annotations.json", annotations_json, allocator);
 }
 
 }  // namespace
 
-IntegrityReporter::IntegrityReporter(const AnnotationKeys& annotation_allowlist,
-                                     const AttachmentKeys& attachment_allowlist)
+Metadata::Metadata(const AnnotationKeys& annotation_allowlist,
+                   const AttachmentKeys& attachment_allowlist)
     : annotation_allowlist_(annotation_allowlist), attachment_allowlist_(attachment_allowlist) {}
 
-std::optional<std::string> IntegrityReporter::MakeIntegrityReport(
-    const ::fit::result<Annotations>& annotations_result,
-    const ::fit::result<Attachments>& attachments_result,
-    bool missing_non_platform_annotations) const {
+std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations_result,
+                                   const ::fit::result<Attachments>& attachments_result,
+                                   bool missing_non_platform_annotations) const {
+  Document metadata_json(kObjectType);
+  auto& allocator = metadata_json.GetAllocator();
+
+  auto MetadataString = [&metadata_json]() {
+    StringBuffer buffer;
+    PrettyWriter<StringBuffer> writer(buffer);
+
+    metadata_json.Accept(writer);
+
+    return std::string(buffer.GetString());
+  };
+
+  // Insert all top-level fields
+  metadata_json.AddMember("snapshot_version", Value(SnapshotVersion::kString, allocator),
+                          allocator);
+  metadata_json.AddMember("metadata_version", Value(Metadata::kVersion, allocator), allocator);
+  metadata_json.AddMember("files", Value(kObjectType), allocator);
+
   const bool has_non_platform_annotations =
       annotations_result.is_ok() &&
       annotations_result.value().size() > annotation_allowlist_.size();
 
   if (annotation_allowlist_.empty() && attachment_allowlist_.empty() &&
       !has_non_platform_annotations && !missing_non_platform_annotations) {
-    return std::nullopt;
+    return MetadataString();
   }
 
-  rapidjson::Document integrity_report(rapidjson::kObjectType);
-
-  AddAttachments(attachment_allowlist_, attachments_result, &integrity_report);
+  AddAttachments(attachment_allowlist_, attachments_result, &metadata_json);
   AddAnnotationsJson(annotation_allowlist_, annotations_result, missing_non_platform_annotations,
-                     &integrity_report);
+                     &metadata_json);
 
-  rapidjson::StringBuffer buffer;
-  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-
-  integrity_report.Accept(writer);
-
-  return buffer.GetString();
+  return MetadataString();
 }
 
 }  // namespace feedback_data

@@ -48,12 +48,11 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 }  // namespace
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services,
-                           IntegrityReporter integrity_reporter, cobalt::Logger* cobalt,
-                           Datastore* datastore)
+                           std::shared_ptr<sys::ServiceDirectory> services, Metadata metadata,
+                           cobalt::Logger* cobalt, Datastore* datastore)
     : dispatcher_(dispatcher),
       services_(services),
-      integrity_reporter_(integrity_reporter),
+      metadata_(metadata),
       cobalt_(cobalt),
       datastore_(datastore),
       executor_(dispatcher_) {}
@@ -100,12 +99,9 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
               }
             }
 
-            if (const auto integrity_report = integrity_reporter_.MakeIntegrityReport(
-                    annotations_result, attachments_result,
-                    datastore_->IsMissingNonPlatformAnnotations());
-                integrity_report.has_value()) {
-              attachments[kAttachmentManifest] = integrity_report.value();
-            }
+            attachments[kAttachmentMetadata] =
+                metadata_.MakeMetadata(annotations_result, attachments_result,
+                                       datastore_->IsMissingNonPlatformAnnotations());
 
             // We bundle the attachments into a single attachment.
             if (!attachments.empty()) {

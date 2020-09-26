@@ -48,7 +48,7 @@ source_set("data_provider") {
   ]
 
   public_deps = [
-    ":integrity_reporter",
+    ":metadata",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils/cobalt",
@@ -201,10 +201,11 @@ source_set("inspect_manager") {
   deps = [ "//src/developer/forensics/utils:inspect_protocol_stats" ]
 }
 
-source_set("integrity_reporter") {
+source_set("metadata") {
   sources = [
-    "integrity_reporter.cc",
-    "integrity_reporter.h",
+    "metadata.cc",
+    "metadata.h",
+    "metadata_schema.h",
   ]
 
   public_deps = [
@@ -214,6 +215,7 @@ source_set("integrity_reporter") {
   ]
 
   deps = [
+    ":constants",
     ":errors",
     "//src/developer/forensics/utils:errors",
 

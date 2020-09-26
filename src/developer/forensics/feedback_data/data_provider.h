@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback_data/datastore.h"
-#include "src/developer/forensics/feedback_data/integrity_reporter.h"
+#include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
@@ -23,7 +23,7 @@ namespace feedback_data {
 class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               IntegrityReporter integrity_reporter, cobalt::Logger* cobalt, Datastore* datastore);
+               Metadata metadata, cobalt::Logger* cobalt, Datastore* datastore);
 
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
@@ -34,7 +34,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  const IntegrityReporter integrity_reporter_;
+  const Metadata metadata_;
   cobalt::Logger* cobalt_;
   Datastore* datastore_;
   async::Executor executor_;

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/metadata_unittest_exe"
+    }
+}

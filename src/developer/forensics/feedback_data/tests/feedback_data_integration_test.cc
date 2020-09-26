@@ -316,7 +316,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
                                         Key(kAttachmentInspect),
                                         Key(kAttachmentLogKernel),
                                         Key(kAttachmentLogSystem),
-                                        Key(kAttachmentManifest),
+                                        Key(kAttachmentMetadata),
                                     }));
 
   ASSERT_NE(unpacked_attachments.find(kAttachmentInspect), unpacked_attachments.end());

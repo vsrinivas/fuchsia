@@ -83,7 +83,7 @@ executable("data_provider_unittest_exe") {
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:device_id_provider",
-    "//src/developer/forensics/feedback_data:integrity_reporter",
+    "//src/developer/forensics/feedback_data:metadata",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gmatchers",
@@ -273,14 +273,16 @@ executable("inspect_ptr_unittest_exe") {
   ]
 }
 
-executable("integrity_reporter_unittest_exe") {
+executable("metadata_unittest_exe") {
   testonly = true
 
-  sources = [ "integrity_reporter_unittest.cc" ]
+  sources = [ "metadata_unittest.cc" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:integrity_reporter",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data:metadata",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:errors",
@@ -574,12 +576,12 @@ fuchsia_component("inspect_test_app") {
   deps = [ ":inspect_exe" ]
 }
 
-fuchsia_component("integrity_reporter_unittest") {
+fuchsia_component("metadata_unittest") {
   testonly = true
 
-  manifest = "meta/integrity_reporter_unittest.cmx"
+  manifest = "meta/metadata_unittest.cmx"
 
-  deps = [ ":integrity_reporter_unittest_exe" ]
+  deps = [ ":metadata_unittest_exe" ]
 }
 
 fuchsia_component("kernel_log_ptr_integration_test") {
@@ -647,7 +649,7 @@ fuchsia_test_package("feedback-data-tests") {
     ":device_id_provider_unittest",
     ":feedback_data_integration_test",
     ":inspect_ptr_unittest",
-    ":integrity_reporter_unittest",
+    ":metadata_unittest",
     ":kernel_log_ptr_integration_test",
     ":last_reboot_info_provider_unittest",
     ":main_service_unittest",

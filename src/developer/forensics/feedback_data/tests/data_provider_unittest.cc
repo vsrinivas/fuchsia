@@ -26,7 +26,7 @@
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
-#include "src/developer/forensics/feedback_data/integrity_reporter.h"
+#include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -157,7 +157,7 @@ class DataProviderTest : public UnitTestFixture {
                                              annotation_allowlist, attachment_allowlist,
                                              &device_id_provider_, /*is_first_instance=*/true);
     data_provider_ = std::make_unique<DataProvider>(
-        dispatcher(), services(), IntegrityReporter(annotation_allowlist, attachment_allowlist),
+        dispatcher(), services(), Metadata(annotation_allowlist, attachment_allowlist),
         cobalt_.get(), datastore_.get());
   }
 
@@ -412,8 +412,8 @@ TEST_F(DataProviderTest, GetSnapshot_ManifestAsAttachment) {
   Snapshot snapshot = GetSnapshot();
   auto unpacked_attachments = UnpackSnapshot(snapshot);
 
-  // There should be a "manifest.json" attachment present in the snapshot.
-  ASSERT_NE(unpacked_attachments.find(kAttachmentManifest), unpacked_attachments.end());
+  // There should be a "metadata.json" attachment present in the snapshot.
+  ASSERT_NE(unpacked_attachments.find(kAttachmentMetadata), unpacked_attachments.end());
 }
 
 TEST_F(DataProviderTest, GetSnapshot_SingleAttachmentOnEmptyAttachmentAllowlist) {
@@ -422,13 +422,6 @@ TEST_F(DataProviderTest, GetSnapshot_SingleAttachmentOnEmptyAttachmentAllowlist)
   Snapshot snapshot = GetSnapshot();
   auto unpacked_attachments = UnpackSnapshot(snapshot);
   ASSERT_NE(unpacked_attachments.find(kAttachmentAnnotations), unpacked_attachments.end());
-}
-
-TEST_F(DataProviderTest, GetSnapshot_NoDataOnEmptyAllowlists) {
-  SetUpDataProvider(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
-
-  Snapshot snapshot = GetSnapshot();
-  EXPECT_TRUE(snapshot.IsEmpty());
 }
 
 }  // namespace
