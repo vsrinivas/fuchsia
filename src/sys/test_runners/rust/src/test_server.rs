@@ -358,7 +358,9 @@ impl TestServer {
         match process_info.return_code {
             TR_OK => Ok(ftest::Result_ { status: Some(ftest::Status::Passed) }),
             TR_FAILED => {
-                test_logger.write_str("test failed.\n").await?;
+                // Add a preceding newline so that this does not mix with test output, as
+                // test output might not contain a newline at end.
+                test_logger.write_str("\ntest failed.\n").await?;
                 Ok(ftest::Result_ { status: Some(ftest::Status::Failed) })
             }
             other => Err(RunTestError::UnexpectedReturnCode(other)),
