@@ -18,10 +18,8 @@ use {
             Component, DataModel, Manifest, ManifestData, Package, Route, Zbi, ZbiType,
         },
     },
-    scrutiny_utils::{bootfs::*, zbi::*},
+    scrutiny_utils::{bootfs::*, env, zbi::*},
     std::collections::HashMap,
-    std::env,
-    std::path::Path,
     std::str,
     std::sync::Arc,
 };
@@ -31,7 +29,7 @@ lazy_static! {
     static ref SERVICE_CONFIG_RE: Regex = Regex::new(r"data/sysmgr/.+\.config").unwrap();
 }
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
-pub const REPOSITORY_PATH: &str = "out/default/amber-files/repository";
+pub const REPOSITORY_PATH: &str = "amber-files/repository";
 
 pub struct PackageDataCollector {
     package_reader: Box<dyn PackageReader>,
@@ -39,18 +37,13 @@ pub struct PackageDataCollector {
 
 impl PackageDataCollector {
     pub fn new() -> Result<Self> {
-        let fuchsia_dir = env::var("FUCHSIA_DIR")?;
-        if fuchsia_dir.len() == 0 {
-            return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
-        }
-
-        let repository_path = Path::new(&fuchsia_dir).join(REPOSITORY_PATH);
+        let fuchsia_build_dir = env::fuchsia_build_dir()?;
+        let repository_path = fuchsia_build_dir.join(REPOSITORY_PATH);
         info!("Repository Path: {:?}", repository_path);
         Ok(Self {
-            package_reader: Box::new(PackageServerReader::new(
-                fuchsia_dir,
-                Box::new(ArtifactGetter::new(&repository_path)),
-            )),
+            package_reader: Box::new(PackageServerReader::new(Box::new(ArtifactGetter::new(
+                &repository_path,
+            )))),
         })
     }
 
@@ -169,11 +162,9 @@ impl PackageDataCollector {
     /// model.
     fn extract_zbi(package: &PackageDefinition) -> Result<Zbi> {
         info!("Extracting the ZBI from {}", package.url);
-        let fuchsia_dir = env::var("FUCHSIA_DIR")?;
-        if fuchsia_dir.len() == 0 {
-            return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
-        }
-        let getter = ArtifactGetter::new(&Path::new(&fuchsia_dir).join(REPOSITORY_PATH));
+        let fuchsia_build_dir = env::fuchsia_build_dir()?;
+        let repository_path = fuchsia_build_dir.join(REPOSITORY_PATH);
+        let getter = ArtifactGetter::new(&repository_path);
         for (path, merkle) in package.contents.iter() {
             if path == "zbi" || path == "zbi.signed" {
                 let zbi_data = getter.read_raw(&format!("blobs/{}", merkle))?;

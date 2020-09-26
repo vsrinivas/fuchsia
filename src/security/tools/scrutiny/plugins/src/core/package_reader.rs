@@ -7,8 +7,7 @@ use {
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
     std::collections::HashMap,
-    std::fs::File,
-    std::io::{BufReader, Cursor},
+    std::io::Cursor,
     std::str,
 };
 
@@ -35,13 +34,12 @@ pub trait PackageReader: Send + Sync {
 }
 
 pub struct PackageServerReader {
-    fuchsia_root: String,
     pkg_getter: Box<dyn PackageGetter>,
 }
 
 impl PackageServerReader {
-    pub fn new(fuchsia_root: String, pkg_getter: Box<dyn PackageGetter>) -> Self {
-        Self { fuchsia_root: fuchsia_root, pkg_getter: pkg_getter }
+    pub fn new(pkg_getter: Box<dyn PackageGetter>) -> Self {
+        Self { pkg_getter }
     }
 
     fn read_blob_raw(&self, merkle: &str) -> Result<Vec<u8>> {
@@ -123,10 +121,8 @@ impl PackageReader for PackageServerReader {
     }
 
     fn read_builtins(&self) -> Result<BuiltinsJson> {
-        let file = File::open(&format!("{}/scripts/scrutiny/builtins.json", self.fuchsia_root))?;
-        let mut reader = BufReader::new(file);
-
-        Ok(serde_json::from_reader(&mut reader)?)
+        const BUILTINS_JSON: &str = include_str!("builtins.json");
+        Ok(serde_json::from_str(BUILTINS_JSON)?)
     }
 }
 
@@ -199,7 +195,7 @@ mod tests {
         let mock_getter = MockPackageGetter::new();
         mock_getter.append_bytes(target.into_inner());
 
-        let pkg_reader = PackageServerReader::new(String::from("/"), Box::new(mock_getter));
+        let pkg_reader = PackageServerReader::new(Box::new(mock_getter));
         let result = pkg_reader.read_package_definition("foo", "bar").unwrap();
         assert_eq!(result.contents.len(), 3);
         assert_eq!(result.contents["a"], "b");

@@ -15,14 +15,13 @@ use {
         model::model::*,
         plugin,
     },
-    scrutiny_utils::{bootfs::*, usage::*, zbi::*},
+    scrutiny_utils::{bootfs::*, env, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
-    std::env,
     std::fs::{self, File},
     std::io::prelude::*,
     std::io::Cursor,
-    std::path::{Path, PathBuf},
+    std::path::PathBuf,
     std::sync::Arc,
 };
 
@@ -119,15 +118,15 @@ struct PackageExtractRequest {
     output: String,
 }
 
-pub const BLOBS_PATH: &str = "out/default/amber-files/repository/blobs";
+pub const BLOBS_PATH: &str = "amber-files/repository/blobs";
 
 #[derive(Default)]
 pub struct PackageExtractController {}
 
 impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let fuchsia_dir = env::var("FUCHSIA_DIR")?;
-        let blob_dir = Path::new(&fuchsia_dir).join(BLOBS_PATH);
+        let fuchsia_build_dir = env::fuchsia_build_dir()?;
+        let blob_dir = fuchsia_build_dir.join(BLOBS_PATH);
 
         let request: PackageExtractRequest = serde_json::from_value(query)?;
         let packages = model.packages().read().unwrap();

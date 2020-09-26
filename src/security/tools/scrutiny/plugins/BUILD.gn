@@ -55,6 +55,9 @@ if (!is_fuchsia) {
       "src/model.rs",
       "src/toolkit.rs",
     ]
+    inputs = [
+      "src/core/builtins.json",
+    ]
   }
 }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod bootfs;
+pub mod env;
 pub mod usage;
 pub mod zbi;
 pub mod zstd;

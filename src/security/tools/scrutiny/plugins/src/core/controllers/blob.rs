@@ -9,15 +9,13 @@ use {
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
-    scrutiny_utils::usage::UsageBuilder,
+    scrutiny_utils::{env, usage::UsageBuilder},
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
-    std::env,
-    std::path::Path,
     std::sync::Arc,
 };
 
-pub const REPOSITORY_PATH: &str = "out/default/amber-files/repository";
+pub const REPOSITORY_PATH: &str = "amber-files/repository";
 
 #[derive(Deserialize, Serialize)]
 struct BlobRequest {
@@ -38,8 +36,8 @@ pub struct BlobController {
 
 impl BlobController {
     pub fn new() -> Self {
-        if let Ok(fuchsia_dir) = env::var("FUCHSIA_DIR") {
-            let repository_path = Path::new(&fuchsia_dir).join(REPOSITORY_PATH);
+        if let Ok(fuchsia_build_dir) = env::fuchsia_build_dir() {
+            let repository_path = fuchsia_build_dir.join(REPOSITORY_PATH);
             Self { getter: Some(ArtifactGetter::new(&repository_path)) }
         } else {
             Self { getter: None }
