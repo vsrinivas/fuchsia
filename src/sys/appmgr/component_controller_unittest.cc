@@ -100,7 +100,7 @@ bool PathExists(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string path,
   for (size_t i = 0; i < ntokens; i++) {
     auto token = tokens[i];
     pdir = dir;
-    if (pdir->Lookup(&dir, token) != ZX_OK) {
+    if (pdir->Lookup(token, &dir) != ZX_OK) {
       return false;
     }
   }
@@ -269,7 +269,7 @@ fbl::String get_value(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string pat
   for (size_t i = 0; i < ntokens; i++) {
     auto token = tokens[i];
     pdir = node;
-    if (pdir->Lookup(&node, token) != ZX_OK) {
+    if (pdir->Lookup(token, &node) != ZX_OK) {
       EXPECT_FALSE(true) << token << " not found";
       return "";
     }

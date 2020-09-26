@@ -103,7 +103,7 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
     return;
   }
   fbl::RefPtr<fs::Vnode> child;
-  zx_status_t status = root_->Lookup(&child, service_name);
+  zx_status_t status = root_->Lookup(service_name, &child);
   if (status == ZX_OK) {
     status = vfs_.Serve(child, std::move(channel), fs::VnodeConnectionOptions());
     if (status != ZX_OK) {
@@ -134,13 +134,13 @@ fs::VnodeProtocolSet ServiceProviderDirImpl::GetProtocols() const {
   return fs::VnodeProtocol::kDirectory;
 }
 
-zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t ServiceProviderDirImpl::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   const std::string service_name(name.data(), name.length());
   if (!IsServiceAllowlisted(service_name)) {
     FX_LOGS(WARNING) << ServiceNotInSandbox(component_moniker_, service_name);
     return ZX_ERR_NOT_FOUND;
   }
-  zx_status_t status = root_->Lookup(out, name);
+  zx_status_t status = root_->Lookup(name, out);
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << ServiceNotAvailable(component_moniker_, service_name);
   }

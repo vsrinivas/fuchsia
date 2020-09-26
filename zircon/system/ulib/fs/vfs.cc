@@ -73,7 +73,7 @@ zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, fbl::RefPtr
     *out = std::move(vn);
     return ZX_OK;
   }
-  return vn->Lookup(out, name);
+  return vn->Lookup(name, out);
 }
 
 // Validate open flags as much as they can be validated
@@ -124,7 +124,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
   if ((r = PrevalidateOptions(options)) != ZX_OK) {
     return r;
   }
-  if ((r = Vfs::Walk(vndir, &vndir, path, &path)) < 0) {
+  if ((r = Vfs::Walk(vndir, path, &vndir, &path)) < 0) {
     return r;
   }
 #ifdef __Fuchsia__
@@ -224,7 +224,7 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
   } else if (ReadonlyLocked()) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  if ((status = vndir->Create(out_vn, path, mode)) != ZX_OK) {
+  if ((status = vndir->Create(path, mode, out_vn)) != ZX_OK) {
     *did_create = false;
     if ((status == ZX_ERR_ALREADY_EXISTS) && !options.flags.fail_if_exists) {
       return LookupNode(std::move(vndir), path, out_vn);
@@ -437,7 +437,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::String
 
   // Look up the target vnode
   fbl::RefPtr<Vnode> target;
-  if ((r = oldparent->Lookup(&target, oldStr)) < 0) {
+  if ((r = oldparent->Lookup(oldStr, &target)) < 0) {
     return r;
   }
   r = newparent->Link(newStr, target);
@@ -577,7 +577,7 @@ void Vfs::SetReadonly(bool value) {
   readonly_ = value;
 }
 
-zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn, fbl::StringPiece path,
+zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, fbl::RefPtr<Vnode>* out_vn,
                       fbl::StringPiece* out_path) {
   zx_status_t r;
   while (!path.empty() && path[path.length() - 1] == '/') {

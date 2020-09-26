@@ -23,7 +23,7 @@ RealmHub::RealmHub(fbl::RefPtr<fs::PseudoDir> root)
 zx_status_t RealmHub::AddRealm(const HubInfo& hub_info) {
   fbl::RefPtr<fs::Vnode> realm_instance_vnode;
   fbl::RefPtr<fs::PseudoDir> realm_instance_dir;
-  zx_status_t status = realm_dir_->Lookup(&realm_instance_vnode, hub_info.label());
+  zx_status_t status = realm_dir_->Lookup(hub_info.label(), &realm_instance_vnode);
   if (status == ZX_ERR_NOT_FOUND) {
     realm_instance_dir = fbl::AdoptRef(new fs::PseudoDir());
     realm_dir_->AddEntry(hub_info.label(), realm_instance_dir);
@@ -36,7 +36,7 @@ zx_status_t RealmHub::AddRealm(const HubInfo& hub_info) {
 
 zx_status_t RealmHub::RemoveRealm(const HubInfo& hub_info) {
   fbl::RefPtr<fs::Vnode> realm_instance_vnode;
-  zx_status_t status = realm_dir_->Lookup(&realm_instance_vnode, hub_info.label());
+  zx_status_t status = realm_dir_->Lookup(hub_info.label(), &realm_instance_vnode);
   if (status == ZX_OK) {
     auto realm_instance_dir =
         fbl::RefPtr<fs::PseudoDir>(static_cast<fs::PseudoDir*>(realm_instance_vnode.get()));

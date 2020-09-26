@@ -47,7 +47,7 @@ TEST_F(InspectManagerTestCase, DirectoryEntries) {
   // Check entries of diagnostics/driver_manager
   {
     fbl::RefPtr<fs::Vnode> node;
-    inspect_manager().diagnostics_dir().Lookup(&node, "driver_manager");
+    inspect_manager().diagnostics_dir().Lookup("driver_manager", &node);
     fs::vdircookie_t cookie = {};
     EXPECT_EQ(node->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
     fs::DirentChecker dc(buffer, length);

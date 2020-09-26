@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/pseudo_dir.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 
 #include <utility>
 
 #include <fbl/auto_lock.h>
+#include <fs/pseudo_dir.h>
 #include <fs/vfs_types.h>
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -34,7 +34,7 @@ zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t PseudoDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   fbl::AutoLock lock(&mutex_);
 
   auto it = entries_by_name_.find(name);

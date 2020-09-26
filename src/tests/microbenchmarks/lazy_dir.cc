@@ -61,7 +61,7 @@ bool TestLookup(perftest::RepeatState* state, size_t file_count) {
   int i = 0;
   while (state->KeepRunning()) {
     fbl::RefPtr<fs::Vnode> out;
-    ASSERT_OK(dir->Lookup(&out, file_names[i]));
+    ASSERT_OK(dir->Lookup(file_names[i], &out));
     i = (i + 1) % file_names.size();
   }
   return true;

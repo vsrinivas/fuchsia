@@ -494,7 +494,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
   return ZX_ERR_NOT_FILE;
 }
 
-zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("minfs", "Directory::Lookup", "name", name);
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
@@ -606,7 +606,7 @@ fail:
   return ZX_ERR_IO;
 }
 
-zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("minfs", "Directory::Create", "name", name);
 
   if (!fs::vfs_valid_name(name)) {
@@ -851,7 +851,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   // directory.
   if ((args.type == kMinfsTypeDir) && (GetIno() != newdir->GetIno())) {
     fbl::RefPtr<fs::Vnode> vn_fs;
-    if ((status = newdir->Lookup(&vn_fs, newname)) < 0) {
+    if ((status = newdir->Lookup(newname, &vn_fs)) < 0) {
       return status;
     }
     auto vn = fbl::RefPtr<Directory>::Downcast(vn_fs);

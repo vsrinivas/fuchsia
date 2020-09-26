@@ -59,7 +59,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
   return ZX_ERR_NOT_FILE;
 }
 
-zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("blobfs", "Directory::Lookup", "name", name);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kLookUp);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
@@ -96,7 +96,7 @@ zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
   return ZX_OK;
 }
 
-zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("blobfs", "Directory::Create", "name", name, "mode", mode);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kCreate);
   assert(memchr(name.data(), '/', name.length()) == nullptr);

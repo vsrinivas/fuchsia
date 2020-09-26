@@ -84,8 +84,8 @@ fs::VnodeProtocolSet ServiceProviderBridge::ServiceProviderDir::GetProtocols() c
   return fs::VnodeProtocol::kDirectory;
 }
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out,
-                                                              fbl::StringPiece name) {
+zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::StringPiece name,
+                                                              fbl::RefPtr<fs::Vnode>* out) {
   *out = fbl::AdoptRef(new fs::Service(
       [bridge = bridge_, name = std::string(name.data(), name.length())](zx::channel channel) {
         if (bridge) {

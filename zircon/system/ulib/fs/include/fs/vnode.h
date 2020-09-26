@@ -45,8 +45,7 @@ struct vdircookie_t;
 
 inline bool vfs_valid_name(fbl::StringPiece name) {
   return name.length() > 0 && name.length() <= NAME_MAX &&
-      memchr(name.data(), '/', name.length()) == nullptr &&
-      name != "." && name != "..";
+         memchr(name.data(), '/', name.length()) == nullptr && name != "." && name != "..";
 }
 
 // The VFS interface declares a default abstract Vnode class with
@@ -284,7 +283,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Attempt to find child of vn, child returned on success.
   // Name is len bytes long, and does not include a null terminator.
-  virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name);
+  virtual zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<Vnode>* out);
 
   // Read attributes of the vnode.
   virtual zx_status_t GetAttributes(fs::VnodeAttributes* a);
@@ -296,7 +295,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // has been already opened i.e. |Open()| is not called again on the created vnode.
   // Name is len bytes long, and does not include a null terminator.
   // Mode specifies the type of entity to create.
-  virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32_t mode);
+  virtual zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<Vnode>* out);
 
   // Removes name from directory vn
   virtual zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir);

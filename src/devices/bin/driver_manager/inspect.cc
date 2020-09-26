@@ -133,7 +133,7 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
     for (unsigned n = 0; n < 1000; n++) {
       snprintf(tmp, sizeof(tmp), "%03u.inspect", ((*seqcount)++) % 1000);
       fbl::RefPtr<fs::Vnode> node;
-      if (dir->Lookup(&node, tmp) == ZX_ERR_NOT_FOUND) {
+      if (dir->Lookup(tmp, &node) == ZX_ERR_NOT_FOUND) {
         name = tmp;
         break;
       }

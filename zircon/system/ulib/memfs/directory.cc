@@ -81,7 +81,7 @@ zx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(); }
 zx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
 void VnodeDir::SetRemote(zx::channel remote) { return remoter_.SetRemote(std::move(remote)); }
 
-zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t VnodeDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   if (!IsDirectory()) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -133,7 +133,7 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len,
 }
 
 // postcondition: reference taken on vn returned through "out"
-zx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+zx_status_t VnodeDir::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   zx_status_t status;
   if ((status = CanCreate(name)) != ZX_OK) {
     return status;

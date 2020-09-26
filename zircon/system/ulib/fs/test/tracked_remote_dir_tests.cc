@@ -41,19 +41,19 @@ TEST(TrackedRemoteDir, AddingTrackedDirectory) {
 
   // "name" should not yet exist within the directory.
   fbl::RefPtr<fs::Vnode> node;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, name));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(name, &node));
 
   // Add a remote directory, observe that it can be looked up.
   auto remote = fbl::AdoptRef<TestRemoteDir>(new TestRemoteDir(std::move(client), &loop));
   EXPECT_EQ(ZX_OK, remote->AddAsTrackedEntry(loop.dispatcher(), dir.get(), name));
   remote.reset();
-  EXPECT_EQ(ZX_OK, dir->Lookup(&node, name));
+  EXPECT_EQ(ZX_OK, dir->Lookup(name, &node));
   node.reset();
 
   // Forcing the remote connection to become "peer closed" causes the entry to be removed.
   server.reset();
   EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run());
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, name));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(name, &node));
 }
 
 TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
@@ -81,7 +81,7 @@ TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
   server.reset();
   EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run());
   fbl::RefPtr<fs::Vnode> node;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, name));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(name, &node));
 }
 
 TEST(TrackedRemoteDir, TrackAddingDifferentVnode) {
@@ -114,7 +114,7 @@ TEST(TrackedRemoteDir, TrackAddingDifferentVnode) {
   fbl::RefPtr<fs::Vnode> node;
 
   // The underlying entry should NOT have been removed.
-  EXPECT_EQ(ZX_OK, dir->Lookup(&node, name));
+  EXPECT_EQ(ZX_OK, dir->Lookup(name, &node));
 }
 
 }  // namespace

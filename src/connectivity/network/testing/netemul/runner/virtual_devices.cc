@@ -82,7 +82,7 @@ fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(std::vector<std::string_
 
   for (auto i = parts.begin(); i != parts.end(); i++) {
     fbl::RefPtr<fs::Vnode> node;
-    if (dir->Lookup(&node, *i) == ZX_OK) {
+    if (dir->Lookup(*i, &node) == ZX_OK) {
       dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
     } else {
       auto ndir = fbl::AdoptRef(new fs::PseudoDir());

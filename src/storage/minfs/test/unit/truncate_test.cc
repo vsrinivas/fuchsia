@@ -20,7 +20,7 @@ class TruncateTest : public JournalIntegrationFixture {
     fbl::RefPtr<VnodeMinfs> root;
     ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
     fbl::RefPtr<fs::Vnode> foo;
-    ASSERT_OK(root->Create(&foo, "foo", 0));
+    ASSERT_OK(root->Create("foo", 0, &foo));
     auto close = fbl::MakeAutoCall([foo]() { ASSERT_OK(foo->Close()); });
     std::vector<uint8_t> buf(kMinfsBlockSize + 10, kFill);
     size_t written;
@@ -42,7 +42,7 @@ TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
   fbl::RefPtr<VnodeMinfs> root;
   ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
   fbl::RefPtr<fs::Vnode> foo;
-  ASSERT_OK(root->Lookup(&foo, "foo"));
+  ASSERT_OK(root->Lookup("foo", &foo));
   auto validated_options = foo->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_OK(foo->Open(validated_options.value(), &foo));

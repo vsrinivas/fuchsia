@@ -99,9 +99,9 @@ void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& ro
       ASSERT_FALSE(subdir.empty());
 
       fbl::RefPtr<fs::Vnode> out;
-      zx_status_t status = dir->Lookup(&out, subdir);
+      zx_status_t status = dir->Lookup(subdir, &out);
       if (status == ZX_ERR_NOT_FOUND) {
-        status = dir->Create(&out, subdir, S_IFDIR);
+        status = dir->Create(subdir, S_IFDIR, &out);
       }
       ASSERT_OK(status);
 

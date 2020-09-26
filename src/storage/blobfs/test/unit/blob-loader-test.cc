@@ -147,7 +147,7 @@ class BlobLoaderTest : public testing::Test {
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root_node->Create(&file, info->path, 0), ZX_OK);
+    ASSERT_EQ(root_node->Create(info->path, 0, &file), ZX_OK);
 
     size_t actual;
     EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);

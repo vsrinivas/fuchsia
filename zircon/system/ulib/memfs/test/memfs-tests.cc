@@ -21,7 +21,7 @@ TEST(MemfsTest, CreateFile) {
   fbl::RefPtr<VnodeDir> root;
   ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_OK(root->Create(&file, "foobar", S_IFREG));
+  ASSERT_OK(root->Create("foobar", S_IFREG, &file));
   auto directory = static_cast<fbl::RefPtr<fs::Vnode>>(root);
   fs::VnodeAttributes directory_attr, file_attr;
   ASSERT_OK(directory->GetAttributes(&directory_attr));
@@ -40,13 +40,13 @@ TEST(MemfsTest, SubdirectoryUpdateTime) {
   fbl::RefPtr<VnodeDir> root;
   ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> index;
-  ASSERT_OK(root->Create(&index, "index", S_IFREG));
+  ASSERT_OK(root->Create("index", S_IFREG, &index));
   fbl::RefPtr<fs::Vnode> subdirectory;
-  ASSERT_OK(root->Create(&subdirectory, "subdirectory", S_IFDIR));
+  ASSERT_OK(root->Create("subdirectory", S_IFDIR, &subdirectory));
 
   // Write a file at "subdirectory/file".
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_OK(subdirectory->Create(&file, "file", S_IFREG));
+  ASSERT_OK(subdirectory->Create("file", S_IFREG, &file));
   file->DidModifyStream();
 
   // Overwrite a file at "index".

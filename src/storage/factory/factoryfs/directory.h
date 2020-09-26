@@ -46,8 +46,8 @@ class Directory final : public fs::Vnode {
   void OpenFile(std::string name, fs::Vnode* file);
   void CloseFile(std::string name);
 
-  zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
-  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+  zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t Unlink(fbl::StringPiece name, bool is_dir) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* attributes) final;
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,

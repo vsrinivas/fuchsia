@@ -116,8 +116,8 @@ class VnodeDir final : public VnodeMemfs {
 
   fs::VnodeProtocolSet GetProtocols() const final;
 
-  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-  zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
+  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
 
   // Create a vnode from a VMO.
   // Fails if the vnode already exists.

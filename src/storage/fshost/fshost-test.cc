@@ -47,7 +47,7 @@ TEST(VnodeTestCase, NoFilesystems) {
       new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir));
 
   fbl::RefPtr<fs::Vnode> node;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, "0"));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup("0", &node));
 }
 
 // Test that when filesystem has been added to the fshost vnode, it appears
@@ -67,7 +67,7 @@ TEST(VnodeTestCase, AddFilesystem) {
   zx_handle_t client_value = client.get();
   ASSERT_OK(fshost_vn->AddFilesystem(std::move(client)));
   fbl::RefPtr<fs::Vnode> node;
-  ASSERT_OK(dir->Lookup(&node, "0"));
+  ASSERT_OK(dir->Lookup("0", &node));
   EXPECT_EQ(node->GetRemote(), client_value);
 }
 
@@ -95,7 +95,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
 
   // confirm that the filesystem was registered
   fbl::RefPtr<fs::Vnode> node;
-  ASSERT_OK(dir->Lookup(&node, "0"));
+  ASSERT_OK(dir->Lookup("0", &node));
   EXPECT_EQ(node->GetRemote(), vfs_client_value);
 }
 

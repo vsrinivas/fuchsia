@@ -72,12 +72,12 @@ TEST(LazyDir, ApiTest) {
     dc.ExpectEnd();
 
     fbl::RefPtr<fs::Vnode> out;
-    EXPECT_EQ(test.Lookup(&out, "test"), ZX_OK);
+    EXPECT_EQ(test.Lookup("test", &out), ZX_OK);
     EXPECT_EQ(1, test.last_id);
     EXPECT_TRUE(strcmp("test", test.last_name.c_str()) == 0);
     EXPECT_EQ(out.get(), test.last_output_file.get());
 
-    EXPECT_EQ(test.Lookup(&out, "test2"), ZX_ERR_NOT_FOUND);
+    EXPECT_EQ(test.Lookup("test2", &out), ZX_ERR_NOT_FOUND);
   }
   test.AddContent({33, "aaaa"});
   {
@@ -93,7 +93,7 @@ TEST(LazyDir, ApiTest) {
     dc.ExpectEnd();
 
     fbl::RefPtr<fs::Vnode> out;
-    EXPECT_EQ(test.Lookup(&out, "aaaa"), ZX_OK);
+    EXPECT_EQ(test.Lookup("aaaa", &out), ZX_OK);
     EXPECT_EQ(33, test.last_id);
     EXPECT_TRUE(strcmp("aaaa", test.last_name.c_str()) == 0);
     EXPECT_EQ(out.get(), test.last_output_file.get());

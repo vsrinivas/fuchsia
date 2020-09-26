@@ -27,7 +27,7 @@ class ServiceProxyDir : public fs::Vnode {
   // Overridden from |fs::Vnode|:
 
   fs::VnodeProtocolSet GetProtocols() const final;
-  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;

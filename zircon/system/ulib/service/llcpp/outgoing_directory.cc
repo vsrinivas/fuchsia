@@ -20,7 +20,7 @@ namespace {
 
 fbl::RefPtr<fs::PseudoDir> FindDir(fbl::RefPtr<fs::PseudoDir> root, fit::string_view name) {
   fbl::RefPtr<fs::Vnode> node;
-  zx_status_t result = root->Lookup(&node, name);
+  zx_status_t result = root->Lookup(name, &node);
   if (result != ZX_OK || !node->Supports(fs::VnodeProtocol::kDirectory)) {
     return {};
   }

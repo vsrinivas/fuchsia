@@ -94,7 +94,7 @@ class ConsistencyCheckerFixtureVerbose : public zxtest::Test {
     fbl::RefPtr<VnodeMinfs> root;
     EXPECT_OK(fs_->VnodeGet(&root, kMinfsRootIno));
     fbl::RefPtr<fs::Vnode> child;
-    EXPECT_OK(root->Create(&child, name, 0));
+    EXPECT_OK(root->Create(name, 0, &child));
     if (data_size != 0) {
       char data[data_size];
       memset(data, 0, data_size);
@@ -284,7 +284,7 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
     fbl::RefPtr<VnodeMinfs> root;
     ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
     fbl::RefPtr<fs::Vnode> child_;
-    ASSERT_OK(root->Create(&child_, "foo", 0));
+    ASSERT_OK(root->Create("foo", 0, &child_));
     auto child = fbl::RefPtr<VnodeMinfs>::Downcast(std::move(child_));
     auto close_child = fbl::MakeAutoCall([child]() { child->Close(); });
     ino = child->GetIno();

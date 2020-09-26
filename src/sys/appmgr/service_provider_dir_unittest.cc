@@ -67,7 +67,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
   void GetService(ServiceProviderDirImpl* service_provider, const fbl::String& service_name,
                   fbl::RefPtr<fs::Service>* out) {
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name)) << service_name.c_str();
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(service_name, &child)) << service_name.c_str();
     *out = fbl::RefPtr<fs::Service>(static_cast<fs::Service*>(child.get()));
   }
 
@@ -76,7 +76,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     // Using Lookup.
     value_ = -1;
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name)) << service_name.c_str();
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(service_name, &child)) << service_name.c_str();
     fbl::RefPtr<fs::Service> child_node;
     GetService(service_provider, service_name, &child_node);
     ASSERT_TRUE(child_node);
@@ -97,7 +97,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     // Using Lookup.
     value_ = -1;
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_ERR_NOT_FOUND, service_provider->Lookup(&child, service_name))
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, service_provider->Lookup(service_name, &child))
         << service_name.c_str();
     // Never connected to service.
     EXPECT_EQ(value_, -1) << service_name.c_str();

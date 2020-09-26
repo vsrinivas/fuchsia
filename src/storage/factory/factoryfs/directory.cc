@@ -22,8 +22,8 @@ Directory::Directory(factoryfs::Factoryfs& fs, std::string_view path)
 
 Directory::~Directory() { factoryfs_.DidClose(path_); }
 
-zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name_view,
-                              uint32_t mode) {
+zx_status_t Directory::Create(fbl::StringPiece name_view, uint32_t mode,
+                              fbl::RefPtr<fs::Vnode>* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -47,7 +47,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
 
 void Directory::Sync(SyncCallback closure) {}
 
-zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   ZX_ASSERT(name.find('/') == std::string::npos);
 
   if (name == ".") {

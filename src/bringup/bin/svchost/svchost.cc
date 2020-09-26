@@ -256,7 +256,7 @@ class ServiceProxy : public fs::Service {
   //
   // If the underlying service does not speak the directory protocol, then attempting
   // to connect to the service will close the connection. This is expected.
-  zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name) final {
+  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<Vnode>* out) final {
     fbl::String path(fbl::StringPrintf("%.*s/%.*s", static_cast<int>(svc_name_.size()),
                                        svc_name_.data(), static_cast<int>(name.length()),
                                        name.data()));

@@ -67,7 +67,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (files[index])
           --open_files;
         fbl::RefPtr<fs::Vnode> vnode;
-        zx_status_t status = root->Create(&vnode, name, mode);
+        zx_status_t status = root->Create(name, mode, &vnode);
         if (status == ZX_OK) {
           created_files.push_back(std::move(name));
           if (files[index]) {

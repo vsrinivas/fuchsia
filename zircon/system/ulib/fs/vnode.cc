@@ -147,7 +147,7 @@ zx_status_t Vnode::Append(const void* data, size_t len, size_t* out_end, size_t*
 
 void Vnode::DidModifyStream() {}
 
-zx_status_t Vnode::Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name) {
+zx_status_t Vnode::Lookup(fbl::StringPiece name, fbl::RefPtr<Vnode>* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -159,7 +159,7 @@ zx_status_t Vnode::Readdir(vdircookie_t* cookie, void* dirents, size_t len, size
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+zx_status_t Vnode::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<Vnode>* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

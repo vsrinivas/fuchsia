@@ -56,7 +56,7 @@ class BlobTest : public testing::Test {
 TEST_F(BlobTest, Truncate_WouldOverflow) {
   fbl::RefPtr root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Create(&file, kEmptyBlobName, 0), ZX_OK);
+  ASSERT_EQ(root->Create(kEmptyBlobName, 0, &file), ZX_OK);
 
   EXPECT_EQ(file->Truncate(UINT64_MAX), ZX_ERR_OUT_OF_RANGE);
 }
@@ -71,7 +71,7 @@ TEST_F(BlobTest, SyncBehavior) {
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Create(&file, info->path, 0), ZX_OK);
+  ASSERT_EQ(root->Create(info->path, 0, &file), ZX_OK);
 
   size_t out_actual = 0;
   EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
@@ -128,7 +128,7 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
     auto root = OpenRoot();
     GenerateRandomBlob("", 64, &info);
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Create(&file, info->path + 1, 0), ZX_OK);
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     size_t out_actual = 0;
     EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
     EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
@@ -167,7 +167,7 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
 
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Lookup(&file, info->path + 1), ZX_OK);
+  ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
 
   // Trying to read from the blob should fail with an error.
   size_t actual;
@@ -199,7 +199,7 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
     {
       GenerateRealisticBlob("", 1 << 16, &info);
       fbl::RefPtr<fs::Vnode> file;
-      ASSERT_EQ(root->Create(&file, info->path + 1, 0), ZX_OK);
+      ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
       size_t out_actual = 0;
       EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
       EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
@@ -216,7 +216,7 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
     // Read back the blob
     {
       fbl::RefPtr<fs::Vnode> file;
-      ASSERT_EQ(root->Lookup(&file, info->path + 1), ZX_OK);
+      ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
       size_t actual;
       uint8_t data[info->size_data];
       EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
@@ -231,7 +231,7 @@ TEST_F(BlobTest, WriteErrorsAreFused) {
   GenerateRandomBlob("", kBlockSize * kNumBlocks, &info);
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Create(&file, info->path + 1, 0), ZX_OK);
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
   ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
   uint64_t out_actual;
   EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_ERR_NO_SPACE);

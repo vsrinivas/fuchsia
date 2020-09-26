@@ -426,7 +426,7 @@ int emu_stat(const char* fn, struct stat* s) {
       nextpath++;
     }
     fbl::RefPtr<fs::Vnode> vn_fs;
-    zx_status_t status = cur->Lookup(&vn_fs, fbl::StringPiece(fn, len));
+    zx_status_t status = cur->Lookup(fbl::StringPiece(fn, len), &vn_fs);
     if (status != ZX_OK) {
       return -ENOENT;
     }

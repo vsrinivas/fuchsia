@@ -47,12 +47,12 @@ TEST(PseudoDir, ApiTest) {
 
   // lookup entries
   fbl::RefPtr<fs::Vnode> node;
-  EXPECT_EQ(ZX_OK, dir->Lookup(&node, "subdir"));
+  EXPECT_EQ(ZX_OK, dir->Lookup("subdir", &node));
   EXPECT_EQ(subdir.get(), node.get());
-  EXPECT_EQ(ZX_OK, dir->Lookup(&node, "file1"));
+  EXPECT_EQ(ZX_OK, dir->Lookup("file1", &node));
   EXPECT_EQ(file1.get(), node.get());
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, "file2"));
-  EXPECT_EQ(ZX_OK, dir->Lookup(&node, "file2b"));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup("file2", &node));
+  EXPECT_EQ(ZX_OK, dir->Lookup("file2b", &node));
   EXPECT_EQ(file2.get(), node.get());
 
   // readdir
@@ -101,7 +101,7 @@ TEST(PseudoDir, ApiTest) {
     dc.ExpectEntry("file2b", V_TYPE_FILE);
     dc.ExpectEnd();
   }
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, "file1"));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup("file1", &node));
 
   // remove all entries
   dir->RemoveAllEntries();

@@ -229,9 +229,9 @@ zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vm
       }
 
       fbl::RefPtr<fs::Vnode> out;
-      zx_status_t status = vnb->Lookup(&out, std::string_view(path, nextpath - path));
+      zx_status_t status = vnb->Lookup(std::string_view(path, nextpath - path), &out);
       if (status == ZX_ERR_NOT_FOUND) {
-        status = vnb->Create(&out, std::string_view(path, nextpath - path), S_IFDIR);
+        status = vnb->Create(std::string_view(path, nextpath - path), S_IFDIR, &out);
       }
       if (status != ZX_OK) {
         return status;

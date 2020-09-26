@@ -40,7 +40,7 @@ zx_status_t Hub::AddComponent(const HubInfo& hub_info) {
   }
   fbl::RefPtr<fs::PseudoDir> component_instance_dir;
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
-  zx_status_t status = component_dir_->Lookup(&component_instance_vnode, hub_info.label());
+  zx_status_t status = component_dir_->Lookup(hub_info.label(), &component_instance_vnode);
   if (status == ZX_ERR_NOT_FOUND) {
     component_instance_dir = fbl::AdoptRef(new fs::PseudoDir());
     component_dir_->AddEntry(hub_info.label(), component_instance_dir);
@@ -53,7 +53,7 @@ zx_status_t Hub::AddComponent(const HubInfo& hub_info) {
 
 zx_status_t Hub::RemoveComponent(const HubInfo& hub_info) {
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
-  zx_status_t status = component_dir_->Lookup(&component_instance_vnode, hub_info.label());
+  zx_status_t status = component_dir_->Lookup(hub_info.label(), &component_instance_vnode);
   if (status == ZX_OK) {
     auto component_instance_dir =
         fbl::RefPtr<fs::PseudoDir>(static_cast<fs::PseudoDir*>(component_instance_vnode.get()));

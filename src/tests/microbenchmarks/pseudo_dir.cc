@@ -64,7 +64,7 @@ bool PseudoDirLookupTest(perftest::RepeatState* state, int file_count) {
   fbl::RefPtr<fs::Vnode> out;
 
   while (state->KeepRunning()) {
-    dir->Lookup(&out, file_names[i]);
+    dir->Lookup(file_names[i], &out);
     i = (i + 1) % file_names.size();
   }
   return true;

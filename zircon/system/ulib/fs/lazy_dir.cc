@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/lazy_dir.h>
-
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <algorithm>
+
+#include <fs/lazy_dir.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -51,7 +51,7 @@ zx_status_t LazyDir::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t LazyDir::Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece name) {
+zx_status_t LazyDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out_vnode) {
   LazyEntryVector entries;
   GetContents(&entries);
   for (const auto& entry : entries) {

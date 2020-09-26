@@ -24,7 +24,7 @@ class JournalIntegrationTest : public JournalIntegrationFixture {
     ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
 
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_OK(root->Create(&child, "foo", 0));
+    ASSERT_OK(root->Create("foo", 0, &child));
     ASSERT_OK(child->Close());
   }
 };
@@ -80,9 +80,9 @@ class JournalUnlinkTest : public JournalIntegrationFixture {
     ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
 
     fbl::RefPtr<fs::Vnode> foo, bar, baz;
-    ASSERT_OK(root->Create(&foo, "foo", 0));
-    ASSERT_OK(root->Create(&bar, "bar", 0));
-    ASSERT_OK(root->Create(&baz, "baz", 0));
+    ASSERT_OK(root->Create("foo", 0, &foo));
+    ASSERT_OK(root->Create("bar", 0, &bar));
+    ASSERT_OK(root->Create("baz", 0, &baz));
     ASSERT_OK(root->Unlink("foo", false));
     ASSERT_OK(root->Unlink("bar", false));
     ASSERT_OK(root->Unlink("baz", false));
@@ -124,7 +124,7 @@ class JournalGrowFvmTest : public JournalIntegrationFixture {
     fbl::RefPtr<VnodeMinfs> root;
     ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
     fbl::RefPtr<fs::Vnode> foo, bar, baz;
-    ASSERT_OK(root->Create(&foo, "foo", 0));
+    ASSERT_OK(root->Create("foo", 0, &foo));
     // Write to a file until we cause an FVM extension.
     std::vector<uint8_t> buf(TransactionLimits::kMaxWriteBytes);
     size_t done = 0;
@@ -177,7 +177,7 @@ TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   fbl::RefPtr<VnodeMinfs> root;
   ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
   fbl::RefPtr<fs::Vnode> foo;
-  ASSERT_OK(root->Create(&foo, "foo", 0));
+  ASSERT_OK(root->Create("foo", 0, &foo));
   auto close = fbl::MakeAutoCall([foo]() { ASSERT_OK(foo->Close()); });
   std::vector<uint8_t> buf(10, 0xaf);
   size_t written;

@@ -268,7 +268,7 @@ class Vfs {
   // On success,
   // |out| is the vnode at which we stopped searching.
   // |pathout| is the remainder of the path to search.
-  zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
+  zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, fbl::RefPtr<Vnode>* out,
                    fbl::StringPiece* pathout) FS_TA_REQUIRES(vfs_lock_);
 
   OpenResult OpenLocked(fbl::RefPtr<Vnode> vn, fbl::StringPiece path,
