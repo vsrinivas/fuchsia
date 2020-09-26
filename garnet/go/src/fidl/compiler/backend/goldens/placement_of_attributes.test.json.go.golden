@@ -45,6 +45,8 @@ func (x ExampleEnum) String() string {
 	return "Unknown"
 }
 
+var _ _bindings.Bits = ExampleBits(0)
+
 type ExampleBits uint32
 
 const (

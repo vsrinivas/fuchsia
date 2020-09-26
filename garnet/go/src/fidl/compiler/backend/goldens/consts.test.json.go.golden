@@ -2,6 +2,10 @@
 
 package name
 
+import (
+	_bindings "syscall/zx/fidl"
+)
+
 const (
 	EnabledFlag       bool     = true
 	Offset            int8     = -33
@@ -61,6 +65,8 @@ func (x EnumType) String() string {
 	}
 	return "Unknown"
 }
+
+var _ _bindings.Bits = BitsType(0)
 
 type BitsType uint32
 

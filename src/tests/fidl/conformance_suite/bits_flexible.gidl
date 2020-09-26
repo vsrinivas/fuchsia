@@ -1,0 +1,143 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("FlexibleBitsUint8KnownValue") {
+    value = FlexibleBitsUint8Struct {
+        b: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, padding:7,
+        ],
+    },
+}
+
+success("FlexibleBitsUint8CombinedValue") {
+    value = FlexibleBitsUint8Struct {
+        b: 3,
+    },
+    bytes = {
+        v1 = [
+            0x03, padding:7,
+        ],
+    },
+}
+
+success("FlexibleBitsUint16KnownValue") {
+    value = FlexibleBitsUint16Struct {
+        b: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, padding:6,
+        ],
+    },
+}
+
+success("FlexibleBitsUint16CombinedValue") {
+    value = FlexibleBitsUint16Struct {
+        b: 3,
+    },
+    bytes = {
+        v1 = [
+            0x03, 0x00, padding:6,
+        ],
+    },
+}
+
+success("FlexibleBitsUint32KnownValue") {
+    value = FlexibleBitsUint32Struct {
+        b: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, padding:4,
+        ],
+    },
+}
+
+success("FlexibleBitsUint32CombinedValue") {
+    value = FlexibleBitsUint32Struct {
+        b: 3,
+    },
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, padding:4,
+        ],
+    },
+}
+success("FlexibleBitsUint64KnownValue") {
+    value = FlexibleBitsUint64Struct {
+        b: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("FlexibleBitsUint64CombinedValue") {
+    value = FlexibleBitsUint64Struct {
+        b: 3,
+    },
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("FlexibleBitsUint8UnknownValue") {
+    // TODO(fxbug.dev/7847): Implement flexible bits
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleBitsUint8Struct {
+        b: 0xff,
+    },
+    bytes = {
+        v1 = [
+            0xff, padding:7,
+        ],
+    },
+}
+
+success("FlexibleBitsUint16UnknownValue") {
+    // TODO(fxbug.dev/7847): Implement flexible bits
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleBitsUint16Struct {
+        b: 0x1234,
+    },
+    bytes = {
+        v1 = [
+            num(0x1234):2, padding:6,
+        ],
+    },
+}
+
+
+success("FlexibleBitsUint32UnknownValue") {
+    // TODO(fxbug.dev/7847): Implement flexible bits
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleBitsUint32Struct {
+        b: 0x12345678,
+    },
+    bytes = {
+        v1 = [
+            num(0x12345678):4, padding:4,
+        ],
+    },
+}
+
+success("FlexibleBitsUint64UnknownValue") {
+    // TODO(fxbug.dev/7847): Implement flexible bits
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleBitsUint64Struct {
+        b: 0x0102030405060708,
+    },
+    bytes = {
+        v1 = [
+            num(0x0102030405060708):8
+        ],
+    },
+}

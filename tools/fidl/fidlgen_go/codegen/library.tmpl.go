@@ -35,6 +35,7 @@ const (
 {{ template "EnumDefinition" . }}
 {{ end -}}
 {{ range .Bits -}}
+var _ {{ $.BindingsAlias }}.Bits = {{ .Name }}(0)
 {{ template "BitsDefinition" . }}
 {{ end -}}
 {{ range .Structs -}}

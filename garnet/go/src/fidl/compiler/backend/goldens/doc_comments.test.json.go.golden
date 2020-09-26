@@ -55,6 +55,8 @@ func (x MyEnum) String() string {
 	return "Unknown"
 }
 
+var _ _bindings.Bits = MyBits(0)
+
 // bits comment #1
 //
 // bits comment #2

@@ -24,16 +24,6 @@ strict bits StrictBitsUint64 : uint64 {
     B = 0x2;
 };
 
-flexible bits FlexibleBits : uint32 {
-    A = 0x1;
-    B = 0x2;
-};
-
-flexible bits FlexibleBitsUint64 : uint64 {
-    A = 0x1;
-    B = 0x2;
-};
-
 struct StrictBitsUint8Struct {
     StrictBitsUint8 b;
 };
@@ -48,12 +38,4 @@ struct StrictBitsUint32Struct {
 
 struct StrictBitsUint64Struct {
     StrictBitsUint64 b;
-};
-
-struct FlexibleBitsStruct {
-    FlexibleBits b;
-};
-
-struct FlexibleBitsUint64Struct {
-    FlexibleBitsUint64 b;
 };

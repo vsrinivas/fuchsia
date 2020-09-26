@@ -15,7 +15,8 @@ fidl("conformance_fidl") {
   sources = [
     "//src/tests/fidl/conformance_suite/alignment.test.fidl",
     "//src/tests/fidl/conformance_suite/arrays_and_vectors.test.fidl",
-    "//src/tests/fidl/conformance_suite/bits.test.fidl",
+    "//src/tests/fidl/conformance_suite/bits_flexible.test.fidl",
+    "//src/tests/fidl/conformance_suite/bits_strict.test.fidl",
     "//src/tests/fidl/conformance_suite/enums_flexible.test.fidl",
     "//src/tests/fidl/conformance_suite/enums_strict.test.fidl",
     "//src/tests/fidl/conformance_suite/handles.test.fidl",

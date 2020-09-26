@@ -4,7 +4,8 @@
 
 conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/alignment.gidl",
-  "//src/tests/fidl/conformance_suite/bits.gidl",
+  "//src/tests/fidl/conformance_suite/bits_flexible.gidl",
+  "//src/tests/fidl/conformance_suite/bits_strict.gidl",
   "//src/tests/fidl/conformance_suite/conformance.gidl",
   "//src/tests/fidl/conformance_suite/enums_flexible.gidl",
   "//src/tests/fidl/conformance_suite/enums_strict.gidl",
