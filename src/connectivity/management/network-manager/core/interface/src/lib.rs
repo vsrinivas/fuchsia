@@ -221,19 +221,23 @@ impl<'a> FileBackedConfig<'a> {
         topological_path: &str,
         mac_address: MacAddress,
         wlan: bool,
-    ) -> Result<&str, anyhow::Error> {
+    ) -> Result<&str, NameGenerationError<'_>> {
         let persistent_id = self.config.generate_identifier(topological_path, mac_address);
 
-        let index = if let Some(index) = self.config.lookup_by_identifier(&persistent_id) {
-            index
+        if let Some(index) = self.config.lookup_by_identifier(&persistent_id) {
+            let (_key, name) = &self.config.names[index];
+            Ok(name)
         } else {
-            let name = self.config.generate_name(&persistent_id, wlan)?;
-            self.config.names.push((persistent_id, name));
-            self.store()?;
-            self.config.names.len() - 1
-        };
-        let (_key, value) = &self.config.names[index];
-        Ok(value)
+            let name = self
+                .config
+                .generate_name(&persistent_id, wlan)
+                .map_err(NameGenerationError::GenerationError)?;
+            let () = self.config.names.push((persistent_id, name));
+            let (_key, name) = &self.config.names[self.config.names.len() - 1];
+            let () =
+                self.store().map_err(|err| NameGenerationError::FileUpdateError { name, err })?;
+            Ok(name)
+        }
     }
 
     /// Returns a temporary name for an interface.
@@ -247,6 +251,13 @@ impl<'a> FileBackedConfig<'a> {
             format!("etht{}", id)
         }
     }
+}
+
+/// An error observed when generating a new name.
+#[derive(Debug)]
+pub enum NameGenerationError<'a> {
+    GenerationError(anyhow::Error),
+    FileUpdateError { name: &'a str, err: anyhow::Error },
 }
 
 #[cfg(test)]

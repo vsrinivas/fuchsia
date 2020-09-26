@@ -1039,16 +1039,23 @@ impl<'a> NetCfg<'a> {
         let (metric, features) = crate::get_metric_and_features(wlan);
         let eth_info = D::eth_device_info(info, mac, features);
         let interface_name = if stable_name {
-            self.persisted_interface_config
-                .get_stable_name(
-                    &topological_path, /* TODO(tamird): we can probably do
-                                        * better with std::borrow::Cow. */
-                    mac,
-                    wlan,
-                )
-                .context("error getting stable name")
-                .map_err(errors::Error::Fatal)?
-                .to_string()
+            match self.persisted_interface_config.get_stable_name(
+                &topological_path, /* TODO(tamird): we can probably do
+                                    * better with std::borrow::Cow. */
+                mac,
+                wlan,
+            ) {
+                Ok(name) => name.to_string(),
+                Err(interface::NameGenerationError::FileUpdateError { name, err }) => {
+                    warn!("failed to update interface (topo path = {}, mac = {}, wlan = {}) with new name = {}: {}", topological_path, mac, wlan, name, err);
+                    name.to_string()
+                }
+                Err(interface::NameGenerationError::GenerationError(e)) => {
+                    return Err(devices::AddDeviceError::Other(errors::Error::Fatal(
+                        e.context("error getting stable name"),
+                    )))
+                }
+            }
         } else {
             self.persisted_interface_config.get_temporary_name(wlan)
         };

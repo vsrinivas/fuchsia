@@ -13,8 +13,7 @@
             "class/network"
         ],
         "features": [
-            "config-data",
-            "isolated-persistent-storage"
+            "config-data"
         ],
         "services": [
             "fuchsia.logger.LogSink",
