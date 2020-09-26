@@ -110,4 +110,24 @@ TEST(LlcppTransaction, transaction_error) {
   ASSERT_FALSE(result.ok());
 }
 
+namespace test_async_completer_deleted_methods {
+
+template <typename T, typename = void>
+struct test : std::false_type {};
+template <typename T>
+struct test<T, std::void_t<decltype(std::declval<T>().EnableNextDispatch())>> : std::true_type {};
+
+// Invoking `FooCompleter::Async::EnableNextDispatch` should be a compile-time error.
+TEST(LlcppCompleter, AsyncCompleterCannotEnableNextDispatch) {
+  Transaction txn{};
+  Completer completer(&txn);
+  static_assert(test<decltype(completer)>::value);
+  static_assert(!test<decltype(completer.ToAsync())>::value);
+
+  // Not relevant to the test, but required to neutralize the completer.
+  completer.Close(ZX_OK);
+}
+
+}  // namespace test_async_completer_deleted_methods
+
 }  // namespace

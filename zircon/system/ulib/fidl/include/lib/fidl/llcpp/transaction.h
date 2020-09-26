@@ -134,12 +134,6 @@ class CompleterBase {
   // |status| may be an error status, or |ZX_OK|, which indicates normal (expected) closure.
   void Close(zx_status_t status);
 
-  // Resumes the asynchronous wait on the underlying channel, enabling another dispatcher thread to
-  // enter the message handler for this binding. This must only be called from the scope of the
-  // message handler.
-  // TODO(madhaviyengar): Hide this from Completer::Async in a cleaner way.
-  virtual void EnableNextDispatch();
-
  protected:
   explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
       : transaction_(transaction), owned_(owned), needs_to_reply_(method_expects_reply) {}
@@ -157,11 +151,16 @@ class CompleterBase {
   // Move the contents of |transaction_| to heap and return it.
   std::unique_ptr<Transaction> TakeOwnership();
 
+  // Resumes the asynchronous wait on the underlying channel, enabling another dispatcher thread to
+  // enter the message handler for this binding. This must only be called from the scope of the
+  // message handler.
+  void EnableNextDispatch();
+
  private:
   // Scoped "lock" to which asserts that only one thread enters the given scope at a time.
   class ScopedLock {
    public:
-    ScopedLock(std::atomic_flag& lock) : lock_(lock) {
+    explicit ScopedLock(std::atomic_flag& lock) : lock_(lock) {
       ZX_ASSERT_MSG(!lock_.test_and_set(std::memory_order_acquire),
                     "Completer accessed from multiple threads concurrently.");
     }
@@ -221,9 +220,7 @@ struct Completer final {
    private:
     // EnableNextDispatch() must only be invoked within the message handler. This is an attempt to
     // enforce such behavior by restricting it to the fidl::Completer<T>::Sync variant.
-    void EnableNextDispatch() final {
-      ZX_ASSERT_MSG(false, "EnableNextDispatch() is only valid on a fidl::Completer<T>::Sync.");
-    }
+    using Base::EnableNextDispatch;
   };
 
   // The server handler function will be given FooCompleter::Sync, an object tailor made for
@@ -239,6 +236,8 @@ struct Completer final {
     // Move a sync responder to its async counterpart, such that the reply could be
     // issued asynchronously. This causes the transaction to be moved to heap.
     Async ToAsync() { return Async(Base::TakeOwnership()); }
+
+    using Base::EnableNextDispatch;
   };
 };
 
