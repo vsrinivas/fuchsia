@@ -121,7 +121,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:87
+From //BUILD.gn:88
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -136,7 +136,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:31
+From //BUILD.gn:32
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
@@ -144,7 +144,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:31
+From //BUILD.gn:32
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -456,7 +456,7 @@ From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:39
+From //BUILD.gn:40
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
@@ -464,7 +464,7 @@ From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:39
+From //BUILD.gn:40
 
 ### camera_debug
 
@@ -640,7 +640,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/f44649f43805ce114237b1f4ccc02c63f7886819/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -648,14 +648,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/f44649f43805ce114237b1f4ccc02c63f7886819/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/f44649f43805ce114237b1f4ccc02c63f7886819/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -864,7 +864,7 @@ From //build/images/args.gni:49
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/f44649f43805ce114237b1f4ccc02c63f7886819/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -879,14 +879,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/f44649f43805ce114237b1f4ccc02c63f7886819/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/1449670167a9449a3c81e718e0fef5e2698fb06b/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/f44649f43805ce114237b1f4ccc02c63f7886819/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1134,7 +1134,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:58
+From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -1142,7 +1142,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:58
+From //BUILD.gn:59
 
 ### host_os
 
@@ -2304,7 +2304,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:45
+From //BUILD.gn:46
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2430,7 +2430,7 @@ From //products/core.gni:86
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
@@ -2438,7 +2438,7 @@ From //products/core.gni:86
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:54
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2763,7 +2763,7 @@ silently clobber the default value shown here.
 **Current value (from the default):**
 ```
 {
-  default_deps = ["//:legacy-arm64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-arm64", "//tools:all-hosts"]
+  default_deps = ["//:legacy-arm64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-arm64"]
   disable_kernel_pci = false
   goma_dir = "/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
@@ -2776,7 +2776,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:112
+From //BUILD.gn:113
 
 ### zircon_asserts
 
@@ -2801,7 +2801,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"default"`
 
-From //BUILD.gn:82
+From //BUILD.gn:83
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2818,14 +2818,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:71
+From //BUILD.gn:72
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:75
+From //BUILD.gn:76
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -2867,7 +2867,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:79
+From //BUILD.gn:80
 
 ### zvb_partition_name
 Partition name from where image will be verified
