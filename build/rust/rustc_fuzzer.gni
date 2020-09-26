@@ -30,6 +30,7 @@ import("//build/rust/rustc_staticlib.gni")
 #   edition
 #   deps
 #   source_root
+#   enforce_source_listing
 #   sources
 #   inputs
 #   features
@@ -73,6 +74,7 @@ template("rustc_fuzzer") {
                              "version",
                              "edition",
                              "source_root",
+                             "enforce_source_listing",
                              "sources",
                              "inputs",
                              "features",

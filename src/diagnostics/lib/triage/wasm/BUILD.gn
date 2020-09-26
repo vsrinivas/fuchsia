@@ -50,6 +50,11 @@ if (current_toolchain == unknown_wasm32_toolchain) {
     ]
 
     deps = lib_deps
+
+    sources = [
+      "src/lib.rs",
+      "src/shim.rs",
+    ]
   }
 }
 

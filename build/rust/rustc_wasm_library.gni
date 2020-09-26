@@ -21,8 +21,13 @@ import("//build/rust/rustc_test.gni")
 #   configs (optional)
 #     A list of config labels applying to this target.
 #
-#   sources (required)
-#     List of source files which this crate is allowed to compile.
+#   enforce_source_listing (optional)
+#     When true, enforces that any source files used by the Rust compiler are
+#     listed in `sources`. Defaults to true.
+#
+#   sources (optional)
+#     List of source files which this crate is allowed to compile. Only
+#     allowed when `enforce_source_listing = true`.
 #     The Rust compiler discovers source files by following `mod` declarations
 #     starting at the `source_root`. The discovered source files must match this
 #     list.
@@ -30,7 +35,7 @@ import("//build/rust/rustc_test.gni")
 #   inputs (optional)
 #     List of additional non-source files read by the compiler. These are typically
 #     configuration or test-data files included in the build with the `include_str!`
-#     macro.
+#     macro. Only allowed when `enforce_source_listing = true`.
 #
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
@@ -104,6 +109,26 @@ template("rustc_wasm_library") {
     }
   }
 
+  _sources = []
+  _deps = []
+
+  if (!defined(invoker.enforce_source_listing) ||
+      invoker.enforce_source_listing == true) {
+    # fail early when the user forgets to list sources
+    assert(defined(invoker.sources), "sources must be listed")
+    _sources = invoker.sources
+  } else {
+    not_needed(invoker, [ "sources" ])
+
+    # This is a hack to workaround the fact that a GN `tool` invocation can't receive arbitrary input.
+    # Add a sentinel value so that enforcement is skipped.
+    _sources = [ "//build/rust/__SKIP_ENFORCEMENT__.rs" ]
+
+    # Opting out of strict sources check requires that the package is present
+    # in a global allow-list.
+    _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
+  }
+
   rust_library(target_name) {
     crate_root = source_root
     crate_name = crate_name
@@ -118,7 +143,7 @@ template("rustc_wasm_library") {
     configs = []
     configs = invoker.configs
 
-    deps = []
+    deps = _deps
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
@@ -129,6 +154,9 @@ template("rustc_wasm_library") {
 
     rustflags = features
 
+    sources = _sources
+
+    # in-tree default in 2018 edition
     if (defined(invoker.edition) && invoker.edition == "2015") {
       configs -= [ "//build/config:rust_edition_2018" ]
       configs += [ "//build/config:rust_edition_2015" ]
@@ -139,7 +167,6 @@ template("rustc_wasm_library") {
                              "testonly",
                              "visibility",
                              "enforce_source_listing",
-                             "sources",
                              "inputs",
                            ])
   }
