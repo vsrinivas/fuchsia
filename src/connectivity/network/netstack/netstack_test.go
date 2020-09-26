@@ -1216,6 +1216,27 @@ func TestDHCPAcquired(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "no gateway",
+			oldAddr: tcpip.AddressWithPrefix{},
+			newAddr: tcpip.AddressWithPrefix{
+				Address:   testV4Address,
+				PrefixLen: prefixLen,
+			},
+			config: dhcp.Config{},
+			expectedRouteTable: []routes.ExtendedRoute{
+				{
+					Route: tcpip.Route{
+						Destination: destination1,
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {

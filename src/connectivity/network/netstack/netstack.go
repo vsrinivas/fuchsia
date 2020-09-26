@@ -648,10 +648,13 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 			} else {
 				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
 
-				// Add a default route and a route for the local subnet.
+				// Add a route for the local subnet.
 				rs := []tcpip.Route{
-					defaultV4Route(ifs.nicid, config.Gateway),
 					addressWithPrefixRoute(ifs.nicid, newAddr),
+				}
+				if len(config.Gateway) != 0 {
+					// Add a default route only if a gateway has been set.
+					rs = append(rs, defaultV4Route(ifs.nicid, config.Gateway))
 				}
 				syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
 
