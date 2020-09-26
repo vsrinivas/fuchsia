@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! Provides utilities to fold [`Stream`]s and [`TryStream`]s with a
-//short-circuited result.
+//! short-circuited result.
 
 use futures::{Future, FutureExt, Stream, StreamExt, TryStream, TryStreamExt};
 
