@@ -205,7 +205,16 @@ static int device_cmd(int argc, char** argv, bool print_out) {
     return -1;
   }
 
-  fbl::unique_fd fd(open(argv[2], O_RDWR));
+  const char* path = argv[2];
+  char new_path[32];
+  int id = -1;
+  if (sscanf(path, "%u", &id) == 1) {
+    if (snprintf(new_path, sizeof(new_path), "/dev/class/i2c/%03u", id) >= 0) {
+      path = new_path;
+    }
+  }
+
+  fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
     printf("%s: %s\n", argv[2], strerror(errno));
     usage(argv[0]);
