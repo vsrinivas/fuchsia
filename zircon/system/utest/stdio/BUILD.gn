@@ -28,6 +28,9 @@ test("stdio-test") {
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-utils",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("stdio-test-util") {

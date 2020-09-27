@@ -51,6 +51,9 @@ source_set("use_media_decoder_source_set") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/tee-client-api",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("use_media_decoder") {
@@ -273,6 +276,9 @@ source_set("decoder_fuzzer") {
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/syslog",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("h264_decoder_fuzzer_test") {

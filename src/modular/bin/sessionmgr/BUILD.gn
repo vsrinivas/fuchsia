@@ -81,6 +81,9 @@ source_set("sessionmgr_lib") {
     "//src/modular/lib/fidl:json_xdr",
     "//src/modular/lib/modular_config:modular_config",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable_package("dev_session_shell") {

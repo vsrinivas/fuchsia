@@ -53,4 +53,7 @@ source_set("src") {
   if (is_linux) {
     deps += [ "$magma_build_root/src/magma_util/platform/linux:device" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

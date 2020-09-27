@@ -108,6 +108,9 @@ zx_library("zstd") {
     configs -= [ "$zx_build_config:default_optimize" ]
     configs += [ "$zx_build_config:optimize_speed" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 # The standalone varaint of this library supports only decompression and does

@@ -75,7 +75,7 @@ source_set("client_lib") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("server_lib") {
@@ -91,7 +91,7 @@ source_set("server_lib") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("operation_test_lib") {
@@ -260,6 +260,9 @@ executable("server_daemon_test") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fuchsia.netemul.guest") {

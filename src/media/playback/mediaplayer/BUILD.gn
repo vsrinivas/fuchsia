@@ -67,6 +67,9 @@ executable("mediaplayer_bin") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/third_party/uapp/dash:output_h",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("mediaplayer_test_util_bin") {
@@ -95,6 +98,9 @@ executable("mediaplayer_test_util_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("mediaplayer_test_util") {

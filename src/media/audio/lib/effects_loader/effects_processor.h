@@ -41,7 +41,7 @@ class EffectsProcessor {
   zx_status_t AddEffect(Effect e);
 
   // Returns the number of active instances in the enclosed effect chain.
-  [[nodiscard]] uint16_t size() const { return effects_chain_.size(); }
+  [[nodiscard]] uint16_t size() const { return static_cast<uint16_t>(effects_chain_.size()); }
 
   // Returns the number of input channels for this effect. This will be the number of channels
   // expected for input frames to `Process` or `ProcessInPlace`.
@@ -58,8 +58,8 @@ class EffectsProcessor {
   // provide frames in multiples of |block_size()|.
   [[nodiscard]] uint32_t block_size() const { return block_size_; }
 
-  // Returns the maximum buffer size (in frames) the processor is prepared to handle with a single call to
-  // |ProcessInPlace| or |Process|.
+  // Returns the maximum buffer size (in frames) the processor is prepared to handle with a single
+  // call to |ProcessInPlace| or |Process|.
   //
   // Returns 0 if the plugin can handle arbitrary buffer sizes.
   [[nodiscard]] uint32_t max_batch_size() const { return max_batch_size_; }

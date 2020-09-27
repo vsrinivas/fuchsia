@@ -16,7 +16,7 @@ namespace scenic {
 class RotatedSquareView : public BackgroundView {
  public:
   static constexpr float kSquareElevation = 8.f;
-  static constexpr float kSquareAngle = M_PI / 4;
+  static constexpr float kSquareAngle = static_cast<float>(M_PI / 4);
 
   RotatedSquareView(ViewContext context, const std::string& debug_name = "RotatedSquareView");
 

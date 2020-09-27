@@ -67,6 +67,9 @@ source_set("source") {
     "//src/lib/files",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 config_data("configs") {

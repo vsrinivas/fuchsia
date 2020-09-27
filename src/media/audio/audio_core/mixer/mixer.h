@@ -87,7 +87,8 @@ class Mixer {
     // From current values, advance long-running positions to the specified absolute dest frame num.
     // Advancing in negative direction should be infrequent, but we do support it.
     void AdvanceRunningPositionsTo(int32_t dest_target_frame, Bookkeeping& bookkeeping) {
-      AdvanceRunningPositionsBy(dest_target_frame - next_dest_frame, bookkeeping);
+      int32_t dest_frames = static_cast<int32_t>(dest_target_frame - next_dest_frame);
+      AdvanceRunningPositionsBy(dest_frames, bookkeeping);
     }
 
     // This translates a source reference_clock value into a source subframe value.

@@ -107,7 +107,4 @@ executable("unittest_bin") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -63,6 +63,9 @@ source_set("ffmpeg") {
     "FF_API_CONVERGENCE_DURATION=0",
     "__STDC_CONSTANT_MACROS",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("tests") {

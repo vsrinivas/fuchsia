@@ -346,10 +346,10 @@ struct DnsResource {
 // DNS message.
 struct DnsMessage {
   void UpdateCounts() {
-    header_.question_count_ = questions_.size();
-    header_.answer_count_ = answers_.size();
-    header_.authority_count_ = authorities_.size();
-    header_.additional_count_ = additionals_.size();
+    header_.question_count_ = static_cast<uint16_t>(questions_.size());
+    header_.answer_count_ = static_cast<uint16_t>(answers_.size());
+    header_.authority_count_ = static_cast<uint16_t>(authorities_.size());
+    header_.additional_count_ = static_cast<uint16_t>(additionals_.size());
   }
 
   DnsHeader header_;

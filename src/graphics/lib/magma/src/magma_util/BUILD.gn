@@ -38,7 +38,7 @@ source_set("address_space") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("macros") {
@@ -56,7 +56,7 @@ source_set("macros") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("status") {

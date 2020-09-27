@@ -130,6 +130,9 @@ zx_library("ngunwind") {
     configs -= [ "$zx_build_config:default_optimize" ]
     configs += [ "$zx_build_config:optimize_default" ]
   }
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 config("private_config") {

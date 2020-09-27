@@ -44,4 +44,7 @@ zx_library("launchpad") {
     "test:*",
     "//src/bringup/bin/bootsvc:*",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

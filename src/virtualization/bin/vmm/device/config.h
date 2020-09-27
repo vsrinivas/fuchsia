@@ -28,7 +28,7 @@ static constexpr zx_signals_t kDeviceInterruptShift = __builtin_ctz(ZX_USER_SIGN
 static constexpr size_t kQueueNotifyMultiplier = 4;
 
 constexpr uint16_t queue_from(zx_gpaddr_t base, zx_gpaddr_t off) {
-  return (off - base) / kQueueNotifyMultiplier;
+  return static_cast<uint16_t>((off - base) / kQueueNotifyMultiplier);
 }
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_CONFIG_H_

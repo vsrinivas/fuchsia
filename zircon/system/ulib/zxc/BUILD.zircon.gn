@@ -11,6 +11,9 @@ source_set("fitx") {
     "include/lib/fitx/internal/type_traits.h",
     "include/lib/fitx/result.h",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  public_configs = [ "$zx_build_config:Wno-conversion" ]
 }
 
 source_set("zx") {
@@ -36,4 +39,7 @@ zx_library("zxc") {
   host = true
   kernel = true
   static = true
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

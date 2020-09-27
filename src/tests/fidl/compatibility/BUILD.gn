@@ -26,6 +26,9 @@ source_set("hlcpp_client_app") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 ## HLCPP Test Server
@@ -46,6 +49,9 @@ executable("hlcpp_server") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("hlcpp-server") {

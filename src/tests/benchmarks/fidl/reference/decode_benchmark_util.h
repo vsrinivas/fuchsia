@@ -48,7 +48,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
 
   // Encode the result with fidl::Encode and compare against the expected encode_result.
   auto reference_encode_result = fidl::Encode(fidl::DecodedMessage<FidlType>(
-      fidl::BytePart(test_data.data(), test_data.size(), test_data.size())));
+      fidl::BytePart(test_data.data(), static_cast<unsigned int>(test_data.size()),
+                     static_cast<unsigned int>(test_data.size()))));
   if (reference_encode_result.status != ZX_OK) {
     std::cout << "fidl::Encode failed with error: " << encode_result.error << std::endl;
     return false;

@@ -188,6 +188,9 @@ executable("virtio_gpu_bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("virtio_gpu") {

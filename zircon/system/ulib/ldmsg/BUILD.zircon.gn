@@ -32,4 +32,7 @@ zx_library("ldmsg") {
     # TODO(25073): Once a cleaner solution is found, remove this.
     "$zx_build_config:no_fuzzer",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
 }

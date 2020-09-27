@@ -34,6 +34,9 @@ source_set("views") {
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("test_views_app") {

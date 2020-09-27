@@ -101,4 +101,7 @@ source_set("mlme") {
 
   public_configs = [ ":wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

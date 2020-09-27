@@ -35,13 +35,21 @@ static constexpr uint64_t kPciBarMmioType64Bit = 0b10 << 1;
 static constexpr uint64_t kPciBarMmioAddrMask = ~bit_mask<uint64_t>(4);
 
 // PCI type 1 address manipulation.
-constexpr uint8_t pci_type1_bus(uint64_t addr) { return bits_shift(addr, 23, 16); }
+constexpr uint8_t pci_type1_bus(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 23, 16));
+}
 
-constexpr uint8_t pci_type1_device(uint64_t addr) { return bits_shift(addr, 15, 11); }
+constexpr uint8_t pci_type1_device(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 15, 11));
+}
 
-constexpr uint8_t pci_type1_function(uint64_t addr) { return bits_shift(addr, 10, 8); }
+constexpr uint8_t pci_type1_function(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 10, 8));
+}
 
-constexpr uint8_t pci_type1_register(uint64_t addr) { return bits_shift(addr, 7, 2) << 2; }
+constexpr uint8_t pci_type1_register(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 7, 2) << 2);
+}
 
 class PciBus;
 class PciDevice;
