@@ -183,6 +183,9 @@ if (target_cpu == "arm64") {
     ]
     public_configs = [ ":sources_include_config" ]
     cflags = []
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("test_sources") {

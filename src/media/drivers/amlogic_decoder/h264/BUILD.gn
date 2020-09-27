@@ -34,4 +34,7 @@ source_set("h264_parser") {
     "//zircon/public/lib/safemath",
   ]
   public_configs = [ ":h264_headers" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
