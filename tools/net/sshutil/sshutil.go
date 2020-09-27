@@ -11,8 +11,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
-	"net"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
@@ -118,30 +116,4 @@ func DefaultSSHConfigFromSigners(signers ...ssh.Signer) (*ssh.ClientConfig, erro
 		Timeout:         connectAttemptTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}, nil
-}
-
-// Returns the network to use to SSH into a device.
-func network(address net.Addr) (string, error) {
-	var ip *net.IP
-
-	// We need these type assertions because the net package (annoyingly) doesn't provide
-	// an interface for objects that have an IP address.
-	switch addr := address.(type) {
-	case *net.UDPAddr:
-		ip = &addr.IP
-	case *net.TCPAddr:
-		ip = &addr.IP
-	case *net.IPAddr:
-		ip = &addr.IP
-	default:
-		return "", fmt.Errorf("unsupported address type: %T", address)
-	}
-
-	if ip.To4() != nil {
-		return "tcp", nil // IPv4
-	}
-	if ip.To16() != nil {
-		return "tcp6", nil // IPv6
-	}
-	return "", fmt.Errorf("cannot infer network for IP address %s", ip.String())
 }
