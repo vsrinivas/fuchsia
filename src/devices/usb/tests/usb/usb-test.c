@@ -150,7 +150,7 @@ static void usb_isoch_verify_result(fuchsia_hardware_usb_tester_IsochResult* res
   // Isochronous transfers aren't guaranteed, so just require a high enough percentage to pass.
   ASSERT_GE(result->num_packets, ISOCH_MIN_PACKETS,
             "num_packets is too low for a reliable result, should request more bytes");
-  double percent_passed = ((double)result->num_passed / result->num_packets) * 100;
+  double percent_passed = ((double)result->num_passed / (double)result->num_packets) * 100;
   ASSERT_GE(percent_passed, ISOCH_MIN_PASS_PERCENT, "not enough isoch transfers succeeded");
 }
 
