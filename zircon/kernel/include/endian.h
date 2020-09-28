@@ -5,8 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_ENDIAN_H_
-#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_ENDIAN_H_
+#ifndef ZIRCON_KERNEL_INCLUDE_ENDIAN_H_
+#define ZIRCON_KERNEL_INCLUDE_ENDIAN_H_
 
 #include <sys/types.h>
 
@@ -43,11 +43,6 @@ static inline uint16_t SWAP_16(uint16_t x) { return __builtin_bswap16(x); }
 #define BE16(val) SWAP_16(val)
 #endif
 
-#define LE32SWAP(var) (var) = LE32(var);
-#define LE16SWAP(var) (var) = LE16(var);
-#define BE32SWAP(var) (var) = BE32(var);
-#define BE16SWAP(var) (var) = BE16(var);
-
 /* classic network byte swap stuff */
 #define ntohs(n) BE16(n)
 #define htons(h) BE16(h)
@@ -58,23 +53,4 @@ static inline uint16_t SWAP_16(uint16_t x) { return __builtin_bswap16(x); }
 #define htobe64(h) BE64(h)
 #define be64toh(b) BE64(b)
 
-// some memory access macros
-#if __POWERPC__
-#include <ppc_intrinsics.h>
-
-#define READ_MEM_WORD(ptr) __lwbrx((word *)(ptr), 0)
-#define READ_MEM_HALFWORD(ptr) __lhbrx((halfword *)(ptr), 0)
-#define READ_MEM_BYTE(ptr) (*(byte *)(ptr))
-#define WRITE_MEM_WORD(ptr, data) __stwbrx(data, (word *)(ptr), 0)
-#define WRITE_MEM_HALFWORD(ptr, data) __sthbrx(data, (halfword *)(ptr), 0)
-#define WRITE_MEM_BYTE(ptr, data) (*(byte *)(ptr) = (data))
-#else
-#define READ_MEM_WORD(ptr) SWAPIT_32(*(word *)(ptr))
-#define READ_MEM_HALFWORD(ptr) SWAPIT_16(*(halfword *)(ptr))
-#define READ_MEM_BYTE(ptr) (*(byte *)(ptr))
-#define WRITE_MEM_WORD(ptr, data) (*(word *)(ptr) = SWAPIT_32(data))
-#define WRITE_MEM_HALFWORD(ptr, data) (*(halfword *)(ptr) = SWAPIT_16(data))
-#define WRITE_MEM_BYTE(ptr, data) (*(byte *)(ptr) = (data))
-#endif
-
-#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_ENDIAN_H_
+#endif  // ZIRCON_KERNEL_INCLUDE_ENDIAN_H_
