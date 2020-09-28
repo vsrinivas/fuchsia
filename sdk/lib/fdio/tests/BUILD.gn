@@ -36,11 +36,14 @@ group("tests") {
 
 # FDIO tests that can run on host as well as target.
 test("fdio_hosttests") {
-  sources = [
-    "fdio_eventfd.cc",
-    "fdio_poll.cc",
-    "fdio_timerfd.cc",
-  ]
+  sources = []
+  if (is_linux) {
+    sources += [
+      "fdio_eventfd.cc",
+      "fdio_poll.cc",
+      "fdio_timerfd.cc",
+    ]
+  }
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",

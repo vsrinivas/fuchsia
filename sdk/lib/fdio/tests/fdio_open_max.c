@@ -8,7 +8,4 @@
 
 #include <zxtest/zxtest.h>
 
-TEST(OpenMaxText, Sysconf) {
-  int max = sysconf(_SC_OPEN_MAX);
-  ASSERT_EQ(max, FDIO_MAX_FD, "sysconf(_SC_OPEN_MAX) != FDIO_MAX_FD");
-}
+TEST(OpenMaxText, Sysconf) { ASSERT_EQ(sysconf(_SC_OPEN_MAX), FDIO_MAX_FD); }
