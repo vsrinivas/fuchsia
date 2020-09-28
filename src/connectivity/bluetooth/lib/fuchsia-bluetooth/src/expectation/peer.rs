@@ -1,9 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 //! Expectations for Bluetooth Peers (i.e. Remote Devices)
 
 //use fidl_fuchsia_bluetooth_control::{RemoteDevice, TechnologyType};
-use fidl_fuchsia_bluetooth_sys::{TechnologyType};
+use fidl_fuchsia_bluetooth_sys::TechnologyType;
 
-use crate::{expectation::Predicate, over, types::{Address, Peer, PeerId}};
+use crate::{
+    expectation::Predicate,
+    over,
+    types::{Address, Peer, PeerId},
+};
 
 pub fn name(expected_name: &str) -> Predicate<Peer> {
     over!(Peer: name, Predicate::equal(Some(expected_name.to_string())))

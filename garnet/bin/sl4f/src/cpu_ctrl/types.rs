@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use anyhow::Error;
 use fidl_fuchsia_hardware_cpu_ctrl::CpuPerformanceStateInfo;
 use serde::{Deserialize, Serialize};

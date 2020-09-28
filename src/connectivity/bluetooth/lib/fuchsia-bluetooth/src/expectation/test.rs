@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {fidl_fuchsia_bluetooth_sys::TechnologyType, std::collections::HashMap};
 
 use crate::{

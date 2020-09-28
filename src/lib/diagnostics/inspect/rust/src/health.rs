@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 // Not sure why this is needed: without it, the compiler will report that practically all of the
 // code here is unused.
 #![allow(unused)]
