@@ -10,3 +10,7 @@ toc:
   path: /docs/concepts/packages/package_update.md
 - title: "Merkle roots"
   path:  /docs/concepts/packages/merkleroot.md
+- title: "Garbage collection"
+  path: /docs/concepts/packages/garbage_collection.md
+- title: "Update package"
+  path: /docs/concepts/packages/update_pkg.md
