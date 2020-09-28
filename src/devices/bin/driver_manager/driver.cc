@@ -10,12 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/driver/binding.h>
 #include <zircon/status.h>
 
 #include <new>
 #include <string>
 
+#include <ddk/binding.h>
 #include <driver-info/driver-info.h>
 #include <fbl/string_printf.h>
 

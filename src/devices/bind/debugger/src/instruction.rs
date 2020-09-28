@@ -64,7 +64,7 @@ impl fmt::Display for RawInstruction<[u32; 3]> {
     }
 }
 
-/// These should match the values in <zircon/driver/binding.h>, e.g. COND_AL = 0
+/// These should match the values in <ddk/binding.h>, e.g. COND_AL = 0
 #[derive(FromPrimitive, PartialEq, Clone, Copy, Debug)]
 pub enum RawCondition {
     Always = 0,
@@ -72,7 +72,7 @@ pub enum RawCondition {
     NotEqual,
 }
 
-/// These should match the values in <zircon/driver/binding.h>, e.g. OP_ABORT = 0
+/// These should match the values in <ddk/binding.h>, e.g. OP_ABORT = 0
 #[derive(FromPrimitive, PartialEq, Clone, Copy)]
 pub enum RawOp {
     Abort = 0,

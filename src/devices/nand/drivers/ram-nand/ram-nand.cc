@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/driver/binding.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <utility>
 
+#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/bad-block.h>
 #include <ddk/metadata/nand.h>

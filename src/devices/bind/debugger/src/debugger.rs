@@ -9,7 +9,7 @@ use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::fmt;
 
-// From <zircon/driver/binding.h>.
+// From <ddk/binding.h>.
 const BIND_FLAGS: u32 = 0;
 const BIND_PROTOCOL: u32 = 1;
 const BIND_AUTOBIND: u32 = 2;

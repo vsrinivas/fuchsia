@@ -54,7 +54,7 @@ case of zxcrypt, the [device](/src/devices/block/drivers/zxcrypt/device.h) is "M
 
 There are two small pieces of functionality which cannot be written in DDKTL and C++:
 * The driver binding logic, written using the C preprocessor macros of DDK's
-  [binding.h](/zircon/system/public/zircon/driver/binding.h).
+  [binding.h](/src/lib/ddk/include/ddk/binding.h).
 * The completion routines of [ulib/sync](/zircon/system/ulib/sync), which are used for synchronous I/O
   and are incompatible with C++ atomics.
 

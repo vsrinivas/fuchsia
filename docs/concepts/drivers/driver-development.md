@@ -122,7 +122,7 @@ zx_device_prop_t device_props[] = {
 ```
 
 For now, binding variables and macros are defined in
-[zircon/driver/binding.h](/zircon/system/public/zircon/driver/binding.h). In the
+[ddk/binding.h](/src/lib/ddk/include/ddk/binding.h). In the
 near future, all bind properties will be defined by bind libraries like the
 `deprecated.pci` library imported above. If you are introducing a new device
 class, you may need to introduce new bind properties to the binding header as

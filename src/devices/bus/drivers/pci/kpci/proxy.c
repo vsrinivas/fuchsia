@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/driver/binding.h>
 #include <zircon/fidl.h>
 #include <zircon/process.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DRIVER_INFO_DRIVER_INFO_H_
+#define DRIVER_INFO_DRIVER_INFO_H_
 
 #include <stdint.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <zircon/driver/binding.h>
+
+#include <ddk/binding.h>
 
 __BEGIN_CDECLS
 
@@ -32,3 +33,5 @@ const char* di_bind_param_name(uint32_t param_num);
 void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len);
 
 __END_CDECLS
+
+#endif  // DRIVER_INFO_DRIVER_INFO_H_

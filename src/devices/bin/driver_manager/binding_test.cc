@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/driver/binding.h>
-
+#include <ddk/binding.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

@@ -9,12 +9,12 @@
 #include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/driver/binding.h>
 #include <zircon/process.h>
 #include <zircon/threads.h>
 
 #include <algorithm>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/sdio.h>

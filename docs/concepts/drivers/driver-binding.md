@@ -19,10 +19,11 @@ Not all drivers use this form of bind rules but a migration is under way to conv
 
 One thing to note about this stage of the migration is that there is no support for defining device
 property keys in bind libraries (see below). Instead, the keys from the old driver binding system
-([driver/binding.h](/zircon/system/public/zircon/driver/binding.h)) are available to be extended.
+([ddk/binding.h](/src/lib/ddk/include/ddk/binding.h)) are available to be extended.
 These keys are hardcoded into the bind compiler and are available under the `deprecated` namespace.
 For example, the PCI vendor ID key is `deprecated.BIND_PCI_VID`. Eventually this namespace will be
 removed and all bind property keys will be defined in bind libraries.
+
 
 ## The compiler
 

@@ -6,7 +6,8 @@
 #define SRC_LIB_DDK_INCLUDE_DDK_METADATA_I2C_H_
 
 #include <stdint.h>
-#include <zircon/driver/binding.h>
+
+#include <ddk/binding.h>
 
 #ifdef __cplusplus
 #include <string.h>

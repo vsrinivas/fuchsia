@@ -4,10 +4,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #include <lib/fitx/result.h>
-#include <zircon/driver/binding.h>
 
 #include <vector>
 
+#include <ddk/binding.h>
 #include <ddk/protocol/pciroot.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/acpi.h>
@@ -171,7 +171,6 @@ ACPI_STATUS WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object, uint3
 
   return ::AcpiWalkNamespace(type, start_object, max_depth, Descent, Ascent, &cbk, nullptr);
 }
-
 
 // A utility function which can be used to invoke the ACPICA library's
 // AcpiWalkResources function, but with an arbitrary Callable instead of needing

@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ACTION_LIST_H_
+#define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ACTION_LIST_H_
+
+#include <fuchsia/device/mock/cpp/fidl.h>
+#include <lib/fit/bridge.h>
+#include <lib/fit/promise.h>
 
 #include <string>
 #include <vector>
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
-#include <fuchsia/device/mock/cpp/fidl.h>
-#include <zircon/driver/binding.h>
+#include <ddk/binding.h>
 
 namespace libdriver_integration_test {
 
@@ -64,3 +66,5 @@ class ActionList {
 };
 
 }  // namespace libdriver_integration_test
+
+#endif  // SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ACTION_LIST_H_

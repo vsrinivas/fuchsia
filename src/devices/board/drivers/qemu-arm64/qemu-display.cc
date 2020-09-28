@@ -1,6 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -8,7 +10,6 @@
 
 #include "qemu-bus.h"
 #include "qemu-virt.h"
-#include "zircon/driver/binding.h"
 namespace board_qemu_arm64 {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),

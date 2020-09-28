@@ -8,7 +8,7 @@ import elfinfo
 import glob
 import os
 
-# Copied from //zircon/system/public/zircon/driver/binding.h, which see.
+# Copied from //src/lib/ddk/include/ddk/binding.h, which see.
 ZIRCON_NOTE_DRIVER = 0x31565244  # DRV1
 ZIRCON_DRIVER_IDENT = ('Zircon\0', ZIRCON_NOTE_DRIVER)
 

@@ -70,7 +70,6 @@ zx_library("c") {
             "zircon/boot/netboot.h",
             "zircon/boot/sysconfig.h",
             "zircon/compiler.h",
-            "zircon/driver/binding.h",
             "zircon/errors.h",
             "zircon/features.h",
             "zircon/fidl.h",
