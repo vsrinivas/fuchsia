@@ -21,7 +21,8 @@
     "out",
     ".cipd",
     "testdata",
-    "prebuilt/third_party/sysroot/linux"
+    "prebuilt/third_party/sysroot/linux",
+    "prebuilt/third_party/gcc"
   ],
   "textExtensionList": [
     "ac",
@@ -32,6 +33,8 @@
     "cc",
     "cpp",
     "dart",
+    "bin",
+    "far",
     "gn",
     "gni",
     "go",
@@ -79,10 +82,6 @@
     {
       "projectRoot": "prebuilt/third_party/ffmpeg/pkg",
       "licenseLocation": "pkg/ffmpeg/docs/LICENSE.md"
-    },
-    {
-      "projectRoot": "prebuilt/third_party/gcc/linux-x64",
-      "licenseLocation": "linux-x64/share/info/gcc.info"
     },
     {
       "projectRoot": "prebuilt/third_party/python3/linux-x64",
