@@ -80,5 +80,6 @@ group("tests") {
     "//zircon/kernel:tests",
     "//zircon/system/ulib:tests",
     "//zircon/system/utest:tests",
+    "//zircon/tools:tests",
   ]
 }

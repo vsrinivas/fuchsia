@@ -236,16 +236,16 @@ action("kazoo-syscall-golden-test") {
 
   args = [
     "--builddir",
-    root_build_dir,
+    rebase_path(root_build_dir),
     "--fidlc",
-    fidlc,
+    rebase_path(fidlc, root_build_dir),
     "--kazoo",
-    kazoo,
+    rebase_path(kazoo, root_build_dir),
     "--syscalls",
     rebase_path("../../vdso"),
     "--output-touch",
-    outputs[0],
+    rebase_path(outputs[0], root_build_dir),
     "--tmp-base",
-    target_gen_dir,
+    rebase_path(target_gen_dir, root_build_dir),
   ]
 }

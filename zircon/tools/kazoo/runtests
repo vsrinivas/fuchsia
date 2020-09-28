@@ -9,23 +9,23 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 pushd $DIR/../../..
 
-fx ninja -C out/default.zircon \
-  host-x64-linux-clang/obj/tools/fidl/fidlc \
-  host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
-  host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
+fx ninja -C out/default \
+  host_x64/fidlc \
+  host_x64/exe.unstripped/kazoo \
+  host_x64/exe.unstripped/kazoo-test \
 
-out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug --gtest_break_on_failure
+out/default/host_x64/exe.unstripped/kazoo-test --gtest_break_on_failure
 
 # An rspfile appears to be the only way to get the path to these tools in the
 # real build, so pass those through directly to avoid more contortions, even
 # though it makes for weird arguments to the test script.
-echo host-x64-linux-clang/obj/tools/fidl/fidlc > /tmp/fidlc.rsp
-echo host-x64-linux-clang/obj/tools/kazoo/kazoo.debug > /tmp/kazoo.rsp
+echo host_x64/fidlc > /tmp/fidlc.rsp
+echo host_x64/exe.unstripped/kazoo > /tmp/kazoo.rsp
 
 zircon/tools/kazoo/golden-test \
   --fidlc /tmp/fidlc.rsp \
   --kazoo /tmp/kazoo.rsp \
-  --builddir out/default.zircon \
+  --builddir out/default \
   --syscalls zircon/vdso \
   --p4merge \
   --output-touch /dev/null \

@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 template("zx_test") {
-  executable(target_name) {
-    testonly = true
+  test(target_name) {
     forward_variables_from(invoker, "*", [ "sdk_migrated" ])
   }
   not_needed(invoker, [ "sdk_migrated" ])
