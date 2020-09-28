@@ -27,7 +27,7 @@ const char kCrashRegisterPath[] = "/tmp/crash_register.json";
 
 std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    const timekeeper::Clock& clock,
+                                                    timekeeper::Clock* clock,
                                                     std::shared_ptr<InfoContext> info_context) {
   Config config;
 
@@ -74,7 +74,7 @@ ErrorOr<std::string> ReadStringFromFile(const std::string& filepath) {
 
 std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    const timekeeper::Clock& clock,
+                                                    timekeeper::Clock* clock,
                                                     std::shared_ptr<InfoContext> info_context,
                                                     Config config) {
   const ErrorOr<std::string> build_version = ReadStringFromFile("/config/build-info/version");

@@ -120,9 +120,9 @@ class FeedbackDataIntegrationTest : public sys::testing::TestWithEnvironment {
   //
   // When archivist.cmx spawns, it will start collecting asynchronously kernel log messages. But if
   // DumpLogs() is called "too soon", it will immediately return empty logs instead of waiting on
-  // the kernel log collection (fxbug.dev/4665), resulting in a flaky test (fxbug.dev/8303). We thus spawn
-  // archivist.cmx on advance and wait for it to have at least one message before running the actual
-  // test.
+  // the kernel log collection (fxbug.dev/4665), resulting in a flaky test (fxbug.dev/8303). We thus
+  // spawn archivist.cmx on advance and wait for it to have at least one message before running the
+  // actual test.
   void WaitForLogger() {
     LogListener log_listener(environment_services_);
     RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });

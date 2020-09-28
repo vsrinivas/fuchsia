@@ -35,11 +35,11 @@ class MainService {
   // because the config cannot be parsed or the crash reporter instantiated.
   static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                const timekeeper::Clock& clock,
+                                                timekeeper::Clock* clock,
                                                 std::shared_ptr<InfoContext> info_context);
   static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                const timekeeper::Clock& clock,
+                                                timekeeper::Clock* clock,
                                                 std::shared_ptr<InfoContext> info_context,
                                                 Config config);
 

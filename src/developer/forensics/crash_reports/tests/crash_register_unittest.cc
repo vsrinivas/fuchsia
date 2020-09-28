@@ -50,7 +50,8 @@ class CrashRegisterTest : public UnitTestFixture {
   CrashRegisterTest() : executor_(dispatcher()) {}
 
   void SetUp() override {
-    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     MakeNewCrashRegister();
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());

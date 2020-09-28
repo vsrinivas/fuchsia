@@ -36,17 +36,14 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   // Static factory method.
   //
   // Returns nullptr if the crash reporter cannot be instantiated.
-  static std::unique_ptr<CrashReporter> TryCreate(async_dispatcher_t* dispatcher,
-                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                  const timekeeper::Clock& clock,
-                                                  std::shared_ptr<InfoContext> info_context,
-                                                  const Config* config,
-                                                  const ErrorOr<std::string>& build_version,
-                                                  CrashRegister* crash_register);
+  static std::unique_ptr<CrashReporter> TryCreate(
+      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+      timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, const Config* config,
+      const ErrorOr<std::string>& build_version, CrashRegister* crash_register);
 
   // For testing purposes and injecting a stub CrashServer.
   CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
+                timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context,
                 const Config* config, const ErrorOr<std::string>& build_version,
                 CrashRegister* crash_register, std::unique_ptr<SnapshotManager> snapshot_manager,
                 std::unique_ptr<CrashServer> crash_server);

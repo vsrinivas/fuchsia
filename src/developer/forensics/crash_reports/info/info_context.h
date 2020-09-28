@@ -21,8 +21,8 @@ namespace crash_reports {
 // Holds the objects needed to expose information for a component.
 class InfoContext {
  public:
-  InfoContext(inspect::Node *root_node, const timekeeper::Clock &clock,
-              async_dispatcher_t *dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+  InfoContext(inspect::Node *root_node, timekeeper::Clock *clock, async_dispatcher_t *dispatcher,
+              std::shared_ptr<sys::ServiceDirectory> services)
       : inspect_manager_(root_node, clock), cobalt_(dispatcher, services) {}
 
   InspectManager &InspectManager() { return inspect_manager_; }

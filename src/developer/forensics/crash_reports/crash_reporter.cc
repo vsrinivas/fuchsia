@@ -51,7 +51,7 @@ constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
 std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, const Config* config,
+    timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, const Config* config,
     const ErrorOr<std::string>& build_version, CrashRegister* crash_register) {
   std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
       dispatcher, services, std::make_unique<timekeeper::SystemClock>(),
@@ -68,11 +68,13 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
       build_version, crash_register, std::move(snapshot_manager), std::move(crash_server)));
 }
 
-CrashReporter::CrashReporter(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, const Config* config,
-    const ErrorOr<std::string>& build_version, CrashRegister* crash_register,
-    std::unique_ptr<SnapshotManager> snapshot_manager, std::unique_ptr<CrashServer> crash_server)
+CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
+                             std::shared_ptr<sys::ServiceDirectory> services,
+                             timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context,
+                             const Config* config, const ErrorOr<std::string>& build_version,
+                             CrashRegister* crash_register,
+                             std::unique_ptr<SnapshotManager> snapshot_manager,
+                             std::unique_ptr<CrashServer> crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),

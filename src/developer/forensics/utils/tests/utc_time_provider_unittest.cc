@@ -25,7 +25,7 @@ constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
 
 class UTCTimeProviderTest : public UnitTestFixture {
  public:
-  UTCTimeProviderTest() : utc_provider_(std::make_unique<UTCTimeProvider>(services(), clock_)) {
+  UTCTimeProviderTest() : utc_provider_(std::make_unique<UTCTimeProvider>(services(), &clock_)) {
     clock_.Set(kTime);
   }
 

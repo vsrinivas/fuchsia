@@ -136,26 +136,26 @@ TEST(TimeTest, CurrentUTCTimeRaw) {
   timekeeper::TestClock clock;
 
   clock.Set(kTime1);
-  EXPECT_EQ(CurrentUTCTimeRaw(clock), kTime1);
+  EXPECT_EQ(CurrentUTCTimeRaw(&clock), kTime1);
 
   clock.Set(kTime2);
-  EXPECT_EQ(CurrentUTCTimeRaw(clock), kTime2);
+  EXPECT_EQ(CurrentUTCTimeRaw(&clock), kTime2);
 
   clock.Set(kTime3);
-  EXPECT_EQ(CurrentUTCTimeRaw(clock), kTime3);
+  EXPECT_EQ(CurrentUTCTimeRaw(&clock), kTime3);
 }
 
 TEST(TimeTest, CurrentUTCTime) {
   timekeeper::TestClock clock;
 
   clock.Set(kTime1);
-  EXPECT_EQ(CurrentUTCTime(clock), kTime1Str);
+  EXPECT_EQ(CurrentUTCTime(&clock), kTime1Str);
 
   clock.Set(kTime2);
-  EXPECT_EQ(CurrentUTCTime(clock), kTime2Str);
+  EXPECT_EQ(CurrentUTCTime(&clock), kTime2Str);
 
   clock.Set(kTime3);
-  EXPECT_EQ(CurrentUTCTime(clock), kTime3Str);
+  EXPECT_EQ(CurrentUTCTime(&clock), kTime3Str);
 }
 
 }  // namespace

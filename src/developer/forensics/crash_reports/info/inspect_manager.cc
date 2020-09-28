@@ -25,7 +25,7 @@ namespace {
 using files::JoinPath;
 using inspect::Node;
 
-std::string CurrentTime(const timekeeper::Clock& clock) {
+std::string CurrentTime(timekeeper::Clock* clock) {
   auto current_time = CurrentUTCTime(clock);
   if (current_time.has_value()) {
     return current_time.value();
@@ -43,7 +43,7 @@ InspectManager::Report::Report(const std::string& program_name,
                    JoinPath(InspectNodeManager::SanitizeString(program_name), local_report_id));
 }
 
-InspectManager::InspectManager(inspect::Node* root_node, const timekeeper::Clock& clock)
+InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* clock)
     : node_manager_(root_node),
       clock_(clock),
       crash_register_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister"),

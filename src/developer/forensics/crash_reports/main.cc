@@ -23,13 +23,13 @@ int main() {
 
   forensics::component::Component component;
 
-  const timekeeper::SystemClock clock;
+  timekeeper::SystemClock clock;
 
-  auto info_context = std::make_shared<InfoContext>(component.InspectRoot(), clock,
+  auto info_context = std::make_shared<InfoContext>(component.InspectRoot(), &clock,
                                                     component.Dispatcher(), component.Services());
 
   std::unique_ptr<MainService> main_service = MainService::TryCreate(
-      component.Dispatcher(), component.Services(), clock, std::move(info_context));
+      component.Dispatcher(), component.Services(), &clock, std::move(info_context));
   if (!main_service) {
     return EXIT_FAILURE;
   }

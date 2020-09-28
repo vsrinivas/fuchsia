@@ -48,7 +48,8 @@ class StoreTest : public UnitTestFixture {
 
  protected:
   void MakeNewStore(const StorageSize max_size) {
-    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     store_ = std::make_unique<Store>(info_context_, tmp_dir_.path(), max_size);
   }
 

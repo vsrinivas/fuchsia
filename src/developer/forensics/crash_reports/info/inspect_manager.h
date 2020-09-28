@@ -27,7 +27,7 @@ namespace crash_reports {
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
  public:
-  InspectManager(inspect::Node* root_node, const timekeeper::Clock& clock);
+  InspectManager(inspect::Node* root_node, timekeeper::Clock* clock);
 
   // Exposes the static configuration of the crash reporter.
   void ExposeConfig(const crash_reports::Config& config);
@@ -150,7 +150,7 @@ class InspectManager {
   };
 
   InspectNodeManager node_manager_;
-  const timekeeper::Clock& clock_;
+  timekeeper::Clock* clock_;
 
   Config config_;
   Settings settings_;

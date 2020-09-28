@@ -135,7 +135,8 @@ std::vector<testing::internal::PairMatcher<K, V>> Linearize(const std::map<K, V>
 class CrashReporterTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     crash_register_ = std::make_unique<CrashRegister>(
         dispatcher(), services(), info_context_, std::string(kBuildVersion), RegisterJsonPath());
 
@@ -163,7 +164,7 @@ class CrashReporterTest : public UnitTestFixture {
     }
 
     crash_reporter_ =
-        std::make_unique<CrashReporter>(dispatcher(), services(), clock_, info_context_, &config_,
+        std::make_unique<CrashReporter>(dispatcher(), services(), &clock_, info_context_, &config_,
                                         ErrorOr<std::string>(kBuildVersion), crash_register_.get(),
                                         std::move(snapshot_manager), std::move(crash_server));
     FX_CHECK(crash_reporter_);

@@ -63,7 +63,7 @@ constexpr Settings::UploadPolicy kSettingsLimbo = Settings::UploadPolicy::LIMBO;
 class InspectManagerTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    inspect_manager_ = std::make_unique<InspectManager>(&InspectRoot(), clock_);
+    inspect_manager_ = std::make_unique<InspectManager>(&InspectRoot(), &clock_);
   }
 
  protected:

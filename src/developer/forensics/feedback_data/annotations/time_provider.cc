@@ -36,7 +36,7 @@ AnnotationOr GetUptime() {
   return AnnotationOr(*uptime);
 }
 
-AnnotationOr GetUTCTime(const Clock& clock) {
+AnnotationOr GetUTCTime(Clock* clock) {
   const auto time = CurrentUTCTime(clock);
   if (!time) {
     FX_LOGS(ERROR) << "error getting UTC time from timekeeper::Clock::Now()";
@@ -63,7 +63,7 @@ TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(cloc
     if (key == kAnnotationDeviceUptime) {
       annotations.insert({key, GetUptime()});
     } else if (key == kAnnotationDeviceUTCTime) {
-      annotations.insert({key, GetUTCTime(*clock_)});
+      annotations.insert({key, GetUTCTime(clock_.get())});
     }
   }
 

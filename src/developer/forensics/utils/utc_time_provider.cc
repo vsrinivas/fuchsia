@@ -11,7 +11,7 @@
 namespace forensics {
 
 UTCTimeProvider::UTCTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
-                                 const timekeeper::Clock& clock)
+                                 timekeeper::Clock* clock)
     : services_(services), clock_(clock), utc_(services_->Connect<fuchsia::time::Utc>()) {
   utc_.set_error_handler([](const zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection with fuchsia.time.Utc";

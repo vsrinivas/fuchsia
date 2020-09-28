@@ -111,7 +111,8 @@ class QueueTest : public UnitTestFixture {
  public:
   void SetUp() override {
     settings_.set_upload_policy(UploadPolicy::LIMBO);
-    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProvider();

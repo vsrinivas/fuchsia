@@ -48,7 +48,8 @@ class MainServiceTest : public UnitTestFixture {
                          /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                          /*url=*/std::make_unique<std::string>(kCrashServerUrl),
                      }};
-    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpDeviceIdProviderServer();
@@ -56,7 +57,7 @@ class MainServiceTest : public UnitTestFixture {
     SetUpUtcProviderServer();
 
     main_service_ =
-        MainService::TryCreate(dispatcher(), services(), clock_, info_context_, std::move(config));
+        MainService::TryCreate(dispatcher(), services(), &clock_, info_context_, std::move(config));
     FX_CHECK(main_service_);
     RunLoopUntilIdle();
   }
