@@ -89,6 +89,10 @@ But applicable pieces can also be used in userspace, e.g. [`<lib/arch/asm.h>`].
 dependencies.  But some other header and library dependencies are both
 acceptable and encouraged in `lib/arch`.
 
+Users are not permitted to directly depend on libraries strictly under
+`lib/arch`, as they are implementation details; only `lib/arch` itself may be
+depended on.
+
 ### C library
 
 `lib/arch` should be entirely compatible with a full-fledged standard C

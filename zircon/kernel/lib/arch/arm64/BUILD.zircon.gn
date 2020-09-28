@@ -10,6 +10,7 @@ zx_library("arm64") {
   kernel = true
   host = true
   static = true
+  visibility = [ "../*" ]
   sources = []
 
   sdk = "source"

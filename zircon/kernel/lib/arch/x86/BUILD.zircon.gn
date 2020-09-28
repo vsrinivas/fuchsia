@@ -10,6 +10,7 @@ zx_library("x86") {
   kernel = true
   host = true
   static = true
+  visibility = [ "../*" ]
   sources = []
   public_deps = [
     # TODO
