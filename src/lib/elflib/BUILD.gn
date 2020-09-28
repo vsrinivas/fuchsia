@@ -14,10 +14,9 @@ static_library("elflib") {
   deps = [ "//zircon/system/public" ]
 
   public_deps = [ "//zircon/public/lib/fbl" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # An example stripped binary. Originally copied from out/x64/cowsay.
@@ -45,7 +44,7 @@ test("elflib_unittest") {
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -100,6 +99,9 @@ group("tests") {
 fuzzer("elflib_fuzzer") {
   sources = [ "elflib_fuzztest.cc" ]
   deps = [ ":elflib" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuzzers_package("elflib_fuzzers") {
