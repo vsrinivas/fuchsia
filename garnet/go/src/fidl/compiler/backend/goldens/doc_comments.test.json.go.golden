@@ -13,6 +13,8 @@ const (
 	C int32 = 4
 )
 
+var _ _bindings.Enum = MyEnum(0)
+
 // enum comment #1.
 //
 // enum comment #2.

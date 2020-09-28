@@ -30,8 +30,7 @@ const (
 {{end}}
 
 {{ range .Enums -}}
-{{/* TODO(fxbug.dev/59077): Uncomment type assertion once I1102f244aa5ab4545fab21218c1da90be08604ec has landed. */}}
-{{/* var _ {{ $.BindingsAlias }}.Enum = {{ .Name }}(0) */}}
+var _ {{ $.BindingsAlias }}.Enum = {{ .Name }}(0)
 {{ template "EnumDefinition" . }}
 {{ end -}}
 {{ range .Bits -}}

@@ -27,6 +27,8 @@ const (
 	BitsPrimitiveTrue int32    = BitsTypeTrue
 )
 
+var _ _bindings.Enum = EnumType(0)
+
 type EnumType int32
 
 const (

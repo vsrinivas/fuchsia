@@ -7,6 +7,8 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+var _ _bindings.Enum = ObjType(0)
+
 type ObjType uint32
 
 const (
@@ -45,6 +47,8 @@ func (x ObjType) String() string {
 	}
 	return "Unknown"
 }
+
+var _ _bindings.Enum = ErrorEnun(0)
 
 type ErrorEnun uint32
 

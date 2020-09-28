@@ -2,6 +2,12 @@
 
 package name
 
+import (
+	_bindings "syscall/zx/fidl"
+)
+
+var _ _bindings.Enum = MyStrictEnum(0)
+
 type MyStrictEnum uint32
 
 const (
@@ -40,6 +46,8 @@ func (x MyStrictEnum) String() string {
 	}
 	return "Unknown"
 }
+
+var _ _bindings.Enum = MyFlexibleEnum(0)
 
 type MyFlexibleEnum uint32
 
@@ -82,6 +90,8 @@ func (x MyFlexibleEnum) String() string {
 	}
 	return "Unknown"
 }
+
+var _ _bindings.Enum = MyFlexibleEnumWithCustomUnknown(0)
 
 type MyFlexibleEnumWithCustomUnknown uint32
 

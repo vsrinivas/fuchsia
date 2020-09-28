@@ -91,8 +91,8 @@ success("FlexibleEnumUint64") {
 }
 
 success("FlexibleEnumInt8UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumInt8Struct {
         e: 0x0f,
     },
@@ -104,8 +104,8 @@ success("FlexibleEnumInt8UnknownValue") {
 }
 
 success("FlexibleEnumInt16UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumInt16Struct {
         e: 0x0fee,
     },
@@ -117,8 +117,8 @@ success("FlexibleEnumInt16UnknownValue") {
 }
 
 success("FlexibleEnumInt32UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumInt32Struct {
         e: 0x0feeddcc,
     },
@@ -130,8 +130,8 @@ success("FlexibleEnumInt32UnknownValue") {
 }
 
 success("FlexibleEnumInt64UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumInt64Struct {
         e: 0x0feeddccbbaa9988,
     },
@@ -143,8 +143,8 @@ success("FlexibleEnumInt64UnknownValue") {
 }
 
 success("FlexibleEnumUint8UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumUint8Struct {
         e: 0xff,
     },
@@ -156,8 +156,8 @@ success("FlexibleEnumUint8UnknownValue") {
 }
 
 success("FlexibleEnumUint16UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumUint16Struct {
         e: 0xffee,
     },
@@ -169,8 +169,8 @@ success("FlexibleEnumUint16UnknownValue") {
 }
 
 success("FlexibleEnumUint32UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumUint32Struct {
         e: 0xffeeddcc,
     },
@@ -182,8 +182,8 @@ success("FlexibleEnumUint32UnknownValue") {
 }
 
 success("FlexibleEnumUint64UnknownValue") {
-    // TODO(fxbug.dev/7847): Implement flexible enums in Go, HLCPP, and LLCPP.
-    bindings_denylist = [go,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in HLCPP, and LLCPP.
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleEnumUint64Struct {
         e: 0xffeeddccbbaa9988,
     },

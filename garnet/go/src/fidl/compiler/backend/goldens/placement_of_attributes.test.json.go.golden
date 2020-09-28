@@ -12,6 +12,8 @@ const (
 	ExampleConst uint32 = 0
 )
 
+var _ _bindings.Enum = ExampleEnum(0)
+
 type ExampleEnum uint32
 
 const (

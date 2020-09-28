@@ -7,6 +7,8 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+var _ _bindings.Enum = ObjType(0)
+
 type ObjType uint32
 
 const (

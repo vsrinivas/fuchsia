@@ -1062,8 +1062,7 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}
-	// TODO(fxbug.dev/59077): Uncomment to support type assertion once I1102f244aa5ab4545fab21218c1da90be08604ec has landed.
-	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 /*|| len(fidlData.Enums) != 0*/ || len(fidlData.Protocols) != 0 {
+	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 || len(fidlData.Enums) != 0 || len(fidlData.Protocols) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Protocols {
