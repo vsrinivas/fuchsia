@@ -1,696 +1,696 @@
 [
    {
-      "data_source":"Inspect",
-      "metadata":{
-         "component_url": "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
-         "errors":null,
-         "filename":"fuchsia.inspect.Tree",
-         "timestamp":0
+      "data_source": "Inspect",
+      "metadata": {
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "errors": null,
+         "filename": "fuchsia.inspect.Tree",
+         "timestamp": 0
       },
-      "moniker":"iquery_test_component.cmx",
-      "payload":{
-         "root":{
-            "array:0x15":[
+      "moniker": "iquery_test_component.cmx",
+      "payload": {
+         "root": {
+            "array:0x15": [
                1,
                10,
                -3
             ],
-            "array:0x16":[
+            "array:0x16": [
                1,
                10,
                2
             ],
-            "array:0x17":[
+            "array:0x17": [
                0.25,
                1.25,
                -0.75
             ],
-            "histogram:0x18":{
-               "buckets":[
+            "histogram:0x18": {
+               "buckets": [
                   {
-                     "count":10,
-                     "floor":-9223372036854775808,
-                     "upper_bound":-10
+                     "count": 10,
+                     "floor": -9223372036854775808,
+                     "upper_bound": -10
                   },
                   {
-                     "count":5,
-                     "floor":-10,
-                     "upper_bound":-5
+                     "count": 5,
+                     "floor": -10,
+                     "upper_bound": -5
                   },
                   {
-                     "count":5,
-                     "floor":-5,
-                     "upper_bound":0
+                     "count": 5,
+                     "floor": -5,
+                     "upper_bound": 0
                   },
                   {
-                     "count":5,
-                     "floor":0,
-                     "upper_bound":5
+                     "count": 5,
+                     "floor": 0,
+                     "upper_bound": 5
                   },
                   {
-                     "count":15,
-                     "floor":5,
-                     "upper_bound":9223372036854775807
+                     "count": 15,
+                     "floor": 5,
+                     "upper_bound": 9223372036854775807
                   }
                ]
             },
-            "histogram:0x19":{
-               "buckets":[
+            "histogram:0x19": {
+               "buckets": [
                   {
-                     "count":5,
-                     "floor":0,
-                     "upper_bound":5
+                     "count": 5,
+                     "floor": 0,
+                     "upper_bound": 5
                   },
                   {
-                     "count":5,
-                     "floor":5,
-                     "upper_bound":10
+                     "count": 5,
+                     "floor": 5,
+                     "upper_bound": 10
                   },
                   {
-                     "count":5,
-                     "floor":10,
-                     "upper_bound":15
+                     "count": 5,
+                     "floor": 10,
+                     "upper_bound": 15
                   },
                   {
-                     "count":5,
-                     "floor":15,
-                     "upper_bound":20
+                     "count": 5,
+                     "floor": 15,
+                     "upper_bound": 20
                   },
                   {
-                     "count":20,
-                     "floor":20,
-                     "upper_bound":18446744073709551615
+                     "count": 20,
+                     "floor": 20,
+                     "upper_bound": 18446744073709551615
                   }
                ]
             },
-            "histogram:0x1a":{
-               "buckets":[
+            "histogram:0x1a": {
+               "buckets": [
                   {
-                     "count":11.0,
-                     "floor":"-Infinity",
-                     "upper_bound":0.0
+                     "count": 11.0,
+                     "floor": "-Infinity",
+                     "upper_bound": 0.0
                   },
                   {
-                     "count":5.0,
-                     "floor":0.0,
-                     "upper_bound":0.5
+                     "count": 5.0,
+                     "floor": 0.0,
+                     "upper_bound": 0.5
                   },
                   {
-                     "count":5.0,
-                     "floor":0.5,
-                     "upper_bound":1.0
+                     "count": 5.0,
+                     "floor": 0.5,
+                     "upper_bound": 1.0
                   },
                   {
-                     "count":4.0,
-                     "floor":1.0,
-                     "upper_bound":1.5
+                     "count": 4.0,
+                     "floor": 1.0,
+                     "upper_bound": 1.5
                   },
                   {
-                     "count":15.0,
-                     "floor":1.5,
-                     "upper_bound":"Infinity"
+                     "count": 15.0,
+                     "floor": 1.5,
+                     "upper_bound": "Infinity"
                   }
                ]
             },
-            "histogram:0x1b":{
-               "buckets":[
+            "histogram:0x1b": {
+               "buckets": [
                   {
-                     "count":10,
-                     "floor":-9223372036854775808,
-                     "upper_bound":-10
+                     "count": 10,
+                     "floor": -9223372036854775808,
+                     "upper_bound": -10
                   },
                   {
-                     "count":5,
-                     "floor":-10,
-                     "upper_bound":-5
+                     "count": 5,
+                     "floor": -10,
+                     "upper_bound": -5
                   },
                   {
-                     "count":5,
-                     "floor":-5,
-                     "upper_bound":0
+                     "count": 5,
+                     "floor": -5,
+                     "upper_bound": 0
                   },
                   {
-                     "count":10,
-                     "floor":0,
-                     "upper_bound":10
+                     "count": 10,
+                     "floor": 0,
+                     "upper_bound": 10
                   },
                   {
-                     "count":10,
-                     "floor":10,
-                     "upper_bound":9223372036854775807
+                     "count": 10,
+                     "floor": 10,
+                     "upper_bound": 9223372036854775807
                   }
                ]
             },
-            "histogram:0x1c":{
-               "buckets":[
+            "histogram:0x1c": {
+               "buckets": [
                   {
-                     "count":0,
-                     "floor":0,
-                     "upper_bound":0
+                     "count": 0,
+                     "floor": 0,
+                     "upper_bound": 0
                   },
                   {
-                     "count":1,
-                     "floor":0,
-                     "upper_bound":1
+                     "count": 1,
+                     "floor": 0,
+                     "upper_bound": 1
                   },
                   {
-                     "count":1,
-                     "floor":1,
-                     "upper_bound":2
+                     "count": 1,
+                     "floor": 1,
+                     "upper_bound": 2
                   },
                   {
-                     "count":2,
-                     "floor":2,
-                     "upper_bound":4
+                     "count": 2,
+                     "floor": 2,
+                     "upper_bound": 4
                   },
                   {
-                     "count":36,
-                     "floor":4,
-                     "upper_bound":18446744073709551615
+                     "count": 36,
+                     "floor": 4,
+                     "upper_bound": 18446744073709551615
                   }
                ]
             },
-            "histogram:0x1d":{
-               "buckets":[
+            "histogram:0x1d": {
+               "buckets": [
                   {
-                     "count":11.0,
-                     "floor":"-Infinity",
-                     "upper_bound":0.0
+                     "count": 11.0,
+                     "floor": "-Infinity",
+                     "upper_bound": 0.0
                   },
                   {
-                     "count":12.0,
-                     "floor":0.0,
-                     "upper_bound":1.25
+                     "count": 12.0,
+                     "floor": 0.0,
+                     "upper_bound": 1.25
                   },
                   {
-                     "count":17.0,
-                     "floor":1.25,
-                     "upper_bound":3.75
+                     "count": 17.0,
+                     "floor": 1.25,
+                     "upper_bound": 3.75
                   },
                   {
-                     "count":0.0,
-                     "floor":3.75,
-                     "upper_bound":11.25
+                     "count": 0.0,
+                     "floor": 3.75,
+                     "upper_bound": 11.25
                   },
                   {
-                     "count":0.0,
-                     "floor":11.25,
-                     "upper_bound":"Infinity"
+                     "count": 0.0,
+                     "floor": 11.25,
+                     "upper_bound": "Infinity"
                   }
                ]
             },
-            "lazy-double":3.14,
-            "lazy-node":{
-               "uint":3
+            "lazy-double": 3.14,
+            "lazy-node": {
+               "uint": 3
             },
-            "table:0x0":{
-               "binary_data":"b64:IAAREgU=",
-               "object_name":"ExampleTable",
-               "row:0x1":{
-                  "cell:0x2":{
-                     "double_value":6.666666666666667,
-                     "name":"(0,0)",
-                     "value":0
+            "table:0x0": {
+               "binary_data": "b64:IAAREgU=",
+               "object_name": "ExampleTable",
+               "row:0x1": {
+                  "cell:0x2": {
+                     "double_value": 6.666666666666667,
+                     "name": "(0,0)",
+                     "value": 0
                   },
-                  "cell:0x3":{
-                     "double_value":13.333333333333334,
-                     "name":"(0,1)",
-                     "value":0
+                  "cell:0x3": {
+                     "double_value": 13.333333333333334,
+                     "name": "(0,1)",
+                     "value": 0
                   },
-                  "cell:0x4":{
-                     "double_value":20.0,
-                     "name":"(0,2)",
-                     "value":0
+                  "cell:0x4": {
+                     "double_value": 20.0,
+                     "name": "(0,2)",
+                     "value": 0
                   }
                },
-               "row:0x11":{
-                  "cell:0x12":{
-                     "double_value":86.66666666666667,
-                     "name":"(4,0)",
-                     "value":0
+               "row:0x11": {
+                  "cell:0x12": {
+                     "double_value": 86.66666666666667,
+                     "name": "(4,0)",
+                     "value": 0
                   },
-                  "cell:0x13":{
-                     "double_value":93.33333333333331,
-                     "name":"(4,1)",
-                     "value":4
+                  "cell:0x13": {
+                     "double_value": 93.33333333333331,
+                     "name": "(4,1)",
+                     "value": 4
                   },
-                  "cell:0x14":{
-                     "double_value":100.0,
-                     "name":"(4,2)",
-                     "value":8
+                  "cell:0x14": {
+                     "double_value": 100.0,
+                     "name": "(4,2)",
+                     "value": 8
                   }
                },
-               "row:0x5":{
-                  "cell:0x6":{
-                     "double_value":26.666666666666668,
-                     "name":"(1,0)",
-                     "value":0
+               "row:0x5": {
+                  "cell:0x6": {
+                     "double_value": 26.666666666666668,
+                     "name": "(1,0)",
+                     "value": 0
                   },
-                  "cell:0x7":{
-                     "double_value":33.333333333333336,
-                     "name":"(1,1)",
-                     "value":1
+                  "cell:0x7": {
+                     "double_value": 33.333333333333336,
+                     "name": "(1,1)",
+                     "value": 1
                   },
-                  "cell:0x8":{
-                     "double_value":40.0,
-                     "name":"(1,2)",
-                     "value":2
+                  "cell:0x8": {
+                     "double_value": 40.0,
+                     "name": "(1,2)",
+                     "value": 2
                   }
                },
-               "row:0x9":{
-                  "cell:0xa":{
-                     "double_value":46.666666666666664,
-                     "name":"(2,0)",
-                     "value":0
+               "row:0x9": {
+                  "cell:0xa": {
+                     "double_value": 46.666666666666664,
+                     "name": "(2,0)",
+                     "value": 0
                   },
-                  "cell:0xb":{
-                     "double_value":53.333333333333336,
-                     "name":"(2,1)",
-                     "value":2
+                  "cell:0xb": {
+                     "double_value": 53.333333333333336,
+                     "name": "(2,1)",
+                     "value": 2
                   },
-                  "cell:0xc":{
-                     "double_value":60.0,
-                     "name":"(2,2)",
-                     "value":4
+                  "cell:0xc": {
+                     "double_value": 60.0,
+                     "name": "(2,2)",
+                     "value": 4
                   }
                },
-               "row:0xd":{
-                  "cell:0x10":{
-                     "double_value":80.0,
-                     "name":"(3,2)",
-                     "value":6
+               "row:0xd": {
+                  "cell:0x10": {
+                     "double_value": 80.0,
+                     "name": "(3,2)",
+                     "value": 6
                   },
-                  "cell:0xe":{
-                     "double_value":66.66666666666667,
-                     "name":"(3,0)",
-                     "value":0
+                  "cell:0xe": {
+                     "double_value": 66.66666666666667,
+                     "name": "(3,0)",
+                     "value": 0
                   },
-                  "cell:0xf":{
-                     "double_value":73.33333333333333,
-                     "name":"(3,1)",
-                     "value":3
+                  "cell:0xf": {
+                     "double_value": 73.33333333333333,
+                     "name": "(3,1)",
+                     "value": 3
                   }
                }
             }
          }
       },
-     "version":1
+      "version": 1
    },
    {
-      "data_source":"Inspect",
-      "metadata":{
-         "component_url": "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
-         "errors":null,
-         "filename":"fuchsia.inspect.deprecated.Inspect",
-         "timestamp":0
+      "data_source": "Inspect",
+      "metadata": {
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "errors": null,
+         "filename": "fuchsia.inspect.deprecated.Inspect",
+         "timestamp": 0
       },
-      "moniker":"iquery_test_component.cmx",
-      "payload":{
-         "root":{
-            "table:0x0":{
-               "binary_data":"b64:IAAREgU=",
-               "object_name":"ExampleTable",
-               "row:0x1":{
-                  "cell:0x2":{
-                     "double_value":6.666666666666667,
-                     "name":"(0,0)",
-                     "value":0
+      "moniker": "iquery_test_component.cmx",
+      "payload": {
+         "root": {
+            "table:0x0": {
+               "binary_data": "b64:IAAREgU=",
+               "object_name": "ExampleTable",
+               "row:0x1": {
+                  "cell:0x2": {
+                     "double_value": 6.666666666666667,
+                     "name": "(0,0)",
+                     "value": 0
                   },
-                  "cell:0x3":{
-                     "double_value":13.333333333333334,
-                     "name":"(0,1)",
-                     "value":0
+                  "cell:0x3": {
+                     "double_value": 13.333333333333334,
+                     "name": "(0,1)",
+                     "value": 0
                   },
-                  "cell:0x4":{
-                     "double_value":20.0,
-                     "name":"(0,2)",
-                     "value":0
+                  "cell:0x4": {
+                     "double_value": 20.0,
+                     "name": "(0,2)",
+                     "value": 0
                   }
                },
-               "row:0x11":{
-                  "cell:0x12":{
-                     "double_value":86.66666666666667,
-                     "name":"(4,0)",
-                     "value":0
+               "row:0x11": {
+                  "cell:0x12": {
+                     "double_value": 86.66666666666667,
+                     "name": "(4,0)",
+                     "value": 0
                   },
-                  "cell:0x13":{
-                     "double_value":93.33333333333331,
-                     "name":"(4,1)",
-                     "value":4
+                  "cell:0x13": {
+                     "double_value": 93.33333333333331,
+                     "name": "(4,1)",
+                     "value": 4
                   },
-                  "cell:0x14":{
-                     "double_value":100.0,
-                     "name":"(4,2)",
-                     "value":8
+                  "cell:0x14": {
+                     "double_value": 100.0,
+                     "name": "(4,2)",
+                     "value": 8
                   }
                },
-               "row:0x5":{
-                  "cell:0x6":{
-                     "double_value":26.666666666666668,
-                     "name":"(1,0)",
-                     "value":0
+               "row:0x5": {
+                  "cell:0x6": {
+                     "double_value": 26.666666666666668,
+                     "name": "(1,0)",
+                     "value": 0
                   },
-                  "cell:0x7":{
-                     "double_value":33.333333333333336,
-                     "name":"(1,1)",
-                     "value":1
+                  "cell:0x7": {
+                     "double_value": 33.333333333333336,
+                     "name": "(1,1)",
+                     "value": 1
                   },
-                  "cell:0x8":{
-                     "double_value":40.0,
-                     "name":"(1,2)",
-                     "value":2
+                  "cell:0x8": {
+                     "double_value": 40.0,
+                     "name": "(1,2)",
+                     "value": 2
                   }
                },
-               "row:0x9":{
-                  "cell:0xa":{
-                     "double_value":46.666666666666664,
-                     "name":"(2,0)",
-                     "value":0
+               "row:0x9": {
+                  "cell:0xa": {
+                     "double_value": 46.666666666666664,
+                     "name": "(2,0)",
+                     "value": 0
                   },
-                  "cell:0xb":{
-                     "double_value":53.333333333333336,
-                     "name":"(2,1)",
-                     "value":2
+                  "cell:0xb": {
+                     "double_value": 53.333333333333336,
+                     "name": "(2,1)",
+                     "value": 2
                   },
-                  "cell:0xc":{
-                     "double_value":60.0,
-                     "name":"(2,2)",
-                     "value":4
+                  "cell:0xc": {
+                     "double_value": 60.0,
+                     "name": "(2,2)",
+                     "value": 4
                   }
                },
-               "row:0xd":{
-                  "cell:0x10":{
-                     "double_value":80.0,
-                     "name":"(3,2)",
-                     "value":6
+               "row:0xd": {
+                  "cell:0x10": {
+                     "double_value": 80.0,
+                     "name": "(3,2)",
+                     "value": 6
                   },
-                  "cell:0xe":{
-                     "double_value":66.66666666666667,
-                     "name":"(3,0)",
-                     "value":0
+                  "cell:0xe": {
+                     "double_value": 66.66666666666667,
+                     "name": "(3,0)",
+                     "value": 0
                   },
-                  "cell:0xf":{
-                     "double_value":73.33333333333333,
-                     "name":"(3,1)",
-                     "value":3
+                  "cell:0xf": {
+                     "double_value": 73.33333333333333,
+                     "name": "(3,1)",
+                     "value": 3
                   }
                }
             }
          }
       },
-     "version":1
+      "version": 1
    },
    {
-      "data_source":"Inspect",
-      "metadata":{
-         "component_url": "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
-         "errors":null,
-         "filename":"root.inspect",
-         "timestamp":0
+      "data_source": "Inspect",
+      "metadata": {
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "errors": null,
+         "filename": "root.inspect",
+         "timestamp": 0
       },
-      "moniker":"iquery_test_component.cmx",
-      "payload":{
-         "root":{
-            "array:0x15":[
+      "moniker": "iquery_test_component.cmx",
+      "payload": {
+         "root": {
+            "array:0x15": [
                1,
                10,
                -3
             ],
-            "array:0x16":[
+            "array:0x16": [
                1,
                10,
                2
             ],
-            "array:0x17":[
+            "array:0x17": [
                0.25,
                1.25,
                -0.75
             ],
-            "histogram:0x18":{
-               "buckets":[
+            "histogram:0x18": {
+               "buckets": [
                   {
-                     "count":10,
-                     "floor":-9223372036854775808,
-                     "upper_bound":-10
+                     "count": 10,
+                     "floor": -9223372036854775808,
+                     "upper_bound": -10
                   },
                   {
-                     "count":5,
-                     "floor":-10,
-                     "upper_bound":-5
+                     "count": 5,
+                     "floor": -10,
+                     "upper_bound": -5
                   },
                   {
-                     "count":5,
-                     "floor":-5,
-                     "upper_bound":0
+                     "count": 5,
+                     "floor": -5,
+                     "upper_bound": 0
                   },
                   {
-                     "count":5,
-                     "floor":0,
-                     "upper_bound":5
+                     "count": 5,
+                     "floor": 0,
+                     "upper_bound": 5
                   },
                   {
-                     "count":15,
-                     "floor":5,
-                     "upper_bound":9223372036854775807
+                     "count": 15,
+                     "floor": 5,
+                     "upper_bound": 9223372036854775807
                   }
                ]
             },
-            "histogram:0x19":{
-               "buckets":[
+            "histogram:0x19": {
+               "buckets": [
                   {
-                     "count":5,
-                     "floor":0,
-                     "upper_bound":5
+                     "count": 5,
+                     "floor": 0,
+                     "upper_bound": 5
                   },
                   {
-                     "count":5,
-                     "floor":5,
-                     "upper_bound":10
+                     "count": 5,
+                     "floor": 5,
+                     "upper_bound": 10
                   },
                   {
-                     "count":5,
-                     "floor":10,
-                     "upper_bound":15
+                     "count": 5,
+                     "floor": 10,
+                     "upper_bound": 15
                   },
                   {
-                     "count":5,
-                     "floor":15,
-                     "upper_bound":20
+                     "count": 5,
+                     "floor": 15,
+                     "upper_bound": 20
                   },
                   {
-                     "count":20,
-                     "floor":20,
-                     "upper_bound":18446744073709551615
+                     "count": 20,
+                     "floor": 20,
+                     "upper_bound": 18446744073709551615
                   }
                ]
             },
-            "histogram:0x1a":{
-               "buckets":[
+            "histogram:0x1a": {
+               "buckets": [
                   {
-                     "count":11.0,
-                     "floor":"-Infinity",
-                     "upper_bound":0.0
+                     "count": 11.0,
+                     "floor": "-Infinity",
+                     "upper_bound": 0.0
                   },
                   {
-                     "count":5.0,
-                     "floor":0.0,
-                     "upper_bound":0.5
+                     "count": 5.0,
+                     "floor": 0.0,
+                     "upper_bound": 0.5
                   },
                   {
-                     "count":5.0,
-                     "floor":0.5,
-                     "upper_bound":1.0
+                     "count": 5.0,
+                     "floor": 0.5,
+                     "upper_bound": 1.0
                   },
                   {
-                     "count":4.0,
-                     "floor":1.0,
-                     "upper_bound":1.5
+                     "count": 4.0,
+                     "floor": 1.0,
+                     "upper_bound": 1.5
                   },
                   {
-                     "count":15.0,
-                     "floor":1.5,
-                     "upper_bound":"Infinity"
+                     "count": 15.0,
+                     "floor": 1.5,
+                     "upper_bound": "Infinity"
                   }
                ]
             },
-            "histogram:0x1b":{
-               "buckets":[
+            "histogram:0x1b": {
+               "buckets": [
                   {
-                     "count":10,
-                     "floor":-9223372036854775808,
-                     "upper_bound":-10
+                     "count": 10,
+                     "floor": -9223372036854775808,
+                     "upper_bound": -10
                   },
                   {
-                     "count":5,
-                     "floor":-10,
-                     "upper_bound":-5
+                     "count": 5,
+                     "floor": -10,
+                     "upper_bound": -5
                   },
                   {
-                     "count":5,
-                     "floor":-5,
-                     "upper_bound":0
+                     "count": 5,
+                     "floor": -5,
+                     "upper_bound": 0
                   },
                   {
-                     "count":10,
-                     "floor":0,
-                     "upper_bound":10
+                     "count": 10,
+                     "floor": 0,
+                     "upper_bound": 10
                   },
                   {
-                     "count":10,
-                     "floor":10,
-                     "upper_bound":9223372036854775807
+                     "count": 10,
+                     "floor": 10,
+                     "upper_bound": 9223372036854775807
                   }
                ]
             },
-            "histogram:0x1c":{
-               "buckets":[
+            "histogram:0x1c": {
+               "buckets": [
                   {
-                     "count":0,
-                     "floor":0,
-                     "upper_bound":0
+                     "count": 0,
+                     "floor": 0,
+                     "upper_bound": 0
                   },
                   {
-                     "count":1,
-                     "floor":0,
-                     "upper_bound":1
+                     "count": 1,
+                     "floor": 0,
+                     "upper_bound": 1
                   },
                   {
-                     "count":1,
-                     "floor":1,
-                     "upper_bound":2
+                     "count": 1,
+                     "floor": 1,
+                     "upper_bound": 2
                   },
                   {
-                     "count":2,
-                     "floor":2,
-                     "upper_bound":4
+                     "count": 2,
+                     "floor": 2,
+                     "upper_bound": 4
                   },
                   {
-                     "count":36,
-                     "floor":4,
-                     "upper_bound":18446744073709551615
+                     "count": 36,
+                     "floor": 4,
+                     "upper_bound": 18446744073709551615
                   }
                ]
             },
-            "histogram:0x1d":{
-               "buckets":[
+            "histogram:0x1d": {
+               "buckets": [
                   {
-                     "count":11.0,
-                     "floor":"-Infinity",
-                     "upper_bound":0.0
+                     "count": 11.0,
+                     "floor": "-Infinity",
+                     "upper_bound": 0.0
                   },
                   {
-                     "count":12.0,
-                     "floor":0.0,
-                     "upper_bound":1.25
+                     "count": 12.0,
+                     "floor": 0.0,
+                     "upper_bound": 1.25
                   },
                   {
-                     "count":17.0,
-                     "floor":1.25,
-                     "upper_bound":3.75
+                     "count": 17.0,
+                     "floor": 1.25,
+                     "upper_bound": 3.75
                   },
                   {
-                     "count":0.0,
-                     "floor":3.75,
-                     "upper_bound":11.25
+                     "count": 0.0,
+                     "floor": 3.75,
+                     "upper_bound": 11.25
                   },
                   {
-                     "count":0.0,
-                     "floor":11.25,
-                     "upper_bound":"Infinity"
+                     "count": 0.0,
+                     "floor": 11.25,
+                     "upper_bound": "Infinity"
                   }
                ]
             },
-            "table:0x0":{
-               "binary_data":"b64:IAAREgU=",
-               "object_name":"ExampleTable",
-               "row:0x1":{
-                  "cell:0x2":{
-                     "double_value":6.666666666666667,
-                     "name":"(0,0)",
-                     "value":0
+            "table:0x0": {
+               "binary_data": "b64:IAAREgU=",
+               "object_name": "ExampleTable",
+               "row:0x1": {
+                  "cell:0x2": {
+                     "double_value": 6.666666666666667,
+                     "name": "(0,0)",
+                     "value": 0
                   },
-                  "cell:0x3":{
-                     "double_value":13.333333333333334,
-                     "name":"(0,1)",
-                     "value":0
+                  "cell:0x3": {
+                     "double_value": 13.333333333333334,
+                     "name": "(0,1)",
+                     "value": 0
                   },
-                  "cell:0x4":{
-                     "double_value":20.0,
-                     "name":"(0,2)",
-                     "value":0
+                  "cell:0x4": {
+                     "double_value": 20.0,
+                     "name": "(0,2)",
+                     "value": 0
                   }
                },
-               "row:0x11":{
-                  "cell:0x12":{
-                     "double_value":86.66666666666667,
-                     "name":"(4,0)",
-                     "value":0
+               "row:0x11": {
+                  "cell:0x12": {
+                     "double_value": 86.66666666666667,
+                     "name": "(4,0)",
+                     "value": 0
                   },
-                  "cell:0x13":{
-                     "double_value":93.33333333333331,
-                     "name":"(4,1)",
-                     "value":4
+                  "cell:0x13": {
+                     "double_value": 93.33333333333331,
+                     "name": "(4,1)",
+                     "value": 4
                   },
-                  "cell:0x14":{
-                     "double_value":100.0,
-                     "name":"(4,2)",
-                     "value":8
+                  "cell:0x14": {
+                     "double_value": 100.0,
+                     "name": "(4,2)",
+                     "value": 8
                   }
                },
-               "row:0x5":{
-                  "cell:0x6":{
-                     "double_value":26.666666666666668,
-                     "name":"(1,0)",
-                     "value":0
+               "row:0x5": {
+                  "cell:0x6": {
+                     "double_value": 26.666666666666668,
+                     "name": "(1,0)",
+                     "value": 0
                   },
-                  "cell:0x7":{
-                     "double_value":33.333333333333336,
-                     "name":"(1,1)",
-                     "value":1
+                  "cell:0x7": {
+                     "double_value": 33.333333333333336,
+                     "name": "(1,1)",
+                     "value": 1
                   },
-                  "cell:0x8":{
-                     "double_value":40.0,
-                     "name":"(1,2)",
-                     "value":2
+                  "cell:0x8": {
+                     "double_value": 40.0,
+                     "name": "(1,2)",
+                     "value": 2
                   }
                },
-               "row:0x9":{
-                  "cell:0xa":{
-                     "double_value":46.666666666666664,
-                     "name":"(2,0)",
-                     "value":0
+               "row:0x9": {
+                  "cell:0xa": {
+                     "double_value": 46.666666666666664,
+                     "name": "(2,0)",
+                     "value": 0
                   },
-                  "cell:0xb":{
-                     "double_value":53.333333333333336,
-                     "name":"(2,1)",
-                     "value":2
+                  "cell:0xb": {
+                     "double_value": 53.333333333333336,
+                     "name": "(2,1)",
+                     "value": 2
                   },
-                  "cell:0xc":{
-                     "double_value":60.0,
-                     "name":"(2,2)",
-                     "value":4
+                  "cell:0xc": {
+                     "double_value": 60.0,
+                     "name": "(2,2)",
+                     "value": 4
                   }
                },
-               "row:0xd":{
-                  "cell:0x10":{
-                     "double_value":80.0,
-                     "name":"(3,2)",
-                     "value":6
+               "row:0xd": {
+                  "cell:0x10": {
+                     "double_value": 80.0,
+                     "name": "(3,2)",
+                     "value": 6
                   },
-                  "cell:0xe":{
-                     "double_value":66.66666666666667,
-                     "name":"(3,0)",
-                     "value":0
+                  "cell:0xe": {
+                     "double_value": 66.66666666666667,
+                     "name": "(3,0)",
+                     "value": 0
                   },
-                  "cell:0xf":{
-                     "double_value":73.33333333333333,
-                     "name":"(3,1)",
-                     "value":3
+                  "cell:0xf": {
+                     "double_value": 73.33333333333333,
+                     "name": "(3,1)",
+                     "value": 3
                   }
                }
             }
          }
       },
-     "version":1
+      "version": 1
    }
 ]

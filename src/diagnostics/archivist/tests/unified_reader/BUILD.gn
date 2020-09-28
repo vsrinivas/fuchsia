@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-rustc_test("unified_reader_test") {
+rustc_test("bin") {
+  name = "unified_reader_test"
   edition = "2018"
 
   deps = [
@@ -38,8 +38,23 @@ rustc_test("unified_reader_test") {
   ]
 }
 
-config_data("config") {
-  for_pkg = "unified_reader_tests"
-  outputs = [ "all_golden.json" ]
-  sources = [ "configs/all_golden.json" ]
+fuchsia_component("unified_reader") {
+  testonly = true
+  manifest = "meta/unified_reader_test.cmx"
+  deps = [
+    ":bin",
+    ":unified_reader_test_archivist",
+    "//src/diagnostics/iquery/test/test_component",
+  ]
+}
+
+fuchsia_component("unified_reader_test_archivist") {
+  testonly = true
+  manifest = "meta/unified_reader_test_archivist.cmx"
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_test("test-spec") {
+  package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
+  component = ":unified_reader"
 }

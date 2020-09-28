@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("logging_component") {
+rustc_binary("bin") {
   name = "logging_component"
-  source_root = "./logging_component.rs"
+  source_root = "logging_component.rs"
   edition = "2018"
 
   deps = [
@@ -17,16 +18,8 @@ rustc_binary("logging_component") {
   sources = [ "logging_component.rs" ]
 }
 
-group("tests") {
+fuchsia_component("logging_component") {
   testonly = true
-  public_deps = [
-    ":logging_component",
-    "cpp",
-    "cpp:logs_integration_cpp_tests",
-    "go",
-    "go/src:logs_integration_go_tests",
-    "rust",
-    "rust:bin",
-    "rust/puppet:bin",
-  ]
+  manifest = "logging_component.cmx"
+  deps = [ ":bin" ]
 }

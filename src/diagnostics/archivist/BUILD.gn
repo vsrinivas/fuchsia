@@ -7,7 +7,6 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
@@ -233,23 +232,20 @@ fuzzers_package("archivist-fuzzers") {
   rust_fuzzers = [ ":convert_debuglog_to_log_message_fuzzer" ]
 }
 
-test_package("archivist_tests") {
+fuchsia_unittest_component("archivist-unittests") {
+  manifest = "meta/archivist_tests.cmx"
   deps = [ ":lib_test" ]
+}
 
-  tests = [
-    {
-      name = "archivist_lib_lib_test"
-      dest = "archivist_tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("archivist-tests") {
+  test_components = [ ":archivist-unittests" ]
 }
 
 group("tests") {
   testonly = true
   public_deps = [
     ":archivist-fuzzers",
-    ":archivist_tests",
+    ":archivist-tests",
     "tests",
   ]
 }

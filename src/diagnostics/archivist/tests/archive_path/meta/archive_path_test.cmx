@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/archive_path_test"
+        "binary": "bin/archive_path_test"
     },
     "sandbox": {
         "features": [

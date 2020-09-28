@@ -1,8 +1,8 @@
 fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
 fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx
-fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/archive_path_test_archivist.cmx
-fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/observer_with_data_stats.cmx
-fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/unified_reader_test_archivist.cmx
-fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/feedback_reader_test_archivist.cmx
+fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/archive_path_test_archivist.cmx
+fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/data_stats_test_archivist.cmx
+fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/unified_reader_test_archivist.cmx
+fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/feedback_reader_test_archivist.cmx
 fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/component_events_integration_test.cmx
 fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/test_component_with_subrealm.cmx

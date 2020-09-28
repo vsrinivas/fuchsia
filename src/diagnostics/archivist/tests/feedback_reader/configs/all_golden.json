@@ -1,60 +1,60 @@
 [
    {
-      "data_source":"Inspect",
-      "metadata":{
-         "component_url":"fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
-         "errors":null,
-         "filename":"fuchsia.inspect.Tree",
-         "timestamp":0
+      "data_source": "Inspect",
+      "metadata": {
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "errors": null,
+         "filename": "fuchsia.inspect.Tree",
+         "timestamp": 0
       },
-      "moniker":"iquery_test_component.cmx",
-      "payload":{
-         "root":{
-            "lazy-double":3.14,
-            "table:0x0":{
-               "binary_data":"b64:IAAREgU=",
-               "object_name":"Example Table"
+      "moniker": "iquery_test_component.cmx",
+      "payload": {
+         "root": {
+            "lazy-double": 3.14,
+            "table:0x0": {
+               "binary_data": "b64:IAAREgU=",
+               "object_name": "Example Table"
             }
          }
       },
-      "version":1
+      "version": 1
    },
    {
-      "data_source":"Inspect",
-      "metadata":{
-         "component_url":"fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
-         "errors":null,
-         "filename":"fuchsia.inspect.deprecated.Inspect",
-         "timestamp":0
+      "data_source": "Inspect",
+      "metadata": {
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "errors": null,
+         "filename": "fuchsia.inspect.deprecated.Inspect",
+         "timestamp": 0
       },
-      "moniker":"iquery_test_component.cmx",
-      "payload":{
-         "root":{
-            "table:0x0":{
-               "binary_data":"b64:IAAREgU=",
-               "object_name":"Example Table"
+      "moniker": "iquery_test_component.cmx",
+      "payload": {
+         "root": {
+            "table:0x0": {
+               "binary_data": "b64:IAAREgU=",
+               "object_name": "Example Table"
             }
          }
       },
-      "version":1
+      "version": 1
    },
    {
-      "data_source":"Inspect",
-      "metadata":{
-         "component_url":"fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
-         "errors":null,
-         "filename":"root.inspect",
-         "timestamp":0
+      "data_source": "Inspect",
+      "metadata": {
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "errors": null,
+         "filename": "root.inspect",
+         "timestamp": 0
       },
-      "moniker":"iquery_test_component.cmx",
-      "payload":{
-         "root":{
-            "table:0x0":{
-               "binary_data":"b64:IAAREgU=",
-               "object_name":"Example Table"
+      "moniker": "iquery_test_component.cmx",
+      "payload": {
+         "root": {
+            "table:0x0": {
+               "binary_data": "b64:IAAREgU=",
+               "object_name": "Example Table"
             }
          }
       },
-      "version":1
+      "version": 1
    }
 ]

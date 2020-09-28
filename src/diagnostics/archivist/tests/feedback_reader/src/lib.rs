@@ -19,9 +19,9 @@ use {
 };
 
 const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/feedback_reader_test_archivist.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/feedback_reader_test_archivist.cmx";
 const SERVICE_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx";
 
 const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../configs/archivist_config.json");
 const ALL_GOLDEN_JSON: &[u8] = include_bytes!("../configs/all_golden.json");

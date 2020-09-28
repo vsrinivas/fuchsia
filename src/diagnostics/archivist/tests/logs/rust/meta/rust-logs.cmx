@@ -12,7 +12,7 @@
         }
     },
     "program": {
-        "binary": "test/logs_integration_rust_tests"
+        "binary": "bin/logs_integration_rust_tests"
     },
     "sandbox": {
         "services": [

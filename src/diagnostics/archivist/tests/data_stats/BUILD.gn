@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-rustc_test("data_stats_test") {
+rustc_test("bin") {
+  name = "data_stats_test"
   edition = "2018"
 
   deps = [
@@ -27,4 +27,24 @@ rustc_test("data_stats_test") {
     "config/observer_config.json",
     "config/all_selectors.txt",
   ]
+}
+
+fuchsia_component("data_stats") {
+  testonly = true
+  manifest = "meta/data_stats_test.cmx"
+  deps = [
+    ":bin",
+    ":data_stats_test_archivist",
+  ]
+}
+
+fuchsia_component("data_stats_test_archivist") {
+  testonly = true
+  manifest = "meta/archivist_with_data_stats.cmx"
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_test("test-spec") {
+  package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
+  component = ":data_stats"
 }

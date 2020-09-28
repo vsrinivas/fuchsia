@@ -3,8 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("iquery_test_component") {
+group("test_component") {
+  testonly = true
+  deps = [ ":iquery_test_component" ]
+}
+
+rustc_binary("bin") {
+  name = "iquery_test_component"
   edition = "2018"
   source_root = "main.rs"
 
@@ -25,4 +32,10 @@ rustc_binary("iquery_test_component") {
     "main.rs",
     "table.rs",
   ]
+}
+
+fuchsia_component("iquery_test_component") {
+  testonly = true
+  manifest = "iquery_test_component.cmx"
+  deps = [ ":bin" ]
 }

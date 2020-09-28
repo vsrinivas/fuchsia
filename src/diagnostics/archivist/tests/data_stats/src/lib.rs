@@ -17,7 +17,7 @@ use {
 };
 
 const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/observer_with_data_stats.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/data_stats_test_archivist.cmx";
 const ALL_SELECTORS: &[u8] = include_bytes!("../config/all_selectors.txt");
 const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/observer_config.json");
 
@@ -58,7 +58,7 @@ async fn data_stats() -> Result<(), Error> {
 
     let results = ArchiveReader::new()
         .with_archive(archive_accessor)
-        .add_selector("observer_with_data_stats.cmx:root/data_stats")
+        .add_selector("data_stats_test_archivist.cmx:root/data_stats")
         .snapshot::<Inspect>()
         .await
         .expect("got results");

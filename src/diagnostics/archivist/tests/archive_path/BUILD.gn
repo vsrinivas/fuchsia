@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-rustc_test("archive_path_test") {
+rustc_test("bin") {
+  name = "archive_path_test"
   edition = "2018"
 
   deps = [
@@ -25,4 +25,24 @@ rustc_test("archive_path_test") {
   sources = [ "src/lib.rs" ]
 
   inputs = [ "configs/archivist_config.json" ]
+}
+
+fuchsia_component("archive_path") {
+  testonly = true
+  manifest = "meta/archive_path_test.cmx"
+  deps = [
+    ":archive_path_test_archivist",
+    ":bin",
+  ]
+}
+
+fuchsia_component("archive_path_test_archivist") {
+  testonly = true
+  manifest = "meta/archive_path_test_archivist.cmx"
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_test("test-spec") {
+  package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
+  component = ":archive_path"
 }

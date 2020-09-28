@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "stdio_puppet"
@@ -19,4 +20,15 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("stdio_puppet") {
+  testonly = true
+  manifest = "meta/stdio_puppet.cmx"
+  deps = [ ":bin" ]
+}
+
+group("puppet") {
+  testonly = true
+  deps = [ ":stdio_puppet" ]
 }

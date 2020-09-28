@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
+
 group("cpp") {
   testonly = true
-  deps = [ ":logs_integration_cpp_tests" ]
+  deps = [ ":cpp-logs-test" ]
 }
 
 executable("logs_integration_cpp_tests") {
@@ -26,4 +28,15 @@ executable("logs_integration_cpp_tests") {
 
   # TODO(fxbug.dev/46532): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+fuchsia_component("cpp-logs-test") {
+  testonly = true
+  manifest = "meta/cpp-logs.cmx"
+  deps = [ ":logs_integration_cpp_tests" ]
+}
+
+fuchsia_test("test-spec") {
+  package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
+  component = ":cpp-logs-test"
 }

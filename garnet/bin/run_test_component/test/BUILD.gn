@@ -89,7 +89,7 @@ test_package("run_test_component_test") {
     ":component_to_test_standard_out",
     ":coverage_component",
     ":error_logging_component",
-    "//src/diagnostics/archivist/tests/logs:logging_component",
+    "//src/diagnostics/archivist/tests/logs:bin",
   ]
 
   binaries = [
@@ -114,7 +114,7 @@ test_package("run_test_component_test") {
     },
     {
       path = rebase_path(
-              "//src/diagnostics/archivist/tests/meta/logging_component.cmx")
+              "//src/diagnostics/archivist/tests/logs/logging_component.cmx")
       dest = "logging_component.cmx"
     },
     {
@@ -127,7 +127,7 @@ test_package("run_test_component_test") {
     },
     {
       path = rebase_path(
-              "//src/diagnostics/archivist/tests/meta/logging_component.cmx")
+              "//src/diagnostics/archivist/tests/logs/logging_component.cmx")
       dest = "logging_component_with_config.cmx"
     },
   ]

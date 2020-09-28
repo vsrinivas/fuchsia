@@ -257,8 +257,6 @@ group("deprecated_package_underscore") {
     "//src/devices/bind/debugger:bind_debugger",
     "//src/devices/bind/debugger:bind_debugger_tests",
     "//src/devices/clock/lib/clocktree/tests:clocktree_test",
-    "//src/diagnostics/archivist:archivist_tests",
-    "//src/diagnostics/archivist/tests:archivist_integration_tests",
     "//src/diagnostics/examples/inspect/cpp:inspect_cpp_codelab",
     "//src/diagnostics/examples/inspect/cpp:inspect_cpp_codelab_integration_tests",
     "//src/diagnostics/examples/inspect/cpp:inspect_cpp_codelab_unittests",

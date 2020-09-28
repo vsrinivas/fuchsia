@@ -20,7 +20,7 @@ use {
 
 lazy_static! {
     static ref ARCHIVIST_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/archive_path_test_archivist.cmx";
+        "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/archive_path_test_archivist.cmx";
     static ref ARCHIVE_PATH: &'static str = "/tmp/archive";
     static ref ARCHIVIST_CONFIG: &'static [u8] = include_bytes!("../configs/archivist_config.json");
     static ref CONFIG_PATH: PathBuf = Path::new("/tmp/config/data").to_path_buf();

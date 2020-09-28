@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/logs_integration_cpp_tests"
+        "binary": "bin/logs_integration_cpp_tests"
     },
     "sandbox": {
         "services": [

@@ -107,7 +107,7 @@ async fn listen_for_klog_routed_stdio() {
     let mut logs = run_listener("klog");
 
     let app_builder = fclient::AppBuilder::new(
-        "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/stdio_puppet.cmx",
+        "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/stdio_puppet.cmx",
     );
 
     let boot_log = connect_to_service::<WriteOnlyLogMarker>().unwrap();
@@ -153,7 +153,7 @@ async fn embedding_stop_api() {
     let (env_proxy, mut logging_component) = fs
         .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
         .launch_component_in_nested_environment(
-            "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx"
+            "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/logging_component.cmx"
                 .to_owned(),
             None,
             "stop_test_env",

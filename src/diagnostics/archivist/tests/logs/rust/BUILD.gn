@@ -3,13 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
 
 group("rust") {
   testonly = true
-  deps = [
-    ":bin",
-    "puppet:bin",
-  ]
+  deps = [ ":rust-logs-test" ]
 }
 
 rustc_test("bin") {
@@ -39,4 +37,19 @@ rustc_test("bin") {
   ]
 
   sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("rust-logs-test") {
+  testonly = true
+  manifest = "meta/rust-logs.cmx"
+  deps = [
+    ":bin",
+    "..:logging_component",
+    "puppet",
+  ]
+}
+
+fuchsia_test("test-spec") {
+  package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
+  component = ":rust-logs-test"
 }

@@ -3,7 +3,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/unified_reader_test"
+        "binary": "bin/feedback_reader_test"
     },
     "sandbox": {
         "features": [

@@ -4,107 +4,30 @@
 
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":archivist_integration_tests",
-    "logs:tests",
-    "v2:archivist-integration-tests-v2",
+    ":archivist-integration-tests",
+    "archive_path:test-spec",
+    "data_stats:test-spec",
+    "feedback_reader:test-spec",
+    "logs/cpp:test-spec",
+    "logs/rust:test-spec",
+    "unified_reader:test-spec",
   ]
 }
 
-test_package("archivist_integration_tests") {
+# only depend on this via the above `tests` group so that fx test sees the tests
+fuchsia_package("archivist-integration-tests") {
+  testonly = true
   deps = [
-    "archive_path:archive_path_test",
-    "data_stats:data_stats_test",
-    "feedback_reader:feedback_reader_test",
-    "logs:tests",
-    "unified_reader:config",
-    "unified_reader:unified_reader_test",
-    "//src/diagnostics/archivist:bin",
-    "//src/diagnostics/iquery/test/test_component:iquery_test_component",
-  ]
-
-  binaries = [
-    {
-      name = "iquery_test_component"
-    },
-    {
-      name = "archivist"
-    },
-    {
-      name = "stdio_puppet"
-    },
-    {
-      name = "logging_component"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("archive_path/meta/archive_path_test_archivist.cmx")
-      dest = "archive_path_test_archivist.cmx"
-    },
-    {
-      path = rebase_path("data_stats/meta/observer_with_data_stats.cmx")
-      dest = "observer_with_data_stats.cmx"
-    },
-    {
-      path = rebase_path("unified_reader/meta/iquery_test_component.cmx")
-      dest = "iquery_test_component.cmx"
-    },
-    {
-      path =
-          rebase_path("unified_reader/meta/unified_reader_test_archivist.cmx")
-      dest = "unified_reader_test_archivist.cmx"
-    },
-    {
-      path =
-          rebase_path("feedback_reader/meta/feedback_reader_test_archivist.cmx")
-      dest = "feedback_reader_test_archivist.cmx"
-    },
-    {
-      path = rebase_path("logs/rust/puppet/meta/stdio_puppet.cmx")
-      dest = "stdio_puppet.cmx"
-    },
-    {
-      path = rebase_path("meta/logging_component.cmx")
-      dest = "logging_component.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "data_stats_test"
-      environments = basic_envs
-    },
-    {
-      name = "archive_path_test"
-      environments = basic_envs
-    },
-    {
-      name = "logs_integration_go_tests"
-      environments = basic_envs
-
-      # BUG(48594): Disabling flaky test for now.
-      disabled = true
-    },
-    {
-      name = "logs_integration_rust_tests"
-      environments = basic_envs
-    },
-    {
-      name = "logs_integration_cpp_tests"
-      environments = basic_envs
-    },
-    {
-      name = "unified_reader_test"
-      environments = basic_envs
-    },
-    {
-      name = "feedback_reader_test"
-      environments = basic_envs
-    },
+    "archive_path",
+    "data_stats",
+    "feedback_reader",
+    "logs/cpp",
+    "logs/rust",
+    "unified_reader",
   ]
 }

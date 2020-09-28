@@ -117,7 +117,7 @@ test_package("iquery_tests") {
   deps = [
     ":bin_test",
     "test/basic_component:iquery_basic_component",
-    "test/test_component:iquery_test_component",
+    "test/test_component:bin",
   ]
 
   binaries = [
