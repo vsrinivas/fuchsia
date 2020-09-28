@@ -41,17 +41,23 @@ class LightDevice {
   Capability GetCapability() const {
     return pwm_.has_value() ? Capability::BRIGHTNESS : Capability::SIMPLE;
   }
-  uint8_t GetCurrentSimpleValue() const { return value_; }
+  bool GetCurrentSimpleValue() const { return (value_ != 0); }
   zx_status_t SetSimpleValue(bool value);
-  uint8_t GetCurrentBrightnessValue() const { return value_; }
-  zx_status_t SetBrightnessValue(uint8_t value);
+  double GetCurrentBrightnessValue() const { return value_; }
+  // TODO (rdzhuang): redundant function. remove after migration.
+  uint8_t GetCurrentBrightnessValue2() const { return value2_; }
+  zx_status_t SetBrightnessValue(double value);
+  // TODO (rdzhuang): redundant function. remove after migration.
+  zx_status_t SetBrightnessValue2(uint8_t value);
 
  private:
   std::string name_;
   ddk::GpioProtocolClient gpio_;
   std::optional<ddk::PwmProtocolClient> pwm_;
 
-  uint8_t value_ = 0;
+  double value_ = 0;
+  // TODO (rdzhuang): redundant variable. remove after migration.
+  uint8_t value2_ = 0;
 };
 
 class AmlLight : public AmlLightType,
@@ -76,7 +82,7 @@ class AmlLight : public AmlLightType,
                                  GetCurrentBrightnessValueCompleter::Sync completer);
   void GetCurrentBrightnessValue2(uint32_t index,
                                   GetCurrentBrightnessValue2Completer::Sync completer);
-  void SetBrightnessValue(uint32_t index, uint8_t value,
+  void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCompleter::Sync completer);
   void SetBrightnessValue2(uint32_t index, uint8_t value,
                            SetBrightnessValue2Completer::Sync completer);
@@ -102,7 +108,7 @@ class AmlLight : public AmlLightType,
                                        GetGroupCurrentBrightnessValue2Completer::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
-  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }

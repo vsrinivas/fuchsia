@@ -95,7 +95,7 @@ impl LightFacade {
         }
     }
 
-    pub async fn get_current_brightness_value(&self, index: u32) -> Result<u8, Error> {
+    pub async fn get_current_brightness_value(&self, index: u32) -> Result<f64, Error> {
         let tag = "LightFacade::get_current_brightness_value";
         match self.get_proxy()?.get_current_brightness_value(index).await? {
             Ok(r) => Ok(r),
@@ -106,7 +106,7 @@ impl LightFacade {
         }
     }
 
-    pub async fn set_brightness_value(&self, index: u32, value: u8) -> Result<(), Error> {
+    pub async fn set_brightness_value(&self, index: u32, value: f64) -> Result<(), Error> {
         let tag = "LightFacade::set_brightness_value";
         match self.get_proxy()?.set_brightness_value(index, value).await? {
             Ok(r) => Ok(r),
@@ -170,7 +170,7 @@ impl LightFacade {
         }
     }
 
-    pub async fn get_group_current_brightness_value(&self, index: u32) -> Result<Vec<u8>, Error> {
+    pub async fn get_group_current_brightness_value(&self, index: u32) -> Result<Vec<f64>, Error> {
         let tag = "LightFacade::get_group_current_brightness_value";
         match self.get_proxy()?.get_group_current_brightness_value(index).await? {
             Ok(r) => match r {
@@ -187,7 +187,7 @@ impl LightFacade {
     pub async fn set_group_brightness_value(
         &self,
         index: u32,
-        value: Vec<u8>,
+        value: Vec<f64>,
     ) -> Result<(), Error> {
         let tag = "LightFacade::set_group_brightness_value";
         match self.get_proxy()?.set_group_brightness_value(index, &value).await? {
@@ -315,7 +315,7 @@ mod tests {
         fn expect_get_current_brightness_value(
             self,
             idx: u32,
-            res: Result<u8, LightError>,
+            res: Result<f64, LightError>,
         ) -> Self {
             self.push(move |req| match req {
                 LightRequest::GetCurrentBrightnessValue { index, responder } => {
@@ -329,7 +329,7 @@ mod tests {
         fn expect_set_brightness_value(
             self,
             idx: u32,
-            val: u8,
+            val: f64,
             res: Result<(), LightError>,
         ) -> Self {
             self.push(move |req| match req {
@@ -431,7 +431,7 @@ mod tests {
         fn expect_get_group_current_brightness_value(
             self,
             id: u32,
-            res: Result<Vec<u8>, LightError>,
+            res: Result<Vec<f64>, LightError>,
         ) -> Self {
             self.push(move |req| match req {
                 LightRequest::GetGroupCurrentBrightnessValue { group_id, responder } => {
@@ -445,7 +445,7 @@ mod tests {
         fn expect_set_group_brightness_value(
             self,
             id: u32,
-            vals: Vec<u8>,
+            vals: Vec<f64>,
             res: Result<(), LightError>,
         ) -> Self {
             self.push(move |req| match req {
@@ -577,9 +577,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_current_brightness_value_ok() {
         let (facade, lights) =
-            MockLightBuilder::new().expect_get_current_brightness_value(0, Ok(33)).build();
+            MockLightBuilder::new().expect_get_current_brightness_value(0, Ok(0.3321)).build();
         let test = async move {
-            assert_matches!(facade.get_current_brightness_value(0).await, Ok(33));
+            assert_matches!(facade.get_current_brightness_value(0).await, Ok(v) if v == 0.3321);
         };
 
         join!(lights, test);
@@ -588,9 +588,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn set_brightness_value_ok() {
         let (facade, lights) =
-            MockLightBuilder::new().expect_set_brightness_value(1, 52, Ok(())).build();
+            MockLightBuilder::new().expect_set_brightness_value(1, 0.2515, Ok(())).build();
         let test = async move {
-            assert_matches!(facade.set_brightness_value(1, 52).await, Ok(()));
+            assert_matches!(facade.set_brightness_value(1, 0.2515).await, Ok(()));
         };
 
         join!(lights, test);
@@ -599,12 +599,15 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_current_rgb_value_ok() {
         let (facade, lights) = MockLightBuilder::new()
-            .expect_get_current_rgb_value(4, Ok(SerializableRgb { red: 21, green: 94, blue: 59 }))
+            .expect_get_current_rgb_value(
+                4,
+                Ok(SerializableRgb { red: 0.21, green: 0.94, blue: 0.59 }),
+            )
             .build();
         let test = async move {
             assert_matches!(
                 facade.get_current_rgb_value(4).await,
-                Ok(SerializableRgb { red: 21, green: 94, blue: 59 })
+                Ok(rgb) if rgb == SerializableRgb { red: 0.21, green: 0.94, blue: 0.59 }
             );
         };
 
@@ -614,11 +617,17 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn set_rgb_value_ok() {
         let (facade, lights) = MockLightBuilder::new()
-            .expect_set_rgb_value(3, SerializableRgb { red: 33, green: 45, blue: 155 }, Ok(()))
+            .expect_set_rgb_value(
+                3,
+                SerializableRgb { red: 0.33, green: 0.45, blue: 0.155 },
+                Ok(()),
+            )
             .build();
         let test = async move {
             assert_matches!(
-                facade.set_rgb_value(3, SerializableRgb { red: 33, green: 45, blue: 155 }).await,
+                facade
+                    .set_rgb_value(3, SerializableRgb { red: 0.33, green: 0.45, blue: 0.155 })
+                    .await,
                 Ok(())
             );
         };
@@ -685,12 +694,12 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_group_current_brightness_value_ok() {
         let (facade, lights) = MockLightBuilder::new()
-            .expect_get_group_current_brightness_value(1, Ok(vec![1, 2, 3, 4, 5]))
+            .expect_get_group_current_brightness_value(1, Ok(vec![0.46, 0.2, 0.77, 0.315, 0.8]))
             .build();
         let test = async move {
             assert_matches!(
                 facade.get_group_current_brightness_value(1).await,
-                Ok(v) if v == vec![1, 2, 3, 4, 5]
+                Ok(v) if v == vec![0.46, 0.2, 0.77, 0.315, 0.8]
             );
         };
 
@@ -700,10 +709,13 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn set_group_brightness_value_ok() {
         let (facade, lights) = MockLightBuilder::new()
-            .expect_set_group_brightness_value(2, vec![3, 2, 1, 0], Ok(()))
+            .expect_set_group_brightness_value(2, vec![0.0, 0.96, 0.37, 0.63], Ok(()))
             .build();
         let test = async move {
-            assert_matches!(facade.set_group_brightness_value(2, vec![3, 2, 1, 0]).await, Ok(()));
+            assert_matches!(
+                facade.set_group_brightness_value(2, vec![0.0, 0.96, 0.37, 0.63]).await,
+                Ok(())
+            );
         };
 
         join!(lights, test);
@@ -715,8 +727,8 @@ mod tests {
             .expect_get_group_current_rgb_value(
                 0,
                 Ok(Some(vec![
-                    SerializableRgb { red: 24, green: 41, blue: 121 },
-                    SerializableRgb { red: 83, green: 23, blue: 155 },
+                    SerializableRgb { red: 0.24, green: 0.41, blue: 0.121 },
+                    SerializableRgb { red: 0.83, green: 0.23, blue: 0.155 },
                 ])),
             )
             .build();
@@ -724,8 +736,8 @@ mod tests {
             assert_matches!(
                 facade.get_group_current_rgb_value(0).await,
                 Ok(v) if v == vec![
-                    SerializableRgb { red: 24, green: 41, blue: 121 },
-                    SerializableRgb { red: 83, green: 23, blue: 155 }
+                    SerializableRgb { red: 0.24, green: 0.41, blue: 0.121 },
+                    SerializableRgb { red: 0.83, green: 0.23, blue: 0.155 }
                 ]
             );
         };
@@ -739,9 +751,9 @@ mod tests {
             .expect_set_group_rgb_value(
                 1,
                 vec![
-                    SerializableRgb { red: 0, green: 3, blue: 3 },
-                    SerializableRgb { red: 111, green: 222, blue: 11 },
-                    SerializableRgb { red: 194, green: 9, blue: 70 },
+                    SerializableRgb { red: 0.0, green: 0.3, blue: 0.3 },
+                    SerializableRgb { red: 0.111, green: 0.222, blue: 0.11 },
+                    SerializableRgb { red: 0.194, green: 0.9, blue: 0.70 },
                 ],
                 Ok(()),
             )
@@ -752,9 +764,9 @@ mod tests {
                     .set_group_rgb_value(
                         1,
                         vec![
-                            SerializableRgb { red: 0, green: 3, blue: 3 },
-                            SerializableRgb { red: 111, green: 222, blue: 11 },
-                            SerializableRgb { red: 194, green: 9, blue: 70 }
+                            SerializableRgb { red: 0.0, green: 0.3, blue: 0.3 },
+                            SerializableRgb { red: 0.111, green: 0.222, blue: 0.11 },
+                            SerializableRgb { red: 0.194, green: 0.9, blue: 0.70 }
                         ]
                     )
                     .await,

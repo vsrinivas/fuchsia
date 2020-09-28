@@ -62,9 +62,9 @@ TEST(Lp50xxLightTest, GetRgbTest) {
 
   llcpp::fuchsia::hardware::light::Rgb rgb = {};
   EXPECT_OK(dut.GetRgb(0, &rgb));
-  EXPECT_EQ(rgb.red, 0xAA);
-  EXPECT_EQ(rgb.green, 0xBB);
-  EXPECT_EQ(rgb.blue, 0xCC);
+  EXPECT_EQ(rgb.red, static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0)));
+  EXPECT_EQ(rgb.green, static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0)));
+  EXPECT_EQ(rgb.blue, static_cast<float>((0xCC * 1.0) / (UINT8_MAX * 1.0)));
 
   dut.Verify();
 }
@@ -74,9 +74,9 @@ TEST(Lp50xxLightTest, SetRgbTest) {
   EXPECT_OK(dut.Init());
 
   llcpp::fuchsia::hardware::light::Rgb rgb = {};
-  rgb.red = 0xAA;
-  rgb.green = 0xBB;
-  rgb.blue = 0xCC;
+  rgb.red = static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0));
+  rgb.green = static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0));
+  rgb.blue = static_cast<float>((0xCC * 1.0) / (UINT8_MAX * 1.0));
 
   dut.mock_i2c.ExpectWriteStop({0x10, 0xAA})
       .ExpectWriteStop({0x11, 0xBB})

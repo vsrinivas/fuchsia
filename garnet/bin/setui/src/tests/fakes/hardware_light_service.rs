@@ -20,7 +20,7 @@ use std::sync::Arc;
 pub struct HardwareLightService {
     pub light_info: Arc<Mutex<HashMap<u32, Info>>>,
     pub simple_values: Arc<Mutex<HashMap<u32, bool>>>,
-    pub brightness_values: Arc<Mutex<HashMap<u32, u8>>>,
+    pub brightness_values: Arc<Mutex<HashMap<u32, f64>>>,
     pub rgb_values: Arc<Mutex<HashMap<u32, Rgb>>>,
 }
 
@@ -46,8 +46,7 @@ impl HardwareLightService {
         self.light_info.lock().await.insert(index, Info { name, capability: light_type.into() });
         match value {
             LightValue::Brightness(value) => {
-                self.brightness_values.lock().await.insert(index, (value * 255.0) as u8);
-                // TODO (rdzhuang): Change after transition
+                self.brightness_values.lock().await.insert(index, value);
             }
             LightValue::Rgb(value) => {
                 self.rgb_values

@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include <cmath>
+
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
@@ -18,8 +20,9 @@ namespace aml_light {
 
 namespace {
 
-constexpr uint8_t kMaxBrightness = 255;
-constexpr uint8_t kMinBrightness = 0;
+constexpr double kMaxBrightness = 1.0;
+constexpr double kMinBrightness = 0.0;
+constexpr uint8_t kMaxBrightness2 = 255;
 constexpr uint32_t kPwmPeriodNs = 1250;
 
 }  // namespace
@@ -48,9 +51,12 @@ zx_status_t LightDevice::SetSimpleValue(bool value) {
   return ZX_OK;
 }
 
-zx_status_t LightDevice::SetBrightnessValue(uint8_t value) {
+zx_status_t LightDevice::SetBrightnessValue(double value) {
   if (!pwm_.has_value()) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+  if ((value > kMaxBrightness) || (value < kMinBrightness) || std::isnan(value)) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t status = ZX_OK;
@@ -68,6 +74,30 @@ zx_status_t LightDevice::SetBrightnessValue(uint8_t value) {
   }
 
   value_ = value;
+  value2_ = static_cast<uint8_t>(value * kMaxBrightness2);
+  return ZX_OK;
+}
+
+zx_status_t LightDevice::SetBrightnessValue2(uint8_t value) {
+  if (!pwm_.has_value()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t status = ZX_OK;
+  aml_pwm::mode_config regular = {aml_pwm::ON, {}};
+  pwm_config_t config = {
+      .polarity = false,
+      .period_ns = kPwmPeriodNs,
+      .duty_cycle = static_cast<float>(value * 100.0 / (kMaxBrightness2 * 1.0)),
+      .mode_config_buffer = &regular,
+      .mode_config_size = sizeof(regular),
+  };
+  if ((status = pwm_->SetConfig(&config)) != ZX_OK) {
+    zxlogf(ERROR, "%s: PWM set config failed", __func__);
+    return status;
+  }
+
+  value2_ = value;
   return ZX_OK;
 }
 
@@ -135,13 +165,13 @@ void AmlLight::GetCurrentBrightnessValue2(uint32_t index,
     return;
   }
   if (lights_[index].GetCapability() == Capability::BRIGHTNESS) {
-    completer.ReplySuccess(lights_[index].GetCurrentBrightnessValue());
+    completer.ReplySuccess(lights_[index].GetCurrentBrightnessValue2());
   } else {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
 }
 
-void AmlLight::SetBrightnessValue(uint32_t index, uint8_t value,
+void AmlLight::SetBrightnessValue(uint32_t index, double value,
                                   SetBrightnessValueCompleter::Sync completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
@@ -161,7 +191,7 @@ void AmlLight::SetBrightnessValue2(uint32_t index, uint8_t value,
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
   }
-  if (lights_[index].SetBrightnessValue(value) != ZX_OK) {
+  if (lights_[index].SetBrightnessValue2(value) != ZX_OK) {
     completer.ReplyError(LightError::FAILED);
   } else {
     completer.ReplySuccess();

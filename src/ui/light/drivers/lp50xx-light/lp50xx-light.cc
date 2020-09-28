@@ -15,6 +15,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <cmath>
 #include <memory>
 
 #include <ddk/binding.h>
@@ -53,9 +54,9 @@ bool Lp50xxLight::BlinkTest() {
     for (uint32_t red = 0; red <= 0xff; red += 16) {
       for (uint32_t green = 0; green <= 0xff; green += 16) {
         for (uint32_t blue = 0; blue <= 0xff; blue += 16) {
-          rgb.red = static_cast<uint8_t>(red);
-          rgb.blue = static_cast<uint8_t>(blue);
-          rgb.green = static_cast<uint8_t>(green);
+          rgb.red = static_cast<float>(red) / static_cast<float>(UINT8_MAX);
+          rgb.blue = static_cast<float>(blue) / static_cast<float>(UINT8_MAX);
+          rgb.green = static_cast<float>(green) / static_cast<float>(UINT8_MAX);
           status = SetRgbValue(led, rgb);
           if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Failed to set color R:%d G:%d B:%d", __func__, red, green, blue);
@@ -70,9 +71,9 @@ bool Lp50xxLight::BlinkTest() {
   }
 
   for (uint32_t i = 0; i < led_count_; i++) {
-    rgb.red = 0;
-    rgb.green = 0;
-    rgb.blue = 0;
+    rgb.red = 0.0;
+    rgb.green = 0.0;
+    rgb.blue = 0.0;
     status = SetRgbValue(i, rgb);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to reset color", __PRETTY_FUNCTION__);
@@ -119,17 +120,29 @@ zx_status_t Lp50xxLight::Lp50xxRegConfig() {
 }
 
 zx_status_t Lp50xxLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb rgb) {
-  auto status = RedColorReg::Get(led_color_addr_, index).FromValue(rgb.red).WriteTo(i2c_);
+  if ((rgb.red > 1.0) || (rgb.green > 1.0) || (rgb.blue > 1.0) || (rgb.red < 0.0) ||
+      (rgb.green < 0.0) || (rgb.blue < 0.0) || std::isnan(rgb.red) || std::isnan(rgb.green) ||
+      std::isnan(rgb.blue)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto status = RedColorReg::Get(led_color_addr_, index)
+                    .FromValue(static_cast<uint8_t>(rgb.red * UINT8_MAX))
+                    .WriteTo(i2c_);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = GreenColorReg::Get(led_color_addr_, index).FromValue(rgb.green).WriteTo(i2c_);
+  status = GreenColorReg::Get(led_color_addr_, index)
+               .FromValue(static_cast<uint8_t>(rgb.green * UINT8_MAX))
+               .WriteTo(i2c_);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = BlueColorReg::Get(led_color_addr_, index).FromValue(rgb.blue).WriteTo(i2c_);
+  status = BlueColorReg::Get(led_color_addr_, index)
+               .FromValue(static_cast<uint8_t>(rgb.blue * UINT8_MAX))
+               .WriteTo(i2c_);
   if (status != ZX_OK) {
     return status;
   }
@@ -147,9 +160,9 @@ zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, llcpp::fuchsia::hardware::l
     return ZX_ERR_INTERNAL;
   }
 
-  rgb->red = red.reg_value();
-  rgb->green = green.reg_value();
-  rgb->blue = blue.reg_value();
+  rgb->red = static_cast<float>(red.reg_value()) / static_cast<float>(UINT8_MAX);
+  rgb->green = static_cast<float>(green.reg_value()) / static_cast<float>(UINT8_MAX);
+  rgb->blue = static_cast<float>(blue.reg_value()) / static_cast<float>(UINT8_MAX);
 
   return ZX_OK;
 }
@@ -200,7 +213,7 @@ void Lp50xxLight::GetCurrentBrightnessValue(uint32_t index,
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-void Lp50xxLight::SetBrightnessValue(uint32_t index, uint8_t value,
+void Lp50xxLight::SetBrightnessValue(uint32_t index, double value,
                                      SetBrightnessValueCompleter::Sync completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
@@ -269,7 +282,7 @@ void Lp50xxLight::GetGroupCurrentBrightnessValue(
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-void Lp50xxLight::SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+void Lp50xxLight::SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                           SetGroupBrightnessValueCompleter::Sync completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }

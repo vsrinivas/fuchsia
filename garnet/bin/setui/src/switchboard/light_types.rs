@@ -189,9 +189,9 @@ impl TryFrom<ColorRgb> for fidl_fuchsia_hardware_light::Rgb {
         }
 
         Ok(fidl_fuchsia_hardware_light::Rgb {
-            red: (src.red * 255.0).round() as u8,
-            green: (src.green * 255.0).round() as u8,
-            blue: (src.blue * 255.0).round() as u8,
+            red: src.red as f64,
+            green: src.green as f64,
+            blue: src.blue as f64,
         })
     }
 }
@@ -230,7 +230,7 @@ mod tests {
                 green: 1.0,
                 blue: 0.5
             }),
-            Ok(fidl_fuchsia_hardware_light::Rgb { red: 0, green: 255, blue: 128 })
+            Ok(fidl_fuchsia_hardware_light::Rgb { red: 0.0, green: 1.0, blue: 0.5 })
         );
     }
 }

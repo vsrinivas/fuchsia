@@ -69,9 +69,9 @@ impl Facade for LightFacade {
             LightMethod::SetBrightnessValue => {
                 let index = get_index(args.clone())?;
                 let val = match args.get("value") {
-                    Some(x) => match x.clone().as_u64() {
-                        Some(v) => v as u8,
-                        None => bail!("Expected a uint8 value."),
+                    Some(x) => match x.clone().as_f64() {
+                        Some(v) => v,
+                        None => bail!("Expected a float64 value."),
                     },
                     None => bail!("Expected a serde_json Value value."),
                 };
@@ -92,9 +92,9 @@ impl Facade for LightFacade {
                     None => bail!("Expected a serde_json Value value"),
                 };
                 let val = SerializableRgb {
-                    red: rgb["red"].as_u64().unwrap() as u8,
-                    green: rgb["green"].as_u64().unwrap() as u8,
-                    blue: rgb["blue"].as_u64().unwrap() as u8,
+                    red: rgb["red"].as_f64().unwrap(),
+                    green: rgb["green"].as_f64().unwrap(),
+                    blue: rgb["blue"].as_f64().unwrap(),
                 };
                 let result = self.set_rgb_value(index, val).await?;
                 Ok(to_value(result)?)

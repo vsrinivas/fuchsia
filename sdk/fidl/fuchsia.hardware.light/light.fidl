@@ -17,9 +17,9 @@ enum Capability {
 };
 
 struct Rgb {
-    uint8 red;
-    uint8 green;
-    uint8 blue;
+    float64 red;
+    float64 green;
+    float64 blue;
 };
 
 struct Info {
@@ -70,21 +70,23 @@ protocol Light {
     /// index: a number between 0 inclusive and the count received from GetNumLights.
     SetSimpleValue(uint32 index, bool value) -> () error LightError;
 
-    /// Returns the current brightness value (0 - 255) of the light indicated by index.
+    /// Returns the current brightness value (0.0 - 1.0) of the light indicated by index, where 0.0
+    /// is minimum brightness and 1.0 is maximum.
     /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    GetCurrentBrightnessValue(uint32 index) -> (uint8 value) error LightError;
+    GetCurrentBrightnessValue(uint32 index) -> (float64 value) error LightError;
 
     /// Redundant to GetCurrentBrightnessValue for transition.
     [Transitional = "Migrate to floating point"]
     GetCurrentBrightnessValue2(uint32 index) -> (uint8 value) error LightError;
 
-    /// Sets the current brightness value (0 - 255).
+    /// Sets the current brightness value (0.0 - 1.0), where 0.0 is minimum brightness and 1.0 is
+    /// maximum.
     /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    SetBrightnessValue(uint32 index, uint8 value) -> () error LightError;
+    SetBrightnessValue(uint32 index, float64 value) -> () error LightError;
 
     /// Redundant to SetBrightnessValue for transition.
     [Transitional = "Migrate to floating point"]
@@ -114,7 +116,7 @@ protocol Light {
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
     GetGroupCurrentSimpleValue(uint32 group_id) -> (vector<bool>:MAX? values) error LightError;
 
-    /// Sets the current values through the values array. Value should be set to 'TRUE' to turn on 
+    /// Sets the current values through the values array. Value should be set to 'TRUE' to turn on
     /// the light. Value should be set to 'FALSE' to turn off the light.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'SIMPLE' is not supported by this group, returns NOT_SUPPORTED.
@@ -122,23 +124,25 @@ protocol Light {
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
     SetGroupSimpleValue(uint32 group_id, vector<bool>:MAX values) -> () error LightError;
 
-    /// Returns an array of the current brightness values (0 - 255) for the light group.
+    /// Returns an array of the current brightness values (0.0 - 1.0) for the light group, where 0.0
+    /// is minimum brightness and 1.0 is maximum.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    GetGroupCurrentBrightnessValue(uint32 group_id) -> (vector<uint8>:MAX? values) error LightError;
+    GetGroupCurrentBrightnessValue(uint32 group_id) -> (vector<float64>:MAX? values) error LightError;
 
     /// Redundant to GetGroupCurrentBrightnessValue for transition.
     [Transitional = "Migrate to floating point"]
     GetGroupCurrentBrightnessValue2(uint32 group_id) -> (vector<uint8>:MAX? values) error LightError;
 
-    /// Sets the current brightness values (0 - 255) for the light group through the values array.
+    /// Sets the current brightness values (0.0 - 1.0) for the light group through the values array,
+    /// where 0.0 is minimum brightness and 1.0 is maximum.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    SetGroupBrightnessValue(uint32 group_id, vector<uint8>:MAX values) -> () error LightError;
+    SetGroupBrightnessValue(uint32 group_id, vector<float64>:MAX values) -> () error LightError;
 
     /// Redundant to GetGroupCurrentBrightnessValue for transition.
     [Transitional = "Migrate to floating point"]

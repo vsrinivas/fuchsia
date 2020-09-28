@@ -23,7 +23,7 @@ class FakeLightServer : public fuchsia::hardware::light::testing::Light_TestBase
   struct Light {
     std::string name;
     fuchsia::hardware::light::Capability capability;
-    uint8_t brightness;
+    double brightness;
   };
 
   explicit FakeLightServer(std::vector<Light> lights) : lights_(std::move(lights)) {}
@@ -39,7 +39,7 @@ class FakeLightServer : public fuchsia::hardware::light::testing::Light_TestBase
     response.info.name = lights_.at(index).name;
     callback(fuchsia::hardware::light::Light_GetInfo_Result::WithResponse(std::move(response)));
   }
-  void SetBrightnessValue(uint32_t index, uint8_t value,
+  void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCallback callback) override {
     lights_.at(index).brightness = value;
     callback(fuchsia::hardware::light::Light_SetBrightnessValue_Result::WithResponse(
@@ -98,11 +98,11 @@ TEST(LightStress, TurnLightOnOff) {
 
   // Turn the light on.
   ASSERT_TRUE(TurnOnLight(client, 0).is_ok());
-  EXPECT_EQ(server.lights().at(0).brightness, 255);
+  EXPECT_EQ(server.lights().at(0).brightness, 1.0);
 
   // Turn the light off.
   ASSERT_TRUE(TurnOffLight(client, 0).is_ok());
-  EXPECT_EQ(server.lights().at(0).brightness, 0);
+  EXPECT_EQ(server.lights().at(0).brightness, 0.0);
 }
 
 }  // namespace

@@ -107,11 +107,11 @@ impl From<SerializableInfo> for Info {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SerializableRgb {
-    pub red: u8,
-    pub green: u8,
-    pub blue: u8,
+    pub red: f64,
+    pub green: f64,
+    pub blue: f64,
 }
 
 /// Rgb object is not serializable so serialize the object
