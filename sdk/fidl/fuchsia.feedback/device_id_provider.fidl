@@ -12,11 +12,5 @@ library fuchsia.feedback;
 [Discoverable]
 protocol DeviceIdProvider {
     /// Returns the device's feedback ID.
-    GetId() -> (string:64 feedback_id) error DeviceIdError;
-};
-
-/// The DeviceIdError values are returned in the following circumstances:
-/// * NOT_FOUND - a valid feedback id was not found by the server.
-enum DeviceIdError {
-    NOT_FOUND = 1;
+    GetId() -> (string:64 feedback_id);
 };

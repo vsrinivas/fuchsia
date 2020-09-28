@@ -16,11 +16,13 @@ namespace fakes {
 // Fake handler for fuchsia.feedback.DeviceIdProvider.
 class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
  public:
+  DeviceIdProvider();
+
   // |fuchsia.feedback.DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 
  private:
-  std::unique_ptr<std::optional<std::string>> device_id_;
+  std::string device_id_;
 };
 
 }  // namespace fakes

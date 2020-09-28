@@ -19,13 +19,13 @@ class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
  public:
   DeviceIdProvider(const std::string& path);
 
-  AnnotationOr GetId();
+  std::string GetId();
 
   // |fuchsia.feedback.DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 
  private:
-  AnnotationOr device_id_;
+  std::string device_id_;
 };
 
 }  // namespace feedback_data

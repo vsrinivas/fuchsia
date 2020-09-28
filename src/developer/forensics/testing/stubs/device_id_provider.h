@@ -31,12 +31,6 @@ class DeviceIdProvider : public DeviceIdProviderBase {
   const std::string device_id_;
 };
 
-class DeviceIdProviderReturnsError : public DeviceIdProviderBase {
- public:
-  // |fuchsia::feedback::DeviceIdProvider|
-  void GetId(GetIdCallback callback) override;
-};
-
 class DeviceIdProviderNeverReturns : public DeviceIdProviderBase {
  public:
   // |fuchsia::feedback::DeviceIdProvider|

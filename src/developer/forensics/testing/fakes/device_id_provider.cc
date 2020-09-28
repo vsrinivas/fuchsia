@@ -16,27 +16,9 @@ namespace fakes {
 
 using namespace fuchsia::feedback;
 
-void DeviceIdProvider::GetId(GetIdCallback callback) {
-  if (!device_id_) {
-    device_id_ = std::make_unique<std::optional<std::string>>(std::nullopt);
-    std::string uuid = uuid::Generate();
-    if (uuid::IsValid(uuid)) {
-      *device_id_ = uuid;
-    }
-  }
+DeviceIdProvider::DeviceIdProvider() : device_id_(uuid::Generate()) {}
 
-  DeviceIdProvider_GetId_Result result;
-  if (device_id_->has_value()) {
-    // We need to copy |device_id_| since Response::Response() requires a rvalue reference to
-    // std::string in its constructor.
-    DeviceIdProvider_GetId_Response response(std::string(device_id_->value()));
-    result = DeviceIdProvider_GetId_Result::WithResponse(std::move(response));
-  } else {
-    result = DeviceIdProvider_GetId_Result::WithErr(DeviceIdError::NOT_FOUND);
-  }
-
-  callback(std::move(result));
-}
+void DeviceIdProvider::GetId(GetIdCallback callback) { callback(device_id_); }
 
 }  // namespace fakes
 }  // namespace forensics

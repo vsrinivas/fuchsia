@@ -20,13 +20,7 @@ DeviceIdProviderPtr::DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
 }
 
 void DeviceIdProviderPtr::MakeCall() {
-  connection_->GetId([this](fuchsia::feedback::DeviceIdProvider_GetId_Result result) {
-    if (result.is_response()) {
-      connection_.SetValue(result.response().ResultValue_());
-    } else {
-      connection_.SetError(Error::kMissingValue);
-    }
-  });
+  connection_->GetId([this](std::string feedback_id) { connection_.SetValue(feedback_id); });
 }
 
 }  // namespace fidl

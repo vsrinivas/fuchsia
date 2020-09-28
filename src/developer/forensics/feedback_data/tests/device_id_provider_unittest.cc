@@ -54,18 +54,12 @@ class DeviceIdTest : public testing::Test {
   }
 
   std::optional<std::string> GetDeviceId() {
-    using Result = fuchsia::feedback::DeviceIdProvider_GetId_Result;
-
     // Because the constructor of DeviceIdProvider does work to read/initialize the device id, we
     // don't set up a DeviceIdProvider until the file is in the state we want.
     DeviceIdProvider device_id_provider(device_id_path_);
 
     std::optional<std::string> device_id = std::nullopt;
-    device_id_provider.GetId([&](Result result) {
-      if (result.is_response()) {
-        device_id = result.response().ResultValue_();
-      }
-    });
+    device_id_provider.GetId([&](std::string feedback_id) { device_id = feedback_id; });
 
     return device_id;
   }
@@ -102,15 +96,6 @@ TEST_F(DeviceIdTest, Check_FileNotPresent) {
 
   ASSERT_TRUE(device_id.has_value());
   CheckDeviceIdFileContentsAre(device_id.value());
-}
-
-TEST_F(DeviceIdTest, Fail_IfPathIsADirectory) {
-  DeleteDeviceIdFile();
-  ASSERT_TRUE(files::CreateDirectory(device_id_path_));
-  EXPECT_FALSE(GetDeviceId().has_value());
-
-  DeviceIdProvider device_id_provider(device_id_path_);
-  EXPECT_EQ(device_id_provider.GetId(), AnnotationOr(Error::kFileReadFailure));
 }
 
 }  // namespace

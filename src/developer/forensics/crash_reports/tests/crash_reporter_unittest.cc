@@ -457,29 +457,6 @@ TEST_F(CrashReporterTest, Check_UtcTimeIsNotReady) {
   EXPECT_EQ(crash_server_->latest_annotations().at("debug.report-time.set"), "false");
 }
 
-TEST_F(CrashReporterTest, Check_guidNotSet) {
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
-  SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderReturnsError>());
-  SetUpUtcProviderServer({kExternalResponse});
-
-  ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
-
-  EXPECT_EQ(crash_server_->latest_annotations().find("guid"),
-            crash_server_->latest_annotations().end());
-
-  ASSERT_NE(crash_server_->latest_annotations().find("debug.guid.set"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("debug.guid.set"), "false");
-
-  ASSERT_NE(crash_server_->latest_annotations().find("debug.device-id.error"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("debug.device-id.error"), "missing");
-}
-
 TEST_F(CrashReporterTest, Check_UnknownChannel) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderClosesConnection>());

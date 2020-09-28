@@ -154,11 +154,7 @@ class DatastoreTest : public UnitTestFixture {
     FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
   }
 
-  std::string device_id() {
-    auto device_id = device_id_provider_.GetId();
-    FX_CHECK(device_id.HasValue());
-    return device_id.Value();
-  }
+  std::string device_id() { return device_id_provider_.GetId(); }
 
   ::fit::result<Annotations> GetAnnotations() {
     FX_CHECK(datastore_);

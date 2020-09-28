@@ -43,7 +43,6 @@ namespace {
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
-using fuchsia::feedback::DeviceIdProvider_GetId_Result;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
 using fuchsia::feedback::GetSnapshotParameters;
 using fuchsia::feedback::ImageEncoding;
@@ -422,11 +421,10 @@ TEST_F(FeedbackDataIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
   DeviceIdProviderSyncPtr device_id_provider;
   environment_services_->Connect(device_id_provider.NewRequest());
 
-  DeviceIdProvider_GetId_Result out_result;
-  ASSERT_EQ(device_id_provider->GetId(&out_result), ZX_OK);
+  std::string out_device_id;
+  ASSERT_EQ(device_id_provider->GetId(&out_device_id), ZX_OK);
 
-  ASSERT_TRUE(out_result.is_response());
-  EXPECT_TRUE(uuid::IsValid(out_result.response().ResultValue_()));
+  EXPECT_TRUE(uuid::IsValid(out_device_id));
 }
 
 }  // namespace
