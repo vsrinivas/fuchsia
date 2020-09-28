@@ -752,6 +752,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
     zx_status_t channel_status = base_close(zs->client.channel());
+    zs->~zxio_datagram_socket_t();
     return channel_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
