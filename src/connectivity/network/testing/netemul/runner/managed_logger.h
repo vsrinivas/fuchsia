@@ -27,6 +27,7 @@ class ManagedLogger {
 
   ManagedLogger(std::string name, bool is_err,
                 std::shared_ptr<fuchsia::logger::LogListenerSafe> loglistener);
+  ~ManagedLogger();
 
   zx::handle CreateHandle();
 
@@ -36,6 +37,7 @@ class ManagedLogger {
   void Start(ClosedCallback callback);
 
  private:
+  zx_status_t ReadSocket();
   void ConsumeBuffer();
 
   // Send a msg to |loglistener_impl|

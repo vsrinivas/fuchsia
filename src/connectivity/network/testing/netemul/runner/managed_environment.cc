@@ -39,6 +39,9 @@ ManagedEnvironment::~ManagedEnvironment() {
   // to panic when it tries to write to stdout/stderr after their sockets have been closed
   // (https://github.com/rust-lang/rust/blob/f6072ca/src/libstd/io/stdio.rs#L878).
   env_ = nullptr;
+
+  // Always destroy loggers next so they can consume all outstanding messages.
+  loggers_ = nullptr;
 }
 
 ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,

@@ -32,6 +32,17 @@ ManagedLogger::ManagedLogger(std::string name, bool is_err,
       wait_(this),
       loglistener_(std::move(loglistener)) {}
 
+ManagedLogger::~ManagedLogger() {
+  // Consume all pending data from the socket.
+  while (ReadSocket() == ZX_OK) {
+  }
+  // Publish any outstanding data as a message (in case it doesn't end with a newline).
+  if (buffer_pos_ != 0) {
+    buffer_[buffer_pos_] = 0x00;
+    LogMessage(buffer_.get());
+  }
+}
+
 zx::handle ManagedLogger::CreateHandle() {
   ZX_ASSERT(!out_.is_valid());
   zx::socket ret;
@@ -48,22 +59,12 @@ void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait, 
   }
 
   if (signal->observed & ZX_SOCKET_READABLE) {
-    // lazily allocate buffer if not created:
-    if (!buffer_) {
-      buffer_.reset(new char[BufferSize]);
-      buffer_pos_ = 0;
-    }
-
-    size_t actual;
-    status = out_.read(0, buffer_.get() + buffer_pos_, BufferSize - 1 - buffer_pos_, &actual);
+    status = ReadSocket();
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Managed Logger read failed: " << zx_status_get_string(status);
       closed_callback_(this);
       return;
     }
-    buffer_pos_ += actual;
-    buffer_[buffer_pos_] = 0x00;
-    ConsumeBuffer();
   }
 
   if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
@@ -72,6 +73,25 @@ void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait, 
     // wait for next
     wait_.Begin(dispatcher_);
   }
+}
+
+zx_status_t ManagedLogger::ReadSocket() {
+  if (!buffer_) {
+    buffer_.reset(new char[BufferSize]);
+    buffer_pos_ = 0;
+  }
+
+  size_t actual;
+  zx_status_t status =
+      out_.read(0, buffer_.get() + buffer_pos_, BufferSize - 1 - buffer_pos_, &actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+  buffer_pos_ += actual;
+  buffer_[buffer_pos_] = 0x00;
+  ConsumeBuffer();
+
+  return ZX_OK;
 }
 
 void ManagedLogger::ConsumeBuffer() {

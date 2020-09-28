@@ -55,6 +55,10 @@ class ManagedLoggerTest : public gtest::RealLoopFixture {
     }
   }
 
+  void DestroyLogger() { logger_ = nullptr; }
+
+  zx::socket& socket() { return sock_; }
+
  private:
   zx::socket sock_;
   std::shared_ptr<TestListener> listener_;
@@ -101,6 +105,25 @@ TEST_F(ManagedLoggerTest, LargeMessageGetsBroken) {
   WaitForMessageCount(2);
   CheckMessage(messages()[0], LogLevel::INFO, big_message.str(), {kLoggerName});
   CheckMessage(messages()[1], LogLevel::INFO, "More", {kLoggerName});
+}
+
+TEST_F(ManagedLoggerTest, DrainsSocketOnExit) {
+  Startup(kLoggerName, false);
+  constexpr char kMsg[] = "Hello World";
+  constexpr char kShortMsg[] = "Hello";
+
+  constexpr size_t kMessages = 25;
+  for (size_t i = 0; i < kMessages; i++) {
+    Write(std::string(kMsg) + "\n");
+  }
+  // Write one last incomplete message, missing a newline.
+  Write(kShortMsg);
+  DestroyLogger();
+  ASSERT_EQ(messages().size(), kMessages + 1);
+  for (auto i = messages().begin(); i != messages().end() - 1; i++) {
+    CheckMessage(*i, LogLevel::INFO, kMsg, {kLoggerName});
+  }
+  CheckMessage(messages().back(), LogLevel::INFO, kShortMsg, {kLoggerName});
 }
 
 }  // namespace testing
