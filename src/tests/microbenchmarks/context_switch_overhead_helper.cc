@@ -151,7 +151,8 @@ int main(int argc, char** argv) {
 
   while (true) {
     // Read the number of context switches to perform.
-    FX_CHECK(ZX_OK == incoming.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+    FX_CHECK(ZX_OK == incoming.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                        zx::time::infinite(), nullptr));
     if (ZX_OK != incoming.read(0, &number_of_switches, nullptr, sizeof(number_of_switches), 0,
                                nullptr, nullptr)) {
       break;

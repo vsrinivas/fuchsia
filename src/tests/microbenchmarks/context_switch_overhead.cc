@@ -20,6 +20,14 @@ namespace {
 
 constexpr const char* kPath = "/bin/context_switch_overhead_helper";
 
+void ChannelWait(const zx::channel& channel) {
+  // If we only pass ZX_CHANNEL_READABLE here, we will end up waiting
+  // forever if the process holding the other channel endpoint dies, so we
+  // should pass ZX_CHANNEL_PEER_CLOSED too.
+  ASSERT_OK(channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                             nullptr));
+}
+
 // Measure the time taken for NUM_CPUS pairs of threads, running in parallel, to each start up and
 // then execute |number_of_switches| round trips (via eventpair wakeup), when running in a separate
 // process. Each pair of threads is pinned to a different CPU on the system.
@@ -55,7 +63,7 @@ bool ContextSwitchTest(perftest::RepeatState* state, size_t number_of_switches) 
   char out[1024];
   uint32_t len;
 
-  ASSERT_OK(chan1.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+  ChannelWait(chan1);
   ASSERT_OK(chan1.read(0, &out, nullptr, sizeof(out), 0, &len, nullptr));
 
   state->DeclareStep("setup");
@@ -63,10 +71,10 @@ bool ContextSwitchTest(perftest::RepeatState* state, size_t number_of_switches) 
 
   while (state->KeepRunning()) {
     ASSERT_OK(chan1.write(0, &number_of_switches, sizeof(number_of_switches), nullptr, 0));
-    ASSERT_OK(chan1.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+    ChannelWait(chan1);
     ASSERT_OK(chan1.read(0, &out, nullptr, sizeof(out), 0, &len, nullptr));
     state->NextStep();
-    ASSERT_OK(chan1.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+    ChannelWait(chan1);
     ASSERT_OK(chan1.read(0, &out, nullptr, sizeof(out), 0, &len, nullptr));
   }
 

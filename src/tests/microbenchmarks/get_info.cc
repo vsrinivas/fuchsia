@@ -59,7 +59,8 @@ bool GetRuntimeInfoTest(perftest::RepeatState* state, size_t processes, size_t t
     char out[1024];
     uint32_t len;
 
-    ASSERT_OK(chan1.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(30)), nullptr));
+    ASSERT_OK(chan1.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                             nullptr));
     ASSERT_OK(chan1.read(0, &out, nullptr, sizeof(out), 0, &len, nullptr));
     process_list.emplace_back(std::move(process));
   }
