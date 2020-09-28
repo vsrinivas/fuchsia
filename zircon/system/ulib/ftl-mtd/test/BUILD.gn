@@ -14,35 +14,26 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-
-  deps = [
-    ":ftl-volume-wrapper",
-    ":nand-volume-driver",
-  ]
+  if (current_os == "linux") {
+    deps = [
+      ":ftl-volume-wrapper($host_toolchain)",
+      ":nand-volume-driver($host_toolchain)",
+    ]
+  }
 }
 
 source_set("common") {
   testonly = true
-
   sources = [ "fake-nand-interface.cc" ]
-
   deps = [ "//zircon/system/ulib/mtd" ]
 }
 
 test("nand-volume-driver") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+  # Restrict visbility to ensure OS is checked.
+  visibility = [ ":tests" ]
   sources = [ "nand-volume-driver-tests.cc" ]
-
   deps = [
     ":common",
     "//zircon/public/lib/zxtest",
@@ -52,17 +43,9 @@ test("nand-volume-driver") {
 }
 
 test("ftl-volume-wrapper") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+  # Restrict visbility to ensure OS is checked.
+  visibility = [ ":tests" ]
   sources = [ "ftl-volume-wrapper-tests.cc" ]
-
   deps = [
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ftl-mtd",

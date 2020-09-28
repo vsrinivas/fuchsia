@@ -12,14 +12,13 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-import("//build/fuzzing/fuzzer.gni")
-
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":tftp-test" ]
+  deps = [ ":tftp-fuzzers" ]
 }
 
 test("tftp-test") {
@@ -49,6 +48,11 @@ test("tftp-test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+bootfs_test("tftp-test-bootfs-test") {
+  name = "tftp-test"
+  deps = [ ":tftp-test" ]
+}
+
 fuzzer("tftp-fuzzer") {
   sources = [ "tftp-fuzztest.cc" ]
   deps = [
@@ -59,7 +63,6 @@ fuzzer("tftp-fuzzer") {
   include_dirs = [ ".." ]
 }
 
-bootfs_test("tftp-test-bootfs-test") {
-  name = "tftp-test"
-  deps = [ ":tftp-test" ]
+fuzzers_package("tftp-fuzzers") {
+  cpp_fuzzers = [ ":tftp-fuzzer" ]
 }

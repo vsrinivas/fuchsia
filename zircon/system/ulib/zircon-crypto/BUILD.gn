@@ -75,3 +75,8 @@ zx_library("zircon-crypto-static") {
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

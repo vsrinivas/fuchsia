@@ -130,3 +130,12 @@ zx_library("fs") {
     "//build/config:Wno-conversion",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "journal:tests",
+    "test:tests",
+    "transaction:tests",
+  ]
+}

@@ -33,3 +33,8 @@ zx_library("bitmap") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

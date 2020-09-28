@@ -14,11 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
-group("tests") {
-  testonly = true
-  deps = [ "tests" ]
-}
-
 zx_library("zxio") {
   sdk = "static"
   sdk_headers = [
@@ -59,4 +54,9 @@ zx_library("zxio") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
 }

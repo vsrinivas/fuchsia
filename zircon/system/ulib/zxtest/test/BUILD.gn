@@ -15,11 +15,11 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-group("test") {
+group("tests") {
   testonly = true
   deps = [
-    ":zxtest",
-    "integration",
+    ":zxtest($host_toolchain)",
+    "integration:tests",
   ]
 }
 

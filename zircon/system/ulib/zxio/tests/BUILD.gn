@@ -15,11 +15,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-fuchsia_unittest_package("zxio-unittest-package") {
-  manifest = "meta/zxio_test.cmx"
-  deps = [ ":zxio" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":zxio-unittest-package" ]
@@ -62,4 +57,9 @@ test("zxio") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_unittest_package("zxio-unittest-package") {
+  manifest = "meta/zxio_test.cmx"
+  deps = [ ":zxio" ]
 }

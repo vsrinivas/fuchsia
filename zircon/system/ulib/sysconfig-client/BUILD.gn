@@ -23,7 +23,7 @@ group("sysconfig-client") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:sysconfig-sync-client-test-package" ]
+  deps = [ "test:tests" ]
 }
 
 zx_library("sysconfig-sync-client") {

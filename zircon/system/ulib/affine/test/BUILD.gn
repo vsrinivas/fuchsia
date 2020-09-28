@@ -12,14 +12,13 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-import("//build/fuzzing/fuzzer.gni")
-
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":affine" ]
+  deps = [ ":affine-fuzzers" ]
 }
 
 test("affine") {
@@ -50,12 +49,16 @@ test("affine") {
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
+bootfs_test("affine-bootfs-test") {
+  name = "affine-test"
+  deps = [ ":affine" ]
+}
+
 fuzzer("affine-fuzzer") {
   sources = [ "affine-fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/affine" ]
 }
 
-bootfs_test("affine-bootfs-test") {
-  name = "affine-test"
-  deps = [ ":affine" ]
+fuzzers_package("affine-fuzzers") {
+  cpp_fuzzers = [ ":affine-fuzzer" ]
 }

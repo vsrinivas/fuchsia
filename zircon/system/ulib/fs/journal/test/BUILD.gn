@@ -12,17 +12,19 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
-
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/test.gni")
+import("//build/testing/bootfs_test.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":journal-unit-tests" ]
+  deps = [
+    ":journal-fuzzers",
+    ":journal-unit-tests",
+  ]
 }
 
 test("journal-unit") {
@@ -73,6 +75,17 @@ source_set("fuzz-utils") {
   ]
 }
 
+fuchsia_component("journal-unit-tests-component") {
+  component_name = "journal-unit-tests"
+  testonly = true
+  manifest = "meta/journal-unit-tests.cml"
+  deps = [ ":journal-unit" ]
+}
+
+fuchsia_test_package("journal-unit-tests") {
+  test_components = [ ":journal-unit-tests-component" ]
+}
+
 fuzzer("journal-fuzzer") {
   sources = [ "journal_fuzztest.cc" ]
   deps = [ ":fuzz-utils" ]
@@ -91,13 +104,10 @@ fuzzer("journal-replay-fuzzer") {
   include_dirs = [ "test" ]
 }
 
-fuchsia_component("journal-unit-tests-component") {
-  component_name = "journal-unit-tests"
-  testonly = true
-  manifest = "meta/journal-unit-tests.cml"
-  deps = [ ":journal-unit" ]
-}
-
-fuchsia_test_package("journal-unit-tests") {
-  test_components = [ ":journal-unit-tests-component" ]
+fuzzers_package("journal-fuzzers") {
+  cpp_fuzzers = [
+    ":journal-fuzzer",
+    ":journal-entry-fuzzer",
+    ":journal-replay-fuzzer",
+  ]
 }

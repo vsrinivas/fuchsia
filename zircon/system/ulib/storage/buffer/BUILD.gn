@@ -61,3 +61,8 @@ zx_library("buffer") {
     public_deps = [ "//zircon/system/public" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

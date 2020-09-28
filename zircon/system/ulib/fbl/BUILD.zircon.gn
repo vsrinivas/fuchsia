@@ -87,3 +87,8 @@ zx_library("fbl") {
     deps = [ "$zx/system/ulib/zircon" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

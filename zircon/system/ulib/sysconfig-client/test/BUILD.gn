@@ -15,6 +15,11 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":sysconfig-sync-client-test-package" ]
+}
+
 test("sysconfig-sync-client-test") {
   sources = [ "sync-client-test.cc" ]
   include_dirs = [ ".." ]

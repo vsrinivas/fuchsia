@@ -81,3 +81,8 @@ zx_library("memfs") {
     "//zircon/system/ulib/trace-engine:trace-engine_sdk",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -15,6 +15,11 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":trace-reader-test($host_toolchain)" ]
+}
+
 test("trace-reader-test") {
   output_name = "trace-reader-test-test"
   if (is_fuchsia) {
@@ -44,11 +49,6 @@ test("trace-reader-test") {
       "//zircon/public/lib/zx",
     ]
   }
-}
-
-group("test") {
-  testonly = true
-  deps = [ ":trace-reader-test" ]
 }
 
 bootfs_test("trace-reader-test-bootfs-test") {

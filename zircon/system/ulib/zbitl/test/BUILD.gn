@@ -16,7 +16,7 @@ import("//build/testing/host_test_data.gni")
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-group("test") {
+group("tests") {
   testonly = true
   deps = [
     ":zbitl-test-package",

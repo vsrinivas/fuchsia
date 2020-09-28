@@ -42,3 +42,8 @@ zx_library("nand-redundant-storage") {
     "//zircon/third_party/ulib/cksum",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

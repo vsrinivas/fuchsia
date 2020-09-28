@@ -44,3 +44,8 @@ zx_library("lz4") {
     configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

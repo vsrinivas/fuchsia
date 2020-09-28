@@ -16,60 +16,37 @@ import("//build/fuzzing/fuzzer.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":fuzzers",
+    "affine:tests",
+    "bitmap:tests",
     "edid:tests",
-    "fbl/test:fbl($host_toolchain)",
-    "ffl/test:ffl($host_toolchain)",
-    "fit/test($host_toolchain)",
-    "fs/journal/test",
-    "fs/transaction/test($host_toolchain)",
-    "ftl/test:tests",
-    "fvm-host:fvm-host-test($host_toolchain)",
-    "fvm/test:fvm-unit($host_toolchain)",
-    "fvm/test:tests",
+    "elfload:tests",
+    "fbl:tests",
+    "ffl:tests",
+    "fit:tests",
+    "fs:tests",
+    "ftl:tests",
+    "ftl-mtd:tests",
+    "fvm:tests",
     "fzl:tests",
-    "hid-parser/test:tests",
+    "gfx:tests",
+    "hid-parser:tests",
     "inspect:tests",
+    "ldmsg:tests",
     "memfs/test:tests",
-    "storage/buffer/test",
-    "storage/operation/test",
+    "nand-redundant-storage:tests",
+    "storage/buffer:tests",
+    "storage/operation:tests",
     "sysconfig-client:tests",
-    "trace-reader/test:trace-reader-test($host_toolchain)",
-    "uart/test($host_toolchain)",
-    "zbi/test:zbi($host_toolchain)",
-    "zbitl/test",
+    "tftp:tests",
+    "trace-reader:tests",
+    "uart:tests",
+    "utf_conversion:tests",
+    "zbi:tests",
+    "zbi-bootfs:tests",
+    "zbitl:tests",
+    "zircon-crypto:tests",
     "zxio:tests",
-    "zxtest/test:zxtest($host_toolchain)",
-    "zxtest/test/integration:zxtest-integration($host_toolchain)",
-  ]
-
-  if (current_os == "linux") {
-    deps += [
-      "ftl-mtd/test:ftl-volume-wrapper($host_toolchain)",
-      "ftl-mtd/test:nand-volume-driver($host_toolchain)",
-      "nand-redundant-storage/test:nand-redundant-storage($host_toolchain)",
-    ]
-  }
-}
-
-fuzzers_package("fuzzers") {
-  package_name = "zircon-fuzzers"
-  cpp_fuzzers = [
-    "affine/test:affine-fuzzer",
-    "bitmap/test:raw-bitmap-fuzzer",
-    "elfload/test:elfload-fuzzer",
-    "fs/journal/test:journal-entry-fuzzer",
-    "fs/journal/test:journal-fuzzer",
-    "fs/journal/test:journal-replay-fuzzer",
-    "fs/test:vmo_file-fuzzer",
-    "gfx/test:gfx-fuzzer",
-    "hid-parser/test:hid-parser-fuzzer",
-    "ldmsg/test:ldmsg-fuzzer",
-    "tftp/test:tftp-fuzzer",
-    "utf_conversion/test:utf_conversion-fuzzer",
-    "zbi-bootfs/test:zbi-bootfs-fuzzer",
-    "zircon-crypto/test:hmac-fuzzer",
-    "//zircon/third_party/ulib/lz4/test:lz4-decompress-fuzzer",
-    "//zircon/third_party/ulib/lz4/test:lz4-roundtrip-fuzzer",
+    "zxtest:tests",
+    "//zircon/third_party/ulib/lz4:tests",
   ]
 }

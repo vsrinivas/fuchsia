@@ -15,11 +15,11 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-group("test") {
+group("tests") {
   testonly = true
   deps = [
-    ":fit",
-    ":fit-unittest",
+    ":fit($host_toolchain)",
+    ":fit-unittest($host_toolchain)",
   ]
 }
 
@@ -46,6 +46,11 @@ test("fit-unittest") {
   if (is_fuchsia) {
     deps += [ "//sdk/lib/fdio" ]
   }
+}
+
+bootfs_test("fit-unittest-bootfs-test") {
+  name = "fit-unittest-test"
+  deps = [ ":fit-unittest" ]
 }
 
 # TODO: Convert these to zxtest and move them into the test above.
@@ -110,9 +115,4 @@ config("shadow") {
 bootfs_test("fit-bootfs-test") {
   name = "fit"
   deps = [ ":fit" ]
-}
-
-bootfs_test("fit-unittest-bootfs-test") {
-  name = "fit-unittest-test"
-  deps = [ ":fit-unittest" ]
 }

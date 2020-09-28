@@ -67,6 +67,11 @@ zx_library("fvm-host") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":fvm-host-test($host_toolchain)" ]
+}
+
 test("fvm-host-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]

@@ -65,3 +65,8 @@ zx_library("transaction") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

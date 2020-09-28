@@ -20,3 +20,8 @@ zx_library("utf_conversion") {
   sources = [ "utf_conversion.cc" ]
   deps = [ "//zircon/public/lib/fbl" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

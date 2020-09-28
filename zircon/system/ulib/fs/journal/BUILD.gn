@@ -81,3 +81,8 @@ zx_library("journal") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -14,27 +14,23 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 
-test("nand-redundant-storage") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  sources = [ "nand-rs-tests.cc" ]
-
-  deps = [ "//zircon/public/lib/zxtest" ]
-
+group("tests") {
+  testonly = true
   if (current_os == "linux") {
-    # This library requires an environment with mtd/mtd-user.h and MTD support.
+    # This test requires an environment with mtd/mtd-user.h and MTD support.
     # Currently, Linux is the only OS with that support.
-    deps += [ "//zircon/system/ulib/nand-redundant-storage" ]
-  } else {
-    assert(false, "Unsupported OS: $current_os")
+    deps = [ ":nand-redundant-storage($host_toolchain)" ]
   }
+}
+
+test("nand-redundant-storage") {
+  # Restrict visbility to ensure OS is checked.
+  visibility = [ ":tests" ]
+  sources = [ "nand-rs-tests.cc" ]
+  deps = [
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/nand-redundant-storage",
+  ]
 
   # Used by the test to point to the correct simulated MTD storage.
   if (current_cpu == "arm64") {

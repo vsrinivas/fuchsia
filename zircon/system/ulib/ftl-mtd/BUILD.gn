@@ -40,3 +40,8 @@ zx_library("ftl-mtd") {
     "//zircon/system/ulib/mtd",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

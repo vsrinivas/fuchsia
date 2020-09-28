@@ -67,3 +67,8 @@ zx_library("zbitl") {
     }
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

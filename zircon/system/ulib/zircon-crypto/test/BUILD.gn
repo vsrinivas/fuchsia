@@ -12,13 +12,13 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-import("//build/fuzzing/fuzzer.gni")
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":zircon-crypto" ]
+  deps = [ ":zircon-crypto-fuzzers" ]
 }
 
 test("zircon-crypto") {
@@ -49,6 +49,11 @@ test("zircon-crypto") {
   ]
 }
 
+bootfs_test("zircon-crypto-bootfs-test") {
+  name = "zircon-crypto-test"
+  deps = [ ":zircon-crypto" ]
+}
+
 fuzzer("hmac-fuzzer") {
   sources = [ "hmac-fuzzer.cc" ]
   deps = [
@@ -57,7 +62,6 @@ fuzzer("hmac-fuzzer") {
   ]
 }
 
-bootfs_test("zircon-crypto-bootfs-test") {
-  name = "zircon-crypto-test"
-  deps = [ ":zircon-crypto" ]
+fuzzers_package("zircon-crypto-fuzzers") {
+  cpp_fuzzers = [ ":hmac-fuzzer" ]
 }

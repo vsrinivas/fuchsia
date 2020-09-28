@@ -18,9 +18,9 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//build/zbi/zbi.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":zbi-bootfs-test" ]
+  deps = [ ":zbi-bootfs-fuzzers" ]
 }
 
 test("zbi-bootfs-test") {
@@ -83,12 +83,16 @@ zbi_input("create-zbi-image") {
   sources = [ "//zircon/system/ulib/zbi-bootfs/test/payload/" ]
 }
 
+bootfs_test("zbi-bootfs-test-bootfs-test") {
+  name = "zbi-bootfs-test"
+  deps = [ ":zbi-bootfs-test" ]
+}
+
 fuzzer("zbi-bootfs-fuzzer") {
   sources = [ "zbi-bootfs-fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/zbi-bootfs" ]
 }
 
-bootfs_test("zbi-bootfs-test-bootfs-test") {
-  name = "zbi-bootfs-test"
-  deps = [ ":zbi-bootfs-test" ]
+fuzzers_package("zbi-bootfs-fuzzers") {
+  cpp_fuzzers = [ ":zbi-bootfs-fuzzer" ]
 }

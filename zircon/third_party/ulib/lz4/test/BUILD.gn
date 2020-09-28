@@ -14,6 +14,11 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":lz4-fuzzers" ]
+}
+
 fuzzer("lz4-decompress-fuzzer") {
   sources = [ "lz4-decompress-fuzzer.cc" ]
   deps = [ "//zircon/third_party/ulib/lz4" ]
@@ -22,4 +27,11 @@ fuzzer("lz4-decompress-fuzzer") {
 fuzzer("lz4-roundtrip-fuzzer") {
   sources = [ "lz4-fuzzer.cc" ]
   deps = [ "//zircon/third_party/ulib/lz4" ]
+}
+
+fuzzers_package("lz4-fuzzers") {
+  cpp_fuzzers = [
+    ":lz4-decompress-fuzzer",
+    ":lz4-roundtrip-fuzzer",
+  ]
 }

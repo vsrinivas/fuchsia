@@ -1,15 +1,6 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/fuzzing/fuzzer.gni")
-import("//build/testing/bootfs_test.gni")
-group("test") {
-  testonly = true
-  deps = [
-    ":fs-connection",
-    ":fs-vnode",
-  ]
-}
 
 ##########################################
 # Though under //zircon, this build file #
@@ -21,7 +12,18 @@ group("test") {
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/testing/bootfs_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fs-connection",
+    ":fs-fuzzers",
+    ":fs-vnode",
+  ]
+}
 
 test("fs-vnode") {
   output_name = "fs-vnode-test"
@@ -105,11 +107,6 @@ test("fs-connection") {
   ]
 }
 
-fuzzer("vmo_file-fuzzer") {
-  sources = [ "vmo_file-fuzzer.cc" ]
-  deps = [ "//zircon/system/ulib/fs" ]
-}
-
 bootfs_test("fs-connection-bootfs-test") {
   name = "fs-connection-test"
   deps = [ ":fs-connection" ]
@@ -118,4 +115,13 @@ bootfs_test("fs-connection-bootfs-test") {
 bootfs_test("fs-vnode-bootfs-test") {
   name = "fs-vnode-test"
   deps = [ ":fs-vnode" ]
+}
+
+fuzzer("vmo_file-fuzzer") {
+  sources = [ "vmo_file-fuzzer.cc" ]
+  deps = [ "//zircon/system/ulib/fs" ]
+}
+
+fuzzers_package("fs-fuzzers") {
+  cpp_fuzzers = [ ":vmo_file-fuzzer" ]
 }
