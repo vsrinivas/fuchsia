@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/camera_benchmark"
+    },
+    "sandbox": {
+        "dev": [
+            "class/aml-ram"
+        ],
+        "services": [
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

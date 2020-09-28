@@ -28,6 +28,8 @@ group("service") {
 
 # Add targets here that are useful for general development.
 group("tools") {
+  testonly = true
+  public_deps = [ "//src/camera/bin/benchmark" ]
 }
 
 group("factory-tools") {
