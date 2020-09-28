@@ -668,6 +668,7 @@ config("Wno-conversion") {
     "//src/connectivity/network/tests/*",
     "//src/connectivity/network/tools/sockscripter/*",
     "//src/connectivity/network/tun/network-tun/*",
+    "//src/connectivity/openthread/drivers/ot-radio/*",
     "//src/connectivity/openthread/ot-stack/*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/*",
     "//src/connectivity/openthread/third_party/*",

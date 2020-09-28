@@ -65,6 +65,9 @@ template("ot_radio_driver") {
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   if (internal_access) {
