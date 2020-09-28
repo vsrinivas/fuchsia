@@ -12,19 +12,23 @@
 
 namespace fbl {
 
-// Extracts the bit range from [lower_bound, upper_bound] (inclusive) from input
-// and returns it as a type ReturnType.
-template <size_t upper_bound, size_t lower_bound, typename ReturnType, typename SourceType>
+// Extracts the bit range [HightBit:LowBit] (inclusive) from a numerical input.
+template <size_t HighBit, size_t LowBit, typename ReturnType, typename SourceType>
 constexpr inline ReturnType ExtractBits(SourceType input) {
-  // Add one to upper bound because it is inclusive.
-  constexpr auto bit_count = upper_bound + 1 - lower_bound;
+  // +1 for inclusivity of the upper bound.
+  constexpr auto bit_count = HighBit + 1 - LowBit;
 
-  static_assert(upper_bound > lower_bound, "Upper bound must be higher than lower bound.");
-  static_assert(upper_bound < (sizeof(SourceType) * 8), "Source value ends before upper bound");
+  static_assert(HighBit >= LowBit, "High bit must be greater or equal to low bit.");
+  static_assert(HighBit < (sizeof(SourceType) * 8), "Source value ends before high bit");
   static_assert(bit_count <= (sizeof(ReturnType) * 8),
-                "Return Type is not large enough to hold requested bits.");
+                "Return type is not large enough to hold requested bits.");
   auto pow2 = static_cast<SourceType>(1) << bit_count;
-  return static_cast<ReturnType>((input >> lower_bound) & (pow2 - 1));
+  return static_cast<ReturnType>((input >> LowBit) & (pow2 - 1));
+}
+
+template <size_t Bit, typename ReturnType, typename SourceType>
+constexpr inline ReturnType ExtractBit(SourceType input) {
+  return ExtractBits<Bit, Bit, ReturnType, SourceType>(input);
 }
 
 // The following contains safe wrappers for numeric bitfields. You can read or

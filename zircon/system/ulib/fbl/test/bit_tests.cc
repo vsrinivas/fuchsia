@@ -12,6 +12,8 @@ namespace {
 
 TEST(ExtractBitsTest, BasicCases) {
   EXPECT_EQ(0b1001u, (fbl::ExtractBits<3, 0, uint8_t>(0b10101001u)));
+  EXPECT_EQ(0b1u, (fbl::ExtractBit<0, uint8_t>(0b10101001u)));
+  EXPECT_EQ(0b0u, (fbl::ExtractBit<2, uint8_t>(0b10101001u)));
   EXPECT_EQ(0b1001u, (fbl::ExtractBits<5, 2, uint8_t>(0b1010100100u)));
   EXPECT_EQ(0b1001u, (fbl::ExtractBits<63, 60, uint64_t>(0x9000000000000000u)));
   EXPECT_EQ(0xe7c07357u, (fbl::ExtractBits<63, 32, uint32_t>(0xe7c0735700000000)));
