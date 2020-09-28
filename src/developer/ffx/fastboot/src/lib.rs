@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{bail, Context, Result},
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
-        send,
+        send, upload,
     },
+    std::fs::read,
     usb_bulk::{Interface, InterfaceInfo, Open},
 };
 
@@ -73,9 +74,7 @@ pub fn find_devices() -> Vec<FastbootDevice> {
     let mut products = Vec::new();
     let serials = find_serial_numbers();
     for serial in serials {
-        let mut cb_verify =
-            |info: &InterfaceInfo| -> bool { extract_serial_number(info) == serial };
-        match open_interface(&mut cb_verify) {
+        match open_interface_with_serial(&serial) {
             Ok(mut usb_interface) => {
                 if let Ok(Reply::Okay(version)) =
                     send(Command::GetVar(ClientVariable::Version), &mut usb_interface)
@@ -94,6 +93,54 @@ pub fn find_devices() -> Vec<FastbootDevice> {
         }
     }
     products
+}
+
+pub fn open_interface_with_serial(serial: &String) -> Result<Interface> {
+    open_interface(|info: &InterfaceInfo| -> bool { extract_serial_number(info) == *serial })
+}
+
+pub fn flash(interface: &mut Interface, file: &String, name: &String) -> Result<()> {
+    let bytes = read(file)?;
+    log::debug!("uploading file size: {}", bytes.len());
+    let upload_reply = upload(&bytes[..], interface).context(format!("uploading {}", file))?;
+    match upload_reply {
+        Reply::Okay(s) => log::debug!("Received response from download command: {}", s),
+        Reply::Fail(s) => bail!("Failed to upload {}: {}", file, s),
+        _ => bail!("Unexpected reply from fastboot device for download: {:?}", upload_reply),
+    }
+    let send_reply = send(Command::Flash(name.to_string()), interface).context("sending flash")?;
+    match send_reply {
+        Reply::Okay(_) => {
+            log::debug!("Successfully flashed parition: {}", name);
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to flash \"{}\": {}", name, s),
+        _ => bail!("Unexpected reply from fastboot device for flash command: {:?}", send_reply),
+    }
+}
+
+pub fn erase(interface: &mut Interface, name: &String) -> Result<()> {
+    let reply = send(Command::Erase(name.to_string()), interface).context("sending erase")?;
+    match reply {
+        Reply::Okay(_) => {
+            log::debug!("Successfully erased parition: {}", name);
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to erase \"{}\": {}", name, s),
+        _ => bail!("Unexpected reply from fastboot device for erase command: {:?}", reply),
+    }
+}
+
+pub fn reboot(interface: &mut Interface) -> Result<()> {
+    let reply = send(Command::Reboot, interface).context("sending reboot")?;
+    match reply {
+        Reply::Okay(_) => {
+            log::debug!("Successfully sent reboot");
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to reboot: {}", s),
+        _ => bail!("Unexpected reply from fastboot device for reboot command: {:?}", reply),
+    }
 }
 
 /// Tests are based on the [Zedmon power monitor](https://fuchsia.googlesource.com/zedmon).

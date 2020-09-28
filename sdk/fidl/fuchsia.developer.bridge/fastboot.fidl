@@ -11,4 +11,6 @@ enum FastbootError {
 [Discoverable]
 protocol Fastboot {
     Flash(string:256 partition_name, string:256 path) -> () error FastbootError;
+    Erase(string:256 partition_name) -> () error FastbootError;
+    Reboot() -> () error FastbootError;
 };

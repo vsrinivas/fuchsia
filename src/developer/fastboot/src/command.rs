@@ -4,7 +4,7 @@
 
 use {anyhow::anyhow, std::convert::TryFrom};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ClientVariable {
     // Version of FastBoot protocol supported. It should be "0.4".
     Version,
@@ -24,7 +24,7 @@ pub enum ClientVariable {
     IsUserSpace,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Command {
     // Read a config/version variable from the bootloader.  The variable contents will be returned
     // after the OKAY response. If the variable is unknown, the bootloader should return a FAIL
@@ -94,7 +94,7 @@ const MAX_COMMAND_LENGTH: usize = 64;
 fn concat_message(cmd: &[u8], s: String) -> Result<Vec<u8>, anyhow::Error> {
     let bytes = s.into_bytes();
     if MAX_COMMAND_LENGTH - cmd.len() < bytes.len() {
-        return Err(anyhow!("Partition name is too long for command."));
+        return Err(anyhow!("Message name is too long for command."));
     }
     Ok([cmd, &bytes[..]].concat())
 }

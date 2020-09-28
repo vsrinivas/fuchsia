@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::{bail, Result},
     command::Command,
     reply::Reply,
     std::convert::TryFrom,
@@ -14,48 +14,73 @@ pub mod command;
 pub mod reply;
 
 const MAX_PACKET_SIZE: usize = 64;
+const READ_RETRY_MAX: usize = 10;
 
-fn read_from_interface<T: Read>(interface: &mut T) -> Result<Reply, Error> {
+fn read_from_interface<T: Read>(interface: &mut T) -> Result<Reply> {
     let mut buf: [u8; MAX_PACKET_SIZE] = [0; MAX_PACKET_SIZE];
     let size = interface.read(&mut buf)?;
     let (trimmed, _) = buf.split_at(size);
     Reply::try_from(trimmed.to_vec())
 }
 
-fn read_and_print_info<T: Read>(interface: &mut T) -> Result<Reply, Error> {
+fn read_and_log_info<T: Read>(interface: &mut T) -> Result<Reply> {
+    let mut retry = 0;
     loop {
-        let reply = read_from_interface(interface)?;
-        match reply {
-            Reply::Info(msg) => println!("{}", msg),
-            _ => return Ok(reply),
+        match read_from_interface(interface) {
+            Ok(reply) => match reply {
+                Reply::Info(msg) => log::info!("{}", msg),
+                _ => return Ok(reply),
+            },
+            Err(e) => {
+                log::warn!("error reading fastboot reply from usb interface: {:?}", e);
+                retry += 1;
+                if retry >= READ_RETRY_MAX {
+                    log::error!("could not read reply: {:?}", e);
+                    return Err(e);
+                }
+            }
         }
     }
 }
 
-pub fn send<T: Read + Write>(cmd: Command, interface: &mut T) -> Result<Reply, Error> {
+pub fn send<T: Read + Write>(cmd: Command, interface: &mut T) -> Result<Reply> {
     interface.write(&Vec::<u8>::try_from(cmd)?)?;
-    read_and_print_info(interface)
+    read_and_log_info(interface)
 }
 
-pub fn upload<T: Read + Write>(data: &[u8], interface: &mut T) -> Result<Reply, Error> {
+pub fn upload<T: Read + Write>(data: &[u8], interface: &mut T) -> Result<Reply> {
     let reply = send(Command::Download(u32::try_from(data.len())?), interface)?;
     match reply {
         Reply::Data(s) => {
             if s != u32::try_from(data.len())? {
-                return Err(anyhow!(
+                bail!(
                     "Target responded with wrong data size - received:{} expected:{}",
                     s,
                     data.len()
-                ));
+                );
             }
             // TODO - possibly split the data based on the speed of the USB connection.
-            // It's possible the USB library might handle this, but it's something to note:
             // Max packet size must be 64 bytes for full-speed, 512 bytes for high-speed and
             // 1024 bytes for Super Speed USB
-            interface.write(data)?;
-            read_and_print_info(interface)
+            // TODO (fxb/60416) - try to use BufWriter instead - currently the usb_bulk library
+            // does not support the Copy trait necessary to get that working.
+            let buffer_length = 64;
+            let upload_length = data.len();
+            let mut buffer: &[u8];
+            let mut cursor = 0;
+            while cursor < upload_length {
+                let remaining = upload_length - cursor;
+                buffer = if remaining < buffer_length {
+                    &data[cursor..]
+                } else {
+                    &data[cursor..cursor + buffer_length]
+                };
+                interface.write(&buffer)?;
+                cursor += buffer_length;
+            }
+            read_and_log_info(interface)
         }
-        _ => Err(anyhow!("Did not get expected Data reply")),
+        _ => bail!("Did not get expected Data reply: {:?}", reply),
     }
 }
 
@@ -72,7 +97,7 @@ mod test {
     }
 
     impl Read for TestTransport {
-        fn read(&mut self, buf: &mut [u8]) -> Result<usize, std::io::Error> {
+        fn read(&mut self, buf: &mut [u8]) -> std::result::Result<usize, std::io::Error> {
             match self.replies.pop() {
                 Some(r) => {
                     let reply = Vec::<u8>::from(r);
@@ -85,7 +110,7 @@ mod test {
     }
 
     impl Write for TestTransport {
-        fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
+        fn write(&mut self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
             Ok(buf.len())
         }
 

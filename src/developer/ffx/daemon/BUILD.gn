@@ -26,6 +26,7 @@ if (is_host) {
       "//src/lib/fuchsia-async",
       "//src/lib/mdns/rust:mdns",
       "//src/lib/network/packet",
+      "//src/lib/usb_bulk/rust:lib",
       "//src/lib/zerocopy",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

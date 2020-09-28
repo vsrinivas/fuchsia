@@ -12,6 +12,7 @@ use {
     async_std::sync::RwLock,
     async_trait::async_trait,
     chrono::{DateTime, Utc},
+    ffx_fastboot::open_interface_with_serial,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::{
@@ -24,11 +25,13 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     std::collections::{HashMap, HashSet},
+    std::default::Default,
     std::fmt,
     std::fmt::{Debug, Display},
     std::hash::Hash,
     std::net::{IpAddr, SocketAddr},
     std::sync::Arc,
+    usb_bulk::Interface,
 };
 
 #[async_trait]
@@ -119,24 +122,36 @@ struct TargetInner {
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
     addrs: RwLock<HashSet<TargetAddr>>,
+    // used for Fastboot
+    serial: RwLock<Option<String>>,
+}
+
+impl Default for TargetInner {
+    fn default() -> Self {
+        Self {
+            nodename: Default::default(),
+            last_response: RwLock::new(Utc::now()),
+            state: Mutex::new(TargetState::new()),
+            addrs: RwLock::new(HashSet::new()),
+            serial: RwLock::new(None),
+        }
+    }
 }
 
 impl TargetInner {
     fn new(nodename: &str) -> Self {
-        Self {
-            nodename: nodename.to_string(),
-            last_response: RwLock::new(Utc::now()),
-            state: Mutex::new(TargetState::new()),
-            addrs: RwLock::new(HashSet::new()),
-        }
+        Self { nodename: nodename.to_string(), ..Default::default() }
     }
 
     pub fn new_with_addrs(nodename: &str, addrs: HashSet<TargetAddr>) -> Self {
+        Self { nodename: nodename.to_string(), addrs: RwLock::new(addrs), ..Default::default() }
+    }
+
+    pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
         Self {
             nodename: nodename.to_string(),
-            last_response: RwLock::new(Utc::now()),
-            state: Mutex::new(TargetState::new()),
-            addrs: RwLock::new(addrs),
+            serial: RwLock::new(Some(serial.to_string())),
+            ..Default::default()
         }
     }
 
@@ -147,8 +162,7 @@ impl TargetInner {
         Self {
             nodename: nodename.to_string(),
             last_response: RwLock::new(time),
-            state: Mutex::new(TargetState::new()),
-            addrs: RwLock::new(HashSet::new()),
+            ..Default::default()
         }
     }
 }
@@ -202,6 +216,11 @@ impl Target {
         Self::from_inner(inner)
     }
 
+    pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
+        let inner = Arc::new(TargetInner::new_with_serial(nodename, serial));
+        Self::from_inner(inner)
+    }
+
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
@@ -228,6 +247,13 @@ impl Target {
     pub async fn rcs(&self) -> Option<RcsConnection> {
         match self.inner.state.lock().await.rcs.as_ref() {
             Some(r) => Some(r.clone()),
+            None => None,
+        }
+    }
+
+    pub async fn usb(&self) -> Option<Interface> {
+        match self.inner.serial.read().await.as_ref() {
+            Some(s) => open_interface_with_serial(s).ok(),
             None => None,
         }
     }
@@ -335,7 +361,7 @@ impl ToFidlTarget for Target {
             ),
             rcs_state: Some(rcs_state),
 
-            // TODO(awdavies): Gather more information here when possilbe.
+            // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
         }
@@ -344,7 +370,11 @@ impl ToFidlTarget for Target {
 
 impl From<events::TargetInfo> for Target {
     fn from(mut t: events::TargetInfo) -> Self {
-        Self::new_with_addrs(t.nodename.as_ref(), t.addresses.drain(..).collect())
+        if let Some(s) = t.serial {
+            Self::new_with_serial(t.nodename.as_ref(), &s)
+        } else {
+            Self::new_with_addrs(t.nodename.as_ref(), t.addresses.drain(..).collect())
+        }
     }
 }
 
@@ -625,6 +655,7 @@ mod test {
                 last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
+                serial: RwLock::new(block_on(self.serial.read()).clone()),
             }
         }
     }

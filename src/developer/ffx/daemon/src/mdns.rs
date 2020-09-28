@@ -269,7 +269,11 @@ impl<B: ByteSlice + Clone> events::TryIntoTargetInfo for dns::Message<B> {
         if nodename.len() == 0 {
             return Err(MdnsConvertError::NodenameMissing);
         }
-        Ok(events::TargetInfo { nodename, addresses: addrs.drain().collect() })
+        Ok(events::TargetInfo {
+            nodename,
+            addresses: addrs.drain().collect(),
+            ..Default::default()
+        })
     }
 }
 

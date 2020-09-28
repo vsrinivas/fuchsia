@@ -11,15 +11,16 @@ use {
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
+    ffx_fastboot::{erase, flash, reboot},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError,
+        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, FastbootRequest,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
-    std::sync::{Arc, Weak},
+    std::sync::{Arc, Mutex, Weak},
     std::time::Duration,
 };
 
@@ -121,13 +122,18 @@ impl Daemon {
     pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
         fuchsia_async::Task::spawn(async move {
             loop {
+                log::debug!("Looking for fastboot devices");
                 let fastboot_devices = ffx_fastboot::find_devices();
                 for dev in fastboot_devices {
                     // Add to target collection
                     let nodename = format!("{:?}", dev);
                     queue
                         .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(
-                            events::TargetInfo { nodename, addresses: Vec::new() },
+                            events::TargetInfo {
+                                nodename,
+                                serial: Some(dev.serial),
+                                ..Default::default()
+                            },
                         )))
                         .await
                         .unwrap_or_else(|err| {
@@ -287,11 +293,89 @@ impl Daemon {
                     .map_err(|_| DaemonError::RcsConnectionError);
                 responder.send(&mut response).context("error sending response")?;
             }
-            DaemonRequest::GetFastboot { target: _, fastboot: _, responder } => {
-                // TODO: Fastboot/Daemon Implementation
-                responder
-                    .send(&mut Err(FastbootError::Generic))
-                    .context("sending error response")?
+            DaemonRequest::GetFastboot { target, fastboot, responder } => {
+                let target = match self.target_from_cache(target).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        log::warn!("{}", e);
+                        responder
+                            .send(&mut Err(FastbootError::Generic))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+                let usb = match target.usb().await {
+                    Some(u) => Arc::new(Mutex::new(u)),
+                    None => {
+                        log::error!("Could not open usb interface for target: {:?}", target);
+                        responder
+                            .send(&mut Err(FastbootError::Generic))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+
+                let mut stream = fastboot.into_stream()?;
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        log::debug!("fastboot - received req: {:?}", req);
+                        match req {
+                            FastbootRequest::Flash { partition_name, path, responder } => {
+                                let mut usb = usb.lock().unwrap();
+                                match flash(&mut usb, &path, &partition_name) {
+                                    Ok(_) => responder.send(&mut Ok(())).unwrap(),
+                                    Err(e) => {
+                                        log::error!(
+                                            "Error flashing \"{}\" from {}:\n{:?}",
+                                            partition_name,
+                                            path,
+                                            e
+                                        );
+                                        responder
+                                            .send(&mut Err(FastbootError::Generic))
+                                            .context("sending error response")
+                                            .unwrap();
+                                    }
+                                }
+                            }
+                            FastbootRequest::Erase { partition_name, responder } => {
+                                let mut usb = usb.lock().unwrap();
+                                match erase(&mut usb, &partition_name) {
+                                    Ok(_) => responder.send(&mut Ok(())).unwrap(),
+                                    Err(e) => {
+                                        log::error!(
+                                            "Error erasing \"{}\": {:?}",
+                                            partition_name,
+                                            e
+                                        );
+                                        responder
+                                            .send(&mut Err(FastbootError::Generic))
+                                            .context("sending error response")
+                                            .unwrap();
+                                    }
+                                }
+                            }
+                            FastbootRequest::Reboot { responder } => {
+                                let mut usb = usb.lock().unwrap();
+                                match reboot(&mut usb) {
+                                    Ok(_) => responder.send(&mut Ok(())).unwrap(),
+                                    Err(e) => {
+                                        log::error!("Error rebooting: {:?}", e);
+                                        responder
+                                            .send(&mut Err(FastbootError::Generic))
+                                            .context("sending error response")
+                                            .unwrap();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Reboot?
+                })
+                .detach();
+
+                responder.send(&mut Ok(())).context("error sending response")?;
             }
             DaemonRequest::Quit { responder } => {
                 log::info!("Received quit request.");
@@ -342,6 +426,7 @@ mod test {
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
                     nodename: t.nodename(),
                     addresses: Vec::new(),
+                    ..Default::default()
                 })))
                 .await
                 .unwrap();

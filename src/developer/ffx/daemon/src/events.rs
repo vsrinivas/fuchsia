@@ -12,6 +12,7 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     std::cmp::Eq,
+    std::default::Default,
     std::fmt::Debug,
     std::hash::Hash,
     std::net::SocketAddr,
@@ -63,10 +64,11 @@ pub trait EventHandler<T: EventTrait>: Send + Sync {
     async fn on_event(&self, event: T) -> Result<bool>;
 }
 
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Hash, Clone, PartialEq, Eq)]
 pub struct TargetInfo {
     pub nodename: String,
     pub addresses: Vec<target::TargetAddr>,
+    pub serial: Option<String>,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]

@@ -121,9 +121,18 @@ impl Flash for FlashManifestV1 {
             writeln!(writer, "Writing \"{}\" from {}", partition.name(), partition.file())?;
             //TODO: better error handling when errors are well defined.
             fastboot_proxy.flash(partition.name(), partition.file()).await?.map_err(|_| {
-                anyhow!("There was an error uploading {} - {}", partition.name(), partition.file())
+                anyhow!(
+                    "There was an error flashing \"{}\" - {}",
+                    partition.name(),
+                    partition.file()
+                )
             })?;
         }
+        fastboot_proxy
+            .erase("misc")
+            .await?
+            .map_err(|_| anyhow!("Could not erase misc partition"))?;
+        fastboot_proxy.reboot().await?.map_err(|_| anyhow!("Could not reboot device"))?;
         Ok(())
     }
 }

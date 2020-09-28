@@ -50,6 +50,12 @@ mod test {
             FastbootRequest::Flash { partition_name: _, path: _, responder } => {
                 responder.send(&mut Ok(())).unwrap();
             }
+            FastbootRequest::Erase { partition_name: _, responder } => {
+                responder.send(&mut Ok(())).unwrap();
+            }
+            FastbootRequest::Reboot { responder } => {
+                responder.send(&mut Ok(())).unwrap();
+            }
         })
     }
 
