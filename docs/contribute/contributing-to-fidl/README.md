@@ -178,7 +178,7 @@ alias fidldev=$FIDLMISC_DIR/fidldev/fidldev.py
 fx set core.x64 --variant=host_asan
 
 # build fidlc
-fx build zircon/tools
+fx ninja -C $(cat .fx-build-dir) host_x64/fidlc
 ```
 
 If you're doing extensive edit-compile-test cycles on `fidlc`, building with
