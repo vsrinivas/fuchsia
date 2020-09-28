@@ -813,7 +813,7 @@ impl<'a, 'fs, IO: ReadWriteSeek, TP, OCC> DirIter<'a, 'fs, IO, TP, OCC> {
 }
 
 impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'_, 'fs, IO, TP, OCC> {
-    fn should_ship_entry(&self, raw_entry: &DirEntryData) -> bool {
+    fn should_skip_entry(&self, raw_entry: &DirEntryData) -> bool {
         if raw_entry.is_deleted() {
             return true;
         }
@@ -837,7 +837,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'_, 'fs, IO, TP, OCC
                 return Ok(None);
             }
             // Check if this is deleted or volume ID entry
-            if self.should_ship_entry(&raw_entry) {
+            if self.should_skip_entry(&raw_entry) {
                 trace!("skip entry");
                 lfn_builder.clear();
                 begin_offset = offset;
@@ -1096,7 +1096,7 @@ impl LongNameBuilder {
         let index = data.order() & 0x1F;
         if index == 0 {
             // Corrupted entry
-            warn!("currupted lfn entry! {:x}", data.order());
+            warn!("corrupted lfn entry! {:x}", data.order());
             self.clear();
             return;
         }
@@ -1108,7 +1108,7 @@ impl LongNameBuilder {
         } else if self.index == 0 || index != self.index - 1 || data.checksum() != self.chksum {
             // Corrupted entry
             warn!(
-                "currupted lfn entry! {:x} {:x} {:x} {:x}",
+                "corrupted lfn entry! {:x} {:x} {:x} {:x}",
                 data.order(),
                 self.index,
                 data.checksum(),
