@@ -10,7 +10,7 @@ use {
         cache::MerkleForError, clock, inspect_util,
         metrics_util::tuf_error_as_create_tuf_client_event_code,
     },
-    anyhow::format_err,
+    anyhow::{anyhow, format_err},
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryKey},
     fuchsia_cobalt::CobaltSender,
@@ -48,7 +48,13 @@ impl CustomTargetMetadata {
     }
 }
 
+#[derive(Debug)]
+struct LogContext {
+    repo_url: String,
+}
+
 pub struct Repository {
+    log_ctx: LogContext,
     updating_client:
         Arc<AsyncMutex<updating_tuf_client::UpdatingTufClient<EphemeralRepository<Json>>>>,
     inspect: RepositoryInspectState,
@@ -138,6 +144,7 @@ impl Repository {
         );
 
         Ok(Self {
+            log_ctx: LogContext { repo_url: config.repo_url().to_string() },
             updating_client,
             inspect: RepositoryInspectState {
                 last_merkle_successfully_resolved_time: node.create_string(
@@ -162,12 +169,19 @@ impl Repository {
             // These are the common cases and can be inferred from AutoClient inspect.
             Ok(UpdateResult::Deferred) | Ok(UpdateResult::UpToDate) => (),
             Ok(UpdateResult::Updated) => fx_log_info!(
-                "updated local TUF metadata: {:?}",
-                updating_client.metadata_versions()
+                "updated local TUF metadata for {:?} to version {:?} while getting merkle for {:?}",
+                self.log_ctx.repo_url,
+                updating_client.metadata_versions(),
+                target_path
             ),
             Err(TufError::NotFound) => return Err(MerkleForError::NotFound),
             Err(other) => {
-                fx_log_err!("failed to update with TUF error {:?}", other);
+                fx_log_err!(
+                    "failed to update local TUF metadata for {:?} while getting merkle for {:?} with error: {:#}",
+                    self.log_ctx.repo_url,
+                    target_path,
+                    anyhow!(other)
+                );
                 // TODO(fxbug.dev/43646) Should this bubble up a MerkleForError::TufError(other)?
             }
         }
@@ -225,6 +239,26 @@ mod tests {
             )
             .await
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_ctx_correctly_set() {
+        // Serve static repo and connect to it
+        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let repo = Arc::new(
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
+        );
+        let served_repository = repo.server().start().expect("create served repo");
+        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
+        let repo_config = served_repository.make_repo_config(repo_url);
+        let repo =
+            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+
+        assert_matches!(repo.log_ctx, LogContext { repo_url } if repo_url == "fuchsia-pkg://test");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -314,6 +348,44 @@ mod tests {
             repo.get_merkle_at_path(&target_path).await.expect("fetched merkle from tuf");
         assert_eq!(merkle.as_bytes(), pkg.meta_far_merkle_root().as_bytes());
         assert_eq!(size, pkg.meta_far().unwrap().metadata().unwrap().len());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_merkle_path_fails_and_logs_when_remote_server_500s() {
+        // Serve static repo
+        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let repo = Arc::new(
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
+        );
+        let should_fail = handler::AtomicToggle::new(false);
+        let served_repository = repo
+            .server()
+            .uri_path_override_handler(handler::Toggleable::new(
+                &should_fail,
+                handler::StaticResponseCode::server_error(),
+            ))
+            .start()
+            .expect("create served repo");
+        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
+        let repo_config = served_repository.make_repo_config(repo_url);
+        let mut repo =
+            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+        let target_path =
+            TargetPath::new("just-meta-far/0".to_owned()).expect("created target path");
+
+        // When the server is blocked, we should fail at get_merkle_at_path.
+        // Since the error was unexpected, we should see an error in the log.
+        should_fail.set();
+        assert_matches!(
+            repo.get_merkle_at_path(&target_path).await,
+            Err(MerkleForError::FetchTargetDescription(
+                extracted_path, TufError::MissingMetadata(tuf::metadata::Role::Snapshot)))
+            if extracted_path == "just-meta-far/0"
+        );
     }
 
     async fn make_repo_with_auto_and_watched_timestamp_metadata(
