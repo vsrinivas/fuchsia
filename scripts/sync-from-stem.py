@@ -6,6 +6,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -202,6 +203,60 @@ def save_and_fix_fuchsia_jiri_project_config(env):
     return to_return
 
 
+def extract_and_output_rebase_warnings(log):
+    """Look for specific rebase warning output from jiri. If rebase output
+    is found, output a message about each, and return False, otherwise True.
+
+    The integration repo is ignored as it will always be pinned to our
+    sync branch.
+
+# Output and fail if we see the rebase note.
+>>> extract_and_output_rebase_warnings('''blah blah blah
+... and then some
+... [10:45:14.203] WARN: For Project "project/somename", branch "muhbranch" does not track any remote branch.
+... To rebase it update with -rebase-untracked flag, or to rebase it manually run
+... WE WANT TO RUN THIS LINE
+... then more stuff down here that
+... we don't want
+... ''')
+sync-from-stem: muhbranch in project/somename has no upstream, to rebase:
+sync-from-stem:     WE WANT TO RUN THIS LINE
+False
+
+# But ignore all the normal goop, and don't fail.
+>>> extract_and_output_rebase_warnings('''[12:09:05.864] Updating all projects
+... [12:09:14.529] WARN: 1 project(s) is/are marked to be deleted. Run 'jiri update -gc' to delete them.
+... Or run 'jiri update -v' or 'jiri status -d' to see the list of projects.
+...
+... [12:09:14.611] WARN: For Project "integration", branch "lock_at_d3d488db58e068abf60750b94e4e82f8fdc9b57c" does not track any remote branch.
+... To rebase it update with -rebase-untracked flag, or to rebase it manually run
+... git -C "../integration" checkout lock_at_d3d488db58e068abf60750b94e4e82f8fdc9b57c && git -C "../integration" rebase e2a923d06860f7a82ad70c429e14328530f41f7e
+...
+... PROGRESS: Fetching CIPD packages
+... ''')
+True
+
+"""
+    ret = True
+    non_tracking = re.compile(
+            r'WARN: For Project "(.*)", branch "(.*)" does not track')
+    err = []
+    capture_lines = 0
+    for line in log.splitlines():
+        if capture_lines:
+            if capture_lines == 1:
+                err.append('    ' + line)
+            capture_lines -= 1
+            continue
+        mo = non_tracking.search(line)
+        if mo and mo.group(1) != 'integration':
+            err.append('%s in %s has no upstream, to rebase:' % mo.group(2, 1))
+            capture_lines = 2
+
+    for x in err: message(x)
+    return not err
+
+
 def to_revision(env, fc, ic):
     prev_ignore = save_and_fix_fuchsia_jiri_project_config(env)
     try:
@@ -211,7 +266,8 @@ def to_revision(env, fc, ic):
              'lock_at_%s' % ic, ic],
             cwd=env.integration_dir)
         message('updating dependencies with jiri...')
-        jiri(['update', '-local-manifest=true'], cwd=env.integration_dir)
+        log = jiri(['update', '-local-manifest=true'], cwd=env.root_dir)
+        return extract_and_output_rebase_warnings(log)
     finally:
         set_jiri_ignore(env, prev_ignore)
 
@@ -260,7 +316,8 @@ stored in the integration repo.
             'fuchsia rev %s not found in integration, not rolled yet?' %
             fuchsia_rev)
         return 1
-    to_revision(env, fuchsia_rev, f_to_i[fuchsia_rev])
+    if not to_revision(env, fuchsia_rev, f_to_i[fuchsia_rev]):
+        return 2
     message(
         'synced integration to %s, which matches fuchsia rev %s' %
         (f_to_i[fuchsia_rev], fuchsia_rev))
