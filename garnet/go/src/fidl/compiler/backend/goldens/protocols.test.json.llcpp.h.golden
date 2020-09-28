@@ -1014,10 +1014,11 @@ class Transitional final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Transitional;
-    using _Base = ::fidl::CompleterBase;
 
-    class RequestCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Transitional;
+
+    class RequestCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -1881,15 +1882,16 @@ class ChannelProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = ChannelProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = ChannelProtocol;
 
     using MethodACompleter = ::fidl::Completer<>;
 
     virtual void MethodA(int64_t a, int64_t b,
                          MethodACompleter::Sync _completer) = 0;
 
-    class MethodBCompleterBase : public _Base {
+    class MethodBCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -1913,7 +1915,7 @@ class ChannelProtocol final {
     virtual void MethodB(int64_t a, int64_t b,
                          MethodBCompleter::Sync _completer) = 0;
 
-    class MutateSocketCompleterBase : public _Base {
+    class MutateSocketCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -3509,15 +3511,16 @@ class WithAndWithoutRequestResponse final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = WithAndWithoutRequestResponse;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = WithAndWithoutRequestResponse;
 
     using NoRequestNoResponseCompleter = ::fidl::Completer<>;
 
     virtual void NoRequestNoResponse(
         NoRequestNoResponseCompleter::Sync _completer) = 0;
 
-    class NoRequestEmptyResponseCompleterBase : public _Base {
+    class NoRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -3541,7 +3544,7 @@ class WithAndWithoutRequestResponse final {
     virtual void NoRequestEmptyResponse(
         NoRequestEmptyResponseCompleter::Sync _completer) = 0;
 
-    class NoRequestWithResponseCompleterBase : public _Base {
+    class NoRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -3572,7 +3575,7 @@ class WithAndWithoutRequestResponse final {
         ::fidl::StringView arg,
         WithRequestNoResponseCompleter::Sync _completer) = 0;
 
-    class WithRequestEmptyResponseCompleterBase : public _Base {
+    class WithRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -3597,7 +3600,7 @@ class WithAndWithoutRequestResponse final {
         ::fidl::StringView arg,
         WithRequestEmptyResponseCompleter::Sync _completer) = 0;
 
-    class WithRequestWithResponseCompleterBase : public _Base {
+    class WithRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -4450,10 +4453,11 @@ class WithErrorSyntax final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = WithErrorSyntax;
-    using _Base = ::fidl::CompleterBase;
 
-    class ResponseAsStructCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = WithErrorSyntax;
+
+    class ResponseAsStructCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -4485,7 +4489,7 @@ class WithErrorSyntax final {
     virtual void ResponseAsStruct(
         ResponseAsStructCompleter::Sync _completer) = 0;
 
-    class ErrorAsPrimitiveCompleterBase : public _Base {
+    class ErrorAsPrimitiveCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -4516,7 +4520,7 @@ class WithErrorSyntax final {
     virtual void ErrorAsPrimitive(
         ErrorAsPrimitiveCompleter::Sync _completer) = 0;
 
-    class ErrorAsEnumCompleterBase : public _Base {
+    class ErrorAsEnumCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

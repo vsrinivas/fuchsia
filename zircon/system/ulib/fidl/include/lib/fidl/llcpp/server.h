@@ -14,14 +14,14 @@ template <typename Protocol>
 class ServerBindingRef;
 
 template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl);
 template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
     OnUnboundFn<Interface> on_unbound);
 template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<Interface> impl);
 
 namespace internal {
@@ -160,10 +160,10 @@ class ServerBindingRef {
 // The following |BindServer()| APIs infer the protocol type based on the server implementation
 // which must publicly inherit from the appropriate |<Protocol_Name>::Interface| class.
 template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
-  return internal::TypeErasedBindServer<typename Interface::_Outer>(
-      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
+  return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
+      dispatcher, std::move(channel), impl, &Interface::_EnclosingProtocol::TypeErasedDispatch, nullptr);
 }
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
@@ -174,27 +174,27 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
 // thread invoking shutdown. The user must ensure that shutdown is never invoked while holding locks
 // which |on_unbound| may also take.
 template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
     OnUnboundFn<Interface> on_unbound) {
-  return internal::TypeErasedBindServer<typename Interface::_Outer>(
-      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
+  return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
+      dispatcher, std::move(channel), impl, &Interface::_EnclosingProtocol::TypeErasedDispatch,
       [fn = std::move(on_unbound)](void* impl, UnbindInfo info, zx::channel channel) mutable {
         fn(static_cast<Interface*>(impl), info, std::move(channel));
       });
 }
 
 // Similar to the first variant, however, the user gives the binding ownership of the server
-// implementation. In order to destroy the implmentation on unbind, the unique_ptr is passed to a
+// implementation. In order to destroy the implementation on unbind, the unique_ptr is passed to a
 // hook which will be automatically invoked during unbinding.
 //
 // NOTE: The same restriction on |on_unbound| in the previous variant applies to ~Interface().
 template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<Interface> impl) {
   Interface* impl_raw = impl.get();
-  return internal::TypeErasedBindServer<typename Interface::_Outer>(
-      dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
+  return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
+      dispatcher, std::move(channel), impl_raw, &Interface::_EnclosingProtocol::TypeErasedDispatch,
       [intf = std::move(impl)](void*, UnbindInfo, zx::channel) {});
 }
 

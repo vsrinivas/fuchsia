@@ -559,10 +559,11 @@ class SimpleProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = SimpleProtocol;
-    using _Base = ::fidl::CompleterBase;
 
-    class AddCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = SimpleProtocol;
+
+    class AddCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

@@ -648,8 +648,9 @@ class Interface final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Interface;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Interface;
 
     using MethodCompleter = ::fidl::Completer<>;
 

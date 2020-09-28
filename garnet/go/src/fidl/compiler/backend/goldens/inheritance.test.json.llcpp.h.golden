@@ -337,10 +337,11 @@ class super final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = super;
-    using _Base = ::fidl::CompleterBase;
 
-    class fooCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = super;
+
+    class fooCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -686,10 +687,11 @@ class sub final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = sub;
-    using _Base = ::fidl::CompleterBase;
 
-    class fooCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = sub;
+
+    class fooCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

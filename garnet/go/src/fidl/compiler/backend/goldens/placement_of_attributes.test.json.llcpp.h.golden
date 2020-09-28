@@ -609,8 +609,9 @@ class ExampleProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = ExampleProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = ExampleProtocol;
 
     using MethodCompleter = ::fidl::Completer<>;
 

@@ -93,7 +93,7 @@ template <typename Interface>
 zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
                                    Interface* impl) {
   return internal::TypeErasedBind(dispatcher, std::move(channel), impl,
-                                  &Interface::_Outer::TypeErasedDispatch, nullptr);
+                                  &Interface::_EnclosingProtocol::TypeErasedDispatch, nullptr);
 }
 
 // As above, but will invoke |on_channel_close_fn| on |impl| when either end of the channel
@@ -103,7 +103,7 @@ zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel c
                                    Interface* impl,
                                    OnChannelClosedFn<Interface> on_channel_close_fn) {
   return internal::TypeErasedBind(dispatcher, std::move(channel), impl,
-                                  &Interface::_Outer::TypeErasedDispatch,
+                                  &Interface::_EnclosingProtocol::TypeErasedDispatch,
                                   [fn = std::move(on_channel_close_fn)](void* impl) mutable {
                                     fn(static_cast<Interface*>(impl));
                                   });

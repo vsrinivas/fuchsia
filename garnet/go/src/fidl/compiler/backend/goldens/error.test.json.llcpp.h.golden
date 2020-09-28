@@ -471,10 +471,11 @@ class Example final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Example;
-    using _Base = ::fidl::CompleterBase;
 
-    class fooCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Example;
+
+    class fooCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

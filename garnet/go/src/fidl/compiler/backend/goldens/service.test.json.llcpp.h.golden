@@ -203,8 +203,9 @@ class SecondProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = SecondProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = SecondProtocol;
 
     using MethodOnSecondCompleter = ::fidl::Completer<>;
 
@@ -396,8 +397,9 @@ class FirstProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = FirstProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = FirstProtocol;
 
     using MethodOnFirstCompleter = ::fidl::Completer<>;
 

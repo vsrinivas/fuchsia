@@ -226,8 +226,9 @@ class Parent final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Parent;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Parent;
 
     using FirstCompleter = ::fidl::Completer<>;
 
@@ -580,8 +581,9 @@ class Child final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Child;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Child;
 
     using FirstCompleter = ::fidl::Completer<>;
 

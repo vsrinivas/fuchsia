@@ -229,8 +229,9 @@ class SomeProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = SomeProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = SomeProtocol;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

@@ -648,13 +648,14 @@ class {{ .Name }} final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = {{ $protocol.Name }};
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = {{ $protocol.Name }};
 {{ "" }}
     {{- range .Methods }}
       {{- if .HasRequest }}
         {{- if .HasResponse }}
-    class {{ .Name }}CompleterBase : public _Base {
+    class {{ .Name }}CompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors during
       // the reply, such as encoding or writing to the transport.

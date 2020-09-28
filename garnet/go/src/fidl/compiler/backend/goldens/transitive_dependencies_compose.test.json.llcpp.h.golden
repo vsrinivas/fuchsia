@@ -325,10 +325,11 @@ class Top final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Top;
-    using _Base = ::fidl::CompleterBase;
 
-    class GetFooCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Top;
+
+    class GetFooCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

@@ -881,10 +881,11 @@ class Parent final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Parent;
-    using _Base = ::fidl::CompleterBase;
 
-    class GetChildCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Parent;
+
+    class GetChildCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -907,7 +908,7 @@ class Parent final {
 
     virtual void GetChild(GetChildCompleter::Sync _completer) = 0;
 
-    class GetChildRequestCompleterBase : public _Base {
+    class GetChildRequestCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -1019,8 +1020,9 @@ class Child final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Child;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Child;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

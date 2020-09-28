@@ -897,10 +897,12 @@ class Protocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Protocol;
-    using _Base = ::fidl::CompleterBase;
 
-    class RequestStrictResponseFlexibleCompleterBase : public _Base {
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = Protocol;
+
+    class RequestStrictResponseFlexibleCompleterBase
+        : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -927,7 +929,8 @@ class Protocol final {
         ::llcpp::fidl::test::json::StrictFoo s,
         RequestStrictResponseFlexibleCompleter::Sync _completer) = 0;
 
-    class RequestFlexibleResponseStrictCompleterBase : public _Base {
+    class RequestFlexibleResponseStrictCompleterBase
+        : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

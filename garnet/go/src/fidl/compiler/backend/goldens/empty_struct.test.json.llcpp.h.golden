@@ -600,15 +600,16 @@ class EmptyProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = EmptyProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = EmptyProtocol;
 
     using SendCompleter = ::fidl::Completer<>;
 
     virtual void Send(::llcpp::fidl::test::json::Empty e,
                       SendCompleter::Sync _completer) = 0;
 
-    class SendAndReceiveCompleterBase : public _Base {
+    class SendAndReceiveCompleterBase : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

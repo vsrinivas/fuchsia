@@ -3118,11 +3118,12 @@ class TestProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = TestProtocol;
-    using _Base = ::fidl::CompleterBase;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = TestProtocol;
 
     class StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase
-        : public _Base {
+        : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note
@@ -3151,7 +3152,7 @@ class TestProtocol final {
             _completer) = 0;
 
     class FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase
-        : public _Base {
+        : public ::fidl::CompleterBase {
      public:
       // In the following methods, the return value indicates internal errors
       // during the reply, such as encoding or writing to the transport. Note

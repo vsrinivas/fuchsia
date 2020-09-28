@@ -7,7 +7,7 @@
 namespace fake_ddk {
 namespace {
 // We are using lowest bit of transaction as a flag. The static assert assures us that this bit will
-// always be 0 due to alignement.
+// always be 0 due to alignment.
 static_assert(alignof(fidl::Transaction) > 1);
 constexpr uintptr_t kTransactionIsBoxed = 0x1;
 
