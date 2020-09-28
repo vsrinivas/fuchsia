@@ -32,9 +32,5 @@ rust_inspect_benchmarks
 # Needed by the peridot tests
 catapult_converter
 
-# fonts contains a v2 component, which goes directly to pkgfs.
-# We should move this to base: fxbug.dev/48944
-fonts
-
 # remote-control is a v2 component that is cached (not in base)
 remote-control
