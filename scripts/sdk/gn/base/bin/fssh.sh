@@ -27,6 +27,8 @@ function usage {
   echo "          If the device is specified at all, then the first device discovered is used."
   echo "  [--private-key <identity file>]"
   echo "    Uses additional private key when using ssh to access the device."
+  echo "  [--sshconfig <sshconfig file>]"
+  echo "    Use the specified sshconfig file instead of fssh's version."
   echo
   echo "All positional arguments are passed through to SSH to be executed on the device."
 }
@@ -35,7 +37,7 @@ PRIVATE_KEY_FILE=""
 DEVICE_NAME_FILTER=""
 DEVICE_IP_ADDR=""
 POSITIONAL=()
-
+SSHCONFIG_FILE=""
 
 # Parse command line
 while (( "$#" )); do
@@ -51,6 +53,10 @@ case $1 in
     --private-key)
       shift
       PRIVATE_KEY_FILE="${1}"
+    ;;
+    --sshconfig)
+      shift
+      SSHCONFIG_FILE="${1}"
     ;;
     --help)
       usage
@@ -107,6 +113,9 @@ fi
 
 ssh_args=()
 # Build the command line
+if [[ "${SSHCONFIG_FILE}" != "" ]]; then
+  ssh_args+=("-F" "${SSHCONFIG_FILE}")
+fi
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
   ssh_args+=( "-i" "${PRIVATE_KEY_FILE}")
 fi

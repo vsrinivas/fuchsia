@@ -72,6 +72,8 @@ readonly EXPECTED_HELP="Usage: fssh.sh [args]
           If the device is specified at all, then the first device discovered is used.
   [--private-key <identity file>]
     Uses additional private key when using ssh to access the device.
+  [--sshconfig <sshconfig file>]
+    Use the specified sshconfig file instead of fssh's version.
 
 All positional arguments are passed through to SSH to be executed on the device."
 
@@ -169,6 +171,16 @@ TEST_fssh_with_all_props() {
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
+TEST_fssh_with_custom_sshconfig() {
+  set_up_device_finder
+
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" "--sshconfig" "custom-sshconfig" hostname
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "custom-sshconfig" "fe80::c0ff:eec0:ffee%coffee" hostname)
+  gn-test-check-mock-args "${expected_args[@]}"
+}
 
 # Test initialization.
 # shellcheck disable=SC2034

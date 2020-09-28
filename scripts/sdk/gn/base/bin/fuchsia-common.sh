@@ -105,7 +105,13 @@ function get-fuchsia-property {
 
 function ssh-cmd {
   check-fuchsia-ssh-config
-  "${SSH_BIN}" -F "$(get-fuchsia-sshconfig-file)" "$@"
+  # If the command line passed starts with the -F option,
+  # use that config file.
+  if [[ "$*" =~ ^-F* ]]; then
+    "${SSH_BIN}" "$@"
+  else
+    "${SSH_BIN}" -F "$(get-fuchsia-sshconfig-file)" "$@"
+  fi
 }
 
 function get-device-ip {
@@ -320,7 +326,7 @@ function check-fuchsia-ssh-config {
   #
   # There is a key for Fuchsia that is placed in a well-known location so that applications
   # which need to access the Fuchsia device can all use the same key. This is stored in
-  # ${HOME}/.ssh/fuchsia_ed25519. 
+  # ${HOME}/.ssh/fuchsia_ed25519.
   #
   # The authorized key file used for paving is in ${HOME}/.ssh/fuchsia_authorized_keys.
   # The private key used when ssh'ing to the device is in ${HOME}/.ssh/fuchsia_ed25519.
