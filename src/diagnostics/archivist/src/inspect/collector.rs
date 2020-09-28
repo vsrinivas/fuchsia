@@ -72,7 +72,6 @@ impl InspectDataCollector {
                 }
             });
         pin_mut!(entries);
-        // TODO(fxbug.dev/60250) convert this async loop to a stream so we can carry backpressure
         while let Some(entry) = entries.next().await {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.

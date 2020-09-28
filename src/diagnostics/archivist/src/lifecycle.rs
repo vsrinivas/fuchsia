@@ -2,58 +2,147 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{container::LifecycleDataContainer, repository::DiagnosticsDataRepository},
-    diagnostics_data::{Data, LifecycleData},
-    futures::prelude::*,
+    crate::{
+        constants, container::LifecycleDataContainer, diagnostics::DiagnosticsServerStats,
+        formatter, repository::DiagnosticsDataRepository, server::DiagnosticsServer,
+    },
+    anyhow::Error,
+    async_trait::async_trait,
+    diagnostics_data::Data,
+    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format, StreamMode},
+    futures::stream::FusedStream,
+    futures::TryStreamExt,
     parking_lot::RwLock,
     selectors,
-    std::{
-        pin::Pin,
-        sync::Arc,
-        task::{Context, Poll},
-    },
+    std::sync::Arc,
 };
 
 /// LifecycleServer holds the state and data needed to serve Lifecycle data
 /// reading requests for a single client.
 ///
+/// configured_selectors: are the selectors provided by the client which define
+///                       what lifecycle event data is returned by read requests. A none type
+///                       implies that all available data should be returned.
+///
 /// diagnostics_repo: the DiagnosticsDataRepository which holds the access-points for
 ///               all relevant lifecycle data.
+#[derive(Clone)]
 pub struct LifecycleServer {
-    data: std::vec::IntoIter<LifecycleDataContainer>,
+    pub diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+    pub configured_selectors: Option<Vec<Arc<fidl_fuchsia_diagnostics::Selector>>>,
+    pub server_stats: Arc<DiagnosticsServerStats>,
 }
 
 impl LifecycleServer {
-    pub fn new(diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>) -> Self {
-        LifecycleServer { data: diagnostics_repo.read().fetch_lifecycle_event_data().into_iter() }
+    pub fn new(
+        diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
+        server_stats: Arc<DiagnosticsServerStats>,
+    ) -> Self {
+        LifecycleServer {
+            diagnostics_repo,
+            configured_selectors: configured_selectors.map(|selectors| {
+                selectors.into_iter().map(|selector| Arc::new(selector)).collect()
+            }),
+            server_stats,
+        }
     }
 
-    fn next_event(&mut self) -> Option<LifecycleData> {
-        self.data.next().map(|lifecycle_container| {
-            let sanitized_moniker = lifecycle_container
-                .relative_moniker
-                .iter()
-                .map(|s| selectors::sanitize_string_for_selectors(s))
-                .collect::<Vec<String>>()
-                .join("/");
+    /// Take a vector of LifecycleDataContainer structs, and a `fidl_fuchsia_diagnostics/Format`
+    /// enum, and writes each container into a READ_ONLY VMO according to
+    /// provided format. This VMO is then packaged into a `fidl_fuchsia_mem/Buffer`
+    /// which is then packaged into a `fidl_fuchsia_diagnostics/FormattedContent`
+    /// xunion which specifies the format of the VMO for clients.
+    ///
+    /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
+    /// a node hierarchy fails to format, its vmo is an empty string.
+    fn format_events(
+        lifecycle_containers: Vec<LifecycleDataContainer>,
+    ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
+        lifecycle_containers
+            .into_iter()
+            .map(|lifecycle_container| {
+                let sanitized_moniker = lifecycle_container
+                    .relative_moniker
+                    .iter()
+                    .map(|s| selectors::sanitize_string_for_selectors(s))
+                    .collect::<Vec<String>>()
+                    .join("/");
 
-            Data::for_lifecycle_event(
-                sanitized_moniker,
-                lifecycle_container.lifecycle_type,
-                lifecycle_container.payload,
-                lifecycle_container.component_url,
-                lifecycle_container.event_timestamp.into_nanos(),
-                Vec::new(),
-            )
-        })
+                let lifecycle_data = Data::for_lifecycle_event(
+                    sanitized_moniker,
+                    lifecycle_container.lifecycle_type,
+                    lifecycle_container.payload,
+                    lifecycle_container.component_url,
+                    lifecycle_container.event_timestamp.into_nanos(),
+                    Vec::new(),
+                );
+                formatter::serialize_to_formatted_json_content(lifecycle_data)
+            })
+            .collect()
     }
 }
 
-impl Stream for LifecycleServer {
-    type Item = LifecycleData;
+#[async_trait]
+impl DiagnosticsServer for LifecycleServer {
+    fn stats(&self) -> &Arc<DiagnosticsServerStats> {
+        &self.server_stats
+    }
 
-    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Poll::Ready(self.next_event())
+    fn format(&self) -> &Format {
+        &Format::Json
+    }
+
+    fn mode(&self) -> &StreamMode {
+        &StreamMode::Snapshot
+    }
+
+    /// Takes a BatchIterator server channel and starts serving snapshotted
+    /// lifecycle events as vectors of FormattedContent. The hierarchies
+    /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
+    /// diagnostics data aren't taken until a component is included in the upcoming batch.
+    ///
+    /// NOTE: This API does not send the terminal empty-vector at the end of the snapshot.
+    async fn snapshot(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error> {
+        if stream.is_terminated() {
+            return Ok(());
+        }
+        let lifecycle_data = self.diagnostics_repo.read().fetch_lifecycle_event_data();
+        let lifecycle_data_length = lifecycle_data.len();
+        let mut lifecycle_data_iter = lifecycle_data.into_iter();
+        let mut iter = 0;
+        let max = (lifecycle_data_length - 1 / constants::IN_MEMORY_SNAPSHOT_LIMIT) + 1;
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
+                    let snapshot_batch: Vec<LifecycleDataContainer> = (&mut lifecycle_data_iter)
+                        .take(constants::IN_MEMORY_SNAPSHOT_LIMIT)
+                        .collect();
+
+                    iter = iter + 1;
+
+                    let mut filtered_results = vec![];
+                    for result in LifecycleServer::format_events(snapshot_batch) {
+                        if let Ok(r) = result {
+                            filtered_results.push(r);
+                            self.stats().add_result();
+                        } else {
+                            self.stats().add_result_error();
+                        }
+                    }
+
+                    responder.send(&mut Ok(filtered_results))?;
+                }
+            }
+
+            // We've sent all the meaningful content available in snapshot mode.
+            // The terminal value must be handled separately.
+            if iter == max - 1 {
+                break;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -62,15 +151,13 @@ mod tests {
     use {
         super::*,
         crate::{
-            diagnostics::{self, DiagnosticsServerStats},
+            diagnostics,
             events::types::{ComponentIdentifier, LegacyIdentifier},
             inspect::collector::InspectDataCollector,
-            server::AccessorServer,
         },
         fdio,
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_diagnostics::BatchIteratorMarker,
-        fuchsia_async::{self as fasync, Task},
+        fidl::endpoints::{create_proxy, ServerEnd},
+        fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::Inspector,
         fuchsia_zircon as zx,
@@ -180,8 +267,13 @@ mod tests {
             diagnostics::DiagnosticsServerStats::for_lifecycle(test_accessor_stats.clone()),
         );
         {
-            let reader_server = LifecycleServer::new(diagnostics_repo.clone());
-            let result_json = read_snapshot(reader_server, test_batch_iterator_stats1).await;
+            let reader_server = LifecycleServer::new(
+                diagnostics_repo.clone(),
+                None,
+                test_batch_iterator_stats1.clone(),
+            );
+
+            let result_json = read_snapshot(reader_server).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
@@ -193,27 +285,26 @@ mod tests {
         );
 
         {
-            let reader_server = LifecycleServer::new(diagnostics_repo.clone());
-            let result_json = read_snapshot(reader_server, test_batch_iterator_stats2).await;
+            let reader_server = LifecycleServer::new(
+                diagnostics_repo.clone(),
+                None,
+                test_batch_iterator_stats2.clone(),
+            );
+
+            let result_json = read_snapshot(reader_server).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 0, "Expect no schema to be returned.");
         }
     }
 
-    async fn read_snapshot(
-        reader_server: LifecycleServer,
-        stats: Arc<DiagnosticsServerStats>,
-    ) -> serde_json::Value {
-        let (consumer, batch_iterator_requests) =
-            create_proxy_and_stream::<BatchIteratorMarker>().unwrap();
-        let _server = Task::spawn(async move {
-            AccessorServer::new(reader_server, batch_iterator_requests, stats)
-                .unwrap()
-                .run()
-                .await
-                .unwrap()
-        });
+    async fn read_snapshot(reader_server: LifecycleServer) -> serde_json::Value {
+        let (consumer, batch_iterator): (
+            _,
+            ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
+        ) = create_proxy().unwrap();
+
+        reader_server.spawn(batch_iterator).detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {

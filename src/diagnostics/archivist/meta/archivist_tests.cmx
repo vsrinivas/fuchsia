@@ -5,9 +5,6 @@
     "sandbox": {
         "features": [
             "isolated-temp"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }
