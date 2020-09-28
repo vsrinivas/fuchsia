@@ -720,6 +720,7 @@ build_api_module("tool_paths") {
     "//build/images:packages",
     "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)",
     "//zircon/tools/blobfs($host_toolchain)",
+    "//zircon/tools/fidl:tools($host_toolchain)",
     "//zircon/tools/fvm($host_toolchain)",
     "//zircon/tools/kazoo($host_toolchain)",
     "//zircon/tools/ktrace-dump($host_toolchain)",
