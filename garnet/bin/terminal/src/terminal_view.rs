@@ -17,7 +17,7 @@ use {
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     fuchsia_zircon::{AsHandleRef, Signals},
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
-    std::{cell::RefCell, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
+    std::{cell::RefCell, convert::TryFrom, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
     term_model::{
         ansi::Processor,
         clipboard::Clipboard,
@@ -319,16 +319,29 @@ impl TerminalViewAssistant {
                             app_context.request_render(view_key);
                         }
                     },
-                result = resize_receiver.next().fuse() => {
-                    if let Some(event) = result {
-                        pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
-                            eprintln!("failed to send resize message to pty: {:?}", e)
-                        });
-                        app_context.request_render(view_key);
+                    result = resize_receiver.next().fuse() => {
+                        if let Some(event) = result {
+                            pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
+                                eprintln!("failed to send resize message to pty: {:?}", e)
+                            });
+                            app_context.request_render(view_key);
+                        }
                     }
-                }
                 );
+                if !pty.is_shell_process_running() {
+                    break;
+                }
             }
+            // TODO(fxb/60181): Exit by using Carnelian, when implemented.
+            std::process::exit(
+                match pty.shell_process_info().map(|info| i32::try_from(info.return_code)) {
+                    Some(Ok(return_code)) => return_code,
+                    _ => {
+                        eprintln!("failed to obtain the shell process return code");
+                        1
+                    }
+                },
+            );
         })
         .detach();
 

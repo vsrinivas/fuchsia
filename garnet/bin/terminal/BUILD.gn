@@ -109,12 +109,16 @@ config_data("tiles_config") {
 test_package("terminal_tests") {
   deps = [
     ":lib_test",
+    "//src/lib/zircon/rust:exit_with_code_util",
     "//zircon/third_party/uapp/dash",
   ]
 
   binaries = [
     {
       name = "sh"
+    },
+    {
+      name = "exit_with_code_util"
     },
   ]
 

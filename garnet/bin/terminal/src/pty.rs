@@ -9,7 +9,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_trace as ftrace,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, HandleBased, ProcessInfo},
     std::{ffi::CStr, fs::File, os::unix::io::AsRawFd},
 };
 
@@ -53,6 +53,22 @@ impl Pty {
                 .context("launch shell process")?,
         );
         Ok(())
+    }
+
+    /// Returns the shell process info, if available.
+    pub fn shell_process_info(&self) -> Option<ProcessInfo> {
+        self.shell_process.as_ref().and_then(|p| match p.info() {
+            Ok(info) => Some(info),
+            Err(status) => {
+                eprintln!("Failed to check shell process info, got status {:?}.", status);
+                None
+            }
+        })
+    }
+
+    /// Checks that the shell process has been started and has not exited.
+    pub fn is_shell_process_running(&self) -> bool {
+        self.shell_process_info().map(|info| info.started && !info.exited).unwrap_or_default()
     }
 
     /// Attempts to clone the server side of the file descriptor.
@@ -177,7 +193,7 @@ impl Pty {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::io::AsyncWriteExt;
+    use {futures::io::AsyncWriteExt, zx::AsHandleRef};
 
     #[fasync::run_singlethreaded(test)]
     async fn can_create_pty() -> Result<(), Error> {
@@ -232,11 +248,82 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn unspawned_shell_process_is_not_running() -> Result<(), Error> {
+        let window_size = WindowSize { width: 300 as u32, height: 300 as u32 };
+        let pty = Pty::new().unwrap();
+        pty.resize(window_size).await?;
+
+        assert_eq!(pty.is_shell_process_running(), false);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn spawned_shell_process_is_running() -> Result<(), Error> {
+        let pty = spawn_pty().await?;
+
+        assert_eq!(pty.is_shell_process_running(), true);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn exited_shell_process_is_not_running() -> Result<(), Error> {
+        let window_size = WindowSize { width: 300 as u32, height: 300 as u32 };
+        let mut pty = Pty::new().unwrap();
+        pty.spawn(Some(&cstr!("/pkg/bin/exit_with_code_util"))).await?;
+        pty.resize(window_size).await?;
+
+        // Since these tests don't seem to timeout automatically, we must
+        // specify a deadline and cannot simply rely on fasync::OnSignals.
+        pty.shell_process
+            .as_ref()
+            .unwrap()
+            .wait_handle(
+                zx::Signals::PROCESS_TERMINATED,
+                zx::Time::after(zx::Duration::from_seconds(60)),
+            )
+            .expect("shell process did not exit in time");
+
+        assert_eq!(pty.is_shell_process_running(), false);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn can_write_to_shell() -> Result<(), Error> {
         let pty = spawn_pty().await?;
+        // EventedFd::new() is unsafe because it can't guarantee the lifetime of
+        // the file descriptor passed to it exceeds the lifetime of the EventedFd.
+        // Since we're cloning the file when passing it in, the EventedFd
+        // effectively owns that file descriptor and thus controls it's lifetime.
         let mut evented_fd = unsafe { fasync::net::EventedFd::new(pty.try_clone_fd()?)? };
 
         evented_fd.write_all("a".as_bytes()).await?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn shell_process_is_not_running_after_writing_exit() -> Result<(), Error> {
+        let pty = spawn_pty().await?;
+        // EventedFd::new() is unsafe because it can't guarantee the lifetime of
+        // the file descriptor passed to it exceeds the lifetime of the EventedFd.
+        // Since we're cloning the file when passing it in, the EventedFd
+        // effectively owns that file descriptor and thus controls it's lifetime.
+        let mut evented_fd = unsafe { fasync::net::EventedFd::new(pty.try_clone_fd()?)? };
+
+        evented_fd.write_all("exit\n".as_bytes()).await?;
+
+        // Since these tests don't seem to timeout automatically, we must
+        // specify a deadline and cannot simply rely on fasync::OnSignals.
+        pty.shell_process
+            .as_ref()
+            .unwrap()
+            .wait_handle(
+                zx::Signals::PROCESS_TERMINATED,
+                zx::Time::after(zx::Duration::from_seconds(60)),
+            )
+            .expect("shell process did not exit in time");
+
+        assert_eq!(pty.is_shell_process_running(), false);
 
         Ok(())
     }
