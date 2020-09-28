@@ -10,7 +10,7 @@
 
 namespace forensics {
 
-UTCTimeProvider::UTCTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
+UtcTimeProvider::UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
                                  timekeeper::Clock* clock)
     : services_(services), clock_(clock), utc_(services_->Connect<fuchsia::time::Utc>()) {
   utc_.set_error_handler([](const zx_status_t status) {
@@ -20,15 +20,15 @@ UTCTimeProvider::UTCTimeProvider(std::shared_ptr<sys::ServiceDirectory> services
   WatchForAccurateUtcTime();
 }
 
-std::optional<zx::time_utc> UTCTimeProvider::CurrentTime() const {
+std::optional<zx::time_utc> UtcTimeProvider::CurrentTime() const {
   if (!is_utc_time_accurate_) {
     return std::nullopt;
   }
 
-  return CurrentUTCTimeRaw(clock_);
+  return CurrentUtcTimeRaw(clock_);
 }
 
-void UTCTimeProvider::WatchForAccurateUtcTime() {
+void UtcTimeProvider::WatchForAccurateUtcTime() {
   utc_->WatchState([this](const fuchsia::time::UtcState& state) {
     switch (state.source()) {
       case fuchsia::time::UtcSource::UNVERIFIED:

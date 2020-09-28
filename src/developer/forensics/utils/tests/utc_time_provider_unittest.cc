@@ -23,9 +23,9 @@ using stubs::UtcProvider;
 
 constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
 
-class UTCTimeProviderTest : public UnitTestFixture {
+class UtcTimeProviderTest : public UnitTestFixture {
  public:
-  UTCTimeProviderTest() : utc_provider_(std::make_unique<UTCTimeProvider>(services(), &clock_)) {
+  UtcTimeProviderTest() : utc_provider_(std::make_unique<UtcTimeProvider>(services(), &clock_)) {
     clock_.Set(kTime);
   }
 
@@ -40,10 +40,10 @@ class UTCTimeProviderTest : public UnitTestFixture {
   std::unique_ptr<stubs::UtcProviderBase> utc_provider_server_;
 
  protected:
-  std::unique_ptr<UTCTimeProvider> utc_provider_;
+  std::unique_ptr<UtcTimeProvider> utc_provider_;
 };
 
-TEST_F(UTCTimeProviderTest, Check_ReturnsExternal) {
+TEST_F(UtcTimeProviderTest, Check_ReturnsExternal) {
   SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kExternal),
   });
@@ -53,7 +53,7 @@ TEST_F(UTCTimeProviderTest, Check_ReturnsExternal) {
   EXPECT_EQ(utc_provider_->CurrentTime().value(), kTime);
 }
 
-TEST_F(UTCTimeProviderTest, Check_ReturnsBackstop) {
+TEST_F(UtcTimeProviderTest, Check_ReturnsBackstop) {
   // Upon receiving "backstop", |utc_provider_| will make another call to the stub so we need an
   // extra response. We use "no_response" so that |utc_provider_| just waits and doesn't make any
   // more calls.
@@ -66,7 +66,7 @@ TEST_F(UTCTimeProviderTest, Check_ReturnsBackstop) {
   EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
 }
 
-TEST_F(UTCTimeProviderTest, Check_ServerNeverResponds) {
+TEST_F(UtcTimeProviderTest, Check_ServerNeverResponds) {
   SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kNoResponse),
   });
@@ -78,7 +78,7 @@ TEST_F(UTCTimeProviderTest, Check_ServerNeverResponds) {
   }
 }
 
-TEST_F(UTCTimeProviderTest, Check_MultipleCalls) {
+TEST_F(UtcTimeProviderTest, Check_MultipleCalls) {
   constexpr zx::duration kDelay = zx::msec(5);
   SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kBackstop, kDelay),

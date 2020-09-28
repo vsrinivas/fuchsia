@@ -132,30 +132,30 @@ TEST(TimeTest, FormatDuration_NegativeRandomNSec) {
   EXPECT_EQ(FormatDuration(kNegRndmNSecs), std::nullopt);
 }
 
-TEST(TimeTest, CurrentUTCTimeRaw) {
+TEST(TimeTest, CurrentUtcTimeRaw) {
   timekeeper::TestClock clock;
 
   clock.Set(kTime1);
-  EXPECT_EQ(CurrentUTCTimeRaw(&clock), kTime1);
+  EXPECT_EQ(CurrentUtcTimeRaw(&clock), kTime1);
 
   clock.Set(kTime2);
-  EXPECT_EQ(CurrentUTCTimeRaw(&clock), kTime2);
+  EXPECT_EQ(CurrentUtcTimeRaw(&clock), kTime2);
 
   clock.Set(kTime3);
-  EXPECT_EQ(CurrentUTCTimeRaw(&clock), kTime3);
+  EXPECT_EQ(CurrentUtcTimeRaw(&clock), kTime3);
 }
 
-TEST(TimeTest, CurrentUTCTime) {
+TEST(TimeTest, CurrentUtcTime) {
   timekeeper::TestClock clock;
 
   clock.Set(kTime1);
-  EXPECT_EQ(CurrentUTCTime(&clock), kTime1Str);
+  EXPECT_EQ(CurrentUtcTime(&clock), kTime1Str);
 
   clock.Set(kTime2);
-  EXPECT_EQ(CurrentUTCTime(&clock), kTime2Str);
+  EXPECT_EQ(CurrentUtcTime(&clock), kTime2Str);
 
   clock.Set(kTime3);
-  EXPECT_EQ(CurrentUTCTime(&clock), kTime3Str);
+  EXPECT_EQ(CurrentUtcTime(&clock), kTime3Str);
 }
 
 }  // namespace

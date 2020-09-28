@@ -435,7 +435,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
-TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
+TEST_F(CrashReporterTest, Check_UtcTimeIsNotReady) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(

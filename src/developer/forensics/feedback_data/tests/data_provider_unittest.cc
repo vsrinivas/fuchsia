@@ -55,7 +55,7 @@ using testing::UnorderedElementsAreArray;
 const AnnotationKeys kDefaultAnnotations = {
     kAnnotationBuildBoard,    kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
     kAnnotationBuildVersion,  kAnnotationDeviceBoardName,       kAnnotationDeviceUptime,
-    kAnnotationDeviceUTCTime,
+    kAnnotationDeviceUtcTime,
 };
 const AttachmentKeys kDefaultAttachments = {
     kAttachmentBuildSnapshot,
@@ -399,7 +399,7 @@ TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {
 })",
               kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
               kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName,
-              kAnnotationDeviceUptime, kAnnotationDeviceUTCTime))
+              kAnnotationDeviceUptime, kAnnotationDeviceUtcTime))
           .HasParseError());
   rapidjson::SchemaDocument schema(schema_json);
   rapidjson::SchemaValidator validator(schema);

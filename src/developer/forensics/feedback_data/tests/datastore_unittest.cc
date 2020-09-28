@@ -212,7 +212,7 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           kAnnotationBuildVersion,
           kAnnotationDeviceBoardName,
           kAnnotationDeviceUptime,
-          kAnnotationDeviceUTCTime,
+          kAnnotationDeviceUtcTime,
           kAnnotationSystemLastRebootReason,
           kAnnotationSystemLastRebootUptime,
       },
@@ -361,7 +361,7 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
   SetUpDatastore(
       {
           kAnnotationDeviceUptime,
-          kAnnotationDeviceUTCTime,
+          kAnnotationDeviceUtcTime,
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
@@ -369,7 +369,7 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
                                             Pair(kAnnotationDeviceUptime, HasValue()),
-                                            Pair(kAnnotationDeviceUTCTime, HasValue()),
+                                            Pair(kAnnotationDeviceUtcTime, HasValue()),
                                         }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());

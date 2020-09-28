@@ -291,7 +291,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
                                           MatchesKey(kAnnotationDeviceBoardName),
                                           MatchesKey(kAnnotationDeviceFeedbackId),
                                           MatchesKey(kAnnotationDeviceUptime),
-                                          MatchesKey(kAnnotationDeviceUTCTime),
+                                          MatchesKey(kAnnotationDeviceUtcTime),
                                           MatchesKey(kAnnotationHardwareBoardName),
                                           MatchesKey(kAnnotationHardwareBoardRevision),
                                           MatchesKey(kAnnotationHardwareProductLanguage),

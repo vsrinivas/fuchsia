@@ -26,7 +26,7 @@ using files::JoinPath;
 using inspect::Node;
 
 std::string CurrentTime(timekeeper::Clock* clock) {
-  auto current_time = CurrentUTCTime(clock);
+  auto current_time = CurrentUtcTime(clock);
   if (current_time.has_value()) {
     return current_time.value();
   } else {

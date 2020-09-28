@@ -16,10 +16,10 @@
 namespace forensics {
 
 // Provides the UTC time only if the device's system clock is accurate.
-class UTCTimeProvider {
+class UtcTimeProvider {
  public:
   // fuchsia.time.Utc is expected to be in |services|.
-  UTCTimeProvider(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock);
+  UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock);
 
   // Returns the current UTC time if the device's UTC time is accurate, std::nullopt otherwise.
   std::optional<zx::time_utc> CurrentTime() const;

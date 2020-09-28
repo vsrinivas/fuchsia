@@ -58,7 +58,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   const Config* config_;
   const ErrorOr<std::string> build_version_;
   CrashRegister* crash_register_;
-  const UTCTimeProvider utc_provider_;
+  const UtcTimeProvider utc_provider_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<CrashServer> crash_server_;
   Queue queue_;
