@@ -14,7 +14,7 @@
 ##  --no-build    do not build the artifacts and just return the list of them
 ##  --allow-empty do not fail if no such artifacts are found
 ##  --expect-one  fail if zero or more than one artifacts are found. This
-##                option is mutually exclusive from `--allow-emmpty`.
+##                option is mutually exclusive from `--allow-empty`.
 ##  --name        filter the set of artifacts to pick out the particular one of
 ##                the same name
 ##  --os          filter the set of artifacts by intended operating system: one
