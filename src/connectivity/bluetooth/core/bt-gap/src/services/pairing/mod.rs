@@ -21,7 +21,7 @@ pub mod pairing_requests;
 
 /// Abstraction over the fuchsia.bluetooth.control and fuchsia.bluetooth.system interfaces, which
 /// each have their own pairing delegate definition.
-/// TODO(48051): Once control is fully deprecated and removed, we can remove this.
+/// TODO(fxbug.dev/48051): Once control is fully deprecated and removed, we can remove this.
 ///
 /// This type is structurally equivalent to (it implements the same set of methods as)
 /// sys::PairingDelegateProxy, for easy migration.

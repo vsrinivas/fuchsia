@@ -119,7 +119,7 @@ NO_ASAN void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
   }
   const size_t shadow_size = size >> ASAN_SHADOW_SHIFT;
   if (!value && shadow_size >= threshold && shadow_size >= PAGE_SIZE) {
-    // TODO(41009): Handle shadow_size < PAGE_SIZE.
+    // TODO(fxbug.dev/41009): Handle shadow_size < PAGE_SIZE.
     uintptr_t page_start = (shadow_base + PAGE_SIZE - 1) & -PAGE_SIZE;
     uintptr_t page_end = (shadow_base + shadow_size) & -PAGE_SIZE;
     // Memset the partial pages, and decommit them if they are zero-pages.

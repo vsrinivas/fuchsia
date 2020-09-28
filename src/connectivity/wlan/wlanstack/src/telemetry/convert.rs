@@ -114,7 +114,7 @@ pub(super) fn convert_protection(
 pub(super) fn convert_rssi(rssi: i8) -> metrics::ConnectionResultPerRssiMetricDimensionRssi {
     use metrics::ConnectionResultPerRssiMetricDimensionRssi::*;
     match (rssi as i16).abs() {
-        // TODO(35522) Change From127To90 to From128To90 in Cobalt so that they are consistent
+        // TODO(fxbug.dev/35522) Change From127To90 to From128To90 in Cobalt so that they are consistent
         90..=128 => From127To90,
         86..=89 => From89To86,
         83..=85 => From85To83,

@@ -13,7 +13,7 @@ use {
 // In order to support packages.json with version as a string or int, we define a
 // custom deserializer to parse a value as an int or string.
 //
-// TODO(50754) Remove this once we remove support for version as an int.
+// TODO(fxbug.dev/50754) Remove this once we remove support for version as an int.
 fn deserialize_string_or_int<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: serde::de::Deserializer<'de>,
@@ -56,7 +56,7 @@ where
 // use a struct so that we can use a custom deserializer for version.
 // We enforce that version must be 1 in the parse_packages_json fn.
 //
-// TODO(50754) Once we remove support for version as an int, we can replace
+// TODO(fxbug.dev/50754) Once we remove support for version as an int, we can replace
 // this with something like:
 // #[serde(tag = "version", content = "content", deny_unknown_fields)]
 // enum Packages {
@@ -94,7 +94,7 @@ pub enum ParsePackageError {
     #[error("json parsing error while reading `packages.json`")]
     JsonError(#[source] serde_json::error::Error),
 
-    // TODO(50754) Remove this error once we remove support for version as an int.
+    // TODO(fxbug.dev/50754) Remove this error once we remove support for version as an int.
     // At that point, unsupported versions will surface as Json errors.
     #[error("packages.json version not supported: '{0}'")]
     VersionNotSupported(String),
@@ -217,7 +217,7 @@ mod tests {
         assert_matches!(parse_packages("{}"), Err(ParsePackageError::InvalidLine(_)));
     }
 
-    // TODO(50754) Use the new Packages implementation, which only supports version as a string.
+    // TODO(fxbug.dev/50754) Use the new Packages implementation, which only supports version as a string.
     #[test]
     fn smoke_test_parse_packages_json() {
         let packages = Packages {
@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(update_pkg.packages().await.unwrap(), pkg_urls(pkg_list));
     }
 
-    // TODO(50754) Remove once we remove support for version as an int.
+    // TODO(fxbug.dev/50754) Remove once we remove support for version as an int.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn smoke_test_packages_json_version_int() {
         let update_pkg = TestUpdatePackage::new();
@@ -289,7 +289,7 @@ mod tests {
         assert_matches!(update_pkg.packages().await, Err(ParsePackageError::JsonError(_)))
     }
 
-    // TODO(50754) Once we remove support for packages.json as an int, this should
+    // TODO(fxbug.dev/50754) Once we remove support for packages.json as an int, this should
     // instead surface as a Json error (rather than a VersionNotSupported error).
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expect_failure_version_not_supported() {

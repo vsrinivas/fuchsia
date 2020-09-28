@@ -78,7 +78,7 @@ size_t asan_heap_redzone_size(size_t size);
 // instrumented by asan. After calling this function, users can call
 // asan_poison_shadow on the bytes in the newly added region.
 // This function can only be called before SMP is set up.
-// TODO(30033): Allow calling after SMP is set up.
+// TODO(fxbug.dev/30033): Allow calling after SMP is set up.
 void asan_remap_shadow(uintptr_t start, size_t size);
 
 // Distinguished kasan poison values.

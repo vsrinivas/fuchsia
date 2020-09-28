@@ -23,6 +23,6 @@ executable("annotation_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(46525): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46525): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

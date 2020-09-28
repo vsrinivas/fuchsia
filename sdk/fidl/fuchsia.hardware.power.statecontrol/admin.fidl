@@ -32,7 +32,7 @@ const uint32 MAX_SYSTEM_POWER_STATES = 7;
 
 /// The maxium number of seconds the server will wait for responses from all RebootMethodsWatchers
 /// before changing the system power state.
-// TODO(52274): Track how long it takes to persist the reboot reason and adjust this value.
+// TODO(fxbug.dev/52274): Track how long it takes to persist the reboot reason and adjust this value.
 const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 
 /// Provides administration services for the device manager service and the device tree it controls.

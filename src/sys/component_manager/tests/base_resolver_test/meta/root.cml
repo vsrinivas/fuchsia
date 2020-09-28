@@ -19,7 +19,7 @@
     ],
     expose: [
         {
-            // TODO(56604): Switch to name-based.
+            // TODO(fxbug.dev/56604): Switch to name-based.
             directory: "/pkgfs",
             from: "self",
             rights: [ "rx*" ],

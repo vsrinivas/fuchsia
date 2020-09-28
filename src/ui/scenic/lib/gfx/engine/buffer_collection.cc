@@ -28,7 +28,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   // Create a duped vulkan token.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
   {
-    // TODO(51213): See if this can become asynchronous.
+    // TODO(fxbug.dev/51213): See if this can become asynchronous.
     fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = buffer_collection_token.BindSync();
     zx_status_t status =
         sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());

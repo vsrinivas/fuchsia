@@ -35,7 +35,7 @@ executable("tests") {
     "//zircon/system/ulib/fs",
   ]
 
-  # TODO(46548): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46548): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

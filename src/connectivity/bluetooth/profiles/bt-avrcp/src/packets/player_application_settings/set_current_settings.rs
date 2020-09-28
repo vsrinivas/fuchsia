@@ -104,7 +104,7 @@ impl TryFrom<SetPlayerApplicationSettingValueCommand> for PlayerApplicationSetti
             return Err(Error::InvalidMessage);
         }
         for (attribute_id, value) in src.attribute_id_values {
-            // TODO(41253): If fetching the attribute_id fails, check to see if it's
+            // TODO(fxbug.dev/41253): If fetching the attribute_id fails, check to see if it's
             // a valid custom attribute. Handle accordingly.
             let attribute_id = PlayerApplicationSettingAttributeId::try_from(attribute_id)
                 .map_err(|_| Error::InvalidMessage)?;

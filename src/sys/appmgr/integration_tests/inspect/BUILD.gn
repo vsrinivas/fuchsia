@@ -41,7 +41,7 @@ executable("test-vmo") {
     "//zircon/system/ulib/inspect",
   ]
 
-  # TODO(46733): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46733): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -75,7 +75,7 @@ executable("test-health") {
     "//zircon/system/ulib/inspect",
   ]
 
-  # TODO(46733): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46733): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

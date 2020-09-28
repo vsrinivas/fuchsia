@@ -57,7 +57,7 @@ class MappingAccumulator : public HitAccumulator<U> {
 //
 // We specifically want sort-first-by-layer-then-by-depth ordering.
 //
-// TODO(24152): Return full set of hits to each client.
+// TODO(fxbug.dev/24152): Return full set of hits to each client.
 class ViewHitAccumulator : public HitAccumulator<ViewHit> {
  public:
   const std::vector<ViewHit>& hits() const { return hits_; }

@@ -21,7 +21,7 @@ package("pkg") {
 
   binaries = [
     {
-      # TODO(50926): remove the "bugreport" alias when all clients have switched
+      # TODO(fxbug.dev/50926): remove the "bugreport" alias when all clients have switched
       # to invoking "snapshot".
       name = "bugreport"
       source = "snapshot"

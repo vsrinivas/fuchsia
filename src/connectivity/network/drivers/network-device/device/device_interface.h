@@ -49,7 +49,7 @@ class DeviceInterface : public netdev::Device::Interface,
   // the number of buffers on device is less than or equal to the threshold, we should attempt to
   // fetch more buffers.
   uint32_t rx_notify_threshold() const {
-    // TODO(44835): This threshold should be negotiated as part of the device info in the banjo
+    // TODO(fxbug.dev/44835): This threshold should be negotiated as part of the device info in the banjo
     // protocol.
     return device_info_.rx_depth / 2;
   }

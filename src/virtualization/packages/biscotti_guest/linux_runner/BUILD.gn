@@ -180,7 +180,7 @@ executable("linux_runner_unittests") {
     "//zircon/system/ulib/memfs",
   ]
 
-  # TODO(46750): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46750): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

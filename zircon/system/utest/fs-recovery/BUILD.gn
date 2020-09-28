@@ -40,7 +40,7 @@ test("fs-recovery") {
     "//zircon/system/ulib/ramdevice-client",
   ]
 
-  # TODO(47413): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47413): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

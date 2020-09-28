@@ -167,7 +167,7 @@ pub struct AssetCollection<L: AssetLoader> {
     /// `DirectoryProxy` contains an `Arc`, so it is safe to clone. We can use a directory for an
     /// extended period without keeping the entire map locked.
     //
-    // TODO(8904): If resource use becomes a concern, consider replacing with a LRU cache.
+    // TODO(fxbug.dev/8904): If resource use becomes a concern, consider replacing with a LRU cache.
     id_to_dir_map: Mutex<BTreeMap<AssetId, io::DirectoryProxy>>,
 
     /// Cache of memory buffers
@@ -266,7 +266,7 @@ impl<L: AssetLoader> AssetCollection<L> {
                         drop(directory_cache_lock);
                         self.fetch_and_cache_package_directory(id, package_locator).await
                     }
-                    // TODO(8904): Implement async fetching and notification
+                    // TODO(fxbug.dev/8904): Implement async fetching and notification
                     _ => Err(AssetCollectionError::UncachedEphemeral {
                         file_name: file_name.to_string(),
                         package_locator: package_locator.clone(),
@@ -291,7 +291,7 @@ impl<L: AssetLoader> AssetCollection<L> {
         // Cache directory handle
         let mut directory_cache = self.id_to_dir_map.lock().await;
         directory_cache.insert(asset_id, Clone::clone(&dir_proxy));
-        // TODO(8904): For "universe" fonts, send event to clients.
+        // TODO(fxbug.dev/8904): For "universe" fonts, send event to clients.
 
         Ok(dir_proxy)
     }

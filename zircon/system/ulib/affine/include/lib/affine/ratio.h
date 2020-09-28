@@ -53,7 +53,7 @@ class Ratio {
 
   Ratio() = default;
 
-  // TODO(36192) : Remove these __LOCAL annotations
+  // TODO(fxbug.dev/36192) : Remove these __LOCAL annotations
   //
   // So, there is something wrong with GCC when building this library with -O0
   // (see the referenced bug).  It does not seem to be respecting the

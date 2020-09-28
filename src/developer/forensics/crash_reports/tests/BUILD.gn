@@ -266,7 +266,7 @@ executable("store_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

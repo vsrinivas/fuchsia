@@ -646,7 +646,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // Then check the bootbyte to override abr decision if necessary.
   // Lastly use the value of bootloader.default to determine the first entry. If
   // bootloader.default is not set, use "network".
-  // TODO(47049) : Make this logic more simpler
+  // TODO(fxbug.dev/47049) : Make this logic more simpler
 
   switch (zircon_abr_get_boot_slot()) {
     case kAbrSlotIndexA:
@@ -667,13 +667,13 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
   } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
     swap_to_head('f', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_NORMAL) {
-    // TODO(47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
+    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
     // code.
     // swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
     swap_to_head('z', valid_keys, key_idx);
   } else if (!memcmp(defboot, "local", 5)) {
-    // TODO(47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
+    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
     // code.
     // swap_to_head('m', valid_keys, key_idx);
   } else {

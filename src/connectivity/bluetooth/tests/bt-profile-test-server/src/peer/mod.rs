@@ -90,7 +90,7 @@ impl MockPeer {
         env: NestedEnvironment,
         observer: Option<bredr::PeerObserverProxy>,
     ) -> Self {
-        // TODO(55462): If provided, take event stream of `observer` and listen for close.
+        // TODO(fxbug.dev/55462): If provided, take event stream of `observer` and listen for close.
         Self {
             id,
             env,

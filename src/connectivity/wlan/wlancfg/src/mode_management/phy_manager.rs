@@ -106,7 +106,7 @@ impl PhyContainer {
     }
 }
 
-// TODO(49590): PhyManager makes the assumption that WLAN PHYs that support client and AP modes can
+// TODO(fxbug.dev/49590): PhyManager makes the assumption that WLAN PHYs that support client and AP modes can
 // can operate as clients and APs simultaneously.  For PHYs where this is not the case, the
 // existing interface should be destroyed before the new interface is created.
 impl PhyManager {
@@ -318,7 +318,7 @@ impl PhyManagerApi for PhyManager {
 
         // If all of the AP-capable PHYs have created AP interfaces already, return the
         // first observed existing AP interface
-        // TODO(49843): Figure out a better method of interface selection.
+        // TODO(fxbug.dev/49843): Figure out a better method of interface selection.
         let phy = match self.phys.get_mut(&ap_capable_phy_ids[0]) {
             Some(phy_container) => phy_container,
             None => return Ok(None),

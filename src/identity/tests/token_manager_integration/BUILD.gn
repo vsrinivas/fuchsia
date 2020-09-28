@@ -31,7 +31,7 @@ executable("bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

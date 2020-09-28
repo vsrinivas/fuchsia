@@ -13,7 +13,7 @@ use {
     zerocopy::LayoutVerified,
 };
 
-// TODO(42763): HT and VHT intersections defined here are best effort only.
+// TODO(fxbug.dev/42763): HT and VHT intersections defined here are best effort only.
 
 // For example:
 // struct Foo { a: u8, b: u8 };
@@ -86,7 +86,7 @@ impl_intersect!(AmpduParams {
     max: min_start_spacing_raw,  // MinMpduStartSpacing(u8)
 });
 
-// TODO(29404): if tx_rx_diff is set, the intersection rule may be more complicated.
+// TODO(fxbug.dev/29404): if tx_rx_diff is set, the intersection rule may be more complicated.
 impl_intersect!(SupportedMcsSet {
     and: rx_mcs_raw, // RxMcsBitmask(u128)
     min: rx_highest_rate,
@@ -165,7 +165,7 @@ impl Intersect for HtCapabilities {
         // IEEE Std. 802.11-2016, 10.17
         // An STA can use rx_stbc if its peer supports tx_stbc. Similarly, an STA can use tx_stbc if
         // its peer supports at least one(1) spatial stream for rx_stbc.
-        // TODO(29131): Verify STBC behavior is correct.
+        // TODO(fxbug.dev/29131): Verify STBC behavior is correct.
         out.ht_cap_info = out
             .ht_cap_info
             .with_tx_stbc(if { other.ht_cap_info }.rx_stbc() != 0 {
@@ -183,7 +183,7 @@ impl Intersect for HtCapabilities {
 }
 
 impl_intersect!(VhtCapabilitiesInfo {
-    // TODO(29404): IEEE 802.11-2016 Table 9-250 - supported_cbw_set needs to consider ext_nss_bw
+    // TODO(fxbug.dev/29404): IEEE 802.11-2016 Table 9-250 - supported_cbw_set needs to consider ext_nss_bw
     min: max_mpdu_len_raw, // MaxMpduLen(u8)
     min: supported_cbw_set,
     and: rx_ldpc,
@@ -356,7 +356,7 @@ mod tests {
         );
     }
 
-    // TODO(42763): Currently, MCS set and channel bandwidth are the most important ones. Revisit
+    // TODO(fxbug.dev/42763): Currently, MCS set and channel bandwidth are the most important ones. Revisit
     // other fields when the use cases arise or we have more understanding.
     #[test]
     fn intersect_ht_cap_info_chan_width_set() {

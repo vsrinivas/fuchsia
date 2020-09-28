@@ -82,7 +82,7 @@ macro_rules! gen_commands {
 }
 
 // `Cmd` is the declarative specification of all commands that bt-avdtp-tool accepts.
-// TODO(37089): Add support for printing with arguments (merge PrintPeer, PrintPeers).
+// TODO(fxbug.dev/37089): Add support for printing with arguments (merge PrintPeer, PrintPeers).
 gen_commands! {
     Cmd {
         AbortStream = ("abort-stream", ["generic id"], "Initiate an abort stream command"),

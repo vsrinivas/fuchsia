@@ -33,7 +33,7 @@ source_set("asan") {
     # The former could be addressed via `#pragma clang attribute`, but the
     # latter cannot be.
     configs -= [ _asan_config ]
-    sources = []  # TODO(30333): setup code, diagnostic code, etc.
+    sources = []  # TODO(fxbug.dev/30333): setup code, diagnostic code, etc.
     deps = [
       ":stubs",
       "..:headers",
@@ -98,7 +98,7 @@ config("kasan") {
     # allocation semantics.
     "-fsanitize-address-poison-custom-array-cookie",
 
-    # TODO(30033): Disable poisoning around stack allocations until later.
+    # TODO(fxbug.dev/30033): Disable poisoning around stack allocations until later.
     "-mllvm",
     "-asan-stack=0",
 

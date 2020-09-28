@@ -523,7 +523,7 @@ impl From<HtOperation> for banjo_wlan_info::WlanHtOp {
     }
 }
 
-// TODO(43257): Move bits 8-32 into tail.
+// TODO(fxbug.dev/43257): Move bits 8-32 into tail.
 // IEEE Std 802.11-2016, Figure 9-339
 #[bitfield(
     0..=1 secondary_chan_offset as SecChanOffset(u8),
@@ -564,7 +564,7 @@ impl StaChanWidth {
     pub_const!(ANY, 1); // Any in the Supported Channel Width set
 }
 
-// TODO(43257): Move bits 8-32 from head into here.
+// TODO(fxbug.dev/43257): Move bits 8-32 from head into here.
 // IEEE Std 802.11-2016, Figure 9-339, continued
 #[bitfield(
     // bit offset in this struct starts from bit 32 in the IEEE HtOperationInformation field.

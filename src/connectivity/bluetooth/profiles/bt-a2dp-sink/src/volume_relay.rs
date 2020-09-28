@@ -115,7 +115,7 @@ impl VolumeRelay {
         let mut staged_volume = Some(current_volume);
 
         let mut last_onchanged = None;
-        // TODO(54002): Change this to be a single responder when AVRCP correctly manages the
+        // TODO(fxbug.dev/54002): Change this to be a single responder when AVRCP correctly manages the
         // lifetime of volume changed subscriptions.
         let mut hanging_onchanged = Vec::new();
         let mut hanging_setvolumes = Vec::new();
@@ -575,7 +575,7 @@ mod tests {
 
     /// Tests the behavior of the VolumeRelay when multiple requests for OnVolumeChanged
     /// updates are requested.
-    // TODO(54002): This test should be updated to reflect the fact that the channel gets closed
+    // TODO(fxbug.dev/54002): This test should be updated to reflect the fact that the channel gets closed
     // when OnVolumeChanged is called twice without a response.
     #[test]
     fn test_volume_changes_multiple_requests() -> Result<(), Error> {

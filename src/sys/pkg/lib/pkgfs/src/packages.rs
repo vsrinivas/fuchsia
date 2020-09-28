@@ -40,7 +40,7 @@ impl Client {
         name: &str,
         variant: Option<&str>,
     ) -> Result<package::Directory, package::OpenError> {
-        // TODO(37858) allow opening as executable too
+        // TODO(fxbug.dev/37858) allow opening as executable too
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
         let path = format!("{}/{}", name, variant.unwrap_or("0"));
         let dir = io_util::directory::open_directory(&self.proxy, &path, flags).await.map_err(

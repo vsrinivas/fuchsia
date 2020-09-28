@@ -44,11 +44,11 @@ void main() {
     await helper.addTile(_appName);
 
     // Wait for the app to start.
-    // TODO(55832): Use flutter_driver waitUntilNoTransientCallbacks.
+    // TODO(fxbug.dev/55832): Use flutter_driver waitUntilNoTransientCallbacks.
     await Future.delayed(Duration(seconds: 15));
 
     // The button should be in the center of the screen; that is, (500, 500).
-    // TODO(55832): Find the button position using flutter_driver.
+    // TODO(fxbug.dev/55832): Find the button position using flutter_driver.
     const buttonPosition = Point<int>(500, 500);
 
     const totalDuration = _numberOfTaps * _millisecondsBetweenTaps;

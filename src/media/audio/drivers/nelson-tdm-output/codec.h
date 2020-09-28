@@ -11,7 +11,7 @@
 #include <ddk/debug.h>
 #include <ddktl/protocol/codec.h>
 
-// TODO(44249): Abstract Audio drivers controllers-codecs communications
+// TODO(fxbug.dev/44249): Abstract Audio drivers controllers-codecs communications
 
 namespace audio {
 namespace nelson {

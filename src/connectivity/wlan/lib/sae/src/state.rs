@@ -16,10 +16,10 @@ use {
     wlan_statemachine::*,
 };
 
-// TODO(42140): Handle received timeouts.
-// TODO(42141): Process/send anti-clogging tokens.
-// TODO(42562): Handle BadGrp/DiffGrp.
-// TODO(42563): Handle frame status.
+// TODO(fxbug.dev/42140): Handle received timeouts.
+// TODO(fxbug.dev/42141): Process/send anti-clogging tokens.
+// TODO(fxbug.dev/42562): Handle BadGrp/DiffGrp.
+// TODO(fxbug.dev/42563): Handle frame status.
 
 /// We store an FcgConstructor rather than a FiniteCyclicGroup so that our handshake
 /// can impl `Send`. FCGs are not generally `Send`, so we construct them on the fly.

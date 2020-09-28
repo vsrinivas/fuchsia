@@ -47,6 +47,6 @@ driver_module("as370") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(47406): restore some form of data dependency on as370 and visalia
+  # TODO(fxbug.dev/47406): restore some form of data dependency on as370 and visalia
   # boot shims.
 }

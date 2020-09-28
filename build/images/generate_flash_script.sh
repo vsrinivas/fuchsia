@@ -229,7 +229,7 @@ if [[ ! -z "${FVM_PARTITION}" ]]; then
 
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" continue >> "${OUTPUT}"
 else
-  # TODO(60172): switch back to `fastboot continue` everywhere once all boards
+  # TODO(fxbug.dev/60172): switch back to `fastboot continue` everywhere once all boards
   # support it. For now we can only assume boards that support FVM + keys know
   # how to continue.
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" reboot >> "${OUTPUT}"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(41417): Remove this entire file once devmgr installs a Rust logger.
+// TODO(fxbug.dev/41417): Remove this entire file once devmgr installs a Rust logger.
 
 // This file is copied from the wlanstack logger in src/connectivity/wlan/wlanstack/src/logger.rs.
 //

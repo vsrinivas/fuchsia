@@ -59,7 +59,7 @@ if (is_host) {
       "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/fit",
 
-      # TODO(57392): Move it back to //third_party once unification completes.
+      # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
       "//zircon/third_party/rapidjson",
     ]
 
@@ -85,7 +85,7 @@ if (is_host) {
       "//third_party/protobuf:protobuf_full",
       "//zircon/public/lib/fidl_base",
 
-      # TODO(57392): Move it back to //third_party once unification completes.
+      # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
       "//zircon/third_party/rapidjson",
     ]
   }

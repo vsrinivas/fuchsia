@@ -1,6 +1,6 @@
 # AllN
 
-> TODO(3367): delete this directory.
+> TODO(fxbug.dev/3367): delete this directory.
 
 This directory contains transient build infrastructure used for the AllN effort
 which aims at producing a single GN/ninja build for the entire Fuchsia system.

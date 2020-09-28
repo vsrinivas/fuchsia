@@ -29,7 +29,7 @@ common_deps = [
   "//third_party/rust_crates:void",
 ]
 
-# TODO(48539): Fix the leaks and remove this.
+# TODO(fxbug.dev/48539): Fix the leaks and remove this.
 common_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
 common_sources = [

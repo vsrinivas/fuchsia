@@ -32,6 +32,6 @@ driver_module("intel-i2c") {
     "//zircon/public/lib/zircon-internal",
   ]
 
-  # TODO(fxb/58161): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 }

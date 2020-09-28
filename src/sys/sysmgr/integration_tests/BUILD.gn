@@ -80,7 +80,7 @@ executable("service_startup_test_bin") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(46846): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46846): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

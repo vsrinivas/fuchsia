@@ -73,7 +73,7 @@ static constexpr bool kMagmaDretEnable = kDebug;
 
 enum LogLevel { LOG_WARNING, LOG_INFO };
 
-// TODO(13095) - replace with MAGMA_LOG
+// TODO(fxbug.dev/13095) - replace with MAGMA_LOG
 __attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, const char* msg, ...) {
   switch (level) {
     case LOG_WARNING:

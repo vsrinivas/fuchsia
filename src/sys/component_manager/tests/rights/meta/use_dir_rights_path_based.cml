@@ -1,4 +1,4 @@
-// TODO(56604): Remove and use use_dir_rights.cml instead once component manager supports
+// TODO(fxbug.dev/56604): Remove and use use_dir_rights.cml instead once component manager supports
 // routing namespace capabilities by path.
 // name.
 {

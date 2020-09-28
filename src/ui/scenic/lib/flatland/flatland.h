@@ -127,7 +127,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // exist for this Flatland instance, returns std::nullopt.
   std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
 
-  // TODO(53330): remove this function when FrameScheduler is integrated.
+  // TODO(fxbug.dev/53330): remove this function when FrameScheduler is integrated.
   // For signaling the buffer collection release fence in tests only. Calling this function will
   // signal the zx::event required for buffer collection deregistration. Each call will signal
   // the event once.
@@ -142,7 +142,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // This is the maximum number of pending Present() calls the user can have in flight. Since the
   // current implementation is synchronous, there can only be one call to Present() at a time.
   //
-  // TODO(36161): Tune this number once we have a non-synchronous present flow.
+  // TODO(fxbug.dev/36161): Tune this number once we have a non-synchronous present flow.
   static constexpr uint32_t kMaxPresents = 1;
 
   // The unique SessionId for this Flatland instance. Used to schedule Presents and register
@@ -271,7 +271,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // not yet been garbage collected.
   std::unordered_set<GlobalBufferCollectionId> released_buffer_collection_ids_;
 
-  // TODO(53330): remove this event when FrameScheduler is integrated.
+  // TODO(fxbug.dev/53330): remove this event when FrameScheduler is integrated.
   // For testing purposes only. When a deregistered buffer collection is ready for garbage
   // collection, the deregister call is placed in a Wait that runs when this event is signaled.
   // Tests can call SignalBufferReleaseFence() to signal this event.

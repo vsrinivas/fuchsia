@@ -55,7 +55,7 @@ pub enum FailureReason {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ConnectFailure {
-    // TODO(53858) Add BSSID of the AP we failed to connect to
+    // TODO(fxbug.dev/53858) Add BSSID of the AP we failed to connect to
     /// For determining whether this connection failure is still relevant
     pub time: SystemTime,
     /// The reason that connection failed

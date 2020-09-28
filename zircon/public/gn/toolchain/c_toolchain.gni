@@ -277,7 +277,7 @@ template("c_toolchain") {
     }
   }
 
-  # TODO(58294): enable for other targets and binary formats.
+  # TODO(fxbug.dev/58294): enable for other targets and binary formats.
   use_gsym = output_gsym && is_elf && invoker.os == "fuchsia"
   if (use_gsym) {
     gsymutil = rebase_path("$clang_tool_dir/llvm-gsymutil", root_build_dir)

@@ -622,7 +622,7 @@ where
                 }
             }
 
-            // TODO(41738): Move this to Policy.
+            // TODO(fxbug.dev/41738): Move this to Policy.
             // Randomized exponential backoff of 1, 2, & 4 seconds, +/- 500ms.
             let backoff_time_secs = 1 << (omaha_request_attempt - 1);
             let backoff_time = randomize(backoff_time_secs * 1000, 1000);

@@ -2038,7 +2038,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     uint64_t offset = 0;
     while (offset < info.size_bytes) {
       uint64_t bytes_to_write = std::min(sizeof(kZeroes), info.size_bytes - offset);
-      // TODO(59796): Use ZX_VMO_OP_ZERO instead.
+      // TODO(fxbug.dev/59796): Use ZX_VMO_OP_ZERO instead.
       status = raw_parent_vmo.write(kZeroes, offset, bytes_to_write);
       if (status != ZX_OK) {
         LogError("raw_parent_vmo.write() failed - status: %d", status);

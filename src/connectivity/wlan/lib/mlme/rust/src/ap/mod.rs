@@ -121,7 +121,7 @@ impl Ap {
         scheduler: Scheduler,
         bssid: Bssid,
     ) -> Self {
-        // TODO(41417): Remove this once devmgr installs a Rust logger.
+        // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
         logger::install();
 
         Self {
@@ -788,7 +788,7 @@ mod tests {
             fake_device.wlan_channel,
             WlanChannel {
                 primary: 2,
-                // TODO(40917): Correctly support this.
+                // TODO(fxbug.dev/40917): Correctly support this.
                 cbw: WlanChannelBandwidth::_20,
                 secondary80: 0,
             }

@@ -18,7 +18,7 @@ namespace blobfs {
 
 using block_client::BlockDevice;
 
-// TODO(54521): This is a temporary measure. The diagnostics directory can
+// TODO(fxbug.dev/54521): This is a temporary measure. The diagnostics directory can
 // eventually be added to the outgoing dir passed via PA_DIRECTORY_REQUEST.
 #define FS_HANDLE_DIAGNOSTICS_DIR PA_HND(PA_USER0, 2)
 

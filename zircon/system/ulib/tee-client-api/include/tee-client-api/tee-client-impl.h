@@ -18,7 +18,7 @@
 #define TEEC_NUM_PARAMS_MAX 4
 
 typedef struct teec_context_impl {
-  // TODO(36236): Currently, some driver code is directly setting tee_channel
+  // TODO(fxbug.dev/36236): Currently, some driver code is directly setting tee_channel
   // instead of using TEEC_InitializeContext() (since that doesn't work in
   // driver code).
   zx_handle_t tee_channel;

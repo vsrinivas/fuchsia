@@ -23,7 +23,7 @@ executable("gltf_export") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

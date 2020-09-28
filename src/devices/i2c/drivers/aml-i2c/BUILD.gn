@@ -26,7 +26,7 @@ driver_module("aml-i2c") {
     "//zircon/system/ulib/trace:trace-driver",
   ]
 
-  # TODO(fxb/58161): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

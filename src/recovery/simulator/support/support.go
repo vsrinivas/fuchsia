@@ -19,7 +19,7 @@ func ZbiPath(t *testing.T) string {
 		return ""
 	}
 	exPath := filepath.Dir(ex)
-	// TODO(47555): get the path from a build API instead.
+	// TODO(fxbug.dev/47555): get the path from a build API instead.
 	return filepath.Join(exPath, "../obj/build/images/recovery/recovery-eng.zbi")
 }
 

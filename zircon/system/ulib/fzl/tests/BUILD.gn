@@ -84,6 +84,6 @@ test("fzl") {
     "//zircon/system/ulib/memfs",
   ]
 
-  # TODO(47439): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47439): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

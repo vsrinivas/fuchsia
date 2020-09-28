@@ -131,7 +131,7 @@ struct ChannelSwitchInfo {
 };
 
 /// Non-IEEE custom structure to inform a SoftMAC device about the association negotiation outcome.
-// TODO(43063): Remove if we are able to intersect the capabilities with beacon before associating
+// TODO(fxbug.dev/43063): Remove if we are able to intersect the capabilities with beacon before associating
 struct NegotiatedCapabilities {
     fuchsia.wlan.common.WlanChan channel;
     CapabilityInfo cap_info;

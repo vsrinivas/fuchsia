@@ -88,7 +88,7 @@ test("aml-securemem-test") {
     "//zircon/system/ulib/tee-client-api:tee-client-api-static",
   ]
 
-  # TODO(46354): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46354): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

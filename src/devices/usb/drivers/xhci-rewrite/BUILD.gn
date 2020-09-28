@@ -107,7 +107,7 @@ test("xhci-unittest") {
   ]
   deps = [ ":test-libs" ]
 
-  # TODO(54318): Fix the leaks and remove this.
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -131,7 +131,7 @@ test("xhci-core-unittest") {
   ]
   deps = [ ":test-libs" ]
 
-  # TODO(54318): Fix the leaks and remove this.
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -155,7 +155,7 @@ test("xhci-event-ring-unittest") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
-  # TODO(54318): Fix the leaks and remove this.
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -176,7 +176,7 @@ test("xhci-transfer-ring-unittest") {
   ]
   deps = [ ":test-libs" ]
 
-  # TODO(54318): Fix the leaks and remove this.
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

@@ -151,7 +151,7 @@ where
     pub fn get_or_add_child_mut(&mut self, name: impl Into<String>) -> &mut NodeHierarchy<Key> {
         // We have to use indices to iterate here because the borrow checker cannot
         // deduce that there are no borrowed values in the else-branch.
-        // TODO(4601): We could make this cleaner by changing the NodeHierarchy
+        // TODO(fxbug.dev/4601): We could make this cleaner by changing the NodeHierarchy
         // children to hashmaps.
         let name_string: String = name.into();
         match (0..self.children.len()).find(|&i| self.children[i].name == name_string) {
@@ -705,7 +705,7 @@ pub struct PropertyEntry<Key = String> {
 
 // Applies a single selector to a NodeHierarchy, returning a vector of tuples for every property
 // in the hierarchy matched by the selector.
-// TODO(47015): Benchmark performance issues with full-filters for selection.
+// TODO(fxbug.dev/47015): Benchmark performance issues with full-filters for selection.
 pub fn select_from_node_hierarchy<Key>(
     root_node: NodeHierarchy<Key>,
     selector: Selector,
@@ -715,7 +715,7 @@ where
 {
     let single_selector_hierarchy_matcher = (&vec![Arc::new(selector)]).try_into()?;
 
-    // TODO(47015): Extraction doesn't require a full tree filter. Instead, the hierarchy
+    // TODO(fxbug.dev/47015): Extraction doesn't require a full tree filter. Instead, the hierarchy
     // should be traversed like a state machine, and all matching nodes should search for
     // their properties.
     let filtered_hierarchy = filter_node_hierarchy(root_node, &single_selector_hierarchy_matcher)?;
@@ -773,7 +773,7 @@ where
         // hierarchy node paths don't, but we want to reuse the regex logic.
         formatted_node_path.push('/');
 
-        // TODO(44926): If any of the selectors in the current set are a
+        // TODO(fxbug.dev/44926): If any of the selectors in the current set are a
         // subtree selector, we dont have to compile new property selector sets
         // until we iterate out of the subtree.
         let property_regex_set: &RegexSet = match &working_node_path {
@@ -817,7 +817,7 @@ where
                 if property_regex_set
                     .is_match(&selectors::sanitize_string_for_selectors(property.name()))
                 {
-                    // TODO(4601): We can keep track of the prefix string identifying
+                    // TODO(fxbug.dev/4601): We can keep track of the prefix string identifying
                     // the "curr_node" and only insert from root if our iteration has
                     // brought us to a new node higher up the hierarchy. Right now, we
                     // insert from root for every new property.

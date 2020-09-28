@@ -106,7 +106,7 @@ GetCreateColorBuffer2Params(const llcpp::fuchsia::sysmem2::SingleBufferSettings&
       image_constraints.has_pixel_format() && image_constraints.pixel_format().has_type() &&
       image_constraints.has_min_coded_width() && image_constraints.has_min_coded_height());
 
-  // TODO(59804): Support other pixel formats.
+  // TODO(fxbug.dev/59804): Support other pixel formats.
   const auto& pixel_format_type = image_constraints.pixel_format().type();
   ColorBufferFormatType color_buffer_format;
   switch (pixel_format_type) {

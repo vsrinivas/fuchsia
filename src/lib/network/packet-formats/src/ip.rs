@@ -73,7 +73,7 @@ impl IpExt for Ipv6 {
 /// ByteSlice` parameter (due to the requirements of `packet::ParsablePacket`).
 pub trait IpExtByteSlice<B: ByteSlice>: IpExt {
     /// An IP packet type for the IP version.
-    // TODO(48578): This previously had the bound `Builder =
+    // TODO(fxbug.dev/48578): This previously had the bound `Builder =
     // Self::PacketBuilder`, but that cannot be satisfied when writing an
     // implementation for NeverPacket<I: Ip>; the only value for
     // Self::PacketBuilder we have is a defaulted type, which could be

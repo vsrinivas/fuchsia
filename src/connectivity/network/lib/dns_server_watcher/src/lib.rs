@@ -40,7 +40,7 @@ pub struct DnsServers {
 
 impl DnsServers {
     /// Sets the DNS servers discovered from `source`.
-    // TODO(55672): Make sure `servers` only contain servers that could be obtained
+    // TODO(fxbug.dev/55672): Make sure `servers` only contain servers that could be obtained
     // from `source`.
     pub fn set_servers_from_source(
         &mut self,
@@ -80,7 +80,7 @@ impl DnsServers {
     /// Note, if multiple `DnsServer_`s have the same address but different sources, only
     /// the `DnsServer_` with the most preferred source will be present in the consolidated
     /// list of servers.
-    // TODO(55893): Consider ordering across sources of the same source-kind based on some
+    // TODO(fxbug.dev/55893): Consider ordering across sources of the same source-kind based on some
     // metric.
     pub fn consolidated(&self) -> Vec<SocketAddress> {
         self.consolidate_filter_map(|x| x.address)

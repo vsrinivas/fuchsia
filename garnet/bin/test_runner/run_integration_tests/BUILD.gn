@@ -16,7 +16,7 @@ executable("run_integration_tests") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

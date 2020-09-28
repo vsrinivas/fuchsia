@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 /// `StateBuilder` is used to construct a new [`State`] as the internal
 /// modification of properties should not be available post construction.
-/// TODO(fxb/59747): remove dead_code macro once used in production code as well.
+/// TODO(fxbug.dev/59747): remove dead_code macro once used in production code as well.
 ///
 /// [`State`]: struct.State.html
 pub struct StateBuilder {
@@ -104,7 +104,7 @@ pub struct Policy {
 }
 
 /// `Transform` provides the parameters for specifying a transform.
-/// TODO(fxb/60367): Add Mute and Disable transforms.
+/// TODO(fxbug.dev/60367): Add Mute and Disable transforms.
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Transform {

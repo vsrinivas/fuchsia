@@ -571,11 +571,11 @@ pub enum ServiceCapability {
     },
     /// Indicates that header compression capabilities is offered  by this end point.
     /// Defined in section 8.21.7
-    /// TODO(38280): Implement header compression specific fields to use the payload.
+    /// TODO(fxbug.dev/38280): Implement header compression specific fields to use the payload.
     HeaderCompression { payload_len: u8 },
     /// Indicates that multiplexing service is offered by this end point.
     /// Defined in section 8.21.8
-    /// TODO(38282): Implement multiplexing specific fields to use the payload.
+    /// TODO(fxbug.dev/38282): Implement multiplexing specific fields to use the payload.
     Multiplexing { payload_len: u8 },
     /// Indicates that delay reporting is offered by this end point.
     /// Defined in section 8.21.9

@@ -24,6 +24,6 @@ driver_module("msm8998") {
     "//zircon/public/lib/fbl",
   ]
 
-  # TODO(47406): restore some form of data dependency on msm8998
+  # TODO(fxbug.dev/47406): restore some form of data dependency on msm8998
   # boot shim.
 }

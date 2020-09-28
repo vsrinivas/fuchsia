@@ -39,7 +39,7 @@ loadable_module("audio_effects_example") {
     "//sdk/lib/media/audio/effects",
     "//zircon/public/lib/fbl",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
   configs += [

@@ -30,7 +30,7 @@ struct UserPagerInfo {
   // Total length of the data. The |verifier| must be set up to verify this length.
   uint64_t data_length_bytes = 0;
   // Used to verify the pages as they are read in.
-  // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
+  // TODO(fxbug.dev/44742): Make BlobVerifier movable, unwrap from unique_ptr.
   std::unique_ptr<BlobVerifier> verifier;
   // An optional decompressor used by the chunked compression strategy. The decompressor is invoked
   // on the raw bytes received from the disk. If unset, blob data is assumed to be managed via some
@@ -41,7 +41,7 @@ struct UserPagerInfo {
   // "uncompressed" strategy). Note that this object is global to the |Blobfs| instance, and is
   // copied here to maintain short-term consistency between |UserPager| strategy implementations.
   //
-  // TODO(51072): Decompression strategies should have common abstractions to, among other things,
+  // TODO(fxbug.dev/51072): Decompression strategies should have common abstractions to, among other things,
   // avoid the need for both |decompressor| and |zstd_seekable_blob_collection|. This change is
   // somewhat complicated by the fact that ZSTD Seekable decompression manages its own
   // compressed-space buffer rather than reusing |transfer_buffer_| as chunked decompression does.

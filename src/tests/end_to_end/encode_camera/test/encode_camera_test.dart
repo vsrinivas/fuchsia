@@ -78,7 +78,7 @@ void _processEncodeTrace(trace_processing.Model traceModel, int duration) {
   const String packetRecvEventName = 'Media:PacketReceived';
   // verify an appropriate number of frames were encoded
   // encode_camera selects a camera configuration that produces 30 fps
-  // TODO(55279) Re-enable more exact frame count checking when it's determined
+  // TODO(fxbug.dev/55279) Re-enable more exact frame count checking when it's determined
   // why it was flaky
   //const int frameRate = 30;
 

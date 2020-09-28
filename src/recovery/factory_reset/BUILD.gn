@@ -109,7 +109,7 @@ config_data("factory_reset_config") {
   sources = [ "service.config" ]
 }
 
-# TODO(45780): Remove this forwarding target once out of tree users are removed.
+# TODO(fxbug.dev/45780): Remove this forwarding target once out of tree users are removed.
 group("configs") {
   deps = [ ":factory_reset_config" ]
 }

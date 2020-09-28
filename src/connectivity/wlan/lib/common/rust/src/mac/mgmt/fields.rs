@@ -238,7 +238,7 @@ pub struct AddbaReqHdr {
     // IEEE Std 802.11-2016, 9.4.1.15 - unit is TU, 0 disables the timeout.
     pub timeout: u16,
     pub starting_sequence_control: BlockAckStartingSequenceControl,
-    // TODO(29887): Evaluate the use cases and support optional fields.
+    // TODO(fxbug.dev/29887): Evaluate the use cases and support optional fields.
     // GCR Group Address element
     // Multi-band
     // TCLAS
@@ -256,7 +256,7 @@ pub struct AddbaRespHdr {
     pub parameters: BlockAckParameters,
     // IEEE Std 802.11-2016, 9.4.1.15 - unit is TU, 0 disables the timeout.
     pub timeout: u16,
-    // TODO(29887): Evaluate the use cases and support optional fields.
+    // TODO(fxbug.dev/29887): Evaluate the use cases and support optional fields.
     // GCR Group Address element
     // Multi-band
     // TCLAS
@@ -270,7 +270,7 @@ pub struct DelbaHdr {
     pub action: BlockAckAction,
     pub parameters: DelbaParameters,
     pub reason_code: ReasonCode,
-    // TODO(29887): Evaluate the use cases and support optional fields.
+    // TODO(fxbug.dev/29887): Evaluate the use cases and support optional fields.
     // GCR Group Address element
     // Multi-band
     // TCLAS

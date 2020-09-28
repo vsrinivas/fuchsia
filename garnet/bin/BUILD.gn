@@ -11,7 +11,7 @@ group("bin") {
     "cpuperf_provider",
     "cs",
 
-    # TODO(49942): temporarily disable while flake is investigated.
+    # TODO(fxbug.dev/49942): temporarily disable while flake is investigated.
     # "fidl_compatibility_test",
     "glob",
     "hwstress",

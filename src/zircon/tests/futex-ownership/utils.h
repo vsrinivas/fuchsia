@@ -24,7 +24,7 @@
 // heap allocation behavior of fbl::Function or std::function)
 static constexpr size_t kMaxLambdaStorage = sizeof(void*) * 4;
 
-// TODO(55744): An extremely long timeout we use as a proxy for "forever".
+// TODO(fxbug.dev/55744): An extremely long timeout we use as a proxy for "forever".
 // Someday, if the test framework ever gives us an environment specific timeout
 // to use as a soft watchdog threshold, we should switch to using that instead.
 static constexpr zx::duration kLongTimeout = zx::sec(25);

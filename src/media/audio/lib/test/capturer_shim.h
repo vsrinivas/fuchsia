@@ -106,7 +106,7 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
           EXPECT_EQ(stream_type.sample_format, format_.sample_format());
           EXPECT_EQ(stream_type.channels, format_.channels());
           EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
-          // TODO(55243): Enable AddPayloadBuffer before the capturer is created.
+          // TODO(fxbug.dev/55243): Enable AddPayloadBuffer before the capturer is created.
           fidl_->AddPayloadBuffer(0, std::move(vmo));
         });
     fixture->AddErrorHandler(fidl_, "UltrasoundCapturer");

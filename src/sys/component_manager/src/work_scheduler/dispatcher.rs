@@ -98,7 +98,7 @@ async fn dispatch(
 ) -> Result<(), Error> {
     let (client_end, mut server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
-    // TODO(58212): This logic isn't really correct. We should be looking up the outgoing path from
+    // TODO(fxbug.dev/58212): This logic isn't really correct. We should be looking up the outgoing path from
     // the ProtocolDecl corresponding to WORKER_CAPABILITY_NAME in the ComponentDecl.  However,
     // currently the model doesn't supply an abstraction for connecting to exposed framework
     // capabilities.

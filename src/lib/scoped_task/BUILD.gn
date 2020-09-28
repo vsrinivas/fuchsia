@@ -53,7 +53,7 @@ rustc_binary("scoped_task_test_spawner") {
     "//third_party/rust_crates:argh",
   ]
 
-  # TODO(54531): Fix the leaks and remove this.
+  # TODO(fxbug.dev/54531): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [ "test/spawner.rs" ]

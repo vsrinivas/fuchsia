@@ -171,7 +171,7 @@ mod tests {
 
         // let mount_point = "/test-blobfs-root";
         blobfs.unmount().unwrap();
-        // TODO(36143): re-enable this part of the test once it's deflaked
+        // TODO(fxbug.dev/36143): re-enable this part of the test once it's deflaked
         // blobfs.mount(mount_point).expect("failed to mount blobfs");
 
         // let mut dir = std::fs::read_dir(mount_point).expect("failed to read blobfs directory");

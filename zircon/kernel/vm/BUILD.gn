@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54160) Keep in sync with BUILD.zircon.gn
+# TODO(fxbug.dev/54160) Keep in sync with BUILD.zircon.gn
 
 # This is defined here because //zircon/system/ulib/fbl/ depends on it directly.
 # Due to circular dependencies, migrating //zircon/kernel/vm will happen in a

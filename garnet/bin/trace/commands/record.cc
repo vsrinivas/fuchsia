@@ -304,7 +304,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
   tracer_->Initialize(
       std::move(trace_config), options_.binary, std::move(bytes_consumer),
       std::move(record_consumer), std::move(error_handler),
-      [this] { DoneTrace(); },  // TODO(37435): For now preserve existing behaviour.
+      [this] { DoneTrace(); },  // TODO(fxbug.dev/37435): For now preserve existing behaviour.
       [this] { DoneTrace(); }, fit::bind_member(this, &RecordCommand::OnAlert));
 
   tracer_->Start([this](controller::Controller_StartTracing_Result result) {

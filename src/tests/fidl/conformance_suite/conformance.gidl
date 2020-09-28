@@ -649,7 +649,7 @@ success("StrictXUnion") {
 }
 
 encode_failure("StrictXUnion Field Not Set") {
-    // TODO(8047) Enable this. Currently only go supports this error.
+    // TODO(fxbug.dev/8047) Enable this. Currently only go supports this error.
     bindings_allowlist = [go,],
     value = TestStrictXUnionInStruct {
         xu: SampleStrictXUnion {},

@@ -15,7 +15,7 @@ use fuchsia_inspect::{
 };
 use fuchsia_inspect_derive::{AttachError, IDebug, IValue, Inspect, Unit, WithInspect};
 
-// TODO(49049): Add negative tests when compile failure tests are possible.
+// TODO(fxbug.dev/49049): Add negative tests when compile failure tests are possible.
 
 #[derive(Unit, Serialize)]
 struct Yak {

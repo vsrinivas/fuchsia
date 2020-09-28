@@ -8,7 +8,7 @@ use {crate::selectors, fidl_fuchsia_diagnostics::StringSelector, std::collection
 /// represent a component selector as a DFA. This DFA representation
 /// is used to evaluate a component_hierarchy path against a selector
 /// to determine if the data under the path is being selected for.
-// TODO(47015): The component DFA is going to be unusued until we implement the custom
+// TODO(fxbug.dev/47015): The component DFA is going to be unusued until we implement the custom
 // DFA traversal for selection of specific properties on a hierarchy.
 #[allow(dead_code)]
 pub(crate) struct SelectorAutomata<'a> {
@@ -20,7 +20,7 @@ pub(crate) struct SelectorAutomata<'a> {
     state_indices: Option<HashSet<usize>>,
 }
 
-// TODO(47015): The component DFA is going to be unusued until we implement the custom
+// TODO(fxbug.dev/47015): The component DFA is going to be unusued until we implement the custom
 // DFA traversal for selection of specific properties on a hierarchy.
 #[allow(dead_code)]
 impl<'a> SelectorAutomata<'a> {
@@ -97,13 +97,13 @@ fn evaluate_path_state_with_selector_node(
     selector_node: &StringSelector,
 ) -> bool {
     match selector_node {
-        // TODO(4601): String patterns that contain wildcards must be pattern matched on.
+        // TODO(fxbug.dev/4601): String patterns that contain wildcards must be pattern matched on.
         //             Can we convert these to regex to avoid another custom state machine?
         StringSelector::StringPattern(string_pattern) => {
             if string_pattern == selectors::WILDCARD_SYMBOL_STR {
                 return true;
             } else {
-                // TODO(4601): Support wildcarded string_literals.
+                // TODO(fxbug.dev/4601): Support wildcarded string_literals.
                 return string_pattern == path_state;
             }
         }
@@ -181,7 +181,7 @@ mod tests {
                 ],
                 false,
             ),
-            // TODO(4601): This should pass once wildcarded string literals
+            // TODO(fxbug.dev/4601): This should pass once wildcarded string literals
             //             are supported.
             (
                 vec!["a".to_string(), "bob".to_string(), "c".to_string()],

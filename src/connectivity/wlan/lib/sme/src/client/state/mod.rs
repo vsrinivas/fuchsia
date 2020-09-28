@@ -1108,7 +1108,7 @@ fn send_mlme_assoc_req(
         peer_sta_address: bssid.0,
         cap_info: capabilities.map_or(0, |c| c.0.cap_info.raw()),
         rates: capabilities.map_or_else(|| vec![], |c| c.0.rates.as_bytes().to_vec()),
-        // TODO(43938): populate `qos_capable` field from device info
+        // TODO(fxbug.dev/43938): populate `qos_capable` field from device info
         qos_capable: ht_cap.is_some(),
         qos_info: 0,
         ht_cap: ht_cap.map(Box::new),

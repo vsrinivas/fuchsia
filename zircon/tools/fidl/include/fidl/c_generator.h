@@ -38,7 +38,7 @@ class CGenerator {
     Channel,
   };
 
-  // TODO(56727): This should eventually be a constant described in the fidl
+  // TODO(fxbug.dev/56727): This should eventually be a constant described in the fidl
   // definition of the channel transport.
   static constexpr uint32_t kChannelMaxMessageHandles = 64;
 

@@ -63,7 +63,7 @@ executable("unittest") {
     "//zircon/public/lib/async-cpp",
   ]
 
-  # TODO(46726): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46726): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

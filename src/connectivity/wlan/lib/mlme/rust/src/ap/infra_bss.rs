@@ -90,13 +90,13 @@ impl InfraBss {
             .set_channel(WlanChannel {
                 primary: channel,
 
-                // TODO(40917): Correctly support this.
+                // TODO(fxbug.dev/40917): Correctly support this.
                 cbw: WlanChannelBandwidth::_20,
                 secondary80: 0,
             })
             .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
 
-        // TODO(37891): Support DTIM.
+        // TODO(fxbug.dev/37891): Support DTIM.
 
         let (in_buf, bytes_written, beacon_offload_params) = bss.make_beacon_frame(ctx)?;
         ctx.device
@@ -478,7 +478,7 @@ impl InfraBss {
                 hdr.da,
                 hdr.sa,
                 self.rsne.is_some(),
-                false, // TODO(37891): Support QoS.
+                false, // TODO(fxbug.dev/37891): Support QoS.
                 hdr.ether_type.to_native(),
                 body,
             )

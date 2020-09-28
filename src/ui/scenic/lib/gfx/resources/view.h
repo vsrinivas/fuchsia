@@ -28,7 +28,7 @@ namespace gfx {
 
 class Session;
 
-// TODO(47147): Remove circular inclusion in View, ViewNode, ViewHolder and
+// TODO(fxbug.dev/47147): Remove circular inclusion in View, ViewNode, ViewHolder and
 // ViewTreeUpdater.
 using ViewNodePtr = fxl::RefPtr<ViewNode>;
 using ViewLinker = ObjectLinker<ViewHolder*, View*>;
@@ -74,7 +74,7 @@ class View final : public Resource {
   // Paired |ViewNode| used to attach this View and its children to the scene
   // graph.
   //
-  // TODO(45371): This method is an implementation detail of View and should be
+  // TODO(fxbug.dev/45371): This method is an implementation detail of View and should be
   // private.
   ViewNode* GetViewNode() const { return node_.get(); }
 
@@ -120,7 +120,7 @@ class View final : public Resource {
   zx_koid_t view_ref_koid() const;
 
  private:
-  // TODO(46112): Remove friend usage.
+  // TODO(fxbug.dev/46112): Remove friend usage.
   friend class ViewHolder;
 
   // |ViewLinker::ExportCallbacks|

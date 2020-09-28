@@ -65,7 +65,7 @@ union Rights {
   bool StricterOrSameAs(Rights other) const { return (raw_value & ~(other.raw_value)) == 0; }
 
   // Convenience factory functions for commonly used option combinations.
-  // TODO(38296) : Remove the magic numbers and go back to a style of
+  // TODO(fxbug.dev/38296) : Remove the magic numbers and go back to a style of
   //
   // '''
   // constexpr static Rights FooAndBar() {

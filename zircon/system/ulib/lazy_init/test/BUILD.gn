@@ -51,7 +51,7 @@ test("lazy_init-test") {
   }
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
-  # TODO(47442): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47442): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

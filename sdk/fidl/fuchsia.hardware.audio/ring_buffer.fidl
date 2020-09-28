@@ -100,7 +100,7 @@ protocol RingBuffer {
     Start() -> (zx.time start_time);
 
     /// Stop the ring buffer. Once this call's response is received, no further position
-    /// notifications will be sent until Start() is called again. TODO(39494): Add timestamp
+    /// notifications will be sent until Start() is called again. TODO(fxbug.dev/39494): Add timestamp
     /// parameter.
     Stop() -> ();
 };

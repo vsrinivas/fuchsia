@@ -296,7 +296,7 @@ Enables various kernel debugging and diagnostic features.  Valid
 values are between 0-3.  The higher the value, the more that are
 enabled.  A value of 0 disables all of them.
 
-TODO(41790): This value is derived from assert_level.  Decouple
+TODO(fxbug.dev/41790): This value is derived from assert_level.  Decouple
 the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`

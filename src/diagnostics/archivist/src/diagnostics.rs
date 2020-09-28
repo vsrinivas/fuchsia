@@ -48,7 +48,7 @@ impl Groups {
 }
 
 pub fn init() {
-    //TODO(36574): Replace log calls once archivist can use LogSink service.
+    //TODO(fxbug.dev/36574): Replace log calls once archivist can use LogSink service.
     component::health().set_starting_up();
 }
 
@@ -153,19 +153,19 @@ pub struct DiagnosticsServerStatsGlobal {
 }
 
 impl DiagnosticsServerStatsGlobal {
-    // TODO(54442): Consider encoding prefix as node name and represent the same
+    // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
     pub fn for_inspect(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
         DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "inspect")
     }
 
-    // TODO(54442): Consider encoding prefix as node name and represent the same
+    // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
     pub fn for_lifecycle(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
         DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "lifecycle")
     }
 
-    // TODO(54442): Consider encoding prefix as node name and represent the same
+    // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
     pub fn for_logs(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
         DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "logs")

@@ -59,7 +59,7 @@ if (is_fuchsia) {
     sources = []
     deps = [ ":test_sources" ]
 
-    # TODO(46873): Fix the leaks and remove this.
+    # TODO(fxbug.dev/46873): Fix the leaks and remove this.
     deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 

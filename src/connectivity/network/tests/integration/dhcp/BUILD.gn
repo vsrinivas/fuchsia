@@ -63,7 +63,7 @@ fuchsia_test_package("netemul-dhcp-tests") {
     "//src/connectivity/network/netstack:component-debug",
   ]
 
-  # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   test_specs = {
     environments = nuc_env_fails_on_asan
   }

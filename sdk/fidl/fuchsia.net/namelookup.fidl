@@ -47,7 +47,7 @@ const uint64 MAX_HOSTNAME_SIZE = 255;
 /// by a period (e.g. abc.com has two labels, 'abc' and 'com').
 using Hostname = string:MAX_HOSTNAME_SIZE;
 
-// TODO(49741): Move to fuchsia.net.name once build unification is done.
+// TODO(fxbug.dev/49741): Move to fuchsia.net.name once build unification is done.
 [Discoverable]
 protocol NameLookup {
     /// Look up a list of IP addresses by hostname.

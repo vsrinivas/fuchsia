@@ -75,14 +75,14 @@ impl ConnectedPeers {
         let remote_streams = strong.collect_capabilities().await?;
 
         // Find the SBC stream, which should exist (it is required)
-        // TODO(39321): Prefer AAC when remote peer supports AAC.
+        // TODO(fxbug.dev/39321): Prefer AAC when remote peer supports AAC.
         let remote_stream = remote_streams
             .iter()
             .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Source)
             .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
             .ok_or(format_err!("Couldn't find a compatible stream"))?;
 
-        // TODO(39321): Choose codec options based on availability and quality.
+        // TODO(fxbug.dev/39321): Choose codec options based on availability and quality.
         let sbc_media_codec_info = SbcCodecInfo::new(
             SbcSamplingFrequency::FREQ44100HZ,
             SbcChannelMode::JOINT_STEREO,

@@ -230,7 +230,7 @@ static_library("libFraunhoferAAC") {
     "//src/media/codec/codecs/sw/low_layer/codec_android_pal:codec_android_pal",
   ]
 
-  # TODO(46738): UBSan has found an instance of undefined behavior in this target.
+  # TODO(fxbug.dev/46738): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   public_configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
   configs += [

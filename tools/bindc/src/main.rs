@@ -54,7 +54,7 @@ enum Command {
         #[structopt(short = "d", long = "depfile", parse(from_os_str))]
         depfile: Option<PathBuf>,
 
-        // TODO(43400): Eventually this option should be removed when we can define this
+        // TODO(fxbug.dev/43400): Eventually this option should be removed when we can define this
         // configuration in the driver's component manifest.
         /// Disable automatically binding the driver so that the driver must be bound on a user's
         /// request.
@@ -80,7 +80,7 @@ enum Command {
         #[structopt(flatten)]
         options: SharedOptions,
 
-        // TODO(56774): Refer to documentation for bind testing.
+        // TODO(fxbug.dev/56774): Refer to documentation for bind testing.
         /// A file containing the test specification.
         #[structopt(short = "t", long = "test-spec", parse(from_os_str))]
         test_spec: PathBuf,

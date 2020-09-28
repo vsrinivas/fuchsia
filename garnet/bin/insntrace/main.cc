@@ -42,7 +42,7 @@ static constexpr uint32_t kCr3MatchReservedMask = 0x1f;
 
 // TODO(dje): Split up into topics, output is long and can scroll off screen.
 //
-// TODO(39631): Support tracing a particular program or individual threads. It's simplest, and
+// TODO(fxbug.dev/39631): Support tracing a particular program or individual threads. It's simplest, and
 // consistent with other programs, if the syntax is "insntrace program [argv]". That is why
 // "--control" is a required argument at the moment.
 constexpr char kUsageString[] =

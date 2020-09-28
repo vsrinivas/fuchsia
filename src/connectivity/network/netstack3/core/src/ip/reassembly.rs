@@ -213,7 +213,7 @@ struct FragmentCacheData {
     //               For now, a `BTreeSet` is used since Rust provides one and it does the job of
     //               keeping the list of gaps in increasing order when searching, inserting and
     //               removing. How many fragments for a packet will we get in practice though?
-    // TODO(50830): O(n) complexity per fragment is a DDOS vulnerability: this should be
+    // TODO(fxbug.dev/50830): O(n) complexity per fragment is a DDOS vulnerability: this should be
     //              refactored to be O(log(n)).
     missing_blocks: BTreeSet<(u16, u16)>,
 

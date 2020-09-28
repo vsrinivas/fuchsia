@@ -52,7 +52,7 @@ rustc_test("font_info_test_bin") {
 
   sources = [ "tests/tests.rs" ]
 
-  # TODO(38228): Fix leak in font_info_test.
+  # TODO(fxbug.dev/38228): Fix leak in font_info_test.
   non_rust_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

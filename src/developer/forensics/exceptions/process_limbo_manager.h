@@ -52,7 +52,7 @@ class ProcessLimboManager {
   // Corresponds to the return value of |WatchProcessesWaitingOnException|.
   std::vector<fuchsia::exception::ProcessExceptionMetadata> ListProcessesInLimbo();
 
-  // TODO(45962): This is an extremely naive approach. There are several policies to make this more
+  // TODO(fxbug.dev/45962): This is an extremely naive approach. There are several policies to make this more
   //              robust:
   //                - Put a ceiling on the amount of exceptions to be held.
   //                - Define an eviction policy (FIFO probably).

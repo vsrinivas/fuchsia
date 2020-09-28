@@ -62,7 +62,7 @@ func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 	// Since we are delivering the packet to a NetworkDispatcher, we do not need
 	// to allocate bytes for a LinkEndpoint's header.
 	//
-	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
+	// TODO(fxbug.dev/50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
 	hdr := packetbuffer.ToView(pkt)
 	if e.filter.Run(Incoming, protocol, hdr, buffer.VectorisedView{}) != Pass {
@@ -83,7 +83,7 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 	// The filter expects the packet's header to be in the packet buffer's
 	// header.
 	//
-	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
+	// TODO(fxbug.dev/50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
 	hdr := packetbuffer.ToView(pkt)
 	if e.filter.Run(Outgoing, protocol, hdr, buffer.VectorisedView{}) == Pass {
@@ -107,7 +107,7 @@ func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 		// The filter expects the packet's header to be in the packet buffer's
 		// header.
 		//
-		// TODO(50424): Support using a buffer.VectorisedView when parsing packets
+		// TODO(fxbug.dev/50424): Support using a buffer.VectorisedView when parsing packets
 		// so we don't need to create a single view here.
 		hdr := packetbuffer.ToView(pkt)
 		if e.filter.Run(Outgoing, protocol, hdr, buffer.VectorisedView{}) == Pass {

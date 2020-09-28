@@ -112,7 +112,7 @@ class AudioDriver {
   virtual AudioClock& reference_clock() = 0;
 };
 
-// TODO(41922): Remove AudioDriverV1 once the transition to V2 is completed.
+// TODO(fxbug.dev/41922): Remove AudioDriverV1 once the transition to V2 is completed.
 class AudioDriverV1 : public AudioDriver {
  public:
   AudioDriverV1(AudioDevice* owner);

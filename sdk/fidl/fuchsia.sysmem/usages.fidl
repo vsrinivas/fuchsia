@@ -15,7 +15,7 @@ struct BufferUsage {
     uint32 video;
 };
 
-// TODO(55935): Consts should use upper snake case per FIDL style guide.
+// TODO(fxbug.dev/55935): Consts should use upper snake case per FIDL style guide.
 // We should reformat the naming of consts in this FIDL file.
 
 // Flag for "none" usage.
@@ -74,7 +74,7 @@ const uint32 displayUsageCursor = 2;
 // TODO(fxbug.dev/32118): Add more specific HwDecoder flags if needed.
 const uint32 videoUsageHwDecoder = 1;
 const uint32 videoUsageHwEncoder = 2;
-// TODO(34192): This bit is redundant with secure_required and supported heaps.  This bit will
+// TODO(fxbug.dev/34192): This bit is redundant with secure_required and supported heaps.  This bit will
 // not be carried forward.
 const uint32 videoUsageHwProtected = 4;
 const uint32 videoUsageCapture = 8;
@@ -82,7 +82,7 @@ const uint32 videoUsageCapture = 8;
 // encoded access units.  The decryptor output may be in secure memory (controlled separately via
 // secure_required).
 //
-// TODO(34192): Overhaul usage so we can add usage categories without breaking client struct init
+// TODO(fxbug.dev/34192): Overhaul usage so we can add usage categories without breaking client struct init
 // code repeatedly.  For now, this value is in the "video" category but to some degree isn't really
 // video; this usage can be used for the output of any secure decryptor.  Also, other usages should
 // include input vs. output as those are separate buffer collections and are really separate usages.

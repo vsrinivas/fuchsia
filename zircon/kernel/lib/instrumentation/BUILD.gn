@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54322): Keep in sync with BUILD.zircon.gn until kernel is migrated to
+# TODO(fxbug.dev/54322): Keep in sync with BUILD.zircon.gn until kernel is migrated to
 # the Fuchsia build. Then remove the latter file.
 
 # This defines C symbol `__llvm_profile_header` with reference to the other

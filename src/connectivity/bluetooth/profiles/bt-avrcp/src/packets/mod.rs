@@ -442,7 +442,7 @@ impl VendorDependentPdu for RawVendorDependentPacket {
     }
 }
 
-// TODO(41343): Specify the command type with the REPL when sending raw packets.
+// TODO(fxbug.dev/41343): Specify the command type with the REPL when sending raw packets.
 // For now, default to Control.
 /// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for RawVendorDependentPacket {

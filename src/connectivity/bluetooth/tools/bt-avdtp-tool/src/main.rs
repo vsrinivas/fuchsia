@@ -38,12 +38,12 @@ struct Options {
 
 /// Generates the next local identifier for the current session.
 /// Increments linearly, and returns the id as a string.
-// TODO(37089): Generate IDs based on the peer_id, and clean up state accordingly.
+// TODO(fxbug.dev/37089): Generate IDs based on the peer_id, and clean up state accordingly.
 fn next_string(input: &str) -> String {
     (input.parse::<u64>().unwrap() + 1).to_string()
 }
 
-// TODO(37089): Spawn listener for PeerEventStream to delete peer from map
+// TODO(fxbug.dev/37089): Spawn listener for PeerEventStream to delete peer from map
 // when a peer disconnects from service.
 async fn peer_manager_listener(
     avdtp_svc: &PeerManagerProxy,

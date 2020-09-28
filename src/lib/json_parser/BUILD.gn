@@ -25,7 +25,7 @@ source_set("json_parser") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -46,11 +46,11 @@ executable("json_parser_unittests_bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
-  # TODO(46748): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46748): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   configs += [

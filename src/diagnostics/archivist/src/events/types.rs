@@ -371,7 +371,7 @@ fn construct_payload_holding_component_event(
                     }
                 }
                 fsys::EventResult::Error(e) => {
-                    // TODO(53903): result.error carries information about errors that happened
+                    // TODO(fxbug.dev/53903): result.error carries information about errors that happened
                     // in component_manager. We should dump those in diagnostics.
                     Err(format_err!("Payload containing event encountered an error: {:?}", e))
                 }

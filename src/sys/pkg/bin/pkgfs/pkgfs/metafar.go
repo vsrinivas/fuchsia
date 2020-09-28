@@ -234,7 +234,7 @@ type metaFarFile struct {
 	vmo *zx.VMO
 
 	// VMO representing the blob backing this entire archive.
-	// TODO(52938): It would be more efficient to cache this VMO for all files
+	// TODO(fxbug.dev/52938): It would be more efficient to cache this VMO for all files
 	// within the same meta far to avoid calling GetBuffer() on the same blob
 	// for multiple files.
 	backingBlobVMO *zx.VMO

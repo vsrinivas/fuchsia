@@ -127,7 +127,7 @@ impl Peers {
                 info!("After initiator delay, {} was connected, not connecting..", id);
                 if let Some(peer) = peer.upgrade() {
                     if peer.set_descriptor(desc.clone()).is_none() {
-                        // TODO(50465): maybe check to see if we should start streaming.
+                        // TODO(fxbug.dev/50465): maybe check to see if we should start streaming.
                         Peers::spawn_streaming(entry.clone());
                     }
                 }
@@ -309,7 +309,7 @@ impl<'a> SelectedStream<'a> {
                 codec_extra,
                 ..
             } => {
-                // TODO(39321): Choose codec options based on availability and quality.
+                // TODO(fxbug.dev/39321): Choose codec options based on availability and quality.
                 let remote_codec_info = SbcCodecInfo::try_from(&codec_extra[..])?;
                 // Attempt to use the recommended "High Quality" bitpool value.
                 let mut bitpool_value = 51;

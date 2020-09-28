@@ -49,7 +49,7 @@ void HardwareDisplayControllerProviderImpl::OpenController(
           return;
         }
 
-        // TODO(57269): it would be nice to simply pass |callback| asynchronously into
+        // TODO(fxbug.dev/57269): it would be nice to simply pass |callback| asynchronously into
         // OpenController(), rather than blocking on a synchronous call.  However, it is non-trivial
         // to do so, so for now we use a blocking call to proxy the request.
         fdio_cpp::FdioCaller caller(std::move(fd));

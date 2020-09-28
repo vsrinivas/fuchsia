@@ -23,7 +23,7 @@ void main() {
       'input',
       'flutter',
       'gfx',
-      // TODO(56996): Adding 'kernel:meta' here causes the scroll-flutter.cmx.ui
+      // TODO(fxbug.dev/56996): Adding 'kernel:meta' here causes the scroll-flutter.cmx.ui
       // thread to be unnamed in the trace, which in turn causes the drm_fps
       // metric to fail.
     ]);

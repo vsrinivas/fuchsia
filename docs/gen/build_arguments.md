@@ -1864,7 +1864,7 @@ From //build/product.gni:7
 ### product_include_updates_in_blobfs
 Include update package in blob.blk. Some products may not need the update
 package included as part of the blobfs.
-TODO(58645) Remove when no longer needed.
+TODO(fxbug.dev/58645) Remove when no longer needed.
 
 **Current value (from the default):** `true`
 

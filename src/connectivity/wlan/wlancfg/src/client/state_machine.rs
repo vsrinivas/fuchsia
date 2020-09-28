@@ -30,7 +30,7 @@ use {
     wlan_common::RadioConfig,
 };
 
-// TODO(53513): add Cobalt metrics
+// TODO(fxbug.dev/53513): add Cobalt metrics
 
 const SME_STATUS_INTERVAL_SEC: i64 = 1; // this poll is very cheap, so we can do it frequently
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
@@ -223,7 +223,7 @@ async fn disconnecting_state(
 ) -> Result<State, ExitReason> {
     debug!("Entering disconnecting state");
 
-    // TODO(53505): either make this fire-and-forget in the SME, or spawn a thread for this,
+    // TODO(fxbug.dev/53505): either make this fire-and-forget in the SME, or spawn a thread for this,
     // so we don't block on it
     common_options.proxy.disconnect().await.map_err(|e| {
         ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
@@ -503,7 +503,7 @@ async fn connected_state(
 ) -> Result<State, ExitReason> {
     debug!("Entering connected state");
 
-    // TODO(57237): replace this poll with a notification from wlanstack in the ConnectTxn
+    // TODO(fxbug.dev/57237): replace this poll with a notification from wlanstack in the ConnectTxn
     // Holds a pending SME status request.  Request status immediately upon entering the started state.
     let mut pending_status_req = FuturesUnordered::new();
     pending_status_req.push(common_options.proxy.status());
@@ -519,7 +519,7 @@ async fn connected_state(
                 })?;
                 match status_response.connected_to {
                     Some(bss_info) => {
-                        // TODO(53545): send some stats to the saved network manager
+                        // TODO(fxbug.dev/53545): send some stats to the saved network manager
                         if (bss_info.ssid != current_network.network.ssid) {
                             error!("Currently connected SSID changed unexpectedly");
                             return Err(ExitReason(Err(format_err!("Currently connected SSID changed unexpectedly"))));
@@ -1542,7 +1542,7 @@ mod tests {
             }
         );
         // Progress the state machine
-        // TODO(53505): remove this once the disconnect request is fire-and-forget
+        // TODO(fxbug.dev/53505): remove this once the disconnect request is fire-and-forget
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         // Third SME request: connect to the second network
         assert_variant!(
@@ -1980,7 +1980,7 @@ mod tests {
             }
         );
         // Progress the state machine
-        // TODO(53505): remove this once the disconnect request is fire-and-forget
+        // TODO(fxbug.dev/53505): remove this once the disconnect request is fire-and-forget
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         // Second SME request: connect to the second network
         assert_variant!(
@@ -2107,7 +2107,7 @@ mod tests {
             }
         );
         // Progress the state machine
-        // TODO(53505): remove this once the disconnect request is fire-and-forget
+        // TODO(fxbug.dev/53505): remove this once the disconnect request is fire-and-forget
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Check for a disconnect update

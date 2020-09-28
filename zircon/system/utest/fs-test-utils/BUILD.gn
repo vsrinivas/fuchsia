@@ -53,7 +53,7 @@ test("fs-test-utils") {
     "//zircon/system/ulib/unittest",
   ]
 
-  # TODO(46861): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46861): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

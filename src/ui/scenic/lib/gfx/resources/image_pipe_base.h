@@ -20,7 +20,7 @@ struct ImagePipeUpdateResults {
 };
 
 // Abstract superclass for ImagePipe and ImagePipe2.
-// TODO(35636): This class is to be DEPRECATED in favor of ImagePipe2.
+// TODO(fxbug.dev/35636): This class is to be DEPRECATED in favor of ImagePipe2.
 class ImagePipeBase : public ImageBase {
  public:
   // Call telling the ImagePipe to update up to the Present call matching |present_id|.

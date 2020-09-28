@@ -37,7 +37,7 @@ impl Drop for HostDiscoverySession {
         trace!("HostDiscoverySession ended");
         if let Some(host) = self.adap.upgrade() {
             if let Err(err) = host.write().stop_discovery() {
-                // TODO(45325) - we should close the host channel if an error is returned
+                // TODO(fxbug.dev/45325) - we should close the host channel if an error is returned
                 warn!("Unexpected error response when stopping discovery: {:?}", err);
             }
         }

@@ -44,7 +44,7 @@ source_set("config") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -73,7 +73,7 @@ source_set("crash_register") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
@@ -340,7 +340,7 @@ source_set("store") {
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

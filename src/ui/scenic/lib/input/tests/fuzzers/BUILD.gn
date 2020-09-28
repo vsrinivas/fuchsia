@@ -13,7 +13,7 @@ fuzzer("input-fuzzer") {
     "//src/ui/scenic/lib/input/tests:util",
   ]
 
-  # TODO(46730): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46730): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

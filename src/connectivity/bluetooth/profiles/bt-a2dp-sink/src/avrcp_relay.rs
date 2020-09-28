@@ -121,7 +121,7 @@ impl AvrcpRelay {
 
         // Get the initial Media Attributes and status
         let mut building = staged_info.as_mut().unwrap();
-        // TODO(42914): sometimes these initially fail with "Protocol Error".  Avoid exiting the
+        // TODO(fxbug.dev/42914): sometimes these initially fail with "Protocol Error".  Avoid exiting the
         // relay for now.
         let _ = update_attributes(&controller, &mut building, &mut last_player_status).await;
         let _ = update_status(&controller, &mut last_player_status).await;

@@ -1095,7 +1095,7 @@ impl<'a> MetricState<'a> {
         }
         MetricValue::Bool(match self.evaluate(namespace, &operands[0]) {
             MetricValue::Missing(_) => true,
-            // TODO(58922): Well-designed errors and special cases, not hacks
+            // TODO(fxbug.dev/58922): Well-designed errors and special cases, not hacks
             MetricValue::Vector(contents) if contents.len() == 0 => true,
             MetricValue::Vector(contents) if contents.len() == 1 => match contents[0] {
                 MetricValue::Missing(_) => true,
@@ -1734,7 +1734,7 @@ pub(crate) mod test {
         );
     }
 
-    // TODO(58922): Modify or probably delete this function after better error design.
+    // TODO(fxbug.dev/58922): Modify or probably delete this function after better error design.
     #[test]
     fn test_missing_hacks() -> Result<(), Error> {
         macro_rules! eval {

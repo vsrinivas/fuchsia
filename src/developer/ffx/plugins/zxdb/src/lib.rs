@@ -30,7 +30,7 @@ pub async fn debug(
     let listener = async_std::os::unix::net::UnixListener::bind(&cmd.socket_location).await?;
 
     // Start the local debugger.
-    // TODO(57639) Remove dependency on fx.
+    // TODO(fxbug.dev/57639) Remove dependency on fx.
     std::process::Command::new("fx")
         .args(&["debug", "--no-agent", "--", "--unix-connect", &cmd.socket_location])
         .spawn()

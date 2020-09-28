@@ -13,7 +13,7 @@ source_set("converter") {
   deps = [
     "//src/lib/fxl",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
   configs += [
@@ -29,7 +29,7 @@ executable("converter_bin") {
   deps = [
     ":converter",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -64,7 +64,7 @@ test("catapult_converter_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

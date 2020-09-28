@@ -608,7 +608,7 @@ async fn populate_inspect_repo(
     // as an Option is only to support mock objects for equality in tests.
     let diagnostics_proxy = diagnostics_ready_data.directory.unwrap();
 
-    // TODO(55736): The pipeline specific updates should be happening asynchronously.
+    // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
     // Once there is a central repository for each pipeline, the updates will just be
     // greedy selector evaluation.
     for diagnostics_repo in &state.lock().diagnostics_repositories {
@@ -617,7 +617,7 @@ async fn populate_inspect_repo(
         let identifier = diagnostics_ready_data.metadata.component_id.clone();
         match io_util::clone_directory(&diagnostics_proxy, CLONE_FLAG_SAME_RIGHTS) {
             Ok(cloned_directory) => {
-                // TODO(55736): There should be a central diagnostics repository that
+                // TODO(fxbug.dev/55736): There should be a central diagnostics repository that
                 // is shared across all pipelines.
                 diagnostics_repo
                     .write()
@@ -707,7 +707,7 @@ async fn process_event(
             archive_event(&state, "RUNNING", archived_metadata.clone()).await
         }
         ComponentEvent::Stop(stop) => {
-            // TODO(53939): Get inspect data from repository before removing
+            // TODO(fxbug.dev/53939): Get inspect data from repository before removing
             // for post-mortem inspection.
             remove_from_inspect_repo(&state, &stop.metadata.component_id);
             archive_event(&state, "STOP", stop.metadata).await
@@ -736,7 +736,7 @@ async fn archive_event(
     let max_archive_size_bytes = configuration.max_archive_size_bytes;
     let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
 
-    // TODO(53939): Get inspect data from repository before removing
+    // TODO(fxbug.dev/53939): Get inspect data from repository before removing
     // for post-mortem inspection.
     //let log = writer.get_log().new_event(event_name, event_data.component_id);
     // if let Some(data_map) = event_data.component_data_map {

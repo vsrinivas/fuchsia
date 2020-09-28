@@ -43,7 +43,7 @@ executable("headless_root_presenter_apptests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/bin/headless_root_presenter:lib",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

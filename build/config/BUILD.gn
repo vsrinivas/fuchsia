@@ -194,7 +194,7 @@ config("toolchain_version_stamp") {
 }
 
 config("relative_paths") {
-  # TODO(54161): Keep in sync with //zircon/public/gn/config:relative_paths
+  # TODO(fxbug.dev/54161): Keep in sync with //zircon/public/gn/config:relative_paths
   # until build unification completes.
 
   if (is_gcc) {
@@ -402,7 +402,7 @@ config("optimize_sanitizer") {
 }
 
 config("optimize_profile") {
-  # TODO(51509): Perhaps use a different default.
+  # TODO(fxbug.dev/51509): Perhaps use a different default.
   configs = [ ":optimize_none" ]
 }
 
@@ -436,7 +436,7 @@ config("linker_gc_sanitizer") {
 }
 
 config("linker_gc_profile") {
-  # TODO(51509): See if we can enable linker GC for profile.
+  # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
 }
 
 config("default_linker_gc") {
@@ -475,7 +475,7 @@ config("debuginfo_debug") {
 config("default_debuginfo") {
   configs = [ ":debuginfo_${debuginfo}" ]
   if (debuginfo != "none" && current_os == "win") {
-    # TODO(55244): This produces the .pdb file, but it doesn't seem
+    # TODO(fxbug.dev/55244): This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
     ldflags = [ "-Wl,/debug:full" ]
   }
@@ -522,38 +522,38 @@ config("default_warnings") {
     "-Wno-unknown-warning-option",
     "-Wno-sign-conversion",
 
-    # TODO(35965): Temporarily disable C99 designator warnings introduced in
+    # TODO(fxbug.dev/35965): Temporarily disable C99 designator warnings introduced in
     # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
     # and we do some cleanup, this will be re-enabled.
     "-Wno-unknown-warning-option",
     "-Wno-c99-designator",
 
-    # TODO(37215): Temporarily disable this warning until we roll toolchain.
+    # TODO(fxbug.dev/37215): Temporarily disable this warning until we roll toolchain.
     # Then we can re-enable it and cleanup instances it appears.
     "-Wno-int-in-bool-context",
 
-    # TODO(37765): Keep this flag here while it is enabled in ZN to keep the
+    # TODO(fxbug.dev/37765): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-address-of-packed-member",
 
-    # TODO(43681): Temporarily disable this warning until we roll toolchain,
+    # TODO(fxbug.dev/43681): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-range-loop-analysis",
 
-    # TODO(49143): Temporarily disable this warning until we disable it
+    # TODO(fxbug.dev/49143): Temporarily disable this warning until we disable it
     # individually for affected third_party libraries.
     "-Wno-deprecated-declarations",
   ]
   cflags_cc = [
-    # TODO(38640): Keep this flag here while it is enabled in ZN to keep the
+    # TODO(fxbug.dev/38640): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-deprecated-copy",
 
-    # TODO(45689): Temporarily disable this warning until we roll toolchain,
+    # TODO(fxbug.dev/45689): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-non-c-typedef-for-linkage",
 
-    # TODO(56202): Temporarily disable this warning until we roll toolchain,
+    # TODO(fxbug.dev/56202): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-unknown-warning-option",
     "-Wno-suggest-override",
@@ -1050,7 +1050,7 @@ config("Wno-conversion") {
   ]
 }
 
-# TODO(fxb/58162): clean up instances of this outside of third party code.
+# TODO(fxbug.dev/58162): clean up instances of this outside of third party code.
 # This is the same as "Wno-conversion" above but without a visibility list.
 # This in turn allows us to have generated code depend on this config. Having
 # an explicit allowlist for generated code (e.g. fidl_cpp template expansions)
@@ -1166,7 +1166,7 @@ config("no_profile") {
 }
 
 # IMPORTANT: Keep the configs below in sync with //zircon/public/gn/config/BUILD.zircon.gn
-# TODO(54322): Remove above comment after build unification.
+# TODO(fxbug.dev/54322): Remove above comment after build unification.
 
 config("icf") {
   # This changes C/C++ semantics and might be incompatible with third-party

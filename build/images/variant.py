@@ -83,7 +83,7 @@ def make_variant(name, info):
             # They just use the base variant.
             libprefix = libprefix[:-len(FUZZER_VARIANT_SUFFIX)]
         if name.startswith(RUST_VARIANT_PREFIX):
-            # TODO(45102): Until the system libraries and loaders can support
+            # TODO(fxbug.dev/45102): Until the system libraries and loaders can support
             # using toolchain-supplied compiler runtimes, the rustc variants
             # need to use clang variants.
             libprefix = libprefix[len(RUST_VARIANT_PREFIX):]

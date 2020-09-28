@@ -122,7 +122,7 @@ pub fn derive_phy_cbw(
     };
 
     // Safe to unwrap below because phy_to_use guarantees that IEs exist.
-    // TODO(38205): Clean up this part to remove all the expect(...).
+    // TODO(fxbug.dev/38205): Clean up this part to remove all the expect(...).
     let best_cbw = match phy_to_use {
         fidl_common::Phy::Hr => fidl_common::Cbw::Cbw20,
         fidl_common::Phy::Erp => fidl_common::Cbw::Cbw20,

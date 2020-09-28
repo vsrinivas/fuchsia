@@ -44,7 +44,7 @@ impl RegisteredServiceId {
 /// A ServiceRecord representing the information about a service.
 /// A ServiceRecord is considered "registered" when it has been assigned
 /// a unique RegisteredServiceId.
-// TODO(51454): Store all the fields of the ServiceDefinition here.
+// TODO(fxbug.dev/51454): Store all the fields of the ServiceDefinition here.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServiceRecord {
     /// The Service Class IDs specified by this record. There must be at least one.
@@ -152,9 +152,9 @@ impl ServiceRecord {
     /// ProtocolDescriptorList from the data in the ServiceRecord.
     ///
     /// Returns an error if the ServiceRecord has not been registered.
-    // TODO(51454): Build the full ServiceFoundResponse. Right now, we just
+    // TODO(fxbug.dev/51454): Build the full ServiceFoundResponse. Right now, we just
     // build the primary L2CAP Protocol, ServiceClassIdentifiers, and Profile Descriptors.
-    // TODO(51454): Filter response to only include attributes requested by
+    // TODO(fxbug.dev/51454): Filter response to only include attributes requested by
     // the search. Right now we just return everything regardless - this is OK
     // according to Profile API.
     pub fn to_service_found_response(&self) -> Result<ServiceFoundResponse, Error> {

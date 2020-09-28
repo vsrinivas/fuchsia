@@ -36,7 +36,7 @@ constexpr fuchsia::sysmem::BufferUsage kNoneUsage = {.none = fuchsia::sysmem::no
 
 constexpr std::pair<fuchsia::sysmem::BufferUsage, fuchsia::sysmem::BufferMemoryConstraints>
 GetUsageAndMemoryConstraintsForCpuWriteOften() {
-  // TODO(55193): The default memory constraints set by Sysmem only allows using
+  // TODO(fxbug.dev/55193): The default memory constraints set by Sysmem only allows using
   // CPU domain for buffers with CPU usage, while Mali driver asks for only
   // RAM and Inaccessible domains for buffer allocation, which caused failure in
   // sysmem allocation. So here we add RAM domain support to clients in order

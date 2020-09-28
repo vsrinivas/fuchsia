@@ -375,7 +375,7 @@ template("zircon_toolchain") {
     }
   }
 
-  # TODO(58294): enable for other targets and binary formats.
+  # TODO(fxbug.dev/58294): enable for other targets and binary formats.
   use_gsym = output_gsym && is_elf && invoker.os == "fuchsia"
   if (use_gsym) {
     gsymutil = rebase_path("$clang_tool_dir/llvm-gsymutil", root_build_dir)
@@ -617,7 +617,7 @@ template("zircon_toolchain") {
     # IMPORTANT: The toolchain_args variables in the Fuchsia and Zircon builds
     # are very distinct.
 
-    # TODO(51585): Keep this in sync with the corresponding code in //BUILD.gn
+    # TODO(fxbug.dev/51585): Keep this in sync with the corresponding code in //BUILD.gn
     if (optimize == "none" || optimize == "sanitizer" ||
         optimize == "profile" || optimize == "size") {
       _zircon_optimize = optimize

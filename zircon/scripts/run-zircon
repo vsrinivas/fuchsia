@@ -346,7 +346,7 @@ case $ARCH in
           ARGS+=" -machine virtualization=true -cpu max"
         fi
         # Ask for a specific virt machine version.
-        # TODO(54317) add support for high PCIe aperture
+        # TODO(fxbug.dev/54317) add support for high PCIe aperture
         # Can switch to plain 'virt' once this is fixed.
         ARGS+=" -machine virt-2.12"
         # append a gic version to the machine specifier

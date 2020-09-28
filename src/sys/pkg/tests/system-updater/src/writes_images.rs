@@ -322,7 +322,7 @@ async fn writes_recovery_called_legacy_zedboot() {
     );
 }
 
-// TODO(52356): drop this duplicate test when "zedboot" is no longer allowed/used.
+// TODO(fxbug.dev/52356): drop this duplicate test when "zedboot" is no longer allowed/used.
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery() {
     let env = TestEnv::builder().oneshot(true).build();

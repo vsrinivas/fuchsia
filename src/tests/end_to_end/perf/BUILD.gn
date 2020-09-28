@@ -121,7 +121,7 @@ if (is_host) {
       "//garnet/bin/trace2json:bin",
     ]
 
-    # TODO(48350): Enable host build for non-linux hosts as well.
+    # TODO(fxbug.dev/48350): Enable host build for non-linux hosts as well.
     if (host_os == "linux") {
       sources += [ "$root_out_dir/iperf3" ]
       deps += [ "//third_party/iperf:bin" ]

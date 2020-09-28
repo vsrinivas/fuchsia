@@ -202,7 +202,7 @@ impl RunningTest {
     }
 
     /// Connect to an instance of a FIDL protocol hosted in `directory` to `server_end`.
-    // TODO(56604): This tries to connect to the protocol under root, then falls back to /svc if
+    // TODO(fxbug.dev/56604): This tries to connect to the protocol under root, then falls back to /svc if
     // that fails. Remove this fallback (and the async) once 56604 is done.
     pub async fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
         directory: &DirectoryProxy,

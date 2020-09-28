@@ -24,7 +24,7 @@ pub struct AuthenticatorConnection {
     connection_state: Mutex<Option<Arc<App>>>,
 }
 
-// TODO(427): Add test coverage through integration tests.
+// TODO(fxbug.dev/427): Add test coverage through integration tests.
 impl AuthenticatorConnection {
     /// Creates a new `AuthenticatorConnection` from the supplied Fuchsia component url.
     pub fn from_url(component_url: &str) -> Self {

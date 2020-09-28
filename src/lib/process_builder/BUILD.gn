@@ -128,7 +128,7 @@ config("static-pie-config") {
 executable("static_pie_test_util") {
   testonly = true
 
-  # TODO(60072): Support syslog backend here.
+  # TODO(fxbug.dev/60072): Support syslog backend here.
   disable_syslog_backend = true
 
   sources = [ "test/static_pie_test_util.c" ]

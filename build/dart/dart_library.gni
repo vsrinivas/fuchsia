@@ -184,7 +184,7 @@ if (current_toolchain == dart_toolchain) {
     # Dependencies of the umbrella group for the targets in this file.
     group_deps = []
 
-    # TODO(55756) remove usages of .packages.
+    # TODO(fxbug.dev/55756) remove usages of .packages.
     # This is here because there are still some tools which rely on the
     # existence of this file. When all the usages of this file have been
     # removed from the tree we can remove the generation of this file.

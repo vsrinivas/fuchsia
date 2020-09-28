@@ -92,7 +92,7 @@ namespace json {
 // The JSONParser should be used from the json_parser namespace to be consistent with the rest of
 // this library but currently many callsites expect this to live in the json namespace. This alias
 // allows both names to work.
-// TODO(36759): Update callers to new name and remove this alias.
+// TODO(fxbug.dev/36759): Update callers to new name and remove this alias.
 using JSONParser = ::json_parser::JSONParser;
 }  // namespace json
 

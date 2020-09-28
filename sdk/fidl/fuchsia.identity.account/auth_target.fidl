@@ -164,7 +164,7 @@ protocol Account {
     /// supported.
     ///
     /// `data_directory` The server end of a `fuchsia.io.Directory` channel
-    // TODO(45799): Support multiple component instance clients.
+    // TODO(fxbug.dev/45799): Support multiple component instance clients.
     GetDataDirectory(request<fuchsia.io.Directory> data_directory)
         -> () error Error;
 };

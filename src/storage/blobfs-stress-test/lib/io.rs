@@ -78,7 +78,7 @@ impl File {
     pub async fn truncate(&self, length: u64) {
         let raw_status_code = self.proxy.truncate(length).await.unwrap();
 
-        // TODO(58749): Bubble the status code up
+        // TODO(fxbug.dev/58749): Bubble the status code up
         Status::ok(raw_status_code).unwrap();
     }
 
@@ -106,7 +106,7 @@ impl File {
     pub async fn flush(&self) {
         let raw_status_code = self.proxy.sync().await.unwrap();
 
-        // TODO(58749): Bubble the status code up
+        // TODO(fxbug.dev/58749): Bubble the status code up
         Status::ok(raw_status_code).unwrap();
     }
 
@@ -114,7 +114,7 @@ impl File {
     pub async fn size_on_disk(&self) -> u64 {
         let (raw_status_code, attr) = self.proxy.get_attr().await.unwrap();
 
-        // TODO(58749): Bubble the status code up
+        // TODO(fxbug.dev/58749): Bubble the status code up
         Status::ok(raw_status_code).unwrap();
         attr.storage_size
     }
@@ -123,7 +123,7 @@ impl File {
     pub async fn uncompressed_size(&self) -> u64 {
         let (raw_status_code, attr) = self.proxy.get_attr().await.unwrap();
 
-        // TODO(58749): Bubble the status code up
+        // TODO(fxbug.dev/58749): Bubble the status code up
         Status::ok(raw_status_code).unwrap();
         attr.content_size
     }
@@ -138,7 +138,7 @@ impl File {
             let bytes_to_read = std::cmp::min(num_bytes, fidl_fuchsia_io::MAX_BUF);
             let (raw_status_code, mut bytes) = self.proxy.read(bytes_to_read).await.unwrap();
 
-            // TODO(58749): Bubble the status code up
+            // TODO(fxbug.dev/58749): Bubble the status code up
             Status::ok(raw_status_code).unwrap();
             assert_eq!(bytes.len() as u64, bytes_to_read);
             data.append(&mut bytes);
@@ -157,7 +157,7 @@ impl File {
     pub async fn seek_from_start(&self, offset: u64) {
         let (raw_status_code, _) = self.proxy.seek(offset as i64, SeekOrigin::Start).await.unwrap();
 
-        // TODO(58749): Bubble the status code up
+        // TODO(fxbug.dev/58749): Bubble the status code up
         Status::ok(raw_status_code).unwrap();
     }
 

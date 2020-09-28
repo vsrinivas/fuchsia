@@ -333,10 +333,10 @@ impl TestAvrcpClientController {
                 }
             }
             ControllerExtRequest::Connect { control_handle: _ } => {
-                // TODO(37266): implement
+                // TODO(fxbug.dev/37266): implement
             }
             ControllerExtRequest::Disconnect { control_handle: _ } => {
-                // TODO(37266): implement
+                // TODO(fxbug.dev/37266): implement
             }
             ControllerExtRequest::SendRawVendorDependentCommand { pdu_id, command, responder } => {
                 responder.send(
@@ -427,7 +427,7 @@ where
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
-                        // TODO(46796): eliminate this parsing with an API Update
+                        // TODO(fxbug.dev/46796): eliminate this parsing with an API Update
                         let peer_id: PeerId = peer_id.parse()?;
                         let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                         sender.try_send(pcr)?;

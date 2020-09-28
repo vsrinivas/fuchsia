@@ -219,7 +219,7 @@ func (o *statsObserver) run(ctx context.Context, interval time.Duration, stats *
 				lastStats[networking_metrics.BytesSentMetricId] = bytesSent
 				lastStats[networking_metrics.BytesReceivedMetricId] = bytesReceived
 
-				// TODO(43237): log the NIC features (eth, WLAN, bridge) associated with each datapoint
+				// TODO(fxbug.dev/43237): log the NIC features (eth, WLAN, bridge) associated with each datapoint
 				events = append(
 					events,
 					cobalt.CobaltEvent{
@@ -1119,7 +1119,7 @@ func (ns *Netstack) addEndpoint(
 			defer ifs.mu.Unlock()
 			ifs.mu.dhcp.Client = dhcp.NewClient(ns.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
 
-			// TODO(37636): remove this. netstack automatically generates a link-local
+			// TODO(fxbug.dev/37636): remove this. netstack automatically generates a link-local
 			// ipv6 address via a configuration option. However, the algorithm used to
 			// generate that address may differ from the algorithm used by netsvc. This
 			// matters because netsvc implements the host side of the netboot protocol

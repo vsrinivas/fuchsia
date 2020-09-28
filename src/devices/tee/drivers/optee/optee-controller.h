@@ -82,7 +82,7 @@ class OpteeController : public OpteeControllerBase,
                             zx::channel service_provider, zx::channel application_request,
                             ConnectToApplicationCompleter::Sync _completer) override;
 
-  // TODO(44664): Once all clients are transitioned off of the old TEE connection model, remove this
+  // TODO(fxbug.dev/44664): Once all clients are transitioned off of the old TEE connection model, remove this
   // function.
   OsInfo GetOsInfo() const override;
 

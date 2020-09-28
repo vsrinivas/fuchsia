@@ -17,7 +17,7 @@ executable("msd_intel_gen_nonhardware_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(47456): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47456): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

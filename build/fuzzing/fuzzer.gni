@@ -251,7 +251,7 @@ set_defaults("fuzzer") {
   configs = default_executable_configs + [ "//build/config/fuzzer:engine" ]
 }
 
-# TODO(48118): Add LSan
+# TODO(fxbug.dev/48118): Add LSan
 _cpp_sanitizers = [
   "asan",
   "ubsan",
@@ -374,7 +374,7 @@ template("fuzzers_package") {
       {
         fuzzers = invoker.go_fuzzers
 
-        # TODO(44551): go host fuzzers fail to link on mac-x64
+        # TODO(fxbug.dev/44551): go host fuzzers fail to link on mac-x64
         fuzz_host = false
         host_only = false
         sanitizers = _go_sanitizers
@@ -390,7 +390,7 @@ template("fuzzers_package") {
       {
         fuzzers = invoker.rust_fuzzers
 
-        # TODO(48624): rustc segfaults when building hostlibs.
+        # TODO(fxbug.dev/48624): rustc segfaults when building hostlibs.
         fuzz_host = false
         host_only = false
         sanitizers = _rust_sanitizers

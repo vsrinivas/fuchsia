@@ -435,7 +435,7 @@ pub enum LogsField {
     Other(String),
 }
 
-// TODO(50519) - ensure that strings reported here align with naming
+// TODO(fxbug.dev/50519) - ensure that strings reported here align with naming
 // decisions made for the structured log format sent by other components.
 pub const PID_LABEL: &str = "pid";
 pub const TID_LABEL: &str = "tid";

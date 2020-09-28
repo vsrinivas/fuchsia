@@ -409,7 +409,7 @@ func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemI
 // NodeGetFlags is a transitional method, and if it's unimplemented the current behavior
 // of the FIDL bindings is to crash the server, which is undesirable.
 // Given that it's a transitional method, we can choose not to implement it fully.
-// TODO(55663): remove this method when the default behavior of the FIDL bindings is changed
+// TODO(fxbug.dev/55663): remove this method when the default behavior of the FIDL bindings is changed
 func (d *directoryWrapper) NodeGetFlags(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrNotSupported), uint32(0), nil
 }
@@ -417,7 +417,7 @@ func (d *directoryWrapper) NodeGetFlags(fidl.Context) (int32, uint32, error) {
 // NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
 // of the FIDL bindings is to crash the server, which is undesirable.
 // Given that it's a transitional method, we can choose not to implement it fully.
-// TODO(55663): remove this method when the default behavior of the FIDL bindings is changed
+// TODO(fxbug.dev/55663): remove this method when the default behavior of the FIDL bindings is changed
 func (d *directoryWrapper) NodeSetFlags(fidl.Context, uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
@@ -548,7 +548,7 @@ func (f *fileWrapper) NodeGetFlags(ctx fidl.Context) (int32, uint32, error) {
 // NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
 // of the FIDL bindings is to crash the server, which is undesirable.
 // Given that it's a transitional method, we can choose not to implement it fully.
-// TODO(55663): remove this method when the default behavior of the FIDL bindings is changed
+// TODO(fxbug.dev/55663): remove this method when the default behavior of the FIDL bindings is changed
 func (f *fileWrapper) NodeSetFlags(ctx fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }

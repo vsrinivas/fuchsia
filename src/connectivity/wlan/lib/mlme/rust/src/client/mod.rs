@@ -49,7 +49,7 @@ use {
 pub use scanner::ScanError;
 
 /// Maximum size of EAPOL frames forwarded to SME.
-/// TODO(34845): Evaluate whether EAPOL size restriction is needed.
+/// TODO(fxbug.dev/34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;
 
 #[derive(Debug, PartialEq)]
@@ -96,7 +96,7 @@ impl ClientMlme {
         buf_provider: BufferProvider,
         scheduler: Scheduler,
     ) -> Self {
-        // TODO(41417): Remove this once devmgr installs a Rust logger.
+        // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
         logger::install();
 
         let iface_mac = device.wlan_info().ifc_info.mac_addr;
@@ -129,7 +129,7 @@ impl ClientMlme {
     }
 
     pub fn on_mac_frame(&mut self, frame: &[u8], rx_info: Option<banjo_wlan_mac::WlanRxInfo>) {
-        // TODO(44487): Send the entire frame to scanner.
+        // TODO(fxbug.dev/44487): Send the entire frame to scanner.
         match mac::MacFrame::parse(frame, false) {
             Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
                 let bssid = Bssid(mgmt_hdr.addr3);
@@ -231,7 +231,7 @@ impl ClientMlme {
                 error!("Error setting up device for join: {}", e);
                 self.ctx.device.access_sme_sender(|sender| {
                     sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
-                        // TODO(44317): Only one failure code defined in IEEE 802.11-2016 6.3.4.3
+                        // TODO(fxbug.dev/44317): Only one failure code defined in IEEE 802.11-2016 6.3.4.3
                         // Can we do better?
                         result_code: fidl_mlme::JoinResultCodes::JoinFailureTimeout,
                     })
@@ -260,7 +260,7 @@ impl ClientMlme {
     }
 
     fn on_sme_stats_query(&self) -> Result<(), Error> {
-        // TODO(43456): Implement stats
+        // TODO(fxbug.dev/43456): Implement stats
         let mut resp = stats::empty_stats_query_response();
         self.ctx.device.access_sme_sender(|sender| sender.send_stats_query_resp(&mut resp))
     }
@@ -441,7 +441,7 @@ fn is_unicast(addr: MacAddr) -> bool {
 
 pub struct BoundClient<'a> {
     sta: &'a mut Client,
-    // TODO(44079): pull everything out of Context and plop them here.
+    // TODO(fxbug.dev/44079): pull everything out of Context and plop them here.
     ctx: &'a mut Context,
     scanner: &'a mut Scanner,
     chan_sched: &'a mut ChannelScheduler,
@@ -729,7 +729,7 @@ impl<'a> BoundClient<'a> {
         is_protected: bool,
         eapol_frame: &[u8],
     ) {
-        // TODO(34910): EAPoL frames can be send in QoS data frames. However, Fuchsia's old C++
+        // TODO(fxbug.dev/34910): EAPoL frames can be send in QoS data frames. However, Fuchsia's old C++
         // MLME never sent EAPoL frames in QoS data frames. For feature parity do the same.
         let result = self.send_data_frame(
             src,
@@ -894,7 +894,7 @@ impl<'a> BoundClient<'a> {
                         assoc_conf.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }))
                     }
                 },
-                // TODO(43938): parse vendor ID and include WMM param if exists
+                // TODO(fxbug.dev/43938): parse vendor ID and include WMM param if exists
                 _ => {}
             }
         }

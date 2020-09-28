@@ -65,7 +65,7 @@ impl Partition {
         let (_status, name) = part.get_name().await.context("Get name failed")?;
         let pave_type;
         if let Some(string) = name {
-            // TODO(44595) support any other partitions that might be needed
+            // TODO(fxbug.dev/44595) support any other partitions that might be needed
             if string == "storage-sparse" {
                 pave_type = Some(PartitionPaveType::Volume);
             } else if bootloader == BootloaderType::Efi {

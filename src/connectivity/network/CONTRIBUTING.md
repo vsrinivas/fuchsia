@@ -103,7 +103,7 @@ from first principles rather than making external references (including past
 revisions).
 
 When writing TODOs:
-1. Include an issue reference using the format `TODO(1245):`
+1. Include an issue reference using the format `TODO(fxbug.dev/1245):`
 1. Phrase the text as an action that is to be taken; it should be possible for
    another contributor to pick up the TODO without consulting any external
    sources, including the referenced issue.

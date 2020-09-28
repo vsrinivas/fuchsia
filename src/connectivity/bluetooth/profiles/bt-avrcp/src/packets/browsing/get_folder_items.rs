@@ -141,7 +141,7 @@ pub const MIN_MEDIA_PLAYER_ITEM_SIZE: usize = 28;
 
 /// The response parameters for a Media Player Item.
 /// Defined in AVRCP 1.6.2, Section 6.10.2.1.
-// TODO(45904): Maybe wrap major_player_type and player_sub_type into strongly typed variables.
+// TODO(fxbug.dev/45904): Maybe wrap major_player_type and player_sub_type into strongly typed variables.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MediaPlayerItem {
     player_id: u16,
@@ -229,7 +229,7 @@ impl From<fidl_avrcp::MediaPlayerItem> for MediaPlayerItem {
 /// AVRCP 1.6.2 section 6.10.4.2 GetFolderItems
 /// Currently, we only support Scope = MediaPlayerList. Therefore, the response packet
 /// is formatted according to Section 6.10.2.1 from AVRCP 1.6.2.
-// TODO(45904): Implement full FolderItemsResponse with other Browseable items defined
+// TODO(fxbug.dev/45904): Implement full FolderItemsResponse with other Browseable items defined
 // in AVRCP 6.10.2.
 #[derive(Debug)]
 pub struct GetFolderItemsResponse {
@@ -258,7 +258,7 @@ impl Encodable for GetFolderItemsResponse {
         len
     }
 
-    // TODO(45904): Implement full encoding with other Browseable items defined
+    // TODO(fxbug.dev/45904): Implement full encoding with other Browseable items defined
     // in AVRCP 6.10.2.
     // Currently, only encodes MediaPlayerList.
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {

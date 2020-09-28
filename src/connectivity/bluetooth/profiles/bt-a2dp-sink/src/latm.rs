@@ -214,14 +214,14 @@ impl Layer {
         let (input, frame_length_type) = take(3usize)(input)?;
 
         if frame_length_type > 1 {
-            //TODO(44552) CELP, HVCX, etc..
+            //TODO(fxbug.dev/44552) CELP, HVCX, etc..
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
 
         let (input, latm_buffer_fullness) = cond(frame_length_type == 0, take(8usize))(input)?;
 
         if all_streams_same_time_framing == 0 {
-            //TODO(44552) core frame offset
+            //TODO(fxbug.dev/44552) core frame offset
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
 
@@ -265,7 +265,7 @@ impl AudioSpecificConfig {
                 (input, Some(config))
             }
             _ => {
-                //TODO(44552) other audio object types
+                //TODO(fxbug.dev/44552) other audio object types
                 return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
             }
         };
@@ -306,7 +306,7 @@ impl GASpecificConfig {
             cond(audio_object_type == 6 || audio_object_type == 20, take(3usize))(input)?;
 
         if extension_flag == 1 {
-            //TODO(44552)
+            //TODO(fxbug.dev/44552)
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
 
@@ -367,7 +367,7 @@ impl StreamMuxConfig {
 
         let (input, other_data_present): (_, u8) = take(1usize)(input)?;
         if other_data_present == 1 {
-            //TODO(44552)
+            //TODO(fxbug.dev/44552)
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
 
@@ -394,7 +394,7 @@ impl<'a> Payload<'a> {
         stream_mux_config: &mut StreamMuxConfig,
     ) -> IResult<BitsCtx<'a>, ()> {
         if stream_mux_config.all_streams_same_time_framing == 0 {
-            //TODO(44552) different time bases
+            //TODO(fxbug.dev/44552) different time bases
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
 
@@ -412,7 +412,7 @@ impl<'a> Payload<'a> {
                         }
                     }
                 } else {
-                    //TODO(44552) mux_slot_length_coded
+                    //TODO(fxbug.dev/44552) mux_slot_length_coded
                     return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
                 }
             }
@@ -429,7 +429,7 @@ impl<'a> Payload<'a> {
         let mut input = input;
 
         if stream_mux_config.all_streams_same_time_framing == 0 {
-            //TODO(44552) different time bases
+            //TODO(fxbug.dev/44552) different time bases
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
 
@@ -471,7 +471,7 @@ impl<'a> Payload<'a> {
                                 }
                             }
                             _ => {
-                                //TODO(44552) other frame length types
+                                //TODO(fxbug.dev/44552) other frame length types
                                 return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
                             }
                         }
@@ -520,7 +520,7 @@ impl<'a> AudioMuxElement<'a> {
             let (input, payloads) = Self::parse_payloads(input, &mut stream_mux_config)?;
             return Ok((input, AudioMuxElement { stream_mux_config, payloads }));
         } else {
-            //TODO(44552) use prev stream_mux_config
+            //TODO(fxbug.dev/44552) use prev stream_mux_config
             return Err(nom::Err::Failure(make_error(input, ErrorKind::Eof)));
         }
     }

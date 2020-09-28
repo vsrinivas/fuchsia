@@ -70,7 +70,7 @@ impl SavedNetworksManager {
     /// For now we need to support reading from the the legacy version (KnownEssStore) as well
     /// from stash. And we need to keep the legacy version temporarily so we will decide where to
     /// read based on whether stash has been used.
-    /// TODO(44184) Eventually delete logic for handling legacy storage from KnownEssStore and
+    /// TODO(fxbug.dev/44184) Eventually delete logic for handling legacy storage from KnownEssStore and
     /// update comments once all users have migrated.
     pub async fn new_with_stash_or_paths(
         stash_id: impl AsRef<str>,
@@ -451,9 +451,9 @@ fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
 /// remove a saved network that has never been successfully connected to. If all have
 /// been successfully connected to, remove any. If a network config is evicted, that connection
 /// is forgotten for future connections.
-/// TODO(41232) - when network configs record information about successful connections,
+/// TODO(fxbug.dev/41232) - when network configs record information about successful connections,
 /// use this to make a better decision what to forget if all networks have connected before.
-/// TODO(41626) - make sure that we disconnect from the network if we evict a network config
+/// TODO(fxbug.dev/41626) - make sure that we disconnect from the network if we evict a network config
 /// for a network we are currently connected to.
 fn evict_if_needed(configs: &mut Vec<NetworkConfig>) {
     if configs.len() < MAX_CONFIGS_PER_SSID {

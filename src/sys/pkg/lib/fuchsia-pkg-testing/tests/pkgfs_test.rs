@@ -1790,7 +1790,7 @@ async fn open_executable_allowed_when_statically_disabled() {
 
 // A previous version of pkgfs/thinfs crashed on a call to node_get_flags on the /pkg directory, since node_get_flags
 // was an unimplemented transitional method.
-// TODO(55663): remove this test when unimplemented transitional methods do not crash the server.
+// TODO(fxbug.dev/55663): remove this test when unimplemented transitional methods do not crash the server.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_pkgfs_node_get_flags() {
     // Try node_get_flags on our own package directory.
@@ -1818,7 +1818,7 @@ async fn test_pkgfs_node_get_flags() {
 
 // A previous version of pkgfs/thinfs crashed on a call to node_set_flags, since node_set_flags
 // was an unimplemented transitional method.
-// TODO(55663): remove this test when unimplemented transitional methods do not crash the server.
+// TODO(fxbug.dev/55663): remove this test when unimplemented transitional methods do not crash the server.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_pkgfs_node_set_flags() {
     // Try node_set_flags on our own package directory.

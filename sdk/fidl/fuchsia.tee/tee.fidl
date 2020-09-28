@@ -39,7 +39,7 @@ enum Direction : uint32 {
 
 /// An empty parameter type is used as a placeholder for elements in the parameter set that are not
 /// used.
-// TODO(8031): Consider making this a table once empty tables do not cause binding issues.
+// TODO(fxbug.dev/8031): Consider making this a table once empty tables do not cause binding issues.
 struct None {
 };
 
@@ -104,7 +104,7 @@ resource table OpResult {
     3: ParameterSet parameter_set;
 };
 
-// TODO(44664): Remove this protocol once transition is complete.
+// TODO(fxbug.dev/44664): Remove this protocol once transition is complete.
 [Discoverable]
 protocol Device {
     /// Obtains information about the TEE OS
@@ -132,11 +132,11 @@ protocol DeviceInfo {
 
 /// Represents a connection to an application running in the TEE.
 protocol Application {
-    // TODO(44664): Remove this function once transition is complete. Used for source-compatibility.
+    // TODO(fxbug.dev/44664): Remove this function once transition is complete. Used for source-compatibility.
     [Transitional, Deprecated]
     GetOsInfo() -> (OsInfo info);
 
-    // TODO(44664): Remove this function once transition is complete. Used for source-compatibility.
+    // TODO(fxbug.dev/44664): Remove this function once transition is complete. Used for source-compatibility.
     [Transitional, Deprecated]
     OpenSession(Uuid trusted_app, ParameterSet parameter_set)
         -> (uint32 session_id, OpResult op_result);

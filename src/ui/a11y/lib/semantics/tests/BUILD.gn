@@ -48,11 +48,11 @@ executable("semantics_tests") {
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//third_party/googletest:gmock",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
-  # TODO(46525): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46525): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # This is a dependency of the semantic tree to perform certain matrix transform operations.

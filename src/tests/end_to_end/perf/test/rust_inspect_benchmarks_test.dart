@@ -49,7 +49,7 @@ void main() {
         await helper.performance.initializeTracing(categories: ['benchmark']);
     await traceSession.start();
 
-    // TODO(53552): Use launch facade instead of SSH.
+    // TODO(fxbug.dev/53552): Use launch facade instead of SSH.
     final benchmarkProcess = await helper.sl4fDriver.ssh
         .start('/bin/run $_appPath --iterations 50000 --benchmark writer');
     // 50000 iterations to ensure the benchmark runs longer than 30 seconds.

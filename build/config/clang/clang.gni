@@ -48,7 +48,7 @@ clang_resource_dir =
 
 # We only provide dynamic runtime libs on Fuchsia.
 if (is_fuchsia) {
-  # TODO(57729): Get this information from runtime.json instead.
+  # TODO(fxbug.dev/57729): Get this information from runtime.json instead.
   clang_libunwind =
       exec_script(rebase_path("$clang_prefix/clang++", "", root_build_dir),
                   [

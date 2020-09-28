@@ -57,7 +57,7 @@ test("zbitl-unittests") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/zbitl",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
   if (is_fuchsia) {

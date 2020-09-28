@@ -34,7 +34,7 @@ using ChainedSemaphoreGeneratorWeakPtr = fxl::WeakPtr<ChainedSemaphoreGenerator>
 // same order of the semaphore chain, otherwise it will cause deadlock on most
 // platforms.
 //
-// TODO(41980): Add integration tests to test synchronization of gfx Engine,
+// TODO(fxbug.dev/41980): Add integration tests to test synchronization of gfx Engine,
 // Screenshotter and Snapshotter as well.
 //
 class ChainedSemaphoreGenerator {

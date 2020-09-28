@@ -42,7 +42,7 @@
 // meaningful except for a few reserved values for LLVM on specific machines.
 // Address spaces 256, 257, and 258 are examples of reserved address spaces in
 // LLVM for X86.
-// TODO(27072): It would be better if the compiler could accept string arguments
+// TODO(fxbug.dev/27072): It would be better if the compiler could accept string arguments
 // to address_space since the number is arbitrary and just needs to be unique.
 #define MMIO_PTR __attribute__((noderef, address_space(100)))
 #else

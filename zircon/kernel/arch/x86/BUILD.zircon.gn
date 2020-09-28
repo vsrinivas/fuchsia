@@ -119,7 +119,7 @@ config("kernel") {
   }
 }
 
-# TODO(58463): Remove conditional when all dependencies below have been
+# TODO(fxbug.dev/58463): Remove conditional when all dependencies below have been
 # migrated to the Fuchsia build.
 # NOTE: Bad indentation is intentional, to make code reviews easier.
 if (zx == "/") {

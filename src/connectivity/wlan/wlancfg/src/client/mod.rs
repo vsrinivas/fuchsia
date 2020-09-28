@@ -408,7 +408,7 @@ async fn send_next_chunk(
     } else {
         // This will happen if the iterator request stream was closed and we expected to send
         // another response.
-        // TODO(45113) Test this error path
+        // TODO(fxbug.dev/45113) Test this error path
         info!("Info: peer closed channel for network config results unexpectedly");
         Ok(())
     }

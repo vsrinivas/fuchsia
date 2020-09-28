@@ -14,7 +14,7 @@ import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/zircon/clang.gni")
 
-# TODO(60410): remove import when the ZN build is gone.
+# TODO(fxbug.dev/60410): remove import when the ZN build is gone.
 import("//build/zbi/zbi.gni")
 import(
     "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
@@ -132,11 +132,11 @@ declare_args() {
     }
     variants = zircon_variants
 
-    # TODO(51585): Keep this in sync with the code in
+    # TODO(fxbug.dev/51585): Keep this in sync with the code in
     # //build/toolchain/zircon/zircon_toolchain.gni
     if (optimize == "none" || optimize == "sanitizer" ||
         optimize == "profile" || optimize == "size") {
-      # TODO(51585): Only propagate none/sanitizer/profile for now.
+      # TODO(fxbug.dev/51585): Only propagate none/sanitizer/profile for now.
       # "Normal" Zircon builds use a different default than Fuchsia builds.
       # These should be harmonized at some point so this is always passed
       # through.

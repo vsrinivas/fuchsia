@@ -34,7 +34,7 @@ source_set("lib") {
     "//third_party/zlib:zfstream",
     "//zircon/system/ulib/trace-reader",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
   configs += [

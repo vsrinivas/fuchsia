@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54322): Keep in sync with BUILD.gn until kernel is migrated to
+# TODO(fxbug.dev/54322): Keep in sync with BUILD.gn until kernel is migrated to
 # Fuchsia build, then remove this file.
 
 zx_library("instrumentation") {

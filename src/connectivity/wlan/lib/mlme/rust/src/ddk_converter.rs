@@ -52,14 +52,14 @@ pub fn build_ddk_assoc_ctx(
         aid,
         // In the association request we sent out earlier, listen_interval is always set to 0,
         // indicating the client never enters power save mode.
-        // TODO(42217): ath10k disregard this value and hard code it to 1.
+        // TODO(fxbug.dev/42217): ath10k disregard this value and hard code it to 1.
         // It is working now but we may need to revisit.
         listen_interval: 0,
         phy,
         chan: ddk_channel_from_fidl(cap.channel),
-        // TODO(29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
+        // TODO(fxbug.dev/29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
         // dynamically determined for each outgoing data frame.
-        // TODO(43938): Derive QoS flag and WMM parameters from device info
+        // TODO(fxbug.dev/43938): Derive QoS flag and WMM parameters from device info
         qos: has_ht_cap,
         ac_be_params: blank_wmm_params(),
         ac_bk_params: blank_wmm_params(),

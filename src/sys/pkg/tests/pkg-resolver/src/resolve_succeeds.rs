@@ -775,7 +775,7 @@ async fn dedup_concurrent_content_blob_fetches() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(49866) Flaking when system time is unknown.
+#[ignore] // TODO(fxbug.dev/49866) Flaking when system time is unknown.
 async fn https_endpoint() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -899,7 +899,7 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(fxb/59827): enable this test once pkg-resolver fetches metadata from LocalMirror.
+#[ignore] // TODO(fxbug.dev/59827): enable this test once pkg-resolver fetches metadata from LocalMirror.
 async fn resolve_local_mirror() {
     let pkg = PackageBuilder::new("test")
         .add_resource_at("test_file", "hi there".as_bytes())
@@ -919,7 +919,7 @@ async fn resolve_local_mirror() {
         .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
         .build()
         .await;
-    // TODO(fxb/59827): don't serve a repository, use the below line instead.
+    // TODO(fxbug.dev/59827): don't serve a repository, use the below line instead.
     // let repo_config = repo.make_repo_config("fuchsia-pkg://test".parse().unwrap(), None, false, true);
     let served = repo.clone().server().start().unwrap();
     let repo_config =

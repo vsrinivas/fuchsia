@@ -68,13 +68,13 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
 
         let mut src_ports = None;
         if let Some(range) = ipfilter.src_ports.as_ref() {
-            // TODO(45891): Multiple port ranges are not supported yet.
+            // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
             src_ports = Some(vec![range.into()]);
         }
 
         let mut dst_ports = None;
         if let Some(range) = ipfilter.dst_ports.as_ref() {
-            // TODO(45891): Multiple port ranges are not supported yet.
+            // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
             dst_ports = Some(vec![range.into()]);
         }
 

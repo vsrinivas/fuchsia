@@ -128,7 +128,7 @@ impl LogManager {
     /// Drain log sink for messages sent by the archivist itself.
     pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
         let forwarder = self.inner.lock().await.legacy_forwarder.clone();
-        // TODO(50105): Figure out how to properly populate SourceIdentity
+        // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
         let mut source = SourceIdentity::empty();
         source.component_name = Some(name.to_owned());
         let source = Arc::new(source);

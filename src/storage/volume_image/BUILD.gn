@@ -20,7 +20,7 @@ source_set("volume-descriptor") {
     "utils:guid",
     "//zircon/public/lib/fit",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -33,7 +33,7 @@ source_set("address-descriptor") {
     "//zircon/public/lib/fit",
   ]
 
-  # TODO(57392): Move it back to //third_party once unification completes.
+  # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
   deps = [ "//zircon/third_party/rapidjson" ]
 }
 
@@ -46,7 +46,7 @@ source_set("partition") {
     "//src/storage/volume_image/utils:io-interfaces",
   ]
 
-  # TODO(57392): Move it back to //third_party once unification completes.
+  # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
   deps = [ "//zircon/third_party/rapidjson" ]
 }
 

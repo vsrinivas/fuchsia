@@ -236,7 +236,7 @@ impl ClientSme {
     ) -> oneshot::Receiver<ConnectResult> {
         let (responder, receiver) = Responder::new();
         if req.ssid.len() > wlan_common::ie::SSID_MAX_LEN {
-            // TODO(42081): Use a more accurate error (InvalidSsidArg) for this error.
+            // TODO(fxbug.dev/42081): Use a more accurate error (InvalidSsidArg) for this error.
             responder.respond(SelectNetworkFailure::NoScanResultWithSsid.into());
             return receiver;
         }

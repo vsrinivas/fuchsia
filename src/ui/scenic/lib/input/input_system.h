@@ -145,7 +145,7 @@ class InputSystem : public System,
   void RequestFocusChange(zx_koid_t view_ref_koid);
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
-  // TODO(48150): Delete when we delete the PointerCapture functionality.
+  // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
   void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event,
                                                   const gfx::ViewTree& view_tree) const;
 

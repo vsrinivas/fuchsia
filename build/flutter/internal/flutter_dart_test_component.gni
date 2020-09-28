@@ -142,7 +142,7 @@ template("flutter_dart_test_component") {
     non_dart_deps = [ ":$_generate_test_main_target_name($target_toolchain)" ]
   }
 
-  # TODO(57577) All tests are currently executing in the dart_component because
+  # TODO(fxbug.dev/57577) All tests are currently executing in the dart_component because
   # the flutter runner is not able to run them. This is the legacy behavior so
   # nothing has regressed but we should update this to switch based on the
   # type of test we are running.

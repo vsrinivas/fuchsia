@@ -30,7 +30,7 @@ impl TrafficIndicationMap {
     /// IEEE Std 802.11-2016, 9.4.2.6: N1 is the largest even number such that bits numbered 1 to
     /// (N1 * 8) - 1 in the traffic indication virtual bitmap are all 0.
     fn n1(&self) -> usize {
-        // TODO(40099): Consider using u64 and CTZ instead of checking all the bytes individually.
+        // TODO(fxbug.dev/40099): Consider using u64 and CTZ instead of checking all the bytes individually.
         for (i, b) in self.0.iter().enumerate() {
             if *b != 0 {
                 // Round down to the nearest even number.
@@ -46,7 +46,7 @@ impl TrafficIndicationMap {
     /// IEEE Std 802.11-2016, 9.4.2.6: N2 is the smallest number such that bits numbered
     /// (N2 + 1) * 8 to 2007 in the traffic indication virtual bitmap are all 0.
     fn n2(&self) -> usize {
-        // TODO(40099): Consider using u64 and CLZ instead of checking all the bytes individually.
+        // TODO(fxbug.dev/40099): Consider using u64 and CLZ instead of checking all the bytes individually.
         for (i, b) in self.0.iter().enumerate().rev() {
             if *b != 0 {
                 return i;

@@ -24,7 +24,7 @@ config("fdio_includes") {
   include_dirs = [ "include" ]
 }
 
-# TODO(38226): This is a kludge to make "foosan-fuzzer" builds actually just use
+# TODO(fxbug.dev/38226): This is a kludge to make "foosan-fuzzer" builds actually just use
 # the plain "foosan" build of libfdio.  This works around the problem that
 # libfuzzer itself calls into libfdio and so its own calls pollute the data
 # it's collecting about the code under test. We explicitly depend on the build

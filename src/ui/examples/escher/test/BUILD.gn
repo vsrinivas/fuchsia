@@ -36,7 +36,7 @@ if (is_mac) {
       deps += [ "//src/ui/examples/escher/common:host_test_data" ]
     }
 
-    # TODO(46717): Fix the leaks and remove this.
+    # TODO(fxbug.dev/46717): Fix the leaks and remove this.
     deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 }

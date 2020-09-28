@@ -217,7 +217,7 @@ mod tests {
         assert!(is_directory(&node_info));
     }
 
-    // TODO(44664): Remove once ConnectTee is deprecated
+    // TODO(fxbug.dev/44664): Remove once ConnectTee is deprecated
     #[fasync::run_singlethreaded(test)]
     async fn connect() {
         let dev_connector = spawn_device_connector(|request| async move {

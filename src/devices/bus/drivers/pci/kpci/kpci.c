@@ -123,7 +123,7 @@ static zx_status_t kpci_configure_irq_mode(pci_msg_t* req, kpci_device_t* device
   // number of interrupts requested. This enables drivers that don't care about
   // how they get their interrupt to call one method rather than doing the
   // QueryIrqMode/SetIrqMode dance.
-  // TODO(32978): This method only covers MSI/Legacy because the transition to MSI-X requires the
+  // TODO(fxbug.dev/32978): This method only covers MSI/Legacy because the transition to MSI-X requires the
   // userspace driver. When that happens, this code will go away.
   zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
   zx_status_t st = zx_pci_set_irq_mode(device->handle, mode, req->irq.requested_irqs);

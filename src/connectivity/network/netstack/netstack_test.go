@@ -816,7 +816,7 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp tcpipstack.NDPDispatcher, h nicRemovedHandler) *Netstack {
 	t.Helper()
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),

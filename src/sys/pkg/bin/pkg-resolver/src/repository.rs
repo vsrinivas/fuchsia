@@ -168,7 +168,7 @@ impl Repository {
             Err(TufError::NotFound) => return Err(MerkleForError::NotFound),
             Err(other) => {
                 fx_log_err!("failed to update with TUF error {:?}", other);
-                // TODO(43646) Should this bubble up a MerkleForError::TufError(other)?
+                // TODO(fxbug.dev/43646) Should this bubble up a MerkleForError::TufError(other)?
             }
         }
 

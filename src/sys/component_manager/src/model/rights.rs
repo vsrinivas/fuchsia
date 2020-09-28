@@ -73,7 +73,7 @@ impl Rights {
         // Since there is no direct translation for connect in CV1 we must explicitly define it
         // here as both flags.
         //
-        // TODO(60673): Is this correct? ReadBytes | Connect seems like it should translate to
+        // TODO(fxbug.dev/60673): Is this correct? ReadBytes | Connect seems like it should translate to
         // READABLE | WRITABLE, not empty rights.
         if flags == 0 && rights.contains(fio2::Operations::Connect) {
             flags |= fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;

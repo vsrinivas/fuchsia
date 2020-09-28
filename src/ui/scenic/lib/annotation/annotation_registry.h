@@ -19,7 +19,7 @@ namespace scenic_impl {
 // AnnotationRegistry registers the fuchsia.ui.annotation.Registry service,
 // and manages all the service handlers for each incoming FIDL connection.
 //
-// TODO(45197): This class is thread-compatible and it's safe to use when Scenic
+// TODO(fxbug.dev/45197): This class is thread-compatible and it's safe to use when Scenic
 // is single-threaded. We may need to make it thread-safe once Scenic supports
 // multithreading.
 class AnnotationRegistry {

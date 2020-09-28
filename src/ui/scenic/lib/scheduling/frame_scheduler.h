@@ -128,7 +128,7 @@ class FrameScheduler {
 
   // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
   // uses this to apply backpressure to clients.
-  // TODO(44211): Move into implementation.
+  // TODO(fxbug.dev/44211): Move into implementation.
   static constexpr int64_t kMaxPresentsInFlight = 5;
 };
 

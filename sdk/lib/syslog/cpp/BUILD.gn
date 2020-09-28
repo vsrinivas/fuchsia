@@ -8,7 +8,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 sdk_source_set("cpp") {
-  # TODO(59937): Remove when Go fuzzer and Mac links OK against this.
+  # TODO(fxbug.dev/59937): Remove when Go fuzzer and Mac links OK against this.
   if ((current_toolchain == "//build/toolchain:host_x64" && host_os == "mac") ||
       (current_toolchain == "//build/toolchain:host_arm64" &&
        host_os == "mac") ||
@@ -44,7 +44,7 @@ sdk_source_set("cpp") {
 }
 
 sdk_source_set("backend_host") {
-  # TODO(59937): Remove when Go fuzzer and Mac links OK against this.
+  # TODO(fxbug.dev/59937): Remove when Go fuzzer and Mac links OK against this.
   if ((current_toolchain == "//build/toolchain:host_x64" && host_os == "mac") ||
       (current_toolchain == "//build/toolchain:host_arm64" &&
        host_os == "mac") ||
@@ -76,7 +76,7 @@ sdk_source_set("backend_host") {
 }
 
 sdk_source_set("backend_legacy_fuchsia") {
-  # TODO(59937): Remove when Go fuzzer links OK against this.
+  # TODO(fxbug.dev/59937): Remove when Go fuzzer links OK against this.
   if (current_toolchain == "//build/toolchain/fuchsia:x64-ubsan-fuzzer" ||
       current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer" ||
       current_toolchain == "//build/toolchain/fuchsia:x64-asan-fuzzer-shared" ||

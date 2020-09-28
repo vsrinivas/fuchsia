@@ -109,7 +109,7 @@ protocol AudioDeviceEnumerator {
     [Deprecated, Transitional]
     GetDefaultOutputDevice() -> (uint64 device_token);
 
-    // TODO(49734): Rename AddDeviceByChannel2 to AddDeviceByChannel once the
+    // TODO(fxbug.dev/49734): Rename AddDeviceByChannel2 to AddDeviceByChannel once the
     // legacy driver method is fully removed.
     AddDeviceByChannel(zx.handle:CHANNEL device_channel, string:256 device_name,
                        bool is_input);

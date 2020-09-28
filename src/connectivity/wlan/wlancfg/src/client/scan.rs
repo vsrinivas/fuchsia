@@ -149,7 +149,7 @@ impl ScanResultUpdate for LocationSensorUpdater {
         // Filter out any errors and just log a message.
         // No error recovery, we'll just try again next time a scan result comes in.
         if let Err(e) = send_results(scan_results).await {
-            // TODO(52700) Upgrade this to a "warn!" once the location sensor works.
+            // TODO(fxbug.dev/52700) Upgrade this to a "warn!" once the location sensor works.
             debug!("Failed to send scan results to location sensor: {:?}", e)
         } else {
             debug!("Updated location sensor")
@@ -932,7 +932,7 @@ mod tests {
         );
     }
 
-    // TODO(54255): Separate test case for "empty final vector not consumed" vs "partial ap list"
+    // TODO(fxbug.dev/54255): Separate test case for "empty final vector not consumed" vs "partial ap list"
     // consumed.
     #[test]
     fn partial_scan_result_consumption_has_no_error() {
@@ -991,7 +991,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Err(_)));
     }
 
-    // TODO(52700) Ignore this test until the location sensor module exists.
+    // TODO(fxbug.dev/52700) Ignore this test until the location sensor module exists.
     #[ignore]
     #[test]
     fn scan_observer_sends_to_location_sensor() {

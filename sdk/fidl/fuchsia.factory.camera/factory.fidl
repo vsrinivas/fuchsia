@@ -22,8 +22,8 @@ enum CameraFactoryError : uint32 {
 /// A protocol for all devices with cameras going through factory calibration
 /// procedures. The devices are exposed as servers; this is meant to receive calls from
 /// and send data back to a SL4F Facade.
-// TODO(41671) - account for multiple cameras on a single device.
-// TODO(41672) - implement video capture.
+// TODO(fxbug.dev/41671) - account for multiple cameras on a single device.
+// TODO(fxbug.dev/41672) - implement video capture.
 [Discoverable]
 protocol CameraFactory {
     /// Checks whether the device under test has a camera and provides information about

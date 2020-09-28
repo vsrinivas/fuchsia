@@ -30,7 +30,7 @@ impl RLSAddressField {
     }
 }
 
-// TODO(59582): Handling of the RLS command is implementation specific. It may be beneficial
+// TODO(fxbug.dev/59582): Handling of the RLS command is implementation specific. It may be beneficial
 // to provide better accessors/types for the RlsError. However, for now, we envision simply
 // acknowledging the command, in which case the fields will never be used.
 bitfield! {

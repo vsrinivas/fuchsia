@@ -19,7 +19,7 @@ use {
 pub struct CobaltDiagnostics {
     /// The wrapped CobaltSender used to log metrics.
     sender: Mutex<CobaltSender>,
-    // TODO(57677): Move back to an owned fasync::Task instead of detaching the spawned Task
+    // TODO(fxbug.dev/57677): Move back to an owned fasync::Task instead of detaching the spawned Task
     // once the lifecycle of timekeeper ensures CobaltDiagnostics objects will last long enough
     // to finish their logging.
 }

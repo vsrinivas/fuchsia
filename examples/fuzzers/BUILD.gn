@@ -54,7 +54,7 @@ fuzzers_package("fuzzing-examples") {
     "rust:toy_example_with_main",
   ]
 
-  # TODO(44551): Building Go fuzzers exhibits linker errors on macOS. Unlink from build until fixed.
+  # TODO(fxbug.dev/44551): Building Go fuzzers exhibits linker errors on macOS. Unlink from build until fixed.
   if (host_os != "mac") {
     go_fuzzers = [ "go:basic_fuzzer" ]
   }

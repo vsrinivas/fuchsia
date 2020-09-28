@@ -119,7 +119,7 @@ impl BlobLocation {
             .chain(meta_contents.into_contents().into_iter().map(|(_, hash)| hash)))
     }
 
-    // TODO(43635) use this function, remove allow
+    // TODO(fxbug.dev/43635) use this function, remove allow
     #[allow(dead_code)]
     pub fn is_blob_in_base(&self, hash: &Hash) -> bool {
         match &self.inner {

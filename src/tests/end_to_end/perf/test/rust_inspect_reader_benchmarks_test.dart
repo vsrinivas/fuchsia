@@ -18,7 +18,7 @@ final _log = Logger('RustInspectReaderBenchmarks');
 
 const _iterations = 300;
 
-// TODO(53934): Share a MetricsProcessor with netstack_benchmarks_test.
+// TODO(fxbug.dev/53934): Share a MetricsProcessor with netstack_benchmarks_test.
 List<TestCaseResults> _metricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
   final durations = filterEventsTyped<DurationEvent>(
@@ -29,7 +29,7 @@ List<TestCaseResults> _metricsProcessor(
 
   _log.info('Got ${durations.length} ${extraArgs['eventName']} events');
 
-  // TODO(55161): Make the test fail if durations.length != _iterations.
+  // TODO(fxbug.dev/55161): Make the test fail if durations.length != _iterations.
   // Currently the benchmark stops working during Snapshot/256K/1mhz when
   // running on terminal-x64-release.
   if (durations.length != _iterations) {
@@ -64,7 +64,7 @@ void main() {
     _log.info('Completed $_iterations iterations in '
         '${stopwatch.elapsed.inSeconds} seconds.');
 
-    // TODO(54931): Explicitly stop tracing.
+    // TODO(fxbug.dev/54931): Explicitly stop tracing.
     // await traceSession.stop();
 
     final fxtTraceFile = await traceSession.terminateAndDownload(_testName);

@@ -330,7 +330,7 @@ standard_variants += standard_sanitizer_variants
 # be interesting for special-purpose environments like fuzzers.
 standard_variants += [
   {
-    # TODO(30033): This is identical to "asan" except for having "kernel"
+    # TODO(fxbug.dev/30033): This is identical to "asan" except for having "kernel"
     # and not "useronly" in tags.  When kernel ASan is ready for prime
     # time, this will be removed and the "useronly" tag dropped from "asan"
     # so that a simple "asan" selector will enable it for kernel too.  For
@@ -385,7 +385,7 @@ standard_variants += [
     }
   },
 
-  # TODO(30033): see above
+  # TODO(fxbug.dev/30033): see above
   {
     variant = {
       name = "kasan-sancov"

@@ -16,7 +16,7 @@ using fuchsia.ui.activity;
 /// Service will no longer determine state based on input to the
 /// fuchsia.ui.activity.Tracker protocol, and instead will only report state
 /// transitions occuring through the Control protocol.
-// TODO(38334): Remove this transitional interface.
+// TODO(fxbug.dev/38334): Remove this transitional interface.
 [Discoverable]
 protocol Control {
     /// Sets the Activity Service's state to `state`.

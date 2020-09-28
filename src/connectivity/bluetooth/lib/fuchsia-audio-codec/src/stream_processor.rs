@@ -173,7 +173,7 @@ impl StreamProcessorInner {
                     settings.packet_count_for_client + settings.packet_count_for_server;
                 self.input_packet_size = settings.per_packet_buffer_bytes as u64;
                 for idx in 0..packet_count {
-                    // TODO(41553): look into letting sysmem allocate these buffers
+                    // TODO(fxbug.dev/41553): look into letting sysmem allocate these buffers
                     let (stream_buffer, vmo) = make_buffer(self.input_packet_size, 1, idx)?;
                     self.input_buffers.insert(InputBufferIndex(idx), vmo);
                     self.client_owned.insert(InputBufferIndex(idx));

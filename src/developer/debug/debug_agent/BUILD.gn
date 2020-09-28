@@ -253,7 +253,7 @@ executable("unit_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(46711): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46711): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -280,7 +280,7 @@ test_package("debug_agent_tests") {
 
   # Integration tests do not run on QEMU because some of the low-level
   # functionality is not implemented correctly.
-  # TODO(47485): Make pass w/ ASan and switch to [ nuc_env ].
+  # TODO(fxbug.dev/47485): Make pass w/ ASan and switch to [ nuc_env ].
   integration_tests_env = nuc_env_fails_on_asan
   deps += [ "//src/developer/debug/debug_agent/integration_tests" ]
   tests += [

@@ -14,7 +14,7 @@ use serde_json::{to_value, Value};
 use crate::camera::types::DetectResult;
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 
-// TODO(41671): Don't hardcode values; use glob for path. Especially for multiple cameras.
+// TODO(fxbug.dev/41671): Don't hardcode values; use glob for path. Especially for multiple cameras.
 const CAMERA_ID: i32 = 0;
 const CAMERA_PATH: &str = "/dev/class/camera/000";
 
@@ -155,7 +155,7 @@ impl CameraFacade {
         Ok(to_value(())?)
     }
 
-    // TODO(52737): Revise the documentation for this method once more information becomes available.
+    // TODO(fxbug.dev/52737): Revise the documentation for this method once more information becomes available.
     /// Loads and unloads camera modules in order.
     ///
     /// # Arguments
@@ -168,7 +168,7 @@ impl CameraFacade {
         Ok(to_value(())?)
     }
 
-    // TODO(52737): Revise the documentation for this method once more information becomes available.
+    // TODO(fxbug.dev/52737): Revise the documentation for this method once more information becomes available.
     /// Updates the GPIO's value.
     ///
     /// # Arguments

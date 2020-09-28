@@ -176,7 +176,7 @@ impl PairingDispatcher {
                                 let result = downstream.send(status, passkey);
                                 if let Err(e) = result {
                                     warn!("Error replying to pairing request from bt-host: {}", e);
-                                    // TODO(45325) - when errors occur communicating with a downstream
+                                    // TODO(fxbug.dev/45325) - when errors occur communicating with a downstream
                                     // host, we should unregister and remove that host
                                 }
                                 false
@@ -233,7 +233,7 @@ impl PairingDispatcher {
                         warn!("PairingRequest received with invalid Peer: {:?}", e);
                         if let Err(e) = responder.send(false, 0) {
                             warn!("Error communicating with downstream bt-host {}: {:?}", host, e);
-                            // TODO(45325) - when errors occur communicating with a downstream
+                            // TODO(fxbug.dev/45325) - when errors occur communicating with a downstream
                             // host, we should unregister and remove that host
                         }
                     }

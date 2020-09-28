@@ -201,7 +201,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
                 # It must be in the shared_toolchain output directory.
                 shared_toolchain = context.variant.shared_toolchain
 
-                # TODO(38226): See //sdk/lib/fdio/BUILD.gn.
+                # TODO(fxbug.dev/38226): See //sdk/lib/fdio/BUILD.gn.
                 # libFuzzer depends on libfdio, so fuzzers need to use a
                 # version of fdio without SanitizerCoverage instrumentation to
                 # avoid polluting coverage data for the code under test.

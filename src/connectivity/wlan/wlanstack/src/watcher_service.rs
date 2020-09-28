@@ -44,7 +44,7 @@ where
     (s, fut)
 }
 
-// TODO(51310): Remove the DeviceWatcher Iface monitoring when policy code no longer relies on it.
+// TODO(fxbug.dev/51310): Remove the DeviceWatcher Iface monitoring when policy code no longer relies on it.
 pub struct WatcherService<P, I> {
     inner: Arc<Mutex<Inner<P, I>>>,
     reaper_queue: UnboundedSender<ReaperTask>,

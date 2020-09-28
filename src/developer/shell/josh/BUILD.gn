@@ -20,7 +20,7 @@ test("josh_tests_bin") {
   # with asan enabled.
   ldflags = [ "-Wl,-z,stack-size=0x200000" ]
 
-  # TODO(47462): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47462): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -40,7 +40,7 @@ executable("bin") {
   # with asan enabled.
   ldflags = [ "-Wl,-z,stack-size=0x200000" ]
 
-  # TODO(46840): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46840): Fix the leaks and remove this.
   deps += [
     "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//sdk/lib/syslog/cpp",

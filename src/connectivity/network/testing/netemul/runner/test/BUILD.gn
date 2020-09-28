@@ -175,7 +175,7 @@ fuchsia_test("guest_test_spec") {
   package = ":netemul-guest-test"
   component = ":guest-test"
 
-  # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   environments = nuc_env_fails_on_asan
 }
 
@@ -183,7 +183,7 @@ fuchsia_test("grpc_client_stress_test_spec") {
   package = ":netemul-guest-test"
   component = ":grpc-client-stress-test"
 
-  # TODO(47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  # TODO(fxbug.dev/47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   if (nuc_env_fails_on_asan != []) {
     nuc_scope = nuc_env_fails_on_asan[0]
 
@@ -191,7 +191,7 @@ fuchsia_test("grpc_client_stress_test_spec") {
       {
         dimensions = nuc_scope.dimensions
 
-        # TODO(49752): test occasionally exceeds 5 minute timeout.
+        # TODO(fxbug.dev/49752): test occasionally exceeds 5 minute timeout.
         tags = [ "flaky" ]
       },
     ]
@@ -205,8 +205,8 @@ fuchsia_test("multiple_guests_test_spec") {
   package = ":netemul-guest-test"
   component = ":multiple-guests-test"
 
-  # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-  # TODO(51063): test fails with ThinLTO.
+  # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  # TODO(fxbug.dev/51063): test fails with ThinLTO.
   environments = []
 }
 

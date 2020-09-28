@@ -140,7 +140,7 @@ executable("cgpt") {
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 
-  # TODO(47057): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47057): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -194,7 +194,7 @@ executable("futility") {
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 
-  # TODO(47057): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47057): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

@@ -6,7 +6,7 @@ pub use core_macros::{ffx_command, ffx_plugin};
 
 // Error type for wrapping errors known to an `ffx` command and whose occurrence should
 // not a priori be considered a bug in ffx.
-// TODO(57592): consider extending this to allow custom types from plugins.
+// TODO(fxbug.dev/57592): consider extending this to allow custom types from plugins.
 #[derive(thiserror::Error, Debug)]
 pub enum FfxError {
     #[error(transparent)]

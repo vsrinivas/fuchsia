@@ -37,7 +37,7 @@ impl IsLocalAddr for IpAddr {
 
 impl IsLocalAddr for Ipv4Addr {
     fn is_local_addr(&self) -> bool {
-        // TODO(58517): add the various RFC reserved addresses and ranges too
+        // TODO(fxbug.dev/58517): add the various RFC reserved addresses and ranges too
         match self.octets() {
             [10, _, _, _] => true,
             [172, 16..=31, _, _] => true,

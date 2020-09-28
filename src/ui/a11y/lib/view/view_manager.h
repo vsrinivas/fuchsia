@@ -119,7 +119,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
 
   std::unordered_map<zx_koid_t, std::unique_ptr<ViewWrapper>> view_wrapper_map_;
 
-  // TODO(36199): Move wait functions inside ViewWrapper.
+  // TODO(fxbug.dev/36199): Move wait functions inside ViewWrapper.
   std::unordered_map<
       zx_koid_t, std::unique_ptr<async::WaitMethod<ViewManager, &ViewManager::ViewSignalHandler>>>
       wait_map_;

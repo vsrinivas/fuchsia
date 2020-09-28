@@ -80,7 +80,7 @@ executable("realm_tests") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  # TODO(46530): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46530): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -104,7 +104,7 @@ executable("hub_tests") {
     "//zircon/public/lib/async-cpp",
   ]
 
-  # TODO(46530): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46530): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

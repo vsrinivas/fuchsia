@@ -43,7 +43,7 @@ executable("fsl_unittests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(46720): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46720): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

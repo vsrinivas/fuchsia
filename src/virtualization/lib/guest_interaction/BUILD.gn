@@ -176,7 +176,7 @@ test_package("guest_interaction_tests") {
     {
       name = "client_operation_test"
 
-      # TODO(47487): Switch to [ nuc_env ] once gRPC leaks are fixed.
+      # TODO(fxbug.dev/47487): Switch to [ nuc_env ] once gRPC leaks are fixed.
       if (nuc_env_fails_on_asan != []) {
         nuc_scope = nuc_env_fails_on_asan[0]
 
@@ -184,7 +184,7 @@ test_package("guest_interaction_tests") {
           {
             dimensions = nuc_scope.dimensions
 
-            # TODO(59639): This test appears to flake roughly once per month during the
+            # TODO(fxbug.dev/59639): This test appears to flake roughly once per month during the
             # Client_Exec_ImmediateFailure test.
             tags = [ "flaky" ]
           },
@@ -197,19 +197,19 @@ test_package("guest_interaction_tests") {
     {
       name = "server_operation_test"
 
-      # TODO(48556): Reenable once gRPC leaks are fixed.
+      # TODO(fxbug.dev/48556): Reenable once gRPC leaks are fixed.
       environments = nuc_env_fails_on_asan
     },
     {
       name = "server_daemon_test"
 
-      # TODO(48127): Currently hangs in ASan. Fix and switch to [ nuc_env ].
+      # TODO(fxbug.dev/48127): Currently hangs in ASan. Fix and switch to [ nuc_env ].
       environments = nuc_env_fails_on_asan
     },
     {
       name = "guest_interaction_service_test"
 
-      # TODO(48127): Currently hangs in ASan. Fix and switch to [ nuc_env ].
+      # TODO(fxbug.dev/48127): Currently hangs in ASan. Fix and switch to [ nuc_env ].
       environments = nuc_env_fails_on_asan
     },
   ]

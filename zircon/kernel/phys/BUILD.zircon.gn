@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54160): Keep in sync with BUILD.gn
+# TODO(fxbug.dev/54160): Keep in sync with BUILD.gn
 
 import("$zx/public/gn/toolchain/environment.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")

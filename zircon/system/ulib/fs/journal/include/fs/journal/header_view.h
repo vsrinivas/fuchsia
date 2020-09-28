@@ -40,7 +40,7 @@ class JournalHeaderView {
   }
 
   // Returns pointer to memory where target block for |index| is stored.
-  // TODO(42430).
+  // TODO(fxbug.dev/42430).
   const uint64_t* TargetBlockPtr(uint32_t index) const {
     ZX_DEBUG_ASSERT(index < kMaxBlockDescriptors);
     return &header_->target_blocks[index];
@@ -62,7 +62,7 @@ class JournalHeaderView {
 
   uint64_t PayloadBlocks() const { return header_->payload_blocks; }
 
-  // TODO(42430).
+  // TODO(fxbug.dev/42430).
   const uint64_t* PayloadBlocksPtr() const { return &header_->payload_blocks; }
   JournalObjectType ObjectType() const { return header_->prefix.ObjectType(); }
 

@@ -85,7 +85,7 @@ test_package("tee-manager-tests") {
   ]
 }
 
-# TODO(44664): Remove this config when transition to board-specific configs is complete.
+# TODO(fxbug.dev/44664): Remove this config when transition to board-specific configs is complete.
 config_data("config") {
   for_pkg = "sysmgr"
   sources = [ "tee_manager.config" ]

@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54160): Keep this in sync with BUILD.gn
+# TODO(fxbug.dev/54160): Keep this in sync with BUILD.gn
 
 import("$zx/public/gn/config/levels.gni")
 import("$zx/public/gn/config/standard.gni")
@@ -28,7 +28,7 @@ if (current_toolchain == default_toolchain) {
       configs = [
         ":headers",
 
-        # TODO(44971): Many include/ headers use <ktl/*.h> headers.
+        # TODO(fxbug.dev/44971): Many include/ headers use <ktl/*.h> headers.
         "$zx/kernel/lib/ktl:headers.config",
         "$zx/kernel/lib/ktl:ktl.config",
 
@@ -220,7 +220,7 @@ if (current_toolchain == default_toolchain) {
       # the link by the compiler driver.  No toolchain-provided library is
       # compatible with the kernel's internal ABI.
       #
-      # TODO(27356): Clang doesn't have a single straightforward switch to
+      # TODO(fxbug.dev/27356): Clang doesn't have a single straightforward switch to
       # disable all such libraries, though it certainly should.  It
       # provides separate switches to disable the profiling/coverage
       # runtime and to disable all the flavors of runtime implied by

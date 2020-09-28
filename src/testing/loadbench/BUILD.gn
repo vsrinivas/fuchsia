@@ -33,7 +33,7 @@ source_set("lib") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

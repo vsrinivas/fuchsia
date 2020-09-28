@@ -57,7 +57,7 @@ func NewLLVMSymbolizer(llvmSymboPath string, restartInterval uint) *LLVMSymboliz
 	out.path = llvmSymboPath
 	out.input = make(chan llvmSymboArgs)
 	out.cache = &cache.LRUCache{Size: maxCacheSize}
-	// TODO(42018): llvm-symbolizer can use *tons* of memory so we restart it.
+	// TODO(fxbug.dev/42018): llvm-symbolizer can use *tons* of memory so we restart it.
 	// Once it no longer uses up so much memory, remove this.
 	out.restartInterval = restartInterval
 	out.restartCounter = 0

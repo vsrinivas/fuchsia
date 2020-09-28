@@ -125,7 +125,7 @@ template("rustc_cdylib") {
     visibility = [ ":$group_target" ]
     deps = []
     if (defined(invoker.non_rust_deps)) {
-      # TODO(43781): This allows propagating non rust dependencies through a
+      # TODO(fxbug.dev/43781): This allows propagating non rust dependencies through a
       # single level of indirection, but does not handle propagating
       # dependencies through an intermediate Rust target.
       deps += invoker.non_rust_deps

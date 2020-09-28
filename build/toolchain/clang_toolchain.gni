@@ -103,7 +103,7 @@ template("clang_toolchain") {
           breakpad_name = "<_>"
         }
         if (output_gsym && invoker.toolchain_os == "fuchsia") {
-          # TODO(58294): enable for other targets.
+          # TODO(fxbug.dev/58294): enable for other targets.
           gsymutil = "${prefix}/llvm-gsymutil"
         }
       }
@@ -210,7 +210,7 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      # TODO(47565): Replacement for rustenv
+      # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
@@ -253,7 +253,7 @@ template("clang_toolchain") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
-      # TODO(47565): Replacement for rustenv
+      # TODO(fxbug.dev/47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
@@ -269,7 +269,7 @@ template("clang_toolchain") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
-      # TODO(47565): Replacement for rustenv
+      # TODO(fxbug.dev/47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
@@ -292,7 +292,7 @@ template("clang_toolchain") {
           # On Fuchsia, lld is directly used to perform linking
           link_map_args = "-C link-args=--Map=\"{{output}}.map\""
         } else if (invoker.toolchain_cpu == "wasm32" && host_os == "linux") {
-          # TODO(56076): Remove need for ld location.
+          # TODO(fxbug.dev/56076): Remove need for ld location.
           # On WASM builds, rust-lld has trouble finding libLLVM.
           # This workaround allows the build to proceed.
 
@@ -320,7 +320,7 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      # TODO(47565): Replacement for rustenv
+      # TODO(fxbug.dev/47565): Replacement for rustenv
       command = "{{rustenv}} $ld_location_env $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
 
       description = "RUST {{output}}"
@@ -412,7 +412,7 @@ template("clang_toolchain") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
-      # TODO(47565): Replacement for rustenv
+      # TODO(fxbug.dev/47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 

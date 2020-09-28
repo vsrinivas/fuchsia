@@ -7,7 +7,7 @@ use {
     std::{cmp::Eq, fmt::Debug, hash::Hash},
 };
 
-//TODO(38342): Move this mod to its own lib to avoid leaking its existance in the
+//TODO(fxbug.dev/38342): Move this mod to its own lib to avoid leaking its existance in the
 //             fuchsia_inspect documentation.
 
 /// Trie mapping a sequence of key fragments to nodes that

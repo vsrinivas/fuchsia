@@ -362,7 +362,7 @@ impl DeviceState {
         pid: PortId,
         topological_path: &str,
     ) -> error::Result<()> {
-        // TODO(51208): Figure out a better way to do this.
+        // TODO(fxbug.dev/51208): Figure out a better way to do this.
         if self.config.device_id_is_an_uplink(topological_path) {
             info!("Discovered a new uplink: {}", topological_path);
             return self.configure_wan(pid, topological_path).await;
@@ -376,7 +376,7 @@ impl DeviceState {
             return self.configure_default_interface(pid, topological_path).await;
         }
 
-        // TODO(43251): Refactor this when we have the ability to add one port at a time to the
+        // TODO(fxbug.dev/43251): Refactor this when we have the ability to add one port at a time to the
         // bridge, currently we have to wait until we've discovered all the ports before creating
         // the bridge.
         self.lans.push(pid);
@@ -384,7 +384,7 @@ impl DeviceState {
         // If the configuration contains switched_vlan interfaces that matches this
         // topological_path add it to the bridge.
         if self.config.device_id_is_a_switched_vlan(topological_path) {
-            // TODO(43251): Need to do this until we can add individual bridge members.
+            // TODO(fxbug.dev/43251): Need to do this until we can add individual bridge members.
             if self.lans.len() == NUMBER_OF_PORTS_IN_LAN {
                 let lans = self.lans.clone();
                 info!("Creating new bridge with LAN ports: {:?}", lans);
@@ -741,7 +741,7 @@ impl DeviceState {
 
     /// Deletes a packet filter rule.
     pub async fn delete_filter(&self, _id: netconfig::Id) -> error::Result<()> {
-        // TODO(44183): Currently this method deletes all of the installed filter rules.
+        // TODO(fxbug.dev/44183): Currently this method deletes all of the installed filter rules.
         // We need to associate each rule with an id when it is installed, so that individual filter
         // rules can be removed.
         warn!("Deleting numbered filter rules is not supported yet: Clearing all rules instead.");

@@ -189,7 +189,7 @@ impl Archivist {
         let writer = archivist_configuration.archive_path.as_ref().and_then(|archive_path| {
             maybe_create_archive(&mut fs, archive_path)
                 .or_else(|e| {
-                    // TODO(57271): this is not expected in regular builds of the archivist. It's
+                    // TODO(fxbug.dev/57271): this is not expected in regular builds of the archivist. It's
                     // happening when starting the zircon_guest (fx shell guest launch zircon_guest)
                     // We'd normally fail if we couldn't create the archive, but for now we include
                     // a warning.
@@ -228,7 +228,7 @@ impl Archivist {
         // repository is unique in that it has no statically configured
         // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
-        // TODO(55735): Lock down this protocol using allowlists.
+        // TODO(fxbug.dev/55735): Lock down this protocol using allowlists.
         let all_inspect_repository =
             Arc::new(RwLock::new(DiagnosticsDataRepository::new(log_manager.clone(), None)));
 
@@ -264,7 +264,7 @@ impl Archivist {
                 },
             )));
 
-        // TODO(55736): Refactor this code so that we don't store
+        // TODO(fxbug.dev/55736): Refactor this code so that we don't store
         // diagnostics data N times if we have N pipelines. We should be
         // storing a single copy regardless of the number of pipelines.
         let archivist_state = archive::ArchivistState::new(

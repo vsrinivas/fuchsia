@@ -12,7 +12,7 @@ const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
 // being made to this file.  Do not rely on the contents of this file to provide
 // backward compatibility (yet).
 //
-// TODO(34192): Sysmem should use llcpp and FIDL tables.  The
+// TODO(fxbug.dev/34192): Sysmem should use llcpp and FIDL tables.  The
 // fuchsia.sysmem2.BufferCollectionConstraints defined here are part of that
 // transition, but the definitions here are not final.  For now, the definition
 // here is only used internally to sysmem (not between processes), and therefore

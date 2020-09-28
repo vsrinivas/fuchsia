@@ -67,7 +67,7 @@ void Streamer::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEv
   for (auto& event : events) {
     if (event.is_added()) {
       // Connect to device.
-      // TODO(48506) Properly detect expected device id.
+      // TODO(fxbug.dev/48506) Properly detect expected device id.
       watcher_->ConnectToDevice(event.added(), device_.NewRequest(loop_.dispatcher()));
 
       // Fetch camera configurations

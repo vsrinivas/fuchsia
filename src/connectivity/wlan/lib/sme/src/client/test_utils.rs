@@ -223,7 +223,7 @@ pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_m
             association_id: 55,
             cap_info: crate::test_utils::fake_capability_info().raw(),
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-            // TODO(43938): mock with fake WMM param
+            // TODO(fxbug.dev/43938): mock with fake WMM param
             wmm_param: None,
             ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() })),
             vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() })),

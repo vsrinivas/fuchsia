@@ -45,8 +45,8 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
             }
             region_array.copy_from_slice(region_string.as_bytes());
 
-            // TODO(49637): Improve handling of concurrent operations on `IfaceManager`.
-            // TODO(46413): Stop APs using `IfaceManager`.
+            // TODO(fxbug.dev/49637): Improve handling of concurrent operations on `IfaceManager`.
+            // TODO(fxbug.dev/46413): Stop APs using `IfaceManager`.
             self.iface_manager.lock().await.stop_client_connections().await?;
             let phy_ids = self.phy_manager.lock().await.get_phy_ids();
             let _ = stream::iter(phy_ids)
@@ -63,11 +63,11 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
                 })
                 .await?;
 
-            // TODO(49632): Respect the initial state of client connections, instead of
+            // TODO(fxbug.dev/49632): Respect the initial state of client connections, instead of
             // restarting them unconditionally.
             self.iface_manager.lock().await.start_client_connections().await?;
 
-            // TODO(49634): Have new PHYs respect current country.
+            // TODO(fxbug.dev/49634): Have new PHYs respect current country.
         }
     }
 }

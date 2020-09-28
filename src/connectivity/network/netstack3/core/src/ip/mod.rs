@@ -1324,7 +1324,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 );
             }
             ForwardDestination::ForwardingDisabled => {
-                // TODO(21182): Check to make sure the behavior here is the
+                // TODO(fxbug.dev/21182): Check to make sure the behavior here is the
                 // same as for IPv4.
                 //
                 // When forwarding is disabled, we silently drop packets not

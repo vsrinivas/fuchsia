@@ -69,7 +69,7 @@ enum DriverFeature {
     /// Indicates support for management frame protection and IGTK.
     MFP = 8;
     /// Temporary feature flag for driver to indicate this iface a SoftMAC device.
-    /// TODO(41640): Remove this flag once FullMAC drivers no longer use SME.
+    /// TODO(fxbug.dev/41640): Remove this flag once FullMAC drivers no longer use SME.
     TEMP_SOFTMAC = 2718281828;
 };
 

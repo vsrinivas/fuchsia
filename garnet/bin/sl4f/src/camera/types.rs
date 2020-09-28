@@ -42,7 +42,7 @@ pub struct CaptureResult {
     pub image_info: ImageInfo,
 }
 
-// TODO(52737): Revise this once data transfer method is decided on.
+// TODO(fxbug.dev/52737): Revise this once data transfer method is decided on.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct WriteCalibrationDataRequest {
     #[serde(with = "buffer_wrapper")]

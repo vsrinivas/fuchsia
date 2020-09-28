@@ -11,7 +11,7 @@ import("//build/toolchain/ccache.gni")
 assert(current_os == "fuchsia")
 
 # Deprecated.
-# TODO(44795): Remove once none of the petals depend on this.
+# TODO(fxbug.dev/44795): Remove once none of the petals depend on this.
 config("werror") {
   configs = [ "//build/config:werror" ]
 }
@@ -164,7 +164,7 @@ config("shared_library_config") {
 # BUILDCONFIG.gn to still reference the //build/config/fuchsia version to avoid
 # breaking their BUILD.gn files, and hence this definition below.
 #
-# TODO(54322): Remove this after build unification completes.
+# TODO(fxbug.dev/54322): Remove this after build unification completes.
 config("thread_safety_annotations") {
   configs = [ "//build/config:thread_safety_annotations" ]
 }

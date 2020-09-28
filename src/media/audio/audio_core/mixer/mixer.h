@@ -281,7 +281,7 @@ class Mixer {
   // TODO(mpuryear): Change parameter frac_src_frames to src_frames (change
   // subframes to int frames), as this was never intended to be fractional.
   //
-  // TODO(37356): Make frac_src_frames and frac_src_offset typesafe
+  // TODO(fxbug.dev/37356): Make frac_src_frames and frac_src_offset typesafe
   virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
                    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) = 0;
   //
@@ -326,7 +326,7 @@ class Mixer {
 
   // Eagerly precompute any needed data. If not called, that data should be lazily computed
   // on the first call to Mix().
-  // TODO(45074): This is for tests only and can be removed once filter creation is eager.
+  // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
   virtual void EagerlyPrepare() {}
 
  protected:

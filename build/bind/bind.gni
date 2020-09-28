@@ -192,7 +192,7 @@ template("bind_test") {
 #   disable_autobind (optional)
 #     [bool]: Configure the bind compiler to disable autobind, so that the driver must be bound on
 #     a user's request. Defaults to false.
-#     TODO(43400): Eventually this option should be removed when we can define this configuration
+#     TODO(fxbug.dev/43400): Eventually this option should be removed when we can define this configuration
 #     in the driver's component manifest.
 #
 #   output_bytecode (optional)

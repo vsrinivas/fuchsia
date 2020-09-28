@@ -58,7 +58,7 @@ pub struct ParameterNegotiationParams {
     pub credit_based_flow_handshake: CreditBasedFlowHandshake,
     pub priority: u8,
     pub max_frame_size: u16,
-    // TODO(58668): Update to explicit type when Credit Based Flow is implemented.
+    // TODO(fxbug.dev/58668): Update to explicit type when Credit Based Flow is implemented.
     pub initial_credits: u8,
 }
 

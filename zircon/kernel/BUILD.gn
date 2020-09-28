@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54160): Keep this in sync with BUILD.zircon.gn
+# TODO(fxbug.dev/54160): Keep this in sync with BUILD.zircon.gn
 import("//build/unification/global_variables.gni")
 if (is_kernel) {
   config("headers") {
@@ -82,7 +82,7 @@ if (is_kernel) {
       # the link by the compiler driver.  No toolchain-provided library is
       # compatible with the kernel's internal ABI.
       #
-      # TODO(27356): Clang doesn't have a single straightforward switch to
+      # TODO(fxbug.dev/27356): Clang doesn't have a single straightforward switch to
       # disable all such libraries, though it certainly should.  It
       # provides separate switches to disable the profiling/coverage
       # runtime and to disable all the flavors of runtime implied by

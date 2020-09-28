@@ -147,7 +147,7 @@ fuzzer("nhlt-fuzzer") {
     "//zircon/public/lib/fbl",
   ]
 
-  # TODO(47959): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47959): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

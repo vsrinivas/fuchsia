@@ -47,7 +47,7 @@ zx_library("zxcrypt-dev") {
 zx_library("zxcrypt-fdio") {
   shared = true
 
-  # TODO(36548): turn to shared library after migration to GN build.
+  # TODO(fxbug.dev/36548): turn to shared library after migration to GN build.
   sdk = "source"
   sdk_headers = [
     "zxcrypt/fdio-volume.h",

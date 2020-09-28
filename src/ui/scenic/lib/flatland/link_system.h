@@ -41,7 +41,7 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
 
   // |fuchsia::ui::scenic::internal::GraphLink|
   void GetLayout(GetLayoutCallback callback) override {
-    // TODO(37750): Handle duplicate calls to a hanging get with an error, as the client is not
+    // TODO(fxbug.dev/37750): Handle duplicate calls to a hanging get with an error, as the client is not
     // assuming the appropriate flow control.
     layout_helper_.SetCallback(
         [callback = std::move(callback)](fuchsia::ui::scenic::internal::LayoutInfo info) {
@@ -51,7 +51,7 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
 
   // |fuchsia::ui::scenic::internal::GraphLink|
   void GetStatus(GetStatusCallback callback) override {
-    // TODO(37750): Handle duplicate calls to a hanging get with an error, as the client is not
+    // TODO(fxbug.dev/37750): Handle duplicate calls to a hanging get with an error, as the client is not
     // assuming the appropriate flow control.
     status_helper_.SetCallback(std::move(callback));
   }
@@ -71,7 +71,7 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
 
   // |fuchsia::ui::scenic::internal::ContentLink|
   void GetStatus(GetStatusCallback callback) override {
-    // TODO(37750): Handle duplicate calls to a hanging get with an error, as the client is not
+    // TODO(fxbug.dev/37750): Handle duplicate calls to a hanging get with an error, as the client is not
     // assuming the appropriate flow control.
     status_helper_.SetCallback(std::move(callback));
   }
@@ -189,7 +189,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
 
   ObjectLinker linker_;
 
-  // TODO(44335): These maps are modified at Link creation and destruction time (within the
+  // TODO(fxbug.dev/44335): These maps are modified at Link creation and destruction time (within the
   // ObjectLinker closures) as well as within UpdateLinks, which is called by the core render loop.
   // This produces a possible priority inversion between the Flatland instance threads and the
   // (possibly deadline scheduled) render thread.

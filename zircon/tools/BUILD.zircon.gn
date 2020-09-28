@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(60423) Remove this file once the //vendor/... targets listed
+# TODO(fxbug.dev/60423) Remove this file once the //vendor/... targets listed
 # in the bug no longer point to the empty targets here.
 group("tools-linux-arm64") {
 }

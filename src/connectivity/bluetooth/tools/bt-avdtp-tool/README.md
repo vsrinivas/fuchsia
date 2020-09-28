@@ -30,7 +30,7 @@ the device address shown in the `bt-cli` tool.
 * To see how to use a specific command, type `help _CommandName_` in the CLI.
 * Note that each avdtp-tool command must be proceeded by a generic id. See the output
 of `fx syslog` for the mapping of peer to generic id. The generic id starts at 0, and
-is incremented after every PTS test that is run. TODO(37089): Deprecate this id scheme and
+is incremented after every PTS test that is run. TODO(fxbug.dev/37089): Deprecate this id scheme and
 use the underlying `peer_id`.
 * TODO(aniramakri): A command `peers` printing the list of generic ids mapped to the connected peers.
 

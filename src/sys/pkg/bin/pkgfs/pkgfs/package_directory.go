@@ -189,7 +189,7 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 				return nil, nil, nil, fs.ErrPermission
 			}
 
-			// TODO(48930) Remove this temporary feature when possible.
+			// TODO(fxbug.dev/48930) Remove this temporary feature when possible.
 			if !d.executable && d.fs.enforceNonBaseExecutabilityRestrictions {
 				log.Printf("pkgfs: attempted executable open of %s. This is not allowed due to executability restrictions in pkgfs. See fxbug.dev/48902", name)
 				return nil, nil, nil, fs.ErrPermission

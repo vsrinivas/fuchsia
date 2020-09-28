@@ -1074,7 +1074,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	s.mu.Lock()
 	var err *tcpip.Error
 	if len(s.mu.readView) == 0 {
-		// TODO(21106): do something with control messages.
+		// TODO(fxbug.dev/21106): do something with control messages.
 		s.mu.readView, _, err = s.ep.Read(&s.mu.sender)
 	}
 	v, sender := s.mu.readView, s.mu.sender

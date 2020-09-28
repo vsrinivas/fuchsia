@@ -38,7 +38,7 @@ impl Client {
         &self,
         meta_far_merkle: &Hash,
     ) -> Result<package::Directory, package::OpenError> {
-        // TODO(37858) allow opening as executable too
+        // TODO(fxbug.dev/37858) allow opening as executable too
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
         let dir =
             io_util::directory::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)

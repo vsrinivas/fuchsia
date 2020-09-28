@@ -459,7 +459,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // only occur on the FIDL thread.
   void EnsureUnbindCompleted();
 
-  // TODO(35200): This isn't fully hooked up yet, so doesn't actually yet
+  // TODO(fxbug.dev/35200): This isn't fully hooked up yet, so doesn't actually yet
   // indicate whether buffers are secure.  Enforce that
   // port_settings_[X].is_secure() is consistent with these.
   fuchsia::mediacodec::SecureMemoryMode OutputSecureMemoryMode();

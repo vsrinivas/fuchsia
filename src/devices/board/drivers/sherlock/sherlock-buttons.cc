@@ -85,7 +85,7 @@ zx_status_t Sherlock::ButtonsInit() {
   };
 
   constexpr size_t kSherlockButtonCount = 4;
-  // TODO(58662): Re-enable camera mute switch.
+  // TODO(fxbug.dev/58662): Re-enable camera mute switch.
   // constexpr size_t kLuisButtonCount = 5;
   constexpr size_t kLuisButtonCount = 4;
 

@@ -28,7 +28,7 @@ executable("app_test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  # TODO(46846): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46846): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

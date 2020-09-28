@@ -31,7 +31,7 @@ namespace arch {
 /// Yield the processor momentarily.  This should be used in busy waits.
 inline void Yield() { _mm_pause(); }
 
-// TODO(49941): Improve the docs on the barrier APIs, maybe rename/refine.
+// TODO(fxbug.dev/49941): Improve the docs on the barrier APIs, maybe rename/refine.
 
 /// Synchronize all memory accesses of all kinds.
 inline void DeviceMemoryBarrier() { __asm__ volatile("mfence" ::: "memory"); }

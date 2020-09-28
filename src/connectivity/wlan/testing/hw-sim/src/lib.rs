@@ -577,7 +577,7 @@ pub async fn loop_until_iface_is_found() {
     // Attempt to issue a scan command until the request succeeds.  Scanning will fail until a
     // client interface is available.  A successful response to a scan request indicates that the
     // client policy layer is ready to use.
-    // TODO(57415): Figure out a new way to signal that the client policy layer is ready to go.
+    // TODO(fxbug.dev/57415): Figure out a new way to signal that the client policy layer is ready to go.
     let mut retry = test_utils::RetryWithBackoff::infinite_with_max_interval(10.seconds());
     loop {
         let (scan_proxy, server_end) = create_proxy().unwrap();

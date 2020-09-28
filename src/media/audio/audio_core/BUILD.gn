@@ -172,7 +172,7 @@ source_set("audio_core_lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

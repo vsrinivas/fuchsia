@@ -53,6 +53,6 @@ executable("screen_reader_tests") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  # TODO(46525): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46525): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

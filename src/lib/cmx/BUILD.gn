@@ -35,7 +35,7 @@ source_set("cmx") {
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/trace",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -58,11 +58,11 @@ executable("cmx_unittests") {
     "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
-  # TODO(46552): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46552): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -86,7 +86,7 @@ fuzzer("cmx_fuzzer") {
     ":cmx",
     "//src/lib/files",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
   public_deps = [

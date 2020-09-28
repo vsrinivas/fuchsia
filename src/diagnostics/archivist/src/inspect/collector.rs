@@ -52,7 +52,7 @@ impl InspectDataCollector {
     /// NOTE: Currently does a synchronous directory-open, since there are no available
     ///       async apis.
     pub async fn find_directory_proxy(path: &Path) -> Result<DirectoryProxy, Error> {
-        // TODO(36762): When available, use the async directory-open api.
+        // TODO(fxbug.dev/36762): When available, use the async directory-open api.
         return io_util::open_directory_in_namespace(
             &path.to_string_lossy(),
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
@@ -62,7 +62,7 @@ impl InspectDataCollector {
     /// Searches the directory specified by inspect_directory_proxy for
     /// .inspect files and populates the `inspect_data_map` with the found VMOs.
     pub async fn populate_data_map(&mut self, inspect_proxy: &DirectoryProxy) -> Result<(), Error> {
-        // TODO(36762): Use a streaming and bounded readdir API when available to avoid
+        // TODO(fxbug.dev/36762): Use a streaming and bounded readdir API when available to avoid
         // being hung.
         let entries = files_async::readdir_recursive(inspect_proxy, /* timeout= */ None)
             .filter_map(|result| {

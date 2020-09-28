@@ -165,7 +165,7 @@ func (c *Client) call(ctx context.Context, method string, params interface{}, re
 		return err
 	}
 
-	// TODO(39973) sl4f currently response with different id values, but
+	// TODO(fxbug.dev/39973) sl4f currently response with different id values, but
 	// over HTTP, we can safely assume this response is for the request we
 	// made over this connection
 	//if response.Id != id {

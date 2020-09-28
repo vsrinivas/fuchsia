@@ -150,7 +150,7 @@ async fn test_discovery_session() -> Result<(), Error> {
     Ok(())
 }
 
-// TODO(39373): Add host.fidl emulation to bt-fidl-mocks and use that instead.
+// TODO(fxbug.dev/39373): Add host.fidl emulation to bt-fidl-mocks and use that instead.
 async fn expect_call<F>(stream: Arc<RwLock<HostRequestStream>>, f: F) -> Result<(), Error>
 where
     F: FnOnce(Arc<HostControlHandle>, HostRequest) -> Result<(), Error>,

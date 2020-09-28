@@ -69,7 +69,7 @@ executable("trace_tests_bin") {
 
   deps = [ ":gtest_main" ]
 
-  # TODO(46850): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -122,7 +122,7 @@ source_set("integration_test_utils") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-reader",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
@@ -158,7 +158,7 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
     "//zircon/system/ulib/trace:trace-with-static-engine",
     "//zircon/system/ulib/trace-reader",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
@@ -183,7 +183,7 @@ executable("trace_integration_tests") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  # TODO(46850): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
@@ -210,7 +210,7 @@ executable("basic_integration_test_app") {
     "//zircon/system/ulib/trace-provider",
   ]
 
-  # TODO(46850): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -295,7 +295,7 @@ executable("nested_environment_test") {
     "//zircon/system/ulib/task-utils",
   ]
 
-  # TODO(46850): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

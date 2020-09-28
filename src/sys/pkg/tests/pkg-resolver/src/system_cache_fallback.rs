@@ -257,7 +257,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
 
 // The package is in the cache but not known to the repository. Don't fall back.
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(50764): reenable this after we've normalized SDK client behavior wrt cache fallback.
+#[ignore] // TODO(fxbug.dev/50764): reenable this after we've normalized SDK client behavior wrt cache fallback.
 async fn test_resolve_fails_not_in_repo() {
     let pkg_name = "test_resolve_fails_not_in_repo";
     let pkg = test_package(pkg_name, "stuff").await;
@@ -288,7 +288,7 @@ async fn test_resolve_fails_not_in_repo() {
 }
 
 // The package is in the cache but not known to the repository. Fall back to the on-disk package.
-// TODO(50764): This is the wrong behavior. Delete this after we've normalized SDK client behavior
+// TODO(fxbug.dev/50764): This is the wrong behavior. Delete this after we've normalized SDK client behavior
 // wrt cache fallback.
 #[fasync::run_singlethreaded(test)]
 async fn test_resolve_falls_back_not_in_repo() {

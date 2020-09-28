@@ -119,7 +119,7 @@ test_package("wlanstack-tests") {
       environments = [
         {
           dimensions = emu_env.dimensions
-          tags = [ "flaky" ]  # TODO(29873)
+          tags = [ "flaky" ]  # TODO(fxbug.dev/29873)
         },
       ]
     },

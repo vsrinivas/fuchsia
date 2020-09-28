@@ -180,8 +180,8 @@ impl SuiteServer for TestServer {
         self.tests(test_component).await
     }
 
-    // TODO(45852): Support disabled tests.
-    // TODO(45853): Support test stdout, or devise a mechanism to replace it.
+    // TODO(fxbug.dev/45852): Support disabled tests.
+    // TODO(fxbug.dev/45853): Support test stdout, or devise a mechanism to replace it.
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
@@ -438,7 +438,7 @@ impl TestServer {
         let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
             Ok(b) => b,
             Err(e) => {
-                // TODO(45857): Introduce Status::InternalError.
+                // TODO(fxbug.dev/45857): Introduce Status::InternalError.
                 test_logger
                     .write_str(&format!("Error reading test result:{:?}\n", IoError::File(e)))
                     .await?;
@@ -457,7 +457,7 @@ impl TestServer {
 
         // parse test results.
         if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
-            // TODO(45857): Introduce Status::InternalError.
+            // TODO(fxbug.dev/45857): Introduce Status::InternalError.
             test_logger
                 .write_str("unexpected output, should have received exactly one test result.\n")
                 .await?;
@@ -475,7 +475,7 @@ impl TestServer {
             IndividualTestOutputStatus::Run => {
                 match &test_suite.failures {
                     Some(_failures) => {
-                        // TODO(53955): re-enable. currently we are getting these logs from test's
+                        // TODO(fxbug.dev/53955): re-enable. currently we are getting these logs from test's
                         // stdout which we are printing above.
                         //for f in failures {
                         //   test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
@@ -527,9 +527,9 @@ async fn get_tests(
     let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
     if process_info.return_code != 0 {
         let logs = std_reader.get_logs().await?;
-        // TODO(4610): logs might not be utf8, fix the code.
+        // TODO(fxbug.dev/4610): logs might not be utf8, fix the code.
         let output = from_utf8(&logs)?;
-        // TODO(45858): Add a error logger to API so that we can display test stdout logs.
+        // TODO(fxbug.dev/45858): Add a error logger to API so that we can display test stdout logs.
         error!("Failed getting list of tests:\n{}", output);
         return Err(EnumerationError::ListTest);
     }
@@ -538,7 +538,7 @@ async fn get_tests(
         Err(e) => {
             let logs = std_reader.get_logs().await?;
 
-            // TODO(4610): logs might not be utf8, fix the code.
+            // TODO(fxbug.dev/4610): logs might not be utf8, fix the code.
             let output = from_utf8(&logs)?;
             error!("Failed getting list of tests from {}:\n{}", test_list_file.display(), output);
             return Err(IoError::File(e).into());

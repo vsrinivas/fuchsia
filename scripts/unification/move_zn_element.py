@@ -142,7 +142,7 @@ def transform_build_file(build):
         # Add extra parameters to tests.
         if starting_type == Type.TEST:
             sys.stdout.write('  # Dependent manifests unfortunately cannot be marked as `testonly`.\n')
-            sys.stdout.write('  # TODO(44278): Remove when converting this file to proper GN build idioms.\n')
+            sys.stdout.write('  # TODO(fxbug.dev/44278): Remove when converting this file to proper GN build idioms.\n')
             sys.stdout.write('  if (is_fuchsia) {\n')
             sys.stdout.write('    testonly = false\n')
             sys.stdout.write('  }\n')

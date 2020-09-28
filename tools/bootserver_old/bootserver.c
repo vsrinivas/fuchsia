@@ -933,7 +933,7 @@ int main(int argc, char** argv) {
           // succeed even if the device netsvc doesn't yet know how to handle
           // firmware files.
           //
-          // TODO(45606): once we bump the version past "0.7.22" and force a
+          // TODO(fxbug.dev/45606): once we bump the version past "0.7.22" and force a
           // hard-transition anyway we can remove this workaround.
           if (status != 0) {
             fprintf(

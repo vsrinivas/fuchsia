@@ -572,7 +572,7 @@ pub(crate) async fn serve_iface_manager_requests(
             terminated_fsm = iface_manager.fsm_futures.select_next_some() => {
                 info!("state machine exited: {:?}", terminated_fsm.1);
 
-                // TODO(57140): The client state machine will be modified to exit on idle.  The
+                // TODO(fxbug.dev/57140): The client state machine will be modified to exit on idle.  The
                 // reconnect process should be initiated here.
             },
             operation_result = operation_futures.select_next_some() => {},

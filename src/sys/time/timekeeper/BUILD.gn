@@ -112,7 +112,7 @@ group("tests") {
 }
 
 # Packages needed for time synchronization in recovery images
-# TODO(56447) - move time sync components and this group to a common directory
+# TODO(fxbug.dev/56447) - move time sync components and this group to a common directory
 group("recovery") {
   deps = [
     ":timekeeper",

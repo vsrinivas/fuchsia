@@ -5,7 +5,7 @@
 /// Serve 64 schemas at a time.
 /// We limit to 64 because each schema is sent over a VMO and we can only have
 /// 64 handles sent over a message.
-// TODO(4601): Greedily fill the vmos with object delimited json, rather than
+// TODO(fxbug.dev/4601): Greedily fill the vmos with object delimited json, rather than
 // giving every schema its own vmo.
 pub const IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 

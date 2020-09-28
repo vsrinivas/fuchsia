@@ -24,7 +24,7 @@ class BufferCollectionInfo {
   // Creates a new |BufferCollectionInfo| instance. The return value is null if the buffer was
   // not created successfully. This function sets the server-side sysmem image constraints.
   //
-  // TODO(48210): Make this an asynchronous call. This function is currently thread safe as
+  // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe as
   // Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
   static fitx::result<fitx::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator, escher::Escher* escher,

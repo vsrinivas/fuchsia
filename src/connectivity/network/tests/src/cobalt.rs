@@ -131,10 +131,10 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         MultilineSlice(&events_post_first_drop),
     );
 
-    // TODO(43242): This is currently FIN-ACK, ACK but should be FIN-ACK, FIN-ACK.
+    // TODO(fxbug.dev/43242): This is currently FIN-ACK, ACK but should be FIN-ACK, FIN-ACK.
     const EXPECTED_PACKET_COUNT: i64 = 2;
 
-    // TODO(42092): make these sent/received expected values the same.
+    // TODO(fxbug.dev/42092): make these sent/received expected values the same.
     // TCP payload size (12) + TCP headers (20)
     const EXPECTED_SENT_PACKET_SIZE: i64 = 32;
     // TCP payload size (12) + TCP headers (20) + IP minimum size (20)

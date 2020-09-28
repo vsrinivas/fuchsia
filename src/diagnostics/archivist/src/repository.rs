@@ -91,7 +91,7 @@ impl DiagnosticsDataRepository {
                     [existing_diagnostics_artifact_container] => {
                         // Races may occur between seeing diagnostics ready and seeing
                         // creation lifecycle events. Handle this here.
-                        // TODO(52047): Remove once caching handles ordering issues.
+                        // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
                         if existing_diagnostics_artifact_container
                             .lifecycle_artifacts_container
                             .is_none()
@@ -211,7 +211,7 @@ impl DiagnosticsDataRepository {
                     [existing_diagnostics_artifact_container] => {
                         // Races may occur between synthesized and real diagnostics_ready
                         // events, so we must handle de-duplication here.
-                        // TODO(52047): Remove once caching handles ordering issues.
+                        // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
                         if existing_diagnostics_artifact_container
                             .inspect_artifacts_container
                             .is_none()

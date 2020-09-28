@@ -38,7 +38,7 @@ source_set("archive_reader") {
   public_deps = [
     "//sdk/fidl/fuchsia.diagnostics",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

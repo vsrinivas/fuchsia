@@ -647,7 +647,7 @@ func compile(fidlData types.Root) Root {
 	}
 
 	for _, v := range fidlData.Structs {
-		// TODO(7704) remove once anonymous structs are supported
+		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
 		if v.Anonymous {
 			continue
 		}

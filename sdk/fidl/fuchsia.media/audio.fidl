@@ -21,7 +21,7 @@ protocol Audio {
     CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
                         bool loopback);
 
-    // TODO(38104): Remove these methods.
+    // TODO(fxbug.dev/38104): Remove these methods.
     [Transitional, Deprecated]
     SetSystemMute(bool muted);
     [Transitional, Deprecated]

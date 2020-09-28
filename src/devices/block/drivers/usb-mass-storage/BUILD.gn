@@ -79,7 +79,7 @@ test("ums") {
     "//zircon/public/lib/zxtest",
   ]
 
-  # TODO(54514): Fix the leaks and remove this.
+  # TODO(fxbug.dev/54514): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

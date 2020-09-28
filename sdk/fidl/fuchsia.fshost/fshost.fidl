@@ -45,7 +45,7 @@ protocol Admin {
     /// Causes fshost to unmount all filesystems and exit. Fshost has
     /// successfully unmounted all filesystems when this function returns, and
     /// exits immediately after writing the response to this function.
-    // TODO(43186): replace with the component manager shutdown API once it
+    // TODO(fxbug.dev/43186): replace with the component manager shutdown API once it
     // becomes available.
     Shutdown() -> ();
 };

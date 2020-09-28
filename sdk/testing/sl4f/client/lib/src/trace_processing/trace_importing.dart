@@ -310,7 +310,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   int droppedFlowEventCounter = 0;
   int droppedAsyncEventCounter = 0;
 
-  // TODO(41309): Support nested async events.  In the meantime, just drop them.
+  // TODO(fxbug.dev/41309): Support nested async events.  In the meantime, just drop them.
   int droppedNestedAsyncEventCounter = 0;
 
   final Map<int, String> pidToName = {};
@@ -494,7 +494,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       counterEvent.id = id;
       resultEvents.add(counterEvent);
     } else if (phase == 'n') {
-      // TODO(41309): Support nested async events.  In the meantime, just drop them.
+      // TODO(fxbug.dev/41309): Support nested async events.  In the meantime, just drop them.
       droppedNestedAsyncEventCounter++;
     } else if (phase == 'M') {
       // Chrome metadata events. These define process and thread names, similar

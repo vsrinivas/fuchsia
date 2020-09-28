@@ -61,7 +61,7 @@ test("virtio-input-test") {
     "//zircon/system/ulib/hid-parser",
   ]
 
-  # TODO(47498): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47498): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

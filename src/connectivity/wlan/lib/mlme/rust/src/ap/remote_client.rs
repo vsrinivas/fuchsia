@@ -31,7 +31,7 @@ use {
 /// that the number of 1000 TUs that pass before an AP disassociates an inactive non-AP STA. This
 /// value is transmitted via the BSS Max Idle Period element (IEEE Std 802.11-2016, 9.4.2.79) in
 /// Association Response and Reassociation Response frames, which contains a 16-bit integer.
-// TODO(37891): Move this setting into the SME.
+// TODO(fxbug.dev/37891): Move this setting into the SME.
 const BSS_MAX_IDLE_PERIOD: u16 = 90;
 
 #[derive(Debug)]
@@ -153,8 +153,8 @@ pub enum ClientEvent {
     BssIdleTimeout,
 }
 
-// TODO(37891): Implement capability negotiation in MLME-ASSOCIATE.response.
-// TODO(37891): Implement action frame handling.
+// TODO(fxbug.dev/37891): Implement capability negotiation in MLME-ASSOCIATE.response.
+// TODO(fxbug.dev/37891): Implement action frame handling.
 impl RemoteClient {
     pub fn new(addr: MacAddr) -> Self {
         Self { addr, state: StateMachine::new(State::Authenticating) }
@@ -274,7 +274,7 @@ impl RemoteClient {
     /// If we receive a WLAN frame, we need to reset the clock on disassociating the client after
     /// timeout.
     fn reset_bss_max_idle_timeout(&mut self, ctx: &mut Context) {
-        // TODO(37891): IEEE Std 802.11-2016, 9.4.2.79 specifies a "Protected Keep-Alive Required"
+        // TODO(fxbug.dev/37891): IEEE Std 802.11-2016, 9.4.2.79 specifies a "Protected Keep-Alive Required"
         // option that indicates that only a protected frame indicates activity. It is unclear how
         // this interacts with open networks.
 
@@ -432,7 +432,7 @@ impl RemoteClient {
                     phy: WlanPhyType::ERP,
                     chan: WlanChannel {
                         primary: channel,
-                        // TODO(40917): Correctly support this.
+                        // TODO(fxbug.dev/40917): Correctly support this.
                         cbw: WlanChannelBandwidth::_20,
                         secondary80: 0,
                     },
@@ -447,7 +447,7 @@ impl RemoteClient {
                     rates: rates_arr,
                     cap_info: capabilities.raw(),
 
-                    // TODO(40917): Correctly support all of this.
+                    // TODO(fxbug.dev/40917): Correctly support all of this.
                     has_ht_cap: false,
                     // Safe: This is not read by the driver.
                     ht_cap: unsafe { std::mem::zeroed::<Ieee80211HtCapabilities>() },
@@ -666,7 +666,7 @@ impl RemoteClient {
 
     /// Handles action frames (IEEE Std 802.11-2016, 9.3.3.14) from the PHY.
     fn handle_action_frame(&self, _ctx: &mut Context) -> Result<(), ClientRejection> {
-        // TODO(37891): Implement me!
+        // TODO(fxbug.dev/37891): Implement me!
         Ok(())
     }
 
@@ -727,7 +727,7 @@ impl RemoteClient {
             State::Associated { ps_state, .. } => match ps_state {
                 PowerSaveState::Awake => {
                     *ps_state = PowerSaveState::Dozing {
-                        // TODO(41759): Impose some kind of limit on this.
+                        // TODO(fxbug.dev/41759): Impose some kind of limit on this.
                         buffered: VecDeque::new(),
                     }
                 }
@@ -928,7 +928,7 @@ impl RemoteClient {
                         }
                         ie::Id::RSNE => {
                             rsne = Some({
-                                // TODO(41109): Stop passing RSNEs around like this.
+                                // TODO(fxbug.dev/41109): Stop passing RSNEs around like this.
                                 let mut buf =
                                     vec![0; std::mem::size_of::<ie::Header>() + ie_body.len()];
                                 let mut w = BufferWriter::new(&mut buf[..]);
@@ -1045,7 +1045,7 @@ impl RemoteClient {
 
         let (in_buf, bytes_written) = ctx
             .make_data_frame(
-                dst_addr, src_addr, protection, false, // TODO(37891): Support QoS.
+                dst_addr, src_addr, protection, false, // TODO(fxbug.dev/37891): Support QoS.
                 ether_type, body,
             )
             .map_err(ClientRejection::WlanSendError)?;
@@ -1629,7 +1629,7 @@ mod tests {
 
     #[test]
     fn handle_action_frame() {
-        // TODO(37891): Implement me!
+        // TODO(fxbug.dev/37891): Implement me!
     }
 
     #[test]

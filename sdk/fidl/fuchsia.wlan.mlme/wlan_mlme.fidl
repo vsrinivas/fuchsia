@@ -391,7 +391,7 @@ struct AssociateConfirm {
     // CapabilityInformation
     uint16 association_id;
 
-    // TODO(43063): If we are able to intersect the capabilities with beacon before associating,
+    // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove these fields.
     CapabilityInfo cap_info;
     bytes:RATES_MAX_LEN rates;
@@ -778,7 +778,7 @@ protocol MLME {
     -> OnSaeFrameRx(SaeFrame frame);
 
     // For SoftMAC drivers only. Let SME inform MLME about the capability negotiation outcome.
-    // TODO(43063): If we are able to intersect the capabilities with beacon before associating,
+    // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove this function and the capabilities from AssociateConfirm and use AssociateRequest.
     FinalizeAssociationReq(NegotiatedCapabilities cap);
 };

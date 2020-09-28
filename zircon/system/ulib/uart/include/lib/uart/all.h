@@ -44,7 +44,7 @@ using Driver = T<Args...,
                  // A default-constructed variant gets the null driver.
                  null::Driver,
 #ifdef __aarch64__
-                 pl011::Driver,  // TODO(49423): many more...
+                 pl011::Driver,  // TODO(fxbug.dev/49423): many more...
 #endif
 #if defined(__x86_64__) || defined(__i386__)
                  ns8250::MmioDriver, ns8250::PioDriver,

@@ -41,7 +41,7 @@ type Endpoint struct {
 // header lengths, and minimum set of the capabilities. This function takes
 // ownership of `links`.
 func New(links []*BridgeableEndpoint) *Endpoint {
-	// TODO(57022): Make sure links are all using the same kind of link.
+	// TODO(fxbug.dev/57022): Make sure links are all using the same kind of link.
 	sort.Slice(links, func(i, j int) bool {
 		return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
 	})

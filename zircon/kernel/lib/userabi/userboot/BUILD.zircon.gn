@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54160) Keep in sync with BUILD.gn
+# TODO(fxbug.dev/54160) Keep in sync with BUILD.gn
 
 import("$zx/public/gn/config/levels.gni")
 import("$zx/public/gn/config/standard.gni")
@@ -23,7 +23,7 @@ if (current_toolchain == default_toolchain) {
       configs += standard_fuchsia_configs + [
                    ":userboot_config",
 
-                   # TODO(48501): This is needed pervasively and not just
+                   # TODO(fxbug.dev/48501): This is needed pervasively and not just
                    # in the linking target so its compile-time flags can
                    # work around fxbug.dev/48501.  It's separate from
                    # userboot_config so it can be removed by other links

@@ -30,7 +30,7 @@ using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 // Set of operation properties used by the watch dog to track the operation.
 // Each operation and operation type that needs to be tracked needs to implement
 // this class.
-// TODO(57867)
+// TODO(fxbug.dev/57867)
 class OperationTracker {
  public:
   // Returns the operation's unique id across all tracked operations.

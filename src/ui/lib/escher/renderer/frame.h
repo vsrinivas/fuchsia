@@ -161,7 +161,7 @@ class Frame : public Resource {
 
   BlockAllocator block_allocator_;
 
-  // TODO(42570): investigate whether this memory is host-coherent, and whether it should be
+  // TODO(fxbug.dev/42570): investigate whether this memory is host-coherent, and whether it should be
   // (it seems like it isn't and should be).  Document the usage guarantees/requirements in
   // AllocateUniform(), above.
   UniformBlockAllocator uniform_block_allocator_;

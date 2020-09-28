@@ -209,7 +209,7 @@ impl RealmCapabilityHost {
                 Err(ModelError::RoutingError {
                     err: RoutingError::SourceInstanceStopped { .. },
                 }) => {
-                    // TODO(54109): The runner may have decided to not run the component. Perhaps a
+                    // TODO(fxbug.dev/54109): The runner may have decided to not run the component. Perhaps a
                     // security policy prevented it, or maybe there was some other issue.
                     // Unfortunately these failed runs may or may not have occurred by this point,
                     // but we want to be consistent about how bind_child responds to these errors.

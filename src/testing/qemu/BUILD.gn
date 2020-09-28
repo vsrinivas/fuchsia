@@ -36,7 +36,7 @@ if (is_linux) {
     visibility = [ ":*" ]
 
     if (target_cpu == "arm64") {
-      # TODO(59918): Move the arm64 boot shim to the Fuchsia build.
+      # TODO(fxbug.dev/59918): Move the arm64 boot shim to the Fuchsia build.
       # Until then, it is ok to assume everything was built by the
       # Zircon build, so no deps entry is needed.
       kernel_binary = "qemu-boot-shim.bin"

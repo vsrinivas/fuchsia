@@ -194,7 +194,7 @@ pub struct Player {
     registration: ValidPlayerRegistration,
     hanging_get: Option<QueryResponseFut<PlayerInfoDelta>>,
     terminated: bool,
-    // TODO(41131): Use structured data when a proc macro to derive
+    // TODO(fxbug.dev/41131): Use structured data when a proc macro to derive
     // Inspect support is available.
     inspect_handle: inspect::Node,
     inspect_state: inspect::Node,

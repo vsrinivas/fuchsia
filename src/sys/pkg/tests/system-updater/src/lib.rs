@@ -756,7 +756,7 @@ macro_rules! pinned_pkg_url {
 
 fn make_packages_json<'a>(urls: impl AsRef<[&'a str]>) -> String {
     json!({
-      // TODO(50754): Change to "1" once we remove support for versions as ints.
+      // TODO(fxbug.dev/50754): Change to "1" once we remove support for versions as ints.
       "version": 1,
       "content": urls.as_ref(),
     })

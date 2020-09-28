@@ -668,7 +668,7 @@ def get_elf_info(filename, match_notes=False):
                     value = 0
                     bits = 0
                     while start < limit:
-                        # TODO(48946): Remove this single-element slice hack
+                        # TODO(fxbug.dev/48946): Remove this single-element slice hack
                         # once Python2 is no longer used in-tree.
                         byte = ord(file[start:start + 1])
                         start += 1

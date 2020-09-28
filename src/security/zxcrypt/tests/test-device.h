@@ -28,7 +28,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 
-// TODO(34273): Replace these with *_STATUS in zxtest.
+// TODO(fxbug.dev/34273): Replace these with *_STATUS in zxtest.
 #define EXPECT_ZX(expr, status) EXPECT_EQ(expr, status)
 #define ASSERT_ZX(expr, status) ASSERT_EQ(expr, status)
 

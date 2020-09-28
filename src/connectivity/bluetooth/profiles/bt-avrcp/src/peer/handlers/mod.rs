@@ -280,8 +280,8 @@ fn notification_response(
 ) -> Result<Box<dyn PacketEncodable>, StatusCode> {
     // Unsupported events:
     // Probably never: TrackReachedEnd, TrackReachedStart,
-    // TODO(47597): Battery/power notifications: BattStatusChanged, SystemStatusChanged,
-    // TODO(2744): Browse channel notifcations: NowPlayingContentChanged, AvailablePlayersChanged,
+    // TODO(fxbug.dev/47597): Battery/power notifications: BattStatusChanged, SystemStatusChanged,
+    // TODO(fxbug.dev/2744): Browse channel notifcations: NowPlayingContentChanged, AvailablePlayersChanged,
     //             and UidsChanged
 
     Ok(match notify_event_id {

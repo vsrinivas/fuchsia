@@ -57,7 +57,7 @@ template("cr_fuchsia_package") {
     if (!defined(invoker.manifest)) {
       assert(testonly == true)
 
-      # TODO(1019938): switch the default to tests.cmx which doesn't request
+      # TODO(fxbug.dev/1019938): switch the default to tests.cmx which doesn't request
       # the deprecated-ambient-replace-as-executable feature.
       _manifest_fragment = "//chromium_compat/build/config/tests-with-exec.cmx"
     } else {

@@ -85,7 +85,7 @@ executable("test-inspect") {
     "//zircon/system/ulib/inspect",
   ]
 
-  # TODO(46756): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46756): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

@@ -11,7 +11,7 @@ namespace scenic_impl {
 namespace input {
 
 // Possible states the pointer can be in.
-// TODO(53316): Remove UP and DOWN phases when old input injection API is removed.
+// TODO(fxbug.dev/53316): Remove UP and DOWN phases when old input injection API is removed.
 enum Phase { INVALID, ADD, DOWN, CHANGE, UP, REMOVE, CANCEL };
 
 // Extents define an axis-aligned rectangle in 2D space.
@@ -41,7 +41,7 @@ struct Viewport {
 struct InternalPointerEvent {
   zx_time_t timestamp = 0;
   // Id of the injection device.
-  // TODO(53352): This is currently only unique per Injector. Make globally unique.
+  // TODO(fxbug.dev/53352): This is currently only unique per Injector. Make globally unique.
   uint32_t device_id = 0u;
   // Id of the pointer this event belongs to (== a finger on a touchscreen).
   uint32_t pointer_id = 0u;

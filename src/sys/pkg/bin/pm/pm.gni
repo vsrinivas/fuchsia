@@ -149,7 +149,7 @@ template("pm_build") {
     ]
 
     if (string_replace(package_name, "_", "-") != package_name) {
-      # TODO(22679): packages ending up in this allowlist should be updated to
+      # TODO(fxbug.dev/22679): packages ending up in this allowlist should be updated to
       # use hyphens in their names. New entries should not be added to the
       # allowlist or excluded by logic here.
       deps += [ "//build:deprecated_package_underscore" ]
@@ -170,7 +170,7 @@ template("pm_publish") {
     outputs = [ "$amber_repository_dir/keys/{{source_file_part}}" ]
   }
 
-  # TODO(38262) In order to be TUF-1.0 conformant, we need to have
+  # TODO(fxbug.dev/38262) In order to be TUF-1.0 conformant, we need to have
   # versioned-prefixed root metadata files. Fow now this just hard-codes
   # copying the current metadata to the correct place, but long term this
   # should be computed so we don't forget to copy the file when we rotate the
@@ -181,7 +181,7 @@ template("pm_publish") {
     outputs = [ "$amber_repository_dir/repository/root.json" ]
   }
 
-  # TODO(38262) See the comment on `root_manifest`.
+  # TODO(fxbug.dev/38262) See the comment on `root_manifest`.
   copy("versioned_root_manifest") {
     sources = [
       "$amber_keys_dir/metadata/1.root.json",

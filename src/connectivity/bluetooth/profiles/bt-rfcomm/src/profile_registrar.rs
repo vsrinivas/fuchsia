@@ -199,7 +199,7 @@ impl ProfileRegistrar {
                 .await
                 .unwrap_or_else(|_fidl_error| Err(ErrorCode::Failed)),
             bredr::ConnectParameters::Rfcomm { .. } => {
-                // TODO(49073): Route to RfcommServer and implement RFCOMM functionality.
+                // TODO(fxbug.dev/49073): Route to RfcommServer and implement RFCOMM functionality.
                 Err(ErrorCode::NotSupported)
             }
         }

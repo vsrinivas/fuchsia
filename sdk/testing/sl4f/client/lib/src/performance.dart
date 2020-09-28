@@ -136,7 +136,7 @@ class Performance {
   /// [Webdriver.webSocketDebuggerUrlsForHost]. Returns a WebSocket object that
   /// is to be passed to [stopChromeTrace] to stop and download the trace data.
   ///
-  /// TODO(35714): Allow tracing users to specify categories to trace.
+  /// TODO(fxbug.dev/35714): Allow tracing users to specify categories to trace.
   Future<WebSocket> startChromeTrace(String webSocketUrl) async {
     final webSocket = await WebSocket.connect(webSocketUrl);
     _log.info('Starting chrome trace');

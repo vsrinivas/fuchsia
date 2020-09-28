@@ -16,7 +16,7 @@ rustc_library("surpass") {
     "//third_party/rust_crates:rustc-hash",
   ]
 
-  # TODO(56138): Fix the leaks and remove this.
+  # TODO(fxbug.dev/56138): Fix the leaks and remove this.
   test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   configs += [ ":surpass-performance" ]

@@ -33,6 +33,6 @@ driver_module("msm8x53-som") {
     "//zircon/public/lib/hwreg",
   ]
 
-  # TODO(47406): restore some form of data dependency on msm8x53-som
+  # TODO(fxbug.dev/47406): restore some form of data dependency on msm8x53-som
   # boot shim.
 }

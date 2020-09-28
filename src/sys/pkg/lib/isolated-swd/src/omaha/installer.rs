@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    // TODO(51770): FuchsiaInstallPlan should be shared with omaha-client.
+    // TODO(fxbug.dev/51770): FuchsiaInstallPlan should be shared with omaha-client.
     super::install_plan::FuchsiaInstallPlan,
     crate::{cache::Cache, resolver::Resolver, updater::Updater},
     anyhow::Context,

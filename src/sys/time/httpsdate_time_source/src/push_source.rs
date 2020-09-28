@@ -97,7 +97,7 @@ impl<UA: UpdateAlgorithm> PushSource<UA> {
     /// Polls updates received on |update_algorithm| and pushes them to bound clients.
     pub async fn poll_updates(&self) -> Result<(), Error> {
         // Wait for timekeeper to signal network availability.
-        // TODO(59972) - move the network check to httpsdate and remove network concerns from
+        // TODO(fxbug.dev/59972) - move the network check to httpsdate and remove network concerns from
         // push_source.
         fasync::OnSignals::new(&self.network_available_event, NETWORK_AVAILABLE_SIGNAL).await?;
 
@@ -123,7 +123,7 @@ impl<UA: UpdateAlgorithm> PushSource<UA> {
             // Timekeeper currently checks for network availability and makes a first fidl request
             // when the network becomes available. Propagate the signal so that polling for updates
             // begins.
-            // TODO(59972) - move network availability check to time source.
+            // TODO(fxbug.dev/59972) - move network availability check to time source.
             self.network_available_event
                 .signal_handle(zx::Signals::NONE, NETWORK_AVAILABLE_SIGNAL)?;
 
@@ -343,7 +343,7 @@ mod test {
 
     #[test]
     fn test_updates_not_polled_until_network_available() {
-        // TODO(59972) - remove this once the availability hack is removed
+        // TODO(fxbug.dev/59972) - remove this once the availability hack is removed
         let mut executor = fasync::Executor::new().unwrap();
         let (update_algorithm, _update_sender) = TestUpdateAlgorithm::new();
         let test_source = PushSource::new(update_algorithm, Status::Ok).unwrap();

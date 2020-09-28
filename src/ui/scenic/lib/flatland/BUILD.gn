@@ -43,7 +43,7 @@ source_set("flatland") {
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//src/lib/fxl",
 
-    # TODO(56879): this dependency should be broken down into smaller libraries, since it is
+    # TODO(fxbug.dev/56879): this dependency should be broken down into smaller libraries, since it is
     # currently only used for escher::FenceQueue.
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",

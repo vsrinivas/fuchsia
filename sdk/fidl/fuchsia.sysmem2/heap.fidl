@@ -78,7 +78,7 @@ protocol Heap {
     /// Implementations should guarantee that this event should be sent
     /// immediately when it binds to a channel, and this event should be
     /// triggered only once per Heap instance.
-    // TODO(57690): Remove this event and pass in HeapProperties when
+    // TODO(fxbug.dev/57690): Remove this event and pass in HeapProperties when
     // registering sysmem Heaps after we migrate sysmem banjo proxying
     // to FIDL.
     -> OnRegister(HeapProperties properties);

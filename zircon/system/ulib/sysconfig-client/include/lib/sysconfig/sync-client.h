@@ -80,7 +80,7 @@ class __EXPORT SyncClient {
 
   SyncClient(SyncClient&&) = default;
   SyncClient& operator=(SyncClient&&) = default;
-  // TODO(47505): Swap the return and output argument.
+  // TODO(fxbug.dev/47505): Swap the return and output argument.
   const sysconfig_header* GetHeader(zx_status_t* status_out = nullptr);
 
  private:

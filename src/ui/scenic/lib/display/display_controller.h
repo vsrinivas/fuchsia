@@ -95,7 +95,7 @@ class DisplayController {
   bool RemoveDisplay(uint64_t display_id);
 
   std::vector<Display2> displays_;
-  // TODO(42795): Replace with a fxl::WeakPtr.
+  // TODO(fxbug.dev/42795): Replace with a fxl::WeakPtr.
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller_;
   OnDisplayRemovedCallback on_display_removed_listener_;
   OnDisplayAddedCallback on_display_added_listener_;

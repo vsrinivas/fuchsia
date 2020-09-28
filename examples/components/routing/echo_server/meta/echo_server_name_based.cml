@@ -1,6 +1,6 @@
 // Component manifest for the `echo_server` example program, which hosts the Echo service used
 // by `echo_client`.
-// TODO(56604): Replace `echo_server.cml` with this.
+// TODO(fxbug.dev/56604): Replace `echo_server.cml` with this.
 {
     program: {
         binary: "bin/echo_server",

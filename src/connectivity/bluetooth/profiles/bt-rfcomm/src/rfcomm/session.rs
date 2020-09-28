@@ -36,7 +36,7 @@ impl Session {
 
                     // Send a canned DisconnectedMode response to reject any incoming
                     // RFCOMM packet. The FCS doesn't matter so we use 0x00.
-                    // TODO(58613): Parse the Frame and handle accordingly.
+                    // TODO(fxbug.dev/58613): Parse the Frame and handle accordingly.
                     let dm_response = [0x03, 0x1F, 0x01, 0x00];
                     let _ = l2cap_channel.as_ref().write(&dm_response);
                 }

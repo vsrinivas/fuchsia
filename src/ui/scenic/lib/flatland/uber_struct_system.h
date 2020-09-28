@@ -15,7 +15,7 @@
 
 namespace flatland {
 
-// TODO(45932): write a bug to find a better name for this system
+// TODO(fxbug.dev/45932): write a bug to find a better name for this system
 //
 // A system for aggregating local data from Flatland instances to be consumed by the render loop.
 // All functions are thread safe. The intent is for separate worker threads to own each Flatland
@@ -54,7 +54,7 @@ class UberStructSystem {
     size_t GetPendingSize();
 
    private:
-    // TODO(57745): add a lock-free queue.
+    // TODO(fxbug.dev/57745): add a lock-free queue.
     // Protects access to |pending_structs_|.
     std::mutex queue_mutex_;
     std::queue<PendingUberStruct> pending_structs_;

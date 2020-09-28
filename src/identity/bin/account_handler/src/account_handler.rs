@@ -242,7 +242,7 @@ impl AccountHandler {
                                 );
                                 AccountManagerError::from(authenticator_err).api_error
                             })?;
-                        // TODO(45041): Use storage manager for key validation
+                        // TODO(fxbug.dev/45041): Use storage manager for key validation
                         if prekey_material != *MAGIC_PREKEY {
                             warn!("Received unexpected pre-key material from authenticator");
                             return Err(ApiError::Internal);
@@ -328,7 +328,7 @@ impl AccountHandler {
                         warn!("Authentication error: {:?}", err);
                         err.api_error
                     })?;
-                // TODO(45041): Use storage manager for key validation
+                // TODO(fxbug.dev/45041): Use storage manager for key validation
                 if let Some(prekey_material) = prekey_material {
                     if prekey_material != *MAGIC_PREKEY {
                         info!("Encountered a failed authentication attempt");

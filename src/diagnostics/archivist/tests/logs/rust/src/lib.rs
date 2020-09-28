@@ -130,7 +130,7 @@ async fn listen_for_klog_routed_stdio() {
     puppet.writeln_stderr(&msg).unwrap();
     logs.filter(|m| futures::future::ready(m.msg == msg)).next().await;
 
-    // TODO(49357): add test for multiline log once behavior is defined.
+    // TODO(fxbug.dev/49357): add test for multiline log once behavior is defined.
 }
 
 #[fasync::run_singlethreaded(test)]

@@ -215,7 +215,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // TODO(35077) Re-enable once test flake is resolved
+    #[ignore] // TODO(fxbug.dev/35077) Re-enable once test flake is resolved
     async fn test_publish_lifecycle() {
         // We use these watchers to verify the addition and removal of these devices as tied to the
         // lifetime of the Emulator instance we create below.

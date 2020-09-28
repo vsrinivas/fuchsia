@@ -10,7 +10,7 @@ using zx;
 // being made to this file.  Do not rely on the contents of this file to provide
 // backward compatibility (yet).
 //
-// TODO(34192): Sysmem should use llcpp and FIDL tables.  The definitions in
+// TODO(fxbug.dev/34192): Sysmem should use llcpp and FIDL tables.  The definitions in
 // this file are part of that transition, but the definitions here are not
 // final.  For now, the definition here is only used internally to sysmem (not
 // between processes), and therefore this definition can change for now.  Later

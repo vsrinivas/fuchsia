@@ -23,7 +23,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-// TODO(47147): Remove circular inclusion in View, ViewNode, ViewHolder and
+// TODO(fxbug.dev/47147): Remove circular inclusion in View, ViewNode, ViewHolder and
 // ViewTreeUpdater.
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 using ViewLinker = ObjectLinker<ViewHolder*, View*>;
@@ -79,7 +79,7 @@ class ViewHolder final : public Node {
   void OnSceneChanged() override;
 
  private:
-  // TODO(46112): Remove friend usage.
+  // TODO(fxbug.dev/46112): Remove friend usage.
   friend class View;
 
   // |ViewLinker::ImportCallbacks|

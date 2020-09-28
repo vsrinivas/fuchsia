@@ -41,7 +41,7 @@ const _eventNameMap = {
 /// Custom [MetricsProcessor] that generates one [TestCaseResults] for each
 /// event name in [_eventNameMap].
 ///
-/// TODO(53934): Share metrics processor with other perf tests.
+/// TODO(fxbug.dev/53934): Share metrics processor with other perf tests.
 List<TestCaseResults> _metricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
   final allEvents = filterEventsTyped<DurationEvent>(getAllEvents(model),

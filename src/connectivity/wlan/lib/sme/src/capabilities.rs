@@ -130,7 +130,7 @@ impl StaCapabilities {
             channel: channel.to_fidl(),
             cap_info: self.cap_info.raw(),
             rates: self.rates.as_bytes().to_vec(),
-            // TODO(43938): populate WMM param with actual value
+            // TODO(fxbug.dev/43938): populate WMM param with actual value
             wmm_param: None,
             ht_cap: ht_cap.map(Box::new),
             vht_cap: vht_cap.map(Box::new),

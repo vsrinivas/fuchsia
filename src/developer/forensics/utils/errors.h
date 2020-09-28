@@ -15,7 +15,7 @@ namespace forensics {
 // Defines common errors that occur throughout //src/developer/feedback.
 enum class Error {
   kNotSet,
-  // TODO(49922): Remove kDefault. This value is temporary to allow the enum to be used without
+  // TODO(fxbug.dev/49922): Remove kDefault. This value is temporary to allow the enum to be used without
   // specifying the exact error that occurred.
   kDefault,
   kLogicError,

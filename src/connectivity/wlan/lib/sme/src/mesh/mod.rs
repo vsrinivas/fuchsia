@@ -176,9 +176,9 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
-        // TODO(29468): Use actual caps from device here.
+        // TODO(fxbug.dev/29468): Use actual caps from device here.
         cap: 0,
-        // TODO(29468): Use actual rates from device here.
+        // TODO(fxbug.dev/29468): Use actual rates from device here.
         rates: vec![],
         country: fidl_mlme::Country {
             // TODO(fxbug.dev/29490): Get config from wlancfg

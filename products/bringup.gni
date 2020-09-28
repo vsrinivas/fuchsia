@@ -27,7 +27,7 @@ product_bootfs_labels = [
   "//bundles/drivers:utils",
 ]
 
-# TODO(56988): We shouldn't need runtests, but right now it's used by profile
+# TODO(fxbug.dev/56988): We shouldn't need runtests, but right now it's used by profile
 # builders, so include it here until we remove that dependency.
 product_bootfs_labels += [ "//src/testing/runtests" ]
 

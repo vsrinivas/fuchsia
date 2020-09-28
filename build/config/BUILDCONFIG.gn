@@ -12,12 +12,12 @@ cobalt_root = "//third_party/cobalt"
 
 # Variable used in Zircon build files to declare absolute labels representing
 # buildable artifacts.
-# TODO(3367): remove when the build is unified.
+# TODO(fxbug.dev/3367): remove when the build is unified.
 zx = "//zircon"
 
 # Variable used in Zircon build files to declare absolute labels representing
 # build infrastructure (e.g. .gni files).
-# TODO(3367): remove when the build is unified.
+# TODO(fxbug.dev/3367): remove when the build is unified.
 zx_build = "//build/unification/zn_build"
 
 # Variable used in Zircon build files to declare the directory path for the
@@ -305,7 +305,7 @@ if (zircon_toolchain == false) {
   if (current_os == "fuchsia") {
     default_executable_configs += [ "//build/config/fuchsia:fdio_config" ]
 
-    # TODO(57585): Enable this for shared and (non-rlib) static libraries as well.
+    # TODO(fxbug.dev/57585): Enable this for shared and (non-rlib) static libraries as well.
     default_executable_configs +=
         [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
   }
@@ -505,7 +505,7 @@ if (toolchain_variant.with_shared) {
         }
         output_file = "$output_dir/$output_file_name"
 
-        # TODO(54322): Zircon toolchains must use a .debug suffix for non-stripped
+        # TODO(fxbug.dev/54322): Zircon toolchains must use a .debug suffix for non-stripped
         # shared libraries, instead of putting them into exe.unstripped. This can be
         # changed after build unification completes.
         if (zircon_toolchain != false) {
@@ -606,7 +606,7 @@ if (toolchain_variant.with_shared) {
         output_file = "$output_dir/$output_file_name"
         rebased_output_file = rebase_path(output_file, root_build_dir)
 
-        # TODO(54322): Zircon toolchains must use a .debug suffix for non-stripped
+        # TODO(fxbug.dev/54322): Zircon toolchains must use a .debug suffix for non-stripped
         # shared libraries, instead of putting them into exe.unstripped. This can be
         # changed after build unification completes.
         if (zircon_toolchain != false) {
@@ -938,7 +938,7 @@ declare_args() {
       ]
     },
 
-    # TODO(30033): Eventually this will go away and just "asan" will cover it.
+    # TODO(fxbug.dev/30033): Eventually this will go away and just "asan" will cover it.
     # This is just ignored so it can be passed through to the Zircon GN build.
     # It has no effect on variant selection in the Fuchsia GN build.
     {
@@ -946,7 +946,7 @@ declare_args() {
       select_variant = []
     },
 
-    # TODO(30033): Eventually this will go away and just "asan" will cover it.
+    # TODO(fxbug.dev/30033): Eventually this will go away and just "asan" will cover it.
     # This is just ignored so it can be passed through to the Zircon GN build.
     # It has no effect on variant selection in the Fuchsia GN build.
     {
@@ -1585,7 +1585,7 @@ template("executable") {
     target_name = _executable_name
 
     # NOTE: Zircon-specific toolchains don't need a syslog backend.
-    # TODO(60072): Clean up logging backends for executables.
+    # TODO(fxbug.dev/60072): Clean up logging backends for executables.
     disable_syslog_backend = defined(invoker.disable_syslog_backend) &&
                              invoker.disable_syslog_backend
 
@@ -1629,7 +1629,7 @@ template("executable") {
       output_file += ".$output_extension"
     }
 
-    # TODO(54322): Zircon toolchains must use a .debug suffix for non-stripped
+    # TODO(fxbug.dev/54322): Zircon toolchains must use a .debug suffix for non-stripped
     # executables, instead of putting them into exe.unstripped. This can be
     # changed after build unification completes.
     if (zircon_toolchain != false) {

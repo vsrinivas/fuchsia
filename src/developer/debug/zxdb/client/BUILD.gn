@@ -160,7 +160,7 @@ static_library("client") {
     "//third_party/crashpad/third_party/mini_chromium:base",
     "//third_party/crashpad/util",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
   configs += [

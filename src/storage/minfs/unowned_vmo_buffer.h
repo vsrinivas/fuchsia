@@ -14,7 +14,7 @@
 namespace minfs {
 
 // Trivial BlockBuffer that doesn't own the underlying buffer.
-// TODO(47947): Remove this.
+// TODO(fxbug.dev/47947): Remove this.
 class UnownedVmoBuffer : public storage::BlockBuffer {
  public:
   UnownedVmoBuffer(const zx::unowned_vmo& vmo) : vmo_(vmo) {}

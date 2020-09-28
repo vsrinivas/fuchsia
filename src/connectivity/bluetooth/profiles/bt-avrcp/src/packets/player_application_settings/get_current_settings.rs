@@ -200,7 +200,7 @@ impl TryFrom<GetCurrentPlayerApplicationSettingValueResponse> for PlayerApplicat
         }
         while idx < src.num_values as usize {
             let (attribute_id, value) = src.attribute_values[idx];
-            // TODO(41253): If fetching the attribute_id fails, check to see if it's
+            // TODO(fxbug.dev/41253): If fetching the attribute_id fails, check to see if it's
             // a valid custom attribute. Handle accordingly.
             let attribute_id = PlayerApplicationSettingAttributeId::try_from(attribute_id)
                 .map_err(|_| Error::InvalidMessage)?;

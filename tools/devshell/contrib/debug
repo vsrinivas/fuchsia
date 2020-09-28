@@ -135,7 +135,7 @@ if [[ -n "${target_core}" ]]; then
   core_prefix="/tmp/r/sys/${crash_reports_dir}/reports"
 
 
-  # TODO(47137): remove fallback on Crashpad database after a while.
+  # TODO(fxbug.dev/47137): remove fallback on Crashpad database after a while.
   if [[ -z "${core_name}" ]]; then
     core_name=`fx-command-run shell \
       ls "/tmp/r/sys/${crash_reports_dir}/crashes/completed" 2>/dev/null | grep -v meta`

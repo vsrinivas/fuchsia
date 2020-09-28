@@ -1249,7 +1249,7 @@ fn serialize_enum<T: Into<u8>>(code: OptionCode, v: T, buf: &mut Vec<u8>) {
 }
 
 /// A type which can be converted to and from a FIDL type `F`.
-//TODO(42819): Impl FidlCompatible for Iterator<Item: FidlCompatible>
+//TODO(fxbug.dev/42819): Impl FidlCompatible for Iterator<Item: FidlCompatible>
 pub trait FidlCompatible<F>: Sized {
     type FromError;
     type IntoError;

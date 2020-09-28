@@ -126,7 +126,7 @@ if (is_mac) {
     if (is_host && is_linux) {
       deps += [ "//src/ui/lib/escher/shaders:linux_shader_data" ]
 
-      # TODO(59140): Fix the leaks and remove this.
+      # TODO(fxbug.dev/59140): Fix the leaks and remove this.
       deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     }
 
@@ -175,7 +175,7 @@ if (is_mac) {
     if (is_host && is_linux) {
       deps += [ "//src/ui/lib/escher/shaders:linux_shader_data" ]
 
-      # TODO(59140): Fix the leaks and remove this.
+      # TODO(fxbug.dev/59140): Fix the leaks and remove this.
       deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     }
 

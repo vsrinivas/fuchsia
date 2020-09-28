@@ -64,7 +64,7 @@ driver_module("mt8167s_ref") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(47406): restore some form of data dependency on cleo and mt8167s_ref
+  # TODO(fxbug.dev/47406): restore some form of data dependency on cleo and mt8167s_ref
   # boot shims.
 }
 

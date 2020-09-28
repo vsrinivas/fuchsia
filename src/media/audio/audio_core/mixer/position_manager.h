@@ -98,7 +98,7 @@ class PositionManager {
   int32_t* frac_src_offset_ptr_ = nullptr;
   int32_t frac_src_offset_ = 0;
   int32_t frac_src_end_ = 0;
-  // TODO(37356): Make frac_src_frames and frac_src_offset typesafe
+  // TODO(fxbug.dev/37356): Make frac_src_frames and frac_src_offset typesafe
 
   float* dest_ = nullptr;
   uint32_t dest_frames_ = 0;

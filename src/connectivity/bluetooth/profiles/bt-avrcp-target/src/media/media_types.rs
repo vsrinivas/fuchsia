@@ -202,7 +202,7 @@ pub struct ValidPlayerApplicationSettings {
     repeat_status_mode: Option<fidl_avrcp::RepeatStatusMode>,
     shuffle_mode: Option<fidl_avrcp::ShuffleMode>,
     scan_mode: Option<fidl_avrcp::ScanMode>,
-    // TODO(41253): Add support to handle custom attributes.
+    // TODO(fxbug.dev/41253): Add support to handle custom attributes.
 }
 
 impl ValidPlayerApplicationSettings {

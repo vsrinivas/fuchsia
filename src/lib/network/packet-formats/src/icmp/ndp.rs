@@ -527,7 +527,7 @@ pub mod options {
     pub struct NdpOptionsImpl;
 
     impl OptionsImplLayout for NdpOptionsImpl {
-        // TODO(52288): Return more verbose logs on parsing errors.
+        // TODO(fxbug.dev/52288): Return more verbose logs on parsing errors.
         type Error = ();
 
         // For NDP options the length should be multiplied by 8.

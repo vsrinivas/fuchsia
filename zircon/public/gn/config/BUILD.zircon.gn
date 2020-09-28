@@ -459,7 +459,7 @@ config("optimize_sanitizer") {
 }
 
 config("optimize_profile") {
-  # TODO(51509): Perhaps use a different default.
+  # TODO(fxbug.dev/51509): Perhaps use a different default.
   configs = [ ":optimize_default" ]
 }
 
@@ -493,7 +493,7 @@ config("linker_gc_sanitizer") {
 }
 
 config("linker_gc_profile") {
-  # TODO(51509): See if we can enable linker GC for profile.
+  # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
 }
 
 config("default_linker_gc") {
@@ -538,7 +538,7 @@ config("debuginfo_debug") {
 config("default_debuginfo") {
   configs = [ ":debuginfo_${debuginfo}" ]
   if (debuginfo != "none" && current_os == "win") {
-    # TODO(55244): This produces the .pdb file, but it doesn't seem
+    # TODO(fxbug.dev/55244): This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
     ldflags = [ "-Wl,/debug:full" ]
   }
@@ -567,7 +567,7 @@ config("default_warnings") {
     "-Wextra",
     "-Wno-unused-parameter",
 
-    # TODO(37765): Temporarily disable this warning to unblock the GCC roll.
+    # TODO(fxbug.dev/37765): Temporarily disable this warning to unblock the GCC roll.
     "-Wno-address-of-packed-member",
   ]
   cflags_c = [
@@ -579,7 +579,7 @@ config("default_warnings") {
     "-Wno-sign-conversion",
     "-Wextra-semi",
 
-    # TODO(38640): Temporarily disable this warning to unblock the GCC roll.
+    # TODO(fxbug.dev/38640): Temporarily disable this warning to unblock the GCC roll.
     "-Wno-deprecated-copy",
   ]
   if (is_gcc) {
@@ -591,22 +591,22 @@ config("default_warnings") {
     cflags += [
       "-Wnewline-eof",
 
-      # TODO(35965): Temporarily disable C99 designator warnings introduced in
+      # TODO(fxbug.dev/35965): Temporarily disable C99 designator warnings introduced in
       # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
       # and we do some cleanup, this will be re-enabled.
       "-Wno-unknown-warning-option",
       "-Wno-c99-designator",
 
-      # TODO(37215): Temporarily disable this warning until we roll toolchain.
+      # TODO(fxbug.dev/37215): Temporarily disable this warning until we roll toolchain.
       # Then we can re-enable it and cleanup instances it appears.
       "-Wno-int-in-bool-context",
 
-      # TODO(43681): Temporarily disable this warning until we roll toolchain,
+      # TODO(fxbug.dev/43681): Temporarily disable this warning until we roll toolchain,
       # then come back and fix the instances this appears after rolling.
       "-Wno-range-loop-analysis",
     ]
     cflags_cc += [
-      # TODO(45689): Temporarily disable this warning until we roll toolchain,
+      # TODO(fxbug.dev/45689): Temporarily disable this warning until we roll toolchain,
       # then come back and fix the instances this appears after rolling.
       "-Wno-non-c-typedef-for-linkage",
     ]
@@ -907,7 +907,7 @@ if (is_fuchsia) {
 
 config("pure") {
   if (!is_gcc) {
-    # TODO(48501): This disables the SwitchToLookupTable optimization,
+    # TODO(fxbug.dev/48501): This disables the SwitchToLookupTable optimization,
     # which is not PIC-friendly.
     cflags = [ "-fno-jump-tables" ]
   }
@@ -934,102 +934,102 @@ config("tiny") {
   ldflags = cflags
 }
 
-# TODO(42305): We will temporarily disable UBSan for a specified number of
+# TODO(fxbug.dev/42305): We will temporarily disable UBSan for a specified number of
 # instances where UBSan triggers runtime errors. This config will go away once
 # the asan-ubsan variant is in CI/CQ and we remove all instances of caught
 # undefined behavior in fuchsia. THIS CONFIG SHOULD NOT BE USED.
 config("temporarily_disable_ubsan_do_not_use") {
   visibility = [
-    # TODO(41888): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41888): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/affine:*",
     "$zx_build/system/ulib/affine/test:*",
 
-    # TODO(41892): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41892): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/trace-reader:*",
 
-    # TODO(41876): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41876): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/dev/block/mbr:*",
 
-    # TODO(41757): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41757): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/zstd:*",
 
-    # TODO(42488): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/42488): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/dev/display/display:*",
 
-    # TODO(41887): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41887): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/uapp/nand-util:*",
 
-    # TODO(42493): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/42493): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/cobalt-client/test:*",
 
-    # TODO(41890): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41890): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/gpt:*",
 
-    # TODO(41893): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41893): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/zxio/test:*",
 
-    # TODO(41894): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41894): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/zxtest:*",
 
-    # TODO(42496): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/42496): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/utest/fidl-simple:*",
 
-    # TODO(41897): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41897): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/utest/fidl:*",
 
-    # TODO(41900): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41900): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/utest/trace:*",
 
-    # TODO(41663): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41663): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/lib/acpica:*",
 
-    # TODO(41901): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41901): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/uapp/dash:*",
 
-    # TODO(41766): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41766): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/lz4:*",
 
-    # TODO(41901): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41901): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/musl/ldso:*",
 
-    # TODO(42500): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/42500): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/musl/src/stdio:*",
 
-    # TODO(41903): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41903): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/musl/third_party/math:*",
 
-    # TODO(41904): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/41904): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/boringssl:*",
 
-    # TODO(43658): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/43658): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/dev/block/sdmcc:*",
 
-    # TODO(46944): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/46944): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/perftest:*",
 
-    # TODO(60442): UBSan has found an instance of undefined behavior in this target.
+    # TODO(fxbug.dev/60442): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until is is migrated into CI/CQ.
     "$zx_build/tools/fidl:*",
   ]

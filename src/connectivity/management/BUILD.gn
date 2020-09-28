@@ -16,7 +16,7 @@ group("management") {
   ]
 }
 
-# TODO(49379): Remove when updating the network_config_* rules
+# TODO(fxbug.dev/49379): Remove when updating the network_config_* rules
 # below.
 group("netcfg") {
   deps = [ "//src/connectivity/network/netcfg" ]
@@ -27,7 +27,7 @@ group("netcfg") {
 }
 
 group("network_config_default") {
-  # TODO(49379): Switch to the equivalent Network Manager config
+  # TODO(fxbug.dev/49379): Switch to the equivalent Network Manager config
   # once we've migrated off of netcfg and onto Network Manager.
   deps = [
     ":netcfg",
@@ -36,7 +36,7 @@ group("network_config_default") {
 }
 
 group("network_config_no_ssh_over_wlan") {
-  # TODO(49379): Switch to the equivalent Network Manager config
+  # TODO(fxbug.dev/49379): Switch to the equivalent Network Manager config
   # once we've migrated off of netcfg and onto Network Manager.
   deps = [
     ":netcfg",

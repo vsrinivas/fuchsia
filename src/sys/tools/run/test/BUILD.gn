@@ -52,7 +52,7 @@ executable("run_return_value_test") {
     "//src/lib/fxl/test:gtest_main",
   ]
 
-  # TODO(46837): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46837): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

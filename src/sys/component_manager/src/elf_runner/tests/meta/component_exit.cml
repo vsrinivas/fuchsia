@@ -26,7 +26,7 @@
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
 
-                // TODO(56604): Convert to name-based once we support name-based capabilities from
+                // TODO(fxbug.dev/56604): Convert to name-based once we support name-based capabilities from
                 // component manager's namespace.
                 "/svc/fuchsia.sys2.BlockingEventSource",
             ],

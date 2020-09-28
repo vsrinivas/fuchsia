@@ -64,7 +64,7 @@ executable("modular_testing_cpp_tests_bin") {
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gmock",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

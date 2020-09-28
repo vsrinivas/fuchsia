@@ -391,7 +391,7 @@ impl super::Station for ApSme {
                     MlmeEvent::DeauthenticateInd { ind } => {
                         bss.handle_deauth(&ind.peer_sta_address)
                     }
-                    // TODO(37891): This path should never be taken, as the MLME will never send
+                    // TODO(fxbug.dev/37891): This path should never be taken, as the MLME will never send
                     // this. Make sure this is the case.
                     MlmeEvent::DeauthenticateConf { resp } => {
                         bss.handle_deauth(&resp.peer_sta_address)

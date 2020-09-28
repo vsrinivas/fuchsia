@@ -61,7 +61,7 @@ sanitizer_default_options("asan_default_options") {
 sanitizer_default_options("lsan_default_options") {
 }
 
-# TODO(45047): Temporary while leaks are plugged.
+# TODO(fxbug.dev/45047): Temporary while leaks are plugged.
 # As leak bugs are found, file a bug #nnnnn for the leaky test/component,
 # and then add:
 # ```
@@ -72,7 +72,7 @@ sanitizer_default_options("lsan_default_options") {
 # marked that way, the asan_default_options default above will be removed.
 sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   visibility = [
-    # TODO(45047): Constrain this and give each a TODO(nnnnn) comment.
+    # TODO(fxbug.dev/45047): Constrain this and give each a TODO(nnnnn) comment.
     # Then rename without the scare caps.
     "*",
   ]
@@ -82,7 +82,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   tags = [ "lsan" ]
 }
 
-# TODO(59214): Temporary while bugs are fixed.  As stack-use-after-return bugs
+# TODO(fxbug.dev/59214): Temporary while bugs are fixed.  As stack-use-after-return bugs
 # are found, file a bug #nnnnn for the buggy test/component, and then add:
 # ```
 #   # TODO(nnnnn): Fix the bugs and remove this.
@@ -90,9 +90,9 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
 # ```
 sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   visibility = [
-    # TODO(59214): allow only necessary third-party or TODO(bug-filed) cases
+    # TODO(fxbug.dev/59214): allow only necessary third-party or TODO(bug-filed) cases
 
-    # TODO(59214): These are constrained indirectly via the target of the same
+    # TODO(fxbug.dev/59214): These are constrained indirectly via the target of the same
     # name in $zx/public/gn/config/instrumentation.
     "//zircon/public/lib/*",
   ]
@@ -103,7 +103,7 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
 }
 
 # rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.
-# TODO(45102): This is technically wrong; it will use clang's ASan.
+# TODO(fxbug.dev/45102): This is technically wrong; it will use clang's ASan.
 # rustc is built from a different fork of LLVM and should use a matching ASan.
 # However, Fuchsia's libc and dynamic linker cooperate to set up the shadow
 # memory and currently always link against clang's ASan. Using both rustc and

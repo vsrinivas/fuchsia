@@ -434,7 +434,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 
   // Make the clock backstop boot arg available to drivers that
   // deal with time (RTC).
-  // TODO(60668): Remove once UTC time is removed from the kernel.
+  // TODO(fxbug.dev/60668): Remove once UTC time is removed from the kernel.
   auto backstop_env = boot_args()->GetString("clock.backstop");
   if (!backstop_env.ok()) {
     return backstop_env.status();

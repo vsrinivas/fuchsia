@@ -626,7 +626,7 @@ impl<'a> NetCfg<'a> {
                     let servers = match res {
                         Ok(s) => s,
                         Err(e) => {
-                            // TODO(57484): Restart the DNS server watcher.
+                            // TODO(fxbug.dev/57484): Restart the DNS server watcher.
                             error!("non-fatal error getting next event from DNS server watcher stream with source = {:?}: {}", source, e);
                             let () = self.handle_dns_server_watcher_done(source, dns_watchers.get_mut())
                                 .await
@@ -716,7 +716,7 @@ impl<'a> NetCfg<'a> {
         interface_id: u64,
         watchers: &mut DnsServerWatchers<'_>,
     ) -> Result<(), errors::Error> {
-        // TODO(56136): Configure interfaces that were not discovered through devfs.
+        // TODO(fxbug.dev/56136): Configure interfaces that were not discovered through devfs.
         let state = match self.interface_states.remove(&interface_id) {
             Some(s) => s,
             None => {
@@ -900,7 +900,7 @@ impl<'a> NetCfg<'a> {
                 }
             }
             InterfaceState::WlanAp(WlanApInterfaceState {}) => {
-                // TODO(55879): Stop the DHCP server when the address it is listening on
+                // TODO(fxbug.dev/55879): Stop the DHCP server when the address it is listening on
                 // is removed.
                 let dhcp_server = if let Some(dhcp_server) = &self.dhcp_server {
                     dhcp_server
@@ -954,7 +954,7 @@ impl<'a> NetCfg<'a> {
 
                 let mut i = 0;
                 loop {
-                    // TODO(56559): The same interface may flap so instead of using a
+                    // TODO(fxbug.dev/56559): The same interface may flap so instead of using a
                     // temporary name, try to determine if the interface flapped and wait
                     // for the teardown to complete.
                     match self.add_new_device::<D>(&filepath, i == 0 /* stable_name */).await {

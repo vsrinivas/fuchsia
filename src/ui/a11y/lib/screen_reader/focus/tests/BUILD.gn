@@ -29,6 +29,6 @@ executable("focus_manager_tests") {
     "//src/ui/a11y/lib/testing",
   ]
 
-  # TODO(47898): Fix the leaks and remove this.
+  # TODO(fxbug.dev/47898): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

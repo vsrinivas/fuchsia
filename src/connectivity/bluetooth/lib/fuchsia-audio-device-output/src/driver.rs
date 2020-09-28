@@ -351,7 +351,7 @@ impl SoftPcmOutput {
         match request {
             RingBufferRequest::GetProperties { responder } => {
                 let prop = RingBufferProperties {
-                    // TODO(51726): Set external_delay and fifo_depth from outside the crate.
+                    // TODO(fxbug.dev/51726): Set external_delay and fifo_depth from outside the crate.
                     external_delay: Some(0),
                     fifo_depth: Some(0),
                     needs_cache_flush_or_invalidate: Some(false),

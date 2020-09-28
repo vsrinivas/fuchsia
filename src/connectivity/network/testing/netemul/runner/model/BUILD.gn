@@ -37,7 +37,7 @@ source_set("model") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
@@ -55,7 +55,7 @@ executable("model_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

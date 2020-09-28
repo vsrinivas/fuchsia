@@ -63,7 +63,7 @@ impl FuchsiaPkgResolver {
         let model = model_chan.deref_mut().try_recv().expect("model channel dropped");
         let model = model.and_then(|m| m.upgrade()).ok_or(ResolverError::model_not_available())?;
 
-        // TODO(56604): Switch to name-based by finding "pkgfs" instead and updating CMLs.
+        // TODO(fxbug.dev/56604): Switch to name-based by finding "pkgfs" instead and updating CMLs.
         let (capability_path, realm) = routing::find_exposed_root_directory_capability(
             &model.root_realm,
             "/pkgfs".try_into().unwrap(),

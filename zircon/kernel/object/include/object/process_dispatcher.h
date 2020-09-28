@@ -458,7 +458,7 @@ class ProcessDispatcher final
   fbl::RefPtr<VmAspace> aspace_;
 
   // Protects |handle_table_| and handle_table_cursors_.
-  // TODO(54938): Allow multiple handle table locks to be acquired at once.
+  // TODO(fxbug.dev/54938): Allow multiple handle table locks to be acquired at once.
   // Right now, this is required when a process closes the last handle to
   // another process, during the destruction of the handle table.
   mutable DECLARE_BRWLOCK_PI(ProcessDispatcher, lockdep::LockFlagsMultiAcquire) handle_table_lock_;

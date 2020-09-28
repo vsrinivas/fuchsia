@@ -51,7 +51,7 @@ zx_library("buffer") {
       "//sdk/lib/fdio",
       "//zircon/public/lib/fbl",
 
-      # TODO(38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
+      # TODO(fxbug.dev/38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fzl",

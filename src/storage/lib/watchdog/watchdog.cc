@@ -105,7 +105,7 @@ class Watchdog : public WatchdogInterface {
   // To keep the lock contention minimum, logs are written to this buffer under
   // lock and then the contents of this buffer are sent to logging subsystem
   // outside of this lock.
-  // TODO(58179)
+  // TODO(fxbug.dev/58179)
   std::unique_ptr<char[]> log_buffer_;
 
   // FILE stream on top of log_buffer that is used to get stack traces.

@@ -607,7 +607,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
 // NOTE: see some of the other tests above, such as GeneratePipelineWithoutCommandBuffer...
 // it is now possible to generate pipelines more directly.
 //
-// TODO(59139): Fix the test on Linux host.
+// TODO(fxbug.dev/59139): Fix the test on Linux host.
 VK_TEST_F(ShaderProgramTest,
 #ifndef __linux__
           GeneratePipelines

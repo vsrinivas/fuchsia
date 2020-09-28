@@ -194,7 +194,7 @@ pub async fn delete_isolated_storage(
         })?
     };
 
-    // TODO(36377): This function is subject to races. If another process has a handle to the
+    // TODO(fxbug.dev/36377): This function is subject to races. If another process has a handle to the
     // isolated storage directory, it can add files while this function is running. That could
     // cause it to spin or fail because a subdir was not empty after it removed all the contents.
     // It's also possible that the directory was already deleted by the backing component or a

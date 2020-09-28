@@ -148,7 +148,7 @@ func TestGetServersCacheNoDuplicates(t *testing.T) {
 	addr4WithPort := addr4
 	addr4WithPort.Port = dns.DefaultDNSPort
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr2, addr3, addr4, addr8}, longLifetime)
@@ -198,7 +198,7 @@ func TestGetServersCacheOrdering(t *testing.T) {
 	addr4WithPort := addr4
 	addr4WithPort.Port = dns.DefaultDNSPort
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
@@ -254,7 +254,7 @@ func TestRemoveAllServersWithNIC(t *testing.T) {
 	addr4WithPort := addr4
 	addr4WithPort.Port = dns.DefaultDNSPort
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	expectAllAddresses := func() {
@@ -351,7 +351,7 @@ func TestRemoveAllServersWithNIC(t *testing.T) {
 }
 
 func TestGetServersCache(t *testing.T) {
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	addr3 := addr3
@@ -529,7 +529,7 @@ func TestGetServersCache(t *testing.T) {
 }
 
 func TestNDPServersDefaultDNSPort(t *testing.T) {
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	addr4WithPort := addr4
@@ -546,7 +546,7 @@ func TestNDPServersDefaultDNSPort(t *testing.T) {
 }
 
 func TestNDPServersUpdateWithDuplicates(t *testing.T) {
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr1, addr1}, longLifetime)
@@ -560,7 +560,7 @@ func TestNDPServersUpdateWithDuplicates(t *testing.T) {
 }
 
 func TestNDPServersAddAndUpdate(t *testing.T) {
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
@@ -622,7 +622,7 @@ func TestNDPServersAddAndUpdate(t *testing.T) {
 func TestNDPServersExpireImmediatelyTimer(t *testing.T) {
 	t.Parallel()
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, shortLifetime)
@@ -644,7 +644,7 @@ func TestNDPServersExpireImmediatelyTimer(t *testing.T) {
 func TestNDPServersExpireAfterUpdate(t *testing.T) {
 	t.Parallel()
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
@@ -694,7 +694,7 @@ func TestNDPServersExpireAfterUpdate(t *testing.T) {
 func TestNDPServersInfiniteLifetime(t *testing.T) {
 	t.Parallel()
 
-	// TODO(57075): Use a fake clock
+	// TODO(fxbug.dev/57075): Use a fake clock
 	d := dns.MakeServersConfig(&tcpip.StdClock{})
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, middleLifetime)

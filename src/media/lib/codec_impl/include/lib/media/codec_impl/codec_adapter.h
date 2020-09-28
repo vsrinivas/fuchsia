@@ -85,7 +85,7 @@ class CodecAdapter {
   // VMOs can be properly pinned for DMA.  If a core codec returns true from
   // IsCoreCodecHwBased(), the core codec should also override this method.
   //
-  // TODO(38650): At least the VP9 decoder isn't overriding this method yet.
+  // TODO(fxbug.dev/38650): At least the VP9 decoder isn't overriding this method yet.
   // Also we should enforce that this method be overridden when
   // IsCoreCodecHwBased() true.
   virtual zx::unowned_bti CoreCodecBti() { return zx::unowned_bti(); }

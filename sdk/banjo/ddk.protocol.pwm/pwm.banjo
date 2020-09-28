@@ -11,7 +11,7 @@ struct PwmConfig {
    uint32 period_ns;
    /// duty_cycle range: [0.0, 100.0]
    float32 duty_cycle;
-   /// TODO(41256): Vendor extensions
+   /// TODO(fxbug.dev/41256): Vendor extensions
    /// mode_config should be mode specific parameters. The first parameter should always be mode.
    /// For example, a PWM supporting regular mode and 2 timer mode should have:
    ///   struct mode_config_regular {};

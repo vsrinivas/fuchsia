@@ -32,6 +32,6 @@ driver_module("c18") {
     "//zircon/public/lib/zx",
   ]
 
-  # TODO(47406): restore some form of data dependency on c18
+  # TODO(fxbug.dev/47406): restore some form of data dependency on c18
   # boot shim.
 }

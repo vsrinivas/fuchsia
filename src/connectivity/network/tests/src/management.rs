@@ -79,7 +79,7 @@ pub(crate) async fn wait_for_non_loopback_interface_up<
 
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
-// TODO(54025): Enable this test for NetworkManager.
+// TODO(fxbug.dev/54025): Enable this test for NetworkManager.
 #[variants_test]
 async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
@@ -127,7 +127,7 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
 }
 
 /// Tests that stable interface name conflicts are handled gracefully.
-// TODO(54025): Enable this test for NetworkManager.
+// TODO(fxbug.dev/54025): Enable this test for NetworkManager.
 #[variants_test]
 async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;

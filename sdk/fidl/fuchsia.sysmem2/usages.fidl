@@ -70,7 +70,7 @@ const uint32 DISPLAY_USAGE_CURSOR = 2;
 // TODO(fxbug.dev/32118): Add more specific HwDecoder flags if needed.
 const uint32 VIDEO_USAGE_HW_DECODER = 1;
 const uint32 VIDEO_USAGE_HW_ENCODER = 2;
-// TODO(34192): This bit is redundant with secure_required and supported heaps.  This bit will
+// TODO(fxbug.dev/34192): This bit is redundant with secure_required and supported heaps.  This bit will
 // not be carried forward.
 const uint32 VIDEO_USAGE_HW_PROTECTED = 4;
 const uint32 VIDEO_USAGE_CAPTURE = 8;
@@ -78,7 +78,7 @@ const uint32 VIDEO_USAGE_CAPTURE = 8;
 // encoded access units.  The decryptor output may be in secure memory (controlled separately via
 // secure_required).
 //
-// TODO(34192): Overhaul usage so we can add usage categories without breaking client struct init
+// TODO(fxbug.dev/34192): Overhaul usage so we can add usage categories without breaking client struct init
 // code repeatedly.  For now, this value is in the "video" category but to some degree isn't really
 // video; this usage can be used for the output of any secure decryptor.  Also, other usages should
 // include input vs. output as those are separate buffer collections and are really separate usages.

@@ -11,7 +11,7 @@ library fuchsia.identity.authentication;
 /// authentication.
 ///
 /// NOTE: This protocol may not be discoverable in the future.
-// TODO(42836): Supply UI for system authentication.
+// TODO(fxbug.dev/42836): Supply UI for system authentication.
 [Discoverable]
 protocol StorageUnlockMechanism {
     /// Interactively requests the user to authenticate against any of the

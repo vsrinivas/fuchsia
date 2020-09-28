@@ -37,7 +37,7 @@ async fn main() -> Result<(), Error> {
 
     // Create a channel that peer manager will receive requests for peer controllers from the FIDL
     // service runner.
-    // TODO(44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
+    // TODO(fxbug.dev/44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
     let (client_sender, mut service_request_receiver) = mpsc::channel(512);
 
     let mut peer_manager = PeerManager::new(profile_proxy).expect("Unable to create Peer Manager");

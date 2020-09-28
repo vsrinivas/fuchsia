@@ -403,11 +403,11 @@ async fn get_tests(
         .unwrap();
 
     let logs = std_reader.get_logs().await?;
-    // TODO(4610): logs might not be utf8, fix the code.
+    // TODO(fxbug.dev/4610): logs might not be utf8, fix the code.
     let output = from_utf8(&logs)?;
     let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
     if process_info.return_code != 0 {
-        // TODO(45858): Add a error logger to API so that we can display test stdout logs.
+        // TODO(fxbug.dev/45858): Add a error logger to API so that we can display test stdout logs.
         error!("Failed getting list of tests:\n{}", output);
         return Err(EnumerationError::ListTest);
     }
@@ -448,7 +448,7 @@ where
     .await?)
 }
 
-// TODO(45854): Add integration tests.
+// TODO(fxbug.dev/45854): Add integration tests.
 #[cfg(test)]
 mod tests {
     use {

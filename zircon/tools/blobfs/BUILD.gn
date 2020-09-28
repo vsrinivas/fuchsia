@@ -24,10 +24,10 @@ executable("blobfs") {
     deps += [ "//zircon/system/ulib/zx-panic-libc" ]
 
     exclude_toolchain_tags = [
-      # TODO(53356): blobfs performs poorly when built with asan
+      # TODO(fxbug.dev/53356): blobfs performs poorly when built with asan
       "asan",
 
-      # TODO(59219): blobfs performs poorly when built with profile
+      # TODO(fxbug.dev/59219): blobfs performs poorly when built with profile
       "profile",
     ]
   }

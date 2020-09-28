@@ -56,7 +56,7 @@ class Filter {
 
   // Eagerly precompute any needed data. If not called, that data should be lazily computed
   // on the first call to ComputeSample().
-  // TODO(45074): This is for tests only and can be removed once filter creation is eager.
+  // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
   virtual void EagerlyPrepare() = 0;
 
  private:
@@ -88,7 +88,7 @@ class Filter {
 // -Fractional source pos 1.501 requires frames between 1.001 and 2.001, thus source frame 2
 // For frac src pos .5, we average the pre- and post- values so as to achieve zero phase delay
 //
-// TODO(37356): Make the fixed-point fractional scale typesafe.
+// TODO(fxbug.dev/37356): Make the fixed-point fractional scale typesafe.
 class PointFilter : public Filter {
  public:
   PointFilter(uint32_t source_rate, uint32_t dest_rate, uint32_t num_frac_bits = kPtsFractionalBits)

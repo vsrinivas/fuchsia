@@ -50,7 +50,7 @@ inline fit::result<fuchsia::camera3::Configuration2, zx_status_t> Convert(
         {.numerator = stream_config.frame_rate.frames_per_sec_numerator,
          .denominator = stream_config.frame_rate.frames_per_sec_denominator});
     stream_properties.set_image_format(stream_config.image_formats[0]);
-    // TODO(50908): Detect ROI support during initialization.
+    // TODO(fxbug.dev/50908): Detect ROI support during initialization.
     stream_properties.set_supports_crop_region(true);
     std::vector<fuchsia::math::Size> supported_resolutions;
     for (const auto& format : stream_config.image_formats) {

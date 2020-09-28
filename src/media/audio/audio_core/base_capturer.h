@@ -38,7 +38,7 @@ class BaseCapturer : public AudioObject,
  public:
   AudioClock& reference_clock() { return audio_clock_; }
 
-  // TODO(43507): This is a temporary flag to ease the transition. This will be exposed as a command
+  // TODO(fxbug.dev/43507): This is a temporary flag to ease the transition. This will be exposed as a command
   // line flag for audio_core. This has no effect in DynamicallyAllocated mode.
   //
   // When false (the default), packets are automatically recycled after each call to Push.
@@ -273,7 +273,7 @@ class BaseCapturer : public AudioObject,
 
   AudioClock audio_clock_;
 
-  // TODO(43507): This is a temporary flag.
+  // TODO(fxbug.dev/43507): This is a temporary flag.
   static bool must_release_packets_;
 };
 

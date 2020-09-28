@@ -95,7 +95,7 @@ protocol AudioCore {
     /// `configuration` must be initialized to a variant, or no capturer
     /// can be created.
     ///
-    /// TODO(45240): Implement
+    /// TODO(fxbug.dev/45240): Implement
     [Transitional]
     CreateAudioCapturerWithConfiguration(
         AudioStreamType stream_type,
@@ -106,14 +106,14 @@ protocol AudioCore {
     /// audio input device, or loops-back from the current default audio output
     /// device based on value passed for the loopback flag.
     //
-    // TODO(34915): Get rid of the loopback flag ASAP. Routing decisions (and
+    // TODO(fxbug.dev/34915): Get rid of the loopback flag ASAP. Routing decisions (and
     // security surrounding routing decisions) should be more sophisticated.
     // This is a placeholder until we have a design in place. Eventually, this
     // should move up to an audio policy layer, where application clients obtain
     // and control AudioCapturers.
     CreateAudioCapturer(bool loopback, request<AudioCapturer> audio_in_request);
 
-    // TODO(34948): remove these systemwide settings, once device-centric
+    // TODO(fxbug.dev/34948): remove these systemwide settings, once device-centric
     // settings are plumbed into the system UI. Also, device-centric and
     // systemwide settings should be moved out of this accessible-to-all public
     // audio interface and relocated to a more restrictive interface that is
@@ -153,7 +153,7 @@ protocol AudioCore {
     // By default, reading and writing device settings files is enabled. This
     // method (which has impact across the entire audio subsystem) allows a test
     // client to temporarily disable, then later enable, that reading/writing.
-    // TODO(13578): Move this to the hub, instead of FIDL API. Alternately,
+    // TODO(fxbug.dev/13578): Move this to the hub, instead of FIDL API. Alternately,
     // simply remove; going forward, HermeticTestEnvironment accepts a
     // parameter that disables device settings writeback during testing.
     EnableDeviceSettings(bool enabled);
@@ -185,7 +185,7 @@ protocol AudioCore {
 };
 
 // Placeholder for routing policies.
-// TODO(34922): Replace, when routing is handled by a central policy manager.
+// TODO(fxbug.dev/34922): Replace, when routing is handled by a central policy manager.
 enum AudioOutputRoutingPolicy {
     // AudioRenderers are always connected to all audio outputs which currently
     // in the plugged state (eg; have a connector attached to them)

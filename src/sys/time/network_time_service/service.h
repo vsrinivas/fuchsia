@@ -54,7 +54,7 @@ class RetryConfig {
 };
 
 // Implementation of the FIDL time services.
-// TODO(58068): This currently assumes that there is only a single client. To support
+// TODO(fxbug.dev/58068): This currently assumes that there is only a single client. To support
 // multiple clients, this needs to retain per-client state so that it understands when
 // a value hasn't been returned yet to a particular client, and so that it can close
 // channels to only a single client as needed.

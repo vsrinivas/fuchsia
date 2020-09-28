@@ -13,7 +13,7 @@ namespace media::audio::test {
 enum GainType : uint32_t { Mute, Unity, Scaled, Ramped };
 enum OutputDataRange : uint32_t { Silence, OutOfRange, Normal };
 
-// TODO(50811): Consider migrating to google/benchmark
+// TODO(fxbug.dev/50811): Consider migrating to google/benchmark
 
 class AudioPerformance {
  public:

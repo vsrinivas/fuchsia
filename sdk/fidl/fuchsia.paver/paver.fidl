@@ -166,7 +166,7 @@ protocol DataSink {
     /// `payload` may need to be resized to the partition size, so the provided vmo must have
     /// been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
     /// `ZX_VMO_CHILD_RESIZABLE`.
-    // TODO(45606): transition users to `WriteFirmware()` and delete this.
+    // TODO(fxbug.dev/45606): transition users to `WriteFirmware()` and delete this.
     [Deprecated]
     WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status status);
 

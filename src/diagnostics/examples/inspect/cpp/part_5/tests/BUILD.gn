@@ -19,7 +19,7 @@ test("integration_part_5") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }

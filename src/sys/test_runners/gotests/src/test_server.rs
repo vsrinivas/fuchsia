@@ -303,11 +303,11 @@ async fn get_tests(test_component: Arc<Component>) -> Result<Vec<String>, Enumer
         .map_err(KernelError::ProcessExit)?;
 
     let logs = std_reader.get_logs().await?;
-    // TODO(4610): logs might not be utf8, fix the code.
+    // TODO(fxbug.dev/4610): logs might not be utf8, fix the code.
     let mut output = from_utf8(&logs)?;
     let process_info = process.info().map_err(KernelError::ProcessInfo)?;
     if process_info.return_code != 0 {
-        // TODO(45858): Add a error logger to API so that we can display test stdout logs.
+        // TODO(fxbug.dev/45858): Add a error logger to API so that we can display test stdout logs.
         error!("Failed getting list of tests:\n{}", output);
         return Err(EnumerationError::ListTest);
     }

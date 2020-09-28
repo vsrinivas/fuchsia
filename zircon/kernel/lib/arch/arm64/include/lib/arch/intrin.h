@@ -160,7 +160,7 @@ namespace arch {
 /// Yield the processor momentarily.  This should be used in busy waits.
 inline void Yield() { __yield(); }
 
-// TODO(49941): Improve the docs on the barrier APIs, maybe rename/refine.
+// TODO(fxbug.dev/49941): Improve the docs on the barrier APIs, maybe rename/refine.
 
 /// Synchronize all memory accesses of all kinds.
 inline void DeviceMemoryBarrier() { __dsb(ARM_MB_SY); }

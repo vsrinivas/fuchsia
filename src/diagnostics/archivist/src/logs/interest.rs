@@ -72,7 +72,7 @@ impl InterestDispatcher {
                 segments.iter().for_each(|segment| {
                     match segment {
                         StringSelector::StringPattern(name) => {
-                            // TODO(54198): Interest listener matching based
+                            // TODO(fxbug.dev/54198): Interest listener matching based
                             // on strict name comparison look at using moniker
                             // heuristics via selectors API.
                             if name == &component.name {

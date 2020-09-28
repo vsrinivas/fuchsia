@@ -16,7 +16,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
-// TODO(44644): This may not be necessary after migration.
+// TODO(fxbug.dev/44644): This may not be necessary after migration.
 #include <utility>
 
 #include <ddktl/device.h>
@@ -102,7 +102,7 @@ class OpteeClient : public OpteeClientBase,
 
   // Shared FIDL handler logic used for migration.
   //
-  // TODO(44664): Remove these once migration is complete.
+  // TODO(fxbug.dev/44664): Remove these once migration is complete.
   std::pair<uint32_t, OpResult> OpenSessionInternal(
       Uuid ta_uuid, fidl::VectorView<fuchsia_tee::Parameter> parameter_set);
   OpResult InvokeCommandInternal(uint32_t session_id, uint32_t command_id,
@@ -300,8 +300,8 @@ class OpteeClient : public OpteeClientBase,
 
   // The (only) trusted application UUID this client is allowed to use.
   //
-  // TODO(44664): Currently, no application UUID indicates that the old API is being used.
-  // TODO(44664): Remove optionality once transition to new API is complete.
+  // TODO(fxbug.dev/44664): Currently, no application UUID indicates that the old API is being used.
+  // TODO(fxbug.dev/44664): Remove optionality once transition to new API is complete.
   std::optional<Uuid> application_uuid_;
 };
 

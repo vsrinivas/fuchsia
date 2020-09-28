@@ -431,7 +431,7 @@ impl ComponentDecl {
                 match target_name_or_path {
                     CapabilityNameOrPath::Name(name) => name == in_target_name,
                     CapabilityNameOrPath::Path(path) => {
-                        // TODO(56604): Remove this legacy compatibility path
+                        // TODO(fxbug.dev/56604): Remove this legacy compatibility path
                         let res: Result<CapabilityPath, _> =
                             format!("/svc/{}", in_target_name).parse();
                         if res.is_err() {

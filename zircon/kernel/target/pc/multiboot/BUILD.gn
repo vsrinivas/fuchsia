@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(54160): Keep this in sync with BUILD.zircon.gn
+# TODO(fxbug.dev/54160): Keep this in sync with BUILD.zircon.gn
 import("$zx_build/public/gn/migrated_targets.gni")
 multiboot_toolchain = "zircon_multiboot"
 

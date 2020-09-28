@@ -492,7 +492,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 		if len(requestedAddr.Address) != 0 {
 			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr.Address)})
 		}
-		// TODO(38166): Refactor retransmitDiscover and retransmitRequest
+		// TODO(fxbug.dev/38166): Refactor retransmitDiscover and retransmitRequest
 
 	retransmitDiscover:
 		for i := uint(0); ; i++ {

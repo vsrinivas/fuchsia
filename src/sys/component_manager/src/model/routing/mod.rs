@@ -444,7 +444,7 @@ async fn route_storage_capability<'a>(
                     let source_path = match capability.name_or_path() {
                         Some(CapabilityNameOrPath::Path(path)) => path.clone(),
                         Some(CapabilityNameOrPath::Name(_)) => {
-                            // TODO(56604): Come up with a solution to route name-based
+                            // TODO(fxbug.dev/56604): Come up with a solution to route name-based
                             // capabilities from component manager's namespace.
                             return Err(RoutingError::storage_directory_source_is_not_component(
                                 "component manager's namespace",

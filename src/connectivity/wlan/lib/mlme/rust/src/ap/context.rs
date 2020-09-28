@@ -117,7 +117,7 @@ impl Context {
                 cap: capabilities.raw(),
                 rates,
                 rsne,
-                // TODO(37891): Send everything else (e.g. HT capabilities).
+                // TODO(fxbug.dev/37891): Send everything else (e.g. HT capabilities).
             })
         })
     }
@@ -216,7 +216,7 @@ impl Context {
                     ie::BssMaxIdlePeriod {
                         max_idle_period,
                         idle_options: ie::IdleOptions(0)
-                            // TODO(37891): Support configuring this.
+                            // TODO(fxbug.dev/37891): Support configuring this.
                             .with_protected_keep_alive_required(false),
                     }
                 },
@@ -294,7 +294,7 @@ impl Context {
     }
 
     /// Sends a WLAN probe response frame (IEEE Std 802.11-2016, 9.3.3.11) to the PHY.
-    // TODO(42088): Use this for devices that don't support probe request offload.
+    // TODO(fxbug.dev/42088): Use this for devices that don't support probe request offload.
     pub fn make_probe_resp_frame(
         &mut self,
         addr: MacAddr,
@@ -452,7 +452,7 @@ impl Context {
             dst_addr,
             src_addr,
             is_protected,
-            false, // TODO(37891): Support QoS.
+            false, // TODO(fxbug.dev/37891): Support QoS.
             mac::ETHER_TYPE_EAPOL,
             eapol_frame,
         )

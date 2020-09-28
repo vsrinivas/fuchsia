@@ -44,10 +44,10 @@ group("deprecated_package_underscore") {
   # https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package_identity
   # fxbug.dev/22679
 
-  # TODO(22679): Provide a mechanism for vendor to temporarily contribute to this list.
+  # TODO(fxbug.dev/22679): Provide a mechanism for vendor to temporarily contribute to this list.
   visibility = [ "//vendor/*" ]
 
-  # TODO(48237): replace system_image with system-image, see bug for details.
+  # TODO(fxbug.dev/48237): replace system_image with system-image, see bug for details.
   visibility += [ "//build/images/*" ]
 
   # Do not add new entries to this list.

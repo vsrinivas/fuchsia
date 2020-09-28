@@ -83,7 +83,7 @@ async fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    // TODO(45790): this should not depend on isolated_devmgr; the two functionalities should
+    // TODO(fxbug.dev/45790): this should not depend on isolated_devmgr; the two functionalities should
     // live in separate binaries to avoid leaking test dependencies into production builds.
     let phy_server = if cfg.isolated_devmgr {
         device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys.clone(), inspect_tree.clone())

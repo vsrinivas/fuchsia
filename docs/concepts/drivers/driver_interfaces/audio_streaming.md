@@ -18,7 +18,7 @@ discussed in this document. Additionally, the information present in audio
 outputs streams is exclusive to the application owner of the stream. Mixing of
 audio is not a service provided by the audio stream interface.
 
-> TODO(35523):
+> TODO(fxbug.dev/35523):
 > The pre-FIDL serialization still in use as of 2020/02/04
 > is defined in [audio_streaming_original.md](audio_streaming_original.md),
 > that file is a copy for reference of this file at 34d6afd26d0.

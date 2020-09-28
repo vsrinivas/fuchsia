@@ -60,7 +60,7 @@ test("lib-hid-input-report-test") {
     "//zircon/system/ulib/hid-parser",
   ]
 
-  # TODO(46730): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46730): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

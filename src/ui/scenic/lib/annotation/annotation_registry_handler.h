@@ -19,7 +19,7 @@ using AnnotationHandlerId = uint32_t;
 // An implementation of the annotation Registry protocol, which sends the
 // CreateAnnotationViewHolder to gfx Annotation Manager once it is initialized.
 //
-// TODO(45197): This class is thread-compatible and it's safe to use when Scenic
+// TODO(fxbug.dev/45197): This class is thread-compatible and it's safe to use when Scenic
 // is single-threaded. We may need to make it thread-safe once Scenic supports
 // multithreading.
 class AnnotationRegistryHandler : fuchsia::ui::annotation::Registry {

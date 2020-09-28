@@ -196,15 +196,15 @@ tests for your high-level reader implementation.
 
 # Update Validator {#update-validator}
 
-TODO(43131)
+TODO(fxbug.dev/43131)
 
 # Update Rust Library {#update-rust}
 
-TODO(43131)
+TODO(fxbug.dev/43131)
 
 # Update Dart Library {#update-dart}
 
-TODO(43131)
+TODO(fxbug.dev/43131)
 
 <!-- xrefs -->
 [block-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h

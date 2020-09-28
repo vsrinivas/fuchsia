@@ -269,7 +269,7 @@ impl BredrData {
     }
 }
 
-/// TODO(36378) - Compatibility functions to convert from the to-be-deprecated Control api types
+/// TODO(fxbug.dev/36378) - Compatibility functions to convert from the to-be-deprecated Control api types
 /// into the newer sys types. To be removed when the Control library is removed.
 mod compat {
     use fidl_fuchsia_bluetooth_control as control;
@@ -672,7 +672,7 @@ pub mod proptest_util {
             })
     }
 
-    // TODO(36378) Note: We don't generate data with a None role_preference, as these can't be
+    // TODO(fxbug.dev/36378) Note: We don't generate data with a None role_preference, as these can't be
     // safely roundtripped to control::BredrData. This can be removed when the control api is
     // retired.
     pub(crate) fn any_bredr_data() -> impl Strategy<Value = BredrData> {
@@ -702,7 +702,7 @@ pub mod proptest_util {
             })
     }
 
-    // TODO(35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
+    // TODO(fxbug.dev/35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
     // same. We emulate that invariant here.
     pub(crate) fn any_le_data_for_control_test() -> impl Strategy<Value = LeData> {
         (

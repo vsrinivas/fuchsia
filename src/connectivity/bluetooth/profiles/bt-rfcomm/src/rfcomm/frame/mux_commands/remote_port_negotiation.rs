@@ -39,7 +39,7 @@ impl RPNAddressField {
     }
 }
 
-// TODO(59582): Per RFCOMM 5.5.1, the handling of the command is implementation specific. It may be
+// TODO(fxbug.dev/59582): Per RFCOMM 5.5.1, the handling of the command is implementation specific. It may be
 // beneficial to add better accessors & strong types for some of these fields if we plan on
 // supporting these customizations in the future.
 bitfield! {

@@ -67,7 +67,7 @@ impl BatterySimulatorFacade {
     /// # Arguments
     /// * 'time_remaining' - A json object with 'message' as the key and an integer as a value
     /// representing time in seconds.
-    // TODO(48702): Check type conversion
+    // TODO(fxbug.dev/48702): Check type conversion
     pub fn set_time_remaining(&self, time_remaining: Value) -> Result<(), Error> {
         self.check_proxy()?;
         let seconds: u64 = match time_remaining["message"].as_u64() {

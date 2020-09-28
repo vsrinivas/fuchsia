@@ -242,7 +242,7 @@ impl ServedRepository {
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository with local mirroring enabled.
-    // TODO(fxb/59827) delete this method once pkg-resolver can fetch metadata from a LocalMirror.
+    // TODO(fxbug.dev/59827) delete this method once pkg-resolver can fetch metadata from a LocalMirror.
     pub fn make_repo_config_with_local_mirror(&self, url: RepoUrl) -> RepositoryConfig {
         self.repo.make_repo_config(url, Some(self.get_mirror_config(false)), true)
     }

@@ -129,7 +129,7 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(54525): The Inspect API has not been connected for FactoryFs yet.
+  // TODO(fxbug.dev/54525): The Inspect API has not been connected for FactoryFs yet.
   zx::channel diagnostics_dir;
 
   zx_status_t status = MountFilesystem(PATH_FACTORY, "/boot/bin/factoryfs", options,
@@ -149,7 +149,7 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(54525): The Inspect API has not been connected for durable partition yet.
+  // TODO(fxbug.dev/54525): The Inspect API has not been connected for durable partition yet.
   zx::channel diagnostics_dir;
   zx_status_t status = MountFilesystem(PATH_DURABLE, "/boot/bin/minfs", options,
                                        std::move(block_device), std::move(diagnostics_dir), FS_SVC);

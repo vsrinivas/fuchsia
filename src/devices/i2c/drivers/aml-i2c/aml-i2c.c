@@ -306,7 +306,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index, uint32_t clo
   thrd_create_with_name(&irqthrd, aml_i2c_irq_thread, device, "i2c_irq_thread");
 
   // Set profile for IRQ thread.
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   const zx_duration_t capacity = ZX_USEC(20);
   const zx_duration_t deadline = ZX_USEC(100);

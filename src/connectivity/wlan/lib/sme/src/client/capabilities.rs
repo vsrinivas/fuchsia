@@ -45,13 +45,13 @@ const OVERRIDE_CAP_INFO_PRIVACY: bool = false;
 const OVERRIDE_CAP_INFO_SPECTRUM_MGMT: bool = false;
 
 /// Fuchsia does not support tx_stbc with our existing SoftMAC chips.
-/// TODO(29089): Enable tx_stbc when ath10k supports it.
+/// TODO(fxbug.dev/29089): Enable tx_stbc when ath10k supports it.
 const OVERRIDE_HT_CAP_INFO_TX_STBC: bool = false;
 
 /// Supported channel bandwidth set can only be non-zero if the associating channel is 160 MHz or
 /// 80+80 MHz Channel bandwidth. Otherwise it will be set to 0. 0 is a purely numeric value without
 /// a name. See IEEE Std 802.11-2016 Table 9-250 for more details.
-/// TODO(39546): finer control over CBW if necessary.
+/// TODO(fxbug.dev/39546): finer control over CBW if necessary.
 const OVERRIDE_VHT_CAP_INFO_SUPPORTED_CBW_SET: u32 = 0;
 
 /// A driver may not properly populate an interface's Capabilities to reflect the selected role.
@@ -169,7 +169,7 @@ fn override_vht_capabilities(mut vht_cap: VhtCapabilities, cbw: Cbw) -> VhtCapab
         // Supported channel bandwidth set can only be non-zero if the associating channel is
         // 160 MHz or 80+80 MHz Channel bandwidth. Otherwise it will be set to 0. 0 is a purely
         // numeric value without a name. See IEEE Std 802.11-2016 Table 9-250 for more details.
-        // TODO(39546): finer control over CBW if necessary.
+        // TODO(fxbug.dev/39546): finer control over CBW if necessary.
         match cbw {
             Cbw::Cbw160 | Cbw::Cbw80P80 { secondary80: _ } => (),
             _ => vht_cap_info.set_supported_cbw_set(OVERRIDE_VHT_CAP_INFO_SUPPORTED_CBW_SET),

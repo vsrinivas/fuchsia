@@ -88,7 +88,7 @@ class Renderer {
   // registered. Registration may fail if the passed in token is invalid or if it is a valid
   // channel but not a valid buffer collection.
   //
-  // TODO(50251): The renderer also needs to be able to unregister buffer collections.
+  // TODO(fxbug.dev/50251): The renderer also needs to be able to unregister buffer collections.
   virtual GlobalBufferCollectionId RegisterTextureCollection(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;

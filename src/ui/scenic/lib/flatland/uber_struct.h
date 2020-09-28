@@ -22,7 +22,7 @@
 
 namespace flatland {
 
-// TODO(45932): find the appropriate name for this struct.
+// TODO(fxbug.dev/45932): find the appropriate name for this struct.
 //
 // A collection of data local to a particular Flatland instance representing the most recent commit
 // of that instance's presented state. Because the UberStruct represents a snapshot of the local

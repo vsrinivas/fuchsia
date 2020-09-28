@@ -158,7 +158,7 @@ impl EventLoop {
         loop {
             // Currently, if any of the workers encounters an error, the event loop
             // will return with the worker's error immediately.
-            // TODO(52740): Gracefully handle worker errors.
+            // TODO(fxbug.dev/52740): Gracefully handle worker errors.
             let () = futures::select! {
                 stack_res = stack_stream.try_next() => {
                     let event = stack_res?.ok_or(anyhow::anyhow!("Stack event stream unexpectedly ended"))?;
@@ -400,7 +400,7 @@ impl EventLoop {
             RouterAdminRequest::SetFilter { rule, responder } => {
                 let r = self
                     .device
-                    // TODO(45024): The Router Config FIDL API doesn't have a way to provide a
+                    // TODO(fxbug.dev/45024): The Router Config FIDL API doesn't have a way to provide a
                     // specific interface identifier.
                     .set_filter_on_interface(&rule, 0u32)
                     .await

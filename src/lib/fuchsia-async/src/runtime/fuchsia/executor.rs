@@ -901,7 +901,7 @@ enum ExecutorTime {
 }
 
 // Simple slab::Slab replacement that doesn't re-use keys
-// TODO(43101): figure out how to safely cancel async waits so we can re-use keys again.
+// TODO(fxbug.dev/43101): figure out how to safely cancel async waits so we can re-use keys again.
 struct PacketReceiverMap<T> {
     next_key: usize,
     mapping: HashMap<usize, T>,

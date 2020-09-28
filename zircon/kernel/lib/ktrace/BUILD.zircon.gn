@@ -32,7 +32,7 @@ config("suppress-warning.config") {
   visibility = [
     ":*",
 
-    # TODO(44971): Referenced in environment configs.
+    # TODO(fxbug.dev/44971): Referenced in environment configs.
     "$zx/kernel/*",
     "$zx/public/gn/*",
     "$zx/system/ulib/*",

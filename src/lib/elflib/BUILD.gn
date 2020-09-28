@@ -40,7 +40,7 @@ test("elflib_unittest") {
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-reorder-init-list" ]
 
-  # TODO(46795): UBSan has found an instance of undefined behavior in this target.
+  # TODO(fxbug.dev/46795): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 

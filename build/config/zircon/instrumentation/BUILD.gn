@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(54160): Keep in sync with //zircon/public/gn/config/instrumentation/BUILD.zircon.gn
+# TODO(fxbug.dev/54160): Keep in sync with //zircon/public/gn/config/instrumentation/BUILD.zircon.gn
 import("//build/unification/global_variables.gni")
 
 # ubsan-trap is pure instrumentation with no runtime.

@@ -264,7 +264,7 @@ var _ cobaltEventProducer = (*availableDynamicIPv6AddressConfigObservation)(nil)
 
 // Using a var so that it can be overriden for tests.
 //
-// TODO(57075): Use a fake clock in tests so we can make these constants.
+// TODO(fxbug.dev/57075): Use a fake clock in tests so we can make these constants.
 var (
 	// availableDynamicIPv6AddressConfigDelayInitialEvents is the initial delay
 	// before registering with the cobalt client that events are ready.

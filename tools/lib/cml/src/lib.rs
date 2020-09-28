@@ -1110,7 +1110,7 @@ impl CapabilityClause for Expose {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
+    // TODO(fxbug.dev/340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
     fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
         self.protocol.clone()

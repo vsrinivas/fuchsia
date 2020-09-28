@@ -15,7 +15,7 @@ use {
 
 const NUM_CHILDREN: u16 = 1000;
 
-// TODO(58641): enable this stress test
+// TODO(fxbug.dev/58641): enable this stress test
 #[fasync::run_singlethreaded(test)]
 #[ignore]
 /// This stress test will create a 1000 children, make sure they are running and then stop them.

@@ -157,7 +157,7 @@ test_package("pkg-resolver-unit-tests") {
       dest = "pkg-resolver-bin-test"
       environments = basic_envs
 
-      # TODO(60612): Remove this override.
+      # TODO(fxbug.dev/60612): Remove this override.
       log_settings = {
         max_severity = "ERROR"
       }

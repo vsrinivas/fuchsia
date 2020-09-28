@@ -26,7 +26,7 @@ sandbox_test_package("some_services") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(46761): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46761): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   environments = basic_envs
@@ -42,7 +42,7 @@ sandbox_test_package("no_services") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(46761): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46761): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   environments = basic_envs
@@ -59,7 +59,7 @@ sandbox_test_package("multiple_components") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(46761): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46761): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   environments = basic_envs

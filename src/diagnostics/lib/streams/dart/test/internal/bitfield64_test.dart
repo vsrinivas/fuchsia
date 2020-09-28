@@ -4,7 +4,7 @@
 
 // ignore_for_file: implementation_imports
 
-// TODO(49485) - this is a copy of bitfield64 from fuchsia_inspect. Find a
+// TODO(fxbug.dev/49485) - this is a copy of bitfield64 from fuchsia_inspect. Find a
 // way to share the common functionality.
 
 import 'package:fuchsia_diagnostic_streams/src/internal/bitfield64.dart';

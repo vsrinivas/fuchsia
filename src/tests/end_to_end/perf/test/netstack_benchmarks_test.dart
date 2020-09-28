@@ -42,7 +42,7 @@ void main() {
         await helper.performance.initializeTracing(categories: ['benchmark']);
     await traceSession.start();
 
-    // TODO(53552): Use launch facade instead of ssh.
+    // TODO(fxbug.dev/53552): Use launch facade instead of ssh.
     await helper.sl4fDriver.ssh.run('/bin/run $_appPath');
 
     await traceSession.stop();

@@ -48,7 +48,7 @@ impl FatFilesystemInner {
 
     pub fn shut_down(&mut self) -> Result<(), Status> {
         self.filesystem.flush().map_err(fatfs_error_to_status)
-        // TODO(55291): send flush to the underlying block device.
+        // TODO(fxbug.dev/55291): send flush to the underlying block device.
     }
 
     pub fn cluster_size(&self) -> u32 {

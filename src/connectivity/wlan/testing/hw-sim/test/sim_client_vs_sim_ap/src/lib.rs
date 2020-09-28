@@ -73,7 +73,7 @@ async fn verify_client_connects_to_ap(
         |event| match event {
             WlantapPhyEvent::SetChannel { args } => {
                 if args.chan.primary == WLANCFG_DEFAULT_AP_CHANNEL.primary {
-                    // TODO(35337): use beacon frame from configure_beacon
+                    // TODO(fxbug.dev/35337): use beacon frame from configure_beacon
                     send_beacon(
                         &WLANCFG_DEFAULT_AP_CHANNEL,
                         &AP_MAC_ADDR,
@@ -107,7 +107,7 @@ async fn verify_client_connects_to_ap(
     // Both tasks need to be running at the same time to ensure "packets" can reach each other.
 
     join!(client_fut, ap_fut);
-    // TODO(35339): Once AP supports status query, verify from the AP side that client associated.
+    // TODO(fxbug.dev/35339): Once AP supports status query, verify from the AP side that client associated.
 }
 
 // Data transfer stage

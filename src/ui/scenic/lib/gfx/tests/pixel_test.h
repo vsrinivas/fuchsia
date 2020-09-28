@@ -96,7 +96,7 @@ class PixelTest : public sys::testing::TestWithEnvironment {
   // Sets the next Present-callback that will be used, then waits for some event on the looper
   // (usually OnScenicEvent) to trigger another Present, and then waits for THAT Present to have its
   // callback return.
-  // TODO(42422): This is too unintuitive. Rewrite to be clearer.
+  // TODO(fxbug.dev/42422): This is too unintuitive. Rewrite to be clearer.
   void RunUntilIndirectPresent(scenic::TestView* view);
 
   // Blocking call to |scenic::Session::Present|.

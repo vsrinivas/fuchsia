@@ -224,7 +224,7 @@ pub fn connect_to_unified_service<US: UnifiedServiceMarker>() -> Result<US::Prox
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory`.
-// TODO(56604): This probes for the protocol under root, then falls back to /svc if
+// TODO(fxbug.dev/56604): This probes for the protocol under root, then falls back to /svc if
 // it isn't there. Remove this fallback (and the async) once 56604 is done.
 pub async fn connect_to_protocol_at_dir_root<S: DiscoverableService>(
     directory: &DirectoryProxy,

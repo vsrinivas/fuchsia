@@ -82,7 +82,7 @@ def collect_packages(items, relative_to):
             languageVersion=language_version,
             packageUri=item['package_uri'])
 
-        #TODO(56428): enable once we sort out our duplicate packages
+        #TODO(fxbug.dev/56428): enable once we sort out our duplicate packages
         # for p in packages:
         #   if p.rootUri == package.rootUri:
         #     print('Failed to create package_config.json file')

@@ -48,7 +48,7 @@ impl HttpsDateClient for NetworkTimeClient {
             .get_network_time(uri.clone())
             .map_err(|e| match e {
                 HttpsDateError::InvalidHostname | HttpsDateError::SchemeNotHttps => {
-                    // TODO(59771) - decide how to surface irrecoverable errors to clients
+                    // TODO(fxbug.dev/59771) - decide how to surface irrecoverable errors to clients
                     error!("Got an unexpected error {:?}, which indicates a bad configuration.", e);
                     Status::UnknownUnhealthy
                 }
@@ -88,7 +88,7 @@ impl<C: HttpsDateClient + Send> UpdateAlgorithm for HttpsDateUpdateAlgorithm<C> 
     }
 
     async fn generate_updates(&self, mut sink: Sender<Update>) -> Result<(), Error> {
-        // TODO(59972): wait for network to be available before polling.
+        // TODO(fxbug.dev/59972): wait for network to be available before polling.
         loop {
             self.poll_time_until_successful(&mut sink).await?;
             fasync::Timer::new(fasync::Time::after(self.retry_strategy.between_successes.clone()))

@@ -30,7 +30,7 @@ const char kCategoriesArg[] = "--categories=kernel:syscall,kernel:sched,kernel:i
 // Just print help text and exit.
 const char kChildArg[] = "--help";
 
-// TODO(34893): Disabled until fixed.
+// TODO(fxbug.dev/34893): Disabled until fixed.
 TEST(Ktrace, DISABLED_IntegrationTest) {
   zx::job job{};  // -> default job
   std::vector<std::string> args{

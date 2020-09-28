@@ -6,7 +6,7 @@ library fuchsia.tracing.kernel;
 
 using zx;
 
-// TODO(30408): Allow providing a vmo of the buffer to use.
+// TODO(fxbug.dev/30408): Allow providing a vmo of the buffer to use.
 
 [Discoverable]
 protocol Controller {

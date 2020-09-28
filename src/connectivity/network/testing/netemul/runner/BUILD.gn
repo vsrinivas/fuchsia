@@ -81,7 +81,7 @@ source_set("src") {
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/syslog",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 
@@ -115,7 +115,7 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs:memfs-cpp",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -150,7 +150,7 @@ executable("sandbox_unittest") {
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/syslog",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 

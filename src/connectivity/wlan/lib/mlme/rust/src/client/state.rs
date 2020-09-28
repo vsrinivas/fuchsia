@@ -39,7 +39,7 @@ use {
 /// Association timeout in Beacon periods.
 /// If no association response was received from he BSS within this time window, an association is
 /// considered to have failed.
-// TODO(41609): Let upper layers set this value.
+// TODO(fxbug.dev/41609): Let upper layers set this value.
 const ASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
 
 /// Number of beacon intervals which beacon is not seen before we declare BSS as lost
@@ -660,7 +660,7 @@ impl Associated {
         let Association { aid, ap_ht_op, ap_vht_op, .. } = self.0;
 
         let assoc_ctx = ddk::build_ddk_assoc_ctx(sta.sta.bssid, aid, cap, ap_ht_op, ap_vht_op);
-        // TODO(29325): Determine for each outbound data frame,
+        // TODO(fxbug.dev/29325): Determine for each outbound data frame,
         // given the result of the dynamic capability negotiation, data frame
         // classification, and QoS policy.
         //
@@ -842,7 +842,7 @@ impl States {
     /// - frames' frame class is not yet permitted
     /// - frames are from a foreign BSS
     /// - frames are unicast but destined for a MAC address that is different from this STA.
-    // TODO(43456): Implement a packet counter and add tests to verify frames are dropped correctly.
+    // TODO(fxbug.dev/43456): Implement a packet counter and add tests to verify frames are dropped correctly.
     pub fn on_mac_frame<B: ByteSlice>(
         mut self,
         sta: &mut BoundClient<'_>,

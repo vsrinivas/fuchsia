@@ -34,7 +34,7 @@ flexible union SelectorArgument {
     /// and properties in a data hierarchy namespaced by component.
     /// NOTE: All StringSelectors parsed from the raw_selector will be interperetted in
     ///       string_pattern mode, giving significance to special characters.
-    /// TODO(4601): Link to in-tree documentation for raw selector strings.
+    /// TODO(fxbug.dev/4601): Link to in-tree documentation for raw selector strings.
     2: string:MAXIMUM_RAW_SELECTOR_LENGTH raw_selector;
 };
 

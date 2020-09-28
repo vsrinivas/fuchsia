@@ -361,7 +361,7 @@ package("use_h264_decoder_secure_input_output_test") {
       name = "use_h264_decoder_secure_input_output_test"
 
       # Without ClearTVP, can't pass anywhere at the moment.
-      # TODO(42991): Re-enable.
+      # TODO(fxbug.dev/42991): Re-enable.
       disabled = true
     },
   ]
@@ -711,7 +711,7 @@ package("use_vp9_decoder_secure_input_output_test") {
       name = "use_vp9_decoder_secure_input_output_test"
 
       # Without ClearTVP, can't pass anywhere at the moment.
-      # TODO(42991): Re-enable.
+      # TODO(fxbug.dev/42991): Re-enable.
       disabled = true
     },
   ]

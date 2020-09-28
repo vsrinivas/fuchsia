@@ -51,7 +51,7 @@ kernel_cmdline_args += [
   "virtcon.hide-on-boot",
 ]
 
-# TODO(fxb/60480): This is a temporary workaround due to bugs caused by the JIT version of the
+# TODO(fxbug.dev/60480): This is a temporary workaround due to bugs caused by the JIT version of the
 # flutter app. Remove this line once the bugs are resolved, or if the default is changed.
 flutter_default_app = "flutter_aot_app"
 

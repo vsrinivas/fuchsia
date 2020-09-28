@@ -16,7 +16,7 @@
 // on rapidjson.  Instead, it provides template functions that accept any
 // object compatible with rapidjson's SAX API.
 
-// TODO(49438): document schema; parse/validate JSON -> header / payload(?)
+// TODO(fxbug.dev/49438): document schema; parse/validate JSON -> header / payload(?)
 
 namespace zbitl {
 

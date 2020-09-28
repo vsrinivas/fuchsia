@@ -75,7 +75,7 @@ async fn create_environments<'a>(
 
         // Wait for the interface to become online
         //
-        // TODO(21154): Replace this loop with a hanging get on `WatchInterfaces`.
+        // TODO(fxbug.dev/21154): Replace this loop with a hanging get on `WatchInterfaces`.
         //
         // Note, netstack3 does not implement `fuchsia.netstack.Netstack/OnInterfacesChanged`
         // or `fuchsia.net.stack.Stack/OnInterfaceStatusChange`.
@@ -98,7 +98,7 @@ async fn create_environments<'a>(
         // This is required for IPv6 since we need to wait for DAD to complete before an address
         // is bound to an interface.
         //
-        // TODO(21154): Replace this loop with a hanging get on `WatchInterfaces`.
+        // TODO(fxbug.dev/21154): Replace this loop with a hanging get on `WatchInterfaces`.
         //
         // Note, netstack3 does not implement `fuchsia.netstack.Netstack/OnInterfacesChanged`.
         loop {

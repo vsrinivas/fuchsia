@@ -82,7 +82,7 @@ def main():
 
     conflicts = {d: e for d, e in entries_by_dest.items() if len(e) > 1}
     # Only report a conflict if the source files differ.
-    # TODO(45680): remove this additional filtering when dependency trees are
+    # TODO(fxbug.dev/45680): remove this additional filtering when dependency trees are
     # cleaned up and //build/package.gni has gone the way of the dodo.
     conflicts = {
         d: e

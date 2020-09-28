@@ -348,7 +348,7 @@ impl Test {
 
     /// Add a reboot step. This reboots the target machine using the configured reboot mechanism,
     /// then waits for the machine to come back up. Right now, it waits by sleeping for 30 seconds.
-    /// TODO(34504): instead of waiting for 30 seconds, we should have a retry loop around the ssh in
+    /// TODO(fxbug.dev/34504): instead of waiting for 30 seconds, we should have a retry loop around the ssh in
     /// the verification step.
     pub fn reboot_step(mut self) -> Self {
         self.steps.push(Box::new(RebootStep::new(&self.target, &self.auth, &self.reboot_type)));

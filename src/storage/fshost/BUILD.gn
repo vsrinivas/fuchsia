@@ -209,7 +209,7 @@ test("fshost_test") {
     "//zircon/system/ulib/mock-boot-arguments",
   ]
 
-  # TODO(46432): Fix the leaks and remove this.
+  # TODO(fxbug.dev/46432): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 

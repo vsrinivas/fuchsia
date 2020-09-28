@@ -212,7 +212,7 @@ source_set("gfx") {
     ":util",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
 
-    # TODO(44143): Gfx should not depend on Input.
+    # TODO(fxbug.dev/44143): Gfx should not depend on Input.
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.annotation",
@@ -250,7 +250,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/inspect",
 
-    # TODO(24590) Remove timings dependency when display_swapchain is pulled out.
+    # TODO(fxbug.dev/24590) Remove timings dependency when display_swapchain is pulled out.
     "//sdk/fidl/fuchsia.sysmem",
     "//src/ui/scenic/lib/scheduling:timings",
     "//zircon/public/lib/fbl",

@@ -36,7 +36,7 @@ pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
             phy_manager.remove_phy(phy_id);
         }
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
-            // TODO(56539): When the legacy shim is removed, adding the interface to the PhyManager
+            // TODO(fxbug.dev/56539): When the legacy shim is removed, adding the interface to the PhyManager
             // should be handled inside of iface_manager.handle_added_iface.
             let mut phy_manager = listener.phy_manager.lock().await;
             match phy_manager.on_iface_added(iface_id).await {

@@ -1167,7 +1167,7 @@ void AudioDriverV1::SetUpClocks() {
   // This clock begins as a clone of MONOTONIC, but because the hardware is NOT in the monotonic
   // clock domain, this clock must eventually diverge. We tune this clock based on notifications
   // provided by the audio driver, which correlate DMA position with CLOCK_MONOTONIC time.
-  // TODO(60027): Recovered clocks should be per-domain not per-driver.
+  // TODO(fxbug.dev/60027): Recovered clocks should be per-domain not per-driver.
   auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
   auto read_only_clock_result = audio::clock::DuplicateClock(adjustable_clock);
   if (!read_only_clock_result.is_ok()) {
@@ -1181,7 +1181,7 @@ void AudioDriverV1::SetUpClocks() {
     return;
   }
 
-  // TODO(46648): If this clock domain is discovered to be hardware-tunable, this should be
+  // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should be
   // DeviceAdjustable instead of DeviceStatic, to articulate that it has hardware controls.
   auto clone = AudioClock::CreateAsDeviceStatic(read_only_clock_result.take_value(), clock_domain_);
   if (!clone.is_valid()) {

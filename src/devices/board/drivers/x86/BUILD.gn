@@ -72,7 +72,7 @@ driver_module("platform-bus-x86") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
 
-  # TODO(fxb/58161): delete the below and fix compiler warnings
+  # TODO(fxbug.dev/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 
   sources = [

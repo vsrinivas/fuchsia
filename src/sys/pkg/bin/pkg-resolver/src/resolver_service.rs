@@ -44,7 +44,7 @@ pub struct ResolverServiceInspectState {
 
     /// How many times the resolver service has fallen back to the
     /// cache package set due to a remote repository returning NOT_FOUND.
-    /// TODO(50764): remove this stat when we remove this cache fallback behavior.
+    /// TODO(fxbug.dev/50764): remove this stat when we remove this cache fallback behavior.
     cache_fallbacks_due_to_not_found: inspect_util::Counter,
 }
 
@@ -261,7 +261,7 @@ async fn hash_from_repo_or_cache(
         Err(e @ GetPackageHashError::MerkleFor(MerkleForError::NotFound)) => {
             // If we can get metadata but the repo doesn't know about the package,
             // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
-            // TODO(50764): remove this behavior.
+            // TODO(fxbug.dev/50764): remove this behavior.
             match missing_cache_package_disk_fallback(
                 &rewritten_url,
                 pkg_url,
@@ -351,7 +351,7 @@ async fn package_from_repo_or_cache(
         Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
             // If we can get metadata but the repo doesn't know about the package,
             // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
-            // TODO(50764): remove this behavior.
+            // TODO(fxbug.dev/50764): remove this behavior.
             match missing_cache_package_disk_fallback(
                 &rewritten_url,
                 pkg_url,

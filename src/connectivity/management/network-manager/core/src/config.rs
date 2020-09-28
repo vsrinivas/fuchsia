@@ -1103,7 +1103,7 @@ impl Config {
     /// If there is a `default_interface` configured, then use the topological path name instead.
     pub fn get_interface_name(&self, topo_path: &str) -> error::Result<String> {
         if self.is_unknown_device_id(topo_path) && self.default_interface().is_some() {
-            // TODO(51107): This special case is needed because LIF manager seems to enforce that
+            // TODO(fxbug.dev/51107): This special case is needed because LIF manager seems to enforce that
             // names be unique across the system. If more than one unconfigured interface were to be
             // connected then LIF manager would refuse to register the device. We should revisit
             // this decision to see if it is still valid.
@@ -1173,14 +1173,14 @@ impl Config {
                     if dhcp_client { lifmgr::Dhcp::Client } else { lifmgr::Dhcp::None };
             }
 
-            // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
+            // TODO(fxbug.dev/42315): LIFProperties doesn't support IPv6 addresses yet.
             if let Some(addr) = c.cidr_address.as_ref() {
                 properties.address_v4 =
                     Some(LifIpAddr { address: addr.ip.0, prefix: addr.prefix_length });
             }
         }
 
-        // TODO(42315): LIF manager throws an error if both a DHCP client and a static IP address
+        // TODO(fxbug.dev/42315): LIF manager throws an error if both a DHCP client and a static IP address
         // configuration are set. We don't want to be generating invalid LIFProperties, so favor
         // the static IP configuration and turn off DHCP.
         if properties.dhcp == lifmgr::Dhcp::Client && properties.address_v4.is_some() {
@@ -1234,7 +1234,7 @@ impl Config {
             }
         };
 
-        // TODO(42315): LIFProperties does not support multiple addresses yet.
+        // TODO(fxbug.dev/42315): LIFProperties does not support multiple addresses yet.
         if subifs.len() != 1 {
             return Err(error::NetworkManager::Config(error::Config::NotSupported {
                 msg: "Multiple subinterfaces on a single interface are not supported".to_string(),
@@ -1259,7 +1259,7 @@ impl Config {
         }
 
         let (v4addr, v6addr) = self.get_ip_address(intf)?;
-        // TODO(42316): LIFProperties doesn't support IPv6 addresses yet.
+        // TODO(fxbug.dev/42316): LIFProperties doesn't support IPv6 addresses yet.
         if v6addr.is_some() {
             warn!("Setting IPv6 addresses is not supported yet");
         }
@@ -1434,7 +1434,7 @@ impl Config {
     ) -> error::Result<lifmgr::LIFProperties> {
         let mut properties = crate::lifmgr::LIFProperties { enabled: true, ..Default::default() };
 
-        // TODO(42316): LIFProperties doesn't support IPv6 addresses yet.
+        // TODO(fxbug.dev/42316): LIFProperties doesn't support IPv6 addresses yet.
         if bridge.ipv6.is_some() {
             warn!("Setting IPv6 addresses is not supported yet.");
         }
@@ -3439,7 +3439,7 @@ mod tests {
         assert_eq!(actual.from, 6667u16);
         assert_eq!(actual.to, 6669u16);
 
-        // TODO(45891): Multiple port ranges are not supported yet.
+        // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
         assert!("6666,6667-6669".parse::<PortRange>().is_err());
     }
 

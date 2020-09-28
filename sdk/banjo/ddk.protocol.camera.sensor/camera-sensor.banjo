@@ -53,7 +53,7 @@ struct ReadoutConfig {
 
 /// A sensor can support several different predefined modes.
 /// This structure keeps all necessary information about a mode.
-// TODO(55427): Move non-sensor-specific params out of this struct.
+// TODO(fxbug.dev/55427): Move non-sensor-specific params out of this struct.
 struct OperatingMode {
     /// This mode's index.
     uint8 idx;
@@ -103,9 +103,9 @@ struct FrameRateInfo  {
 ///    ZX_ERR_OUT_OF_RANGE        - Args fall outside of min/max constraints.
 ///    ZX_ERR_BUFFER_TOO_SMALL    - Buffer provided cannot hold all required data.
 ///    ZX_ERR_IO_NOT_PRESENT      - There is no sensor device present or bound.
-// TODO(55428): Incorporate muting behavior into documentation. Add arg/return value info.
-// TODO(56558): Add a versioning mechanism.
-// TODO(55430): Transition methods to use [Async].
+// TODO(fxbug.dev/55428): Incorporate muting behavior into documentation. Add arg/return value info.
+// TODO(fxbug.dev/56558): Add a versioning mechanism.
+// TODO(fxbug.dev/55430): Transition methods to use [Async].
 [Layout = "ddk-protocol"]
 protocol CameraSensor2 {
     /// Initializes the sensor.

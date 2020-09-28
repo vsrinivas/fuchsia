@@ -185,7 +185,7 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .context("failed to connect to netstack service")?;
 
     // Add the device and get its interface state from netstack.
-    // TODO(48907) Support Network Device. This helper fn should use stack.fidl
+    // TODO(fxbug.dev/48907) Support Network Device. This helper fn should use stack.fidl
     // and be agnostic over interface type.
     let id = netstack
         .add_ethernet_device(
@@ -541,7 +541,7 @@ async fn add_address_for_dad<
 ///
 /// If no remote node has any interest in an address the netstack is attempting to assign to
 /// an interface, DAD should succeed.
-// TODO(53644): Reenable when we figure out how to handle timing issues in CQ when the address
+// TODO(fxbug.dev/53644): Reenable when we figure out how to handle timing issues in CQ when the address
 // may resolve before the netstack processes the NA/NS messagee.
 #[allow(unused)]
 async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result {

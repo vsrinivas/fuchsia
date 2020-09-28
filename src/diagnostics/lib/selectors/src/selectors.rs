@@ -131,7 +131,7 @@ fn validate_path_selection_vector(
                 }
             },
             StringSelector::ExactMatch(_) => {
-                //TODO(4601): What do we need to validate against exact matches?
+                //TODO(fxbug.dev/4601): What do we need to validate against exact matches?
             }
             _ => {
                 return Err(format_err!(
@@ -175,7 +175,7 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
                     }
                 },
                 StringSelector::ExactMatch(_) => {
-                    // TODO(4601): What do we need to validate for exact match strings?
+                    // TODO(fxbug.dev/4601): What do we need to validate for exact match strings?
                 }
                 _ => {
                     return Err(format_err!(
@@ -225,7 +225,7 @@ pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
 fn convert_string_to_string_selector(string_to_convert: &String) -> Result<StringSelector, Error> {
     validate_string_pattern(string_to_convert)?;
 
-    // TODO(4601): Expose the ability to parse selectors from string into "exact_match" mode.
+    // TODO(fxbug.dev/4601): Expose the ability to parse selectors from string into "exact_match" mode.
     Ok(StringSelector::StringPattern(string_to_convert.to_string()))
 }
 
@@ -442,7 +442,7 @@ fn convert_single_character_to_regex(token_builder: &mut String, character: char
 /// The regular expression needs to match both the literal backslash and whatever character
 /// is being `escaped` in the selector string. So this method converts a selector string
 /// like `\:` into `\\:`.
-// TODO(4601): Should we validate that the only characters being "escaped" in our
+// TODO(fxbug.dev/4601): Should we validate that the only characters being "escaped" in our
 //             selector strings are characters that have special syntax in our selector
 //             DSL?
 fn convert_escaped_char_to_regex(

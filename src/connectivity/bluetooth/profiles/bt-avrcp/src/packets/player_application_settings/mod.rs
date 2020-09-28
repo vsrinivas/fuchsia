@@ -184,7 +184,7 @@ impl From<Equalizer> for fidl_avrcp::Equalizer {
     }
 }
 
-// TODO(41253): Add support to handle custom attributes.
+// TODO(fxbug.dev/41253): Add support to handle custom attributes.
 #[derive(Clone, Debug)]
 pub struct PlayerApplicationSettings {
     pub equalizer: Option<Equalizer>,
@@ -259,7 +259,7 @@ impl From<PlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSettings {
 }
 
 /// Takes a PlayerApplicationSettings and returns a vector of (attribute_id, value).
-// TODO(41253): Add support to handle custom attributes.
+// TODO(fxbug.dev/41253): Add support to handle custom attributes.
 pub fn settings_to_vec(
     settings: &PlayerApplicationSettings,
 ) -> Vec<(PlayerApplicationSettingAttributeId, u8)> {

@@ -129,7 +129,7 @@ impl Controller {
             .map_err(|e| Error::PacketError(e))?;
 
         // Get the text information of supported attributes.
-        // TODO(41253): Get attribute text information for only custom attributes.
+        // TODO(fxbug.dev/41253): Get attribute text information for only custom attributes.
         let cmd = GetPlayerApplicationSettingAttributeTextCommand::new(
             response.player_application_setting_attribute_ids().clone(),
         );
@@ -146,7 +146,7 @@ impl Controller {
             let list_response = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])
                 .map_err(|e| Error::PacketError(e))?;
 
-            // TODO(41253): Get value text information for only custom attributes.
+            // TODO(fxbug.dev/41253): Get value text information for only custom attributes.
             let cmd = GetPlayerApplicationSettingValueTextCommand::new(
                 attribute,
                 list_response.player_application_setting_value_ids(),
@@ -162,7 +162,7 @@ impl Controller {
             );
         }
 
-        // TODO(41253): Use return value of ListPlayerApplicationSettingValuesResponse::decode()
+        // TODO(fxbug.dev/41253): Use return value of ListPlayerApplicationSettingValuesResponse::decode()
         // to get current custom settings. For now, get current settings for default settings.
         self.get_current_player_application_settings(
             response.player_application_setting_attribute_ids().into(),
@@ -230,7 +230,7 @@ impl Controller {
 
     /// Returns notification events from the peer.
     pub fn take_event_stream(&self) -> ControllerEventStream {
-        // TODO(44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
+        // TODO(fxbug.dev/44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
         let (sender, receiver) = mpsc::channel(512);
         self.peer.add_control_listener(sender);
         receiver

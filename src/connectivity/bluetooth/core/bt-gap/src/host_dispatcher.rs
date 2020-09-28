@@ -126,7 +126,7 @@ impl Drop for DiscoverableRequestToken {
             let await_response = host.write().set_discoverable(false);
             fasync::Task::spawn(async move {
                 if let Err(err) = await_response.await {
-                    // TODO(45325) - we should close the host channel if an error is returned
+                    // TODO(fxbug.dev/45325) - we should close the host channel if an error is returned
                     warn!("Unexpected error response when disabling discoverable: {:?}", err);
                 }
             })
@@ -733,7 +733,7 @@ impl HostDispatcher {
     }
 
     pub fn on_device_updated(&self, peer: Peer) -> impl Future<Output = ()> {
-        // TODO(825): generic method for this pattern
+        // TODO(fxbug.dev/825): generic method for this pattern
         let mut d = control::RemoteDevice::from(peer.clone());
         self.notify_event_listeners(|listener| {
             let _res = listener
