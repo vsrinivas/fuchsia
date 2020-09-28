@@ -94,7 +94,14 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("%v%s", value, suffix)
 		case *gidlmixer.BitsDecl:
 			primitive := visit(value, &decl.Underlying)
-			return fmt.Sprintf("%s::from_bits(%v).unwrap()", declName(decl), primitive)
+			if decl.IsFlexible() {
+				return fmt.Sprintf("%s::from_bits_flexible(%v)", declName(decl), primitive)
+			}
+			// Use from_bits_unchecked so that encode_failure tests work. It's
+			// not worth the effort to make the test type available here and use
+			// from_bits(...).unwrap() in success cases, since all this would do
+			// is move validation from the bindings to GIDL.
+			return fmt.Sprintf("unsafe { %s::from_bits_unchecked(%v) }", declName(decl), primitive)
 		case *gidlmixer.EnumDecl:
 			primitive := visit(value, &decl.Underlying)
 			if decl.IsFlexible() {

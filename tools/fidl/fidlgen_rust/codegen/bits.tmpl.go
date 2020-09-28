@@ -20,7 +20,11 @@ bitflags! {
 	}
 }
 
-fidl_bits! {
+{{- if .IsStrict}}
+fidl_strict_bits! {
+{{- else }}
+fidl_flexible_bits! {
+{{- end }}
 	name: {{ .Name }},
 	prim_ty: {{ .Type }},
 }

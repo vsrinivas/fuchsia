@@ -91,7 +91,7 @@ success("FlexibleBitsUint64CombinedValue") {
 
 success("FlexibleBitsUint8UnknownValue") {
     // TODO(fxbug.dev/7847): Implement flexible bits
-    bindings_denylist = [rust,cpp,llcpp],
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleBitsUint8Struct {
         b: 0xff,
     },
@@ -104,7 +104,7 @@ success("FlexibleBitsUint8UnknownValue") {
 
 success("FlexibleBitsUint16UnknownValue") {
     // TODO(fxbug.dev/7847): Implement flexible bits
-    bindings_denylist = [rust,cpp,llcpp],
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleBitsUint16Struct {
         b: 0x1234,
     },
@@ -118,7 +118,7 @@ success("FlexibleBitsUint16UnknownValue") {
 
 success("FlexibleBitsUint32UnknownValue") {
     // TODO(fxbug.dev/7847): Implement flexible bits
-    bindings_denylist = [rust,cpp,llcpp],
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleBitsUint32Struct {
         b: 0x12345678,
     },
@@ -131,7 +131,7 @@ success("FlexibleBitsUint32UnknownValue") {
 
 success("FlexibleBitsUint64UnknownValue") {
     // TODO(fxbug.dev/7847): Implement flexible bits
-    bindings_denylist = [rust,cpp,llcpp],
+    bindings_denylist = [cpp,llcpp],
     value = FlexibleBitsUint64Struct {
         b: 0x0102030405060708,
     },

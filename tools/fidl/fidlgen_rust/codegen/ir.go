@@ -25,14 +25,14 @@ type Type struct {
 }
 
 type Bits struct {
-	types.Attributes
+	types.Bits
 	Name    string
 	Type    string
 	Members []BitsMember
 }
 
 type BitsMember struct {
-	types.Attributes
+	types.BitsMember
 	Name  string
 	Value string
 }
@@ -671,14 +671,14 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 
 func (c *compiler) compileBits(val types.Bits) Bits {
 	e := Bits{
-		val.Attributes,
-		c.compileCamelCompoundIdentifier(val.Name),
-		c.compileType(val.Type, false).Decl,
-		[]BitsMember{},
+		Bits:    val,
+		Name:    c.compileCamelCompoundIdentifier(val.Name),
+		Type:    c.compileType(val.Type, false).Decl,
+		Members: []BitsMember{},
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, BitsMember{
-			Attributes: v.Attributes,
+			BitsMember: v,
 			// TODO(fxbug.dev/47034) Should be SCREAMING_SNAKE_CASE.
 			Name:  compileCamelIdentifier(v.Name),
 			Value: c.compileConstant(v.Value, val.Type),

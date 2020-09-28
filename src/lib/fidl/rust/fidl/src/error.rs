@@ -96,6 +96,10 @@ pub enum Error {
         service_name: &'static str,
     },
 
+    /// Invalid bits value for a strict bits type.
+    #[error("Invalid bits value for a strict bits type.")]
+    InvalidBitsValue,
+
     /// Unrecognized descriminant for a FIDL union type.
     #[error("Unrecognized descriminant for a FIDL union type.")]
     UnknownUnionTag,

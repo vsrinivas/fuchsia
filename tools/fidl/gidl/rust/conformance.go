@@ -319,7 +319,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.NonEmptyStringWithNullBody: "UnexpectedNullRef",
 	gidlir.StrictUnionFieldNotSet:     "UnknownUnionTag",
 	gidlir.StrictUnionUnknownField:    "UnknownUnionTag",
-	gidlir.StrictBitsUnknownBit:       "Invalid",
+	gidlir.StrictBitsUnknownBit:       "InvalidBitsValue",
 	gidlir.StrictEnumUnknownValue:     "Invalid",
 	gidlir.ExceededMaxOutOfLineDepth:  "MaxRecursionDepth",
 	gidlir.InvalidPaddingByte:         "NonZeroPadding",

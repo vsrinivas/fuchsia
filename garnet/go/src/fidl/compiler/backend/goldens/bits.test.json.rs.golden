@@ -16,8 +16,8 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
-        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
-        fidl_struct_copy, fidl_table, fidl_xunion,
+        fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
+        fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
     },
     fuchsia_zircon_status as zx_status,
 };
@@ -29,8 +29,7 @@ bitflags! {
         const Mask = 4;
     }
 }
-
-fidl_bits! {
+fidl_strict_bits! {
     name: MyBits,
     prim_ty: u32,
 }
@@ -41,8 +40,7 @@ bitflags! {
         const Biggest = 9223372036854775808;
     }
 }
-
-fidl_bits! {
+fidl_strict_bits! {
     name: StrictBits,
     prim_ty: u64,
 }
@@ -53,8 +51,7 @@ bitflags! {
         const Biggest = 9223372036854775808;
     }
 }
-
-fidl_bits! {
+fidl_flexible_bits! {
     name: FlexibleBits,
     prim_ty: u64,
 }

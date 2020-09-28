@@ -26,9 +26,10 @@ use {
 	bitflags::bitflags,
 	fuchsia_zircon_status as zx_status,
 	fidl::{
-		fidl_bits,
 		fidl_empty_struct,
+		fidl_flexible_bits,
 		fidl_flexible_enum,
+		fidl_strict_bits,
 		fidl_strict_enum,
 		fidl_struct_copy,
 		fidl_struct,

@@ -364,6 +364,10 @@ func (decl *BitsDecl) Name() string {
 	return string(decl.bitsDecl.Name)
 }
 
+func (decl *BitsDecl) IsFlexible() bool {
+	return decl.bitsDecl.IsFlexible()
+}
+
 func (decl *BitsDecl) conforms(value interface{}, ctx context) error {
 	// TODO(fxbug.dev/7847): Require a valid bits member when strict
 	return decl.Underlying.conforms(value, ctx)
