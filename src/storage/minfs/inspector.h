@@ -5,12 +5,13 @@
 // This file includes necessary methods for inspecting various on-disk structures
 // of a MinFS filesystem.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_INSPECTOR_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_INSPECTOR_H_
+#ifndef SRC_STORAGE_MINFS_INSPECTOR_H_
+#define SRC_STORAGE_MINFS_INSPECTOR_H_
 
 #include <block-client/cpp/block-device.h>
 #include <disk_inspector/common_types.h>
-#include <minfs/bcache.h>
+
+#include "src/storage/minfs/bcache.h"
 
 namespace minfs {
 
@@ -39,4 +40,4 @@ class Inspector : public disk_inspector::DiskInspector {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_INSPECTOR_H_
+#endif  // SRC_STORAGE_MINFS_INSPECTOR_H_

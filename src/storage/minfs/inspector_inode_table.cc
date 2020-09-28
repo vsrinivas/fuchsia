@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspector_inode_table.h"
+#include "src/storage/minfs/inspector_inode_table.h"
 
 #include <disk_inspector/common_types.h>
 
-#include "inspector_inode.h"
-#include "inspector_private.h"
+#include "src/storage/minfs/inspector_inode.h"
+#include "src/storage/minfs/inspector_private.h"
 
 namespace minfs {
 

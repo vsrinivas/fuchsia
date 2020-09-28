@@ -4,7 +4,8 @@
 
 // Tests minfs format behavior.
 
-#include <minfs/format.h>
+#include "src/storage/minfs/format.h"
+
 #include <zxtest/zxtest.h>
 
 namespace minfs {

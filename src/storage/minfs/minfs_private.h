@@ -24,7 +24,8 @@
 #include <fs/managed_vfs.h>
 #include <fs/remote_container.h>
 #include <fs/watcher.h>
-#include <minfs/metrics.h>
+
+#include "src/storage/minfs/metrics.h"
 #endif
 
 #include <lib/zircon-internal/fnv1hash.h>
@@ -42,19 +43,20 @@
 #include <fs/transaction/transaction_handler.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <minfs/format.h>
-#include <minfs/minfs.h>
-#include <minfs/superblock.h>
-#include <minfs/transaction_limits.h>
-#include <minfs/writeback.h>
+
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/superblock.h"
+#include "src/storage/minfs/transaction_limits.h"
+#include "src/storage/minfs/writeback.h"
 
 #ifdef __Fuchsia__
-#include "vnode_allocation.h"
+#include "src/storage/minfs/vnode_allocation.h"
 #endif
 
-#include "allocator/allocator.h"
-#include "allocator/inode_manager.h"
-#include "vnode.h"
+#include "src/storage/minfs/allocator/allocator.h"
+#include "src/storage/minfs/allocator/inode_manager.h"
+#include "src/storage/minfs/vnode.h"
 
 constexpr uint32_t kExtentCount = 6;
 

@@ -15,10 +15,10 @@
 #include <fs/trace.h>
 #include <fs/transaction/buffered_operations_builder.h>
 #include <fs/transaction/transaction_handler.h>
-#include <minfs/format.h>
-#include <minfs/writeback.h>
 
-#include "block_utils.h"
+#include "src/storage/minfs/block_utils.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/writeback.h"
 
 namespace minfs {
 

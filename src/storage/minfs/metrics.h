@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_METRICS_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_METRICS_H_
+#ifndef SRC_STORAGE_MINFS_METRICS_H_
+#define SRC_STORAGE_MINFS_METRICS_H_
 
 #include <fbl/macros.h>
 #include <storage-metrics/fs-metrics.h>
@@ -40,4 +40,4 @@ class MinfsMetrics : public FsMetrics {
   std::atomic<uint64_t> vnodes_opened_cache_hit;
 };
 }  // namespace minfs
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_METRICS_H_
+#endif  // SRC_STORAGE_MINFS_METRICS_H_

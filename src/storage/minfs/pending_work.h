@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_PENDING_WORK_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_PENDING_WORK_H_
+#ifndef SRC_STORAGE_MINFS_PENDING_WORK_H_
+#define SRC_STORAGE_MINFS_PENDING_WORK_H_
 
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include <minfs/format.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 // Types of data to use with read and write transactions.
@@ -42,4 +43,4 @@ class PendingWork {
 };
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_PENDING_WORK_H_
+#endif  // SRC_STORAGE_MINFS_PENDING_WORK_H_

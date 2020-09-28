@@ -11,8 +11,9 @@
 #include <fbl/unique_fd.h>
 #include <fvm-host/container.h>
 #include <fvm/sparse-reader.h>
-#include <minfs/host.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/minfs/host.h"
 
 // NOTES ABOUT DISABLED TESTS
 //

@@ -9,13 +9,13 @@
 #include <fbl/ref_ptr.h>
 #include <fs/trace.h>
 #include <fs/vnode.h>
-#include <minfs/format.h>
-#include <minfs/minfs.h>
-#include <minfs/superblock.h>
-#include <minfs/transaction_limits.h>
-#include <minfs/writeback.h>
 
-#include "vnode.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/superblock.h"
+#include "src/storage/minfs/transaction_limits.h"
+#include "src/storage/minfs/vnode.h"
+#include "src/storage/minfs/writeback.h"
 
 namespace minfs {
 

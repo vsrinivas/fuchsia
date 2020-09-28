@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/transaction_limits.h"
+
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
@@ -9,8 +11,8 @@
 
 #include <fbl/algorithm.h>
 #include <fs/journal/format.h>
-#include <minfs/format.h>
-#include <minfs/transaction_limits.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 

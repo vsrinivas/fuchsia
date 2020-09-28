@@ -5,8 +5,9 @@
 #ifndef SRC_STORAGE_MINFS_INSPECTOR_PARSER_H_
 #define SRC_STORAGE_MINFS_INSPECTOR_PARSER_H_
 
-#include <minfs/format.h>
 #include <storage/buffer/block_buffer.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 

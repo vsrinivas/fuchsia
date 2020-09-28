@@ -11,6 +11,7 @@ executable("minfs") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/lib/fdio",
     "//src/storage/minfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

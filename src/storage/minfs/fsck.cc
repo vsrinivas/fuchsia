@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/fsck.h"
+
 #include <lib/cksum.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,8 +17,8 @@
 #include <utility>
 
 #include <fs/journal/format.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
+
+#include "src/storage/minfs/format.h"
 #ifdef __Fuchsia__
 #include <storage/buffer/owned_vmoid.h>
 #else
@@ -24,7 +26,7 @@
 #endif
 
 #include "lib/fit/string_view.h"
-#include "minfs_private.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 

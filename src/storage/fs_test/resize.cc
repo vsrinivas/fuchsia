@@ -18,9 +18,9 @@
 
 #include <fbl/unique_fd.h>
 #include <fvm/format.h>
-#include <minfs/format.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
+#include "src/storage/minfs/format.h"
 
 namespace fs_test {
 namespace {

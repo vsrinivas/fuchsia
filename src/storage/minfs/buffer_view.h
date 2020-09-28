@@ -13,7 +13,7 @@
 
 #include <storage/buffer/block_buffer.h>
 
-#include "block_utils.h"
+#include "src/storage/minfs/block_utils.h"
 
 namespace minfs {
 

@@ -39,13 +39,13 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
-#include <minfs/fsck.h>
-#include <minfs/minfs.h>
 
 #include "block-watcher.h"
 #include "encrypted-volume.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs.h"
 
 namespace devmgr {
 namespace {

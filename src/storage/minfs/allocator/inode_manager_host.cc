@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "inode_manager.h"
-#include "minfs/format.h"
+#include "src/storage/minfs/allocator/inode_manager.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 

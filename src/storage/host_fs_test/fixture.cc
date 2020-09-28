@@ -18,7 +18,8 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <minfs/fsck.h>
+
+#include "src/storage/minfs/fsck.h"
 
 namespace fs_test {
 

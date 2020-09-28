@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_SUPERBLOCK_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_SUPERBLOCK_H_
+#ifndef SRC_STORAGE_MINFS_SUPERBLOCK_H_
+#define SRC_STORAGE_MINFS_SUPERBLOCK_H_
 
 #include <cstdint>
 #include <memory>
 
 #include <fbl/macros.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
-#include <minfs/minfs.h>
-#include <minfs/pending_work.h>
+
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/pending_work.h"
 
 #ifdef __Fuchsia__
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -136,4 +137,4 @@ class SuperblockManager {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_SUPERBLOCK_H_
+#endif  // SRC_STORAGE_MINFS_SUPERBLOCK_H_

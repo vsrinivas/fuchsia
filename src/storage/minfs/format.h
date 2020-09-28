@@ -4,21 +4,18 @@
 
 // This file describes the on-disk format of MinFS
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_FORMAT_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_FORMAT_H_
+#ifndef SRC_STORAGE_MINFS_FORMAT_H_
+#define SRC_STORAGE_MINFS_FORMAT_H_
 
-#include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <limits>
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include <fbl/algorithm.h>
-#include <fbl/macros.h>
 
 namespace minfs {
 
@@ -321,4 +318,4 @@ constexpr uint64_t NonDataBlocks(const Superblock& info) {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_FORMAT_H_
+#endif  // SRC_STORAGE_MINFS_FORMAT_H_

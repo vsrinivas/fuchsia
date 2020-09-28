@@ -2,75 +2,85 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
-
-zx_library("minfs") {
-  sdk = "source"
-  sdk_headers = [
-    "minfs/fsck.h",
-    "minfs/bcache.h",
-    "minfs/superblock.h",
-    "minfs/inspector.h",
-    "minfs/writeback.h",
-    "minfs/transaction_limits.h",
-    "minfs/allocator_reservation.h",
-    "minfs/format.h",
-    "minfs/minfs.h",
-    "minfs/host.h",
-    "minfs/metrics.h",
-    "minfs/pending_work.h",
-    "minfs/command_handler.h",
-    "minfs/minfs_inspector.h",
+static_library("minfs") {
+  friend = [
+    "test:*",
+    "allocator/test:*",
   ]
-  host = true
-  static = true
+  visibility = [
+    "//src/devices/block/bin/disk-inspect",
+    "//src/storage/*",
+    "//zircon/system/ulib/fvm-host",
+    "//zircon/system/utest/fvm",
+    "//zircon/system/utest/minfs-micro-benchmark",
+    "//zircon/tools/minfs",
+  ]
+  public = [
+    "bcache.h",
+    "format.h",
+    "fsck.h",
+    "minfs.h",
+    "transaction_limits.h",
+  ]
   sources = [
+    "allocator/allocator.h",
     "allocator/allocator_common.cc",
     "allocator/allocator_reservation.cc",
+    "allocator/inode_manager.h",
     "allocator/metadata.cc",
+    "allocator/metadata.h",
+    "allocator/storage.h",
     "allocator/storage_common.cc",
+    "allocator_reservation.h",
+    "block_utils.h",
     "buffer_view.cc",
+    "buffer_view.h",
     "directory.cc",
+    "directory.h",
     "file.cc",
+    "file.h",
     "fsck.cc",
+    "inspector.h",
+    "inspector/disk_struct.h",
+    "inspector/loader.h",
+    "inspector/parser.h",
+    "inspector_inode.h",
+    "inspector_inode_table.h",
+    "inspector_private.h",
+    "inspector_superblock.h",
     "lazy_buffer.cc",
+    "lazy_buffer.h",
     "lazy_reader.cc",
+    "lazy_reader.h",
     "metrics.cc",
+    "metrics.h",
     "minfs.cc",
     "minfs_private.h",
+    "minfs_private.h",
+    "pending_work.h",
     "resizeable_array_buffer.cc",
+    "resizeable_array_buffer.h",
+    "resizeable_buffer.h",
+    "resizeable_vmo_buffer.h",
+    "superblock.h",
     "transaction_limits.cc",
+    "unowned_vmo_buffer.h",
     "vnode.cc",
+    "vnode.h",
+    "vnode_allocation.h",
     "vnode_mapper.cc",
+    "vnode_mapper.h",
     "writeback.cc",
+    "writeback.h",
   ]
-  if (is_fuchsia) {
-    sources += [ "resizeable_vmo_buffer.cc" ]
-  } else {
-    sources += [
-      "allocator/allocator_host.cc",
-      "allocator/inode_manager_host.cc",
-      "allocator/storage_host.cc",
-      "bcache_host.cc",
-      "host.cc",
-      "superblock_host.cc",
-    ]
-  }
   public_deps = [
-    "//zircon/system/ulib/bitmap",
-
-    #"//zircon/system/ulib/disk_inspector",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/fs/journal",
-    "//zircon/system/ulib/fs/transaction",
 
-    # <minfs/bcache.h> has #include <fvm/client.h>.
-    "//zircon/system/ulib/fvm",
-    "//zircon/system/ulib/storage/operation",
+    # bcache.h includes fs/transaction/device_transaction_handler.h & storage/buffer/...
+    "//zircon/system/ulib/fs/transaction",
+    "//zircon/system/ulib/storage/buffer",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
@@ -78,45 +88,15 @@ zx_library("minfs") {
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/fs/transaction",
+    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/range",
-    "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
     "//zircon/third_party/ulib/cksum",
   ]
   if (is_fuchsia) {
-    public_deps += [
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
-      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
-      "//zircon/public/lib/zx",
-      "//zircon/system/ulib/block-client",
-      "//zircon/system/ulib/fzl",
-      "//zircon/system/ulib/storage-metrics",
-    ]
-    deps += [
-      "//sdk/fidl/fuchsia.device:fuchsia.device_c",
-      "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
-      "//zircon/public/lib/async",
-      "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/fidl",
-      "//zircon/public/lib/sync",
-      "//zircon/public/lib/zx",
-      "//zircon/system/ulib/async-default",
-      "//zircon/system/ulib/async-loop",
-      "//zircon/system/ulib/async-loop:async-loop-cpp",
-      "//zircon/system/ulib/async-loop:async-loop-default",
-      "//zircon/system/ulib/fdio-caller",
-      "//zircon/system/ulib/fidl-utils",
-      "//zircon/system/ulib/fs/journal",
-      "//zircon/system/ulib/fvm",
-      "//zircon/system/ulib/fzl",
-      "//zircon/system/ulib/storage-metrics",
-      "//zircon/system/ulib/storage/operation",
-      "//zircon/system/ulib/trace",
-      "//zircon/system/ulib/trace-engine",
+    public += [
+      "command_handler.h",
+      "minfs_inspector.h",
     ]
     sources += [
       "allocator/allocator.cc",
@@ -132,33 +112,60 @@ zx_library("minfs") {
       "inspector_inode.cc",
       "inspector_inode_table.cc",
       "inspector_superblock.cc",
+      "resizeable_vmo_buffer.cc",
       "superblock.cc",
       "vnode_allocation.cc",
     ]
+    public_deps += [
+      # bcache.h includes fuchsia/hardware/block/c/fidl.h.
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+
+      # fsck.h includes block-client/cpp/block-device.h
+      "//zircon/system/ulib/block-client",
+
+      # minfs_inspector.h includes fs/journal/format.h
+      "//zircon/system/ulib/fs/journal",
+    ]
+    deps += [
+      "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+      "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/async-default",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fdio-caller",
+      "//zircon/system/ulib/fidl-utils",
+      "//zircon/system/ulib/fvm",
+      "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/storage-metrics",
+      "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/trace-engine",
+    ]
   } else {
-    public_deps += [ "//zircon/public/lib/zircon-headers" ]
+    public += [ "host.h" ]
+    sources += [
+      "allocator/allocator_host.cc",
+      "allocator/inode_manager_host.cc",
+      "allocator/storage_host.cc",
+      "bcache_host.cc",
+      "host.cc",
+      "superblock_host.cc",
+    ]
+    deps += [
+      "//zircon/public/lib/zircon-headers",
+      "//zircon/system/ulib/fs/journal",
+    ]
   }
-  include_dirs = [ "." ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
-}
-
-# Targets that depend on minfs_private expect to include the private headers using relative includes
-# and we expect the relative includes inside of minfs to work as well.
-config("private_config") {
-  visibility = [ ":*" ]
-
-  include_dirs = [ "." ]
-}
-
-# This target exists for tests that need to include the minfs_private.h header. It is not exposed
-# to the SDK but some tests need these internals.
-source_set("minfs_private") {
-  visibility = [ "//src/storage/minfs/*" ]
-
-  public = [ "minfs_private.h" ]
-  public_configs = [ ":private_config" ]
-  public_deps = [ ":minfs" ]
 }

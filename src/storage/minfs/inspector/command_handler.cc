@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "minfs/command_handler.h"
+#include "src/storage/minfs/command_handler.h"
 
 #include <zircon/errors.h>
 
@@ -15,7 +15,7 @@
 #include <fs/journal/disk_struct.h>
 #include <fs/trace.h>
 
-#include "disk_struct.h"
+#include "src/storage/minfs/inspector/disk_struct.h"
 
 namespace minfs {
 

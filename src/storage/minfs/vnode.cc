@@ -28,11 +28,11 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include "directory.h"
-#include "file.h"
-#include "minfs_private.h"
-#include "unowned_vmo_buffer.h"
-#include "vnode.h"
+#include "src/storage/minfs/directory.h"
+#include "src/storage/minfs/file.h"
+#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/unowned_vmo_buffer.h"
+#include "src/storage/minfs/vnode.h"
 
 namespace minfs {
 

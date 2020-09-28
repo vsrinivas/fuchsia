@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/minfs.h"
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
@@ -21,7 +23,6 @@
 #include <fbl/auto_call.h>
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
-#include <minfs/minfs.h>
 #include <safemath/checked_math.h>
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/llcpp/fidl.h>
@@ -34,16 +35,17 @@
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <fs/pseudo_dir.h>
+#include <fvm/client.h>
 #include <storage/buffer/owned_vmoid.h>
 #endif
 
 #include <utility>
 
 #include <fs/journal/format.h>
-#include <minfs/fsck.h>
 
-#include "file.h"
-#include "minfs_private.h"
+#include "src/storage/minfs/file.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

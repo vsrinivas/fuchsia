@@ -4,12 +4,12 @@
 
 #include <optional>
 
-#include <minfs/minfs.h>
-
-#include "minfs_private.h"
+#include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/minfs_private.h"
 #ifdef FS_WITH_METRICS
-#include <minfs/metrics.h>
 #include <storage-metrics/storage-metrics.h>
+
+#include "src/storage/minfs/metrics.h"
 #endif
 
 namespace minfs {

@@ -20,11 +20,11 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/format.h>
-#include <minfs/format.h>
 #include <ramdevice-client/ramnand.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/blobfs/include/blobfs/format.h"
+#include "src/storage/minfs/format.h"
 
 namespace fs_test {
 

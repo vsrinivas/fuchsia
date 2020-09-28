@@ -48,13 +48,13 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
-#include <minfs/minfs.h>
 #include <zxcrypt/fdio-volume.h>
 
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/pkgfs-launcher.h"
+#include "src/storage/minfs/minfs.h"
 
 namespace devmgr {
 namespace {

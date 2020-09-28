@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "utils.h"
+#include "src/storage/minfs/test/integration/utils.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "minfs_fixtures.h"
+#include "src/storage/minfs/test/integration/minfs_fixtures.h"
 
 std::string BuildPath(const std::string_view& name) {
   std::string path(kMountPath);

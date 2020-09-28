@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/superblock.h"
+
 #include <lib/cksum.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <stdlib.h>
@@ -11,9 +13,9 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
-#include <minfs/superblock.h>
+#include <fs/trace.h>
 
-#include "unowned_vmo_buffer.h"
+#include "src/storage/minfs/unowned_vmo_buffer.h"
 
 namespace minfs {
 

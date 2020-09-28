@@ -25,11 +25,12 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fs-test-utils/fixture.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
-#include <minfs/minfs.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs.h"
 
 namespace {
 

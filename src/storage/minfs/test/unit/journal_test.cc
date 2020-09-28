@@ -4,13 +4,13 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
 #include <zxtest/zxtest.h>
 
-#include "file.h"
-#include "journal_integration_fixture.h"
-#include "minfs_private.h"
+#include "src/storage/minfs/file.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/test/unit/journal_integration_fixture.h"
 
 namespace minfs {
 namespace {

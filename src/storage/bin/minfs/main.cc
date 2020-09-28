@@ -9,6 +9,7 @@
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/vfs.h>
 #include <lib/trace-provider/provider.h>
 #include <libgen.h>
 #include <stdarg.h>
@@ -29,8 +30,9 @@
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <fs/trace.h>
-#include <minfs/fsck.h>
-#include <minfs/minfs.h>
+
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs.h"
 
 namespace {
 

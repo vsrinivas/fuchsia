@@ -45,7 +45,7 @@ zx_library("fvm-host") {
     # <fvm-host/format.h> has #include <blobfs/format.h>.
     "//src/storage/blobfs",
 
-    # <fvm-host/format.h> has #include <minfs/bcache.h>.
+    # <fvm-host/format.h> has #include "src/storage/minfs/bcache.h".
     "//src/storage/minfs",
 
     # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.

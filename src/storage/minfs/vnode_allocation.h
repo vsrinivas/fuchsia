@@ -8,9 +8,9 @@
 #define SRC_STORAGE_MINFS_VNODE_ALLOCATION_H_
 
 #include <bitmap/rle-bitmap.h>
-#include <minfs/format.h>
 
-#include "allocator/allocator.h"
+#include "src/storage/minfs/allocator/allocator.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 

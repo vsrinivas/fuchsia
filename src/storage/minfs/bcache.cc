@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/bcache.h"
+
 #include <assert.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
@@ -17,13 +19,12 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fs/trace.h>
-#include <minfs/bcache.h>
-#include <minfs/format.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 

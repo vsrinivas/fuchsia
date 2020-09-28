@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inode_manager.h"
+#include "src/storage/minfs/allocator/inode_manager.h"
 
 #include <stdlib.h>
 
@@ -10,8 +10,8 @@
 
 #include <storage/buffer/block_buffer.h>
 
-#include "minfs/format.h"
-#include "unowned_vmo_buffer.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/unowned_vmo_buffer.h"
 
 namespace minfs {
 

@@ -8,7 +8,8 @@
 #include <fcntl.h>
 
 #include <gtest/gtest.h>
-#include <minfs/host.h>
+
+#include "src/storage/minfs/host.h"
 
 namespace fs_test {
 

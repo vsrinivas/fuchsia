@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_HOST_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_HOST_H_
+#ifndef SRC_STORAGE_MINFS_HOST_H_
+#define SRC_STORAGE_MINFS_HOST_H_
 
 #ifdef __Fuchsia__
 #error Host-only Header
@@ -20,7 +20,8 @@
 #include <memory>
 
 #include <fbl/macros.h>
-#include <minfs/bcache.h>
+
+#include "src/storage/minfs/bcache.h"
 
 #define PATH_PREFIX "::"
 #define PREFIX_SIZE 2
@@ -149,4 +150,4 @@ class DirWrapper {
   DIR* dir_;
 };
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_HOST_H_
+#endif  // SRC_STORAGE_MINFS_HOST_H_

@@ -22,9 +22,10 @@
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <minfs/metrics.h>
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
+
+#include "src/storage/minfs/metrics.h"
 
 namespace {
 

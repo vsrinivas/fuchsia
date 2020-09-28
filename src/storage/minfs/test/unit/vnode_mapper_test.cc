@@ -4,13 +4,13 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <minfs/bcache.h>
-#include <minfs/format.h>
-#include <minfs/minfs.h>
 #include <zxtest/zxtest.h>
 
-#include "lazy_buffer.h"
-#include "minfs_private.h"
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/lazy_buffer.h"
+#include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

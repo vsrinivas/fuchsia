@@ -6,7 +6,8 @@
 #define SRC_STORAGE_MINFS_TEST_INTEGRATION_MINFS_FIXTURES_H_
 
 #include <fs/test_support/fixtures.h>
-#include <minfs/format.h>
+
+#include "src/storage/minfs/format.h"
 
 // FVM slice size used for tests.
 constexpr size_t kTestFvmSliceSize = minfs::kMinfsBlockSize * 2;  // 16 KB is the minimum.

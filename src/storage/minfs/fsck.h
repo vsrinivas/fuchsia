@@ -5,8 +5,8 @@
 // This file includes necessary methods for checking the consistency
 // of a MinFS filesystem.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_FSCK_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_FSCK_H_
+#ifndef SRC_STORAGE_MINFS_FSCK_H_
+#define SRC_STORAGE_MINFS_FSCK_H_
 
 #include <inttypes.h>
 
@@ -14,9 +14,9 @@
 
 #include <fbl/array.h>
 #include <fbl/vector.h>
-#include <fs/trace.h>
-#include <minfs/bcache.h>
-#include <minfs/format.h>
+
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/format.h"
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
@@ -113,4 +113,4 @@ zx_status_t SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
 #endif
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_FSCK_H_
+#endif  // SRC_STORAGE_MINFS_FSCK_H_

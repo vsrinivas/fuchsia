@@ -11,7 +11,7 @@
 
 #include <bitmap/raw-bitmap.h>
 
-#include "allocator.h"
+#include "src/storage/minfs/allocator/allocator.h"
 
 namespace minfs {
 

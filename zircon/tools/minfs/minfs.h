@@ -8,7 +8,8 @@
 #include <utility>
 
 #include <fs-host/common.h>
-#include <minfs/host.h>
+
+#include "src/storage/minfs/host.h"
 
 class MinfsCreator : public FsCreator {
  public:

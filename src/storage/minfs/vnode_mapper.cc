@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vnode_mapper.h"
+#include "src/storage/minfs/vnode_mapper.h"
 
 #include <fs/trace.h>
 
-#include "lazy_buffer.h"
-#include "minfs_private.h"
-#include "vnode.h"
+#include "src/storage/minfs/lazy_buffer.h"
+#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/vnode.h"
 
 namespace minfs {
 

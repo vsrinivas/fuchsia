@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxbug.dev/36139.                   #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
@@ -58,12 +48,13 @@ test("minfs-unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//src/storage/minfs:minfs_private",
+    "//src/storage/minfs",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/disk_inspector",
@@ -90,7 +81,7 @@ source_set("integration-fixtures") {
     "integration/utils.cc",
   ]
   deps = [
-    "//src/storage/minfs:minfs_private",
+    "//src/storage/minfs",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
@@ -115,7 +106,7 @@ test("minfs-integration") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//src/devices/tests/sysdev",
-    "//src/storage/minfs:minfs_private",
+    "//src/storage/minfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -130,6 +121,7 @@ test("minfs-integration") {
     "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/fs/test/posix:posix_tests",
     "//zircon/system/ulib/fs/test_support",
+    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
   ]
 }
@@ -150,7 +142,7 @@ test("minfs-power") {
   deps = [
     ":integration-fixtures",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//src/storage/minfs:minfs_private",
+    "//src/storage/minfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
@@ -175,7 +167,7 @@ test("minfs-host") {
   }
   sources = [ "host/bcache_test.cc" ]
   deps = [
-    "//src/storage/minfs:minfs_private",
+    "//src/storage/minfs",
     "//zircon/public/lib/zxtest",
   ]
 }
@@ -183,9 +175,10 @@ test("minfs-host") {
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
-    "//src/storage/minfs:minfs_private",
+    "//src/storage/minfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client:fake-device",
   ]
 }

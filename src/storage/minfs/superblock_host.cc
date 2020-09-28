@@ -10,9 +10,11 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
+#include <fs/trace.h>
 #include <fs/transaction/buffered_operations_builder.h>
-#include <minfs/superblock.h>
 #include <storage/buffer/block_buffer.h>
+
+#include "src/storage/minfs/superblock.h"
 
 namespace minfs {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "journal_integration_fixture.h"
+#include "src/storage/minfs/test/unit/journal_integration_fixture.h"
 
 #include <lib/sync/completion.h>
 

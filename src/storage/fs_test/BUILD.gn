@@ -28,8 +28,6 @@ static_library("fs_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/storage/bin/minfs",
-    "//src/storage/blobfs",
     "//src/storage/fuchsia-fatfs:fatfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
@@ -38,7 +36,9 @@ static_library("fs_test") {
     "//zircon/system/ulib/memfs",
   ]
   public_deps = [
+    # fs_test.h:
     "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/storage/blobfs",
     "//src/storage/minfs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
@@ -159,6 +159,7 @@ test("corrupt_tests") {
   sources = [ "corrupt.cc" ]
   deps = [
     ":fs_test",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]

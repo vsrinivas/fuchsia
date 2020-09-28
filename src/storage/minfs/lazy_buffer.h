@@ -5,11 +5,10 @@
 #ifndef SRC_STORAGE_MINFS_LAZY_BUFFER_H_
 #define SRC_STORAGE_MINFS_LAZY_BUFFER_H_
 
-#include <minfs/bcache.h>
-
-#include "buffer_view.h"
-#include "lazy_reader.h"
-#include "resizeable_buffer.h"
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/buffer_view.h"
+#include "src/storage/minfs/lazy_reader.h"
+#include "src/storage/minfs/resizeable_buffer.h"
 
 namespace minfs {
 

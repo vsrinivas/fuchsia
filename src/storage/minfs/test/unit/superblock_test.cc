@@ -4,16 +4,17 @@
 
 // Tests minfs backup superblock behavior.
 
+#include "src/storage/minfs/superblock.h"
+
 #include <lib/cksum.h>
 #include <unistd.h>
 
 #include <block-client/cpp/fake-device.h>
-#include <minfs/fsck.h>
-#include <minfs/superblock.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs/format.h"
-#include "minfs_private.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

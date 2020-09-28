@@ -6,9 +6,9 @@
 
 #include <storage/buffer/block_buffer.h>
 
-#include "allocator.h"
-#include "storage.h"
-#include "unowned_vmo_buffer.h"
+#include "src/storage/minfs/allocator/allocator.h"
+#include "src/storage/minfs/allocator/storage.h"
+#include "src/storage/minfs/unowned_vmo_buffer.h"
 
 namespace minfs {
 

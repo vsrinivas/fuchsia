@@ -5,11 +5,11 @@
 #ifndef SRC_STORAGE_MINFS_VNODE_MAPPER_H_
 #define SRC_STORAGE_MINFS_VNODE_MAPPER_H_
 
-#include <minfs/pending_work.h>
 #include <range/range.h>
 
-#include "buffer_view.h"
-#include "lazy_reader.h"
+#include "src/storage/minfs/buffer_view.h"
+#include "src/storage/minfs/lazy_reader.h"
+#include "src/storage/minfs/pending_work.h"
 
 namespace minfs {
 

@@ -4,7 +4,7 @@
 
 #include <fbl/auto_call.h>
 
-#include "journal_integration_fixture.h"
+#include "src/storage/minfs/test/unit/journal_integration_fixture.h"
 
 namespace minfs {
 namespace {

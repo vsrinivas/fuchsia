@@ -17,16 +17,17 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fs/transaction/buffered_operations_builder.h>
-#include <minfs/allocator_reservation.h>
-#include <minfs/format.h>
-#include <minfs/superblock.h>
-#include <minfs/writeback.h>
+
+#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/superblock.h"
+#include "src/storage/minfs/writeback.h"
 
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/c/fidl.h>
 #endif
 
-#include "storage.h"
+#include "src/storage/minfs/allocator/storage.h"
 
 namespace minfs {
 

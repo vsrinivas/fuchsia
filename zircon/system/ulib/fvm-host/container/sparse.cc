@@ -16,8 +16,9 @@
 #include <fvm-host/format.h>
 #include <fvm-host/sparse-paver.h>
 #include <fvm/fvm-sparse.h>
-#include <minfs/format.h>
 #include <safemath/checked_math.h>
+
+#include "src/storage/minfs/format.h"
 
 constexpr size_t kLz4HeaderSize = 15;
 

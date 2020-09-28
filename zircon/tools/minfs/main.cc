@@ -13,13 +13,13 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
-#include <minfs/host.h>
-#include <minfs/minfs.h>
-#include <minfs/transaction_limits.h>
 
 #include "minfs.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/fsck.h"
+#include "src/storage/minfs/host.h"
+#include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/transaction_limits.h"
 
 char kDot[2] = ".";
 char kDotDot[3] = "..";

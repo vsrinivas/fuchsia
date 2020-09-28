@@ -13,12 +13,12 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fs/trace.h>
-#include <minfs/bcache.h>
-#include <minfs/format.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 

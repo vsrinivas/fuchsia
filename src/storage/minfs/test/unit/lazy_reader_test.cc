@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lazy_reader.h"
+#include "src/storage/minfs/lazy_reader.h"
 
 #include <fcntl.h>
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <minfs/bcache.h>
-#include <minfs/writeback.h>
 #include <zxtest/zxtest.h>
 
-#include "resizeable_vmo_buffer.h"
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/resizeable_vmo_buffer.h"
+#include "src/storage/minfs/writeback.h"
 
 namespace minfs {
 namespace {

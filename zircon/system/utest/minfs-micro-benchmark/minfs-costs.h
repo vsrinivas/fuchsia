@@ -6,9 +6,9 @@
 #define ZIRCON_SYSTEM_UTEST_MINFS_MICRO_BENCHMARK_MINFS_COSTS_H_
 
 #include <fs-management/mount.h>
-#include <minfs/format.h>
 
 #include "block-device-utils.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs_micro_benchmanrk {
 

@@ -20,9 +20,10 @@
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
-#include <minfs/bcache.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
+
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/fsck.h"
 
 #define TRACE 0
 

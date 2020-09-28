@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <block-client/cpp/fake-device.h>
-#include <minfs/format.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

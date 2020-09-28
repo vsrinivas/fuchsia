@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "metadata.h"
+#include "src/storage/minfs/allocator/metadata.h"
 
 #include <utility>
 

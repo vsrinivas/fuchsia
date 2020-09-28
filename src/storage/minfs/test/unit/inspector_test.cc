@@ -4,20 +4,21 @@
 
 // Tests minfs inspector behavior.
 
+#include "src/storage/minfs/inspector.h"
+
 #include <lib/sync/completion.h>
 
 #include <block-client/cpp/fake-device.h>
 #include <disk_inspector/disk_inspector.h>
 #include <fbl/string_printf.h>
 #include <fs/journal/inspector_journal.h>
-#include <minfs/inspector.h>
 #include <zxtest/zxtest.h>
 
-#include "inspector_inode.h"
-#include "inspector_inode_table.h"
-#include "inspector_private.h"
-#include "inspector_superblock.h"
-#include "minfs_private.h"
+#include "src/storage/minfs/inspector_inode.h"
+#include "src/storage/minfs/inspector_inode_table.h"
+#include "src/storage/minfs/inspector_private.h"
+#include "src/storage/minfs/inspector_superblock.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

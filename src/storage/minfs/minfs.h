@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_MINFS_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_MINFS_H_
+#ifndef SRC_STORAGE_MINFS_MINFS_H_
+#define SRC_STORAGE_MINFS_MINFS_H_
 
 #include <inttypes.h>
 
@@ -22,8 +22,8 @@
 
 #include <utility>
 
-#include <minfs/bcache.h>
-#include <minfs/format.h>
+#include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 
@@ -115,4 +115,4 @@ zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispa
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_MINFS_H_
+#endif  // SRC_STORAGE_MINFS_MINFS_H_

@@ -4,14 +4,16 @@
 
 // Tests Transaction Limits behavior.
 
+#include "src/storage/minfs/transaction_limits.h"
+
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <memory>
 
-#include <minfs/format.h>
-#include <minfs/transaction_limits.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 namespace {

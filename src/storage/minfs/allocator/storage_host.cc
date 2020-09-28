@@ -4,9 +4,8 @@
 
 #include <utility>
 
-#include <minfs/format.h>
-
-#include "storage.h"
+#include "src/storage/minfs/allocator/storage.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/allocator_reservation.h"
+
 #include <stdlib.h>
 
 #include <utility>
 
-#include <minfs/allocator_reservation.h>
-
-#include "allocator.h"
+#include "src/storage/minfs/allocator/allocator.h"
 
 namespace minfs {
 

@@ -32,10 +32,9 @@ test("minfs-allocator-unit") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//src/storage/minfs",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
   ]
-
-  include_dirs = [ ".." ]
 }
 
 bootfs_test("minfs-allocator-unit-bootfs-test") {

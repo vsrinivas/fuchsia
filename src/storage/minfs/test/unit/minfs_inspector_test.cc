@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "minfs/minfs_inspector.h"
+#include "src/storage/minfs/minfs_inspector.h"
 
 #include <zircon/device/block.h>
 
@@ -12,10 +12,10 @@
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <fs/journal/format.h>
-#include <minfs/format.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

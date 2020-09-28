@@ -16,7 +16,6 @@
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <cobalt-client/cpp/metric_options.h>
 #include <fs/metrics/events.h>
-#include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
@@ -24,6 +23,7 @@
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/metrics.h"
+#include "src/storage/minfs/format.h"
 
 namespace devmgr {
 namespace {

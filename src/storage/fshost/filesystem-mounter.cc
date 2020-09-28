@@ -9,11 +9,11 @@
 
 #include <blobfs/mount.h>
 #include <fs-management/mount.h>
-#include <minfs/minfs.h>
 
 #include "fdio.h"
 #include "fshost-fs-provider.h"
 #include "pkgfs-launcher.h"
+#include "src/storage/minfs/minfs.h"
 
 namespace devmgr {
 

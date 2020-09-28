@@ -22,10 +22,10 @@
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <fbl/unique_fd.h>
-#include <minfs/command_handler.h>
-#include <minfs/minfs_inspector.h>
 
 #include "src/lib/line_input/modal_line_input.h"
+#include "src/storage/minfs/command_handler.h"
+#include "src/storage/minfs/minfs_inspector.h"
 
 namespace {
 

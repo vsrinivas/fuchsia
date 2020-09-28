@@ -5,8 +5,8 @@
 // This file describes the in-memory structures which construct
 // a MinFS filesystem.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_BCACHE_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_BCACHE_H_
+#ifndef SRC_STORAGE_MINFS_BCACHE_H_
+#define SRC_STORAGE_MINFS_BCACHE_H_
 
 #include <errno.h>
 #include <inttypes.h>
@@ -18,20 +18,16 @@
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
-#include <fs/trace.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-#include <minfs/format.h>
+
+#include "src/storage/minfs/format.h"
 
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/vmo.h>
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
 #include <fs/transaction/device_transaction_handler.h>
-#include <fvm/client.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 #else
@@ -191,4 +187,4 @@ class Bcache : public fs::TransactionHandler {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_BCACHE_H_
+#endif  // SRC_STORAGE_MINFS_BCACHE_H_

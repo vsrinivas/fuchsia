@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vnode_allocation.h"
+#include "src/storage/minfs/vnode_allocation.h"
 
 namespace minfs {
 

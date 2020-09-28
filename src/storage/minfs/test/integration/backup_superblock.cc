@@ -7,8 +7,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_fixtures.h"
-#include "utils.h"
+#include "src/storage/minfs/test/integration/minfs_fixtures.h"
+#include "src/storage/minfs/test/integration/utils.h"
 
 namespace {
 

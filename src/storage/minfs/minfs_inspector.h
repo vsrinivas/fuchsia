@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_MINFS_INSPECTOR_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_MINFS_INSPECTOR_H_
+#ifndef SRC_STORAGE_MINFS_MINFS_INSPECTOR_H_
+#define SRC_STORAGE_MINFS_MINFS_INSPECTOR_H_
 
 #include <string>
 #include <vector>
@@ -13,7 +13,8 @@
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <fs/journal/format.h>
-#include <minfs/format.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 
@@ -111,4 +112,4 @@ class MinfsInspector {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_MINFS_INSPECTOR_H_
+#endif  // SRC_STORAGE_MINFS_MINFS_INSPECTOR_H_

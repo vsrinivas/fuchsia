@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_TRANSACTION_LIMITS_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_TRANSACTION_LIMITS_H_
+#ifndef SRC_STORAGE_MINFS_TRANSACTION_LIMITS_H_
+#define SRC_STORAGE_MINFS_TRANSACTION_LIMITS_H_
 
 #include <lib/zx/status.h>
 
-#include <minfs/format.h>
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 
@@ -116,4 +116,4 @@ class TransactionLimits {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_TRANSACTION_LIMITS_H_
+#endif  // SRC_STORAGE_MINFS_TRANSACTION_LIMITS_H_

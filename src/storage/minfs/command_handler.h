@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_COMMAND_HANDLER_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_COMMAND_HANDLER_H_
+#ifndef SRC_STORAGE_MINFS_COMMAND_HANDLER_H_
+#define SRC_STORAGE_MINFS_COMMAND_HANDLER_H_
 
 #include <iostream>
 #include <map>
@@ -17,10 +17,10 @@
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/disk_struct.h>
 #include <disk_inspector/inspector_transaction_handler.h>
-#include <minfs/format.h>
 #include <storage/buffer/vmo_buffer.h>
 
-#include "minfs_inspector.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_inspector.h"
 
 namespace minfs {
 using ArgType = disk_inspector::ArgType;
@@ -104,4 +104,4 @@ class CommandHandler : public disk_inspector::CommandHandler {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_COMMAND_HANDLER_H_
+#endif  // SRC_STORAGE_MINFS_COMMAND_HANDLER_H_

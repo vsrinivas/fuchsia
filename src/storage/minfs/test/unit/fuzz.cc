@@ -5,7 +5,7 @@
 #include <block-client/cpp/fake-device.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

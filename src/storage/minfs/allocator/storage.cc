@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "storage.h"
+#include "src/storage/minfs/allocator/storage.h"
 
 #include <cstdint>
 #include <utility>
 
-#include <minfs/format.h>
+#include <fs/trace.h>
 
-#include "allocator.h"
+#include "src/storage/minfs/allocator/allocator.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 

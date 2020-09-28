@@ -11,7 +11,7 @@
 #include <fs/test_support/environment.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_fixtures.h"
+#include "src/storage/minfs/test/integration/minfs_fixtures.h"
 
 // The test can operate over either a ramdisk, or a real device. Initialization
 // of that device happens at the test environment level, but the test fixtures

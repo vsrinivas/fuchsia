@@ -12,7 +12,8 @@
 #include <memory>
 
 #include <fbl/macros.h>
-#include <minfs/format.h>
+
+#include "src/storage/minfs/format.h"
 
 #ifdef __Fuchsia__
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -20,7 +21,7 @@
 #include <block-client/cpp/block-device.h>
 #endif
 
-#include "allocator.h"
+#include "src/storage/minfs/allocator/allocator.h"
 
 namespace minfs {
 

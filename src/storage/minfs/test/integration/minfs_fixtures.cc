@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "minfs_fixtures.h"
+#include "src/storage/minfs/test/integration/minfs_fixtures.h"
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>

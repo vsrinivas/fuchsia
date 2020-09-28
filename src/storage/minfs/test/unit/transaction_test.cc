@@ -9,12 +9,12 @@
 #include <memory>
 #include <vector>
 
-#include <minfs/writeback.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs/format.h"
-#include "minfs_private.h"
-#include "unowned_vmo_buffer.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/unowned_vmo_buffer.h"
+#include "src/storage/minfs/writeback.h"
 
 namespace minfs {
 namespace {

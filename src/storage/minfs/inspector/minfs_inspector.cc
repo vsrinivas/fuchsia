@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "minfs/minfs_inspector.h"
+#include "src/storage/minfs/minfs_inspector.h"
 
 #include <algorithm>
 
@@ -10,10 +10,10 @@
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <fs/journal/internal/inspector_parser.h>
 #include <fs/trace.h>
-#include <minfs/format.h>
 
-#include "loader.h"
-#include "parser.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/inspector/loader.h"
+#include "src/storage/minfs/inspector/parser.h"
 
 namespace minfs {
 

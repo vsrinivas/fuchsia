@@ -11,7 +11,7 @@
 #include <block-client/cpp/fake-device.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 

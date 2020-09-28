@@ -59,10 +59,10 @@
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <fvm/fvm-check.h>
-#include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "src/storage/minfs/format.h"
 #include "zircon/errors.h"
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"

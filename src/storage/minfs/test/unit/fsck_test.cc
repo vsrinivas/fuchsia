@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/fsck.h"
+
 #include <fcntl.h>
 #include <lib/sync/completion.h>
 #include <sys/stat.h>
@@ -11,12 +13,11 @@
 #include <fbl/auto_call.h>
 #include <fs-management/mount.h>
 #include <fs/journal/format.h>
-#include <minfs/format.h>
-#include <minfs/fsck.h>
 #include <safemath/checked_math.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

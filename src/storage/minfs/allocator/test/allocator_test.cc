@@ -4,14 +4,15 @@
 
 // Tests Minfs Allocator and AllocatorReservation behavior.
 
-#include "allocator.h"
+#include "src/storage/minfs/allocator/allocator.h"
 
 #include <algorithm>
 #include <memory>
 
 #include <fbl/array.h>
-#include <minfs/format.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 namespace {

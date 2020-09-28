@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspector/parser.h"
+#include "src/storage/minfs/inspector/parser.h"
 
-#include <minfs/format.h>
 #include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 namespace {

@@ -8,8 +8,9 @@
 #include <bitmap/storage.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <minfs/format.h>
-#include <minfs/superblock.h>
+
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/superblock.h"
 
 namespace minfs {
 

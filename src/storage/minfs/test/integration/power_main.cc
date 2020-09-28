@@ -11,7 +11,7 @@
 #include <fs/test_support/environment.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_fixtures.h"
+#include "src/storage/minfs/test/integration/minfs_fixtures.h"
 
 fs::Environment* fs::g_environment;
 

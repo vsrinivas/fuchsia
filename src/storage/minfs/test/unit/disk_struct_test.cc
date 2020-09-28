@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspector/disk_struct.h"
+#include "src/storage/minfs/inspector/disk_struct.h"
 
 #include <iostream>
 
-#include <minfs/format.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 namespace {

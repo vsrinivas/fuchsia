@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "resizeable_vmo_buffer.h"
+#include "src/storage/minfs/resizeable_vmo_buffer.h"
 
 namespace minfs {
 

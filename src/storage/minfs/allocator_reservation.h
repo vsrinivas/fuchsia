@@ -5,14 +5,15 @@
 // This file describes the structure used to allocate
 // from an on-disk bitmap.
 
-#ifndef SRC_STORAGE_MINFS_INCLUDE_MINFS_ALLOCATOR_RESERVATION_H_
-#define SRC_STORAGE_MINFS_INCLUDE_MINFS_ALLOCATOR_RESERVATION_H_
+#ifndef SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
+#define SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <minfs/format.h>
-#include <minfs/pending_work.h>
-#include <minfs/superblock.h>
+
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/pending_work.h"
+#include "src/storage/minfs/superblock.h"
 
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/c/fidl.h>
@@ -88,4 +89,4 @@ class AllocatorReservation {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INCLUDE_MINFS_ALLOCATOR_RESERVATION_H_
+#endif  // SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_

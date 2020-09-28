@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "minfs/command_handler.h"
+#include "src/storage/minfs/command_handler.h"
 
 #include <iostream>
 
 #include <block-client/cpp/fake-device.h>
 #include <disk_inspector/vmo_buffer_factory.h>
-#include <minfs/format.h>
 #include <zxtest/zxtest.h>
 
-#include "minfs_private.h"
+#include "src/storage/minfs/format.h"
+#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {

@@ -32,7 +32,6 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fs-test-utils/fixture.h>
-#include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
@@ -40,6 +39,7 @@
 
 #include "block-device-utils.h"
 #include "minfs-costs.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs_micro_benchmanrk {
 namespace {
