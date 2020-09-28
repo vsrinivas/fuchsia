@@ -3,8 +3,8 @@
 `device-finder` is the command line tool for device discovery. It uses mDNS to
 find Fuchsia devices.
 
-Currently only Linux is supported. For Mac users see the "For Mac Users"
-section.
+Currently only Linux is supported. For Mac users see the section
+[for Mac Users](#for_mac_users).
 
 ## For Linux Users
 
@@ -20,7 +20,8 @@ $ ./device-finder list
 
 This will give you the addresses of all Fuchsia devices on the network. If you'd
 like to get their hostnames as well as their addresses, you can include the
-`-full` flag.
+`-full` flag. If you also want to find Fuchsia emulator (FEMU) devices
+use the `-netboot` flag.
 
 ### Finding devices by hostname
 
@@ -55,3 +56,7 @@ Timestamp     A/R    Flags  if Domain       Service Type   Instance Name
 
 Mac does not support the equivalent of a `local` flag as described above in the
 `device-finder` docs.
+
+## For additional help
+
+For additional help using any of the `device-finder` subcommands, run the subcommand with the `-help` flag.
