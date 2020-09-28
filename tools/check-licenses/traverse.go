@@ -14,7 +14,7 @@ func Walk(config *Config) error {
 	metrics := new(Metrics)
 	metrics.Init()
 	file_tree := NewFileTree(config, metrics)
-	licenses, err := NewLicenses(config.LicensePatternDir)
+	licenses, err := NewLicenses(config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {
 		return err
 	}
@@ -32,10 +32,20 @@ func Walk(config *Config) error {
 			fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
 		}
 	}
+
+	if config.ExitOnProhibitedLicenseTypes {
+		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
+		if len(filesWithProhibitedLicenses) > 0 {
+			files := strings.Join(filesWithProhibitedLicenses, "\n")
+			return fmt.Errorf("Encountered prohibited license types. File paths are:\n%v", files)
+		}
+	}
+
 	file, err := createOutputFile(config)
 	if err != nil {
 		return err
 	}
+
 	saveToOutputFile(file, licenses, config, metrics)
 	metrics.print()
 	return nil

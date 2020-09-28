@@ -11,9 +11,10 @@ import (
 
 // License contains a searchable regex pattern for finding file matches in tree. The category field is the .lic name
 type License struct {
-	pattern  *regexp.Regexp
-	matches  map[string]*Match
-	category string
+	pattern   *regexp.Regexp
+	matches   map[string]*Match
+	category  string
+	validType bool
 }
 
 // Match is used to store a single match result alongside the License along with a list of all matching files

@@ -25,8 +25,9 @@ func TestLicensesInit(t *testing.T) {
 	if err := ioutil.WriteFile(path, []byte("abc"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	prohibitedLicenseTypes := []string{"gcc"}
 	var licenses Licenses
-	if err := licenses.Init(folder); err != nil {
+	if err := licenses.Init(folder, prohibitedLicenseTypes); err != nil {
 		t.Error("error: licenses.Init()")
 	}
 }
@@ -37,7 +38,8 @@ func TestLicensesNew(t *testing.T) {
 	if err := ioutil.WriteFile(path, []byte("abc"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := NewLicenses(folder); err != nil {
+	prohibitedLicenseTypes := []string{"gcc"}
+	if _, err := NewLicenses(folder, prohibitedLicenseTypes); err != nil {
 		t.Error("error: NewLicenses(...)")
 	}
 }

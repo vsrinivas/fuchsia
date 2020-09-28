@@ -55,6 +55,12 @@
   ],
   "maxReadSize": 6144,
   "separatorWidth": 80,
+  "prohibitedLicenseTypes" :[
+    "gcc",
+    "gnu",
+    "redhat"
+  ],
+  "exitOnProhibitedLicenseTypes": true,
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
   "product": "astro",

@@ -29,9 +29,9 @@ type copyrightRegex struct {
 }
 
 // NewLicenses returns a Licenses object with each license pattern loaded from the .lic folder location specified in Config
-func NewLicenses(root string) (*Licenses, error) {
+func NewLicenses(root string, prohibitedLicenseTypes []string) (*Licenses, error) {
 	licenses := Licenses{}
-	if err := licenses.Init(root); err != nil {
+	if err := licenses.Init(root, prohibitedLicenseTypes); err != nil {
 		fmt.Println("error initializing licenses")
 		return nil, err
 	}
@@ -52,8 +52,17 @@ func LicenseWorker(path string) ([]byte, error) {
 	return bytes, err
 }
 
+func (licenses *Licenses) isLicenseAValidType(prohibitedLicenseTypes []string, category string) bool {
+	for _, prohibitedLicenseType := range prohibitedLicenseTypes {
+		if strings.Contains(category, prohibitedLicenseType) {
+			return false
+		}
+	}
+	return true
+}
+
 // Init loads all Licenses specified in the .lic directory as defined in Config
-func (licenses *Licenses) Init(root string) error {
+func (licenses *Licenses) Init(root string, prohibitedLicenseTypes []string) error {
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -67,8 +76,9 @@ func (licenses *Licenses) Init(root string) error {
 		updatedRegex := strings.ReplaceAll(str, "\n", `[\s\\#\*\/]*`)
 		updatedRegex = strings.ReplaceAll(updatedRegex, " ", `[\s\\#\*\/]*`)
 		licenses.add(&License{
-			pattern:  regexp.MustCompile(updatedRegex),
-			category: info.Name(),
+			pattern:   regexp.MustCompile(updatedRegex),
+			category:  info.Name(),
+			validType: licenses.isLicenseAValidType(prohibitedLicenseTypes, info.Name()),
 		})
 		return nil
 	})
@@ -83,6 +93,19 @@ func (licenses *Licenses) Init(root string) error {
 
 func (licenses *Licenses) add(license *License) {
 	licenses.licenses = append(licenses.licenses, license)
+}
+
+func (licenses *Licenses) GetFilesWithProhibitedLicenses() []string {
+	var filesWithProhibitedLicenses []string
+	for _, license := range licenses.licenses {
+		if license.validType {
+			continue
+		}
+		for _, match := range license.matches {
+			filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, match.files...)
+		}
+	}
+	return filesWithProhibitedLicenses
 }
 
 func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Metrics, file_tree *FileTree) {
