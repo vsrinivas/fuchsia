@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "bin/child_for_stress_test",
+        binary: "bin/deep_tree_stress_test",
     },
     collections: [
         {
@@ -9,7 +9,7 @@
         },
     ],
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
         { protocol: "/svc/fuchsia.logger.LogSink" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
@@ -25,7 +25,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/test.componentmanager.stresstests.ChildRealm",
+            protocol: "/svc/fuchsia.test.Suite",
             from: "self",
         },
     ],

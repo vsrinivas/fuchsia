@@ -6,9 +6,17 @@ library test.componentmanager.stresstests;
 
 /// The way for parent to conrtol lifecycle of its child in a stress test.
 [Discoverable]
-protocol Lifecycle {
+protocol ChildRealm {
     /// Component will gracefully exit.
     Stop();
+
+    StopChildren() -> ();
+
+    /// Create nested children in this realm.
+    /// `direct_children` - Num of direct children of this realm.
+    /// `tree_height` - Height of the realm tree to create.
+    /// Returns once all children are running.
+    CreateChildren(uint16 direct_children, uint16 tree_height) -> ();
 
     /// Fired when the server is connected
     -> OnConnected();
