@@ -32,11 +32,6 @@ String StringVPrintf(const char* format, va_list ap) {
   va_list ap_copy;
   va_copy(ap_copy, ap);
 
-  // TODO(johngro): Remove this when clang-tidy (or the clang analyzer) gets
-  // fixed.  Right now, it seems unaware that va_copy is initializing
-  // |ap_copy|.
-  //
-  // NOLINTNEXTLINE (clang-analyzer-valist.Uninitialized)
   int result = vsnprintf(stack_buf.data(), kStackBufferSize, format, ap_copy);
   va_end(ap_copy);
   if (result < 0) {
@@ -59,15 +54,7 @@ String StringVPrintf(const char* format, va_list ap) {
   // (Add 1 because |vsnprintf()| will always null-terminate.)
   size_t heap_buf_size = output_size + 1U;
 
-  // TODO(johngro): remove this exception if clang-tidy learns to ignore this.
-  // Our configuration of clang-tidy really does not want to see _any_
-  // traditional C arrays in it's world, so it demands that you convert them
-  // all to std::arrays.  In this case, however, that is not good advice.  The
-  // code below is deliberately dynamically allocating a character buffer to
-  // sprintf into.  Since the point of std::array is to have a compile time
-  // sized array type, it is really not appropriate to use here.
-  //
-  // NOLINTNEXTLINE (modernize-avoid-c-arrays)
+  // Allocate a buffer to print into.
   std::unique_ptr<char[]> heap_buf(new char[heap_buf_size]);
   result = vsnprintf(heap_buf.get(), heap_buf_size, format, ap);
   ZX_ASSERT(result >= 0 && static_cast<size_t>(result) == output_size);
