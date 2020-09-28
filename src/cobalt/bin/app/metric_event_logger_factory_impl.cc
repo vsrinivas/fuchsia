@@ -21,6 +21,12 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
     fuchsia::cobalt::ProjectSpec project_spec,
     fidl::InterfaceRequest<fuchsia::cobalt::MetricEventLogger> request,
     CreateMetricEventLoggerCallback callback) {
+  if (shut_down_) {
+    FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "
+                      "create a new Logger.";
+    callback(Status::SHUT_DOWN);
+    return;
+  }
   uint32_t customer_id =
       project_spec.has_customer_id() ? project_spec.customer_id() : kFuchsiaCustomerId;
   auto logger = cobalt_service_->NewLogger(customer_id, project_spec.project_id());
@@ -34,6 +40,11 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
   logger_bindings_.AddBinding(std::make_unique<MetricEventLoggerImpl>(std::move(logger)),
                               std::move(request));
   callback(Status::OK);
+}
+
+void MetricEventLoggerFactoryImpl::ShutDown() {
+  shut_down_ = true;
+  logger_bindings_.CloseAll();
 }
 
 }  // namespace cobalt

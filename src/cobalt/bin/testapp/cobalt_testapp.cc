@@ -28,6 +28,7 @@
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/tests.h"
+#include "src/cobalt/bin/utils/status_utils.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -35,6 +36,8 @@
 
 namespace cobalt {
 namespace testapp {
+
+using ::cobalt::StatusToString;
 
 // This must be less than 2^31. There appears to be a bug in
 // std::condition_variable::wait_for() in which setting the wait time to

@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "src/cobalt/bin/utils/status_utils.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -18,27 +19,12 @@ namespace cobalt {
 namespace {
 
 using async::PostDelayedTask;
+using ::cobalt::StatusToString;
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::Status;
 using fxl::StringPrintf;
 
 constexpr uint32_t kMaxPendingEvents = 500u;
-
-// Convert a status to a string.
-std::string ToString(const Status& status) {
-  switch (status) {
-    case Status::OK:
-      return "OK";
-    case Status::INVALID_ARGUMENTS:
-      return "INVALID_ARGUMENTS";
-    case Status::EVENT_TOO_BIG:
-      return "EVENT_TO_BIG";
-    case Status::BUFFER_FULL:
-      return "BUFFER_FULL";
-    case Status::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
-  }
-}
 
 uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
   return zx::nsec(clock->Now().get()).to_usecs();
@@ -91,7 +77,7 @@ void Logger::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> l
         if (status == Status::OK) {
           logger_reconnection_backoff_.Reset();
         } else {
-          FX_LOGS(ERROR) << "Failed to set up Logger: " << ToString(status);
+          FX_LOGS(ERROR) << "Failed to set up Logger: " << StatusToString(status);
           logger_.Unbind();
           RetryConnectingToLogger();
         }
@@ -151,7 +137,7 @@ void Logger::SendEvent(uint64_t event_id) {
   auto cb = [this, event_id, &event](Status status) {
     if (status != Status::OK) {
       FX_LOGS(INFO) << StringPrintf("Cobalt logging error: status %s, event %s",
-                                    ToString(status).c_str(), event.ToString().c_str());
+                                    StatusToString(status).c_str(), event.ToString().c_str());
     }
 
     // We don't retry events that have been acknowledged by the server, regardless of the return

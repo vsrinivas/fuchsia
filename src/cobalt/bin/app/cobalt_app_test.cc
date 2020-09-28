@@ -415,12 +415,49 @@ TEST_F(CobaltAppTest, LogCustomEvent) {
 
 TEST_F(CobaltAppTest, ShutDown) {
   EXPECT_EQ(fake_service_->is_shut_down(), false);
+
+  fuchsia::cobalt::MetricEventLoggerPtr metric_logger = GetMetricEventLogger();
+  fuchsia::cobalt::LoggerPtr logger = GetLogger();
+  EXPECT_TRUE(metric_logger.is_bound());
+  EXPECT_TRUE(logger.is_bound());
+
   fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
   context_provider_.ConnectToPublicService(process_lifecycle.NewRequest(),
                                            "fuchsia.process.lifecycle.Lifecycle");
   process_lifecycle->Stop();
   RunLoopUntilIdle();
   EXPECT_EQ(fake_service_->is_shut_down(), true);
+  EXPECT_FALSE(metric_logger.is_bound());
+  EXPECT_FALSE(logger.is_bound());
+}
+
+TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {
+  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
+  context_provider_.ConnectToPublicService(process_lifecycle.NewRequest(),
+                                           "fuchsia.process.lifecycle.Lifecycle");
+  process_lifecycle->Stop();
+  RunLoopUntilIdle();
+
+  fuchsia::cobalt::MetricEventLoggerPtr metric_logger = nullptr;
+  fuchsia::cobalt::LoggerPtr logger = nullptr;
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  fuchsia::cobalt::ProjectSpec project;
+  project.set_customer_id(1);
+  project.set_project_id(testapp_registry::kProjectId);
+
+  metric_event_logger_factory_->CreateMetricEventLogger(
+      std::move(project), metric_logger.NewRequest(),
+      [&](fuchsia::cobalt::Status status_) { status = status_; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(status, fuchsia::cobalt::Status::SHUT_DOWN);
+  EXPECT_FALSE(metric_logger.is_bound());
+
+  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  factory_->CreateLoggerFromProjectId(testapp_registry::kProjectId, logger.NewRequest(),
+                                      [&](fuchsia::cobalt::Status status_) { status = status_; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(status, fuchsia::cobalt::Status::SHUT_DOWN);
+  EXPECT_FALSE(logger.is_bound());
 }
 
 }  // namespace cobalt

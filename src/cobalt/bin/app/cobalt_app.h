@@ -124,10 +124,10 @@ class CobaltApp {
   std::unique_ptr<CobaltControllerImpl> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
 
-  std::unique_ptr<fuchsia::cobalt::LoggerFactory> logger_factory_impl_;
+  std::unique_ptr<LoggerFactoryImpl> logger_factory_impl_;
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
-  std::unique_ptr<fuchsia::cobalt::MetricEventLoggerFactory> metric_event_logger_factory_impl_;
+  std::unique_ptr<MetricEventLoggerFactoryImpl> metric_event_logger_factory_impl_;
   fidl::BindingSet<fuchsia::cobalt::MetricEventLoggerFactory> metric_event_logger_factory_bindings_;
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;

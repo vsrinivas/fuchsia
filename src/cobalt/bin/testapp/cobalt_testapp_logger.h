@@ -13,8 +13,6 @@
 namespace cobalt {
 namespace testapp {
 
-std::string StatusToString(fuchsia::cobalt::Status status);
-
 class CobaltTestAppLogger {
  public:
   CobaltTestAppLogger(bool use_network, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller)

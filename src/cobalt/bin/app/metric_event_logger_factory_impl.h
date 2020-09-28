@@ -19,6 +19,8 @@ class MetricEventLoggerFactoryImpl : public fuchsia::cobalt::MetricEventLoggerFa
  public:
   MetricEventLoggerFactoryImpl(CobaltServiceInterface* cobalt_service);
 
+  void ShutDown();
+
  private:
   void CreateMetricEventLogger(fuchsia::cobalt::ProjectSpec project_spec,
                                fidl::InterfaceRequest<fuchsia::cobalt::MetricEventLogger> request,
@@ -28,6 +30,7 @@ class MetricEventLoggerFactoryImpl : public fuchsia::cobalt::MetricEventLoggerFa
                    std::unique_ptr<fuchsia::cobalt::MetricEventLogger>>
       logger_bindings_;
 
+  bool shut_down_ = false;
   CobaltServiceInterface* cobalt_service_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MetricEventLoggerFactoryImpl);

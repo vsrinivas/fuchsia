@@ -5,9 +5,13 @@
 #ifndef GARNET_BIN_COBALT_UTILS_STATUS_UTILS_H_
 #define GARNET_BIN_COBALT_UTILS_STATUS_UTILS_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
+
+#include <string>
+
 namespace cobalt {
 
-std::string StatusToString(fuchsia::cobalt::Status status) {
+inline std::string StatusToString(fuchsia::cobalt::Status status) {
   switch (status) {
     case fuchsia::cobalt::Status::OK:
       return "OK";
@@ -17,6 +21,8 @@ std::string StatusToString(fuchsia::cobalt::Status status) {
       return "EVENT_TOO_BIG";
     case fuchsia::cobalt::Status::BUFFER_FULL:
       return "BUFFER_FULL";
+    case fuchsia::cobalt::Status::SHUT_DOWN:
+      return "SHUT_DOWN";
     case fuchsia::cobalt::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }

@@ -20,6 +20,8 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   LoggerFactoryImpl(TimerManager* timer_manager, CobaltServiceInterface* cobalt_service);
 
+  void ShutDown();
+
  private:
   // Extracts the Cobalt 1.0 project with the given |project_id| from the global CobaltRegistry, if
   // there is such a project in the registry, and uses this to construct a LoggerImpl. Binds this to
@@ -48,6 +50,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   fidl::BindingSet<fuchsia::cobalt::LoggerSimple, std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
 
+  bool shut_down_ = false;
   TimerManager* timer_manager_;             // not owned
   CobaltServiceInterface* cobalt_service_;  // not owned
 

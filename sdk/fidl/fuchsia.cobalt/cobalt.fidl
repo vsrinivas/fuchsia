@@ -80,6 +80,10 @@ enum Status : int32 {
     /// Events at this time. Try again later. This condition should be rare
     BUFFER_FULL = 3;
 
+    // Cobalt has received a ShutDown signal and will not accept any more
+    // events.
+    SHUT_DOWN = 4;
+
     /// Catch-all for unexpected errors.
     INTERNAL_ERROR = -1;
 };
@@ -118,9 +122,10 @@ protocol LoggerFactory {
     ///
     /// `project_id` The ID of the client's Cobalt project.
     ///
-    /// `status` Returns OK on success or INVALID_ARGUMENTS if there is no
-    /// project with the given ID in the version of the metrics registry that
-    /// is bundled with Cobalt.
+    /// `status` Returns OK on success, SHUT_DOWN if the factory is no longer
+    /// creating new loggers, or INVALID_ARGUMENTS if there is no project with
+    /// the given ID in the version of the metrics registry that is bundled
+    /// with Cobalt.
     CreateLoggerFromProjectId(uint32 project_id,
                               request<Logger> logger)
         -> (Status status);

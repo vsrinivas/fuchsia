@@ -24,6 +24,12 @@ void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
     uint32_t customer_id, uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request,
     Callback callback,
     fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
+  if (shut_down_) {
+    FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "
+                      "create a new Logger.";
+    callback(Status::SHUT_DOWN);
+    return;
+  }
   auto logger = cobalt_service_->NewLogger(customer_id, project_id);
   if (!logger) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
@@ -57,6 +63,12 @@ void LoggerFactoryImpl::CreateLoggerFromProjectSpec(
     CreateLoggerFromProjectSpecCallback callback) {
   CreateAndBindLoggerFromProjectId(customer_id, project_id, std::move(request), std::move(callback),
                                    &logger_bindings_);
+}
+
+void LoggerFactoryImpl::ShutDown() {
+  shut_down_ = true;
+  logger_bindings_.CloseAll();
+  logger_simple_bindings_.CloseAll();
 }
 
 }  // namespace cobalt

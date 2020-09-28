@@ -9,9 +9,12 @@
 #include <map>
 #include <string>
 
+#include "src/cobalt/bin/utils/status_utils.h"
+
 namespace cobalt {
 namespace testapp {
 
+using ::cobalt::StatusToString;
 using fuchsia::cobalt::Status;
 
 bool CobaltTestAppLogger::LogEvent(uint32_t metric_id, uint32_t index) {
@@ -179,21 +182,6 @@ bool CobaltTestAppLogger::CheckForSuccessfulSend() {
   (*cobalt_controller_)->RequestSendSoon(&send_success);
   FX_VLOGS(1) << "RequestSendSoon => " << send_success;
   return send_success;
-}
-
-std::string StatusToString(fuchsia::cobalt::Status status) {
-  switch (status) {
-    case Status::OK:
-      return "OK";
-    case Status::INVALID_ARGUMENTS:
-      return "INVALID_ARGUMENTS";
-    case Status::EVENT_TOO_BIG:
-      return "EVENT_TOO_BIG";
-    case Status::BUFFER_FULL:
-      return "BUFFER_FULL";
-    case Status::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
-  }
 }
 
 }  // namespace testapp

@@ -210,6 +210,7 @@ void BaseCobaltLoggerImpl::SendEvents() {
 void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event, Status status) {
   switch (status) {
     case Status::INVALID_ARGUMENTS:
+    case Status::SHUT_DOWN:
     case Status::EVENT_TOO_BIG:  // fall through
       // Log the failure.
       FX_LOGS(WARNING) << "Cobalt rejected event for metric: " << event->metric_id()
