@@ -1,1 +1,1 @@
-#!resolve fuchsia-pkg://fuchsia.com/fdio_spawn_tests#bin/resolve_infinite_loop
+#!resolve fuchsia-pkg://fuchsia.com/fdio-spawn-tests#bin/resolve_infinite_loop

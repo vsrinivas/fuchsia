@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fdio_spawn_tests"
+        "binary": "bin/fdio-spawn-tests-bin"
     },
     "sandbox": {
         "services": [

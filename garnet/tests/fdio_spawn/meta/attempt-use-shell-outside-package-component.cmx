@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/attempt_use_shell_outside_package.sh"
+    }
+}

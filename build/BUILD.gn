@@ -166,7 +166,6 @@ group("deprecated_package_underscore") {
     "//garnet/lib/trace_converters:trace_converter_tests",
     "//garnet/public/lib/fostr:tests_package",
     "//garnet/tests/benchmarks:garnet_benchmarks",
-    "//garnet/tests/fdio_spawn:fdio_spawn_tests",
     "//garnet/tests/zircon:zircon_fuzzers_pkg",
     "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
     "//sdk/lib/fuzzing/cpp:fuzzing_traits_tests",

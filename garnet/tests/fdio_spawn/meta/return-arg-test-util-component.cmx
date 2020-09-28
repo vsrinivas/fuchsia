@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/return_arg_test_util"
+    }
+}

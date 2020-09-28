@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/use_resolve_from_shebang"
+    }
+}

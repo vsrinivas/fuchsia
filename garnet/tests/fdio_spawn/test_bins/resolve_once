@@ -1,1 +1,1 @@
-#!resolve fuchsia-pkg://fuchsia.com/fdio_spawn_tests#bin/return_arg_test_util
+#!resolve fuchsia-pkg://fuchsia.com/fdio-spawn-tests#bin/return_arg_test_util

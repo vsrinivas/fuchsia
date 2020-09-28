@@ -2,12 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-executable("bin") {
+executable("fdio-spawn-tests-bin") {
   testonly = true
-  output_name = "fdio_spawn_tests"
   visibility = [ ":*" ]
 
   sources = [
@@ -31,11 +29,17 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-# A test utility used to test various features of fdio_spawn, extensively in spawn_test.cc.
-executable("spawn_child_util") {
+fuchsia_component("fdio-spawn-tests-component") {
   testonly = true
+  manifest = "meta/fdio-spawn-tests-component.cmx"
+  deps = [ ":fdio-spawn-tests-bin" ]
+}
+
+# A test utility used to test various features of fdio_spawn, extensively in spawn_test.cc.
+executable("spawn-child-util-bin") {
   visibility = [ ":*" ]
 
+  output_name = "spawn_child_util"
   sources = [ "spawn_child_util.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -46,11 +50,17 @@ executable("spawn_child_util") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-# A test utility that attempts to use zx_process_create (mimicking a launcher implementation).
-executable("fake_launcher_util") {
+fuchsia_component("spawn-child-util-component") {
   testonly = true
+  manifest = "meta/spawn-child-util-component.cmx"
+  deps = [ ":spawn-child-util-bin" ]
+}
+
+# A test utility that attempts to use zx_process_create (mimicking a launcher implementation).
+executable("fake-launcher-util-bin") {
   visibility = [ ":*" ]
 
+  output_name = "fake_launcher_util"
   sources = [
     "fake_launcher_util.cc",
     "fake_launcher_util.h",
@@ -64,93 +74,171 @@ executable("fake_launcher_util") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-# A simple test utility that returns the integer value provided to it in its first argument.
-executable("return_arg_test_util") {
+fuchsia_component("fake-launcher-util-component") {
   testonly = true
+  manifest = "meta/fake-launcher-util-component.cmx"
+  deps = [ ":fake-launcher-util-bin" ]
+}
 
+# A simple test utility that returns the integer value provided to it in its first argument.
+executable("return-arg-test-util-bin") {
+  output_name = "return_arg_test_util"
   sources = [ "return_arg_util.cc" ]
-
   deps = [ "//src/lib/fxl" ]
 }
 
-test_package("fdio_spawn_tests") {
+fuchsia_component("return-arg-test-util-component") {
+  testonly = true
+  manifest = "meta/return-arg-test-util-component.cmx"
+  deps = [ ":return-arg-test-util-bin" ]
+}
+
+# The 'binaries' in the components below are really just text files with either
+# a "#!resolve" or "#!" directive.
+resource("resolve-once-bin") {
+  sources = [ "test_bins/resolve_once" ]
+  outputs = [ "bin/resolve_once" ]
+}
+
+fuchsia_component("resolve-once-component") {
+  testonly = true
+  manifest = "meta/resolve-once-component.cmx"
+  deps = [ ":resolve-once-bin" ]
+}
+
+resource("resolve-twice-bin") {
+  sources = [ "test_bins/resolve_twice" ]
+  outputs = [ "bin/resolve_twice" ]
+}
+
+fuchsia_component("resolve-twice-component") {
+  testonly = true
+  manifest = "meta/resolve-twice-component.cmx"
+  deps = [ ":resolve-twice-bin" ]
+}
+
+resource("resolve-infinite-loop-bin") {
+  sources = [ "test_bins/resolve_infinite_loop" ]
+  outputs = [ "bin/resolve_infinite_loop" ]
+}
+
+fuchsia_component("resolve-infinite-loop-component") {
+  testonly = true
+  manifest = "meta/resolve-infinite-loop-component.cmx"
+  deps = [ ":resolve-infinite-loop-bin" ]
+}
+
+resource("resolve-to-not-found-bin") {
+  sources = [ "test_bins/resolve_to_not_found" ]
+  outputs = [ "bin/resolve_to_not_found" ]
+}
+
+fuchsia_component("resolve-to-not-found-component") {
+  testonly = true
+  manifest = "meta/resolve-to-not-found-component.cmx"
+  deps = [ ":resolve-to-not-found-bin" ]
+}
+
+resource("echo-arguments-script") {
+  sources = [ "test_bins/echo_arguments.sh" ]
+  outputs = [ "bin/echo_arguments.sh" ]
+}
+
+fuchsia_component("echo-arguments-component") {
+  testonly = true
+  manifest = "meta/echo-arguments-component.cmx"
+  deps = [ ":echo-arguments-script" ]
+}
+
+resource("use-script-as-interpreter-bin") {
+  sources = [ "test_bins/use_script_as_interpreter" ]
+  outputs = [ "bin/use_script_as_interpreter" ]
+}
+
+fuchsia_component("use-script-as-interpreter-component") {
+  testonly = true
+  manifest = "meta/use-script-as-interpreter-component.cmx"
+  deps = [ ":use-script-as-interpreter-bin" ]
+}
+
+resource("shebang-infinite-loop-bin") {
+  sources = [ "test_bins/shebang_infinite_loop" ]
+  outputs = [ "bin/shebang_infinite_loop" ]
+}
+
+fuchsia_component("shebang-infinite-loop-component") {
+  testonly = true
+  manifest = "meta/shebang-infinite-loop-component.cmx"
+  deps = [ ":shebang-infinite-loop-bin" ]
+}
+
+resource("attempt-use-shell-outside-package-script") {
+  sources = [ "test_bins/attempt_use_shell_outside_package.sh" ]
+  outputs = [ "bin/attempt_use_shell_outside_package.sh" ]
+}
+
+fuchsia_component("attempt-use-shell-outside-package-component") {
+  testonly = true
+  manifest = "meta/attempt-use-shell-outside-package-component.cmx"
+  deps = [ ":attempt-use-shell-outside-package-script" ]
+}
+
+resource("too-long-shebang-bin") {
+  sources = [ "test_bins/too_long_shebang" ]
+  outputs = [ "bin/too_long_shebang" ]
+}
+
+fuchsia_component("too-long-shebang-component") {
+  testonly = true
+  manifest = "meta/too-long-shebang-component.cmx"
+  deps = [ ":too-long-shebang-bin" ]
+}
+
+resource("use-resolve-from-shebang-bin") {
+  sources = [ "test_bins/use_resolve_from_shebang" ]
+  outputs = [ "bin/use_resolve_from_shebang" ]
+}
+
+fuchsia_component("use-resolve-from-shebang-component") {
+  testonly = true
+  manifest = "meta/use-resolve-from-shebang-component.cmx"
+  deps = [ ":use-resolve-from-shebang-bin" ]
+}
+
+resource("use-shebang-from-resolve-bin") {
+  sources = [ "test_bins/use_shebang_from_resolve" ]
+  outputs = [ "bin/use_shebang_from_resolve" ]
+}
+
+fuchsia_component("use-shebang-from-resolve-component") {
+  testonly = true
+  manifest = "meta/use-shebang-from-resolve-component.cmx"
+  deps = [ ":use-shebang-from-resolve-bin" ]
+}
+
+fuchsia_test_package("fdio-spawn-tests") {
+  test_components = [ ":fdio-spawn-tests-component" ]
+
   deps = [
-    ":bin",
-    ":fake_launcher_util",
-    ":return_arg_test_util",
-    ":spawn_child_util",
+    ":attempt-use-shell-outside-package-component",
+    ":echo-arguments-component",
+    ":fake-launcher-util-component",
+    ":resolve-infinite-loop-component",
+    ":resolve-once-component",
+    ":resolve-to-not-found-component",
+    ":resolve-twice-component",
+    ":return-arg-test-util-component",
+    ":shebang-infinite-loop-component",
+    ":spawn-child-util-component",
+    ":too-long-shebang-component",
+    ":use-resolve-from-shebang-component",
+    ":use-script-as-interpreter-component",
+    ":use-shebang-from-resolve-component",
     "//zircon/third_party/uapp/dash",
   ]
+}
 
-  binaries = [
-    {
-      name = "fake_launcher_util"
-    },
-    {
-      name = "return_arg_test_util"
-    },
-    {
-      name = "sh"
-    },
-    {
-      name = "spawn_child_util"
-    },
-
-    # These 'binaries' (really just text files with either a "#!resolve" or "#!" directive) are
-    # copied straight out of the source directory into bin/ in the package, but the package template
-    # expects the source path to be relative to root_build_dir, so we first rebase to that.
-    {
-      name = "resolve_once"
-      source = rebase_path("test_bins/resolve_once", root_build_dir)
-    },
-    {
-      name = "resolve_twice"
-      source = rebase_path("test_bins/resolve_twice", root_build_dir)
-    },
-    {
-      name = "resolve_infinite_loop"
-      source = rebase_path("test_bins/resolve_infinite_loop", root_build_dir)
-    },
-    {
-      name = "resolve_to_not_found"
-      source = rebase_path("test_bins/resolve_to_not_found", root_build_dir)
-    },
-    {
-      name = "echo_arguments.sh"
-      source = rebase_path("test_bins/echo_arguments.sh", root_build_dir)
-    },
-    {
-      name = "use_script_as_interpreter"
-      source =
-          rebase_path("test_bins/use_script_as_interpreter", root_build_dir)
-    },
-    {
-      name = "shebang_infinite_loop"
-      source = rebase_path("test_bins/shebang_infinite_loop", root_build_dir)
-    },
-    {
-      name = "attempt_use_shell_outside_package.sh"
-      source = rebase_path("test_bins/attempt_use_shell_outside_package.sh",
-                           root_build_dir)
-    },
-    {
-      name = "too_long_shebang"
-      source = rebase_path("test_bins/too_long_shebang", root_build_dir)
-    },
-    {
-      name = "use_resolve_from_shebang"
-      source = rebase_path("test_bins/use_resolve_from_shebang", root_build_dir)
-    },
-    {
-      name = "use_shebang_from_resolve"
-      source = rebase_path("test_bins/use_shebang_from_resolve", root_build_dir)
-    },
-  ]
-
-  tests = [
-    {
-      name = "fdio_spawn_tests"
-      environments = basic_envs
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":fdio-spawn-tests" ]
 }

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/use_script_as_interpreter"
+    }
+}

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/spawn_child_util"
+    }
+}

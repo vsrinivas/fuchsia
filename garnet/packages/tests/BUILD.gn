@@ -78,7 +78,7 @@ group("all") {
     "//garnet/public/lib/fostr:tests_package",
     "//garnet/public/rust:rust-crates-tests",
     "//garnet/tests/acts_tests",
-    "//garnet/tests/fdio_spawn:fdio_spawn_tests",
+    "//garnet/tests/fdio_spawn:fdio-spawn-tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",
     "//sdk/lib/fuzzing/cpp:fuzzing_traits_tests",
     "//sdk/lib/inspect/contrib/cpp:tests",
