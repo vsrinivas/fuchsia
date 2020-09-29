@@ -57,13 +57,16 @@ if (is_fuchsia) {
 # Generate Zircon rust bindings using the GN version of the Kazoo tool.
 # The source is still the .json file generated during the ZN build.
 compiled_action("generate-rust-zircon-syscalls-definitions") {
+  _zx_json_target = "//zircon/vdso:zx($default_toolchain)"
   tool = "//zircon/tools/kazoo"
-  sources = [ "$zircon_root_build_dir/gen/vdso/zx.json/fidl.json" ]
+  sources =
+      [ get_label_info(_zx_json_target, "target_gen_dir") + "/zx.fidl.json" ]
   outputs = [ "$root_gen_dir/zircon/rust/syscalls/definitions.rs" ]
   args = [
     "--rust=" + rebase_path(outputs[0], root_build_dir),
     rebase_path(sources[0], root_build_dir),
   ]
+  deps = [ _zx_json_target ]
 }
 
 rustc_library("fuchsia-zircon-sys") {

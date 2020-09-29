@@ -2,28 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/c_utils.gni")
-import("$zx_build/public/gn/fidl.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
 import("vdso.gni")
 
 group("vdso") {
   public_deps = [ ":zx" ]
 }
 
-group("json") {
-  public_deps = [ ":zx.json" ]
-}
-
 # The system calls are defined as if they were a FIDL library, because
-# kazoo consumes the FIDL JSON IR (generated below).  This cannot be used
-# like a normal fidl_library, however.  Only the "json" subtarget is
-# available.
-#
-# TODO(fxbug.dev/7802): Merge with vdso/zx:zx.
-fidl_library("zx") {
-  visibility = [ ":*" ]
-  targets = [ "fidl_json_rspfile" ]
-  sources = all_syscall_fidl_files
+# kazoo consumes the FIDL JSON IR (generated below). This generates the
+# file by invoking fidlc directly.
+zx_host_tool_action("zx") {
+  visibility = [
+    ":*",
+    "//src/lib/zircon/rust:*",
+  ]
+  tool = "$zx/tools/fidl:fidlc"
+  outputs = [ "$target_gen_dir/$target_name.fidl.json" ]
+  inputs = []
+  args = [
+    "--name",
+    target_name,
+    "--json",
+    rebase_path(outputs[0], root_build_dir),
+    "--files",
+  ]
+  foreach(src, all_syscall_fidl_files) {
+    inputs += [ "$src" ]
+    args += [ rebase_path("$src", root_build_dir) ]
+  }
+
+  metadata = {
+    generated_sources = rebase_path(outputs, root_build_dir)
+  }
 }
 
 # The generated stuff is identical regardless of how it gets compiled.
@@ -61,13 +72,6 @@ private_gen_dir = "$target_gen_dir/include/lib/syscalls"
 config("private.config") {
   visibility = [ ":private" ]
   include_dirs = [ "$target_gen_dir/include" ]
-}
-
-# Generate a file that contains the path to the generated JSON IR file.
-fidl_library_json_rspfile("json.rspfile") {
-  visibility = [ ":*" ]
-  output = "$target_gen_dir/json.rspfile"
-  deps = [ ":json" ]
 }
 
 # The kazoo compiler translates FIDL's IR into syscall-oriented outputs.
@@ -124,7 +128,7 @@ private_generated = [
   },
 ]
 
-host_tool_action("generate") {
+zx_host_tool_action("generate") {
   visibility = [
     ":private",
     ":public",
@@ -143,10 +147,10 @@ host_tool_action("generate") {
     outputs += gen.outputs
   }
 
-  deps = [ ":json.rspfile" ]
+  deps = [ ":zx" ]
   sources = get_target_outputs(deps[0])
   assert(sources == [ sources[0] ])  # There can be only one.
-  args += [ "@" + rebase_path(sources[0], root_build_dir) ]
+  args += [ rebase_path(sources[0], root_build_dir) ]
 
   metadata = {
     generated_sources = rebase_path(outputs, root_build_dir)
