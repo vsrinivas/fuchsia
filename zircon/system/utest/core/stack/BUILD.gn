@@ -31,7 +31,4 @@ source_set("stack") {
   if (select_variant + [ "gcc" ] - [ "gcc" ] != select_variant) {
     cflags += [ "-fno-sanitize=safe-stack" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
