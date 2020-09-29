@@ -43,8 +43,8 @@ void LaunchClient(std::string client_url, fuchsia::sys::LauncherPtr launcher,
   launcher->CreateComponent(std::move(client_info), std::move(ctrl_request));
 }
 
-int LaunchComponents(std::string client_url, std::string server_url,
-                     std::vector<std::string> capability_names) {
+int64_t LaunchComponents(std::string client_url, std::string server_url,
+                         std::vector<std::string> capability_names) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto svc = sys::ServiceDirectory::CreateFromNamespace();
@@ -62,7 +62,7 @@ int LaunchComponents(std::string client_url, std::string server_url,
   LaunchClient(std::move(client_url), std::move(client_launcher), client_controller.NewRequest());
 
   // terminate once client terminates
-  int client_status = -1;
+  int64_t client_status = -1;
   client_controller.events().OnTerminated =
       [&loop, &client_status](uint64_t code, fuchsia::sys::TerminationReason reason) {
         client_status = code;
