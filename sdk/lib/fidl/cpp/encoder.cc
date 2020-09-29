@@ -59,8 +59,10 @@ void Encoder::EncodeUnknownHandle(zx::object_base* value) {
 #endif
 
 Message Encoder::GetMessage() {
-  return Message(BytePart(bytes_.data(), bytes_.size(), bytes_.size()),
-                 HandlePart(handles_.data(), handles_.size(), handles_.size()));
+  return Message(BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+                          static_cast<uint32_t>(bytes_.size())),
+                 HandlePart(handles_.data(), static_cast<uint32_t>(handles_.size()),
+                            static_cast<uint32_t>(handles_.size())));
 }
 
 void Encoder::Reset(uint64_t ordinal) {
