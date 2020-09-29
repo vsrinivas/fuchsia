@@ -258,6 +258,12 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
   struct brcmf_event_msg emsg;
   brcmf_fweh_event_info* event_info = &event->event_info;
 
+  if (event_info->code != BRCMF_E_ESCAN_RESULT) {
+    BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM",
+              brcmf_fweh_event_name(event_info->code), event_info->code, event_info->emsg.ifidx,
+              event_info->emsg.bsscfgidx, event_info->emsg.addr);
+  }
+
   /* convert event message */
   emsg_be = &event_info->emsg;
   emsg.version = be16toh(emsg_be->version);
@@ -452,11 +458,11 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
   }
 
   for (i = 0; i < BRCMF_E_LAST; i++) {
-    if (ifp->drvr->fweh.evt_handler[i]) {
+    // if (ifp->drvr->fweh.evt_handler[i]) {
       BRCMF_DBG(EVENT, "enable event %s",
                 brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(i)));
       setbit(msgs_ext->event_mask, i);
-    }
+    // }
   }
 
   /* want to handle IF event as well */
@@ -505,22 +511,29 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* 
   uint32_t datalen;
 
   if (packet_len < sizeof(*event_packet)) {
+    BRCMF_DBG(EVENT, "packet_len too small");
     return;
   }
 
+  code = static_cast<brcmf_fweh_event_code>(be32toh(event_packet->msg.event_type));
+  BRCMF_DBG(EVENT, "Received %s event %u", brcmf_fweh_event_name(code), code);
+
   /* only process events when protocol matches */
   if (event_packet->eth.h_proto != htobe16(ETH_P_LINK_CTL)) {
+    BRCMF_DBG(EVENT, "protocol does not match");
     return;
   }
 
   /* check for BRCM oui match */
   if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
+    BRCMF_DBG(EVENT, "BRCM oui does not match");
     return;
   }
 
   /* final match on usr_subtype */
   usr_stype = be16toh(event_packet->hdr.usr_subtype);
   if (usr_stype != BCMILCP_BCM_SUBTYPE_EVENT) {
+    BRCMF_DBG(EVENT, "usr_subtype does not match");
     return;
   }
 
@@ -530,16 +543,17 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* 
   data = &event_packet[1];
 
   if (code >= BRCMF_E_LAST) {
+    BRCMF_DBG(EVENT, "event code greater than BRCMF_E_LAST");
     return;
   }
 
   if (code != BRCMF_E_IF && !fweh->evt_handler[code]) {
-    BRCMF_DBG(TEMP, "Event not found");
+    BRCMF_DBG(EVENT, "Event has no handler!");
     return;
   }
 
   if (datalen > BRCMF_DCMD_MAXLEN || datalen + sizeof(*event_packet) > packet_len) {
-    BRCMF_DBG(TEMP, "Len, datalen %d, event_packet size %ld, packet_len %d", datalen,
+    BRCMF_DBG(EVENT, "Len, datalen %d, event_packet size %ld, packet_len %d", datalen,
               sizeof(*event_packet), packet_len);
     return;
   }
@@ -564,8 +578,10 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* 
   if (brcmf_bus_get_bus_type(drvr->bus_if) == BRCMF_BUS_TYPE_SIM) {
     // The simulator's behavior is synchronous: we want all events to be processed immediately.
     // So, we bypass the workqueue and just call directly into the handler.
+    BRCMF_DBG(EVENT, "Handling %s event %d", brcmf_fweh_event_name(code), code);
     brcmf_fweh_handle_event(drvr, event);
   } else {
+    BRCMF_DBG(EVENT, "Queueing %s event %d", brcmf_fweh_event_name(code), code);
     brcmf_fweh_queue_event(drvr, fweh, event);
   }
 }

@@ -332,7 +332,6 @@ void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size) {
 static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
                                     struct brcmf_if** ifp) {
   zx_status_t ret;
-
   /* process and remove protocol-specific header */
   ret = brcmf_proto_hdrpull(drvr, netbuf, ifp);
 
@@ -372,6 +371,7 @@ void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   BRCMF_DBG(EVENT, "Enter: %s: rxp=%p", device_get_name(drvr->zxdev), netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
+    BRCMF_DBG(EVENT, "Dropping event");
     return;
   }
 
