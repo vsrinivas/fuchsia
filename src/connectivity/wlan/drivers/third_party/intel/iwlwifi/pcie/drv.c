@@ -40,7 +40,6 @@
 #include <stdlib.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -50,6 +49,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwlwifi-bind.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 #if 0  // NEEDS_PORTING
@@ -1174,14 +1174,7 @@ static zx_driver_ops_t iwlwifi_pci_driver_ops = {
 
 #define INTEL_VID 0x8086
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(iwlwifi_pci, iwlwifi_pci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x095A),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x095B),
-ZIRCON_DRIVER_END(iwlwifi_pci)
-// clang-format on
+ZIRCON_DRIVER(iwlwifi_pci, iwlwifi_pci_driver_ops, "zircon", "0.1");
 
 #if 0  // NEEDS_PORTING
 

@@ -31,6 +31,7 @@ group("tests") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env/test:wlan-sim-env-test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_tests",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:tests",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
     "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",
     "//src/connectivity/wlan/drivers/wlanif/test:wlanif_unittest",

@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+
+  {
+    "name": "Intel 7265 series",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+      "fuchsia.BIND_PCI_DID": "0x095A"
+    }
+  }
+]
