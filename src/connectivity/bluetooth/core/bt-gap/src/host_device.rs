@@ -4,10 +4,9 @@
 
 use {
     anyhow::format_err,
-    fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
-    fidl_fuchsia_bluetooth_control::PairingOptions,
+    fidl_fuchsia_bluetooth as fbt,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
-    fidl_fuchsia_bluetooth_sys::{self as sys, LeSecurityMode},
+    fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::{
         inspect::Inspectable,
         types::{BondingData, HostData, HostInfo, Peer, PeerId},
@@ -74,7 +73,7 @@ impl HostDevice {
 
     pub fn set_device_class(
         &self,
-        mut cod: DeviceClass,
+        mut cod: fbt::DeviceClass,
     ) -> impl Future<Output = types::Result<()>> {
         self.host.set_device_class(&mut cod).map(from_fidl_result)
     }
@@ -99,7 +98,7 @@ impl HostDevice {
     pub fn pair(
         &mut self,
         id: PeerId,
-        options: PairingOptions,
+        options: sys::PairingOptions,
     ) -> impl Future<Output = types::Result<()>> {
         let mut id: fbt::PeerId = id.into();
         self.host.pair(&mut id, options).map(from_fidl_result)
@@ -147,7 +146,7 @@ impl HostDevice {
         self.host.enable_background_scan(enable).map_err(Error::from)
     }
 
-    pub fn set_le_security_mode(&self, mode: LeSecurityMode) -> types::Result<()> {
+    pub fn set_le_security_mode(&self, mode: sys::LeSecurityMode) -> types::Result<()> {
         self.host.set_le_security_mode(mode).map_err(Error::from)
     }
 

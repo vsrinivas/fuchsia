@@ -74,6 +74,12 @@ impl From<SecurityLevel> for control::PairingSecurityLevel {
 
 impl From<sys::PairingOptions> for PairingOptions {
     fn from(opts: sys::PairingOptions) -> Self {
+        (&opts).into()
+    }
+}
+
+impl From<&sys::PairingOptions> for PairingOptions {
+    fn from(opts: &sys::PairingOptions) -> Self {
         let bondable = match opts.bondable_mode {
             Some(sys::BondableMode::NonBondable) => BondableMode::NonBondable,
             Some(sys::BondableMode::Bondable) | None => BondableMode::Bondable,

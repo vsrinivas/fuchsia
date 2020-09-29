@@ -8,7 +8,6 @@ using fuchsia.bluetooth as bt;
 using fuchsia.bluetooth.sys as sys;
 
 using fuchsia.bluetooth.bredr;
-using fuchsia.bluetooth.control;
 using fuchsia.bluetooth.gatt;
 using fuchsia.bluetooth.le;
 
@@ -131,7 +130,7 @@ protocol Host {
     /// NOTE: This is intended to satisfy test scenarios that require pairing procedures to be
     /// initiated without relying on service access. In normal operation, Bluetooth security is
     /// enforced during service access.
-    Pair(bt.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> () error sys.Error;
+    Pair(bt.PeerId id, sys.PairingOptions options) -> () error sys.Error;
 
     /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected.
     /// `device_id` will no longer refer to any peer, even if a device with the same address is

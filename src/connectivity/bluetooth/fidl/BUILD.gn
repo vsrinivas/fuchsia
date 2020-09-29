@@ -18,7 +18,6 @@ fidl("host") {
   public_deps = [
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.bluetooth.bredr",
-    "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.bluetooth.gatt",
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.bluetooth.sys",
