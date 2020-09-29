@@ -4,8 +4,6 @@
 
 #include "aml-axg-gpio.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
-
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

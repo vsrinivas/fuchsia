@@ -4,7 +4,6 @@
 
 #include "uart16550.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/event.h>
 
 #include <ddk/protocol/serial.h>

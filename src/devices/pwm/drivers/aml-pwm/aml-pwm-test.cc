@@ -7,8 +7,6 @@
 #include <vector>
 #include <ddk/metadata/pwm.h>
 
-#include <lib/fake_ddk/fake_ddk.h>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>

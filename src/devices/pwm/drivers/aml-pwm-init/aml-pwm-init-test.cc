@@ -4,8 +4,6 @@
 
 #include "aml-pwm-init.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
-
 #include <fbl/alloc_checker.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <mock/ddktl/protocol/pwm.h>

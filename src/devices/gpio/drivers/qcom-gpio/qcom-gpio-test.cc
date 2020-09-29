@@ -4,7 +4,6 @@
 
 #include "qcom-gpio.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 
 #include <fbl/auto_call.h>
