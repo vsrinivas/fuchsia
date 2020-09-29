@@ -79,6 +79,11 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
                parent_name);
     return ZX_ERR_NOT_SUPPORTED;
   }
+  if (device_info_.buffer_alignment == 0) {
+    LOGF_ERROR("network-device: bind: device '%s' reports invalid zero buffer alignment",
+               parent_name);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   // Copy the vectors of supported Rx and Tx types.
   std::copy_n(device_info_.rx_types_list, device_info_.rx_types_count, supported_rx_.begin());
   device_info_.rx_types_list = supported_rx_.data();
@@ -180,24 +185,21 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
 
 void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
   LOG_TRACE("network-device: GetInfo");
-  netdev::Info info;
-  info.class_ = static_cast<netdev::DeviceClass>(device_info_.device_class);
-  info.min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t);
-  info.descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
-  info.rx_depth = rx_fifo_depth();
-  info.tx_depth = tx_fifo_depth();
-  // TODO(fxbug.dev/44604): We're missing a way to negotiate the buffer alignment with the device
-  // implementation. We're using a sufficiently large alignment for now for typical requirements we
-  // see in drivers, but this needs to be fixed.
-  info.buffer_alignment = ZX_PAGE_SIZE / 2;
-  info.max_buffer_length = device_info_.max_buffer_length;
-  info.min_rx_buffer_length = device_info_.min_rx_buffer_length;
-  info.min_tx_buffer_head = device_info_.tx_head_length;
-  info.min_tx_buffer_tail = device_info_.tx_tail_length;
+  netdev::Info info{
+      .class_ = static_cast<netdev::DeviceClass>(device_info_.device_class),
+      .min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t),
+      .descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION,
+      .rx_depth = rx_fifo_depth(),
+      .tx_depth = tx_fifo_depth(),
+      .buffer_alignment = device_info_.buffer_alignment,
+      .max_buffer_length = device_info_.max_buffer_length,
+      .min_rx_buffer_length = device_info_.min_rx_buffer_length,
+      .min_tx_buffer_head = device_info_.tx_head_length,
+      .min_tx_buffer_tail = device_info_.tx_tail_length,
+  };
 
   std::array<netdev::FrameType, netdev::MAX_FRAME_TYPES> rx;
   std::array<netdev::FrameTypeSupport, netdev::MAX_FRAME_TYPES> tx;
-
   for (size_t i = 0; i < device_info_.rx_types_count; i++) {
     rx[i] = static_cast<netdev::FrameType>(device_info_.rx_types_list[i]);
   }

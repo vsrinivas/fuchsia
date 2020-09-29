@@ -50,25 +50,22 @@ void RxBuffer::FillReturn() {
 }
 
 FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
-    : ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl>() {
-  // setup default info
-  info_.device_features = 0;
-  info_.device_class = static_cast<uint8_t>(netdev::DeviceClass::ETHERNET);
-  info_.rx_depth = kRxDepth;
-  info_.tx_depth = kTxDepth;
-  info_.max_buffer_length = ZX_PAGE_SIZE;
-  info_.min_rx_buffer_length = 1500;
-  info_.tx_accel_count = 0;
-  info_.tx_accel_list = nullptr;
-  info_.rx_accel_count = 0;
-  info_.rx_accel_list = nullptr;
-  info_.tx_head_length = 0;
-  info_.tx_tail_length = 0;
-  info_.rx_types_count = 1;
-  info_.rx_types_list = rx_types_.data();
+    : ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl>(),
+      rx_types_(),
+      tx_types_(),
+      info_(device_info_t{
+          .tx_depth = kTxDepth,
+          .rx_depth = kRxDepth,
+          .device_class = static_cast<uint8_t>(netdev::DeviceClass::ETHERNET),
+          .rx_types_list = rx_types_.data(),
+          .rx_types_count = 1,
+          .tx_types_list = tx_types_.data(),
+          .tx_types_count = 1,
+          .max_buffer_length = ZX_PAGE_SIZE / 2,
+          .buffer_alignment = ZX_PAGE_SIZE,
+          .min_rx_buffer_length = 1500,
+      }) {
   rx_types_[0] = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
-  info_.tx_types_count = 1;
-  info_.tx_types_list = tx_types_.data();
   tx_types_[0].type = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
   tx_types_[0].supported_flags = 0;
   tx_types_[0].features = netdev::FRAME_FEATURES_RAW;

@@ -269,6 +269,9 @@ struct DeviceInfo {
   /// page size to guarantee compatibility.
   /// Can't be larger than `MAX_PHYSICAL_PARTS` pages.
   uint32 max_buffer_length;
+  /// Alignment requirement for buffers relative to the start of VMOs.
+  /// Must be greater than zero.
+  uint32 buffer_alignment;
   /// The minimum RX buffer length for correct operation, in bytes.
   uint32 min_rx_buffer_length;
   /// Number of bytes requested as header bytes on Tx buffers. If set to zero, Tx buffers will never

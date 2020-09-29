@@ -391,7 +391,6 @@ void SerialPpp::NetworkDeviceImplStop(network_device_impl_stop_callback callback
 
 void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
   *out_info = device_info_t{
-      .device_features = 0,
       .tx_depth = kFifoDepth,
       .rx_depth = kFifoDepth,
       .device_class = static_cast<uint8_t>(llcpp::fuchsia::hardware::network::DeviceClass::PPP),
@@ -400,13 +399,9 @@ void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
       .tx_types_list = kTxFrameSupport,
       .tx_types_count = sizeof(kTxFrameSupport) / sizeof(tx_support_t),
       .max_buffer_length = kMaxBufferSize,
+      .buffer_alignment = 1,
       .min_rx_buffer_length = kDefaultMtu,
-      .tx_head_length = 0,
-      .tx_tail_length = 0,
-      .rx_accel_list = nullptr,
-      .rx_accel_count = 0,
-      .tx_accel_list = nullptr,
-      .tx_accel_count = 0};
+  };
 }
 
 void SerialPpp::NetworkDeviceImplGetStatus(status_t* out_status) {

@@ -310,22 +310,16 @@ DeviceAdapter::DeviceAdapter(async_dispatcher_t* dispatcher, DeviceAdapterParent
       has_sessions_(false),
       online_(online),
       device_info_(device_info_t{
-          0,           // device_features
-          kFifoDepth,  // rx_depth
-          kFifoDepth,  // tx_depth
-          static_cast<uint8_t>(fuchsia::hardware::network::DeviceClass::UNKNOWN),  // device_class
-          rx_types_.data(),                                                        // rx_types_list
-          parent->config().rx_types().size(),                                      // rx_types_count
-          tx_types_.data(),                                                        // tx_types_list
-          parent->config().tx_types().size(),                                      // tx_types_count
-          fuchsia::net::tun::MAX_MTU,  // max_buffer_length
-          parent->config().mtu(),      // min_rx_buffer_length
-          0,                           // tx_head_lenght
-          0,                           // tx_tail_length
-          nullptr,                     // rx_accel_list
-          0,                           // rx_accel_count
-          nullptr,                     // tx_accel_list
-          0,                           // tx_accel_count
+          .tx_depth = kFifoDepth,
+          .rx_depth = kFifoDepth,
+          .device_class = static_cast<uint8_t>(fuchsia::hardware::network::DeviceClass::UNKNOWN),
+          .rx_types_list = rx_types_.data(),
+          .rx_types_count = parent->config().rx_types().size(),
+          .tx_types_list = tx_types_.data(),
+          .tx_types_count = parent->config().tx_types().size(),
+          .max_buffer_length = fuchsia::net::tun::MAX_MTU,
+          .buffer_alignment = 1,
+          .min_rx_buffer_length = parent->config().mtu(),
       }) {
   // Initialize rx_types_ and tx_types_ lists from parent config.
   for (size_t i = 0; i < parent_->config().rx_types().size(); i++) {

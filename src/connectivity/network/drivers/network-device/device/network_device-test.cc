@@ -135,9 +135,7 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.min_tx_buffer_tail, impl_.info().tx_tail_length);
   EXPECT_EQ(info.min_tx_buffer_head, impl_.info().tx_head_length);
   EXPECT_EQ(info.descriptor_version, NETWORK_DEVICE_DESCRIPTOR_VERSION);
-  // TODO(fxbug.dev/44604): Buffer alignment is currently hard-coded in DeviceInterface, it must be
-  // properly negotiated.
-  EXPECT_EQ(info.buffer_alignment, ZX_PAGE_SIZE / 2);
+  EXPECT_EQ(info.buffer_alignment, impl_.info().buffer_alignment);
   static_assert(sizeof(buffer_descriptor_t) % 8 == 0);
   EXPECT_EQ(info.min_descriptor_length, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
   EXPECT_EQ(info.class_, netdev::DeviceClass::ETHERNET);
@@ -154,6 +152,12 @@ TEST_F(NetworkDeviceTest, GetInfo) {
     EXPECT_EQ(static_cast<uint32_t>(info.tx_types.at(i).supported_flags),
               impl_.info().tx_types_list[i].supported_flags);
   }
+}
+
+TEST_F(NetworkDeviceTest, MinReportedBufferAlignment) {
+  // Tests that device creation is rejected with an invalid buffer_alignment value.
+  impl_.info().buffer_alignment = 0;
+  ASSERT_STATUS(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(NetworkDeviceTest, OpenSession) {

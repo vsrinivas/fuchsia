@@ -148,10 +148,10 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   ddk::NetworkDeviceIfcProtocolClient& client() { return device_client_; }
 
  private:
-  device_info_t info_{};
   std::array<zx::vmo, MAX_VMOS> vmos_;
   std::array<uint8_t, netdev::MAX_FRAME_TYPES> rx_types_;
   std::array<tx_support_t, netdev::MAX_FRAME_TYPES> tx_types_;
+  device_info_t info_{};
   status_t status_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;
   fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_;

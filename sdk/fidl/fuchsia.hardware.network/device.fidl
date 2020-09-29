@@ -73,7 +73,8 @@ struct Info {
     /// `tx_depth` is calculated based on the size of the actual backing hardware tx queue.
     uint32 tx_depth;
     /// Alignment requirement for buffers in the data VMO. All buffers in the data VMO *must* be
-    /// aligned to `buffer_alignment` relative to the start of the VMO.
+    /// aligned to `buffer_alignment` relative to the start of the VMO. `buffer_alignment == 0` is
+    /// never reported.
     uint32 buffer_alignment;
     /// Maximum supported length of buffers in the data VMO, in bytes.
     uint32 max_buffer_length;
