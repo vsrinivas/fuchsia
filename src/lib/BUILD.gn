@@ -105,7 +105,6 @@ group("tests") {
     "scoped_task:tests",
     "shared-buffer:tests",
     "storage:tests",
-    "streammap:tests",
     "syslog:tests",
     "tcp-stream-ext:tests",
     "test_executor:tests",

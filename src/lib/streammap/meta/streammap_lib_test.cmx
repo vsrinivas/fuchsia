@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/streammap_lib_test"
-    }
-}
