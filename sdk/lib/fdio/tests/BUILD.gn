@@ -72,6 +72,7 @@ test("fdio") {
     "fdio_poll.cc",
     "fdio_root.c",
     "fdio_socket.cc",
+    "fdio_socket_cleanup.cc",
     "fdio_socketpair.cc",
     "fdio_startup.cc",
     "fdio_stubs.cc",
