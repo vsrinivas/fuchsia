@@ -11,8 +11,10 @@ use {
     futures_util::stream::TryStreamExt,
     std::sync::{Arc, Mutex},
     test_utils_lib::{
-        events::{self as events, Event, EventMatcher, EventSource, Ordering},
+        events::{self as events, Event, EventSource},
         injectors::*,
+        matcher::EventMatcher,
+        sequence::EventSequence,
     },
 };
 
@@ -21,7 +23,7 @@ async fn test_exit_detection() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
+    let event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
     event_source.start_component_tree().await;
 
     let collection_name = String::from("test-collection");
@@ -37,10 +39,11 @@ async fn test_exit_detection() {
 
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
 
-    let expected_events = vec![EventMatcher::new()
-        .expect_type(events::Stopped::TYPE)
-        .expect_moniker(&target_moniker)];
-    event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
+    EventSequence::new()
+        .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(&target_moniker))
+        .expect(event_stream)
+        .await
+        .unwrap();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -51,8 +54,8 @@ async fn test_exit_after_rendezvous() {
     // component tree.
     let event_source = EventSource::new_sync().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
-    rendezvous_service.inject(&event_source, EventMatcher::new()).await;
-    let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
+    rendezvous_service.inject(&event_source, EventMatcher::ok()).await;
+    let event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
     event_source.start_component_tree().await;
 
     // Launch the component under test.
@@ -68,10 +71,11 @@ async fn test_exit_after_rendezvous() {
 
     // Wait to get confirmation that the component under test exited.
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
-    let expected_events = vec![EventMatcher::new()
-        .expect_type(events::Stopped::TYPE)
-        .expect_moniker(&target_moniker)];
-    event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
+    EventSequence::new()
+        .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(&target_moniker))
+        .expect(event_stream)
+        .await
+        .unwrap();
 
     // Check that we received a request from the component under test.
     assert_eq!(*rendezvous_service.call_count.lock().unwrap(), 1);

@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_component,
     test_utils_lib::{
         events::*,
+        matcher::EventMatcher,
         opaque_test::{OpaqueTest, OpaqueTestBuilder},
     },
 };
@@ -36,7 +37,7 @@ pub async fn start_policy_test(
 
     // Wait for the root component to be started so we can connect to its Realm service through the
     // hub.
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
+    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     event.resume().await?;
 
     let realm = connect_to_root_service::<fsys::RealmMarker>(&test)

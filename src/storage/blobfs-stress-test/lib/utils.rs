@@ -6,7 +6,8 @@ use {
     crate::io::Directory,
     log::info,
     test_utils_lib::{
-        events::{Event, EventMatcher, Handler, Started},
+        events::{Event, Handler, Started},
+        matcher::EventMatcher,
         opaque_test::OpaqueTest,
     },
 };
@@ -39,7 +40,7 @@ pub async fn init_blobfs() -> (OpaqueTest, Directory) {
     ];
 
     for _ in 1..=4 {
-        let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
+        let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
         let component_url = event.component_url();
         info!("{} has started", component_url);
 

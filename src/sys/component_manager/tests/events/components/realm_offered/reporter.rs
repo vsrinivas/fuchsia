@@ -6,7 +6,10 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    test_utils_lib::events::{Event, EventMatcher, EventSource, Handler, Started},
+    test_utils_lib::{
+        events::{Event, EventSource, Handler, Started},
+        matcher::EventMatcher,
+    },
 };
 
 #[fasync::run_singlethreaded]
@@ -27,7 +30,7 @@ async fn main() {
     trigger.run().await.expect("start trigger failed");
 
     for _ in 0..3 {
-        let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
+        let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
         let target_moniker = event.target_moniker();
         let _ = echo.echo_string(Some(target_moniker)).await.unwrap();
         event.resume().await.unwrap();

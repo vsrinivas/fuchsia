@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::{
-        CapabilityRouted, Event, EventMatcher, EventSource, EventStreamError, RoutingProtocol,
+    crate::{
+        events::{CapabilityRouted, Event, EventSource, EventStreamError, RoutingProtocol},
+        matcher::EventMatcher,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -31,7 +32,7 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
         event_source: &EventSource,
         matcher: EventMatcher,
     ) -> AbortHandle {
-        let matcher = matcher.expect_capability_id(Self::Marker::NAME);
+        let matcher = matcher.capability_id(Self::Marker::NAME);
         let mut event_stream = event_source
             .subscribe(vec![CapabilityRouted::NAME])
             .await
@@ -44,16 +45,15 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
                 async move {
                     loop {
                         // Wait for a capability routed event that matches
-                        let event = match event_stream
-                            .wait_until_exact::<CapabilityRouted>(matcher.clone())
-                            .await
-                        {
-                            Ok(e) => e,
-                            Err(e) => match e.downcast::<EventStreamError>() {
-                                Ok(EventStreamError::StreamClosed) => return,
-                                Err(e) => panic!("Unknown error! {:?}", e),
-                            },
-                        };
+                        let event =
+                            match matcher.clone().wait::<CapabilityRouted>(&mut event_stream).await
+                            {
+                                Ok(e) => e,
+                                Err(e) => match e.downcast::<EventStreamError>() {
+                                    Ok(EventStreamError::StreamClosed) => return,
+                                    Err(e) => panic!("Unknown error! {:?}", e),
+                                },
+                            };
 
                         // An event was found! Inject the route.
                         if event.result.is_ok() {

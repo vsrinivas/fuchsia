@@ -5,7 +5,7 @@
 use {
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::*,
-    test_utils_lib::{events::*, opaque_test::*},
+    test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -35,12 +35,13 @@ async fn base_resolver_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
+    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
     // Expect the echo_server component to be bound to
-    let event = event_stream
-        .expect_match::<Started>(EventMatcher::ok().expect_moniker("./echo_server:0"))
+    let event = EventMatcher::ok()
+        .moniker("./echo_server:0")
+        .expect_match::<Started>(&mut event_stream)
         .await;
     event.resume().await.unwrap();
 

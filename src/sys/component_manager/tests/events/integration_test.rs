@@ -10,7 +10,7 @@ use {
     futures::StreamExt,
     test_utils_lib::{
         echo_capability::EchoCapability, events::*, injectors::*, interposers::ProtocolInterposer,
-        opaque_test::*,
+        matcher::EventMatcher, opaque_test::*,
     },
     vfs::{file::pcb::asynchronous::read_only_static, pseudo_directory},
 };
@@ -26,7 +26,7 @@ async fn async_event_source_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -54,7 +54,7 @@ async fn echo_interposer_test() {
 
     // Setup the interposer
     let (echo_interposer, mut rx) = EchoInterposer::new();
-    let interposer = echo_interposer.interpose(&event_source, EventMatcher::new()).await;
+    let interposer = echo_interposer.interpose(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -78,7 +78,7 @@ async fn scoped_events_test() {
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new().expect_moniker("./echo_reporter:0")).await;
+    capability.inject(&event_source, EventMatcher::ok().moniker("./echo_reporter:0")).await;
 
     event_source.start_component_tree().await;
 
@@ -126,7 +126,7 @@ async fn realm_offered_event_source_test() {
     // here.
     let (capability, mut echo_rx) = EchoCapability::new();
     capability
-        .inject(&event_source, EventMatcher::new().expect_moniker("./nested_realm:0/reporter:0"))
+        .inject(&event_source, EventMatcher::ok().moniker("./nested_realm:0/reporter:0"))
         .await;
     event_source.start_component_tree().await;
 
@@ -150,7 +150,7 @@ async fn nested_event_source_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -176,7 +176,7 @@ async fn chained_interposer_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoFactoryInterposer::new();
-    capability.interpose(&event_source, EventMatcher::new()).await;
+    capability.interpose(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -193,7 +193,7 @@ async fn expect_and_get_timestamp<T: Event>(
     event_stream: &mut EventStream,
     moniker: &str,
 ) -> Result<zx::Time, Error> {
-    let event = event_stream.expect_match::<T>(EventMatcher::ok().expect_moniker(moniker)).await;
+    let event = EventMatcher::ok().moniker(moniker).expect_match::<T>(event_stream).await;
     let timestamp = event.timestamp();
     event.resume().await.unwrap();
     Ok(timestamp)
@@ -240,7 +240,7 @@ async fn event_capability_ready() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -272,7 +272,7 @@ async fn resolved_error_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -291,7 +291,7 @@ async fn synthesis_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
     let mut events = vec![];
@@ -326,7 +326,7 @@ async fn static_event_stream_capability_requested_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
@@ -350,7 +350,7 @@ async fn dir_capability_routed_test() {
 
     // Setup the Echo service
     let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     // Setup the pseudo filesystem
     let pseudo_dir = pseudo_directory! {
@@ -359,12 +359,12 @@ async fn dir_capability_routed_test() {
         }
     };
     DirectoryInjector::new(pseudo_dir)
-        .inject(&event_source, EventMatcher::new().expect_capability_id("/foo"))
+        .inject(&event_source, EventMatcher::ok().capability_id("/foo"))
         .await;
 
     // Connect the v2 component to a directory in the test namespace
     TestNamespaceInjector::new("/pkg")
-        .inject(&event_source, EventMatcher::new().expect_capability_id("/test_pkg"))
+        .inject(&event_source, EventMatcher::ok().capability_id("/test_pkg"))
         .await;
 
     // Start the component tree

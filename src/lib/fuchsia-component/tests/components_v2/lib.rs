@@ -7,8 +7,10 @@ use {
     fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
     test_utils_lib::{
-        events::{Event, EventMatcher, Ordering, Stopped},
+        events::{Event, Stopped},
+        matcher::EventMatcher,
         opaque_test::OpaqueTest,
+        sequence::{EventSequence, Ordering},
     },
 };
 
@@ -19,11 +21,13 @@ async fn scoped_instances() -> Result<(), Error> {
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm.cm")
             .await?;
 
-    let event_source = test.connect_to_event_source().await?;
-    let event =
-        EventMatcher::new().expect_type(Stopped::TYPE).expect_moniker("./coll:auto-*".to_string());
+    let mut event_source = test.connect_to_event_source().await?;
+    let event = EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:auto-*".to_string());
     let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
-    let expectation = event_source.expect_events(Ordering::Unordered, expected_events).await?;
+    let expectation = EventSequence::new()
+        .all_of(expected_events, Ordering::Ordered)
+        .subscribe_and_expect(&mut event_source)
+        .await?;
 
     event_source.start_component_tree().await;
     info!("Waiting for scoped instances to be destroyed");

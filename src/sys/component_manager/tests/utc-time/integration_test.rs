@@ -12,7 +12,7 @@ use fuchsia_zircon as zx;
 use futures::{channel::oneshot, lock::Mutex, prelude::*};
 use log::*;
 use std::sync::Arc;
-use test_utils_lib::{events::*, injectors::*, opaque_test::OpaqueTestBuilder};
+use test_utils_lib::{injectors::*, matcher::EventMatcher, opaque_test::OpaqueTestBuilder};
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
     pseudo_directory,
@@ -69,7 +69,7 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
     // requesting this will panic.
     debug!("injecting TestOutcomeCapability");
     let (capability, test_case) = test_outcome_report();
-    capability.inject(&event_source, EventMatcher::new()).await;
+    capability.inject(&event_source, EventMatcher::ok()).await;
 
     // Unblock the component_manager.
     debug!("starting component tree");

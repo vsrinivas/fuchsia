@@ -7,5 +7,7 @@ pub mod echo_factory_capability;
 pub mod events;
 pub mod injectors;
 pub mod interposers;
+pub mod matcher;
 pub mod opaque_test;
+pub mod sequence;
 pub mod trigger_capability;

@@ -11,7 +11,7 @@ use {
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::{path::PathBuf, sync::Arc, sync::Mutex},
-    test_utils_lib::{events::*, injectors::*, opaque_test::*},
+    test_utils_lib::{events::*, injectors::*, matcher::EventMatcher, opaque_test::*},
 };
 
 lazy_static! {
@@ -44,14 +44,14 @@ async fn storage() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
+    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
     // Expect the 2 children to be bound to
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
+    let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok()).await;
+    let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
     let component_manager_path = test.get_component_manager_path();
@@ -87,23 +87,20 @@ async fn storage_from_collection() {
     // rendezvous so the test can inspect storage before the child is
     // destroyed.
     let trigger_capability = TriggerCapability::new(trigger_lock.clone());
-    trigger_capability.inject(&event_source, EventMatcher::new()).await;
+    trigger_capability.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
     // Expect the root component to be started
-    let event = event_stream
-        .wait_until_exact::<Started>(EventMatcher::new().expect_moniker("."))
-        .await
-        .unwrap();
+    let event = EventMatcher::ok().moniker(".").wait::<Started>(&mut event_stream).await.unwrap();
     event.resume().await.unwrap();
 
     // Expect 2 children to be started - one static and one dynamic
     // Order is irrelevant
-    let event = event_stream.wait_until_type::<Started>().await.unwrap();
+    let event = EventMatcher::ok().wait::<Started>(&mut event_stream).await.unwrap();
     event.resume().await.unwrap();
 
-    let event = event_stream.wait_until_type::<Started>().await.unwrap();
+    let event = EventMatcher::ok().wait::<Started>(&mut event_stream).await.unwrap();
     event.resume().await.unwrap();
 
     // With all children started, do the test
@@ -119,8 +116,9 @@ async fn storage_from_collection() {
     drop(trigger_guard);
 
     // Expect the dynamic child to be destroyed
-    let event = event_stream
-        .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:storage_user:1"))
+    let event = EventMatcher::ok()
+        .moniker("./coll:storage_user:1")
+        .wait::<Destroyed>(&mut event_stream)
         .await
         .unwrap();
 

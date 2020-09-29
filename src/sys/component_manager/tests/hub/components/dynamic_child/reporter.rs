@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context as _, fidl::endpoints, fidl_fuchsia_io::DirectoryMarker,
+    anyhow::Context as _,
+    fidl::endpoints,
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service, futures::prelude::*, hub_report::HubReport,
-    test_utils_lib::events::*,
+    fuchsia_component::client::connect_to_service,
+    futures::prelude::*,
+    hub_report::HubReport,
+    test_utils_lib::{events::*, matcher::EventMatcher},
 };
 
 #[fasync::run_singlethreaded]
@@ -95,10 +99,9 @@ async fn main() {
     fasync::Task::spawn(f).detach();
 
     // Wait for the dynamic child to begin deletion
-    let event = event_stream
-        .expect_match::<MarkedForDestruction>(
-            EventMatcher::ok().expect_moniker("./coll:simple_instance:1"),
-        )
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<MarkedForDestruction>(&mut event_stream)
         .await;
     hub_report.report_directory_contents("/hub/children").await.unwrap();
     hub_report.report_directory_contents("/hub/deleting").await.unwrap();
@@ -109,17 +112,17 @@ async fn main() {
     destroy_handle.await.context("delete_child failed").unwrap().expect("failed to delete child");
 
     // Wait for the dynamic child to stop
-    let event = event_stream
-        .expect_match::<Stopped>(EventMatcher::ok().expect_moniker("./coll:simple_instance:1"))
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<Stopped>(&mut event_stream)
         .await;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await.unwrap();
     event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to begin deletion
-    let event = event_stream
-        .expect_match::<MarkedForDestruction>(
-            EventMatcher::ok().expect_moniker("./coll:simple_instance:1/child:0"),
-        )
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1/child:0")
+        .expect_match::<MarkedForDestruction>(&mut event_stream)
         .await;
     hub_report
         .report_directory_contents("/hub/deleting/coll:simple_instance:1/children")
@@ -136,10 +139,9 @@ async fn main() {
     event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to be destroyed
-    let event = event_stream
-        .expect_match::<Destroyed>(
-            EventMatcher::ok().expect_moniker("./coll:simple_instance:1/child:0"),
-        )
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1/child:0")
+        .expect_match::<Destroyed>(&mut event_stream)
         .await;
     hub_report
         .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting")
@@ -148,8 +150,9 @@ async fn main() {
     event.resume().await.unwrap();
 
     // Wait for the dynamic child to be destroyed
-    let event = event_stream
-        .expect_match::<Destroyed>(EventMatcher::ok().expect_moniker("./coll:simple_instance:1"))
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<Destroyed>(&mut event_stream)
         .await;
     hub_report.report_directory_contents("/hub/deleting").await.unwrap();
     event.resume().await.unwrap();

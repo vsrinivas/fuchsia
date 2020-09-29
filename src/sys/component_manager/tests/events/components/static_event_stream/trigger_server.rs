@@ -12,7 +12,8 @@ use {
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,
     test_utils_lib::{
-        events::{CapabilityRequested, CapabilityRequestedError, Event, EventMatcher, EventStream},
+        events::{CapabilityRequested, CapabilityRequestedError, Event, EventStream},
+        matcher::EventMatcher,
         trigger_capability::{TriggerCapability, TriggerReceiver},
     },
 };
@@ -47,7 +48,7 @@ fn run_main_event_stream(
     fasync::Task::spawn(async move {
         let mut event_stream = EventStream::new(stream);
         let mut capability_request =
-            event_stream.expect_match::<CapabilityRequested>(EventMatcher::ok()).await;
+            EventMatcher::ok().expect_match::<CapabilityRequested>(&mut event_stream).await;
         assert_eq!(".\\trigger_server:0/trigger_client:0", capability_request.target_moniker());
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
@@ -70,7 +71,7 @@ fn run_second_event_stream(
     fasync::Task::spawn(async move {
         let mut event_stream = EventStream::new(stream);
         let capability_request =
-            event_stream.expect_match::<CapabilityRequested>(EventMatcher::err()).await;
+            EventMatcher::err().expect_match::<CapabilityRequested>(&mut event_stream).await;
         let trigger_path = format!("/svc/{}", ftest::TriggerMarker::NAME);
         // Verify that the second stream gets an error.
         match capability_request.result {

@@ -11,7 +11,7 @@ use {
     hub_report_capability::*,
     io_util::*,
     std::{path::PathBuf, sync::Arc},
-    test_utils_lib::{events::*, injectors::*, opaque_test::*},
+    test_utils_lib::{events::*, injectors::*, matcher::EventMatcher, opaque_test::*},
 };
 
 pub struct TestRunner {
@@ -51,14 +51,15 @@ impl TestRunner {
             let event_stream = event_source.subscribe(event_names).await.unwrap();
 
             // Inject HubReportCapability wherever it's requested.
-            hub_report_capability.inject(&event_source, EventMatcher::new()).await;
+            hub_report_capability.inject(&event_source, EventMatcher::ok()).await;
 
             // Unblock component manager
             event_source.start_component_tree().await;
 
             // Wait for the root component to start up
-            start_event_stream
-                .expect_match::<Started>(EventMatcher::ok().expect_moniker("."))
+            EventMatcher::ok()
+                .moniker(".")
+                .expect_match::<Started>(&mut start_event_stream)
                 .await
                 .resume()
                 .await
@@ -66,8 +67,8 @@ impl TestRunner {
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
-                start_event_stream
-                    .expect_match::<Started>(EventMatcher::ok())
+                EventMatcher::ok()
+                    .expect_match::<Started>(&mut start_event_stream)
                     .await
                     .resume()
                     .await
@@ -346,10 +347,9 @@ async fn dynamic_child_test() {
         .unwrap();
 
     // Wait for the dynamic child to begin deletion
-    let event = event_stream
-        .expect_match::<MarkedForDestruction>(
-            EventMatcher::ok().expect_moniker("./coll:simple_instance:1"),
-        )
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<MarkedForDestruction>(&mut event_stream)
         .await;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
@@ -366,8 +366,9 @@ async fn dynamic_child_test() {
     event.resume().await.unwrap();
 
     // Wait for the dynamic child to stop
-    let event = event_stream
-        .expect_match::<Stopped>(EventMatcher::ok().expect_moniker("./coll:simple_instance:1"))
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<Stopped>(&mut event_stream)
         .await;
 
     // After stopping, the dynamic child should not have an exec directory
@@ -382,10 +383,9 @@ async fn dynamic_child_test() {
     event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to begin deletion
-    let event = event_stream
-        .expect_match::<MarkedForDestruction>(
-            EventMatcher::ok().expect_moniker("./coll:simple_instance:1/child:0"),
-        )
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1/child:0")
+        .expect_match::<MarkedForDestruction>(&mut event_stream)
         .await;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
@@ -404,10 +404,9 @@ async fn dynamic_child_test() {
     event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to be destroyed
-    let event = event_stream
-        .expect_match::<Destroyed>(
-            EventMatcher::ok().expect_moniker("./coll:simple_instance:1/child:0"),
-        )
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1/child:0")
+        .expect_match::<Destroyed>(&mut event_stream)
         .await;
 
     // The dynamic child's static child should not be visible in the hub anymore
@@ -417,8 +416,9 @@ async fn dynamic_child_test() {
     event.resume().await.unwrap();
 
     // Wait for the dynamic child to be destroyed
-    let event = event_stream
-        .expect_match::<Destroyed>(EventMatcher::ok().expect_moniker("./coll:simple_instance:1"))
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<Destroyed>(&mut event_stream)
         .await;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub

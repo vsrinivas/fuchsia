@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::{
-        CapabilityRouted, Event, EventMatcher, EventSource, EventStreamError, RoutingProtocol,
+    crate::{
+        events::{CapabilityRouted, Event, EventSource, EventStreamError, RoutingProtocol},
+        matcher::EventMatcher,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -40,9 +41,7 @@ pub trait CapabilityInjector: 'static + Send + Sync {
         fasync::Task::spawn(async move {
             loop {
                 // Wait for a capability routed event that matches
-                let event = match event_stream
-                    .wait_until_exact::<CapabilityRouted>(matcher.clone())
-                    .await
+                let event = match matcher.clone().wait::<CapabilityRouted>(&mut event_stream).await
                 {
                     Ok(e) => e,
                     Err(e) => match e.downcast::<EventStreamError>() {
@@ -193,7 +192,7 @@ impl<M: ServiceMarker, T: ProtocolInjector<Marker = M> + 'static + Sync + Send> 
     for T
 {
     async fn inject(self: &Arc<Self>, event_source: &EventSource, matcher: EventMatcher) {
-        let matcher = matcher.expect_capability_id(M::NAME);
+        let matcher = matcher.capability_id(M::NAME);
         CapabilityInjector::subscribe(self, event_source, matcher).await;
     }
 

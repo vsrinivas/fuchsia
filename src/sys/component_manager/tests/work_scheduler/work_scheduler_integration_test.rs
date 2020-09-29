@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    test_utils_lib::{events::*, injectors::*, opaque_test::*},
+    test_utils_lib::{events::*, injectors::*, matcher::EventMatcher, opaque_test::*},
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 
@@ -17,12 +17,12 @@ async fn basic_work_scheduler_test() {
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::new()).await;
+    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
+    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
     let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
@@ -39,17 +39,18 @@ async fn unbound_work_scheduler_test() {
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::new()).await;
+    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::ok()).await;
 
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_match::<Started>(EventMatcher::ok().expect_moniker(".")).await;
+    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
     // `/worker_sibling:0` has started.
-    let event = event_stream
-        .expect_match::<Started>(EventMatcher::ok().expect_moniker("./worker_sibling:0"))
+    let event = EventMatcher::ok()
+        .moniker("./worker_sibling:0")
+        .expect_match::<Started>(&mut event_stream)
         .await;
     event.resume().await.unwrap();
 

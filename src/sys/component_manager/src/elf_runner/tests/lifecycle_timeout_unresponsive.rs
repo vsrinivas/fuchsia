@@ -6,8 +6,10 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_syslog::{self as fxlog},
-    test_utils_lib::events::{
-        Destroyed, Event, EventMatcher, EventSource, ExitStatusMatcher, Ordering, Stopped,
+    test_utils_lib::{
+        events::{Destroyed, Event, EventSource, Stopped},
+        matcher::{EventMatcher, ExitStatusMatcher},
+        sequence::{EventSequence, Ordering},
     },
 };
 
@@ -18,8 +20,7 @@ async fn test_stop_timeouts() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
+    let event_stream = event_source.subscribe(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
     event_source.start_component_tree().await;
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
@@ -48,21 +49,26 @@ async fn test_stop_timeouts() {
     let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
     let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
     let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
-    let expected_events = vec![
-        EventMatcher::new()
-            .expect_type(Stopped::TYPE)
-            .expect_monikers(&target_monikers)
-            .expect_stop(Some(ExitStatusMatcher::AnyCrash)),
-        EventMatcher::new()
-            .expect_monikers(&target_monikers)
-            .expect_stop(Some(ExitStatusMatcher::AnyCrash)),
-        EventMatcher::new()
-            .expect_monikers(&target_monikers)
-            .expect_stop(Some(ExitStatusMatcher::AnyCrash)),
-        EventMatcher::new().expect_type(Destroyed::TYPE).expect_monikers(&target_monikers),
-        EventMatcher::new().expect_type(Destroyed::TYPE).expect_monikers(&target_monikers),
-        EventMatcher::new().expect_type(Destroyed::TYPE).expect_monikers(&target_monikers),
-    ];
-
-    event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
+    EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::ok()
+                    .r#type(Stopped::TYPE)
+                    .monikers(&target_monikers)
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .monikers(&target_monikers)
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .monikers(&target_monikers)
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok().r#type(Destroyed::TYPE).monikers(&target_monikers),
+                EventMatcher::ok().r#type(Destroyed::TYPE).monikers(&target_monikers),
+                EventMatcher::ok().r#type(Destroyed::TYPE).monikers(&target_monikers),
+            ],
+            Ordering::Ordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 }

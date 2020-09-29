@@ -12,7 +12,10 @@ use {
     io_util,
     maplit::hashmap,
     std::collections::HashSet,
-    test_utils_lib::events::{CapabilityReady, Event, EventMatcher, EventSource, Handler},
+    test_utils_lib::{
+        events::{CapabilityReady, Event, EventSource, Handler},
+        matcher::EventMatcher,
+    },
 };
 
 async fn list_entries(directory: &DirectoryProxy) -> Vec<String> {
@@ -61,7 +64,8 @@ async fn main() {
     let mut seen = HashSet::new();
 
     while seen.len() != 3 {
-        let event = event_stream.expect_match::<CapabilityReady>(EventMatcher::new()).await;
+        let event =
+            EventMatcher::default().expect_match::<CapabilityReady>(&mut event_stream).await;
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");
         match &event.result {
             Ok(payload) if !seen.contains(&payload.path) => {

@@ -5,20 +5,13 @@
 use {
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
-    std::cmp::min,
-    test_utils_lib::{events::*, opaque_test::*},
+    test_utils_lib::{
+        events::*,
+        matcher::EventMatcher,
+        opaque_test::*,
+        sequence::{EventSequence, Ordering},
+    },
 };
-
-/// Drains the required number of events, sorts them and compares them
-/// to the expected events
-fn expect_next(actual_events: &mut Vec<EventDescriptor>, expected_events: Vec<EventMatcher>) {
-    let num_events: usize = min(expected_events.len(), actual_events.len());
-    let mut actual_events: Vec<EventDescriptor> = actual_events.drain(0..num_events).collect();
-    actual_events.sort_unstable();
-    for (actual_event, expected_event) in actual_events.iter().zip(expected_events.iter()) {
-        expected_event.matches(actual_event).unwrap();
-    }
-}
 
 #[fasync::run_singlethreaded(test)]
 async fn destruction() {
@@ -28,15 +21,35 @@ async fn destruction() {
     .await
     .unwrap();
 
-    let event_source = test.connect_to_event_source().await.unwrap();
+    let mut event_source = test.connect_to_event_source().await.unwrap();
 
-    let event_log = event_source.record_events(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
     let mut event_stream = event_source.subscribe(vec![Destroyed::NAME]).await.unwrap();
+    let expectation = EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1/trigger_a:0"),
+                EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+            ],
+            Ordering::Unordered,
+        )
+        .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1"))
+        .all_of(
+            vec![
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1/trigger_a:0"),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+            ],
+            Ordering::Unordered,
+        )
+        .then(EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1"))
+        .subscribe_and_expect(&mut event_source)
+        .await
+        .unwrap();
     event_source.start_component_tree().await;
 
     // Wait for `coll:parent` to be destroyed.
-    let event = event_stream
-        .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:parent:1"))
+    let event = EventMatcher::ok()
+        .moniker("./coll:parent:1$")
+        .wait::<Destroyed>(&mut event_stream)
         .await
         .unwrap();
 
@@ -48,42 +61,6 @@ async fn destruction() {
     assert!(child_dir_contents.is_empty());
 
     // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
-    let mut events = event_log.flush().await;
-
-    expect_next(
-        &mut events,
-        vec![
-            EventMatcher::new()
-                .expect_type(Stopped::TYPE)
-                .expect_moniker("./coll:parent:1/trigger_a:0"),
-            EventMatcher::new()
-                .expect_type(Stopped::TYPE)
-                .expect_moniker("./coll:parent:1/trigger_b:0"),
-        ],
-    );
-
-    expect_next(
-        &mut events,
-        vec![EventMatcher::new().expect_type(Stopped::TYPE).expect_moniker("./coll:parent:1")],
-    );
-
-    expect_next(
-        &mut events,
-        vec![
-            EventMatcher::new()
-                .expect_type(Destroyed::TYPE)
-                .expect_moniker("./coll:parent:1/trigger_a:0"),
-            EventMatcher::new()
-                .expect_type(Destroyed::TYPE)
-                .expect_moniker("./coll:parent:1/trigger_b:0"),
-        ],
-    );
-
-    expect_next(
-        &mut events,
-        vec![EventMatcher::new().expect_type(Destroyed::TYPE).expect_moniker("./coll:parent:1")],
-    );
-
-    assert!(events.is_empty());
     event.resume().await.unwrap();
+    expectation.await.unwrap();
 }

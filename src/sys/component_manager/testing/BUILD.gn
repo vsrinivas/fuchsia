@@ -40,7 +40,9 @@ rustc_library("test_utils_lib") {
     "injectors.rs",
     "interposers.rs",
     "lib.rs",
+    "matcher.rs",
     "opaque_test.rs",
+    "sequence.rs",
     "trigger_capability.rs",
   ]
 }

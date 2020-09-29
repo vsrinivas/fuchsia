@@ -7,7 +7,10 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
-    test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved, Started},
+    test_utils_lib::{
+        events::{Event, EventSource, Resolved, Started},
+        matcher::EventMatcher,
+    },
 };
 
 #[fasync::run_singlethreaded]
@@ -30,11 +33,11 @@ async fn main() {
     let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let _ = realm.bind_child(&mut child_ref, server_end).await;
 
-    let _resolved_event = event_stream.expect_match::<Resolved>(EventMatcher::err()).await;
+    let _resolved_event = EventMatcher::err().expect_match::<Resolved>(&mut event_stream).await;
 
     // A started event should still be dispatched indicating failure due to a resolution
     // error.
-    let _started_event = event_stream.expect_match::<Started>(EventMatcher::err()).await;
+    let _started_event = EventMatcher::err().expect_match::<Started>(&mut event_stream).await;
 
     let _ = echo.echo_string(Some("ERROR")).await.unwrap();
 }
