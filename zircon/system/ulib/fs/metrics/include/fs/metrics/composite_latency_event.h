@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_METRICS_COMPOSITE_LATENCY_EVENT_H_
+#define FS_METRICS_COMPOSITE_LATENCY_EVENT_H_
 
 #include <cobalt-client/cpp/histogram.h>
 #include <fs/metrics/cobalt_metrics.h>
@@ -13,8 +14,8 @@ namespace fs_metrics {
 namespace internal {
 
 // Returns the appropiate histogram for an event.
-cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* SelectHistogram(
-    const Event event, fs_metrics::VnodeMetrics* metrics);
+cobalt_client::Histogram<fs_metrics::FsCommonMetrics::kHistogramBuckets>* SelectHistogram(
+    Event event, fs_metrics::FsCommonMetrics* metrics);
 
 }  // namespace internal
 
@@ -31,7 +32,7 @@ class CompositeLatencyEvent {
  public:
   CompositeLatencyEvent() = delete;
   CompositeLatencyEvent(Event event, Histograms* histogram_collection,
-                        fs_metrics::VnodeMetrics* metrics);
+                        fs_metrics::FsCommonMetrics* metrics);
   CompositeLatencyEvent(const CompositeLatencyEvent&) = delete;
   CompositeLatencyEvent(CompositeLatencyEvent&&) = default;
   CompositeLatencyEvent& operator=(const CompositeLatencyEvent&) = delete;
@@ -45,13 +46,15 @@ class CompositeLatencyEvent {
   void Cancel();
 
   LatencyEvent* mutable_latency_event() { return &inspect_event_; }
-  cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* mutable_histogram() {
+  cobalt_client::Histogram<fs_metrics::FsCommonMetrics::kHistogramBuckets>* mutable_histogram() {
     return cobalt_histogram_;
   }
 
  private:
   LatencyEvent inspect_event_;
-  cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* cobalt_histogram_;
+  cobalt_client::Histogram<fs_metrics::FsCommonMetrics::kHistogramBuckets>* cobalt_histogram_;
 };
 
 }  // namespace fs_metrics
+
+#endif  // FS_METRICS_COMPOSITE_LATENCY_EVENT_H_

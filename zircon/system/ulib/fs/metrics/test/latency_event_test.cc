@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fzl/time.h>
+#include <lib/zx/time.h>
+
 #include <vector>
 
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
-#include <lib/fzl/time.h>
-#include <lib/zx/time.h>
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {
@@ -31,9 +32,9 @@ zx::ticks FakeClock::now_;
 
 class FakeHistograms {
  public:
-  FakeHistograms() : histogram_id_(-1) {}
-
-  uint64_t GetHistogramId(Event operation, const EventOptions& options) { return histogram_id_; }
+  uint64_t GetHistogramId(Event operation, const EventOptions& options) const {
+    return histogram_id_;
+  }
 
   void Record(uint64_t histogram_id, zx::duration duration) {
     collected_data_.push_back({histogram_id, duration});
@@ -44,7 +45,7 @@ class FakeHistograms {
   const std::vector<HistogramEntry>& collected_data() const { return collected_data_; }
 
  private:
-  uint64_t histogram_id_;
+  uint64_t histogram_id_ = -1;
   std::vector<HistogramEntry> collected_data_;
 };
 

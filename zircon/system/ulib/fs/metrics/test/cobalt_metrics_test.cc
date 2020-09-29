@@ -51,30 +51,30 @@ TEST(CobaltMetricsTest, LogWhileEnabled) {
   fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ true);
 
-  fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+  fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
   ASSERT_NOT_NULL(vnodes);
   if (metrics.IsEnabled()) {
-    vnodes->close.Add(kLatencyNs);
+    vnodes->vnode.close.Add(kLatencyNs);
   }
   // We should have observed 15 hundred usecs.
-  EXPECT_EQ(vnodes->close.GetCount(kLatencyNs), 1);
+  EXPECT_EQ(vnodes->vnode.close.GetCount(kLatencyNs), 1);
 }
 
 TEST(CobaltMetricsTest, LogWhileNotEnabled) {
   fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ false);
 
-  fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+  fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
   ASSERT_NOT_NULL(vnodes);
   if (metrics.IsEnabled()) {
-    vnodes->close.Add(kLatencyNs);
+    vnodes->vnode.close.Add(kLatencyNs);
   }
-  EXPECT_EQ(vnodes->close.GetCount(kLatencyNs), 0);
+  EXPECT_EQ(vnodes->vnode.close.GetCount(kLatencyNs), 0);
 }
 
 TEST(CobaltMetricsTest, EnableMetricsEnabled) {
   fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
-  fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+  fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
   ASSERT_NOT_NULL(vnodes);
   ASSERT_EQ(vnodes->metrics_enabled, metrics.IsEnabled());
   metrics.EnableMetrics(/*should_collect*/ true);
@@ -86,7 +86,7 @@ TEST(CobaltMetricsTest, EnableMetricsEnabled) {
 TEST(CobaltMetricsTest, EnableMetricsDisabled) {
   fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ true);
-  fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+  fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
 
   ASSERT_NOT_NULL(vnodes);
   ASSERT_EQ(vnodes->metrics_enabled, metrics.IsEnabled());
@@ -134,8 +134,10 @@ TEST(CobaltMetricsTest, CreateCompressionFormatMetrics) {
   ASSERT_EQ(metrics.compression_format_metrics().source, source);
 
   std::vector<fs_metrics::CompressionFormat> formats = {
-      fs_metrics::CompressionFormat::kUnknown, fs_metrics::CompressionFormat::kUncompressed,
-      fs_metrics::CompressionFormat::kCompressedLZ4, fs_metrics::CompressionFormat::kCompressedZSTD,
+      fs_metrics::CompressionFormat::kUnknown,
+      fs_metrics::CompressionFormat::kUncompressed,
+      fs_metrics::CompressionFormat::kCompressedLZ4,
+      fs_metrics::CompressionFormat::kCompressedZSTD,
       fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
       fs_metrics::CompressionFormat::kCompressedZSTDChunked,
   };
@@ -166,8 +168,10 @@ TEST(CobaltMetricsTest, IncrementCompressionFormatMetrics) {
 
   auto source = fs_metrics::CompressionSource::kBlobfs;
   std::vector<fs_metrics::CompressionFormat> formats = {
-      fs_metrics::CompressionFormat::kUnknown, fs_metrics::CompressionFormat::kUncompressed,
-      fs_metrics::CompressionFormat::kCompressedLZ4, fs_metrics::CompressionFormat::kCompressedZSTD,
+      fs_metrics::CompressionFormat::kUnknown,
+      fs_metrics::CompressionFormat::kUncompressed,
+      fs_metrics::CompressionFormat::kCompressedLZ4,
+      fs_metrics::CompressionFormat::kCompressedZSTD,
       fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
       fs_metrics::CompressionFormat::kCompressedZSTDChunked,
   };

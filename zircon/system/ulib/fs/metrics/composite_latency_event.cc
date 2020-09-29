@@ -9,47 +9,77 @@
 namespace fs_metrics {
 
 namespace internal {
-cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* SelectHistogram(
-    const Event event, fs_metrics::VnodeMetrics* metrics) {
+cobalt_client::Histogram<fs_metrics::FsCommonMetrics::kHistogramBuckets>* SelectHistogram(
+    const Event event, fs_metrics::FsCommonMetrics* metrics) {
   switch (event) {
     case Event::kClose:
-      return &metrics->close;
+      return &metrics->vnode.close;
 
     case Event::kRead:
-      return &metrics->read;
+      return &metrics->vnode.read;
 
     case Event::kWrite:
-      return &metrics->write;
+      return &metrics->vnode.write;
 
     case Event::kAppend:
-      return &metrics->append;
+      return &metrics->vnode.append;
 
     case Event::kTruncate:
-      return &metrics->truncate;
+      return &metrics->vnode.truncate;
 
     case Event::kSetAttr:
-      return &metrics->set_attr;
+      return &metrics->vnode.set_attr;
 
     case Event::kGetAttr:
-      return &metrics->get_attr;
+      return &metrics->vnode.get_attr;
 
     case Event::kReadDir:
-      return &metrics->read_dir;
+      return &metrics->vnode.read_dir;
 
     case Event::kSync:
-      return &metrics->sync;
+      return &metrics->vnode.sync;
 
     case Event::kLookUp:
-      return &metrics->look_up;
+      return &metrics->vnode.look_up;
 
     case Event::kCreate:
-      return &metrics->create;
+      return &metrics->vnode.create;
 
     case Event::kLink:
-      return &metrics->link;
+      return &metrics->vnode.link;
 
     case Event::kUnlink:
-      return &metrics->unlink;
+      return &metrics->vnode.unlink;
+
+    case Event::kJournalWriteData:
+      return &metrics->journal.write_data;
+
+    case Event::kJournalWriteMetadata:
+      return &metrics->journal.write_metadata;
+
+    case Event::kJournalTrimData:
+      return &metrics->journal.trim_data;
+
+    case Event::kJournalSync:
+      return &metrics->journal.sync;
+
+    case Event::kJournalScheduleTask:
+      return &metrics->journal.schedule_task;
+
+    case Event::kJournalWriterWriteData:
+      return &metrics->journal.writer_write_data;
+
+    case Event::kJournalWriterWriteMetadata:
+      return &metrics->journal.writer_write_metadata;
+
+    case Event::kJournalWriterTrimData:
+      return &metrics->journal.writer_trim_data;
+
+    case Event::kJournalWriterSync:
+      return &metrics->journal.writer_sync;
+
+    case Event::kJournalWriterWriteInfoBlock:
+      return &metrics->journal.writer_write_info_block;
 
     default:
       return nullptr;
@@ -59,7 +89,7 @@ cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* SelectHis
 
 CompositeLatencyEvent::CompositeLatencyEvent(Event event,
                                              fs_metrics::Histograms* histogram_collection,
-                                             fs_metrics::VnodeMetrics* metrics)
+                                             fs_metrics::FsCommonMetrics* metrics)
     : inspect_event_(histogram_collection, event) {
   cobalt_histogram_ = internal::SelectHistogram(event, metrics);
 }

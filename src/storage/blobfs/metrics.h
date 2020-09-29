@@ -69,7 +69,7 @@ class BlobfsMetrics {
   // Returns a new Latency event for the given event. This requires the event to be backed up by
   // an histogram in both cobalt metrics and Inspect.
   LatencyEvent NewLatencyEvent(fs_metrics::Event event) {
-    return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_vnode_metrics());
+    return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_fs_common_metrics());
   }
 
   // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
@@ -108,13 +108,14 @@ class BlobfsMetrics {
   void ScheduleMetricFlush();
 
   // Inspect instrumentation data.
-  // The maximum size of the VMO is set to 64KB. In practice, we have not seen this
-  // inspect VMO need more than 32KB. This gives the VMO enough space to grow if
+  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this
+  // inspect VMO need more than 128KiB. This gives the VMO enough space to grow if
   // we add more data in the future.
   // WARNING: When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
-  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a VMO.
+  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
+  // VMO.
   inspect::Inspector inspector_ =
-      inspect::Inspector(inspect::InspectSettings{.maximum_size = 65536});
+      inspect::Inspector(inspect::InspectSettings{.maximum_size = 131072});
   inspect::Node& root_ = inspector_.GetRoot();
 
   // ALLOCATION STATS

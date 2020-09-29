@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 #include <limits>
 #include <string>
@@ -13,7 +15,6 @@
 #include <fs/metrics/histograms.h>
 #include <fs/metrics/internal/attributes.h>
 #include <fs/metrics/internal/object_offsets.h>
-#include <zircon/assert.h>
 
 namespace fs_metrics {
 
@@ -211,6 +212,100 @@ struct EventInfo<Event::kUnlink> : public NodeDegree, Success {
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kLink>>();
 };
 
+template <>
+struct EventInfo<Event::kJournalWriteData> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_write_data";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kUnlink>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalWriteMetadata> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_write_metadata";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalWriteData>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalTrimData> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_trim_data";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart =
+      HistogramOffsets::End<EventInfo<Event::kJournalWriteMetadata>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalSync> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_sync";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalTrimData>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalScheduleTask> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_schedule_task";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalSync>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalWriterWriteData> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_writer_write_data";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart =
+      HistogramOffsets::End<EventInfo<Event::kJournalScheduleTask>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalWriterWriteMetadata> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_writer_write_metadata";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart =
+      HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteData>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalWriterTrimData> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_writer_trim_data";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart =
+      HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteMetadata>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalWriterSync> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_writer_sync";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart =
+      HistogramOffsets::End<EventInfo<Event::kJournalWriterTrimData>>();
+};
+
+template <>
+struct EventInfo<Event::kJournalWriterWriteInfoBlock> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  static constexpr char kPrefix[] = "journal_writer_write_info_block";
+  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalWriterSync>>();
+};
+
+template <>
+struct EventInfo<Event::kInvalidEvent> : public NodeDegree, Success {
+  using AttributeData = EventOptions;
+  [[maybe_unused]] static constexpr char kPrefix[] = "invalid event";
+  [[maybe_unused]] static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr uint64_t kStart =
+      HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteInfoBlock>>();
+};
+
 template <Event event>
 void AddOpHistograms(inspect::Node* root,
                      std::vector<inspect::ExponentialUintHistogram>* histograms) {
@@ -264,7 +359,38 @@ Histograms::Histograms(inspect::Node* root) {
   ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kUnlink>::kStart);
   AddOpHistograms<Event::kUnlink>(&hist_node, &histograms_);
 
-  ZX_DEBUG_ASSERT(histograms_.size() == HistogramOffsets::End<EventInfo<Event::kUnlink>>());
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriteData>::kStart);
+  AddOpHistograms<Event::kJournalWriteData>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriteMetadata>::kStart);
+  AddOpHistograms<Event::kJournalWriteMetadata>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalTrimData>::kStart);
+  AddOpHistograms<Event::kJournalTrimData>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalSync>::kStart);
+  AddOpHistograms<Event::kJournalSync>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalScheduleTask>::kStart);
+  AddOpHistograms<Event::kJournalScheduleTask>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriterWriteData>::kStart);
+  AddOpHistograms<Event::kJournalWriterWriteData>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriterWriteMetadata>::kStart);
+  AddOpHistograms<Event::kJournalWriterWriteMetadata>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriterTrimData>::kStart);
+  AddOpHistograms<Event::kJournalWriterTrimData>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriterSync>::kStart);
+  AddOpHistograms<Event::kJournalWriterSync>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kJournalWriterWriteInfoBlock>::kStart);
+  AddOpHistograms<Event::kJournalWriterWriteInfoBlock>(&hist_node, &histograms_);
+
+  ZX_DEBUG_ASSERT(histograms_.size() ==
+                  HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteInfoBlock>>());
 }
 
 LatencyEvent Histograms::NewLatencyEvent(Event event) { return LatencyEvent(this, event); }
@@ -309,6 +435,38 @@ uint64_t Histograms::GetHistogramId(Event event, const EventOptions& options) co
 
     case Event::kUnlink:
       return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kUnlink>>(options);
+
+    case Event::kJournalWriteData:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriteData>>(options);
+
+    case Event::kJournalWriteMetadata:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriteMetadata>>(options);
+
+    case Event::kJournalTrimData:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalTrimData>>(options);
+
+    case Event::kJournalSync:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalSync>>(options);
+
+    case Event::kJournalScheduleTask:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalScheduleTask>>(options);
+
+    case Event::kJournalWriterWriteData:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriterWriteData>>(options);
+
+    case Event::kJournalWriterWriteMetadata:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriterWriteMetadata>>(
+          options);
+
+    case Event::kJournalWriterTrimData:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriterTrimData>>(options);
+
+    case Event::kJournalWriterSync:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriterSync>>(options);
+
+    case Event::kJournalWriterWriteInfoBlock:
+      return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kJournalWriterWriteInfoBlock>>(
+          options);
 
     default:
       return GetHistogramCount();
@@ -356,6 +514,36 @@ uint64_t Histograms::GetHistogramCount(Event event) {
     case Event::kUnlink:
       return HistogramOffsets::Count<EventInfo<Event::kUnlink>>();
 
+    case Event::kJournalWriteData:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriteData>>();
+
+    case Event::kJournalWriteMetadata:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriteMetadata>>();
+
+    case Event::kJournalTrimData:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalTrimData>>();
+
+    case Event::kJournalSync:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalSync>>();
+
+    case Event::kJournalScheduleTask:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalScheduleTask>>();
+
+    case Event::kJournalWriterWriteData:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriterWriteData>>();
+
+    case Event::kJournalWriterWriteMetadata:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriterWriteMetadata>>();
+
+    case Event::kJournalWriterTrimData:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriterTrimData>>();
+
+    case Event::kJournalWriterSync:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriterSync>>();
+
+    case Event::kJournalWriterWriteInfoBlock:
+      return HistogramOffsets::Count<EventInfo<Event::kJournalWriterWriteInfoBlock>>();
+
     default:
       return 0;
   };
@@ -369,7 +557,7 @@ void Histograms::Record(uint64_t histogram_id, zx::duration duration) {
 uint64_t Histograms::Size() {
   // An integer for each bucket + metadata
   constexpr uint32_t kApproximateNameLength = 30;
-  return fbl::round_up(HistogramOffsets::End<EventInfo<Event::kUnlink>>() *
+  return fbl::round_up(HistogramOffsets::End<EventInfo<Event::kInvalidEvent>>() *
                            ((kHistogramBuckets * sizeof(uint64_t) + kApproximateNameLength) +
                             strlen(Histograms::kHistComponent)),
                        static_cast<uint64_t>(PAGE_SIZE));

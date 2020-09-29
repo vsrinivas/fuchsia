@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/metrics/composite_latency_event.h>
-
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/types.h>
 
@@ -14,6 +12,7 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <fs/metrics/cobalt_metrics.h>
+#include <fs/metrics/composite_latency_event.h>
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <zxtest/zxtest.h>
@@ -32,7 +31,7 @@ class CompositeLatencyEventTest : public zxtest::Test {
         std::make_unique<cobalt_client::InMemoryLogger>();
     logger_ = logger.get();
     collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
-    metrics_ = std::make_unique<fs_metrics::VnodeMetrics>(collector_.get(), kComponentName);
+    metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(), kComponentName);
     histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
   }
 
@@ -40,23 +39,41 @@ class CompositeLatencyEventTest : public zxtest::Test {
   inspect::Inspector inspector_;
   cobalt_client::InMemoryLogger* logger_;
   std::unique_ptr<cobalt_client::Collector> collector_;
-  std::unique_ptr<fs_metrics::VnodeMetrics> metrics_;
+  std::unique_ptr<fs_metrics::FsCommonMetrics> metrics_;
   std::unique_ptr<Histograms> histograms_;
 };
 
 TEST_F(CompositeLatencyEventTest, SelectHistogramIsCorrect) {
-  EXPECT_EQ(&metrics_->close, SelectHistogram(Event::kClose, metrics_.get()));
-  EXPECT_EQ(&metrics_->read, SelectHistogram(Event::kRead, metrics_.get()));
-  EXPECT_EQ(&metrics_->append, SelectHistogram(Event::kAppend, metrics_.get()));
-  EXPECT_EQ(&metrics_->truncate, SelectHistogram(Event::kTruncate, metrics_.get()));
-  EXPECT_EQ(&metrics_->set_attr, SelectHistogram(Event::kSetAttr, metrics_.get()));
-  EXPECT_EQ(&metrics_->get_attr, SelectHistogram(Event::kGetAttr, metrics_.get()));
-  EXPECT_EQ(&metrics_->read_dir, SelectHistogram(Event::kReadDir, metrics_.get()));
-  EXPECT_EQ(&metrics_->sync, SelectHistogram(Event::kSync, metrics_.get()));
-  EXPECT_EQ(&metrics_->look_up, SelectHistogram(Event::kLookUp, metrics_.get()));
-  EXPECT_EQ(&metrics_->create, SelectHistogram(Event::kCreate, metrics_.get()));
-  EXPECT_EQ(&metrics_->link, SelectHistogram(Event::kLink, metrics_.get()));
-  EXPECT_EQ(&metrics_->unlink, SelectHistogram(Event::kUnlink, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.close, SelectHistogram(Event::kClose, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.read, SelectHistogram(Event::kRead, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.append, SelectHistogram(Event::kAppend, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.truncate, SelectHistogram(Event::kTruncate, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.set_attr, SelectHistogram(Event::kSetAttr, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.get_attr, SelectHistogram(Event::kGetAttr, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.read_dir, SelectHistogram(Event::kReadDir, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.sync, SelectHistogram(Event::kSync, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.look_up, SelectHistogram(Event::kLookUp, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.create, SelectHistogram(Event::kCreate, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.link, SelectHistogram(Event::kLink, metrics_.get()));
+  EXPECT_EQ(&metrics_->vnode.unlink, SelectHistogram(Event::kUnlink, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.write_data,
+            SelectHistogram(Event::kJournalWriteData, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.write_metadata,
+            SelectHistogram(Event::kJournalWriteMetadata, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.trim_data, SelectHistogram(Event::kJournalTrimData, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.sync, SelectHistogram(Event::kJournalSync, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.schedule_task,
+            SelectHistogram(Event::kJournalScheduleTask, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.writer_write_data,
+            SelectHistogram(Event::kJournalWriterWriteData, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.writer_write_metadata,
+            SelectHistogram(Event::kJournalWriterWriteMetadata, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.writer_trim_data,
+            SelectHistogram(Event::kJournalWriterTrimData, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.writer_sync,
+            SelectHistogram(Event::kJournalWriterSync, metrics_.get()));
+  EXPECT_EQ(&metrics_->journal.writer_write_info_block,
+            SelectHistogram(Event::kJournalWriterWriteInfoBlock, metrics_.get()));
   // This is not a Vnode event, and is not backed by an histogram, should return nullptr.
   EXPECT_EQ(nullptr, SelectHistogram(Event::kDataCorruption, metrics_.get()));
 }
@@ -81,7 +98,7 @@ TEST_F(CompositeLatencyEventTest, SelectAppropiateHistogram) {
     auto entry = logger_->histograms().find(options);
     EXPECT_NE(logger_->histograms().end(), entry);
     // There should be one event per bucket, since we made a one to one mapping for each event.
-    EXPECT_EQ(fs_metrics::VnodeMetrics::kHistogramBuckets + kCobaltOverflowHistogramBuckets,
+    EXPECT_EQ(fs_metrics::FsCommonMetrics::kHistogramBuckets + kCobaltOverflowHistogramBuckets,
               entry->second.size());
     uint64_t total_observations = 0;
     for (const auto it : entry->second) {

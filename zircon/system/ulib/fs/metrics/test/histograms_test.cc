@@ -68,7 +68,10 @@ TEST_F(HistogramsTest, AllOptionsAreValid) {
   Histograms histograms = Histograms(&inspector_.GetRoot());
   std::set<uint64_t> histogram_ids;
 
-  for (auto operation : kVnodeEvents) {
+  std::vector<fs_metrics::Event> all_events;
+  all_events.insert(all_events.end(), kVnodeEvents, kVnodeEvents + kVnodeEventCount);
+  all_events.insert(all_events.end(), kJournalEvents, kJournalEvents + kJournalEventCount);
+  for (auto operation : all_events) {
     uint64_t prev_size = histogram_ids.size();
     for (auto option_set : GetOptionsSets()) {
       uint64_t histogram_id = histograms.GetHistogramId(operation, option_set);
@@ -98,7 +101,13 @@ TEST_F(HistogramsTest, DefaultLatencyEventSmokeTest) {
 
 TEST_F(HistogramsTest, InvalidOptionsReturnsHistogramCount) {
   Histograms histograms = Histograms(&inspector_.GetRoot());
-  ASSERT_EQ(histograms.GetHistogramId(static_cast<Event>(kEventCount), EventOptions()),
+  ASSERT_EQ(histograms.GetHistogramId(Event::kDataCorruption, EventOptions()),
+            histograms.GetHistogramCount());
+  ASSERT_EQ(histograms.GetHistogramId(Event::kCompression, EventOptions()),
+            histograms.GetHistogramCount());
+
+  uint32_t invalid_event = static_cast<uint32_t>(Event::kInvalidEvent) + 1;
+  ASSERT_EQ(histograms.GetHistogramId(static_cast<Event>(invalid_event), EventOptions()),
             histograms.GetHistogramCount());
 }
 

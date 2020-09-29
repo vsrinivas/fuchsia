@@ -28,7 +28,7 @@ class Histogram {
   using Count = uint64_t;
 
   Histogram() = default;
-  Histogram(const HistogramOptions& options) : remote_histogram_(options) {}
+  explicit Histogram(const HistogramOptions& options) : remote_histogram_(options) {}
   // Collector's lifetime must exceed the histogram's lifetime.
   Histogram(const HistogramOptions& options, Collector* collector)
       : remote_histogram_(options), collector_(collector) {

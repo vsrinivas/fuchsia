@@ -14,25 +14,26 @@ namespace fs_metrics {
 namespace {
 
 // Mirrors ids defined in cobalt metric definitions for Filesystems.
-struct VnodeCobalt {
-  // Enum of Vnode related event codes.
+struct FsCommonCobalt {
+  // Enum of FsCommonMetrics related event codes.
   enum class EventCode : uint32_t {
     kUnknown = 0,
   };
 };
 
-// Default options for VnodeMetrics that are in tens of nanoseconds precision.
-const cobalt_client::HistogramOptions kVnodeOptionsNanoOp =
-    cobalt_client::HistogramOptions::Exponential(VnodeMetrics::kHistogramBuckets, 10 * (1024 - 1));
+// Default options for FsCommonMetrics that are in tens of nanoseconds precision.
+const cobalt_client::HistogramOptions kFsCommonOptionsNanoOp =
+    cobalt_client::HistogramOptions::Exponential(FsCommonMetrics::kHistogramBuckets,
+                                                 10 * (1024 - 1));
 
-// Default options for VnodeMetrics that are in microseconds precision.
-const cobalt_client::HistogramOptions kVnodeOptionsMicroOp =
-    cobalt_client::HistogramOptions::Exponential(VnodeMetrics::kHistogramBuckets,
+// Default options for FsCommonMetrics that are in microseconds precision.
+const cobalt_client::HistogramOptions kFsCommonOptionsMicroOp =
+    cobalt_client::HistogramOptions::Exponential(FsCommonMetrics::kHistogramBuckets,
                                                  10000 * (1024 - 1));
 
 cobalt_client::HistogramOptions MakeHistogramOptions(const cobalt_client::HistogramOptions& base,
                                                      Event metric_id,
-                                                     VnodeCobalt::EventCode event_code) {
+                                                     FsCommonCobalt::EventCode event_code) {
   cobalt_client::HistogramOptions options = base;
   options.metric_id = static_cast<uint32_t>(metric_id);
   for (auto& event_code : options.event_codes) {
@@ -43,47 +44,87 @@ cobalt_client::HistogramOptions MakeHistogramOptions(const cobalt_client::Histog
 
 }  // namespace
 
-VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name) {
+FsCommonMetrics::FsCommonMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name) {
   // Initialize all the metrics for the collector.
-  cobalt_client::HistogramOptions nano_base = kVnodeOptionsNanoOp;
-  cobalt_client::HistogramOptions micro_base = kVnodeOptionsMicroOp;
+  cobalt_client::HistogramOptions nano_base = kFsCommonOptionsNanoOp;
+  cobalt_client::HistogramOptions micro_base = kFsCommonOptionsMicroOp;
   nano_base.component = fs_name.c_str();
   micro_base.component = fs_name.c_str();
 
-  close.Initialize(MakeHistogramOptions(nano_base, Event::kClose, VnodeCobalt::EventCode::kUnknown),
-                   collector);
-  read.Initialize(MakeHistogramOptions(micro_base, Event::kRead, VnodeCobalt::EventCode::kUnknown),
-                  collector);
-  write.Initialize(
-      MakeHistogramOptions(micro_base, Event::kWrite, VnodeCobalt::EventCode::kUnknown), collector);
-  append.Initialize(
-      MakeHistogramOptions(micro_base, Event::kAppend, VnodeCobalt::EventCode::kUnknown),
+  vnode.close.Initialize(
+      MakeHistogramOptions(nano_base, Event::kClose, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  truncate.Initialize(
-      MakeHistogramOptions(micro_base, Event::kTruncate, VnodeCobalt::EventCode::kUnknown),
+  vnode.read.Initialize(
+      MakeHistogramOptions(micro_base, Event::kRead, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  set_attr.Initialize(
-      MakeHistogramOptions(micro_base, Event::kSetAttr, VnodeCobalt::EventCode::kUnknown),
+  vnode.write.Initialize(
+      MakeHistogramOptions(micro_base, Event::kWrite, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  get_attr.Initialize(
-      MakeHistogramOptions(nano_base, Event::kGetAttr, VnodeCobalt::EventCode::kUnknown),
+  vnode.append.Initialize(
+      MakeHistogramOptions(micro_base, Event::kAppend, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  sync.Initialize(MakeHistogramOptions(micro_base, Event::kSync, VnodeCobalt::EventCode::kUnknown),
-                  collector);
-  read_dir.Initialize(
-      MakeHistogramOptions(micro_base, Event::kReadDir, VnodeCobalt::EventCode::kUnknown),
+  vnode.truncate.Initialize(
+      MakeHistogramOptions(micro_base, Event::kTruncate, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  look_up.Initialize(
-      MakeHistogramOptions(micro_base, Event::kLookUp, VnodeCobalt::EventCode::kUnknown),
+  vnode.set_attr.Initialize(
+      MakeHistogramOptions(micro_base, Event::kSetAttr, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  create.Initialize(
-      MakeHistogramOptions(micro_base, Event::kCreate, VnodeCobalt::EventCode::kUnknown),
+  vnode.get_attr.Initialize(
+      MakeHistogramOptions(nano_base, Event::kGetAttr, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  unlink.Initialize(
-      MakeHistogramOptions(micro_base, Event::kUnlink, VnodeCobalt::EventCode::kUnknown),
+  vnode.sync.Initialize(
+      MakeHistogramOptions(micro_base, Event::kSync, FsCommonCobalt::EventCode::kUnknown),
       collector);
-  link.Initialize(MakeHistogramOptions(micro_base, Event::kLink, VnodeCobalt::EventCode::kUnknown),
-                  collector);
+  vnode.read_dir.Initialize(
+      MakeHistogramOptions(micro_base, Event::kReadDir, FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  vnode.look_up.Initialize(
+      MakeHistogramOptions(micro_base, Event::kLookUp, FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  vnode.create.Initialize(
+      MakeHistogramOptions(micro_base, Event::kCreate, FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  vnode.unlink.Initialize(
+      MakeHistogramOptions(micro_base, Event::kUnlink, FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  vnode.link.Initialize(
+      MakeHistogramOptions(micro_base, Event::kLink, FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  journal.write_data.Initialize(MakeHistogramOptions(micro_base, Event::kJournalWriteData,
+                                                     FsCommonCobalt::EventCode::kUnknown),
+                                collector);
+  journal.write_metadata.Initialize(MakeHistogramOptions(micro_base, Event::kJournalWriteMetadata,
+                                                         FsCommonCobalt::EventCode::kUnknown),
+                                    collector);
+  journal.trim_data.Initialize(MakeHistogramOptions(micro_base, Event::kJournalTrimData,
+                                                    FsCommonCobalt::EventCode::kUnknown),
+                               collector);
+  journal.sync.Initialize(
+      MakeHistogramOptions(micro_base, Event::kJournalSync, FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  journal.schedule_task.Initialize(MakeHistogramOptions(micro_base, Event::kJournalScheduleTask,
+                                                        FsCommonCobalt::EventCode::kUnknown),
+                                   collector);
+  journal.writer_write_data.Initialize(
+      MakeHistogramOptions(micro_base, Event::kJournalWriterWriteData,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  journal.writer_write_metadata.Initialize(
+      MakeHistogramOptions(micro_base, Event::kJournalWriterWriteMetadata,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  journal.writer_trim_data.Initialize(
+      MakeHistogramOptions(micro_base, Event::kJournalWriterTrimData,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  journal.writer_sync.Initialize(MakeHistogramOptions(micro_base, Event::kJournalWriterSync,
+                                                      FsCommonCobalt::EventCode::kUnknown),
+                                 collector);
+
+  journal.writer_write_info_block.Initialize(
+      MakeHistogramOptions(micro_base, Event::kJournalWriterWriteInfoBlock,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
 }
 
 CompressionFormatMetrics::CompressionFormatMetrics(
@@ -93,8 +134,10 @@ CompressionFormatMetrics::CompressionFormatMetrics(
     return;
   }
   std::vector<fs_metrics::CompressionFormat> formats = {
-      fs_metrics::CompressionFormat::kUnknown, fs_metrics::CompressionFormat::kUncompressed,
-      fs_metrics::CompressionFormat::kCompressedLZ4, fs_metrics::CompressionFormat::kCompressedZSTD,
+      fs_metrics::CompressionFormat::kUnknown,
+      fs_metrics::CompressionFormat::kUncompressed,
+      fs_metrics::CompressionFormat::kCompressedLZ4,
+      fs_metrics::CompressionFormat::kCompressedZSTD,
       fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
       fs_metrics::CompressionFormat::kCompressedZSTDChunked,
   };
@@ -127,13 +170,12 @@ void CompressionFormatMetrics::IncrementCounter(fs_metrics::CompressionFormat fo
 Metrics::Metrics(std::unique_ptr<cobalt_client::Collector> collector, const fbl::String& fs_name,
                  fs_metrics::CompressionSource source)
     : collector_(std::move(collector)),
-      vnode_metrics_(collector_.get(), fs_name),
-      compression_format_metrics_(collector_.get(), source),
-      is_enabled_(false) {}
+      fs_common_metrics_(collector_.get(), fs_name),
+      compression_format_metrics_(collector_.get(), source) {}
 
-const VnodeMetrics& Metrics::vnode_metrics() const { return vnode_metrics_; }
+const FsCommonMetrics& Metrics::fs_common_metrics() const { return fs_common_metrics_; }
 
-VnodeMetrics* Metrics::mutable_vnode_metrics() { return &vnode_metrics_; }
+FsCommonMetrics* Metrics::mutable_fs_common_metrics() { return &fs_common_metrics_; }
 
 const CompressionFormatMetrics& Metrics::compression_format_metrics() const {
   return compression_format_metrics_;
@@ -145,7 +187,7 @@ CompressionFormatMetrics* Metrics::mutable_compression_format_metrics() {
 
 void Metrics::EnableMetrics(bool should_enable) {
   is_enabled_ = should_enable;
-  vnode_metrics_.metrics_enabled = should_enable;
+  fs_common_metrics_.metrics_enabled = should_enable;
 }
 
 bool Metrics::IsEnabled() const { return is_enabled_; }

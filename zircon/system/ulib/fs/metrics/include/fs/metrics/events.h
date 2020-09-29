@@ -34,6 +34,21 @@ enum class Event : uint32_t {
 
   // Distribution of compression formats. Only used by blobfs.
   kCompression = 16,
+
+  // Journal events
+  kJournalWriteData = 17,
+  kJournalWriteMetadata = 18,
+  kJournalTrimData = 19,
+  kJournalSync = 20,
+  kJournalScheduleTask = 21,
+  kJournalWriterWriteData = 22,
+  kJournalWriterWriteMetadata = 23,
+  kJournalWriterTrimData = 24,
+  kJournalWriterSync = 25,
+  kJournalWriterWriteInfoBlock = 26,
+
+  // This is an event used to identify last or invalid event.
+  kInvalidEvent = 27,
 };
 
 enum class CorruptionSource { kUnknown = 0, kFvm = 1, kBlobfs = 2, kMinfs = 3 };
@@ -68,8 +83,22 @@ constexpr Event kFsManagerEvents[] = {Event::kDataCorruption};
 // Number of different metric types recorded at Fs Manager level.
 constexpr uint64_t kFsManagerEventCount = std::size(kFsManagerEvents);
 
+constexpr Event kJournalEvents[] = {Event::kJournalWriteData,
+                                    Event::kJournalWriteMetadata,
+                                    Event::kJournalTrimData,
+                                    Event::kJournalSync,
+                                    Event::kJournalScheduleTask,
+                                    Event::kJournalWriterWriteData,
+                                    Event::kJournalWriterWriteMetadata,
+                                    Event::kJournalWriterTrimData,
+                                    Event::kJournalWriterSync,
+                                    Event::kJournalWriterWriteInfoBlock};
+
+// Number of different metric types recorded at journal level.
+constexpr uint64_t kJournalEventCount = std::size(kJournalEvents);
+
 // Total number of events in the registry.
-constexpr uint64_t kEventCount = kVnodeEventCount + kFsManagerEventCount;
+constexpr uint64_t kEventCount = kVnodeEventCount + kFsManagerEventCount + kJournalEventCount;
 
 }  // namespace fs_metrics
 
