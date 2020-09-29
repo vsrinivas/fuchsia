@@ -42,6 +42,7 @@ class SessionProvider {
                   fuchsia::hardware::power::statecontrol::Admin* administrator,
                   const modular::ModularConfigAccessor* config_accessor,
                   intl::IntlPropertyProviderImpl* intl_property_provider,
+                  fuchsia::sys::ServiceList services_from_session_launcher,
                   fit::function<void()> on_zero_sessions);
 
   // Starts a new sessionmgr process if there isn't one already.
@@ -75,6 +76,7 @@ class SessionProvider {
   fuchsia::hardware::power::statecontrol::Admin* const administrator_;  // Not owned.
   const modular::ModularConfigAccessor* const config_accessor_;         // Not owned.
   intl::IntlPropertyProviderImpl* const intl_property_provider_;        // Not owned.
+  fuchsia::sys::ServiceList services_from_session_launcher_;
   fit::function<void()> on_zero_sessions_;
 
   std::unique_ptr<SessionContextImpl> session_context_;

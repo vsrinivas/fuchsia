@@ -98,12 +98,14 @@ executable("basemgr_test") {
   sources = [ "basemgr_test.cc" ]
 
   deps = [
+    ":fuchsia.testing.modular",
     "//sdk/lib/modular/testing/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/modular/lib/pseudo_dir:pseudo_dir_server",
   ]
 }
 

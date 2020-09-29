@@ -54,7 +54,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
                      fuchsia::ui::views::ViewToken view_token,
-                     fuchsia::sys::ServiceListPtr additional_services,
+                     fuchsia::sys::ServiceListPtr additional_services_for_sessionmgr,
+                     fuchsia::sys::ServiceList additional_services_for_agents,
                      GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);
 

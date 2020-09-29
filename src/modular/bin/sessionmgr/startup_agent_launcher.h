@@ -32,6 +32,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
           session_restart_controller_connector,
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
           intl_property_provider_connector,
+      fuchsia::sys::ServiceList additional_services_for_agents,
       fit::function<bool()> is_terminating_cb);
 
   ~StartupAgentLauncher() override = default;
@@ -70,12 +71,12 @@ class StartupAgentLauncher : public AgentServicesFactory {
   };
 
   using ServiceProviderInitializer =
-      fit::function<void(const std::string& url, component::ServiceNamespace* agent_host)>;
+      fit::function<void(const std::string& url, component::ServiceNamespace* service_namespace)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context entry point. Returns the names
   // of the services added.
   std::vector<std::string> AddAgentServices(const std::string& url,
-                                            component::ServiceNamespace* agent_host);
+                                            component::ServiceNamespace* service_namespace);
 
   void StartAgent(AgentRunner* agent_runner, const std::string& url);
 
@@ -93,6 +94,8 @@ class StartupAgentLauncher : public AgentServicesFactory {
       session_restart_controller_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
       intl_property_provider_connector_;
+  fuchsia::sys::ServiceList additional_services_for_agents_;
+  sys::ServiceDirectory additional_services_for_agents_directory_;
 
   // Return |true| to avoid automatically restarting session_agents_.
   fit::function<bool()> is_terminating_cb_ = nullptr;

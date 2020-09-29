@@ -4,6 +4,7 @@
 
 library fuchsia.modular.internal;
 
+using fuchsia.sys;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
@@ -22,6 +23,7 @@ protocol Sessionmgr {
     // initialization pattern of sessionmgr.
     Initialize(string session_id,
                SessionContext session_context,
+               fuchsia.sys.ServiceList additional_services_for_agents,
                fuchsia.ui.views.ViewToken view_token);
 };
 

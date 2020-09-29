@@ -99,6 +99,7 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 void SessionmgrImpl::Initialize(
     std::string session_id,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+    fuchsia::sys::ServiceList additional_services_for_agents,
     fuchsia::ui::views::ViewToken view_token) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
 
@@ -113,7 +114,7 @@ void SessionmgrImpl::Initialize(
   // Create |puppet_master_| before |agent_runner_| to ensure agents can use it when terminating.
   InitializePuppetMaster();
 
-  InitializeStartupAgentLauncher();
+  InitializeStartupAgentLauncher(std::move(additional_services_for_agents));
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
   InitializeStartupAgents();
 
@@ -189,7 +190,8 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   OnTerminate(Reset(&session_environment_));
 }
 
-void SessionmgrImpl::InitializeStartupAgentLauncher() {
+void SessionmgrImpl::InitializeStartupAgentLauncher(
+    fuchsia::sys::ServiceList additional_services_for_agents) {
   FX_DCHECK(puppet_master_impl_);
 
   startup_agent_launcher_ = std::make_unique<StartupAgentLauncher>(
@@ -210,7 +212,7 @@ void SessionmgrImpl::InitializeStartupAgentLauncher() {
         }
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
       },
-      [this]() { return terminating_; });
+      std::move(additional_services_for_agents), [this]() { return terminating_; });
   OnTerminate(Reset(&startup_agent_launcher_));
 }
 

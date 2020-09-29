@@ -40,7 +40,8 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
 
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
-      /*additional_services=*/nullptr,
+      /*additional_services_for_sessionmgr=*/nullptr,
+      /*additional_services_for_agents=*/fuchsia::sys::ServiceList(),
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
       /*on_session_shutdown=*/[](modular::SessionContextImpl::ShutDownReason /* unused */) {});
@@ -69,6 +70,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
       /*additional_services=*/nullptr,
+      /*additional_services_for_agents=*/fuchsia::sys::ServiceList(),
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
       /*on_session_shutdown=*/

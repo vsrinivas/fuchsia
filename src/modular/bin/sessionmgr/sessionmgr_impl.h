@@ -51,11 +51,12 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // |Sessionmgr|
   void Initialize(std::string session_id,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+                  fuchsia::sys::ServiceList additional_services_for_agents,
                   fuchsia::ui::views::ViewToken view_token) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id);
-  void InitializeStartupAgentLauncher();
+  void InitializeStartupAgentLauncher(fuchsia::sys::ServiceList additional_services_for_agents);
   void InitializeStartupAgents();
   void InitializeAgentRunner(std::string session_shell_url);
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,

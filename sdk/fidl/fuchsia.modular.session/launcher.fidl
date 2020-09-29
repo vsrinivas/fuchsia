@@ -4,6 +4,7 @@
 library fuchsia.modular.session;
 
 using fuchsia.mem;
+using fuchsia.sys;
 
 /// A protocol used to launch sessionmgr.
 ///
@@ -31,4 +32,13 @@ protocol Launcher {
     ///
     /// * `config` Modular configuration serialized as UTF-8 JSON
     LaunchSessionmgr(fuchsia.mem.Buffer config);
+
+    /// Launches an instance of sessionmgr with the given Modular configuration and
+    /// a list of services to be provided to agents in
+    /// ModularConfig.sessionmgr_config.session_agents and .startup_agents.
+    ///
+    /// |additional_services.host_directory| is required. The channel will close with
+    /// ZX_ERR_INVALID_ARGS if not present.
+    LaunchSessionmgrWithServices(fuchsia.mem.Buffer config,
+                                 fuchsia.sys.ServiceList additional_services);
 };

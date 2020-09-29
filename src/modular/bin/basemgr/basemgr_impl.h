@@ -82,7 +82,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void Stop() override;
 
   // Launches sessionmgr with the given |config|.
-  void LaunchSessionmgr(fuchsia::modular::session::ModularConfig config);
+  void LaunchSessionmgr(fuchsia::modular::session::ModularConfig config,
+                        fuchsia::sys::ServiceList services_from_session_launcher);
 
   State state() const { return state_; }
 
@@ -122,10 +123,13 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Starts the session launcher component defined in the default basemgr configuration.
   void StartSessionLauncherComponent();
 
-  // Creates a |session_provider_| that uses the given config.
+  // Creates a |session_provider_| that uses the given config. If
+  // |services_from_session_launcher| is populated all listed services will be
+  // provided to agent children of sessionmgr.
   //
   // |config_accessor| must live for the duration of the session, outliving |session_provider_|.
-  void CreateSessionProvider(const ModularConfigAccessor* config_accessor);
+  void CreateSessionProvider(const ModularConfigAccessor* config_accessor,
+                             fuchsia::sys::ServiceList services_from_session_launcher);
 
   // Returns a service list for serving |fuchsia.modular.session.Launcher| to the session
   // launcher component, served from |session_launcher_component_service_dir_|.

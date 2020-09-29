@@ -118,13 +118,14 @@ std::string GetStableSessionId() {
 
 }  // namespace
 
-SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
-                                       fuchsia::modular::session::AppConfig sessionmgr_app_config,
-                                       const modular::ModularConfigAccessor* const config_accessor,
-                                       fuchsia::ui::views::ViewToken view_token,
-                                       fuchsia::sys::ServiceListPtr additional_services,
-                                       GetPresentationCallback get_presentation,
-                                       OnSessionShutdownCallback on_session_shutdown)
+SessionContextImpl::SessionContextImpl(
+    fuchsia::sys::Launcher* const launcher,
+    fuchsia::modular::session::AppConfig sessionmgr_app_config,
+    const modular::ModularConfigAccessor* const config_accessor,
+    fuchsia::ui::views::ViewToken view_token,
+    fuchsia::sys::ServiceListPtr additional_services_for_sessionmgr,
+    fuchsia::sys::ServiceList additional_services_for_agents,
+    GetPresentationCallback get_presentation, OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
@@ -150,13 +151,14 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
 
   // 2. Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr_app_config), data_origin, std::move(additional_services),
-      std::move(config_namespace));
+      launcher, std::move(sessionmgr_app_config), data_origin,
+      std::move(additional_services_for_sessionmgr), std::move(config_namespace));
 
   // 3. Initialize the Sessionmgr service.
 
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(session_id, session_context_binding_.NewBinding(), std::move(view_token));
+  sessionmgr_->Initialize(session_id, session_context_binding_.NewBinding(),
+                          std::move(additional_services_for_agents), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "

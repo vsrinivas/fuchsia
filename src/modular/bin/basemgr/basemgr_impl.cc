@@ -37,6 +37,18 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
 
   // |Launcher|
   void LaunchSessionmgr(fuchsia::mem::Buffer config) override {
+    LaunchSessionmgrWithServices(std::move(config), fuchsia::sys::ServiceList());
+  }
+
+  // |Launcher|
+  void LaunchSessionmgrWithServices(fuchsia::mem::Buffer config,
+                                    fuchsia::sys::ServiceList additional_services) override {
+    if (additional_services.names.size() > 0 && !additional_services.host_directory) {
+      FX_LOGS(ERROR)
+          << "LaunchSessionmgrWithServices() requires additional_servicces.host_directory";
+      binding_->Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
     FX_DCHECK(binding_);
 
     if (basemgr_impl_->state() == BasemgrImpl::State::SHUTTING_DOWN) {
@@ -65,7 +77,7 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
       return;
     }
 
-    basemgr_impl_->LaunchSessionmgr(config_result.take_value());
+    basemgr_impl_->LaunchSessionmgr(config_result.take_value(), std::move(additional_services));
   }
 
   void set_binding(modular::BasemgrImpl::LauncherBinding* binding) { binding_ = binding; }
@@ -155,7 +167,7 @@ void BasemgrImpl::Start() {
   if (config_accessor_.basemgr_config().has_session_launcher()) {
     StartSessionLauncherComponent();
   } else {
-    CreateSessionProvider(&config_accessor_);
+    CreateSessionProvider(&config_accessor_, fuchsia::sys::ServiceList());
 
     auto start_session_result = StartSession();
     if (start_session_result.is_error()) {
@@ -226,12 +238,13 @@ void BasemgrImpl::Terminate() { Shutdown(); }
 
 void BasemgrImpl::Stop() { Shutdown(); }
 
-void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const config_accessor) {
+void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const config_accessor,
+                                        fuchsia::sys::ServiceList services_from_session_launcher) {
   FX_DCHECK(!session_provider_.get());
 
   session_provider_.reset(new SessionProvider(
       /* delegate= */ this, launcher_.get(), device_administrator_.get(), config_accessor,
-      intl_property_provider_.get(),
+      intl_property_provider_.get(), std::move(services_from_session_launcher),
       /* on_zero_sessions= */
       [this] {
         if (state_ == State::SHUTTING_DOWN) {
@@ -274,32 +287,18 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
 }
 
 void BasemgrImpl::StartSessionWithRandomId() {
-  // If there is a session already running, stop it and try again.
-  // If it's not running, but there's a configured session provider, tear it down because
-  // we need to create a new one with an updated configuration.
-  if (session_provider_.get() || session_provider_->is_session_running()) {
-    session_provider_.Teardown(kSessionProviderTimeout, [this]() {
-      session_provider_.reset(nullptr);
-      StartSessionWithRandomId();
-    });
+  // If there is a session already running, exit.
+  if (session_provider_.get()) {
     return;
   }
-
   FX_CHECK(!session_provider_.get());
 
   // The new session uses a configuration based on its existing configuration,
   // with an argument set that ensures it starts with a random session ID.
   //
-  // If the session was previously launched through LaunchSessionmgr, the session configuration
-  // is stored in |launch_sessionmgr_config_accessor_|, and in |config_accessor_| if it was
-  // launched with configuration read by basemgr on startup.
-  const auto& accessor = launch_sessionmgr_config_accessor_
-                             ? launch_sessionmgr_config_accessor_.get()
-                             : &config_accessor_;
-
   // Create a copy of the configuration that ensures a random session ID is used.
   // TODO(fxbug.dev/51752): Create a config field for use_random_session_id and remove base shell
-  auto new_config = CloneStruct(accessor->config());
+  auto new_config = CloneStruct(config_accessor_.config());
   new_config.mutable_basemgr_config()
       ->mutable_base_shell()
       ->mutable_app_config()
@@ -310,14 +309,11 @@ void BasemgrImpl::StartSessionWithRandomId() {
   //
   // Overwrite the config accessor that was the source for the original configuration,
   // and which will be used to launch sessions in the future.
-  if (launch_sessionmgr_config_accessor_) {
-    launch_sessionmgr_config_accessor_ =
-        std::make_unique<modular::ModularConfigAccessor>(std::move(new_config));
-    CreateSessionProvider(launch_sessionmgr_config_accessor_.get());
-  } else {
-    config_accessor_ = ModularConfigAccessor(std::move(new_config));
-    CreateSessionProvider(&config_accessor_);
-  }
+  //
+  // This method, StartSessionWithRandomId(), is defined on the BasemgrDebug interface.
+  // It only ever launches a new session, and thus will use the default config.
+  config_accessor_ = ModularConfigAccessor(std::move(new_config));
+  CreateSessionProvider(&config_accessor_, fuchsia::sys::ServiceList());
 
   if (auto result = StartSession(); result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Could not start session";
@@ -333,13 +329,15 @@ void BasemgrImpl::GetPresentation(
   presentation_container_->GetPresentation(std::move(request));
 }
 
-void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {
+void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config,
+                                   fuchsia::sys::ServiceList services_from_session_launcher) {
   // If there is a session provider, tear it down and try again. This stops any running session.
   if (session_provider_.get()) {
     session_provider_.Teardown(kSessionProviderTimeout,
-                               [this, config = std::move(config)]() mutable {
+                               [this, config = std::move(config),
+                                services = std::move(services_from_session_launcher)]() mutable {
                                  session_provider_.reset(nullptr);
-                                 LaunchSessionmgr(std::move(config));
+                                 LaunchSessionmgr(std::move(config), std::move(services));
                                });
     return;
   }
@@ -347,7 +345,8 @@ void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig conf
   launch_sessionmgr_config_accessor_ =
       std::make_unique<modular::ModularConfigAccessor>(std::move(config));
 
-  CreateSessionProvider(launch_sessionmgr_config_accessor_.get());
+  CreateSessionProvider(launch_sessionmgr_config_accessor_.get(),
+                        std::move(services_from_session_launcher));
 
   if (auto result = StartSession(); result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Could not start session";

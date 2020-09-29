@@ -18,5 +18,6 @@ fidl("fuchsia.modular.internal") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.sys",
   ]
 }
