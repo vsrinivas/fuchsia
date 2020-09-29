@@ -9,7 +9,7 @@
 
 namespace util {
 
-std::vector<std::string> MakeDeterministicNamesList(int length);
+std::vector<std::string> MakeDeterministicNamesList(size_t length);
 
 }  // namespace util
 

@@ -10,10 +10,10 @@
 
 namespace util {
 
-std::vector<std::string> MakeDeterministicNamesList(int length) {
+std::vector<std::string> MakeDeterministicNamesList(size_t length) {
   std::vector<std::string> ret;
-  for (int i = 0; i < length; ++i) {
-    ret.emplace_back(fxl::StringPrintf("%07d", i));
+  for (size_t i = 0; i < length; ++i) {
+    ret.emplace_back(fxl::StringPrintf("%07zu", i));
   }
 
   std::shuffle(ret.begin(), ret.end(), std::default_random_engine(0x2128847));

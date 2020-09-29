@@ -62,9 +62,6 @@ executable("bin") {
   ]
   public_deps = [ "//zircon/system/ulib/perftest" ]
   libs = [ "zircon" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # "Helper" executable used to implement the fdio_spawn benchmark.

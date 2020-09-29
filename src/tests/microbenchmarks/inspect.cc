@@ -311,7 +311,7 @@ void RegisterTests() {
     perftest::RegisterTest(fxl::StringPrintf("Inspect/DoubleArray/Modify/%d", size).c_str(),
                            TestArrayModify<inspect::DoubleArray>, size);
 
-    const auto linear_midpoint = kLinearFloor + (size / 2) * kLinearStep;
+    const int linear_midpoint = kLinearFloor + (size / 2) * kLinearStep;
     perftest::RegisterTest(
         fxl::StringPrintf("Inspect/LinearUintHistogram/Lifecycle/%d", size).c_str(),
         TestArrayLifecycle<inspect::LinearUintHistogram>, size);
@@ -331,9 +331,9 @@ void RegisterTests() {
         TestHistogramInsert<inspect::LinearDoubleHistogram>, size, linear_midpoint);
   }
   for (auto size : {4, 16, 32}) {
-    const auto exponential_midpoint =
-        (kExponentialFloor +
-         kExponentialInitialStep * std::pow(kExponentialStepMultiplier, size / 2));
+    const int exponential_midpoint =
+        static_cast<int>(kExponentialFloor +
+                         kExponentialInitialStep * std::pow(kExponentialStepMultiplier, size / 2));
     perftest::RegisterTest(
         fxl::StringPrintf("Inspect/ExponentialUintHistogram/Lifecycle/%d", size).c_str(),
         TestArrayLifecycle<inspect::ExponentialUintHistogram>, size);

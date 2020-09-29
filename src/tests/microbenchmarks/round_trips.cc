@@ -66,7 +66,8 @@ bool ChannelRead(const zx::channel& channel, std::vector<uint8_t>* msg) {
     return false;
 
   uint32_t bytes_read;
-  ASSERT_OK(channel.read(0, msg->data(), nullptr, msg->size(), 0, &bytes_read, nullptr));
+  ASSERT_OK(channel.read(0, msg->data(), nullptr, static_cast<uint32_t>(msg->size()), 0,
+                         &bytes_read, nullptr));
   FX_CHECK(bytes_read == msg->size());
   return true;
 }
@@ -89,7 +90,7 @@ void ChannelServe(const zx::channel& channel, uint32_t count, uint32_t size) {
     if (!ChannelReadMultiple(channel, count, &msg))
       break;
     for (uint32_t i = 0; i < count; ++i) {
-      ASSERT_OK(channel.write(0, msg.data(), msg.size(), nullptr, 0));
+      ASSERT_OK(channel.write(0, msg.data(), static_cast<uint32_t>(msg.size()), nullptr, 0));
     }
   }
 }
@@ -178,7 +179,7 @@ class BasicChannelTest {
 
   void Run() {
     for (unsigned i = 0; i < args_.msg_count; ++i) {
-      ASSERT_OK(client_.write(0, msg_.data(), msg_.size(), nullptr, 0));
+      ASSERT_OK(client_.write(0, msg_.data(), static_cast<uint32_t>(msg_.size()), nullptr, 0));
     }
     FX_CHECK(ChannelReadMultiple(client_, args_.msg_count, &msg_));
   }
@@ -710,7 +711,8 @@ void RunSubprocess(const char* func_name) {
   // Retrieve the handles.
   std::vector<zx::handle> handles;
   for (;;) {
-    zx::handle handle(zx_take_startup_handle(PA_HND(PA_USER0, handles.size())));
+    uint32_t index = static_cast<uint32_t>(handles.size());
+    zx::handle handle(zx_take_startup_handle(PA_HND(PA_USER0, index)));
     if (!handle)
       break;
     handles.push_back(std::move(handle));

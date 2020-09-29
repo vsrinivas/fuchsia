@@ -34,10 +34,10 @@ bool ChannelWriteReadTest(perftest::RepeatState* state, uint32_t message_size,
   }
 
   while (state->KeepRunning()) {
-    ASSERT_OK(channel1.write(0, buffer.data(), buffer.size(), handles.data(), handles.size()));
+    ASSERT_OK(channel1.write(0, buffer.data(), message_size, handles.data(), handle_count));
     state->NextStep();
-    ASSERT_OK(channel2.read(0, buffer.data(), handles.data(), buffer.size(), handles.size(),
-                            nullptr, nullptr));
+    ASSERT_OK(channel2.read(0, buffer.data(), handles.data(), message_size, handle_count, nullptr,
+                            nullptr));
   }
 
   for (auto& handle : handles) {
@@ -73,11 +73,11 @@ bool ChannelWriteEtcReadEtcTest(perftest::RepeatState* state, uint32_t message_s
   std::vector<zx_handle_info_t> handle_info(handle_count);
 
   while (state->KeepRunning()) {
-    ASSERT_OK(channel1.write_etc(0, buffer.data(), buffer.size(), handle_dispositions.data(),
-                                 handle_dispositions.size()));
+    ASSERT_OK(channel1.write_etc(0, buffer.data(), message_size, handle_dispositions.data(),
+                                 handle_count));
     state->NextStep();
-    ASSERT_OK(channel2.read_etc(0, buffer.data(), handle_info.data(), buffer.size(),
-                                handle_info.size(), nullptr, nullptr));
+    ASSERT_OK(channel2.read_etc(0, buffer.data(), handle_info.data(), message_size, handle_count,
+                                nullptr, nullptr));
 
     // The original handles are invalid because they were moved. Put the handles that were read in
     // the handle disposition array.
