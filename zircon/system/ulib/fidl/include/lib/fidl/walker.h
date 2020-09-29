@@ -353,9 +353,11 @@ Result Walker<VisitorImpl>::WalkBits(const FidlCodedBits* coded_bits,
     default:
       __builtin_unreachable();
   }
-  if (unlikely(value & ~coded_bits->mask)) {
-    visitor_->OnError("not a valid bits member");
-    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+  if (coded_bits->strictness == kFidlStrictness_Strict) {
+    if (unlikely(value & ~coded_bits->mask)) {
+      visitor_->OnError("not a valid bits member");
+      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+    }
   }
   return Result::kContinue;
 }
