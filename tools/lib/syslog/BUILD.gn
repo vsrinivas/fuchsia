@@ -13,8 +13,7 @@ go_library("syslog") {
   ]
 }
 
-go_test("tests") {
-  output_name = "syslog_tests"
+go_test("syslog_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/syslog" ]
   deps = [ ":syslog" ]
 }

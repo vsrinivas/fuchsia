@@ -32,7 +32,6 @@ type Syslogger struct {
 type sshClient interface {
 	Run(context.Context, []string, io.Writer, io.Writer) error
 	ReconnectWithBackoff(context.Context, retry.Backoff) error
-	Close()
 }
 
 // NewSyslogger creates a new Syslogger, given an SSH session with a Fuchsia instance.
@@ -42,18 +41,24 @@ func NewSyslogger(client *sshutil.Client) *Syslogger {
 	}
 }
 
-// Stream writes system logs to a given writer; it blocks until the stream is
-// is terminated or a Done is signaled. The syslogger streams from the very
-// beggining of the system's uptime.
+// Stream writes system logs to a given writer, starting from the very beginning
+// of the system's uptime. It blocks until the context is canceled or until an
+// unexpected (not SSH-related) error occurs.
 func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 	cmd := []string{logListener}
 	for {
 		// Note: Fuchsia's log_listener does not write to stderr.
 		err := s.client.Run(ctx, cmd, output, nil)
-
-		completedSuccessfully := err == nil || ctx.Err() != nil
-		if !completedSuccessfully {
-			logger.Debugf(ctx, "error streaming syslog: %v", err)
+		if ctx.Err() == nil {
+			if err != nil {
+				logger.Debugf(ctx, "error streaming syslog: %v", err)
+			} else {
+				logger.Debugf(ctx, "log_listener exited successfully, will rerun")
+				// Don't stream from the beginning of the system's uptime, since
+				// that would include logs that we've already streamed.
+				cmd = []string{logListener, "--since_now", "yes"}
+				continue
+			}
 		}
 
 		// We need not attempt to reconnect if we hit an error unrelated to the
@@ -61,7 +66,7 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		// canceled (context cancellation is the only mechanism for stopping
 		// this method, so it generally indicates that the caller is exiting
 		// normally).
-		if completedSuccessfully || !sshutil.IsConnectionError(err) {
+		if ctx.Err() != nil || !sshutil.IsConnectionError(err) {
 			logger.Debugf(ctx, "syslog streaming complete")
 			return err
 		}
@@ -72,6 +77,9 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 			// reconnect.
 			return err
 		}
+		// Start streaming from the beginning of the system's uptime again now that
+		// we're rebooting.
+		cmd = []string{logListener}
 		logger.Infof(ctx, "syslog: refreshed ssh connection")
 		io.WriteString(output, "\n\n<< SYSLOG STREAM INTERRUPTED; RECONNECTING NOW >>\n\n")
 	}
