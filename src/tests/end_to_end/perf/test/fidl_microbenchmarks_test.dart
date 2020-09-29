@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:args/args.dart';
 import 'package:test/test.dart';
 
 import 'helpers.dart';
 
-var _tests = [];
+List<void Function()> _tests = [];
 
 const int perftestProcessRuns = 6;
 
@@ -84,22 +83,5 @@ void main(List<String> args) {
     }, timeout: Timeout.none);
   });
 
-  // The Dart test library is supposed to support sharding, but its
-  // sharding options do not seem to be accessible when running Dart tests
-  // on Fuchsia, so we reimplement the same options here.
-  final parser = ArgParser()
-    ..addOption('total-shards',
-        help: 'Number of total shards to split test suites into.',
-        defaultsTo: '1')
-    ..addOption('shard-index',
-        help: 'Which shard of test suites to run.', defaultsTo: '0');
-  final argResults = parser.parse(args);
-
-  int totalShards = int.parse(argResults['total-shards']);
-  int shardIndex = int.parse(argResults['shard-index']);
-  for (var i = 0; i < _tests.length; i++) {
-    if (i % totalShards == shardIndex) {
-      _tests[i]();
-    }
-  }
+  runShardTests(args, _tests);
 }

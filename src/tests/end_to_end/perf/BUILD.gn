@@ -21,7 +21,6 @@ test_list = [
   "kernel_boot_timeline_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
-  "netstack_iperf_test",
   "rust_inspect_benchmarks_test",
   "rust_inspect_reader_benchmarks_test",
 ]
@@ -72,7 +71,7 @@ foreach(target_name, flutter_test_list) {
   }
 }
 
-# Split fidl_microbenchmarks_test into shards so that each shard fits
+# Split the following tests into shards so that each shard fits
 # within the default time limit.
 shards = [
   "0",
@@ -85,27 +84,35 @@ shards = [
   "7",
 ]
 total_shards = "8"
-foreach(shard, shards) {
-  target_name = "fidl_microbenchmarks_test_shard_" + shard
-  dart_test(target_name) {
-    sources = [ "fidl_microbenchmarks_test.dart" ]
+shard_test_list = [
+  "fidl_microbenchmarks_test",
+  "netstack_iperf_test",
+]
+foreach(test, shard_test_list) {
+  foreach(shard, shards) {
+    target_name = test + "_shard_" + shard
+    dart_test(target_name) {
+      sources = [ test + ".dart" ]
 
-    args = [
-      "--total-shards=" + total_shards,
-      "--shard-index=" + shard,
-    ]
+      args = [
+        "--total-shards=" + total_shards,
+        "--shard-index=" + shard,
+      ]
 
-    deps = [
-      "//sdk/testing/sl4f/client",
-      "//third_party/dart-pkg/pub/args",
-      "//third_party/dart-pkg/pub/test",
-    ]
+      deps = [
+        "//sdk/testing/sl4f/client",
+        "//third_party/dart-pkg/pub/args",
+        "//third_party/dart-pkg/pub/logging",
+        "//third_party/dart-pkg/pub/meta",
+        "//third_party/dart-pkg/pub/test",
+      ]
 
-    non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+      non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
-    environments = [ nuc_env ]
+      environments = [ nuc_env ]
+    }
+    test_list += [ target_name ]
   }
-  test_list += [ target_name ]
 }
 
 if (is_host) {

@@ -26,7 +26,7 @@ enum Direction { send, recv }
 //              receiving application.
 // jitter     - mean deviation of latency experienced by receiver in msec for UDP.
 // CPU usage  - Avg CPU usage during the iperf3 sessions.
-void main() {
+void main(List<String> args) {
   enableLoggingOutput();
   const componentUrl = 'fuchsia-pkg://fuchsia.com/iperf3#meta/iperf3.cmx';
   // TCP/UDP port number that the Fuchsia side will listen on.
@@ -316,19 +316,22 @@ void main() {
     }
   }
 
+  List<void Function()> tests = [];
   void addIperfTest(String label, Protocol proto,
       {bool send = false, bool recv = false, bool deviceLocal = true}) {
-    test(label, () async {
-      final helper = await PerfTestHelper.make();
-      await waitSystemMetricsDaemonStart(helper);
-      try {
-        await runIperfClientTests(helper, proto,
-            send: send, recv: recv, deviceLocal: deviceLocal);
-      } finally {
-        // Kill the iperf3 server process.
-        await helper.sl4fDriver.ssh.run('killall iperf3.cmx');
-      }
-    }, timeout: Timeout.none);
+    tests.add(() {
+      test(label, () async {
+        final helper = await PerfTestHelper.make();
+        await waitSystemMetricsDaemonStart(helper);
+        try {
+          await runIperfClientTests(helper, proto,
+              send: send, recv: recv, deviceLocal: deviceLocal);
+        } finally {
+          // Kill the iperf3 server process.
+          await helper.sl4fDriver.ssh.run('killall iperf3.cmx');
+        }
+      }, timeout: Timeout.none);
+    });
   }
 
   // Localhost tests where both ends of iperf3 sessions are within
@@ -346,4 +349,6 @@ void main() {
   addIperfTest('e2e/TCP/recv', Protocol.tcp, recv: true, deviceLocal: false);
   addIperfTest('e2e/UDP/send', Protocol.udp, send: true, deviceLocal: false);
   addIperfTest('e2e/UDP/recv', Protocol.udp, recv: true, deviceLocal: false);
+
+  runShardTests(args, tests);
 }
