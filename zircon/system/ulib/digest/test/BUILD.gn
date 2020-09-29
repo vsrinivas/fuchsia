@@ -39,9 +39,12 @@ test("digest") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//third_party/boringssl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/digest",
   ]
 }

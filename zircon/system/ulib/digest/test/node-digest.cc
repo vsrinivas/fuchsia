@@ -9,10 +9,16 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <digest/node-digest.h>
-#include <zxtest/zxtest.h>
+#include <fbl/span.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace digest {
-namespace testing {
+namespace {
+
+using ::testing::ElementsAreArray;
 
 void TestGeometry(size_t node_size) {
   NodeDigest node_digest;
@@ -24,25 +30,25 @@ void TestGeometry(size_t node_size) {
 
   data_off = node_size;
   EXPECT_TRUE(node_digest.IsAligned(data_off));
-  EXPECT_EQ(node_digest.ToNode(data_off), 1);
+  EXPECT_EQ(node_digest.ToNode(data_off), 1ul);
   EXPECT_EQ(node_digest.PrevAligned(data_off), data_off);
   EXPECT_EQ(node_digest.NextAligned(data_off), data_off);
 
   data_off = node_size - 1;
   EXPECT_FALSE(node_digest.IsAligned(data_off));
-  EXPECT_EQ(node_digest.ToNode(data_off), 0);
-  EXPECT_EQ(node_digest.PrevAligned(data_off), 0);
+  EXPECT_EQ(node_digest.ToNode(data_off), 0ul);
+  EXPECT_EQ(node_digest.PrevAligned(data_off), 0ul);
   EXPECT_EQ(node_digest.NextAligned(data_off), node_size);
 
   data_off = node_size + 1;
   EXPECT_FALSE(node_digest.IsAligned(data_off));
-  EXPECT_EQ(node_digest.ToNode(data_off), 1);
+  EXPECT_EQ(node_digest.ToNode(data_off), 1ul);
   EXPECT_EQ(node_digest.PrevAligned(data_off), node_size);
   EXPECT_EQ(node_digest.NextAligned(data_off), node_size * 2);
 
   data_off = node_size * 37;
   EXPECT_TRUE(node_digest.IsAligned(data_off));
-  EXPECT_EQ(node_digest.ToNode(data_off), 37);
+  EXPECT_EQ(node_digest.ToNode(data_off), 37ul);
   EXPECT_EQ(node_digest.PrevAligned(data_off), data_off);
   EXPECT_EQ(node_digest.NextAligned(data_off), data_off);
 
@@ -60,26 +66,6 @@ TEST(NodeDigest, Geometry) {
     }
     EXPECT_STATUS(node_digest.SetNodeSize(node_size + 1), ZX_ERR_INVALID_ARGS);
   }
-}
-
-void TestDigest(uint64_t id, const void *data, size_t data_off, size_t data_len, const char *hex) {
-  NodeDigest node_digest;
-  const Digest &actual = node_digest.get();
-  Digest expected;
-  ASSERT_OK(expected.Parse(hex));
-
-  // All at once
-  node_digest.set_id(id);
-  EXPECT_OK(node_digest.Reset(0, data_len));
-  EXPECT_EQ(node_digest.Append(data, SIZE_MAX), data_len);
-  EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
-
-  // Byte by byte
-  EXPECT_OK(node_digest.Reset(0, data_len));
-  for (size_t i = 0; i < data_len; ++i) {
-    EXPECT_EQ(node_digest.Append(data, 1), 1);
-  }
-  EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
 }
 
 TEST(NodeDigest, ResetAndAppend) {
@@ -108,6 +94,7 @@ TEST(NodeDigest, ResetAndAppend) {
   const Digest &actual = node_digest.get();
   Digest expected;
   for (size_t i = 0; i < sizeof(tc) / sizeof(tc[0]); ++i) {
+    SCOPED_TRACE(std::string("Test case with digest: ") + tc[i].hex);
     node_digest.set_id(tc[i].id);
     size_t data_off = tc[i].off;
     size_t data_len = tc[i].len;
@@ -115,27 +102,37 @@ TEST(NodeDigest, ResetAndAppend) {
     // All at once
     EXPECT_OK(node_digest.Reset(data_off, data_off + data_len));
     EXPECT_EQ(node_digest.Append(data, SIZE_MAX), data_len);
-    EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
+    EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+                ElementsAreArray(expected.get(), kSha256Length));
     // Byte by byte
     EXPECT_OK(node_digest.Reset(data_off, data_off + data_len));
     for (size_t i = data_off; i < data_len; ++i) {
-      EXPECT_EQ(node_digest.Append(data, 1), 1);
+      EXPECT_EQ(node_digest.Append(data, 1), 1ul);
     }
-    EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
+    EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+                ElementsAreArray(expected.get(), kSha256Length));
   }
 }
 
-TEST(NodeDigest, IsValidNodeSize) {
-  EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMinNodeSize));
+TEST(NodeDigest, MinNodeSizeIsValid) { EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMinNodeSize)); }
+
+TEST(NodeDigest, MaxNodeSizeIsValid) { EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMaxNodeSize)); }
+
+TEST(NodeDigest, DefaultNodeSizeIsValid) {
   EXPECT_TRUE(NodeDigest::IsValidNodeSize(kDefaultNodeSize));
-  EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMaxNodeSize));
-  // Power of 2 less than kMinNodeSize.
+}
+
+TEST(NodeDigest, NodeSizeLessThanMinIsInvalid) {
   EXPECT_FALSE(NodeDigest::IsValidNodeSize(kMinNodeSize >> 1));
-  // Power of 2 greater than kMaxNodeSize.
+}
+
+TEST(NodeDigest, NodeSizeGreaterThanMaxIsInvalid) {
   EXPECT_FALSE(NodeDigest::IsValidNodeSize(kMaxNodeSize << 1));
-  // Not a power of 2 between kMinNodeSize and kMaxNodeSize.
+}
+
+TEST(NodeDigest, NodeSizeNotPowerOf2IsInvalid) {
   EXPECT_FALSE(NodeDigest::IsValidNodeSize(kMaxNodeSize - 1));
 }
 
-}  // namespace testing
+}  // namespace
 }  // namespace digest

@@ -11,10 +11,12 @@
 #include <digest/hash-list.h>
 #include <digest/node-digest.h>
 #include <fbl/algorithm.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace digest {
-namespace testing {
+namespace {
 
 // Sizes for testing
 static const size_t kNodeSize = kMinNodeSize;
@@ -44,14 +46,14 @@ TEST(HashListBase, Align) {
       // Check that off is a tight, node aligned bound.
       EXPECT_LE(off, i);
       EXPECT_GT(off + kNodeSize, i);
-      EXPECT_EQ(off % kNodeSize, 0);
+      EXPECT_EQ(off % kNodeSize, 0ul);
       // Check that len is node aligned, or runs to end of data.
       EXPECT_GE(off + len, end);
       EXPECT_LT(off + len, end + kNodeSize);
       if (end > fbl::round_down(kDataLen, kNodeSize)) {
         EXPECT_EQ(len, kDataLen - off);
       } else {
-        EXPECT_EQ(len % kNodeSize, 0);
+        EXPECT_EQ(len % kNodeSize, 0ul);
       }
     }
   }
@@ -77,7 +79,7 @@ void TestSetList(size_t data_len, size_t list_len) {
 
   ASSERT_LE(list_len, sizeof(list));
   ASSERT_OK(base.SetDataLength(data_len));
-  EXPECT_EQ(base.data_off(), 0);
+  EXPECT_EQ(base.data_off(), 0ul);
   EXPECT_EQ(base.data_len(), data_len);
   ASSERT_LE(base.GetListLength(), sizeof(list));
   EXPECT_EQ(base.GetListLength(), list_len);
@@ -88,10 +90,10 @@ void TestSetList(size_t data_len, size_t list_len) {
   EXPECT_EQ(base.list_len(), list_len);
 }
 TEST(HashList, SetList) {
-  ASSERT_NO_FATAL_FAILURES(TestSetList<uint8_t>(0, kSha256Length));
-  ASSERT_NO_FATAL_FAILURES(TestSetList<uint8_t>(kDataLen, kListLen));
-  ASSERT_NO_FATAL_FAILURES(TestSetList<const uint8_t>(0, kSha256Length));
-  ASSERT_NO_FATAL_FAILURES(TestSetList<const uint8_t>(kDataLen, kListLen));
+  ASSERT_NO_FATAL_FAILURE(TestSetList<uint8_t>(0, kSha256Length));
+  ASSERT_NO_FATAL_FAILURE(TestSetList<uint8_t>(kDataLen, kListLen));
+  ASSERT_NO_FATAL_FAILURE(TestSetList<const uint8_t>(0, kSha256Length));
+  ASSERT_NO_FATAL_FAILURE(TestSetList<const uint8_t>(kDataLen, kListLen));
 }
 
 TEST(HashListCreator, Append) {
@@ -208,5 +210,5 @@ TEST(HashList, CalculateHashListSize) {
   EXPECT_EQ(kSha256Length * 41, CalculateHashListSize(kDefaultNodeSize * 40 + 1, kDefaultNodeSize));
 }
 
-}  // namespace testing
+}  // namespace
 }  // namespace digest
