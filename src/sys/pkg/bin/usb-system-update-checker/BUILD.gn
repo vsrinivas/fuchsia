@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
@@ -64,4 +65,10 @@ fuchsia_package("usb-system-update-checker") {
 fuchsia_unittest_package("usb-system-update-checker-tests") {
   manifest = "meta/usb-system-update-checker-tests.cmx"
   deps = [ ":bin_test" ]
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  outputs = [ "usb_system_update_checker_sysmgr.config" ]
+  sources = [ "sysmgr.config" ]
 }

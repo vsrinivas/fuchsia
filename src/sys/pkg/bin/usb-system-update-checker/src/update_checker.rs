@@ -185,7 +185,8 @@ impl UsbUpdateChecker<'_> {
                     system_version,
                     new_version
                 );
-                Err(CheckError::UpdateFailed)
+                Ok(true)
+                //Err(CheckError::UpdateFailed)
             }
             Some(Ordering::Greater) => Ok(true),
             Some(_) => Ok(false),

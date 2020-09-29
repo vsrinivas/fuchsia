@@ -73,6 +73,8 @@ group("system-update-checker") {
   public_deps = [
     "bin/system-update-checker",
     "bin/system-update-checker:config",
+    "bin/usb-system-update-checker",
+    "bin/usb-system-update-checker:config",
   ]
   # TODO(fxbug.dev/51214): Remove the comment after we update to omaha-client
   # for migration build.
