@@ -333,7 +333,10 @@ mod tests {
             OPEN_RIGHT_READABLE,
         },
         fuchsia_async as fasync,
-        std::{any::Any, sync::Arc, sync::Mutex},
+        std::{
+            any::Any,
+            sync::{Arc, Mutex, Weak},
+        },
     };
 
     #[derive(Debug, PartialEq)]
@@ -449,21 +452,29 @@ mod tests {
         }
     }
 
+    struct Events(Mutex<Vec<MutableDirectoryAction>>);
+
+    impl Events {
+        fn new() -> Arc<Self> {
+            Arc::new(Events(Mutex::new(vec![])))
+        }
+    }
+
     struct MockFilesystem {
         cur_id: Mutex<u32>,
         scope: ExecutionScope,
-        events: Mutex<Vec<MutableDirectoryAction>>,
+        events: Weak<Events>,
     }
 
     impl MockFilesystem {
-        pub fn new() -> Self {
+        pub fn new(events: &Arc<Events>) -> Self {
             let token_registry = token_registry::Simple::new();
             let scope = ExecutionScope::build().token_registry(token_registry).new();
-            MockFilesystem { cur_id: Mutex::new(0), scope, events: Mutex::new(vec![]) }
+            MockFilesystem { cur_id: Mutex::new(0), scope, events: Arc::downgrade(events) }
         }
 
         pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), Status> {
-            self.events.lock().unwrap().push(event);
+            self.events.upgrade().map(|x| x.0.lock().unwrap().push(event));
             Ok(())
         }
 
@@ -515,7 +526,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
 
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let (dir2, proxy2) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
@@ -526,7 +538,7 @@ mod tests {
         let status = proxy.rename("src", token.unwrap(), "dest").await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(
             *events,
             vec![MutableDirectoryAction::Rename {
@@ -540,7 +552,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_setattr() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let mut attrs = NodeAttributes {
             mode: 0,
@@ -560,7 +573,7 @@ mod tests {
             .unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(
             *events,
             vec![MutableDirectoryAction::SetAttr {
@@ -573,7 +586,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_link() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let (_dir2, proxy2) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
 
@@ -582,17 +596,18 @@ mod tests {
 
         let status = proxy.link("src", token.unwrap(), "dest").await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Link { id: 1, path: "dest".to_owned() },]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unlink() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let status = proxy.unlink("test").await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(
             *events,
             vec![MutableDirectoryAction::Unlink {
@@ -604,33 +619,36 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sync() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let status = proxy.sync().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_close() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let status = proxy.close().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_implicit_close() {
-        let fs = Arc::new(MockFilesystem::new());
+        let events = Events::new();
+        let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, _proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
 
         fs.scope.shutdown();
         fs.scope.wait().await;
 
-        let events = fs.events.lock().unwrap();
+        let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }
 }

@@ -1530,25 +1530,3 @@ fn watch_addition_with_two_scopes() {
         }
     });
 }
-
-#[test]
-fn test_recursive_directory() {
-    let dir = pseudo_directory! {
-        "file" => read_only_static(b"Content"),
-    };
-
-    dir.clone().add_entry("dir", dir.clone()).unwrap();
-
-    let root = pseudo_directory! {
-        "dir" => dir,
-    };
-
-    run_server_client(OPEN_RIGHT_READABLE, root, |proxy| async move {
-        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_file_assert_content!(&proxy, flags, "dir/file", "Content");
-        open_as_file_assert_content!(&proxy, flags, "dir/dir/file", "Content");
-        open_as_file_assert_content!(&proxy, flags, "dir/dir/dir/file", "Content");
-
-        assert_close!(proxy);
-    });
-}
