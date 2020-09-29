@@ -925,4 +925,12 @@ zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& o
   return TransactionManager::RunRequests(operations);
 }
 
+BlobfsMetrics Blobfs::CreateMetrics() {
+#ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
+  return BlobfsMetrics{true};
+#else
+  return BlobfsMetrics{false};
+#endif
+}
+
 }  // namespace blobfs

@@ -276,6 +276,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // to be sure that all transactions leave the file system in a good state.
   void FsckAtEndOfTransaction(zx_status_t status);
 
+  static BlobfsMetrics CreateMetrics();
+
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
 
@@ -305,11 +307,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // by inspecting its koid.
   uint64_t fs_id_legacy_ = 0;
 
-#ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
-  BlobfsMetrics metrics_{true};
-#else
-  BlobfsMetrics metrics_{false};
-#endif
+  BlobfsMetrics metrics_ = CreateMetrics();
 
   std::unique_ptr<pager::UserPager> pager_ = nullptr;
 

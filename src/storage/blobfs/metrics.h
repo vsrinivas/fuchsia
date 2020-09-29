@@ -107,15 +107,10 @@ class BlobfsMetrics {
   // Flushes the metrics to the cobalt client and schedules itself to flush again.
   void ScheduleMetricFlush();
 
+  static inspect::Inspector CreateInspector();
+
   // Inspect instrumentation data.
-  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this
-  // inspect VMO need more than 128KiB. This gives the VMO enough space to grow if
-  // we add more data in the future.
-  // WARNING: When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
-  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
-  // VMO.
-  inspect::Inspector inspector_ =
-      inspect::Inspector(inspect::InspectSettings{.maximum_size = 131072});
+  inspect::Inspector inspector_ = CreateInspector();
   inspect::Node& root_ = inspector_.GetRoot();
 
   // ALLOCATION STATS

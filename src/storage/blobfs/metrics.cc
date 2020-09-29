@@ -153,6 +153,21 @@ void BlobfsMetrics::ScheduleMetricFlush() {
       kCobaltFlushTimer);
 }
 
+inspect::Inspector BlobfsMetrics::CreateInspector() {
+  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this
+  // inspect VMO need more than 128KiB. This gives the VMO enough space to grow if
+  // we add more data in the future.
+  // When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
+  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
+  // VMO.
+#ifdef BLOBFS_ENABLE_LARGE_INSPECT_VMO
+  constexpr size_t kSize = 2 * 1024 * 1024;
+#else
+  constexpr size_t kSize = 128 * 1024;
+#endif
+  return inspect::Inspector(inspect::InspectSettings{.maximum_size = kSize});
+}
+
 void BlobfsMetrics::Collect() {
   cobalt_metrics_.EnableMetrics(true);
   // TODO(gevalentino): Once we have async llcpp bindings, instead pass a dispatcher for

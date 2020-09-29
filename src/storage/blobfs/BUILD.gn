@@ -14,6 +14,14 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
+declare_args() {
+  # Set this to true when configuring gn args to enable blobfs page-in
+  # metrics recording.
+  # This will also increase the inspect VMO size for blobfs to 2 MiB,
+  # to accommodate the large number of metrics entries.
+  blobfs_page_in_metrics_recording = false
+}
+
 config("headers_config") {
   include_dirs = [ "." ]
 }
@@ -210,7 +218,13 @@ zx_library("blobfs") {
     "//build/config:Wno-conversion",
   ]
 
-  # To enable blobfs page-in metrics, uncomment the line below.
-  # Note that this feature requires a large Inspect VMO (>512KB) for blobfs.
-  # defines = [ "BLOBFS_ENABLE_PAGE_IN_METRICS" ]
+  if (blobfs_page_in_metrics_recording) {
+    defines = [
+      # Enable blobfs page-in metrics.
+      "BLOBFS_ENABLE_PAGE_IN_METRICS",
+
+      # The page-in metrics feature requires a large Inspect VMO (>512KB) for blobfs.
+      "BLOBFS_ENABLE_LARGE_INSPECT_VMO",
+    ]
+  }
 }
