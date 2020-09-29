@@ -17,6 +17,7 @@ use {
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     fuchsia_zircon::{AsHandleRef, Signals},
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
+    log::error,
     std::{cell::RefCell, convert::TryFrom, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
     term_model::{
         ansi::Processor,
@@ -304,7 +305,7 @@ impl TerminalViewAssistant {
                 select!(
                     result = read_fut => {
                         let read_count = result.unwrap_or_else(|e: std::io::Error| {
-                            eprintln!(
+                            error!(
                                 "failed to read bytes from io_loop, dropping current message: {:?}",
                                 e
                             );
@@ -322,7 +323,7 @@ impl TerminalViewAssistant {
                     result = resize_receiver.next().fuse() => {
                         if let Some(event) = result {
                             pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
-                                eprintln!("failed to send resize message to pty: {:?}", e)
+                                error!("failed to send resize message to pty: {:?}", e)
                             });
                             app_context.request_render(view_key);
                         }
@@ -337,7 +338,7 @@ impl TerminalViewAssistant {
                 match pty.shell_process_info().map(|info| i32::try_from(info.return_code)) {
                     Some(Ok(return_code)) => return_code,
                     _ => {
-                        eprintln!("failed to obtain the shell process return code");
+                        error!("failed to obtain the shell process return code");
                         1
                     }
                 },

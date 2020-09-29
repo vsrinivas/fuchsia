@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     carnelian::{App, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture},
+    fuchsia_syslog as syslog,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
     std::env,
     terminal_lib::TerminalAssistant,
@@ -25,6 +26,7 @@ pub fn make_app_assistant() -> AssistantCreatorFunc {
 }
 
 fn main() -> Result<(), Error> {
+    syslog::init().unwrap();
     trace_provider_create_with_fdio();
     env::set_var("RUST_BACKTRACE", "full");
     App::run(make_app_assistant())

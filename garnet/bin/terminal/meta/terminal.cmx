@@ -17,6 +17,7 @@
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageResolverAdmin",
             "fuchsia.pkg.RepositoryManager",
