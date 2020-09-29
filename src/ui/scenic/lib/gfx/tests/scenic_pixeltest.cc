@@ -7,6 +7,7 @@
 // clang-format on
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -1267,13 +1268,16 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
   EXPECT_EQ(status, ZX_OK);
 
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
+
   const uint32_t kBufferId = 1;
   image_pipe->AddBufferCollection(kBufferId, std::move(dup_token));
 
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  fuchsia::sysmem::BufferCollectionPtr buffer_collection;
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest());
+                                                  buffer_collection.NewRequest(dispatcher()));
   EXPECT_EQ(status, ZX_OK);
+
+  buffer_collection.set_error_handler([](zx_status_t status) { EXPECT_NE(status, ZX_OK); });
 
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.has_buffer_memory_constraints = true;
@@ -1293,23 +1297,38 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
   image_constraints.max_coded_height = kShapeHeight;
   image_constraints.max_bytes_per_row = kShapeWidth;
 
-  status = buffer_collection->SetConstraints(true, constraints);
-  EXPECT_EQ(status, ZX_OK);
+  // Have the client wait for allocation.
+  // TODO(fxbug.dev/60837): Currently in order to make WaitForBuffersAllocated()
+  // see a response before the BufferCollections channel is closed, we have to
+  // call WaitForBuffersAllocated() asynchronously before SetConstraints().
+  // We should change it back to sync pointers after this bug is fixed.
+  bool allocation_processed = false;
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  EXPECT_EQ(status, ZX_OK);
-  // TODO(fxbug.dev/54153): This test is skipped on FEMU until we support external
-  // host-visible image allocation on FEMU.
+  buffer_collection->WaitForBuffersAllocated(
+      [&allocation_processed, &allocation_status, &buffer_collection_info](
+          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+        allocation_processed = true;
+        allocation_status = status;
+        buffer_collection_info = std::move(info);
+      });
+
+  RunLoopUntilIdle();
+
+  buffer_collection->SetConstraints(true, constraints);
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&allocation_processed]() { return allocation_processed; },
+                                        zx::sec(1)));
+
+  // TODO(fxbug.dev/59804): This test is skipped on FEMU until we support YUV
+  // formats for external visible image allocation on FEMU.
   if (allocation_status == ZX_ERR_NOT_SUPPORTED) {
     FX_LOGS(WARNING) << "Buffer constraints not supported. Test skipped.";
     GTEST_SKIP();
-  } else {
-    ASSERT_EQ(ZX_OK, allocation_status);
   }
+  ASSERT_EQ(allocation_status, ZX_OK);
   EXPECT_FALSE(buffer_collection_info.settings.buffer_settings.is_secure);
-  status = buffer_collection->Close();
-  EXPECT_EQ(status, ZX_OK);
+  buffer_collection->Close();
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kShapeWidth;
@@ -1383,6 +1402,12 @@ INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, ParameterizedYuvPixelTest,
 
 // We cannot capture protected content, so we expect a black screenshot instead.
 TEST_F(ScenicPixelTest, ProtectedImage) {
+  auto escher_ptr = escher::test::GetEscher()->GetWeakPtr();
+  if (!escher_ptr->device()->caps().allow_protected_memory) {
+    FX_LOGS(WARNING) << "Protected memory not supported. Test skipped.";
+    GTEST_SKIP();
+  }
+
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
@@ -2037,10 +2062,13 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
 
   const uint32_t kShapeWidth = 32;
   const uint32_t kShapeHeight = 32;
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  fuchsia::sysmem::BufferCollectionPtr buffer_collection;
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest());
+                                                  buffer_collection.NewRequest(dispatcher()));
   EXPECT_EQ(status, ZX_OK);
+
+  buffer_collection.set_error_handler([](zx_status_t status) { EXPECT_NE(status, ZX_OK); });
+
   fuchsia::sysmem::BufferCollectionConstraints constraints;
 
   constraints.has_buffer_memory_constraints = true;
@@ -2059,18 +2087,37 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   image_constraints.min_coded_height = kShapeHeight;
   image_constraints.max_coded_height = kShapeHeight;
 
-  status = buffer_collection->SetConstraints(true, constraints);
-  EXPECT_EQ(status, ZX_OK);
-
   // Have the client wait for allocation.
+  // TODO(fxbug.dev/60837): Currently in order to make WaitForBuffersAllocated()
+  // see a response before the BufferCollections channel is closed, we have to
+  // call WaitForBuffersAllocated() asynchronously before SetConstraints().
+  // We should change it back to sync pointers after this bug is fixed.
+  bool allocation_processed = false;
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(allocation_status, ZX_OK);
+  buffer_collection->WaitForBuffersAllocated(
+      [&allocation_processed, &allocation_status, &buffer_collection_info](
+          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+        allocation_processed = true;
+        allocation_status = status;
+        buffer_collection_info = std::move(info);
+      });
 
-  status = buffer_collection->Close();
-  EXPECT_EQ(status, ZX_OK);
+  RunLoopUntilIdle();
+
+  buffer_collection->SetConstraints(true, constraints);
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&allocation_processed]() { return allocation_processed; },
+                                        zx::sec(1)));
+
+  // TODO(fxbug.dev/59804): This test is skipped on FEMU until we support YUV
+  // formats for external visible image allocation on FEMU.
+  if (allocation_status == ZX_ERR_NOT_SUPPORTED) {
+    FX_LOGS(WARNING) << "Buffer constraints not supported. Test skipped.";
+    GTEST_SKIP();
+  }
+  ASSERT_EQ(allocation_status, ZX_OK);
+  buffer_collection->Close();
 
   uint8_t* vmo_base;
   const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;

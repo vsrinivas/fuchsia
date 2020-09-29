@@ -15,13 +15,13 @@ import("//src/ui/lib/escher/shaders/shaders.gni")
 # many such products.
 group("runtime") {
   deps = [
+    ":scenic",
     "//garnet/bin/sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/activity",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/bin/root_presenter:configs",
-    ":scenic",
   ]
 }
 
@@ -90,7 +90,7 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_pixeltests"
-      environments = magma_libvulkan_hardware_envs
+      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_swapchain_tests"
@@ -106,7 +106,7 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_viewstate_apptests"
-      environments = magma_libvulkan_hardware_envs
+      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
     },
     {
       name = "input_unittests"
