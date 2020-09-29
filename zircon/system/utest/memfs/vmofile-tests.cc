@@ -91,7 +91,17 @@ TEST(VmofileTests, test_vmofile_basic) {
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
-    // TODO(fxbug.dev/37091): This currently provides SET_PROPERTY but shouldn't.
+    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights);
+    ASSERT_EQ(buffer->size, 13);
+  }
+
+  {
+    auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h),
+                                                 fio::VMO_FLAG_READ | fio::VMO_FLAG_PRIVATE);
+    ASSERT_EQ(get_result.status(), ZX_OK);
+    ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
+    llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
+    ASSERT_TRUE(buffer->vmo.is_valid());
     ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
     ASSERT_EQ(buffer->size, 13);
   }
@@ -168,8 +178,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
-    // TODO(fxbug.dev/37091): This currently provides SET_PROPERTY but shouldn't.
-    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
+    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights);
     ASSERT_EQ(buffer->size, 13);
   }
 
@@ -182,9 +191,8 @@ TEST(VmofileTests, test_vmofile_exec) {
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     auto buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
-    // TODO(fxbug.dev/37091): This currently provides SET_PROPERTY but shouldn't.
     ASSERT_EQ(get_rights(buffer->vmo),
-              kCommonExpectedRights | ZX_RIGHT_EXECUTE | ZX_RIGHT_SET_PROPERTY);
+              kCommonExpectedRights | ZX_RIGHT_EXECUTE);
     ASSERT_EQ(buffer->size, 13);
   }
 

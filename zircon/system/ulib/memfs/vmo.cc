@@ -126,18 +126,33 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
     }
   }
 
-  // Let clients map and set the names of their VMOs.
-  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
-  // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access
-  // to the underlying VMO can both be satisfied due to the immutability of
-  // Vmofiles.
+  // Let clients map their VMOs.
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
   rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
   rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
 
   zx_handle_t vmo;
-  zx_status_t status = zx_handle_duplicate(vmo_, rights, &vmo);
-  if (status != ZX_OK) {
-    return status;
+  if (flags & ::llcpp::fuchsia::io::VMO_FLAG_PRIVATE) {
+    // Only allow object_set_property on private VMO.
+    rights |= ZX_RIGHT_SET_PROPERTY;
+    // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it. Adding
+    // CHILD_NO_WRITE still creates a snapshot and a new VMO object, which e.g. can have a unique
+    // ZX_PROP_NAME value, but the returned handle lacks WRITE and maintains EXECUTE.
+    zx_status_t status = zx_vmo_create_child(vmo_,
+                                             ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE,
+                                             0, length_, &vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    if ((status = zx_handle_replace(vmo, rights, &vmo)) != ZX_OK) {
+      return status;
+    }
+  } else {
+    zx_status_t status = zx_handle_duplicate(vmo_, rights, &vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   *out_vmo = zx::vmo(vmo);
