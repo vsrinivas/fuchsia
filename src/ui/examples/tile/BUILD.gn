@@ -29,7 +29,4 @@ executable("tile") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

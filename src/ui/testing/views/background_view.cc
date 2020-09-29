@@ -72,7 +72,7 @@ void BackgroundView::OnScenicError(std::string error) {
 
 void BackgroundView::OnViewPropertiesChanged(const fuchsia::ui::gfx::vec3& sz) {
   FX_LOGS(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;
-  if (!sz.x || !sz.y || !sz.z)
+  if (sz.x == 0.f || sz.y == 0.f || sz.z == 0.f)
     return;
 
   Draw(sz.x * .5f, sz.y * .5f, sz.x, sz.y);

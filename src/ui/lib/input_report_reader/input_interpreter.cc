@@ -19,8 +19,8 @@ namespace {
 
 fuchsia::ui::input::Axis ConvertAxis(fuchsia::input::report::Axis axis) {
   fuchsia::ui::input::Axis a = {};
-  a.range.min = axis.range.min;
-  a.range.max = axis.range.max;
+  a.range.min = static_cast<int32_t>(axis.range.min);
+  a.range.max = static_cast<int32_t>(axis.range.max);
   return a;
 }
 
@@ -51,9 +51,9 @@ void InputInterpreter::DispatchReport(const fuchsia::ui::input::InputDevicePtr& 
   device->DispatchReport(std::move(report));
 }
 
-std::unique_ptr<InputInterpreter> InputInterpreter::Create(InputReaderBase* base, zx::channel channel,
-                                     fuchsia::ui::input::InputDeviceRegistry* registry,
-                                     std::string name) {
+std::unique_ptr<InputInterpreter> InputInterpreter::Create(
+    InputReaderBase* base, zx::channel channel, fuchsia::ui::input::InputDeviceRegistry* registry,
+    std::string name) {
   // Using `new` to access a non-public constructor.
   auto interpreter = std::unique_ptr<InputInterpreter>(new InputInterpreter(base, registry, name));
   zx_status_t status = interpreter->device_.Bind(std::move(channel));
@@ -158,12 +158,16 @@ void InputInterpreter::RegisterTouchscreen(
   auto touch = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
   if (descriptor.touch().input().has_contacts()) {
     if (descriptor.touch().input().contacts()[0].has_position_x()) {
-      touch->x.range.min = descriptor.touch().input().contacts()[0].position_x().range.min;
-      touch->x.range.max = descriptor.touch().input().contacts()[0].position_x().range.max;
+      touch->x.range.min =
+          static_cast<int32_t>(descriptor.touch().input().contacts()[0].position_x().range.min);
+      touch->x.range.max =
+          static_cast<int32_t>(descriptor.touch().input().contacts()[0].position_x().range.max);
     }
     if (descriptor.touch().input().contacts()[0].has_position_y()) {
-      touch->y.range.min = descriptor.touch().input().contacts()[0].position_y().range.min;
-      touch->y.range.max = descriptor.touch().input().contacts()[0].position_y().range.max;
+      touch->y.range.min =
+          static_cast<int32_t>(descriptor.touch().input().contacts()[0].position_y().range.min);
+      touch->y.range.max =
+          static_cast<int32_t>(descriptor.touch().input().contacts()[0].position_y().range.max);
     }
   }
   if (descriptor.touch().input().has_max_contacts()) {
@@ -219,10 +223,10 @@ void InputInterpreter::DispatchTouchReport(const fuchsia::input::report::InputRe
         input_touch.finger_id = contact.contact_id();
       }
       if (contact.has_position_x()) {
-        input_touch.x = contact.position_x();
+        input_touch.x = static_cast<int32_t>(contact.position_x());
       }
       if (contact.has_position_y()) {
-        input_touch.y = contact.position_y();
+        input_touch.y = static_cast<int32_t>(contact.position_y());
       }
       input_touchscreen->touches.push_back(std::move(input_touch));
     }
@@ -238,10 +242,10 @@ void InputInterpreter::DispatchMouseReport(const fuchsia::input::report::InputRe
   }
   auto input_mouse = std::make_unique<fuchsia::ui::input::MouseReport>();
   if (report.mouse().has_movement_x()) {
-    input_mouse->rel_x = report.mouse().movement_x();
+    input_mouse->rel_x = static_cast<uint32_t>(report.mouse().movement_x());
   }
   if (report.mouse().has_movement_y()) {
-    input_mouse->rel_y = report.mouse().movement_y();
+    input_mouse->rel_y = static_cast<uint32_t>(report.mouse().movement_y());
   }
   if (report.mouse().has_pressed_buttons()) {
     for (uint8_t button : report.mouse().pressed_buttons()) {

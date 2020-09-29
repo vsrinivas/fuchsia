@@ -18,16 +18,16 @@ void CoordinateTestView::Draw(float cx, float cy, float sx, float sy) {
   static const float pane_width = sx / 2;
   static const float pane_height = sy / 2;
 
-  for (uint32_t i = 0; i < 2; i++) {
-    for (uint32_t j = 0; j < 2; j++) {
+  for (uint8_t i = 0; i < 2; i++) {
+    for (uint8_t j = 0; j < 2; j++) {
       Rectangle pane_shape(session(), pane_width, pane_height);
       Material pane_material(session());
-      pane_material.SetColor(i * 255.f, 0, j * 255.f, 255);
+      pane_material.SetColor(i * 255, 0, j * 255, 255);
 
       ShapeNode pane_node(session());
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
-      pane_node.SetTranslation((i + 0.5) * pane_width, (j + 0.5) * pane_height, -20);
+      pane_node.SetTranslation((i + 0.5f) * pane_width, (j + 0.5f) * pane_height, -20);
       root_node.AddChild(pane_node);
     }
   }
@@ -39,7 +39,7 @@ void CoordinateTestView::Draw(float cx, float cy, float sx, float sy) {
   ShapeNode pane_node(session());
   pane_node.SetShape(pane_shape);
   pane_node.SetMaterial(pane_material);
-  pane_node.SetTranslation(0.5 * sx, 0.5 * sy, -40);
+  pane_node.SetTranslation(0.5f * sx, 0.5f * sy, -40);
   root_node.AddChild(pane_node);
 }
 

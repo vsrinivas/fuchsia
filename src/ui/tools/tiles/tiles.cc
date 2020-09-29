@@ -163,10 +163,10 @@ void Tiles::Layout() {
   if (views_.empty() || !has_logical_size())
     return;
 
-  int num_tiles = views_.size();
-  int columns = std::ceil(std::sqrt(num_tiles));
+  int num_tiles = static_cast<int>(views_.size());
+  int columns = static_cast<int>(std::ceil(std::sqrt(num_tiles)));
   int rows = (columns + num_tiles - 1) / columns;
-  float tile_height = logical_size().y / rows;
+  float tile_height = logical_size().y / static_cast<float>(rows);
 
   auto view_it = views_.begin();
   for (int r = 0; r < rows; ++r) {
@@ -175,7 +175,7 @@ void Tiles::Layout() {
     if (r == rows - 1 && (num_tiles % columns) != 0)
       tiles_in_row = num_tiles % columns;
 
-    float tile_width = logical_size().x / tiles_in_row;
+    float tile_width = logical_size().x / static_cast<float>(tiles_in_row);
     float inset = std::min({static_cast<float>(border_), tile_width / 3.f, tile_height / 3.f});
 
     for (int c = 0; c < tiles_in_row; ++c) {
@@ -194,8 +194,8 @@ void Tiles::Layout() {
           // Preserve this across |Layout| calls.
           .focus_change = tile->view_properties.focus_change,
       };
-      tile->host_node.SetTranslation(c * tile_width + inset, r * tile_height + inset,
-                                     -kTileElevation);
+      tile->host_node.SetTranslation(static_cast<float>(c) * tile_width + inset,
+                                     static_cast<float>(r) * tile_height + inset, -kTileElevation);
       if (!fidl::Equals(tile->view_properties, view_properties)) {
         tile->host_view_holder.SetViewProperties(view_properties);
         tile->view_properties = std::move(view_properties);

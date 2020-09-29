@@ -213,9 +213,9 @@ void YuvBaseView::SetBgra32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      uint8_t y_value = GetYValue(x, y) * pixel_multiplier;
-      uint8_t u_value = GetUValue(x, y) * pixel_multiplier;
-      uint8_t v_value = GetVValue(x, y) * pixel_multiplier;
+      uint8_t y_value = static_cast<uint8_t>(GetYValue(x, y) * pixel_multiplier);
+      uint8_t u_value = static_cast<uint8_t>(GetUValue(x, y) * pixel_multiplier);
+      uint8_t v_value = static_cast<uint8_t>(GetVValue(x, y) * pixel_multiplier);
       yuv::YuvToBgra(y_value, u_value, v_value,
                      &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)]);
     }
@@ -227,9 +227,9 @@ void YuvBaseView::SetRgba32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      uint8_t y_value = GetYValue(x, y) * pixel_multiplier;
-      uint8_t u_value = GetUValue(x, y) * pixel_multiplier;
-      uint8_t v_value = GetVValue(x, y) * pixel_multiplier;
+      uint8_t y_value = static_cast<uint8_t>(GetYValue(x, y) * pixel_multiplier);
+      uint8_t u_value = static_cast<uint8_t>(GetUValue(x, y) * pixel_multiplier);
+      uint8_t v_value = static_cast<uint8_t>(GetVValue(x, y) * pixel_multiplier);
       uint8_t bgra_val[4];
       yuv::YuvToBgra(y_value, u_value, v_value, bgra_val);
       uint8_t* target = &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)];
@@ -248,7 +248,7 @@ void YuvBaseView::SetNv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * pixel_multiplier;
+      y_base[y_iter * stride_ + x_iter] = static_cast<uint8_t>(GetYValue(x, y) * pixel_multiplier);
     }
   }
   // UV interleaved
@@ -257,8 +257,10 @@ void YuvBaseView::SetNv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
-      uv_base[y_iter * stride_ + x_iter * 2] = GetUValue(x, y) * pixel_multiplier;
-      uv_base[y_iter * stride_ + x_iter * 2 + 1] = GetVValue(x, y) * pixel_multiplier;
+      uv_base[y_iter * stride_ + x_iter * 2] =
+          static_cast<uint8_t>(GetUValue(x, y) * pixel_multiplier);
+      uv_base[y_iter * stride_ + x_iter * 2 + 1] =
+          static_cast<uint8_t>(GetVValue(x, y) * pixel_multiplier);
     }
   }
 }
@@ -270,7 +272,7 @@ void YuvBaseView::SetI420Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * pixel_multiplier;
+      y_base[y_iter * stride_ + x_iter] = static_cast<uint8_t>(GetYValue(x, y) * pixel_multiplier);
     }
   }
   // U and V work the same as each other, so do them together
@@ -280,8 +282,10 @@ void YuvBaseView::SetI420Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
-      u_base[y_iter * stride_ / 2 + x_iter] = GetUValue(x, y) * pixel_multiplier;
-      v_base[y_iter * stride_ / 2 + x_iter] = GetVValue(x, y) * pixel_multiplier;
+      u_base[y_iter * stride_ / 2 + x_iter] =
+          static_cast<uint8_t>(GetUValue(x, y) * pixel_multiplier);
+      v_base[y_iter * stride_ / 2 + x_iter] =
+          static_cast<uint8_t>(GetVValue(x, y) * pixel_multiplier);
     }
   }
 }

@@ -28,7 +28,8 @@ const Color* Screenshot::operator[](size_t row) const { return &begin()[row * wi
 const Color& Screenshot::ColorAt(float x, float y) const {
   FX_CHECK(x >= 0 && x < 1 && y >= 0 && y < 1)
       << "(" << x << ", " << y << ") is out of bounds [0, 1) x [0, 1)";
-  const size_t ix = x * width_, iy = y * height_;
+  const size_t ix = static_cast<size_t>(x * static_cast<float>(width_));
+  const size_t iy = static_cast<size_t>(y * static_cast<float>(height_));
   return (*this)[iy][ix];
 }
 

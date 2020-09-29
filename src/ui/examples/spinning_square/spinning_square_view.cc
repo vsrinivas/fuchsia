@@ -45,8 +45,9 @@ void SpinningSquareView::OnSceneInvalidated(fuchsia::images::PresentationInfo pr
   const float center_x = logical_size().x * .5f;
   const float center_y = logical_size().y * .5f;
   const float square_size = std::min(logical_size().x, logical_size().y) * .6f;
-  const float t = fmod((presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
-  const float angle = t * M_PI * 2;
+  const float t = fmod(
+      static_cast<float>(presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
+  const float angle = t * static_cast<float>(M_PI) * 2.f;
 
   scenic::Rectangle background_shape(session(), logical_size().x, logical_size().y);
   background_node_.SetShape(background_shape);

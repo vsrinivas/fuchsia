@@ -179,15 +179,16 @@ void TileView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation
   const bool vertical = (params_.orientation_mode == TileParams::OrientationMode::kVertical);
 
   uint32_t index = 0;
-  uint32_t space = vertical ? logical_size().y : logical_size().x;
-  uint32_t base = space / views_.size();
-  uint32_t excess = space % views_.size();
-  uint32_t offset = 0;
+  const uint32_t space =
+      vertical ? static_cast<uint32_t>(logical_size().y) : static_cast<uint32_t>(logical_size().x);
+  const uint32_t base = space / static_cast<uint32_t>(views_.size());
+  uint32_t excess = space % static_cast<uint32_t>(views_.size());
+  float offset = 0;
   for (auto it = views_.begin(); it != views_.end(); ++it, ++index) {
     ViewData* view_data = it->second.get();
 
     // Distribute any excess width among the leading children.
-    uint32_t extent = base;
+    float extent = static_cast<float>(base);
     if (excess) {
       extent++;
       excess--;

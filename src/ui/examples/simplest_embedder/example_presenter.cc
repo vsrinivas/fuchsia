@@ -93,7 +93,7 @@ ExamplePresenter::Presentation::Presentation(scenic::Session* session,
 }
 
 void ExamplePresenter::Presentation::SetSize(float width, float height) {
-  layer_.SetSize(static_cast<int32_t>(width), static_cast<int32_t>(height));
+  layer_.SetSize(width, height);
   // TODO(fxbug.dev/24474): Don't hardcode Z bounds in multiple locations.
   view_holder_.SetViewProperties(0.f, 0.f, -1000.f, width, height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
                                  0.f);
