@@ -20,6 +20,7 @@ const fuchsia_sysmem_BufferCollectionToken_ops_t BufferCollectionToken::kOps = {
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::Duplicate>,
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::Sync>,
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::Close>,
+    fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::SetName>,
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::SetDebugClientInfo>,
     fidl::Binder<BufferCollectionToken>::BindMember<
         &BufferCollectionToken::SetDebugTimeoutLogDeadline>,
@@ -117,6 +118,12 @@ void BufferCollectionToken::SetBufferCollectionRequest(zx::channel buffer_collec
 
 zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
   return std::move(buffer_collection_request_);
+}
+
+zx_status_t BufferCollectionToken::SetName(uint32_t priority, const char* name_data,
+                                           size_t name_size) {
+  parent_->SetName(priority, std::string(name_data, name_size));
+  return ZX_OK;
 }
 
 zx_status_t BufferCollectionToken::SetDebugClientInfo(const char* name_data, size_t name_size,

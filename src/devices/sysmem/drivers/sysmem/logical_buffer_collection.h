@@ -103,6 +103,10 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // for child BufferCollection(s) to use the allocator.
   FidlAllocator& fidl_allocator() { return allocator_; }
 
+  std::optional<std::string> name() const {
+    return name_ ? std::make_optional(name_->second) : std::optional<std::string>();
+  }
+
   inspect::Node& node() { return node_; }
 
  private:

@@ -159,6 +159,54 @@ TEST_F(FakeDdkSysmem, DummySecureMem) {
   securemem_client.reset();
 }
 
+TEST_F(FakeDdkSysmem, NamedToken) {
+  zx::channel allocator_server, allocator_client;
+  ASSERT_OK(zx::channel::create(0u, &allocator_server, &allocator_client));
+  EXPECT_OK(
+      fuchsia_sysmem_DriverConnectorConnect(ddk_.FidlClient().get(), allocator_server.release()));
+
+  zx::channel token_server, token_client;
+  ASSERT_OK(zx::channel::create(0u, &token_server, &token_client));
+
+  // Queue up something that would be processed on the FIDL thread, so we can try to detect a
+  // use-after-free if the FidlServer outlives the sysmem device.
+  EXPECT_OK(fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                             token_server.release()));
+
+  // The buffer collection should end up with a name of "a" because that's the highest priority.
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionTokenSetName(token_client.get(), 5u, "c", 1));
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionTokenSetName(token_client.get(), 100u, "a", 1));
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionTokenSetName(token_client.get(), 6u, "b", 1));
+
+  zx::channel collection_server, collection_client;
+  ASSERT_OK(zx::channel::create(0u, &collection_server, &collection_client));
+
+  EXPECT_OK(fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator_client.get(), token_client.release(), collection_server.release()));
+
+  // Poll until a matching buffer collection is found.
+  while (true) {
+    bool found_collection = false;
+    sync_completion_t completion;
+    async::PostTask(sysmem_.dispatcher(), [&] {
+      if (sysmem_.logical_buffer_collections().size() == 1) {
+        const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
+        if (logical_collection->collection_views().size() == 1) {
+          auto name = logical_collection->name();
+          EXPECT_TRUE(name);
+          EXPECT_EQ("a", *name);
+          found_collection = true;
+        }
+      }
+      sync_completion_signal(&completion);
+    });
+
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    if (found_collection)
+      break;
+  }
+}
+
 TEST_F(FakeDdkSysmem, NamedClient) {
   zx::channel allocator_server, allocator_client;
   ASSERT_OK(zx::channel::create(0u, &allocator_server, &allocator_client));

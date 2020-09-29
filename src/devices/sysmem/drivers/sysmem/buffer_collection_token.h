@@ -27,6 +27,7 @@ class BufferCollectionToken
                         zx_handle_t buffer_collection_token_request);
   zx_status_t Sync(fidl_txn_t* txn);
   zx_status_t Close();
+  zx_status_t SetName(uint32_t priority, const char* name_data, size_t name_size);
   zx_status_t SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id);
   zx_status_t SetDebugTimeoutLogDeadline(int64_t deadline);
 

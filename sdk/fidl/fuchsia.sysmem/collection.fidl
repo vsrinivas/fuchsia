@@ -121,6 +121,12 @@ protocol BufferCollectionToken {
     /// LogicalBufferCollection failure.
     Close();
 
+    /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
+    /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
+    /// multiple clients set different names then the larger priority value will win.
+    [Transitional]
+    SetName(uint32 priority, string:64 name);
+
     /// Set information about the current client that can be used by sysmem to
     /// help debug leaking memory and hangs waiting for constraints. |name| can
     /// be an arbitrary string, but the current process name (see
