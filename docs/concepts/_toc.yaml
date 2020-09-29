@@ -28,6 +28,8 @@ toc:
 - title: "Drivers"
   section:
   - include: /docs/concepts/drivers/_toc.yaml
+- title: "Fuchsia emulator (FEMU)"
+  path: /docs/concepts/emulator/index.md
 - title: "Filesystems"
   section:
   - include: /docs/concepts/filesystems/_toc.yaml
