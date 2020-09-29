@@ -124,7 +124,7 @@ func main() {
 
 	if *bootloader == "" {
 		needZirconBuildDir()
-		*bootloader = filepath.Join(*zirconBuildDir, "efi-x64-win-clang/bootx64.efi")
+		*bootloader = filepath.Join(*fuchsiaBuildDir, "efi_x64/bootx64.efi")
 	}
 	if _, err := os.Stat(*bootloader); err != nil {
 		log.Fatalf("cannot read %q: %s", *bootloader, err)
