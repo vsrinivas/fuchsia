@@ -194,19 +194,17 @@ file as follows:
 
 ```
 {
-    "program": {
-        "binary": "bin/client",
+    program: {
+        binary: "bin/client",
     },
-    "use": [
+    use: [
         {
-            "protocol": [
-                "/svc/fuchsia.sys2.BlockingEventSource",
-            ],
-            "from": "framework"
+            protocol: "fuchsia.sys2.BlockingEventSource",
+            from: "framework"
         },
         {
-          event: [ "started", "stopped" ],
-          from: "framework",
+            event: [ "started", "stopped" ],
+            from: "framework",
         }
     ],
 }

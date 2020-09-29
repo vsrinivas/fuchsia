@@ -13,65 +13,95 @@ for more details.
 
 ## Providing protocol capabilities
 
-Components provide protocol capabilities by either:
+To provide a protocol capability, a component must define the capability and
+[route](#routing-protocol-capabilities) it from `self`. The component hosts the
+protocol capability in its [outgoing directory][glossary-outgoing].
 
-- [exposing](#providing-protocol-capability-expose) them,
-- or [offering](#providing-protocol-capability-offer) them.
+To define the capability, add a `capabilities` declaration for it:
 
-Components host protocol capabilities in their
-[outgoing directory][glossary-outgoing].
+```json5
+{
+    capabilities: [
+        {
+            protocol: "fuchsia.example.ExampleProtocol",
+        },
+    ],
+}
+```
 
-### Exposing {#providing-protocol-capability-expose}
+This defines a capability hosted by this component whose outgoing directory path
+is `/svc/fuchsia.example.ExampleProtocol`. You can also customize the path:
+
+```json5
+{
+    capabilities: [
+        {
+            protocol: "fuchsia.example.ExampleProtocol",
+            path: "/my_svc/fuchsia.example.MyExampleProtocol",
+        },
+    ],
+}
+```
+
+## Routing protocol capabilities
+
+Components route protocol capabilities by either:
+
+- [exposing](#routing-protocol-capability-expose) them,
+- or [offering](#routing-protocol-capability-offer) them.
+
+### Exposing {#routing-protocol-capability-expose}
 
 Exposing a protocol capability gives the component's parent access to that
 capability. This is done through an [`expose`][expose] declaration.
 
-```
+```json5
 {
-    "expose": [{
-        "protocol": "/svc/fuchsia.example.ExampleProtocol",
-        "from": "self",
-    }],
+    expose: [
+        {
+            protocol: "fuchsia.example.ExampleProtocol",
+            from: "self",
+        },
+    ],
 }
 ```
 
-The `"from": "self"` directive means that the protocol capability was created
-by this component.
+The `from: "self"` directive means that the protocol capability is provided by
+this component. In this case the protocol must have a corresponding
+[definition](#providing-protocol-capability).
 
-Note: The protocol path `"/svc/fuchsia.example.ExampleProtocol"` follows a
-convention and is explained in the [protocol paths section](#protocol-paths).
+### Offering {#routing-protocol-capability-offer}
 
-### Offering {#providing-protocol-capability-offer}
+Offering a protocol capability gives a child component access to that capability.
+This is done through an [`offer`][offer] declaration.
 
-Offering a protocol capability gives a child component access to that
-capability. This is done through an [`offer`][offer] declaration.
-
-```
+```json5
 {
-    "offer": [{
-        "protocol": "/svc/fuchsia.example.ExampleProtocol",
-        "from": "self",
-        "to": [{
-            { "dest": "#child-a" },
-            { "dest": "#child-b" },
-        }],
-    }],
+    offer: [
+        {
+            protocol: "fuchsia.example.ExampleProtocol",
+            from: "self",
+            to: [ "#child-a", "#child_b" ],
+        },
+    ],
 }
 ```
 
 ## Consuming protocol capabilities
 
-When a component [uses][use] a protocol capability that has been
-[offered][offer] to it, that protocol is made available through the component's
+When a component [uses][use] a protocol capability that has been [offered][offer]
+to it, that protocol is made available through the component's
 [namespace][glossary-namespace].
 
 Consider a component with the following manifest declaration:
 
 ```
 {
-    "use": [{
-        "protocol": "/svc/fuchsia.example.ExampleProtocol",
-    }],
+    use: [
+        {
+            protocol: "fuchsia.example.ExampleProtocol",
+        },
+    ],
 }
 ```
 
@@ -80,6 +110,19 @@ When the component attempts to open the path
 [capability routing][capability-routing] to find the component that provides
 this protocol. Then, the framework connects the newly opened channel to this
 provider.
+
+You can also customize the namespace path:
+
+```json5
+{
+    use: [
+        {
+            protocol: "fuchsia.example.ExampleProtocol",
+            path: "/my_svc/fuchsia.example.MyExampleProtocol",
+        },
+    ],
+}
+```
 
 For more information about the open request, see
 [life of a protocol open][life-of-a-protocol-open].
@@ -95,89 +138,16 @@ can be [used][use] by components without their parents [offering][offer] them.
 For a list of these protocols and what they can be used for, see
 [framework protocols][framework-protocols].
 
-```
+```json5
 {
-    "use": [{
-        "protocol": "/svc/fuchsia.sys2.Realm",
-        "from": "framework",
-    }],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
 }
 ```
-
-## Protocol paths {#protocol-paths}
-
-When a protocol capability is `use`d by a component, its path refers to the
-path in the component's [namespace][glossary-namespace].
-
-When a protocol capability is `offer`ed or `expose`d from itself, its path
-refers to the path in the component's [outgoing directory][glossary-outgoing].
-
-The path also hints to clients which FIDL protocol the server expects clients
-to use, but this is entirely a convention. Protocol capability paths can be
-renamed when being [offered][offer], [exposed][expose], or [used][use].
-
-In the following example, there are three components, `A`, `B`, and `C`, with
-the following layout:
-
-```
- A  <- offers protocol "/svc/fidl.example.X" from self to B as "/intermediary"
- |
- B  <- offers protocol "/intermediary" from realm to C as "/intermediary2"
- |
- C  <- uses protocol "/intermediary2" as "/protocol/example"
-```
-
-Each component in this example changes the path used to reference the protocol
-when passing it along in this chain, and so long as components `A` and `C`
-know which FIDL protocol to use over the channel, this will work just fine.
-
-```
-A.cml:
-{
-    "offer": [{
-        "protocol": "/svc/fidl.example.X",
-        "from": "self",
-        "to": [{
-            { "dest": "#B", "as": "/intermediary" },
-        }],
-    }],
-    "children": [{
-        "name": "B",
-        "url": "fuchsia-pkg://fuchsia.com/B#B.cm",
-    }],
-}
-```
-
-```
-B.cml:
-{
-    "offer": [{
-        "protocol": "/intermediary",
-        "from": "parent",
-        "to": [{
-            { "dest": "#C", "as": "/intermediary2" },
-        }],
-    }],
-    "children": [{
-        "name": "C",
-        "url": "fuchsia-pkg://fuchsia.com/C#C.cm",
-    }],
-}
-```
-
-```
-C.cml:
-{
-    "use": [{
-        "protocol": "/intermediary2",
-        "as": "/svc/example",
-    }],
-}
-```
-
-When `C` attempts to open the `example` node in its `/protocol` directory, `A`
-sees an open request for `/svc/fidl.example.X`. If any of the names don't
-match in this chain, `C` will see its open attempt fail.
 
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/v2/component_manifests.md#expose

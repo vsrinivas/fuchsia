@@ -1,9 +1,9 @@
 # Component manifests {#component-manifests}
 
-Note: This document describes manifests for the new Component Manager. If your
-component launches with [appmgr][doc-glossary-appmgr], indicated for instance by
-your manifest file ending in a `.cmx` extension, then refer to
-[legacy documentation][doc-legacy-manifest]
+Note: This document describes manifests for Component Framework
+([Components v2][glossary-components-v2]). If your component launches with
+[appmgr][glossary-appmgr], indicated for instance by your manifest file ending
+in a `.cmx` extension, then refer to [legacy documentation][doc-legacy-manifest]
 
 A [component manifest](#component-manifest) is a file that defines a component
 by encoding a [component declaration](#component-declaration). This document
@@ -58,7 +58,7 @@ represent components and may be provided to components at runtime.
 
 The component framework doesn't dictate a particular format for programs, but
 instead requires components to specify which runtime they need by specifying a
-[runner](runners.md). The component framework provides a built-in ELF runner,
+[runner][doc-runners]. The component framework provides a built-in ELF runner,
 while other runtimes are implemented as components within the framework. A
 component can use any runner available in its [environment][doc-environments].
 
@@ -90,7 +90,7 @@ The following capabilities can be routed:
 -   `storage`: A filesystem directory that is isolated to the component using
     it.
 -   `runner`: A capability that allows a component to use a particular
-    [runner](runners.md).
+    [runner][doc-runners].
 
 `protocol`, `directory` and `storage` capabilities are routed to components that
 `use` them. `runner` capabilities` are routed to [environments](#environments)
@@ -145,32 +145,16 @@ Because the component framework itself is the provider of the directory, any
 component may `use` it without an explicit `offer`. Fuchsia supports the
 following framework directories:
 
--   [`/hub`][doc-glossary-hub]: Allows a component to perform runtime
-    introspection of itself and its children.
-
-#### Capability paths {#capability-paths}
-
-Service, protocol, and directory capabilities are identified by paths. A path
-consists of a sequence of path components, starting with and separated by `/`,
-where each path component consists one or more non-`/` characters.
-
-A path may either be a *source path* or *target path*, whose meaning depends on
-context:
-
--   A *source path* is either a path in the component's outgoing directory (for
-    `offer` or `expose` from `self`), or the path by which the capability was
-    offered or exposed to this component.
--   A *target path* is either a path in the component's namespace (for `use`),
-    or the path by which the capability is being `offered` or `exposed` to
-    another component.
+-   [`hub`][glossary-hub]: Allows a component to perform runtime introspection
+    of itself and its children.
 
 #### Capability names {#capability-names}
 
-Runner capabilities are identified by a capability name. A capability name
-consists of a string containing the characters `a` to `z`, `A` to `Z`, `0` to
-`9`, underscore (`_`), hyphen (`-`), or the full stop character (`.`).
+Capabilities are identified by a capability name. A capability name consists of
+a string containing the characters `a` to `z`, `A` to `Z`, `0` to `9`,
+underscore (`_`), hyphen (`-`), or the full stop character (`.`).
 
-#### Directory Rights {#directory-rights}
+#### Directory rights {#directory-rights}
 
 Directory rights define how a directory may be accessed in the component
 framework. You must specify directory rights on `use` declarations and on
@@ -180,17 +164,17 @@ declarations not from `self`, they are optional.
 A *rights* field can be defined by the combination of any of the following
 rights tokens:
 
-```
-"rights": ["connect", "enumerate", "read_bytes", "write_bytes", "execute_bytes",
-            "update_attributes", "get_attributes", "traverse", "modify_directory"]
+```json5
+rights: ["connect", "enumerate", "read_bytes", "write_bytes", "execute_bytes",
+         "update_attributes", "get_attributes", "traverse", "modify_directory"]
 ```
 
 See [`fuchsia.io2.Rights`][fidl-io2-rights] for the equivalent FIDL definitions.
 
 However *rights aliases* should be prefered where possible for clarity.
 
-```
-"rights": ["r*", "w*", "x*", "rw*", "rx*"]
+```json5
+rights: ["r*", "w*", "x*", "rw*", "rx*"]
 ```
 
 Except in special circumstances you will almost always want either `["r*"]` or
@@ -209,40 +193,16 @@ Merged aliases like `rw*` are simply `r*` and `w*` merged without duplicates.
 
 This example shows usage of a directory use declaration annotated with rights:
 
-```
-"use": [
-  {
-    "directory": "/test",
-    "from": "parent",
-    "rights": ["rw*", "admin"],
-  },
+```json5
+use: [
+    {
+        directory: "test",
+        from: "parent",
+        rights: ["rw*", "admin"],
+        path: "/data/test",
+    },
 ],
 ```
-
-#### Storage capabilities {#storage-capabilities}
-
-Storage capabilities are not directly provided from a component instance's
-[outgoing directory][doc-outgoing-directory], but are created from preexisting
-directory capabilities that are declared in [`storage`](#storage) in a component
-manifest. This declaration describes the source for a directory capability and
-can then be listed as a source for offering storage capabilities.
-
-Storage capabilities cannot be [exposed](#expose).
-
-#### Storage types {#storage-types}
-
-Storage capabilities are identified by types. Valid storage types are `data`,
-`cache`, and `meta`, each having different semantics:
-
--   `data`: A mutable directory the component may store its state in. This
-    directory is guaranteed to be unique and non-overlapping with directories
-    provided to other components.
--   `cache`: Identical to the `data` storage type, but the framework may delete
-    items from this directory to reclaim space.
--   `meta`: A directory where the framework can store metadata for the component
-    instance. Features such as persistent collections must use this capability
-    as they require component manager to store data on the component's behalf.
-    The component cannot directly access this directory.
 
 #### Examples {#examples}
 
@@ -251,23 +211,24 @@ instance tree:
 
 <br>![Capability routing example](capability_routing_example.png)<br>
 
-In this example, the `echo` component instance provides an `/svc/echo` protocol
-in its outgoing directory. This protocol is routed to the `echo_tool` component
-instance, which uses it. It is necessary for each component instance in the
-routing path to propagate `/svc/echo` to the next component instance.
+In this example, the `echo` component instance provides an `fuchsia.Echo`
+protocol in its outgoing directory. This protocol is routed to the `echo_tool`
+component instance, which uses it. It is necessary for each component instance
+in the routing path to propagate `fuchsia.Echo` to the next component instance.
 
 The routing sequence is:
 
--   `echo` hosts the `/svc/echo` protocol in its outgoing directory. Also, it
-    exposes `/svc/echo` from `self` so the protocol is visible to its parent,
+-   `echo` hosts the `fuchsia.Echo` protocol in its outgoing directory. Also, it
+    exposes `fuchsia.Echo` from `self` so the protocol is visible to its parent,
     `services`.
--   `services` exposes `/svc/echo` from its child `echo` to its parent, `shell`.
--   `system` offers `/svc/echo` from its child `services` to its other child
+-   `services` exposes `fuchsia.Echo` from its child `echo` to its parent,
+    `shell`.
+-   `system` offers `fuchsia.Echo` from its child `services` to its other child
     `tools`.
--   `tools` offers `/svc/echo` from `parent` (i.e., its parent) to its child
+-   `tools` offers `fuchsia.Echo` from `parent` (i.e., its parent) to its child
     `echo_tool`.
--   `echo_tool` uses `/svc/echo`. When `echo_tool` runs, it will find
-    `/svc/echo` in its namespace.
+-   `echo_tool` uses `fuchsia.Echo`. When `echo_tool` runs, it will find
+    `fuchsia.Echo` in its namespace.
 
 A working example of capability routing can be found at
 [//examples/components/routing][examples-routing].
@@ -308,13 +269,13 @@ properties:
 -   `binary`: Package-relative path to the executable binary
 -   `args` _(optional)_: List of arguments
 
-```
-"program": {
-    "binary": "bin/hippo",
-    "args": [ "Hello", "hippos!" ],
+```json5
+program: {
+    binary: "bin/hippo",
+    args: [ "Hello", "hippos!" ],
 },
-"use": [
-    { "runner": "elf" },
+use: [
+    { runner: "elf" },
 ],
 ```
 
@@ -330,7 +291,7 @@ it expects to receive, and how it interprets them.
 ### children {#children}
 
 The `children` section declares child component instances as described in [Child
-component instances][doc-children]
+component instances][children]
 
 `children` is an array of objects with the following properties:
 
@@ -348,16 +309,16 @@ component instances][doc-children]
 
 Example:
 
-```
-"children": [
+```json5
+children: [
     {
-        "name": "logger",
-        "url": "fuchsia-pkg://fuchsia.com/logger#logger.cm",
+        name: "logger",
+        url: "fuchsia-pkg://fuchsia.com/logger#logger.cm",
     },
     {
-        "name": "pkg_cache",
-        "url": "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
-        "startup": "eager",
+        name: "pkg_cache",
+        url: "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
+        startup: "eager",
     },
 ],
 ```
@@ -383,11 +344,11 @@ The `collections` section declares collections as described in
 
 Example:
 
-```
-"collections": [
+```json5
+collections: [
     {
-        "name": "tests",
-        "durability": "transient",
+        name: "tests",
+        durability: "transient",
     },
 ],
 ```
@@ -404,8 +365,8 @@ The `environments` section declares environments as describe in
 -   `extend`: How the environment should extend this realm's environment.
     -   `realm`: Inherit all properties from this realm's environment.
     -   `none`: Start with an empty environment, do not inherit anything.
--   `runners`: The runners registered in the environment. An array of
-    objects with the following properties:
+-   `runners`: The runners registered in the environment. An array of objects
+    with the following properties:
     -   `runner`: The [name](#capability-names) of a runner capability, whose
         source is specified in `from`.
     -   `from`: The source of the runner capability, one of:
@@ -418,68 +379,132 @@ The `environments` section declares environments as describe in
 
 Example:
 
-```
-"environments": [
+```json5
+environments: [
     {
-        "name": "test-env",
-        "extend": "realm",
-        "runners": [
+        name: "test-env",
+        extend: "realm",
+        runners: [
             {
-                "runner": "gtest-runner",
-                "from": "#gtest",
+                runner: "gtest-runner",
+                from: "#gtest",
             },
         ],
     },
 ],
 ```
 
+### capabilities {#capabilities}
+
+The `capabilities` section defines capabilities that are provided by this
+component. Capabilities that are offered or exposed from `self` must be declared
+here.
+
+`capabilities` is an array of objects of any of the following types:
+
+-   [`protocol`](#capability-protocol)
+-   [`directory`](#capability-directory)
+-   [`storage`](#capability-storage)
+-   [`runner`](#capability-runner)
+
+#### protocol {#capability-protocol}
+
+A definition of a [protocol capability][doc-protocol].
+
+-   `protocol`: The [name](#capability-names) for this protocol capability, or
+    an array of names to define multiple protocols.
+-   `path` _(optional)_: The path in the component's outgoing directory from
+    which this protocol is served. Only supported when `protocol` is a single
+    name. Defaults to `/svc/${protocol}`.
+
+#### directory {#capability-directory}
+
+A definition of a [directory capability][doc-directory].
+
+-   `protocol`: The [name](#capability-names) for this directory capability.
+-   `path`: The path in the component's outgoing directory from which this
+    directory is served.
+-   `rights`: The maximum [directory rights](#directory-rights) that may be set
+    when using this directory.
+
+#### storage {#capability-storage}
+
+A definition of a [storage capability][doc-storage].
+
+-   `storage`: The [name](#capability-names) for this storage capability.
+-   `from`: The source of the directory capability backing the new storage
+    capabilities, one of:
+    -   `parent`: The component's parent.
+    -   `self`: This component.
+    -   `#<child-name>`: A [reference](#references) to a child component
+        instance.
+-   `backing_dir`: The [name](#capability-names) of the directory backing the
+    storage.
+
+#### runner {#capability-runner}
+
+A definition of a [runner capability][doc-runners].
+
+-   `runner`: The [name](#capability-names) for this runner capability.
+-   `path`: The path in the component's outgoing directory from which the
+    `fuchsia.sys2.ComponentRunner` protocol is served.
+-   `from`: Must be set, but ignored ([fxb/52195](https://fxbug.dev/52195)).
+
 ### use {#use}
 
 The `use` section declares the capabilities that the component can use at
 runtime, as explained in [Routing terminology](#routing-terminology).
 
-`use` is an array of objects with the following properties:
-
 -   A capability declaration, one of:
-    -   `protocol`: The [source path](#capability-paths) of a protocol
-        capability, or an array of source paths of protocol capabilities.
-    -   `directory`: The [source path](#capability-paths) of a directory
-        capability.
+    -   `protocol`: The [name](#capability-names) of a protocol capability, or
+        an array of names of protocol capabilities.
+    -   `directory`: The [name](#capability-names) of a directory capability.
     -   `storage`: The [type](#storage-types) of a storage capability. A
         manifest can only declare one `use` for each storage type.
     -   `runner`: The [name](#capability-names) of a runner capability. A
         component can use at most one `runner`.
--   `as` _(optional)_: The explicit [target path](#capability-paths) for the
-    capability. If omitted, defaults to the source path for protocol and
-    directory capabilities, and one of `/data` or `/cache` for storage
-    capabilities. This property cannot be used:
-    -   For meta storage capabilities.
+
+`use` is an array of objects with the following properties:
+
+-   A capability declaration, one of:
+    -   `protocol`: The [name](#capability-names) of a protocol capability, or
+        an array of names of protocol capabilities.
+    -   `directory`: The [name](#capability-names) of a directory capability.
+    -   `storage`: The [type](#storage-types) of a storage capability. A
+        manifest can only declare one `use` for each storage type.
+    -   `runner`: The [name](#capability-names) of a runner capability. A
+        component can use at most one `runner`.
+-   `path` _(optional)_: The path at which to install the capability in the
+    component's namespace. For protocols, defaults to `/svc/${protocol}`.
+    Required for `directory` and `storage`. This protocol cannot be used:
+    -   For runner capabilities.
     -   When `protocol` is an array of multiple items.
 
 Example:
 
-```
-"use": [
+```json5
+use: [
     {
-        "protocol": "/svc/fuchsia.logger.LogSink2",
-        "as": "/svc/fuchsia.logger.LogSink",
+        protocol: "fuchsia.logger.LegacyLogSink",
+        path: "/svc/fuchsia.logger.LogSink",
     },
     {
-        "protocol": [
+        protocol: [
             "/svc/fuchsia.ui.scenic.Scenic",
             "/svc/fuchsia.accessibility.Manager",
         ]
     },
     {
-        "directory": "/data/themes",
-        "as": "/themes",
+        directory: "themes",
+        path: "/data/themes",
+        rights: [ "r* ]',
     },
     {
-        "storage": "data",
-        "as": "/my_data",
+        storage: "persistent",
+        path: "/data",
     },
     {
-        "runner": "web",
+        runner: "web",
     },
 ],
 ```
@@ -492,43 +517,45 @@ explained in [Routing terminology](#routing-terminology).
 `expose` is an array of objects with the following properties:
 
 -   A capability declaration, one of:
-    -   `protocol`: The [source path](#capability-paths) of a protocol
-        capability, or an array of source paths to protocol capabilities.
-    -   `directory`: The [source path](#capability-paths) of a directory
-        capability.
-    -   `runner`: The [source name](#capability-names) of a runner capability.
+    -   `protocol`: The [name](#capability-names) of a protocol capability, or
+        an array of names to protocol capabilities.
+    -   `directory`: The [name](#capability-names) of a directory capability.
+    -   `runner`: The [name](#capability-names) of a runner capability.
 -   `from`: The source of the capability, one of:
-    -   `self`: This component.
+    -   `self`: This component. Requires a corresponding
+        [`capability`](#capabilities) declaration.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance.
--   `as` _(optional)_: The explicit [target path](#capability-paths) for the
-    capability. If omitted, defaults to the source path. This property cannot be
-    used when `protocol` is an array of multiple items.
+-   `to` _(optional)_: The capability target. Either `parent` or `framework`.
+    Defaults to `parent`.
+-   `as` _(optional)_: The [name](#capability-names) for the capability as it
+    will be known by the target. If omitted, defaults to the original name. This
+    property cannot be used when `protocol` is an array of multiple items.
 
 Example:
 
-```
-"expose": [
+```json5
+expose: [
     {
-        "directory": "/data/themes",
-        "from": "self",
+        directory: "themes",
+        from: "self",
     },
     {
-        "protocol": "/svc/pkg_cache",
-        "from": "#pkg_cache",
-        "as": "/svc/fuchsia.pkg.PackageCache",
+        protocol: "pkg.Cache",
+        from: "#pkg_cache",
+        as: "fuchsia.pkg.PackageCache",
     },
     {
-        "protocol": [
-            "/svc/fuchsia.ui.app.ViewProvider",
-            "/svc/fuchsia.fonts.Provider",
+        protocol: [
+            "fuchsia.ui.app.ViewProvider",
+            "fuchsia.fonts.Provider",
         ],
-        "from": "self",
+        from: "self",
     },
     {
-        "runner": "web-chromium",
-        "from": "#web_runner",
-        "as": "web",
+        runner: "web-chromium",
+        from: "#web_runner",
+        as: "web",
     },
 ],
 ```
@@ -541,17 +568,16 @@ explained in [Routing terminology](#routing-terminology).
 `offer` is an array of objects with the following properties:
 
 -   A capability declaration, one of:
-    -   `protocol`: The [source path](#capability-paths) of a protocol
-        capability, or an array of source paths of protocol capabilities.
-    -   `directory`: The [source path](#capability-paths) of a directory
-        capability.
+    -   `protocol`: The [name](#capability-names) of a protocol capability, or
+        an array of names of protocol capabilities.
+    -   `directory`: The [name](#capability-names) of a directory capability.
     -   `storage`: The [type](#storage-types) of a storage capability.
-    -   `runner`: The [source name](#capability-names) of a runner capability.
+    -   `runner`: The [name](#capability-names) of a runner capability.
 -   `from`: The source of the capability, one of:
     -   `parent`: The component's parent. This source can be used for all
         capability types.
-    -   `self`: This component. This source can only be used when offering
-        protocol, directory, or runner capabilities.
+    -   `self`: This component. Requires a corresponding
+        [`capability`](#capabilities) declaration.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance. This source can only be used when offering protocol,
         directory, or runner capabilities.
@@ -560,8 +586,9 @@ explained in [Routing terminology](#routing-terminology).
 -   `to`: An array of capability targets, each of which is a
     [reference](#references) to the child or collection to which the capability
     is being offered, of the form `#<target-name>`.
--   `as` _(optional)_: The explicit [target path](#capability-paths) for the
-    capability. If omitted, defaults to the source path. `as` cannot be used:
+-   `as` _(optional)_: An explicit [name](#capability-names) for the capability
+    as it will be known by the target. If omitted, defaults to the original
+    name. `as` cannot be used:
     -   For storage capabilities.
     -   When `protocol` is an array of multiple items.
 -   `dependency` _(optional)_: The type of dependency between the source and
@@ -578,64 +605,46 @@ explained in [Routing terminology](#routing-terminology).
 
 Example:
 
-```
-"offer": [
+```json5
+offer: [
     {
-        "protocol": "/svc/fuchsia.logger.LogSink",
-        "from": "#logger",
-        "to": [ "#fshost", "#pkg_cache" ],
-        "dependency": "weak_for_migration",
+        protocol: "fuchsia.logger.LogSink",
+        from: "#logger",
+        to: [ "#fshost", "#pkg_cache" ],
+        dependency: "weak_for_migration",
     },
     {
-        "protocol": [
-            "/svc/fuchsia.ui.app.ViewProvider",
-            "/svc/fuchsia.fonts.Provider",
+        protocol: [
+            "fuchsia.ui.app.ViewProvider",
+            "fuchsia.fonts.Provider",
         ],
-        "from": "#session",
-        "to": [ "#ui_shell" ],
-        "dependency": "strong",
+        from: "#session",
+        to: [ "#ui_shell" ],
+        dependency: "strong",
     },
     {
-        "directory": "/data/blobfs",
-        "from": "self",
-        "to": [ "#pkg_cache" ],
-        "as": "/blobfs",
+        directory: "blobfs",
+        from: "self",
+        to: [ "#pkg_cache" ],
     },
     {
-        "directory": "/data",
-        "from": "parent",
-        "to": [ "#fshost" ],
+        directory: "fshost-config",
+        from: "parent",
+        to: [ "#fshost" ],
+        directory: "config",
     },
     {
-        "storage": "meta",
-        "from": "parent",
-        "to": [ "#logger" ],
+        storage: "cache",
+        from: "parent",
+        to: [ "#logger" ],
     },
     {
-        "runner": "web",
-        "from": "parent",
-        "to": [ "#user-shell" ],
-    }
+        runner: "web",
+        from: "parent",
+        to: [ "#user-shell" ],
+    },
 ],
 ```
-
-### storage {#storage}
-
-A `storage` declaration creates three storage capabilities, for "data", "cache",
-and "meta" storage. These storage capabilities are backed by a preexisting
-directory capability, as explained in
-[Storage capabilities](#storage-capabilities).
-
-`storage` is an array of objects with the following properties:
-
--   `name`: A name for this storage section which can be used by an `offer`.
--   `from`: The source of the directory capability backing the new storage
-    capabilities, one of:
-    -   `parent`: The component's parent.
-    -   `self`: This component.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance.
--   `path`: The [source path](#capability-paths) of a directory capability.
 
 ### facets {#facets}
 
@@ -649,8 +658,14 @@ This section may be omitted.
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#component-collections
 [doc-environments]: environments.md
-[doc-glossary-appmgr]: /docs/glossary.md#appmgr
-[doc-glossary-hub]: /docs/glossary.md#hub
+[glossary-appmgr]: /docs/glossary.md#appmgr
+[glossary-hub]: /docs/glossary.md#hub
+[glossary-components-v2]: /docs/glossary.md#components-v2
+[doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
+[doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
+[doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
+[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-resolver]: /docs/concepts/components/v2/runners.md
 [doc-legacy-manifest]: /docs/concepts/components/v1/component_manifests.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory

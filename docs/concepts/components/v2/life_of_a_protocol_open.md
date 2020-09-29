@@ -8,15 +8,15 @@ Portions of it also apply to the components v1 model as run under appmgr.
 
 At a high level these steps are:
 
-- Component manager will [construct a component's namespace][ns-construction]
-  based on the `use` declarations in its manifest.
-- Once running, a component will attempt to [open a protocol][protocol-open] in
-  its namespace.
-- This `Open` request is received by component manager, which performs the
-  [capability routing][cap-routing] necessary to find the component providing
-  the protocol.
-- Component manager [binds to the component providing the protocol][binding] and
-  connects the `Open` request to it
+-   Component manager will [construct a component's namespace][ns-construction]
+    based on the `use` declarations in its manifest.
+-   Once running, a component will attempt to [open a protocol][protocol-open]
+    in its namespace.
+-   This `Open` request is received by component manager, which performs the
+    [capability routing][cap-routing] necessary to find the component providing
+    the protocol.
+-   Component manager [binds to the component providing the protocol][binding]
+    and connects the `Open` request to it
 
 ## Constructing a component's namespace
 
@@ -26,8 +26,8 @@ path through which the component may access files and protocols offered by other
 components.
 
 These directories take the form of [handles][handle] to [channels][channel],
-over which the component can use [the `fuchsia.io.Directory` FIDL
-protocol][fuchsia.io].
+over which the component can use
+[the `fuchsia.io.Directory` FIDL protocol][fuchsia.io].
 
 For example, all components will receive a handle to the contents of the package
 from which they were created at `/pkg`. This means that a component can see what
@@ -36,30 +36,33 @@ binaries are available in their package by reading the contents of `/pkg/bin`.
 The `use` declarations in [the component's manifest][component-manifests]
 determine how the namespace is populated. When a protocol capability is used...
 
-```cml
-"use": [
+```json5
+use: [
     {
-        "protocol": "/svc/fuchsia.example.Foo",
+        protocol: "fuchsia.example.Foo",
     },
 ]
 ```
 
 ...component manager will add an entry to the component's namespace for the
-parent directory of the protocol. In this example, this means that component
-manager will add a handle for `/svc` to the namespace.
+parent directory of the protocol. In this example, the namespace path of the
+protocol is `/svc/fuchsia.example.Foo` (the default path assignment), which
+means that component manager will add a handle for `/svc` to the namespace.
 
 The `/svc` directory is provided by component manager itself, and component
 manager will respond to requests for protocols to this directory for the
 lifetime of the component.
 
 The exact semantics of what appears in the namespace varies based on capability
-type. For example if a directory capability is used instead of the protocol 
+type. For example if a directory capability is used instead of the protocol
 capability...
 
-```cml
+```json5
 "use": [
     {
-        "directory": "/example/data",
+        directory: "example-data",
+        rights: [ "r*" ],
+        path: "/example/data",
     },
 ]
 ```
@@ -109,10 +112,10 @@ If at any step of the way the chain is invalid, component manager will log an
 error and close the channel it received from the `Open` call. This can be caused
 by various situations, such as:
 
-- A component `C` offered a capability from `parent`, but its parent `R` did not
-  offer the capability to `C`.
-- A component `C` offered a capability from its child `D`, but child `D` did not
-  expose the capability to `C`.
+-   A component `C` offered a capability from `parent`, but its parent `R` did
+    not offer the capability to `C`.
+-   A component `C` offered a capability from its child `D`, but child `D` did
+    not expose the capability to `C`.
 
 For example, consider the following tree of components and their manifests
 (`program` blocks and runner setup omitted for brevity):
@@ -127,10 +130,15 @@ A
 A.cml:
 {
     // ...
-    "expose": [
+    capabilities: [
         {
-            "protocol": "/svc/fuchsia.example.Foo",
-            "from": "self",
+            protocol: "fuchsia.example.Foo",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.example.Foo",
+            from: "self",
         },
     ],
 }
@@ -138,16 +146,16 @@ A.cml:
 B.cml:
 {
     // ...
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.example.Foo",
-            "from": "#A",
+            protocol: "fuchsia.example.Foo",
+            from: "#A",
         },
     ],
-    "children": [
+    children: [
         {
-            "name": "A",
-            "url": "fuchsia-pkg://fuchsia.com/a#meta/a.cm",
+            name: "A",
+            url: "fuchsia-pkg://fuchsia.com/a#meta/a.cm",
         },
     ]
 }
@@ -155,23 +163,21 @@ B.cml:
 C.cml:
 {
     // ...
-    "offer": [
+    offer: [
         {
-            "protocol": "/svc/fuchsia.example.Foo",
-            "from": "#B",
-            "to": [
-                { "dest": "#D" },
-            ],
+            protocol: "fuchsia.example.Foo",
+            from: "#B",
+            to: [ "#D" ],
         },
     ]
-    "children": [
+    children: [
         {
-            "name": "B",
-            "url": "fuchsia-pkg://fuchsia.com/b#meta/b.cm",
+            name: "B",
+            url: "fuchsia-pkg://fuchsia.com/b#meta/b.cm",
         },
         {
-            "name": "D",
-            "url": "fuchsia-pkg://fuchsia.com/d#meta/d.cm",
+            name: "D",
+            url: "fuchsia-pkg://fuchsia.com/d#meta/d.cm",
         },
     ]
 }
@@ -179,9 +185,9 @@ C.cml:
 D.cml:
 {
     // ...
-    "use": [
+    use: [
         {
-            "protocol": "/svc/fuchsia.example.Foo",
+            "protocol": "fuchsia.example.Foo",
         },
     ],
 }
@@ -191,13 +197,13 @@ When `D` calls `Open` on `/svc/fuchsia.example.Foo` in its namespace, component
 manager will walk the tree to find the component that should provide this
 protocol. It will start at `D`'s parent, `C`, and from there:
 
-- Look for the `offer` declaration for `fuchsia.example.Foo` to `D`, and see that
-  it comes from child `B`.
-- Look for the `expose` declaration for `fuchsia.example.Foo` from `B`, and see
-  that it comes from `A`.
-- Look for the `expose` declaration for `fuchsia.example.Foo` from `A`, and see
-  that it comes from `self`. This means that `A` is the component providing the
-  capability that `D` is attempting to use.
+-   Look for the `offer` declaration for `fuchsia.example.Foo` to `D`, and see
+    that it comes from child `B`.
+-   Look for the `expose` declaration for `fuchsia.example.Foo` from `B`, and
+    see that it comes from `A`.
+-   Look for the `expose` declaration for `fuchsia.example.Foo` from `A`, and
+    see that it comes from `self`. This means that `A` is the component
+    providing the capability that `D` is attempting to use.
 
 Now that the provider component has been found, component manager can attempt to
 hand off the channel it received via the `Open` request.
@@ -207,11 +213,11 @@ hand off the channel it received via the `Open` request.
 With the provider found the client component is now bound to the provider. This
 will cause the component to start running if it is currently stopped.
 
-Every component upon being started receives a server handle to an [_outgoing
-directory_][abi-system] in its handle table. When a component is bound to,
-component manager forwards the server end of the protocol channel to the
-providing component's outgoing directory, under the source path in the providing
-component's `offer` or `expose` declaration
+Every component upon being started receives a server handle to an
+[_outgoing directory_][abi-system] in its handle table. When a component is
+bound to, component manager forwards the server end of the protocol channel to
+the providing component's outgoing directory, under the source path in the
+providing component's `offer` or `expose` declaration
 
 In the above example component manager will send an `Open` request over the
 outgoing directory handle for component `A` to the `/svc/fuchsia.example.Foo`
@@ -245,9 +251,9 @@ Some capabilities are provided by the component framework itself, and can be
 directly used by (or will be implicitly provided to) components without their
 parent offering these capabilities. Currently these are:
 
-- `/pkg`: a handle to the package from which the component was created.
-- [`/svc/fuchsia.sys2.Realm`][realm.fidl]: a protocol which components can use
-  to manage their own realm.
+-   `/pkg`: a handle to the package from which the component was created.
+-   [`/svc/fuchsia.sys2.Realm`][realm.fidl]: a protocol which components can use
+    to manage their own realm.
 
 ### Parent may not `use` capabilities exposed to it
 
@@ -255,9 +261,9 @@ Parent components can access capabilities offered by their children at runtime
 by calling the [`fuchsia.sys2.Realm.BindChild`][realm.fidl] method to start the
 child and receive a directory containing the child's exposed protocols.
 
-To prevent dependency cycles from occurring in component namespaces, a
-parent component cannot declare a static dependency on the protocols of its
-children with `use` declarations; it must use `BindChild()`.
+To prevent dependency cycles from occurring in component namespaces, a parent
+component cannot declare a static dependency on the protocols of its children
+with `use` declarations; it must use `BindChild()`.
 
 [ns-construction]: #constructing-a-components-namespace
 [protocol-open]: #a-component-opens-a-protocol

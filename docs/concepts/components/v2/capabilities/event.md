@@ -99,7 +99,7 @@ For example, a component that was offered the events from the
 {
     use: [
         {
-            protocol: "/svc/fuchsia.sys2.EventSource",
+            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
         },
         {

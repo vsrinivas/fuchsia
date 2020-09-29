@@ -46,13 +46,13 @@ component sees its own children, it has no direct knowledge of its grandchildren
 `echo_tool`, `logger`, or `echo`. Nevertheless, all of these component instances
 are considered part of the `shell` realm.
 
-The arrows illustrate the path of an `/svc/echo` service capability that is
+The arrows illustrate the path of an `fuchsia.Echo` service capability that is
 routed through the realm from `echo` to `echo_tool`. The upward arrows
 correspond to [`expose`][expose] declarations, while the downward arrows
 represent [`offer`][offer] declarations. The `expose` declarations cause
-`/svc/echo` to be exposed outside of the capability boundary of the
-corresponding realms. For example, if `services` did not expose `/svc/echo`,
-`shell` would not be aware that `/svc/echo` exists, and could not offer the
+`fuchsia.Echo` to be exposed outside of the capability boundary of the
+corresponding realms. For example, if `services` did not expose `fuchsia.Echo`,
+`shell` would not be aware that `fuchsia.Echo` exists, and could not offer the
 service to its children or access it at runtime.
 
 For a more detailed walkthrough of capability routing with this example, see the
@@ -162,10 +162,10 @@ The use of a collection implies that the existence of `ls` and `grep` is not
 known in advance. This is plausible if you imagine that `ls` and `grep` are
 command-line tools that are instantiated on demand as the user requests them.
 
-The example also illustrates a capability routing path with the arrows.
-First, `console` [exposes][expose] `/svc/console` to its parent `shell`, which
-[offers][offer] it to `(tools)`. `/svc/console` then becomes available for any
-component instance in the collection to [use][use] -- it does not need to be
+The example also illustrates a capability routing path with the arrows. First,
+`console` [exposes][expose] `fuchsia.Console` to its parent `shell`, which
+[offers][offer] it to `(tools)`. `fuchsia.Console` then becomes available for
+any component instance in the collection to [use][use] -- it does not need to be
 routed to the dynamic instances independently.
 
 ## Environments {#environments}
