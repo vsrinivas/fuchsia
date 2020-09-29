@@ -50,6 +50,30 @@ static_assert(kSliceEntryVPartitionBits + kSliceEntryVSliceBits + kSliceEntryRes
 
 }  // namespace
 
+Header Header::FromSliceCount(size_t usable_partitions, size_t usable_slices, size_t slice_size) {
+  // Slice size must be a multiple of the block size.
+  ZX_ASSERT(slice_size % kBlockSize == 0);
+
+  // TODO(fxb/40192): Allow the partition table to vary.
+  ZX_ASSERT(usable_partitions == kMaxUsablePartitions);
+  Header result{
+      .magic = kMagic,
+      .version = kVersion,
+      .pslice_count = usable_slices,
+      .slice_size = slice_size,
+      .fvm_partition_size = kBlockSize,  // Will be set properly below.
+      .vpartition_table_size =
+          fbl::round_up((usable_partitions + 1) * sizeof(VPartitionEntry), kBlockSize),
+      .allocation_table_size = AllocTableLengthForUsableSliceCount(usable_slices),
+      .generation = 0,
+  };
+
+  // Fix up the partition size now that we know the metadata size. Slices count from 1.
+  result.fvm_partition_size = result.GetSliceDataOffset(1) + usable_slices * slice_size;
+
+  return result;
+}
+
 VPartitionEntry VPartitionEntry::Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,
                                         Name name, uint32_t flags) {
   VPartitionEntry entry = VPartitionEntry::Create();

@@ -520,7 +520,7 @@ TEST_F(FvmTest, TestLarge) {
   ASSERT_TRUE(fd);
 
   size_t slice_size = 16 * (1 << 10);
-  size_t metadata_size = fvm::MetadataSize(block_size * block_count, slice_size);
+  size_t metadata_size = fvm::MetadataSizeForDiskSize(block_size * block_count, slice_size);
 
   fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
   zx::unowned_channel channel(disk_connection.borrow_channel());

@@ -54,18 +54,11 @@ class FormatInfo {
 
   // Returns the offset from the start of the disk to beginning of |pslice| physical slice.
   // Note: pslice is 1-indexed.
-  size_t GetSliceStart(size_t pslice) const {
-    return 2 * metadata_allocated_size() + (pslice - 1) * slice_size();
-  }
+  size_t GetSliceStart(size_t pslice) const { return header_.GetSliceDataOffset(pslice); }
 
   // Returns the maximum number of slices that can be addressed from the maximum possible size of
   // the metatadata.
-  size_t GetMaxAllocatableSlices() const {
-    // The "-1" here allows for the unused 0 indexed slice.
-    // TODO(fxbug.dev/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
-    // allocation data itself is 1-indexed. This inconsistency should be fixed,
-    return (metadata_allocated_size() - kAllocTableOffset) / sizeof(SliceEntry) - 1;
-  }
+  size_t GetMaxAllocatableSlices() const { return header_.GetAllocationTableAllocatedEntryCount(); }
 
   // Returns the maximum number of slices that the allocated metadata can address for a given
   // |disk_size|.
@@ -76,7 +69,7 @@ class FormatInfo {
     // slices fit perfectly in the metadata, the allocated buffer won't be big enough to address
     // them all. This only happens when the rounded up block value happens to match the disk size.
     // TODO(gevalentino): Fix underlying cause and remove workaround.
-    if ((AllocationTable::kOffset + slice_count * sizeof(SliceEntry)) ==
+    if ((header_.GetAllocationTableOffset() + slice_count * sizeof(SliceEntry)) ==
         metadata_allocated_size()) {
       slice_count--;
     }

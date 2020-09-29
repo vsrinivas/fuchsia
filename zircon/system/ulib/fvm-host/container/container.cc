@@ -93,7 +93,7 @@ uint64_t Container::CalculateDiskSizeForSlices(size_t slice_count) const {
   // reaches 0.
   do {
     total_size = data_size + (metadata_size * 2);
-    metadata_size = fvm::MetadataSize(total_size, slice_size_);
+    metadata_size = fvm::MetadataSizeForDiskSize(total_size, slice_size_);
   } while (total_size - (metadata_size * 2) < data_size);
 
   return total_size;

@@ -71,8 +71,12 @@ static constexpr uint64_t kVersion = 0x00000001;
 // Defines the block size of that the FVM driver exposes.
 static constexpr uint64_t kBlockSize = 8192;
 
-// Maximum number of virtual partitions that can be created.
+// One past the maximum number of virtual partitions that can be created.
+// Valid partitions indices range from 1 to 1023.
+// TODO(fxb/59980) make this consistent so we can use the whole table. Either use 0-1023 as the
+// valid partition range, or 1-1024.
 static constexpr uint64_t kMaxVPartitions = 1024;
+static constexpr uint64_t kMaxUsablePartitions = kMaxVPartitions - 1;
 
 // Maximum size for a partition GUID.
 static constexpr uint64_t kGuidSize = GPT_GUID_LEN;
@@ -101,7 +105,7 @@ namespace internal {
 // and standard layout.
 template <typename T>
 struct is_persistable {
-  static constexpr bool value = std::is_standard_layout<T>::value && std::is_trivial<T>::value;
+  static constexpr bool value = std::is_standard_layout<T>::value;
 };
 
 // FVM block alignment properties for a given type.
@@ -114,11 +118,29 @@ struct block_alignment {
 
 // FVM header which describes the contents and layout of the volume manager.
 struct Header {
+  // The partition table and slice tables are both one larger than the number of usable entries,
+  // rounded up to the next block size.
+  // TODO(fxb/59980) make table_size == usable_count.
+  //
+  // Currently the partition table size is fixed, so usable_partitions must be kMaxUsablePartitions
+  // or it will assert.
+  // TODO(fxb/40192): Allow usable partitions to vary.
+  static Header FromSliceCount(size_t usable_partitions, size_t usable_slices, size_t slice_size);
+
   // The partition table always starts at a block offset, and is always a multiple of blocks
   // long in bytes.
+  //
+  // Partition IDs count from 1 but the partition table is indexed from 0, leaving an unused
+  // VPartitionEntry at the beginning of this table. The "entry count" is therefore one less than
+  // the size of the table.
   size_t GetPartitionTableOffset() const;
   size_t GetPartitionTableEntryCount() const;
   size_t GetPartitionTableByteSize() const;
+
+  // Returns the offset of the given VPartitionEntry struct from the beginning of the Header. The
+  // valid input range is:
+  //   0 < index <= GetPartitionTableEntryCount()
+  size_t GetPartitionEntryOffset(size_t index) const;
 
   // The allocation table begins on a block boundary after the partition table. It has a "used"
   // portion which are available for use by partitions (though they may not be used yet). Then it
@@ -155,10 +177,10 @@ struct Header {
   // Data ------------------------------------------------------------------------------------------
 
   // Unique identifier for this format type. Expected to be kMagic.
-  uint64_t magic;
+  uint64_t magic = kMagic;
 
   // Version of the format. The current version is kVersion.
-  uint64_t version;
+  uint64_t version = kVersion;
 
   // The number of physical slices which can be addressed and allocated by the virtual parititons.
   // This is the number of slices that will fit in the current fvm_partition_size, minus the size
@@ -171,15 +193,15 @@ struct Header {
   // space in the allocation table because there is an unused 0 entry. Always compute with
   // UsableSlicesCountOrZero() in fvm.cc to account for some edge conditions. See also
   // allocation_table_size below.
-  uint64_t pslice_count;
+  uint64_t pslice_count = 0;
 
   // Size of the each slice in bytes. Must be a multiple of kBlockSize.
-  uint64_t slice_size;
+  uint64_t slice_size = 0;
 
   // Current size of the volume the fvm described by this header. This might be smaller than the
   // size of the underlying device (see comments at the top of the file). Must be a multiple of
   // kBlockSize.
-  uint64_t fvm_partition_size;
+  uint64_t fvm_partition_size = 0;
 
   // Size in bytes of the partition table of the superblock the header describes. Must be a
   // multiple of kBlockSize.
@@ -187,22 +209,22 @@ struct Header {
   // Currently this is fixed to be the size required to hold exactly kMaxVPartitions and various
   // code assumes this constant.
   // TODO(fxbug.dev/40192): Use this value so the partition table can have different sizes.
-  uint64_t vpartition_table_size;
+  uint64_t vpartition_table_size = 0;
 
   // Size in bytes reserved for the allocation table. Must be a multiple of kBlockSize. This
   // includes extra space allowing the fvm to grow as the underlying volume grows. The
   // currently-used allocation table size, which defines the number of slices that can be addressed,
   // is derived from |pslice_count|.
-  uint64_t allocation_table_size;
+  uint64_t allocation_table_size = 0;
 
   // Use to determine over two copies(primary, secondary) of superblock, which one is the latest
   // one. This is incremented for each metadata change so the valid metadata with the largest
   // generation is the one to use.
-  uint64_t generation;
+  uint64_t generation = 0;
 
   // Integrity check of the entire metadata (one copy). When computing the hash (use
   // fvm::UpdateHash() to compute), this field is is considered to be 0-filled.
-  uint8_t hash[digest::kSha256Length];
+  uint8_t hash[digest::kSha256Length] = {0};
 
   // Fill remainder of the block.
   uint8_t reserved[0];
@@ -331,52 +353,47 @@ static_assert(internal::is_persistable<SliceEntry>::value,
 static_assert(!internal::block_alignment<SliceEntry>::may_cross_boundary,
               "VSliceEntry must not cross block boundary.");
 
-// Partition Table.
-// TODO(gevalentino): Upgrade this into a class that provides a view into a an unowned buffer, so
-// the logic for calculating offsets and accessing respective entries is hidden.
-struct PartitionTable {
-  // The Partition table starts at the next block after the respective header.
-  static constexpr uint64_t kOffset = kBlockSize;
-
-  // The Partition table size will finish at a block boundary, which is determined by the maximum
-  // allowed number of partitions.
-  static constexpr uint64_t kLength = sizeof(VPartitionEntry) * kMaxVPartitions;
-};
-
-// Allocation Table.
-// TODO(gevalentino): Upgrade this into a class that provides a view into a an unowned buffer, so
-// the logic for calculating offsets and accessing respective entries is hidden.
-struct AllocationTable {
-  // The allocation table offset with respect to the start of the header.
-  static constexpr uint64_t kOffset = PartitionTable::kOffset + PartitionTable::kLength;
-
-  // Returns an over estimation of size required to allocate all slices in a fvm_volume of
-  // |fvm_disk_size| with a given |slice_size|. The returned value is always rounded to the next
-  // block boundary.
-  static constexpr uint64_t Length(size_t fvm_disk_size, size_t slice_size) {
-    return fbl::round_up(sizeof(SliceEntry) * (fvm_disk_size / slice_size), kBlockSize);
-  }
-};
-
-// Remove this.
-constexpr size_t kVPartTableOffset = PartitionTable::kOffset;
-constexpr size_t kVPartTableLength = PartitionTable::kLength;
-constexpr size_t kAllocTableOffset = AllocationTable::kOffset;
-
-constexpr size_t AllocTableLength(size_t total_size, size_t slice_size) {
-  return fbl::round_up(sizeof(SliceEntry) * (total_size / slice_size), fvm::kBlockSize);
+constexpr size_t PartitionTableOffset() {
+  // The partition table starts at the first block after the header.
+  return kBlockSize;
 }
 
-constexpr size_t MetadataSize(size_t total_size, size_t slice_size) {
-  return kAllocTableOffset + AllocTableLength(total_size, slice_size);
+// Due to the way partitions are counted, the total partition entries (the input to this function)
+// is one larger than the number of usable partitions because the 0th entry is not used. This
+// function may generate a larger-than-needed partition table to ensure it's block-aligned.
+//
+// TODO(fxb/59980) Remove the unused 0th entry so we can actually use the full number passed in.
+constexpr size_t PartitionTableLength(size_t total_partition_entries) {
+  return fbl::round_up(sizeof(VPartitionEntry) * total_partition_entries, kBlockSize);
+}
+
+constexpr size_t AllocTableOffset() {
+  // TODO(fxb/40192): Allow a variable partition table size.
+  return PartitionTableOffset() + PartitionTableLength(kMaxVPartitions);
+}
+
+constexpr size_t AllocTableLengthForUsableSliceCount(size_t slice_count) {
+  // Reserve the 0th table entry so need +1 to get the usable slices.
+  return fbl::round_up(sizeof(SliceEntry) * (slice_count + 1), fvm::kBlockSize);
+}
+constexpr size_t AllocTableLengthForDiskSize(size_t disk_size, size_t slice_size) {
+  // This will be an over-estimate in some cases. The usable disk size will not include the FVM
+  // metadata, so for some specific ranges, subtracting the metadata might mean we actually need a
+  // smaller allocation table. But to keep things simple we ignore this small difference.
+  return AllocTableLengthForUsableSliceCount(disk_size / slice_size);
+}
+
+constexpr size_t MetadataSizeForDiskSize(size_t total_size, size_t slice_size) {
+  // TODO(fxb/40192): Allow a variable partition table size.
+  return AllocTableOffset() + AllocTableLengthForDiskSize(total_size, slice_size);
 }
 
 constexpr size_t BackupStart(size_t total_size, size_t slice_size) {
-  return MetadataSize(total_size, slice_size);
+  return MetadataSizeForDiskSize(total_size, slice_size);
 }
 
 constexpr size_t SlicesStart(size_t total_size, size_t slice_size) {
-  return 2 * MetadataSize(total_size, slice_size);
+  return 2 * MetadataSizeForDiskSize(total_size, slice_size);
 }
 
 constexpr size_t UsableSlicesCount(size_t total_size, size_t slice_size) {
@@ -405,19 +422,28 @@ enum class SuperblockType {
 
 inline size_t Header::GetPartitionTableOffset() const {
   // The partition table starts at the first block after the header.
-  return kBlockSize;
+  return ::fvm::PartitionTableOffset();
 }
 
 inline size_t Header::GetPartitionTableEntryCount() const {
+  // The partition table has an unused 0th entry, so the number of usable entries in the table
+  // is one less than that.
+  // TODO(fxb/59980) the partition table is 0-indexed (with the 0th entry not used) while the
+  // valid indices start from 1 (0 means invalid). This should be more consistent to remove the
+  // unused entry.
   // Currently we expect the partition table count and size to be constant.
   // TODO(bug 40192): Derive this from the header so we can have different sizes.
-  return kMaxVPartitions;
+  return kMaxVPartitions - 1;
 }
 
 inline size_t Header::GetPartitionTableByteSize() const {
   // Currently we expect the partition table count and size to be constant.
   // TODO(bug 40192): Derive this from the header so we can have different sizes.
   return sizeof(VPartitionEntry) * kMaxVPartitions;
+}
+
+inline size_t Header::GetPartitionEntryOffset(size_t index) const {
+  return GetPartitionTableOffset() + index * sizeof(VPartitionEntry);
 }
 
 inline size_t Header::GetAllocationTableOffset() const {
@@ -435,8 +461,10 @@ inline size_t Header::GetAllocationTableUsedByteSize() const {
 inline size_t Header::GetAllocationTableAllocatedEntryCount() const {
   // The "-1" here allows for the unused 0 indexed slice.
   // TODO(fxbug.dev/59980) the allocation table is 0-indexed (with the 0th entry not used) while the
-  // allocation data itself is 1-indexed. This inconsistency should be fixed,
-  return GetAllocationTableAllocatedByteSize() / sizeof(SliceEntry) - 1;
+  // allocation data itself is 1-indexed. This inconsistency should be fixed.
+  if (size_t byte_size = GetAllocationTableAllocatedByteSize(); byte_size > 0)
+    return byte_size / sizeof(SliceEntry) - 1;
+  return 0;  // Don't underflow if the table is empty.
 }
 
 inline size_t Header::GetAllocationTableAllocatedByteSize() const { return allocation_table_size; }

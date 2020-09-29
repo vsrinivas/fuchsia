@@ -20,7 +20,11 @@
 namespace storage::volume_image {
 namespace {
 
-using internal::GetMetadataSize;
+// Returns the expected total size of the metadata requied for both copies at the beginning of the
+// volume.
+uint64_t GetMetadataSize(const FvmOptions& options, uint64_t slice_count) {
+  return 2 * internal::MakeHeader(options, slice_count).GetMetadataAllocatedBytes();
+}
 
 CompressionOptions Lz4Compression() {
   CompressionOptions compression = {};
@@ -297,39 +301,36 @@ TEST(FvmDescriptorBuilderTest, BuildWithContiguousAlignedMappingsIsOk) {
   ASSERT_TRUE(FvmDescriptor::Builder().AddPartition(std::move(partition)).Build().is_error());
 }
 
-TEST(GetMetadataSizeTest, AccountsForTwoCopiesOfMetadata) {
-  constexpr unsigned int kSliceCount = 33;
+TEST(FvmDescriptor, MakeHeader) {
+  // Use a very small slice count and size so the answers from the three different computations
+  // will vary significantly. Various tables in FVM can be rounded up so this test doesn't test
+  // exact values, only that things are in the correct range.
+  constexpr uint64_t kSliceSize = fvm::kBlockSize;
+  constexpr uint64_t kSliceCount = 2;
+  constexpr uint64_t kMaxSize = 10 * (1ull << 30);
+  constexpr uint64_t kTargetSize = 5 * (1ull << 25);
 
   auto options = ValidOptions();
-  options.slice_size = 1 << 20;
+  options.slice_size = kSliceSize;
+  options.max_volume_size = kMaxSize;
+  options.target_volume_size = kTargetSize;
 
-  ASSERT_EQ(internal::GetMetadataSize(options, kSliceCount),
-            2 * (fvm::AllocationTable::kOffset +
-                 fbl::round_up(kSliceCount * sizeof(fvm::SliceEntry), fvm::kBlockSize)));
-}
+  // Max size is used if it's set.
+  fvm::Header header = internal::MakeHeader(options, kSliceCount);
+  EXPECT_GE(header.fvm_partition_size, kMaxSize);
 
-TEST(GetMetadataSizeTest, AllocatesSpaceForMaxVolumeSizeWhenSet) {
-  constexpr unsigned int kSliceCount = 33;
-
-  auto options = ValidOptions();
-  options.slice_size = 1ull << 20;
-  options.max_volume_size = 10 * (1ull << 30);
-  options.target_volume_size = 5 * (1ull << 25);
-
-  ASSERT_EQ(internal::GetMetadataSize(options, kSliceCount),
-            fvm::MetadataSize(*options.max_volume_size, options.slice_size));
-}
-
-TEST(GetMetadataSizeTest, AllocatesSpaceForTargetVolumeSizeWhenSet) {
-  constexpr unsigned int kSliceCount = 33;
-
-  auto options = ValidOptions();
-  options.slice_size = 1ull << 20;
+  // The target size should be used if the max size isn't set.
   options.max_volume_size = std::nullopt;
-  options.target_volume_size = 5 * (1ull << 25);
+  header = internal::MakeHeader(options, kSliceCount);
+  EXPECT_GE(header.fvm_partition_size, kTargetSize);
+  EXPECT_LT(header.fvm_partition_size, kMaxSize);
 
-  ASSERT_EQ(fvm::MetadataSize(*options.target_volume_size, options.slice_size),
-            internal::GetMetadataSize(options, kSliceCount));
+  // The slice count should be used if nothing else is set.
+  options.target_volume_size = std::nullopt;
+  header = internal::MakeHeader(options, kSliceCount);
+  constexpr uint64_t kExpectedPartitionSize = kSliceSize * kSliceCount;
+  EXPECT_GE(header.fvm_partition_size, kExpectedPartitionSize);
+  EXPECT_LT(header.fvm_partition_size, kTargetSize);
 }
 
 }  // namespace

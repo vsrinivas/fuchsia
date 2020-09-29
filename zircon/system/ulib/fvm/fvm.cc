@@ -35,7 +35,7 @@ constexpr size_t MetadataSizeOrZero(size_t disk_size, size_t slice_size) {
   if (disk_size == 0 || slice_size == 0) {
     return 0;
   }
-  return MetadataSize(disk_size, slice_size);
+  return MetadataSizeForDiskSize(disk_size, slice_size);
 }
 
 constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metadata_allocated_size,
@@ -47,14 +47,16 @@ constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metad
   int64_t delta = (fvm_partition_size - 2 * metadata_allocated_size);
   size_t slice_count = (delta > 0 ? static_cast<size_t>(delta) : 0) / slice_size;
 
+  // TODO(fxb/40192) account for variable partition table sizes.
+  uint64_t allocation_table_offset = AllocTableOffset();
+
   // Because the allocation table is 1-indexed and pslices are 0 indexed on disk,
   // if the number of slices fit perfectly in the metadata, the allocated buffer won't be big
   // enough to address them all. This only happens when the rounded up block value happens to
   // match the disk size.
   // TODO(fxbug.dev/59980): Fix underlying cause and remove workaround.
-  if ((AllocationTable::kOffset + slice_count * sizeof(SliceEntry)) == metadata_allocated_size) {
+  if ((allocation_table_offset + slice_count * sizeof(SliceEntry)) == metadata_allocated_size)
     slice_count--;
-  }
   return slice_count;
 }
 
@@ -100,45 +102,20 @@ FormatInfo FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size
       UsableSlicesCountOrZero(initial_size, MetadataSizeOrZero(max_size, slice_size), slice_size);
   header.slice_size = slice_size;
   header.fvm_partition_size = initial_size;
-  header.vpartition_table_size = kVPartTableLength;
-  header.allocation_table_size = AllocTableLength(max_size, slice_size);
+  header.vpartition_table_size = PartitionTableLength(kMaxVPartitions);
+  header.allocation_table_size = AllocTableLengthForDiskSize(max_size, slice_size);
   header.generation = 1;
 
-  FormatInfo result(header);
-
-  // Validate the getters with the older implementations.
-  // TODO remove this when everything is converted to the new getters.
-  ZX_ASSERT(header.GetPartitionTableOffset() == PartitionTable::kOffset);
-  ZX_ASSERT(header.GetPartitionTableByteSize() == PartitionTable::kLength);
-  ZX_ASSERT(header.GetAllocationTableOffset() == AllocationTable::kOffset);
-  ZX_ASSERT(header.GetAllocationTableAllocatedByteSize() ==
-            AllocationTable::Length(max_size, slice_size));
-  // We don't check the "used" bytes because the "new" version in the Header struct computes this
-  // from the pslice_count, while the "old" version in FormatInfo computes it from the
-  // fvm_partition_size. These should theoretically agree but will disagree in some corrupted cases,
-  // and these happen in tests.
-
-  ZX_ASSERT(header.GetSliceDataOffset(1) == result.GetSliceStart(1));
-  ZX_ASSERT(header.GetSliceDataOffset(17) == result.GetSliceStart(17));
-
-  ZX_ASSERT(header.GetAllocationTableAllocatedEntryCount() == result.GetMaxAllocatableSlices());
-
-  return result;
+  return FormatInfo(header);
 }
 
 FormatInfo FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
   return FromPreallocatedSize(disk_size, disk_size, slice_size);
 }
 
-size_t FormatInfo::metadata_size() const {
-  return MetadataSizeOrZero(header_.fvm_partition_size, header_.slice_size);
-}
+size_t FormatInfo::metadata_size() const { return header_.GetMetadataUsedBytes(); }
 
-size_t FormatInfo::metadata_allocated_size() const {
-  ZX_ASSERT(kAllocTableOffset + header_.allocation_table_size ==
-            header_.GetMetadataAllocatedBytes());
-  return kAllocTableOffset + header_.allocation_table_size;
-}
+size_t FormatInfo::metadata_allocated_size() const { return header_.GetMetadataAllocatedBytes(); }
 
 size_t FormatInfo::slice_count() const { return header_.pslice_count; }
 
@@ -163,9 +140,10 @@ zx_status_t ValidateHeader(const void* metadata, const void* backup, size_t meta
   auto check_value_consitency = [metadata_size](const Header* header, const FormatInfo& info) {
     // Check no overflow for each region of metadata.
     uint64_t calculated_metadata_size = 0;
-    if (add_overflow(header->allocation_table_size, kAllocTableOffset, &calculated_metadata_size)) {
+    if (add_overflow(header->allocation_table_size, header->GetAllocationTableOffset(),
+                     &calculated_metadata_size)) {
       fprintf(stderr, "fvm: Calculated metadata size produces overflow(%" PRIu64 ", %zu).\n",
-              header->allocation_table_size, kAllocTableOffset);
+              header->allocation_table_size, header->GetAllocationTableOffset());
       return false;
     }
 

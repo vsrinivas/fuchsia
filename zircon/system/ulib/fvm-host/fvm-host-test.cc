@@ -107,7 +107,7 @@ size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
   // Make use of the CalculateDiskSize() method to compute the required data size.
   // The required data size is one that does not include the header size and extended part.
   size_t minimal_disk_size = container->CalculateDiskSize();
-  size_t minimal_metadata_size = fvm::MetadataSize(minimal_disk_size, kDefaultSliceSize);
+  size_t minimal_metadata_size = fvm::MetadataSizeForDiskSize(minimal_disk_size, kDefaultSliceSize);
   return minimal_disk_size - 2 * minimal_metadata_size;
 }
 
@@ -767,8 +767,8 @@ TEST_F(FvmHostTest, TestCreateWithResizeImageFileToFit) {
   std::unique_ptr<FvmContainer> container;
   ASSERT_OK(FvmContainer::CreateExisting(fvm_path, offset, &container));
   auto required_data_size = ComputeRequiredDataSize(container);
-  size_t expected_size =
-      offset + required_data_size + 2 * fvm::MetadataSize(kContainerSize, kDefaultSliceSize);
+  size_t expected_size = offset + required_data_size +
+                         2 * fvm::MetadataSizeForDiskSize(kContainerSize, kDefaultSliceSize);
   off_t current_size;
   StatFile(fvm_path, &current_size);
   ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
@@ -784,7 +784,7 @@ TEST_F(FvmHostTest, TestResizeImageFileToFitAfterExtend) {
   ASSERT_OK(container->ResizeImageFileToFit());
   auto required_data_size = ComputeRequiredDataSize(container);
   size_t expected_size =
-      required_data_size + 2 * fvm::MetadataSize(2 * kContainerSize, kDefaultSliceSize);
+      required_data_size + 2 * fvm::MetadataSizeForDiskSize(2 * kContainerSize, kDefaultSliceSize);
 
   off_t current_size;
   StatFile(fvm_path, &current_size);
@@ -860,7 +860,7 @@ TEST_F(FvmHostTest, ConverToAndroidSparseFormat) {
   CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
   size_t disk_size = out->GetDiskSize();
   size_t roundup_disk_size = fbl::round_up(disk_size, kAndroidSparseBlockSize);
-  size_t superblock_size = 2 * fvm::MetadataSize(disk_size, out->SliceSize());
+  size_t superblock_size = 2 * fvm::MetadataSizeForDiskSize(disk_size, out->SliceSize());
   out.reset();
   // Modify the created fvm by writing custom data to test sparse image conversion logic.
   fbl::unique_fd fd(open(fvm_path, O_RDWR, 0644));
@@ -997,9 +997,9 @@ TEST_F(FvmHostTest, DecompressLZ4) {
 #if 0  // TODO(bug 38188)
 constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_size,
                                                 const size_t extended_container_size) {
-  const size_t initial_metadata_size = fvm::MetadataSize(initial_container_size, kDefaultSliceSize);
+  const size_t initial_metadata_size = fvm::MetadataSizeForDiskSize(initial_container_size, kDefaultSliceSize);
   const size_t extended_metadata_size =
-      fvm::MetadataSize(extended_container_size, kDefaultSliceSize);
+      fvm::MetadataSizeForDiskSize(extended_container_size, kDefaultSliceSize);
 
   if (extended_metadata_size == initial_metadata_size) {
     return CalculateExtendedContainerSize(initial_container_size, extended_container_size * 2);
@@ -1011,8 +1011,8 @@ constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_s
 TEST_F(FvmHostTest, TestExtendChangesMetadataSize) {
   CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */);
   size_t extended_container_size = CalculateExtendedContainerSize(kContainerSize, kContainerSize);
-  ASSERT_GT(fvm::MetadataSize(extended_container_size, kDefaultSliceSize),
-            fvm::MetadataSize(kContainerSize, kDefaultSliceSize));
+  ASSERT_GT(fvm::MetadataSizeForDiskSize(extended_container_size, kDefaultSliceSize),
+            fvm::MetadataSizeForDiskSize(kContainerSize, kDefaultSliceSize));
   ExtendFvm(extended_container_size);
   ReportFvm();
   DestroyFvm();

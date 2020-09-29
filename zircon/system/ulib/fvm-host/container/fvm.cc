@@ -353,7 +353,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     }
   }
 
-  size_t metadata_size = fvm::MetadataSize(disk_size, slice_size_);
+  size_t metadata_size = fvm::MetadataSizeForDiskSize(disk_size, slice_size_);
   ZX_ASSERT(metadata_size == target_format_info.header().GetMetadataUsedBytes());
   zx_status_t status = info_.Grow(metadata_size);
   if (status != ZX_OK) {
@@ -391,7 +391,7 @@ zx_status_t FvmContainer::Commit() {
     }
 
     uint64_t total_size = CalculateDiskSize();
-    zx_status_t status = info_.Grow(fvm::MetadataSize(total_size, slice_size_));
+    zx_status_t status = info_.Grow(fvm::MetadataSizeForDiskSize(total_size, slice_size_));
     if (status != ZX_OK) {
       return status;
     }

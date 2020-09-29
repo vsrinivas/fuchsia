@@ -129,7 +129,7 @@ TEST_P(MaxDataTest, UseAllData) {
   ASSERT_NO_FATAL_FAILURE(EnsureCanGrow());
 
   uint64_t disk_size = fs().options().device_block_count * fs().options().device_block_size;
-  size_t metadata_size = fvm::MetadataSize(disk_size, fs().options().fvm_slice_size);
+  size_t metadata_size = fvm::MetadataSizeForDiskSize(disk_size, fs().options().fvm_slice_size);
 
   ASSERT_GT(disk_size, metadata_size * 2);
   disk_size -= 2 * metadata_size;

@@ -32,22 +32,16 @@ std::string ToSizeString(uint64_t bytes) {
 
 namespace internal {
 
-uint64_t GetMetadataSize(const FvmOptions& options, uint64_t slice_count) {
-  uint64_t required_metadata_allocated_size = 0;
-
+fvm::Header MakeHeader(const FvmOptions& options, uint64_t slice_count) {
   if (options.max_volume_size.has_value()) {
-    required_metadata_allocated_size =
-        fvm::MetadataSize(options.max_volume_size.value(), options.slice_size);
-  } else if (options.target_volume_size.has_value()) {
-    required_metadata_allocated_size =
-        fvm::MetadataSize(options.target_volume_size.value(), options.slice_size);
-  } else {
-    required_metadata_allocated_size =
-        2 * (fvm::AllocationTable::kOffset +
-             fbl::round_up(slice_count * sizeof(fvm::SliceEntry), fvm::kBlockSize));
+    return fvm::FormatInfo::FromDiskSize(options.max_volume_size.value(), options.slice_size)
+        .header();
   }
-
-  return required_metadata_allocated_size;
+  if (options.target_volume_size.has_value()) {
+    return fvm::FormatInfo::FromDiskSize(options.target_volume_size.value(), options.slice_size)
+        .header();
+  }
+  return fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slice_count, options.slice_size);
 }
 
 }  // namespace internal
@@ -132,7 +126,9 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
   }
   partitions_.clear();
 
-  metadata_allocated_size_ = internal::GetMetadataSize(*options_, accumulated_slices_);
+  fvm::Header header = internal::MakeHeader(*options_, accumulated_slices_);
+  metadata_allocated_size_ = 2 * header.GetMetadataAllocatedBytes();
+
   uint64_t minimum_size = metadata_allocated_size_ + accumulated_slices_ * options_->slice_size;
   // We are not allowed to exceed the  target disk size when set.
   if (minimum_size > options_->target_volume_size.value_or(std::numeric_limits<uint64_t>::max())) {

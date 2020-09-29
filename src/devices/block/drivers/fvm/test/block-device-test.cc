@@ -18,8 +18,8 @@ using fvm::VPartitionManager;
 
 constexpr size_t kFvmSlizeSize = 8 * fvm::kBlockSize;
 constexpr size_t kDiskSize = 64 * fvm::kBlockSize;
-constexpr size_t kAllocTableSize = fvm::AllocTableLength(kDiskSize, kFvmSlizeSize);
-constexpr size_t kPartitionTableSize = fvm::kVPartTableLength;
+constexpr size_t kAllocTableSize = fvm::AllocTableLengthForDiskSize(kDiskSize, kFvmSlizeSize);
+constexpr size_t kPartitionTableSize = fvm::PartitionTableLength(fvm::kMaxVPartitions);
 constexpr uint32_t kBlocksPerSlice = 128;
 
 // Initializes the header of an FVM volume.

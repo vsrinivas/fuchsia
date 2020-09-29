@@ -503,12 +503,12 @@ class SmallDiskTestWithFvm : public BlobfsFixedDiskSizeTestWithFvm {
     // Require an additional 1 slice each for super, inode, and block bitmaps.
     uint64_t blobfs_size = (required_journal_slices + required_data_slices + 3) * kTestFvmSliceSize;
     uint64_t minimum_size = blobfs_size;
-    uint64_t metadata_size = fvm::MetadataSize(blobfs_size, kTestFvmSliceSize);
+    uint64_t metadata_size = fvm::MetadataSizeForDiskSize(blobfs_size, kTestFvmSliceSize);
 
     // Re-calculate minimum size until the metadata size stops growing.
     while (minimum_size - blobfs_size != metadata_size * 2) {
       minimum_size = blobfs_size + metadata_size * 2;
-      metadata_size = fvm::MetadataSize(minimum_size, kTestFvmSliceSize);
+      metadata_size = fvm::MetadataSizeForDiskSize(minimum_size, kTestFvmSliceSize);
     }
 
     return minimum_size;

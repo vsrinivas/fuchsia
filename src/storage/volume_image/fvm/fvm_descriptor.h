@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <fvm/fvm.h>
+
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/partition.h"
@@ -18,9 +20,8 @@
 namespace storage::volume_image {
 namespace internal {
 
-// Returns the minimum size for addressing the a set of |slice_count| slices.
-// Accounts for both primary and secondary control block.
-uint64_t GetMetadataSize(const FvmOptions& options, uint64_t slice_count);
+// Creates an FVM header for the given options.
+fvm::Header MakeHeader(const FvmOptions& options, uint64_t slice_count);
 
 }  // namespace internal
 
@@ -76,7 +77,8 @@ class FvmDescriptor {
   // once a volume is formatted with it.
   uint64_t slice_count() const { return slice_count_; }
 
-  // Returns the amount of bytes required for this descriptor to format a volume.
+  // Returns the amount of bytes required for this descriptor to format a volume. This accounts for
+  // both copies of the FVM metadata.
   uint64_t metadata_required_size() const { return metadata_required_size_; }
 
  private:
@@ -89,7 +91,8 @@ class FvmDescriptor {
   // Number of slices required for this fvm descriptor.
   uint64_t slice_count_ = 0;
 
-  // Size in bytes of the metadata required to generate this image.
+  // Size in bytes of the metadata required to generate this image. This accounts for both copies of
+  // the FVM metadata.
   uint64_t metadata_required_size_ = 0;
 };
 

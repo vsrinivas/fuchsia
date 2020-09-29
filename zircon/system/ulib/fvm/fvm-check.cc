@@ -232,7 +232,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock->generation);
   logger_.Log("\n");
 
-  const size_t slice_count = format_info.slice_count();
+  const size_t slice_count = superblock->GetAllocationTableUsedEntryCount();
   logger_.Log("[  Size Info  ]\n");
   logger_.Log("%-15s %10zu\n", "Device Length:", info.device_size);
   logger_.Log("%-15s %10zu\n", "Block size:", info.block_size);
@@ -254,9 +254,9 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("[  All Subsequent Offsets Relative to Valid Metadata Start  ]\n");
   logger_.Log("\n");
 
-  const size_t vpart_table_start = fvm::kVPartTableOffset;
+  const size_t vpart_table_start = superblock->GetPartitionTableOffset();
   const size_t vpart_entry_size = sizeof(fvm::VPartitionEntry);
-  const size_t vpart_table_size = fvm::kVPartTableLength;
+  const size_t vpart_table_size = superblock->GetPartitionTableByteSize();
   const size_t vpart_table_end = vpart_table_start + vpart_table_size;
   logger_.Log("[  Virtual Partition Table  ]\n");
   logger_.Log("%-25s 0x%016zx\n", "VPartition Entry Start:", vpart_table_start);
@@ -265,9 +265,9 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("%-25s 0x%016zx\n", "VPartition table end:", vpart_table_end);
   logger_.Log("\n");
 
-  const size_t slice_table_start = fvm::kAllocTableOffset;
+  const size_t slice_table_start = superblock->GetAllocationTableOffset();
   const size_t slice_entry_size = sizeof(fvm::SliceEntry);
-  const size_t slice_table_size = slice_entry_size * slice_count;
+  const size_t slice_table_size = superblock->GetAllocationTableUsedByteSize();
   const size_t slice_table_end = slice_table_start + slice_table_size;
   logger_.Log("[  Slice Allocation Table  ]\n");
   logger_.Log("%-25s 0x%016zx\n", "Slice table start:", slice_table_start);

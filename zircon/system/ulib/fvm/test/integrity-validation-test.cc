@@ -169,7 +169,8 @@ TEST(IntegrityValidationTest, MetadataHasOverflowInCalculatedSizeIsBadState) {
   Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
 
-  header->allocation_table_size = std::numeric_limits<uint64_t>::max() - fvm::kAllocTableOffset + 1;
+  header->allocation_table_size =
+      std::numeric_limits<uint64_t>::max() - header->GetAllocationTableOffset() + 1;
 
   ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
                            nullptr),

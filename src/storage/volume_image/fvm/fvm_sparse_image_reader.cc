@@ -221,21 +221,20 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
     return fit::error("bad maximum offset from base reader");
   }
 
-  uint64_t disk_size = fvm_sparse_header.maximum_disk_size;
-  if (disk_size == 0) {
-    // If the sparse image includes a maximum disk size, use that, but otherwise, compute the disk
-    // size using the number of allocated slices.  This will only allow limited growth (i.e. FVM's
-    // metadata can only grow to a block boundary).
-    const uint64_t metadata_size =
-        fvm::AllocationTable::kOffset +
-        fbl::round_up(sizeof(fvm::SliceEntry) * total_slices, fvm::kBlockSize);
-    disk_size = metadata_size * 2 + total_slices * slice_size;
-  }
-
-  fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(disk_size, slice_size);
-  if (total_slices > format_info.slice_count()) {
-    return fit::error("Fvm Sparse Image Reader, found " + std::to_string(total_slices) +
-                      ", but disk size allows " + std::to_string(format_info.slice_count()) + ".");
+  fvm::Header header;
+  if (fvm_sparse_header.maximum_disk_size) {
+    // The sparse image includes a maximum disk size, use that.
+    header =
+        fvm::FormatInfo::FromDiskSize(fvm_sparse_header.maximum_disk_size, slice_size).header();
+    if (total_slices > header.GetAllocationTableUsedEntryCount()) {
+      return fit::error("Fvm Sparse Image Reader, found " + std::to_string(total_slices) +
+                        ", but disk size allows " +
+                        std::to_string(header.GetAllocationTableUsedEntryCount()) + ".");
+    }
+  } else {
+    // When no disk size is specified, compute the disk size using the number of allocated slices.
+    // This will allow limited growth (i.e. FVM's metadata can only grow to a block boundary).
+    header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, total_slices, slice_size);
   }
 
   // Now we need to synthesize the FVM metadata, which consists of the super-block a.k.a
@@ -245,15 +244,15 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
     metadata.insert(metadata.end(), data.begin(), data.end());
   };
 
-  append_metadata(FixedSizeStructToSpan(const_cast<fvm::Header&>(format_info.header())));
+  append_metadata(FixedSizeStructToSpan(header));
 
-  metadata.resize(fvm::PartitionTable::kOffset);
+  metadata.resize(header.GetPartitionTableOffset());
   append_metadata(ContainerToSpan(fvm_partitions));
 
-  metadata.resize(fvm::AllocationTable::kOffset);
+  metadata.resize(header.GetAllocationTableOffset());
   append_metadata(ContainerToSpan(slices));
 
-  metadata.resize(format_info.metadata_size());
+  metadata.resize(header.GetMetadataUsedBytes());
 
   digest::Digest digest;
   fvm::Header* header_ptr = reinterpret_cast<fvm::Header*>(metadata.data());
@@ -284,7 +283,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   uint64_t slice = 1;  // It's 1 indexed.
   for (const Extent& extent : extents) {
     AddressMap mapping = {.source = extent.second,
-                          .target = format_info.GetSliceStart(slice),
+                          .target = header.GetSliceDataOffset(slice),
                           .count = extent.first.extent_length,
                           .size = extent.first.slice_count * slice_size};
     if (!(fvm_sparse_header.flags & fvm::kSparseFlagZeroFillNotRequired)) {
@@ -297,7 +296,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
 
   // Now we can create a reader.
   auto reader = std::make_unique<SparseImageReader>(base_reader, data_start, std::move(metadata));
-  VolumeDescriptor descriptor{.size = disk_size};
+  VolumeDescriptor descriptor{.size = header.fvm_partition_size};
   return fit::ok(Partition(descriptor, address_descriptor, std::move(reader)));
 }
 

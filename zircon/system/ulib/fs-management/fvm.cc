@@ -146,8 +146,8 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
   sb->pslice_count = format_info.slice_count();
   sb->slice_size = slice_size;
   sb->fvm_partition_size = initial_volume_size;
-  sb->vpartition_table_size = fvm::kVPartTableLength;
-  sb->allocation_table_size = fvm::AllocTableLength(max_volume_size, slice_size);
+  sb->vpartition_table_size = fvm::PartitionTableLength(fvm::kMaxVPartitions);
+  sb->allocation_table_size = fvm::AllocTableLengthForDiskSize(max_volume_size, slice_size);
   sb->generation = 0;
 
   if (sb->pslice_count == 0) {
@@ -222,7 +222,7 @@ zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
   }
 
   size_t disk_size = block_info.block_count * block_info.block_size;
-  size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
+  size_t metadata_size = fvm::MetadataSizeForDiskSize(disk_size, slice_size);
 
   std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
 

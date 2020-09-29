@@ -233,14 +233,31 @@ zx_status_t VPartitionManager::Load() {
     zxlogf(ERROR, "Bad block (%u) or slice size (%zu)", info_.block_size, SliceSize());
     return ZX_ERR_BAD_STATE;
   }
-  if (sb.vpartition_table_size != kVPartTableLength) {
+
+  // TODO(fxb/40192) Allow the partition table to be different lengths (aligned to blocks):
+  //   size_t kMinPartitionTableSize = kBlockSize;
+  //   size_t kMaxPartitionTableSize = sizeof(VPartitionEntry) * kMaxVPartitions;
+  //   if (sb.vpartition_table_size < kMinPartitionTableSize ||
+  //       sb.vpartition_table_size > kMaxPartitionTableSize ||
+  //       sb.vpartition_table_size % sizeof(VPartitionEntry) != 0) {
+  //     zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu-%zu, multiple of %zu)",
+  //            sb.vpartition_table_size, kMinPartitionTableSize, kMaxPartitionTableSize,
+  //            sizeof(VPartitionEntry));
+  //     return ZX_ERR_BAD_STATE;
+  //
+  // Currently the partition table must be a fixed size:
+  size_t kPartitionTableLength = PartitionTableLength(kMaxVPartitions);
+  if (sb.vpartition_table_size != kPartitionTableLength) {
     zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu)", sb.vpartition_table_size,
-           kVPartTableLength);
+           kPartitionTableLength);
     return ZX_ERR_BAD_STATE;
   }
-  if (sb.allocation_table_size < AllocTableLength(sb.fvm_partition_size, SliceSize())) {
-    zxlogf(ERROR, "Bad allocation table size %zu (expected at least %zu)", sb.allocation_table_size,
-           AllocTableLength(sb.fvm_partition_size, SliceSize()));
+
+  size_t required_alloc_table_len = AllocTableLengthForUsableSliceCount(sb.pslice_count);
+  if (sb.allocation_table_size % kBlockSize != 0 ||
+      sb.allocation_table_size < required_alloc_table_len) {
+    zxlogf(ERROR, "Bad allocation table size %zu (expected at least %zu, multiple of %zu)",
+           sb.allocation_table_size, required_alloc_table_len, kBlockSize);
     return ZX_ERR_BAD_STATE;
   }
   if (sb.fvm_partition_size > DiskSize()) {
@@ -304,7 +321,7 @@ zx_status_t VPartitionManager::Load() {
   // Whether the metadata should grow or not.
   bool metadata_should_grow =
       GetFvmLocked()->fvm_partition_size < DiskSize() &&
-      AllocTableLength(GetFvmLocked()->fvm_partition_size, GetFvmLocked()->slice_size) <
+      AllocTableLengthForDiskSize(GetFvmLocked()->fvm_partition_size, GetFvmLocked()->slice_size) <
           GetFvmLocked()->allocation_table_size;
 
   // Recalculate format info for the valid metadata header.
@@ -639,19 +656,27 @@ void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, uint64_t pslice, u
 
 SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index >= 1);
-  uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-  uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset + index * sizeof(SliceEntry));
-  ZX_DEBUG_ASSERT(kAllocTableOffset <= offset);
-  ZX_DEBUG_ASSERT(offset < format_info_.metadata_size());
+  Header* header = GetFvmLocked();
+
+  uintptr_t metadata_start = reinterpret_cast<uintptr_t>(header);
+  uintptr_t offset = static_cast<uintptr_t>(header->GetSliceEntryOffset(index));
+
+  ZX_DEBUG_ASSERT(header->GetAllocationTableOffset() <= offset);
+  ZX_DEBUG_ASSERT(header->GetAllocationTableOffset() + header->GetAllocationTableUsedByteSize() >
+                  offset);
   return reinterpret_cast<SliceEntry*>(metadata_start + offset);
 }
 
 VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index >= 1);
-  uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-  uintptr_t offset = static_cast<uintptr_t>(kVPartTableOffset + index * sizeof(VPartitionEntry));
-  ZX_DEBUG_ASSERT(kVPartTableOffset <= offset);
-  ZX_DEBUG_ASSERT(offset < kVPartTableOffset + kVPartTableLength);
+  Header* header = GetFvmLocked();
+
+  uintptr_t metadata_start = reinterpret_cast<uintptr_t>(header);
+  uintptr_t offset = static_cast<uintptr_t>(header->GetPartitionEntryOffset(index));
+
+  ZX_DEBUG_ASSERT(header->GetPartitionTableOffset() <= offset);
+  ZX_DEBUG_ASSERT(header->GetPartitionEntryOffset(index) + header->GetPartitionTableByteSize() >
+                  offset);
   return reinterpret_cast<VPartitionEntry*>(metadata_start + offset);
 }
 

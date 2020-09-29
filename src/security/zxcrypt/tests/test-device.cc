@@ -326,11 +326,11 @@ void TestDevice::DestroyRamdisk() {
 void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   // Calculate total size of data + metadata.
   device_size = fbl::round_up(device_size, fvm::kBlockSize);
-  size_t old_meta = fvm::MetadataSize(device_size, fvm::kBlockSize);
-  size_t new_meta = fvm::MetadataSize(old_meta + device_size, fvm::kBlockSize);
+  size_t old_meta = fvm::MetadataSizeForDiskSize(device_size, fvm::kBlockSize);
+  size_t new_meta = fvm::MetadataSizeForDiskSize(old_meta + device_size, fvm::kBlockSize);
   while (old_meta != new_meta) {
     old_meta = new_meta;
-    new_meta = fvm::MetadataSize(old_meta + device_size, fvm::kBlockSize);
+    new_meta = fvm::MetadataSizeForDiskSize(old_meta + device_size, fvm::kBlockSize);
   }
   ASSERT_NO_FATAL_FAILURES(CreateRamdisk(device_size + (new_meta * 2), block_size));
 
