@@ -27,7 +27,7 @@ struct State {
   pthread_barrier_t stop_barrier;
   const size_t number_of_switches;
 
-  State(size_t thread_count, size_t number_of_switches) : number_of_switches(number_of_switches) {
+  State(uint32_t thread_count, size_t number_of_switches) : number_of_switches(number_of_switches) {
     FX_CHECK(0 == pthread_barrier_init(&start_barrier, nullptr,
                                        thread_count + 1));  // additional thread for main
     FX_CHECK(0 == pthread_barrier_init(&stop_barrier, nullptr,
@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  size_t cpus = zx_system_get_num_cpus();
+  uint32_t cpus = zx_system_get_num_cpus();
   uint64_t number_of_switches = 0;
 
   // Signal that this process is ready to accept instructions.

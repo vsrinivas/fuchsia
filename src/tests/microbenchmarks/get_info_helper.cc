@@ -20,14 +20,14 @@
 int main(int argc, char** argv) {
   ZX_ASSERT(argc >= 2);
 
-  size_t threads = std::atoi(argv[1]);
+  uint32_t threads = std::atoi(argv[1]);
   zx::channel incoming(zx_take_startup_handle(PA_USER0));
   ZX_ASSERT(incoming);
 
   pthread_barrier_t barrier;
   pthread_barrier_init(&barrier, nullptr, threads);
 
-  for (size_t i = 0; i < threads - 1; i++) {
+  for (uint32_t i = 0; i < threads - 1; i++) {
     std::thread([&] {
       pthread_barrier_wait(&barrier);
       while (true) {

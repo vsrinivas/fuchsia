@@ -88,9 +88,6 @@ executable("context_switch_overhead_helper") {
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # "Helper" executable used to implement the get_info benchmark.
@@ -102,9 +99,6 @@ executable("get_info_helper") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fidl_interface") {
