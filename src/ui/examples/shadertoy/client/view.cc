@@ -94,8 +94,8 @@ void ViewImpl::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation
 
   for (size_t i = 0; i < nodes_.size(); ++i) {
     // Compute the translation for kSwirling mode.  Each node has a slightly different speed.
-    const float animation_progress = seconds * (32 + i) / 32.f;
-    const float elevation = -1.f * (50.f + 20.f * i);
+    const double animation_progress = seconds * static_cast<double>(32 + i) / 32;
+    const long elevation = -1 * (50 + 20 * i);
     glm::vec3 swirl_translation(kHalfWidth + sin(animation_progress * 0.8) * kHalfWidth * 1.1,
                                 kHalfHeight + sin(animation_progress * 0.6) * kHalfHeight * 1.2,
                                 elevation);
@@ -148,7 +148,7 @@ float ViewImpl::UpdateTransition(zx_time_t presentation_time) {
       static_cast<double>(presentation_time - transition_start_time_) / 1'000'000'000;
   constexpr double kTransitionDuration = 0.5;
 
-  float transition_param = transition_elapsed_seconds / kTransitionDuration;
+  float transition_param = static_cast<float>(transition_elapsed_seconds / kTransitionDuration);
 
   if (transition_param >= 1.f) {
     if (animation_state_ == kChangingToFourCorners) {
